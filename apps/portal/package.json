@@ -2,6 +2,7 @@
   "name": "@crossub/portal",
   "version": "0.1.0",
   "private": true,
+  "description": "CROSSUB agent portal — Next.js 16 App Router (maintenance, keys, viewings).",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"

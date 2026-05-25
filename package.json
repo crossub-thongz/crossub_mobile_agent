@@ -2,14 +2,17 @@
   "name": "crossub-mobile-agent",
   "version": "0.1.0",
   "private": true,
+  "description": "CROSSUB agent portal — external Next.js app for property agents (consumes crossub_web API).",
   "scripts": {
     "preinstall": "npx -y only-allow pnpm",
     "dev": "bash scripts/dev-clean.sh",
     "dev:raw": "pnpm -r --parallel run dev",
+    "dev:clean": "bash scripts/dev-clean.sh",
     "dev:portal": "pnpm --filter @crossub/portal dev",
     "build": "pnpm -r run build",
     "build:portal": "pnpm --filter @crossub/portal build",
     "start": "pnpm -r --parallel run start",
+    "start:portal": "pnpm --filter @crossub/portal start",
     "lint": "pnpm -r run lint"
   },
   "packageManager": "pnpm@9.12.0",

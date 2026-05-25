@@ -1,9 +1,18 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Building2, Loader2, Lock, Mail } from 'lucide-react';
+import {
+  ArrowRight,
+  Building2,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -30,6 +39,7 @@ type FormValues = z.infer<typeof schema>;
 export default function LoginPage() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -47,7 +57,13 @@ export default function LoginPage() {
       router.replace(ROUTES.DASHBOARD);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        toast.error('Invalid email or password');
+        toast.error(
+          'Invalid email or password. Staging uses a separate database — your local account may not exist there yet.',
+        );
+        return;
+      }
+      if (err instanceof ApiError) {
+        toast.error(`Sign in failed (${err.status}). Check API connection.`);
         return;
       }
       toast.error('Something went wrong. Please try again.');
@@ -101,12 +117,24 @@ export default function LoginPage() {
               <Lock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="Enter your password"
                 autoComplete="current-password"
-                className="pl-10"
+                className="pl-10 pr-10"
                 {...register('password')}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
             </div>
             {errors.password && (
               <p className="text-xs text-destructive">
@@ -138,12 +166,6 @@ export default function LoginPage() {
             )}
           </Button>
         </form>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Powered by the{' '}
-          <span className="text-foreground">crossub_web</span> API. Run the API
-          locally on port 3001 before signing in.
-        </p>
       </div>
     </div>
   );
