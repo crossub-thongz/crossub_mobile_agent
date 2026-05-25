@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# pnpm
+**/node_modules/
+
+# Next.js
+.next/
+out/
+
+# Node / JS tooling
+dist/
+build/
+*.tsbuildinfo
+.cache/
+
+# Testing & coverage
+coverage/
+.nyc_output/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & debug
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vercel
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cursor
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**

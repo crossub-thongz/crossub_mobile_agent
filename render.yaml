@@ -1,0 +1,22 @@
+# Render Blueprint — crossub_mobile_agent portal
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy: Render Dashboard → New → Blueprint → connect this repo.
+# Requires crossub_web API already deployed; set API_INTERNAL_URL after first deploy.
+
+services:
+  - type: web
+    name: crossub-mobile-agent
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: corepack enable && pnpm install && pnpm build:portal
+    startCommand: pnpm --filter @crossub/portal start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: /api
+      - key: API_INTERNAL_URL
+        sync: false

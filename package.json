@@ -1,0 +1,22 @@
+{
+  "name": "crossub-mobile-agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "preinstall": "npx -y only-allow pnpm",
+    "dev": "bash scripts/dev-clean.sh",
+    "dev:raw": "pnpm -r --parallel run dev",
+    "dev:portal": "pnpm --filter @crossub/portal dev",
+    "build": "pnpm -r run build",
+    "build:portal": "pnpm --filter @crossub/portal build",
+    "start": "pnpm -r --parallel run start",
+    "lint": "pnpm -r run lint"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9",
+    "npm": "please-use-pnpm",
+    "yarn": "please-use-pnpm"
+  }
+}
