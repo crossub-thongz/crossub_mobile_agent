@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ChevronRight, Search } from 'lucide-react';
 
 import { FilterChips } from '@/components/agent/filter-chips';
-import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
@@ -33,8 +32,8 @@ export default function PropertiesPage() {
       items = items.filter(
         (p) =>
           p.address.toLowerCase().includes(q) ||
-          p.suburb.toLowerCase().includes(q) ||
-          p.tenantName.toLowerCase().includes(q),
+          p.tenantName.toLowerCase().includes(q) ||
+          p.homeOwnerName.toLowerCase().includes(q),
       );
     }
     return items;
@@ -43,16 +42,22 @@ export default function PropertiesPage() {
   return (
     <AgentShell title="Properties">
       <div className="space-y-4">
+        <p className="text-muted-foreground text-sm">
+          Your assigned landlords and tenants — each agent sees only their own
+          portfolio.
+        </p>
+
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Address, suburb, tenant…"
+            placeholder="Address, landlord, tenant…"
             className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
+
         <div className="space-y-2">
           {list.map((p) => (
             <Link
@@ -64,13 +69,18 @@ export default function PropertiesPage() {
                 <div className="min-w-0 space-y-1">
                   <p className="font-semibold">{p.address}</p>
                   <p className="text-muted-foreground text-xs">{p.suburb}</p>
-                  <p className="text-sm">{p.tenantName}</p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    <StatusBadge label={p.leaseStatus} />
-                    {p.openTasks > 0 && (
-                      <StatusBadge label={`${p.openTasks} open tasks`} variant="approval" />
-                    )}
-                  </div>
+                  <p className="text-xs">
+                    <span className="text-muted-foreground">Landlord: </span>
+                    {p.homeOwnerName}
+                  </p>
+                  <p className="text-xs">
+                    <span className="text-muted-foreground">Tenant: </span>
+                    {p.tenantName}
+                  </p>
+                  <p className="text-primary pt-1 text-xs font-medium capitalize">
+                    {p.leaseStatus}
+                    {p.openTasks > 0 ? ` · ${p.openTasks} open tasks` : ''}
+                  </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {p.rentWeekly > 0 && (
@@ -81,9 +91,6 @@ export default function PropertiesPage() {
                   <ChevronRight className="text-muted-foreground size-4" />
                 </div>
               </div>
-              <p className="text-muted-foreground mt-2 text-xs">
-                {p.inspectionStatus} · {p.maintenanceStatus}
-              </p>
             </Link>
           ))}
         </div>

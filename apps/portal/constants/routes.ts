@@ -1,4 +1,5 @@
 export const ROUTES = {
+  STATUS: '/status',
   DASHBOARD: '/dashboard',
   LOGIN: '/login',
   FORGOT_PASSWORD: '/forgot-password',

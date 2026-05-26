@@ -1,10 +1,8 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 
-import { DataSourceBadge } from '@/components/agent/data-source-badge';
-import { StatusBadge } from '@/components/agent/status-badge';
 import type { DashboardItem } from '@/lib/types';
-import { cn, formatDateTime, formatRelative } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export function TaskCard({
   item,
@@ -26,26 +24,23 @@ export function TaskCard({
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             {item.requiresApproval && (
-              <StatusBadge label="Approval" variant="approval" />
-            )}
-            {'source' in item && item.source && (
-              <DataSourceBadge source={item.source} />
+              <span className="text-primary text-[10px] font-semibold uppercase">
+                Action needed
+              </span>
             )}
             {item.priority === 'urgent' && (
-              <StatusBadge label="Urgent" priority="urgent" />
+              <span className="text-destructive text-[10px] font-semibold uppercase">
+                Urgent
+              </span>
             )}
-            <StatusBadge label={item.status} />
           </div>
+          <p className="text-primary text-xs font-medium">{item.status}</p>
           <p className="text-sm font-semibold leading-snug">{item.title}</p>
-          <p className="text-muted-foreground text-xs">{item.subtitle}</p>
           <p className="text-muted-foreground truncate text-xs">
             {item.propertyAddress}
           </p>
-          {!compact && (
-            <p className="text-muted-foreground text-[11px]">
-              Updated {formatRelative(item.updatedAt)}
-              {item.dueAt ? ` · Due ${formatDateTime(item.dueAt)}` : ''}
-            </p>
+          {!compact && item.subtitle && (
+            <p className="text-muted-foreground text-xs">{item.subtitle}</p>
           )}
         </div>
         <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />

@@ -1,17 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Bell,
   Building2,
-  ClipboardCheck,
   LayoutDashboard,
+  ListChecks,
   Menu,
   MessageSquare,
-  MoreHorizontal,
-  Search,
-  Wrench,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -24,17 +21,17 @@ import { cn, displayName } from '@/lib/utils';
 const PRIMARY_NAV = [
   { href: ROUTES.DASHBOARD, label: 'Home', icon: LayoutDashboard },
   { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
-  { href: ROUTES.INSPECTIONS, label: 'Inspect', icon: ClipboardCheck },
-  { href: ROUTES.MAINTENANCE, label: 'Maint.', icon: Wrench },
   { href: ROUTES.MESSAGES, label: 'Messages', icon: MessageSquare },
+  { href: ROUTES.STATUS, label: 'Status', icon: ListChecks },
 ] as const;
 
 const MORE_NAV = [
-  { href: ROUTES.RENT_REVIEW, label: 'Rent Review' },
+  { href: ROUTES.MAINTENANCE, label: 'Maintenance' },
+  { href: ROUTES.INSPECTIONS, label: 'Inspections' },
+  { href: ROUTES.RENT_REVIEW, label: 'Rent review' },
   { href: ROUTES.VACATING, label: 'Vacating' },
-  { href: ROUTES.REPORTS, label: 'Reports & Documents' },
-  { href: ROUTES.NOTIFICATIONS, label: 'Notifications' },
-  { href: ROUTES.SEARCH, label: 'Global search' },
+  { href: ROUTES.REPORTS, label: 'Reports' },
+  { href: ROUTES.NOTIFICATIONS, label: 'Alerts' },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -52,7 +49,6 @@ export function AgentShell({
   backHref?: string;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const { notifications, messages } = useAgentData();
@@ -80,17 +76,22 @@ export function AgentShell({
           )}
 
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => router.push(ROUTES.SEARCH)}
-              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
-              aria-label="Search"
+            <Link
+              href={ROUTES.MESSAGES}
+              className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Messages"
             >
-              <Search className="size-5" />
-            </button>
+              <MessageSquare className="size-5" />
+              {unreadMessages > 0 && (
+                <span className="bg-destructive absolute top-1 right-1 flex size-4 items-center justify-center rounded-full text-[9px] text-white">
+                  {unreadMessages}
+                </span>
+              )}
+            </Link>
             <Link
               href={ROUTES.NOTIFICATIONS}
               className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Alerts"
             >
               <Bell className="size-5" />
               {unreadNotifications > 0 && (
@@ -177,9 +178,12 @@ export function AgentShell({
           <button
             type="button"
             onClick={() => setMoreOpen((v) => !v)}
-            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium text-muted-foreground"
+            className={cn(
+              'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium',
+              moreOpen ? 'text-primary' : 'text-muted-foreground',
+            )}
           >
-            <MoreHorizontal className="size-5" />
+            <Menu className="size-5" />
             <span>More</span>
           </button>
         </div>

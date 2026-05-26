@@ -5,10 +5,10 @@ import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
+import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
 import { CommunicationPanel } from '@/components/agent/communication-panel';
-import { DataSourceBadge } from '@/components/agent/data-source-badge';
 import { MaintenanceStageTracker } from '@/components/agent/stage-tracker';
-import { StatusBadge } from '@/components/agent/status-badge';
+import { StatusBanner } from '@/components/agent/status-banner';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -24,6 +24,7 @@ export default function MaintenanceDetailPage() {
     approveMaintenanceQuote,
     declineMaintenanceQuote,
     refresh,
+    messages,
   } = useAgentData();
 
   const item = maintenanceAll.find((m) => m.id === id);
@@ -75,25 +76,27 @@ export default function MaintenanceDetailPage() {
   return (
     <AgentShell title={item.trackingNumber} backHref={ROUTES.MAINTENANCE}>
       <div className="space-y-4">
-        <DataSourceBadge source={item.source ?? 'demo'} />
+        <StatusBanner
+          status={item.status}
+          subtitle={item.propertyAddress}
+          tone={item.requiresApproval ? 'action' : item.priority === 'urgent' ? 'urgent' : 'default'}
+        />
+
+        <ChatCrossubBar taskLabel="Maintenance" threadId={messages[0]?.id} />
+
         <MaintenanceStageTracker current={item.status} />
 
-        <div className="rounded-xl border bg-card p-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge label={item.status} />
-            <StatusBadge label={item.priority} priority={item.priority} />
-            <StatusBadge label={String(item.responsibility)} />
-            {item.contractorStatus && (
-              <StatusBadge
-                label={`Contractor: ${item.contractorStatus.replace('_', ' ')}`}
-              />
-            )}
-          </div>
+        <div className="rounded-xl border bg-card p-4 space-y-2">
           <h2 className="text-base font-semibold">{item.title}</h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
             {item.description}
           </p>
-          <p className="text-muted-foreground text-xs">{item.propertyAddress}</p>
+          {item.contractorName && (
+            <p className="text-muted-foreground text-xs">
+              Contractor: {item.contractorName}
+              {item.quoteAmount != null && ` · $${item.quoteAmount.toLocaleString()}`}
+            </p>
+          )}
         </div>
 
         {(item.invoiceUploaded != null || item.completionEvidenceUploaded != null) && (

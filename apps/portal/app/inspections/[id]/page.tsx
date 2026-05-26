@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { DataSourceBadge } from '@/components/agent/data-source-badge';
+import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
 import { DocumentViewer } from '@/components/agent/document-viewer';
 import { StatusBadge } from '@/components/agent/status-badge';
+import { StatusBanner } from '@/components/agent/status-banner';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import { formatDateTime } from '@/lib/utils';
 
 export default function InspectionDetailPage() {
   const params = useParams();
-  const { inspections } = useAgentData();
+  const { inspections, messages } = useAgentData();
   const insp = inspections.find((i) => i.id === params.id);
   const [acknowledged, setAcknowledged] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -26,15 +27,16 @@ export default function InspectionDetailPage() {
   return (
     <AgentShell title={insp.trackingNumber} backHref={ROUTES.INSPECTIONS}>
       <div className="space-y-4">
-        <DataSourceBadge source="demo" />
-        <div className="rounded-xl border bg-card p-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge label={insp.type} variant="approval" />
-            <StatusBadge label={insp.status} />
-            <StatusBadge label={`Report: ${insp.reportStatus}`} />
-          </div>
-          <p className="font-semibold">{insp.propertyAddress}</p>
-          <dl className="grid gap-2 text-xs">
+        <StatusBanner
+          status={insp.status}
+          subtitle={`${insp.type} · ${insp.propertyAddress}`}
+          tone={insp.reportStatus === 'sent' ? 'ok' : 'default'}
+        />
+
+        <ChatCrossubBar taskLabel="Inspection" threadId={messages[1]?.id} />
+
+        <div className="rounded-xl border bg-card p-4 space-y-2 text-xs">
+          <dl className="grid gap-2">
             {insp.inspector && (
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Inspector</dt>

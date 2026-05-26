@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { useState } from 'react';
 
-import { StatusBadge } from '@/components/agent/status-badge';
+import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
+import { StatusBanner } from '@/components/agent/status-banner';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -46,15 +47,27 @@ export default function PropertyDetailPage() {
   return (
     <AgentShell title={property.address} backHref={ROUTES.PROPERTIES}>
       <div className="space-y-4">
+        <StatusBanner
+          status={property.leaseStatus}
+          subtitle={`${property.homeOwnerName} · ${property.tenantName}`}
+        />
+
+        <ChatCrossubBar taskLabel={property.address} />
+
         <div className="rounded-xl border bg-card p-4">
           <p className="text-muted-foreground text-xs">{property.suburb}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <StatusBadge label={property.leaseStatus} />
             {property.rentWeekly > 0 && (
-              <StatusBadge label={`${formatCurrency(property.rentWeekly)}/wk`} />
+              <span className="text-sm font-medium">
+                {formatCurrency(property.rentWeekly)}/wk
+              </span>
             )}
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <dt className="text-muted-foreground">Landlord</dt>
+              <dd className="font-medium">{property.homeOwnerName}</dd>
+            </div>
             <div>
               <dt className="text-muted-foreground">Tenant</dt>
               <dd className="font-medium">{property.tenantName}</dd>
@@ -166,10 +179,12 @@ function TaskLink({
     <Link href={href} className="flex items-center justify-between rounded-xl border bg-card px-4 py-3">
       <div>
         <p className="text-sm font-medium">{title}</p>
-        <div className="mt-1 flex gap-2">
-          <StatusBadge label={status} />
-          {approval && <StatusBadge label="Approval" variant="approval" />}
-        </div>
+        <p className="text-primary mt-1 text-xs font-medium">{status}</p>
+        {approval && (
+          <p className="text-primary text-[10px] font-semibold uppercase">
+            Action needed
+          </p>
+        )}
       </div>
       <span className="text-primary text-xs">Open</span>
     </Link>

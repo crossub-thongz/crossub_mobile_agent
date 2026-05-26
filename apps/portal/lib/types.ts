@@ -24,6 +24,10 @@ export interface Property {
   id: string;
   address: string;
   suburb: string;
+  /** Landlord / home owner this property belongs to */
+  homeOwnerName: string;
+  /** Which agent manages this property — filtered per logged-in agent */
+  assignedAgentId: 'agent-1' | 'agent-2';
   tenantName: string;
   leaseStatus: 'active' | 'periodic' | 'vacating' | 'vacant';
   rentWeekly: number;
@@ -135,6 +139,7 @@ export interface VacatingCase {
 
 export interface MessageThread {
   id: string;
+  assignedAgentId: 'agent-1' | 'agent-2';
   propertyAddress: string;
   subject: string;
   taskType: string;
@@ -179,6 +184,15 @@ export interface TenantSelectionCase {
   requiresApproval: boolean;
   documents: string[];
   timeline: TimelineEntry[];
+}
+
+export interface SectionStatus {
+  id: string;
+  label: string;
+  href: string;
+  statusLabel: string;
+  tone: 'neutral' | 'warning' | 'urgent' | 'ok';
+  count?: number;
 }
 
 export interface AgentDocument {
