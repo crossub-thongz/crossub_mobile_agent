@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Search } from 'lucide-react';
 
-import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { StatusBanner } from '@/components/agent/status-banner';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -21,7 +20,7 @@ const FILTERS = [
 export default function MaintenancePage() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const { maintenanceAll, sectionStatus, messages } = useAgentData();
+  const { maintenanceAll, sectionStatus } = useAgentData();
 
   const summary = sectionStatus.find((s) => s.id === 'maintenance');
 
@@ -89,8 +88,6 @@ export default function MaintenancePage() {
             </Link>
           ))}
         </div>
-
-        <ChatCrossubBar taskLabel="Maintenance" threadId={messages[0]?.id} />
       </div>
     </AgentShell>
   );

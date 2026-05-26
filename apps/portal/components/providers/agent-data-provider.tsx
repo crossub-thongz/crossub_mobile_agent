@@ -40,6 +40,8 @@ import {
   VACATING,
 } from '@/lib/mock-data';
 import { buildSectionStatus } from '@/lib/section-status';
+import { useAgentStore } from '@/lib/store';
+import { displayName } from '@/lib/utils';
 import type {
   AgentDocument,
   AgentNotification,
@@ -75,6 +77,7 @@ interface AgentDataContextValue {
   dashboardItems: DashboardItem[];
   sectionStatus: SectionStatus[];
   markNotificationRead: (id: string) => void;
+  sendMessage: (threadId: string, body: string) => void;
   approveMaintenanceQuote: (quotationId: string) => Promise<void>;
   declineMaintenanceQuote: (quotationId: string, reason: string) => Promise<void>;
 }
@@ -126,8 +129,10 @@ function buildDashboardFromApi(
 }
 
 export function AgentDataProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, status } = useAuth();
   const agentPortfolioId = resolveAgentPortfolioId(user);
+  const sentThreadMessages = useAgentStore((s) => s.sentThreadMessages);
+  const sendThreadMessage = useAgentStore((s) => s.sendThreadMessage);
 
   const [apiState, setApiState] = useState<ApiMaintenanceState | null>(null);
   const [kpis, setKpis] = useState<{
@@ -158,8 +163,20 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    void useAgentStore.persist.rehydrate();
+  }, []);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (status !== 'authed') {
+      setLoading(false);
+      setApiState(null);
+      setKpis(null);
+      setApiError(null);
+      return;
+    }
     void refresh();
-  }, [refresh]);
+  }, [refresh, status]);
 
   const properties = useMemo(
     () => PROPERTIES.filter((p) => p.assignedAgentId === agentPortfolioId),
@@ -215,8 +232,40 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const messages = useMemo(
-    () => MESSAGE_THREADS.filter((m) => m.assignedAgentId === agentPortfolioId),
-    [agentPortfolioId],
+    () =>
+      MESSAGE_THREADS.filter((m) => m.assignedAgentId === agentPortfolioId).map(
+        (thread) => {
+          const prop = thread.propertyId
+            ? properties.find((p) => p.id === thread.propertyId)
+            : properties.find((p) => thread.propertyAddress.includes(p.address));
+          const sent = sentThreadMessages[thread.id] ?? [];
+          const allMessages = [...thread.messages, ...sent].sort((a, b) =>
+            a.at.localeCompare(b.at),
+          );
+          const last = allMessages[allMessages.length - 1];
+          return {
+            ...thread,
+            propertyId: prop?.id ?? thread.propertyId,
+            homeOwnerName: prop?.homeOwnerName ?? thread.homeOwnerName,
+            homeOwnerContact:
+              prop?.homeOwnerContact ?? thread.homeOwnerContact ?? {},
+            tenantName: prop?.tenantName ?? thread.tenantName,
+            tenantContact: prop?.tenantContact ?? thread.tenantContact ?? {},
+            messages: allMessages,
+            lastMessage: last?.body ?? thread.lastMessage,
+            lastAt: last?.at ?? thread.lastAt,
+          };
+        },
+      ),
+    [agentPortfolioId, properties, sentThreadMessages],
+  );
+
+  const sendMessage = useCallback(
+    (threadId: string, body: string) => {
+      const from = user ? displayName(user) : 'Agent';
+      sendThreadMessage(threadId, body, from);
+    },
+    [user, sendThreadMessage],
   );
 
   const documents = useMemo(() => {
@@ -316,6 +365,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     sectionStatus,
     markNotificationRead: (id) =>
       setReadIds((prev) => new Set(prev).add(id)),
+    sendMessage,
     approveMaintenanceQuote,
     declineMaintenanceQuote,
   };

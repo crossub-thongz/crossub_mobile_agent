@@ -5,6 +5,7 @@ import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
+import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CounterOfferTimeline } from '@/components/agent/counter-offer-timeline';
 import { DataSourceBadge } from '@/components/agent/data-source-badge';
 import { StatusBadge } from '@/components/agent/status-badge';
@@ -62,6 +63,8 @@ export default function RentReviewDetailPage() {
           </dl>
           <LinkButton href={ROUTES.REPORTS}>Download comparable market PDF</LinkButton>
         </div>
+
+        <CaseContactActions propertyId={item.propertyId} caseLabel="Rent review" />
 
         {!decided ? (
           <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">

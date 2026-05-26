@@ -5,7 +5,7 @@ import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
-import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
+import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CommunicationPanel } from '@/components/agent/communication-panel';
 import { MaintenanceStageTracker } from '@/components/agent/stage-tracker';
 import { StatusBanner } from '@/components/agent/status-banner';
@@ -24,7 +24,6 @@ export default function MaintenanceDetailPage() {
     approveMaintenanceQuote,
     declineMaintenanceQuote,
     refresh,
-    messages,
   } = useAgentData();
 
   const item = maintenanceAll.find((m) => m.id === id);
@@ -82,7 +81,7 @@ export default function MaintenanceDetailPage() {
           tone={item.requiresApproval ? 'action' : item.priority === 'urgent' ? 'urgent' : 'default'}
         />
 
-        <ChatCrossubBar taskLabel="Maintenance" threadId={messages[0]?.id} />
+        <CaseContactActions propertyId={item.propertyId} caseLabel={item.title} />
 
         <MaintenanceStageTracker current={item.status} />
 

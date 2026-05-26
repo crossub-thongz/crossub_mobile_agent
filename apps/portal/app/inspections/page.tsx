@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Search } from 'lucide-react';
 
-import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { StatusBanner } from '@/components/agent/status-banner';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -20,7 +19,7 @@ const TYPE_FILTERS = [
 ];
 
 export default function InspectionsPage() {
-  const { inspections, sectionStatus, messages } = useAgentData();
+  const { inspections, sectionStatus } = useAgentData();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -80,8 +79,6 @@ export default function InspectionsPage() {
             </Link>
           ))}
         </div>
-
-        <ChatCrossubBar taskLabel="Inspections" threadId={messages[1]?.id} />
       </div>
     </AgentShell>
   );

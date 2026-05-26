@@ -4,6 +4,7 @@ import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
+import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -33,6 +34,8 @@ export default function VacatingDetailPage() {
             />
           </div>
         </div>
+
+        <CaseContactActions propertyId={item.propertyId} caseLabel="Vacating" />
 
         {item.requiresApproval && (
           <ApprovalPanel

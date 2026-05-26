@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Plus, Search } from 'lucide-react';
 
-import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -13,7 +12,7 @@ import { messageDetail } from '@/constants/routes';
 import { formatRelative } from '@/lib/utils';
 
 export default function MessagesPage() {
-  const { messages, sectionStatus } = useAgentData();
+  const { messages } = useAgentData();
   const [search, setSearch] = useState('');
 
   const list = useMemo(() => {
@@ -22,24 +21,19 @@ export default function MessagesPage() {
     return messages.filter(
       (t) =>
         t.subject.toLowerCase().includes(q) ||
-        t.propertyAddress.toLowerCase().includes(q),
+        t.propertyAddress.toLowerCase().includes(q) ||
+        t.tenantName.toLowerCase().includes(q) ||
+        t.homeOwnerName.toLowerCase().includes(q),
     );
   }, [messages, search]);
-
-  const msgStatus = sectionStatus.find((s) => s.id === 'messages');
 
   return (
     <AgentShell title="Messages">
       <div className="space-y-4">
-        <ChatCrossubBar
-          taskLabel={msgStatus?.statusLabel ?? 'Chat with CROSSUB'}
-          threadId={messages[0]?.id}
-        />
-
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Search conversations…"
+            placeholder="Search subject, address, tenant, owner…"
             className="pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -68,6 +62,26 @@ export default function MessagesPage() {
                   <p className="truncate text-sm font-semibold">{thread.subject}</p>
                   <p className="text-muted-foreground truncate text-xs">
                     {thread.propertyAddress}
+                  </p>
+                  <p className="text-xs">
+                    <span className="text-muted-foreground">Owner: </span>
+                    {thread.homeOwnerName}
+                    {thread.homeOwnerContact.phone && (
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {thread.homeOwnerContact.phone}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs">
+                    <span className="text-muted-foreground">Tenant: </span>
+                    {thread.tenantName}
+                    {thread.tenantContact.phone && (
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {thread.tenantContact.phone}
+                      </span>
+                    )}
                   </p>
                   <p className="text-muted-foreground line-clamp-1 text-xs">
                     {thread.lastMessage}

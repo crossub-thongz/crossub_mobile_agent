@@ -31,4 +31,6 @@ export const maintenanceDetail = (id: string) => `/maintenance/${id}`;
 export const rentReviewDetail = (id: string) => `/rent-review/${id}`;
 export const vacatingDetail = (id: string) => `/vacating/${id}`;
 export const messageDetail = (id: string) => `/messages/${id}`;
+export const messageDetailParty = (id: string, party: 'tenant' | 'owner') =>
+  `/messages/${id}?party=${party}`;
 export const tenantSelectionDetail = (id: string) => `/tenant-selection/${id}`;

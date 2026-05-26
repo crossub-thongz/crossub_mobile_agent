@@ -10,7 +10,7 @@ import {
   Menu,
   MessageSquare,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -51,13 +51,30 @@ export function AgentShell({
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(56);
   const { notifications, messages } = useAgentData();
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const unreadMessages = messages.reduce((s, m) => s + m.unread, 0);
 
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+
+    const updateHeight = () => setHeaderHeight(el.offsetHeight);
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [title, moreOpen]);
+
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header
+        ref={headerRef}
+        className="fixed top-0 left-1/2 z-40 w-full max-w-lg -translate-x-1/2 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      >
         <div className="flex h-14 items-center justify-between gap-2 px-4">
           {backHref ? (
             <Link
@@ -148,7 +165,12 @@ export function AgentShell({
         )}
       </header>
 
-      <main className="flex-1 px-4 py-4 pb-24">{children}</main>
+      <main
+        className="flex-1 px-4 py-4 pb-24"
+        style={{ paddingTop: headerHeight + 16 }}
+      >
+        {children}
+      </main>
 
       <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
         <div className="flex h-16 items-stretch justify-around px-1">

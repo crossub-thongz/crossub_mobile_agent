@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { useState } from 'react';
 
-import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
+import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { StatusBanner } from '@/components/agent/status-banner';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -52,7 +52,7 @@ export default function PropertyDetailPage() {
           subtitle={`${property.homeOwnerName} · ${property.tenantName}`}
         />
 
-        <ChatCrossubBar taskLabel={property.address} />
+        <CaseContactActions propertyId={property.id} caseLabel={property.address} />
 
         <div className="rounded-xl border bg-card p-4">
           <p className="text-muted-foreground text-xs">{property.suburb}</p>

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -38,8 +38,14 @@ type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { refresh } = useAuth();
+  const { refresh, status } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (status === 'authed') {
+      router.replace(ROUTES.DASHBOARD);
+    }
+  }, [status, router]);
 
   const {
     register,

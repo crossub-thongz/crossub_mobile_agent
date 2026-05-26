@@ -4,6 +4,7 @@ import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
+import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ export default function TenantSelectionPage() {
             {formatCurrency(item.proposedRent)}/wk · {item.leaseTerm}
           </p>
         </div>
+
+        <CaseContactActions propertyId={item.propertyId} caseLabel="Tenant selection" />
 
         <ApprovalPanel
           title={`Approve ${item.applicantName}`}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
+import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { DocumentViewer } from '@/components/agent/document-viewer';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { StatusBanner } from '@/components/agent/status-banner';
@@ -17,7 +17,7 @@ import { formatDateTime } from '@/lib/utils';
 
 export default function InspectionDetailPage() {
   const params = useParams();
-  const { inspections, messages } = useAgentData();
+  const { inspections } = useAgentData();
   const insp = inspections.find((i) => i.id === params.id);
   const [acknowledged, setAcknowledged] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -33,7 +33,7 @@ export default function InspectionDetailPage() {
           tone={insp.reportStatus === 'sent' ? 'ok' : 'default'}
         />
 
-        <ChatCrossubBar taskLabel="Inspection" threadId={messages[1]?.id} />
+        <CaseContactActions propertyId={insp.propertyId} caseLabel={`${insp.type} inspection`} />
 
         <div className="rounded-xl border bg-card p-4 space-y-2 text-xs">
           <dl className="grid gap-2">

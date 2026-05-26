@@ -15,6 +15,12 @@ const buildUpstreamUrl = (req: NextRequest, path: string[]): string => {
   return `${apiBase()}/api/${suffix}${req.nextUrl.search}`;
 };
 
+const rewriteSetCookie = (cookie: string): string =>
+  cookie
+    .split(';')
+    .filter((part) => !part.trim().toLowerCase().startsWith('domain='))
+    .join(';');
+
 const proxy = async (
   req: NextRequest,
   context: { params: Promise<{ path: string[] }> },
@@ -44,7 +50,7 @@ const proxy = async (
 
   const cookies = upstream.headers.getSetCookie?.() ?? [];
   for (const cookie of cookies) {
-    response.headers.append('set-cookie', cookie);
+    response.headers.append('set-cookie', rewriteSetCookie(cookie));
   }
 
   return response;

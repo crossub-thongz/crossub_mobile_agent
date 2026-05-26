@@ -81,7 +81,7 @@ export function buildSectionStatus(input: {
       label: 'Messages',
       href: ROUTES.MESSAGES,
       statusLabel:
-        unread > 0 ? `${unread} unread — chat with CROSSUB` : 'Chat with CROSSUB online',
+        unread > 0 ? `${unread} unread` : 'Message landlords & tenants',
       tone: unread > 0 ? 'warning' : 'ok',
       count: unread || undefined,
     },

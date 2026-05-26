@@ -1,4 +1,4 @@
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, isPublicRoute } from '@/constants/routes';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
@@ -12,6 +12,11 @@ export class ApiError extends Error {
 }
 
 const isAuthPath = (path: string): boolean => path.startsWith('/auth/');
+
+const onPublicPage = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return isPublicRoute(window.location.pathname);
+};
 
 const buildHeaders = (init?: RequestInit): HeadersInit => ({
   'Content-Type': 'application/json',
@@ -36,6 +41,21 @@ const parseBody = async (res: Response): Promise<unknown> => {
   }
 };
 
+const clearSessionAndRedirectToLogin = async (): Promise<void> => {
+  if (typeof window === 'undefined' || onPublicPage()) return;
+
+  try {
+    await fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch {
+    // Best-effort — stale cookies are cleared server-side when logout succeeds.
+  }
+
+  window.location.href = ROUTES.LOGIN;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res = await doFetch(path, init);
 
@@ -51,7 +71,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (refreshed.ok) {
       res = await doFetch(path, init);
     } else {
-      window.location.href = ROUTES.LOGIN;
+      await clearSessionAndRedirectToLogin();
       throw new ApiError(401, await parseBody(refreshed));
     }
   }

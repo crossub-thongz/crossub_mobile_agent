@@ -20,15 +20,22 @@ export interface TimelineEntry {
   staffAssisted?: boolean;
 }
 
+export interface PropertyContact {
+  email?: string;
+  phone?: string;
+}
+
 export interface Property {
   id: string;
   address: string;
   suburb: string;
   /** Landlord / home owner this property belongs to */
   homeOwnerName: string;
+  homeOwnerContact: PropertyContact;
   /** Which agent manages this property — filtered per logged-in agent */
   assignedAgentId: 'agent-1' | 'agent-2';
   tenantName: string;
+  tenantContact: PropertyContact;
   leaseStatus: 'active' | 'periodic' | 'vacating' | 'vacant';
   rentWeekly: number;
   nextRentReview?: string;
@@ -140,20 +147,28 @@ export interface VacatingCase {
 export interface MessageThread {
   id: string;
   assignedAgentId: 'agent-1' | 'agent-2';
+  propertyId?: string;
   propertyAddress: string;
+  homeOwnerName: string;
+  homeOwnerContact: PropertyContact;
+  tenantName: string;
+  tenantContact: PropertyContact;
   subject: string;
   taskType: string;
   lastMessage: string;
   lastAt: string;
   unread: number;
   channel: 'app' | 'email' | 'mixed';
-  messages: {
-    id: string;
-    at: string;
-    from: string;
-    body: string;
-    channel: 'app' | 'email';
-  }[];
+  messages: ThreadMessage[];
+}
+
+export interface ThreadMessage {
+  id: string;
+  at: string;
+  from: string;
+  body: string;
+  channel: 'app' | 'email';
+  sentByAgent?: boolean;
 }
 
 export interface AgentNotification {

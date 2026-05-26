@@ -3,12 +3,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import type { ThreadMessage } from '@/lib/types';
+
 interface AgentStore {
   rentReviewDecisions: Record<string, { action: 'confirmed' | 'custom'; amount?: number } | null>;
   setRentReviewDecision: (
     id: string,
     decision: { action: 'confirmed' | 'custom'; amount?: number },
   ) => void;
+  sentThreadMessages: Record<string, ThreadMessage[]>;
+  sendThreadMessage: (threadId: string, body: string, from: string) => ThreadMessage;
 }
 
 export const useAgentStore = create<AgentStore>()(
@@ -19,6 +23,24 @@ export const useAgentStore = create<AgentStore>()(
         set((s) => ({
           rentReviewDecisions: { ...s.rentReviewDecisions, [id]: decision },
         })),
+      sentThreadMessages: {},
+      sendThreadMessage: (threadId, body, from) => {
+        const message: ThreadMessage = {
+          id: `agent-${Date.now()}`,
+          at: new Date().toISOString(),
+          from,
+          body: body.trim(),
+          channel: 'app',
+          sentByAgent: true,
+        };
+        set((s) => ({
+          sentThreadMessages: {
+            ...s.sentThreadMessages,
+            [threadId]: [...(s.sentThreadMessages[threadId] ?? []), message],
+          },
+        }));
+        return message;
+      },
     }),
     {
       name: 'crossub-agent-store',

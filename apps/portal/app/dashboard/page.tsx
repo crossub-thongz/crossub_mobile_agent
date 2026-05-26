@@ -6,7 +6,6 @@ import { CheckCircle2, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AgentPortfolioBanner } from '@/components/agent/agent-portfolio-banner';
-import { ChatCrossubBar } from '@/components/agent/chat-crossub-bar';
 import { SectionStatusGrid } from '@/components/agent/section-status-grid';
 import { TaskCard } from '@/components/agent/task-card';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -20,7 +19,6 @@ export default function DashboardPage() {
     properties,
     loading,
     sectionStatus,
-    messages,
   } = useAgentData();
 
   const approvals = dashboardItems.filter((i) => i.requiresApproval);
@@ -42,8 +40,6 @@ export default function DashboardPage() {
       });
     }
   }, [loading, notifications]);
-
-  const unreadMessages = messages.reduce((s, m) => s + m.unread, 0);
 
   return (
     <AgentShell title="Home">
@@ -79,15 +75,6 @@ export default function DashboardPage() {
           </div>
           <SectionStatusGrid sections={sectionStatus} />
         </section>
-
-        <ChatCrossubBar
-          taskLabel={
-            unreadMessages > 0
-              ? `${unreadMessages} unread message${unreadMessages > 1 ? 's' : ''}`
-              : 'Online support'
-          }
-          threadId={messages[0]?.id}
-        />
       </div>
     </AgentShell>
   );
