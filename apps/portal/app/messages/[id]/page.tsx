@@ -84,7 +84,7 @@ export default function MessageDetailPage() {
         {highlightParty && partyLabel && (
           <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
             Messaging <span className="font-semibold">{partyLabel}</span>
-            {highlightParty === 'tenant' ? ' (tenant)' : ' (home owner)'}
+            {highlightParty === 'tenant' ? ' (tenant)' : ' (landlord)'}
           </div>
         )}
 

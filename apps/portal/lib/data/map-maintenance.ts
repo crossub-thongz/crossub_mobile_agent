@@ -65,10 +65,12 @@ export function mapApiMaintenanceRequest(
     (q) =>
       q.maintenanceRequestId === req.id &&
       q.status === 'submitted' &&
-      req.quotationIds.includes(q.id),
+      (req.quotationIds ?? []).includes(q.id),
   );
   const latestQuote = quotations.find(
-    (q) => q.maintenanceRequestId === req.id && req.quotationIds.includes(q.id),
+    (q) =>
+      q.maintenanceRequestId === req.id &&
+      (req.quotationIds ?? []).includes(q.id),
   );
   const contractorId =
     req.assignedContractorId ?? submittedQuote?.contractorId ?? latestQuote?.contractorId;
@@ -122,7 +124,7 @@ export function maintenanceNotificationsToAgent(
   notifications: ApiMaintenanceNotification[],
   requests: ApiMaintenanceRequest[],
 ) {
-  return notifications.map((n) => {
+  return (notifications ?? []).map((n) => {
     const req = requests.find((r) => r.id === n.maintenanceRequestId);
     return {
       id: n.id,

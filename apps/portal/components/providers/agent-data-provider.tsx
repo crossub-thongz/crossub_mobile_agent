@@ -56,6 +56,19 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { maintenanceDetail, tenantSelectionDetail, ROUTES } from '@/constants/routes';
+import type { ThreadMessage } from '@/lib/types';
+
+function normalizeSentMessages(value: unknown): ThreadMessage[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (m): m is ThreadMessage =>
+      m != null &&
+      typeof m === 'object' &&
+      typeof (m as ThreadMessage).at === 'string' &&
+      typeof (m as ThreadMessage).body === 'string' &&
+      typeof (m as ThreadMessage).from === 'string',
+  );
+}
 
 interface AgentDataContextValue {
   loading: boolean;
@@ -163,7 +176,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void useAgentStore.persist.rehydrate();
+    void useAgentStore.persist.rehydrate().catch(() => {
+      try {
+        localStorage.removeItem('crossub-agent-store');
+      } catch {
+        // ignore
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -189,16 +208,25 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const maintenanceFromApi = useMemo(() => {
-    if (!apiState) return [];
-    return apiState.maintenanceRequests.map((req) =>
-      mapApiMaintenanceRequest(
-        req,
-        apiState.contractors,
-        apiState.quotations,
-        apiState.maintenanceAuditLog,
-        apiState.maintenanceNotifications,
-      ),
-    );
+    if (!apiState?.maintenanceRequests?.length) return [];
+    try {
+      const contractors = apiState.contractors ?? [];
+      const quotations = apiState.quotations ?? [];
+      const auditLog = apiState.maintenanceAuditLog ?? [];
+      const notifications = apiState.maintenanceNotifications ?? [];
+      return apiState.maintenanceRequests.map((req) =>
+        mapApiMaintenanceRequest(
+          req,
+          contractors,
+          quotations,
+          auditLog,
+          notifications,
+        ),
+      );
+    } catch (err) {
+      console.error('[Agent portal] failed to map maintenance API data', err);
+      return [];
+    }
   }, [apiState]);
 
   const maintenanceAll = useMemo(() => {
@@ -238,9 +266,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           const prop = thread.propertyId
             ? properties.find((p) => p.id === thread.propertyId)
             : properties.find((p) => thread.propertyAddress.includes(p.address));
-          const sent = sentThreadMessages[thread.id] ?? [];
+          const sent = normalizeSentMessages(sentThreadMessages[thread.id]);
           const allMessages = [...thread.messages, ...sent].sort((a, b) =>
-            a.at.localeCompare(b.at),
+            (a.at ?? '').localeCompare(b.at ?? ''),
           );
           const last = allMessages[allMessages.length - 1];
           return {
@@ -276,21 +304,26 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [properties]);
 
   const notifications = useMemo(() => {
-    const apiNotifs = apiState
-      ? maintenanceNotificationsToAgent(
-          apiState.maintenanceNotifications,
-          apiState.maintenanceRequests,
-        )
-      : [];
-    const demo = DEMO_NOTIFICATIONS.map((n) => ({ ...n, source: 'demo' as const }));
-    const seen = new Set<string>();
-    return [...apiNotifs, ...demo]
-      .filter((n) => {
-        if (seen.has(n.id)) return false;
-        seen.add(n.id);
-        return true;
-      })
-      .map((n) => ({ ...n, read: n.read || readIds.has(n.id) }));
+    try {
+      const apiNotifs = apiState
+        ? maintenanceNotificationsToAgent(
+            apiState.maintenanceNotifications ?? [],
+            apiState.maintenanceRequests ?? [],
+          )
+        : [];
+      const demo = DEMO_NOTIFICATIONS.map((n) => ({ ...n, source: 'demo' as const }));
+      const seen = new Set<string>();
+      return [...apiNotifs, ...demo]
+        .filter((n) => {
+          if (seen.has(n.id)) return false;
+          seen.add(n.id);
+          return true;
+        })
+        .map((n) => ({ ...n, read: n.read || readIds.has(n.id) }));
+    } catch (err) {
+      console.error('[Agent portal] failed to build notifications', err);
+      return DEMO_NOTIFICATIONS.map((n) => ({ ...n, source: 'demo' as const }));
+    }
   }, [apiState, readIds]);
 
   const dashboardItems = useMemo(() => {

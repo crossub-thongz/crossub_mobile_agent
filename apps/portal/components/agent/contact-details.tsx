@@ -18,7 +18,7 @@ export function ContactDetails({
   return (
     <dl className="grid gap-3 text-xs">
       <ContactBlock
-        label="Home owner"
+        label="Landlord"
         name={homeOwnerName}
         contact={homeOwnerContact}
         highlighted={highlightParty === 'owner'}
