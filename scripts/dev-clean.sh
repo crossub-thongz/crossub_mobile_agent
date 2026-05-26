@@ -24,6 +24,12 @@ echo "→ Freeing dev port $PORT"
 pkill -f "next dev.*$PORT" 2>/dev/null || true
 kill_listeners_on_port "$PORT"
 
+# Turbopack can keep stale proxy/middleware chunks after renames — clear on restart.
+if [ -d "$ROOT/apps/portal/.next" ]; then
+  echo "→ Clearing stale .next cache"
+  rm -rf "$ROOT/apps/portal/.next"
+fi
+
 for attempt in 1 2 3 4 5; do
   if ! lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
     break

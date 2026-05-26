@@ -1,0 +1,139 @@
+'use client';
+
+import { useState } from 'react';
+import { notFound, useParams } from 'next/navigation';
+import { toast } from 'sonner';
+
+import { ApprovalPanel } from '@/components/agent/approval-panel';
+import { CounterOfferTimeline } from '@/components/agent/counter-offer-timeline';
+import { DataSourceBadge } from '@/components/agent/data-source-badge';
+import { StatusBadge } from '@/components/agent/status-badge';
+import { Timeline } from '@/components/agent/timeline';
+import { AgentShell } from '@/components/layout/agent-shell';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ROUTES } from '@/constants/routes';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { useAgentStore } from '@/lib/store';
+
+export default function RentReviewDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const { rentReviews } = useAgentData();
+  const item = rentReviews.find((r) => r.id === id);
+  const decision = useAgentStore((s) => s.rentReviewDecisions[id]);
+  const setDecision = useAgentStore((s) => s.setRentReviewDecision);
+  const [customRent, setCustomRent] = useState('');
+
+  if (!item) notFound();
+
+  const decided = decision != null;
+
+  return (
+    <AgentShell title="Rent Review" backHref={ROUTES.RENT_REVIEW}>
+      <div className="space-y-4">
+        <DataSourceBadge source="demo" />
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <StatusBadge label={item.status} variant="approval" />
+          <p className="font-semibold">{item.propertyAddress}</p>
+          <dl className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <dt className="text-muted-foreground">Lease</dt>
+              <dd className="font-medium">
+                {formatDate(item.leaseStart)} – {formatDate(item.leaseEnd)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Review due</dt>
+              <dd className="font-medium">{formatDate(item.reviewDue)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Current rent</dt>
+              <dd className="font-medium">{formatCurrency(item.currentRent)}/wk</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">AI suggested</dt>
+              <dd className="text-primary font-medium">
+                {formatCurrency(item.suggestedRent)}/wk
+              </dd>
+            </div>
+          </dl>
+          <LinkButton href={ROUTES.REPORTS}>Download comparable market PDF</LinkButton>
+        </div>
+
+        {!decided ? (
+          <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-primary text-xs font-semibold uppercase">
+              Confirm rent review
+            </p>
+            <Button
+              className="w-full"
+              onClick={() => {
+                setDecision(id, { action: 'confirmed' });
+                toast.success('Rent review confirmed — tenant notice will be sent');
+              }}
+            >
+              Agree with AI suggested {formatCurrency(item.suggestedRent)}/wk
+            </Button>
+            <div className="space-y-2">
+              <Label htmlFor="custom">Or enter proposed rent ($/week)</Label>
+              <Input
+                id="custom"
+                type="number"
+                value={customRent}
+                onChange={(e) => setCustomRent(e.target.value)}
+              />
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={!customRent}
+                onClick={() => {
+                  setDecision(id, { action: 'custom', amount: Number(customRent) });
+                  toast.success('Custom rent submitted');
+                }}
+              >
+                Submit custom amount
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border bg-primary/5 p-4 text-sm">
+            Decision recorded:{' '}
+            {decision.action === 'confirmed'
+              ? `Agreed ${formatCurrency(item.suggestedRent)}/wk`
+              : `Proposed ${formatCurrency(decision.amount ?? 0)}/wk`}
+          </div>
+        )}
+
+        {item.negotiationHistory && item.negotiationHistory.length > 0 && (
+          <section>
+            <h2 className="mb-2 text-sm font-semibold">Counter offer history</h2>
+            <CounterOfferTimeline history={item.negotiationHistory} />
+          </section>
+        )}
+
+        {item.tenantResponse === 'counter' && item.counterOffer && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+            <p className="font-semibold text-amber-400">Tenant counter offer</p>
+            <p className="mt-1">{formatCurrency(item.counterOffer)}/wk</p>
+          </div>
+        )}
+
+        <section>
+          <h2 className="mb-3 text-sm font-semibold">Timeline</h2>
+          <Timeline entries={item.timeline} />
+        </section>
+      </div>
+    </AgentShell>
+  );
+}
+
+function LinkButton({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a href={href} className="text-primary block text-xs font-medium">
+      {children} →
+    </a>
+  );
+}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 
 import { AuthProvider } from '@/components/providers/auth-provider';
+import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -11,14 +12,16 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'CROSSUB | Agent Portal',
+  title: 'CROSSUB | Agent App',
   description:
-    'External portal for property agents — maintenance submissions, key handover, and open viewings.',
+    'Mobile-first agent portal — approvals, properties, inspections, maintenance, rent review, and vacating.',
 };
 
 export const viewport: Viewport = {
   themeColor: '#0b0f10',
 };
+
+export const dynamic = 'force-dynamic';
 
 export default function RootLayout({
   children,
@@ -28,7 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark bg-background">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AgentDataProvider>{children}</AgentDataProvider>
+        </AuthProvider>
         <Toaster position="bottom-right" />
       </body>
     </html>

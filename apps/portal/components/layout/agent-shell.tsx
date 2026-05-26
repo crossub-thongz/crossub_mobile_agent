@@ -1,85 +1,189 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
+  Bell,
   Building2,
-  KeyRound,
+  ClipboardCheck,
   LayoutDashboard,
-  LogOut,
+  Menu,
+  MessageSquare,
+  MoreHorizontal,
+  Search,
   Wrench,
 } from 'lucide-react';
+import { useState } from 'react';
 
 import { useAuth } from '@/components/providers/auth-provider';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import { cn, displayName } from '@/lib/utils';
 
-const NAV = [
-  { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
-  { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench },
-  { href: ROUTES.KEYS, label: 'Key handover', icon: KeyRound },
-  { href: ROUTES.VIEWINGS, label: 'Open viewings', icon: Building2 },
+const PRIMARY_NAV = [
+  { href: ROUTES.DASHBOARD, label: 'Home', icon: LayoutDashboard },
+  { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
+  { href: ROUTES.INSPECTIONS, label: 'Inspect', icon: ClipboardCheck },
+  { href: ROUTES.MAINTENANCE, label: 'Maint.', icon: Wrench },
+  { href: ROUTES.MESSAGES, label: 'Messages', icon: MessageSquare },
 ] as const;
 
-export function AgentShell({ children }: { children: React.ReactNode }) {
+const MORE_NAV = [
+  { href: ROUTES.RENT_REVIEW, label: 'Rent Review' },
+  { href: ROUTES.VACATING, label: 'Vacating' },
+  { href: ROUTES.REPORTS, label: 'Reports & Documents' },
+  { href: ROUTES.NOTIFICATIONS, label: 'Notifications' },
+  { href: ROUTES.SEARCH, label: 'Global search' },
+] as const;
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === ROUTES.DASHBOARD) return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function AgentShell({
+  children,
+  title,
+  backHref,
+}: {
+  children: React.ReactNode;
+  title?: string;
+  backHref?: string;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const { notifications, messages } = useAgentData();
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
+  const unreadMessages = messages.reduce((s, m) => s + m.unread, 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href={ROUTES.DASHBOARD} className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Building2 className="size-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold leading-none">CROSSUB</p>
-              <p className="text-xs text-muted-foreground">Agent Portal</p>
-            </div>
-          </Link>
+    <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-background">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="flex h-14 items-center justify-between gap-2 px-4">
+          {backHref ? (
+            <Link
+              href={backHref}
+              className="text-primary -ml-1 text-sm font-medium"
+            >
+              ← Back
+            </Link>
+          ) : (
+            <Link href={ROUTES.DASHBOARD} className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Building2 className="size-4" />
+              </div>
+              <span className="text-sm font-semibold">CROSSUB Agent</span>
+            </Link>
+          )}
 
-          <div className="flex items-center gap-2">
-            {user && (
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                {displayName(user)}
-              </span>
-            )}
-            <Button variant="ghost" size="sm" onClick={() => void logout()}>
-              <LogOut className="size-4" />
-              <span className="hidden sm:inline">Sign out</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => router.push(ROUTES.SEARCH)}
+              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Search"
+            >
+              <Search className="size-5" />
+            </button>
+            <Link
+              href={ROUTES.NOTIFICATIONS}
+              className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <Bell className="size-5" />
+              {unreadNotifications > 0 && (
+                <span className="bg-destructive absolute top-1 right-1 size-2 rounded-full" />
+              )}
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9"
+              onClick={() => setMoreOpen((v) => !v)}
+            >
+              <Menu className="size-5" />
             </Button>
           </div>
         </div>
+
+        {title && (
+          <div className="border-t border-border px-4 py-2">
+            <h1 className="truncate text-base font-semibold">{title}</h1>
+            {user && (
+              <p className="text-muted-foreground truncate text-xs">
+                {displayName(user)}
+              </p>
+            )}
+          </div>
+        )}
+
+        {moreOpen && (
+          <div className="border-t border-border bg-card px-4 py-3">
+            <p className="text-muted-foreground mb-2 text-xs font-medium uppercase">
+              More
+            </p>
+            <div className="flex flex-col gap-1">
+              {MORE_NAV.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMoreOpen(false)}
+                  className="rounded-lg px-3 py-2.5 text-sm hover:bg-secondary"
+                >
+                  {label}
+                </Link>
+              ))}
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="rounded-lg px-3 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:py-8">
-        <nav className="flex shrink-0 gap-2 overflow-x-auto lg:w-52 lg:flex-col lg:overflow-visible">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active =
-              pathname === href ||
-              (href !== ROUTES.DASHBOARD && pathname.startsWith(href));
+      <main className="flex-1 px-4 py-4 pb-24">{children}</main>
+
+      <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+        <div className="flex h-16 items-stretch justify-around px-1">
+          {PRIMARY_NAV.map(({ href, label, icon: Icon }) => {
+            const active = isActive(pathname, href);
+            const badge =
+              href === ROUTES.MESSAGES && unreadMessages > 0 ? unreadMessages : 0;
             return (
               <Link
                 key={href}
                 href={href}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
+                  active ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
-                <Icon className="size-4 shrink-0" />
-                {label}
+                <Icon className={cn('size-5', active && 'stroke-[2.5]')} />
+                <span className="truncate">{label}</span>
+                {badge > 0 && (
+                  <span className="bg-destructive absolute top-2 right-2 flex size-4 items-center justify-center rounded-full text-[9px] text-white">
+                    {badge}
+                  </span>
+                )}
               </Link>
             );
           })}
-        </nav>
-
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium text-muted-foreground"
+          >
+            <MoreHorizontal className="size-5" />
+            <span>More</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

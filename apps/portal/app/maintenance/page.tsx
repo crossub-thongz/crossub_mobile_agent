@@ -1,133 +1,103 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ChevronRight, Loader2, Search } from 'lucide-react';
 
+import { DataSourceBadge } from '@/components/agent/data-source-badge';
+import { FilterChips } from '@/components/agent/filter-chips';
+import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { ApiError, api } from '@/lib/api';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Input } from '@/components/ui/input';
+import { maintenanceDetail } from '@/constants/routes';
+import { formatCurrency } from '@/lib/utils';
 
-interface MaintenanceRequest {
-  id: string;
-  title: string;
-  status: string;
-  priority?: string;
-  propertyAddress?: string;
-}
-
-interface MaintenanceState {
-  requests?: MaintenanceRequest[];
-}
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'approval', label: 'Approval' },
+  { id: 'urgent', label: 'Urgent' },
+  { id: 'in_progress', label: 'In progress' },
+];
 
 export default function MaintenancePage() {
-  const [state, setState] = useState<MaintenanceState | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const { maintenanceAll, loading, apiConnected } = useAgentData();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const data = await api.get<MaintenanceState>('/maintenance/state');
-        if (!cancelled) {
-          setState(data);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          if (err instanceof ApiError) {
-            setError(`Unable to load maintenance data (${err.status}).`);
-          } else {
-            setError('Unable to load maintenance data.');
-          }
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const list = useMemo(() => {
+    let items = [...maintenanceAll];
+    if (filter === 'approval')
+      items = items.filter((m) => m.requiresApproval);
+    if (filter === 'urgent') items = items.filter((m) => m.priority === 'urgent');
+    if (filter === 'in_progress')
+      items = items.filter((m) =>
+        m.status.toLowerCase().includes('progress'),
+      );
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter(
+        (m) =>
+          m.title.toLowerCase().includes(q) ||
+          m.propertyAddress.toLowerCase().includes(q) ||
+          m.trackingNumber.toLowerCase().includes(q),
+      );
     }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const requests = state?.requests ?? [];
+    return items;
+  }, [maintenanceAll, filter, search]);
 
   return (
-    <AgentShell>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Maintenance</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            View maintenance requests linked to your listings. Submissions use
-            the crossub_web maintenance API.
-          </p>
+    <AgentShell title="Maintenance">
+      <div className="space-y-4">
+        <DataSourceBadge source={apiConnected ? 'api' : 'demo'} />
+        <div className="relative">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            placeholder="Search maintenance…"
+            className="pl-10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-
+        <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
         {loading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
-            Loading requests...
+            Syncing with crossub_web…
           </div>
         )}
-
-        {error && (
-          <Card className="border-destructive/30">
-            <CardHeader>
-              <CardTitle className="text-base text-destructive">Error</CardTitle>
-              <CardDescription>{error}</CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Ensure crossub_web API is running on port 3001 and you are signed
-              in with a valid account.
-            </CardContent>
-          </Card>
-        )}
-
-        {!loading && !error && requests.length === 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">No requests yet</CardTitle>
-              <CardDescription>
-                Maintenance requests will appear here once submitted or synced
-                from the API.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        )}
-
-        {!loading && requests.length > 0 && (
-          <div className="space-y-3">
-            {requests.map((req) => (
-              <Card key={req.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-4">
-                    <CardTitle className="text-base">{req.title}</CardTitle>
-                    <span className="rounded-full bg-secondary px-2 py-0.5 text-xs capitalize text-muted-foreground">
-                      {req.status.replace(/_/g, ' ')}
-                    </span>
+        <div className="space-y-2">
+          {list.map((m) => (
+            <Link
+              key={m.id}
+              href={maintenanceDetail(m.id)}
+              className="block rounded-xl border bg-card p-4 active:bg-secondary/50"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <DataSourceBadge source={m.source} />
+                    {m.requiresApproval && (
+                      <StatusBadge label="Approval" variant="approval" />
+                    )}
+                    {m.priority === 'urgent' && (
+                      <StatusBadge label="Urgent" priority="urgent" />
+                    )}
+                    <StatusBadge label={m.status} />
                   </div>
-                  {req.propertyAddress && (
-                    <CardDescription>{req.propertyAddress}</CardDescription>
-                  )}
-                </CardHeader>
-                {req.priority && (
-                  <CardContent className="pt-0 text-xs text-muted-foreground">
-                    Priority: {req.priority}
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
+                  <p className="text-sm font-semibold">{m.title}</p>
+                  <p className="text-muted-foreground text-xs">{m.propertyAddress}</p>
+                  <p className="text-muted-foreground text-xs capitalize">
+                    {m.responsibility} responsibility
+                    {m.quoteAmount != null &&
+                      ` · ${formatCurrency(m.quoteAmount)} quote`}
+                  </p>
+                </div>
+                <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </AgentShell>
   );
