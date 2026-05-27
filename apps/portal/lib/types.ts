@@ -169,6 +169,12 @@ export interface ThreadMessage {
   body: string;
   channel: 'app' | 'email';
   sentByAgent?: boolean;
+  mentions?: MessageMention[];
+}
+
+export interface MessageMention {
+  name: string;
+  role: 'tenant' | 'owner' | 'crossub';
 }
 
 export interface AgentNotification {

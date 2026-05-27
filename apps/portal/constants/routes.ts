@@ -13,6 +13,7 @@ export const ROUTES = {
   NOTIFICATIONS: '/notifications',
   REPORTS: '/reports',
   SEARCH: '/search',
+  PROFILE: '/profile',
   TENANT_SELECTION: '/tenant-selection',
 } as const;
 

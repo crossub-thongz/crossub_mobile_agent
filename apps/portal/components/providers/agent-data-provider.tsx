@@ -48,15 +48,16 @@ import type {
   DashboardItem,
   Inspection,
   MaintenanceRequest,
+  MessageMention,
   MessageThread,
   Property,
   RentReviewCase,
   SectionStatus,
   TenantSelectionCase,
+  ThreadMessage,
   VacatingCase,
 } from '@/lib/types';
 import { maintenanceDetail, tenantSelectionDetail, ROUTES } from '@/constants/routes';
-import type { ThreadMessage } from '@/lib/types';
 
 function normalizeSentMessages(value: unknown): ThreadMessage[] {
   if (!Array.isArray(value)) return [];
@@ -90,7 +91,7 @@ interface AgentDataContextValue {
   dashboardItems: DashboardItem[];
   sectionStatus: SectionStatus[];
   markNotificationRead: (id: string) => void;
-  sendMessage: (threadId: string, body: string) => void;
+  sendMessage: (threadId: string, body: string, mentions?: MessageMention[]) => void;
   approveMaintenanceQuote: (quotationId: string) => Promise<void>;
   declineMaintenanceQuote: (quotationId: string, reason: string) => Promise<void>;
 }
@@ -289,9 +290,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const sendMessage = useCallback(
-    (threadId: string, body: string) => {
+    (threadId: string, body: string, mentions?: MessageMention[]) => {
       const from = user ? displayName(user) : 'Agent';
-      sendThreadMessage(threadId, body, from);
+      sendThreadMessage(threadId, body, from, mentions);
     },
     [user, sendThreadMessage],
   );

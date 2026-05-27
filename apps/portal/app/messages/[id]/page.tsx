@@ -1,16 +1,22 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { Mail, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ContactDetails } from '@/components/agent/contact-details';
+import { MessageBody } from '@/components/agent/message-body';
+import { MessageCompose } from '@/components/agent/message-compose';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import { buildAiDraftReply } from '@/lib/message-ai-draft';
+import {
+  buildThreadMentionCandidates,
+  extractMentions,
+} from '@/lib/message-mentions';
 import { cn, formatDateTime } from '@/lib/utils';
 
 export default function MessageDetailPage() {
@@ -24,9 +30,19 @@ export default function MessageDetailPage() {
   const thread = messages.find((m) => m.id === threadId);
   const [reply, setReply] = useState('');
   const [drafting, setDrafting] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageCount = thread?.messages.length ?? 0;
+
+  const mentionCandidates = useMemo(
+    () =>
+      thread
+        ? buildThreadMentionCandidates({
+            homeOwnerName: thread.homeOwnerName,
+            tenantName: thread.tenantName,
+          })
+        : [],
+    [thread],
+  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,10 +53,6 @@ export default function MessageDetailPage() {
     if (!current || !highlightParty) return;
     const draft = buildAiDraftReply(current, highlightParty);
     setReply(draft);
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(draft.length, draft.length);
-    });
   }, [messages, threadId, highlightParty]);
 
   if (!thread) notFound();
@@ -62,19 +74,21 @@ export default function MessageDetailPage() {
         ? `Draft for ${partyLabel} inserted — edit before sending`
         : 'AI draft inserted — edit before sending',
     );
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(draft.length, draft.length);
-    });
   };
 
   const handleSend = () => {
     const text = reply.trim();
     if (!text) return;
-    sendMessage(thread.id, text);
+    const mentions = extractMentions(text, mentionCandidates);
+    sendMessage(thread.id, text, mentions);
     setReply('');
+    const tagged = mentions.map((m) => `@${m.name}`).join(', ');
     toast.success(
-      highlightParty ? `Message sent to ${partyLabel}` : 'Message sent',
+      mentions.length > 0
+        ? `Sent · tagged ${tagged}`
+        : highlightParty
+          ? `Message sent to ${partyLabel}`
+          : 'Message sent',
     );
   };
 
@@ -118,7 +132,12 @@ export default function MessageDetailPage() {
                   )}
                   {msg.from} · {formatDateTime(msg.at)}
                 </div>
-                <p className="whitespace-pre-wrap">{msg.body}</p>
+                <MessageBody body={msg.body} />
+                {msg.mentions && msg.mentions.length > 0 && (
+                  <p className="text-muted-foreground mt-1.5 text-[10px]">
+                    Tagged: {msg.mentions.map((m) => `@${m.name}`).join(', ')}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -141,17 +160,15 @@ export default function MessageDetailPage() {
                 ? `AI draft for ${partyLabel}`
                 : 'AI draft reply'}
           </Button>
-          <textarea
-            ref={textareaRef}
-            placeholder={
-              highlightParty
-                ? `Message ${partyLabel}…`
-                : 'Reply via app…'
-            }
+          <MessageCompose
             value={reply}
-            rows={4}
-            onChange={(e) => setReply(e.target.value)}
-            className="border-input placeholder:text-muted-foreground w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:bg-input/30"
+            onChange={setReply}
+            onSubmit={handleSend}
+            placeholder={
+              highlightParty ? `Message ${partyLabel}…` : 'Reply via app…'
+            }
+            homeOwnerName={thread.homeOwnerName}
+            tenantName={thread.tenantName}
           />
           <Button
             type="button"

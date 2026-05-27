@@ -9,6 +9,7 @@ import {
   ListChecks,
   Menu,
   MessageSquare,
+  User,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -32,6 +33,7 @@ const MORE_NAV = [
   { href: ROUTES.VACATING, label: 'Vacating' },
   { href: ROUTES.REPORTS, label: 'Reports' },
   { href: ROUTES.NOTIFICATIONS, label: 'Alerts' },
+  { href: ROUTES.PROFILE, label: 'Profile' },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -197,17 +199,18 @@ export function AgentShell({
               </Link>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setMoreOpen((v) => !v)}
+          <Link
+            href={ROUTES.PROFILE}
             className={cn(
-              'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium',
-              moreOpen ? 'text-primary' : 'text-muted-foreground',
+              'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors',
+              isActive(pathname, ROUTES.PROFILE)
+                ? 'text-primary'
+                : 'text-muted-foreground',
             )}
           >
-            <Menu className="size-5" />
-            <span>More</span>
-          </button>
+            <User className={cn('size-5', isActive(pathname, ROUTES.PROFILE) && 'stroke-[2.5]')} />
+            <span>Profile</span>
+          </Link>
         </div>
       </nav>
     </div>

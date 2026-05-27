@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { ThreadMessage } from '@/lib/types';
+import type { MessageMention, ThreadMessage } from '@/lib/types';
 
 interface AgentStore {
   rentReviewDecisions: Record<string, { action: 'confirmed' | 'custom'; amount?: number } | null>;
@@ -12,7 +12,12 @@ interface AgentStore {
     decision: { action: 'confirmed' | 'custom'; amount?: number },
   ) => void;
   sentThreadMessages: Record<string, ThreadMessage[]>;
-  sendThreadMessage: (threadId: string, body: string, from: string) => ThreadMessage;
+  sendThreadMessage: (
+    threadId: string,
+    body: string,
+    from: string,
+    mentions?: MessageMention[],
+  ) => ThreadMessage;
 }
 
 export const useAgentStore = create<AgentStore>()(
@@ -24,7 +29,7 @@ export const useAgentStore = create<AgentStore>()(
           rentReviewDecisions: { ...s.rentReviewDecisions, [id]: decision },
         })),
       sentThreadMessages: {},
-      sendThreadMessage: (threadId, body, from) => {
+      sendThreadMessage: (threadId, body, from, mentions) => {
         const message: ThreadMessage = {
           id: `agent-${Date.now()}`,
           at: new Date().toISOString(),
@@ -32,6 +37,7 @@ export const useAgentStore = create<AgentStore>()(
           body: body.trim(),
           channel: 'app',
           sentByAgent: true,
+          mentions,
         };
         set((s) => ({
           sentThreadMessages: {
