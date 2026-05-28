@@ -3,7 +3,6 @@ import {
   ClipboardCheck,
   DollarSign,
   DoorOpen,
-  MessageSquare,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ const ICONS: Record<string, LucideIcon> = {
   inspections: ClipboardCheck,
   rent_review: DollarSign,
   vacating: DoorOpen,
-  messages: MessageSquare,
 };
 
 const TONE_DOT: Record<SectionStatus['tone'], string> = {

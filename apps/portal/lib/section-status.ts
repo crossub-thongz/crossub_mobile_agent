@@ -2,7 +2,6 @@ import { ROUTES } from '@/constants/routes';
 import type {
   Inspection,
   MaintenanceRequest,
-  MessageThread,
   RentReviewCase,
   SectionStatus,
   VacatingCase,
@@ -13,7 +12,6 @@ export function buildSectionStatus(input: {
   inspections: Inspection[];
   rentReviews: RentReviewCase[];
   vacating: VacatingCase[];
-  messages: MessageThread[];
   maintenanceOverdue?: number;
 }): SectionStatus[] {
   const maintApproval = input.maintenance.filter((m) => m.requiresApproval).length;
@@ -25,7 +23,6 @@ export function buildSectionStatus(input: {
   ).length;
   const rentAction = input.rentReviews.filter((r) => r.requiresApproval).length;
   const vacAction = input.vacating.filter((v) => v.requiresApproval).length;
-  const unread = input.messages.reduce((s, m) => s + m.unread, 0);
 
   let maintLabel = 'All up to date';
   let maintTone: SectionStatus['tone'] = 'ok';
@@ -75,15 +72,6 @@ export function buildSectionStatus(input: {
         vacAction > 0 ? `${vacAction} need approval` : 'No active move-outs',
       tone: vacAction > 0 ? 'warning' : 'ok',
       count: vacAction || undefined,
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      href: ROUTES.MESSAGES,
-      statusLabel:
-        unread > 0 ? `${unread} unread` : 'Message landlords & tenants',
-      tone: unread > 0 ? 'warning' : 'ok',
-      count: unread || undefined,
     },
   ];
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Building2, History, LogOut, Mail, Phone, User } from 'lucide-react';
+import { Building2, ChevronRight, History, LogOut, Mail, Phone, Settings, User } from 'lucide-react';
 
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -10,6 +10,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { buildProfileHistory } from '@/lib/profile-history';
 import { buildPhonebook } from '@/lib/phonebook';
+import { ROUTES } from '@/constants/routes';
 import { useAgentStore } from '@/lib/store';
 import { cn, displayName, formatDateTime, formatRelative } from '@/lib/utils';
 
@@ -52,6 +53,17 @@ export default function ProfilePage() {
             </div>
           </div>
         </section>
+
+        <Link
+          href={ROUTES.SETTINGS}
+          className="flex items-center justify-between rounded-xl border bg-card px-4 py-3 text-sm active:bg-secondary/50"
+        >
+          <span className="flex items-center gap-2">
+            <Settings className="text-muted-foreground size-4" />
+            Settings & notifications
+          </span>
+          <ChevronRight className="text-muted-foreground size-4" />
+        </Link>
 
         <div className="flex rounded-lg border bg-card p-1">
           {(

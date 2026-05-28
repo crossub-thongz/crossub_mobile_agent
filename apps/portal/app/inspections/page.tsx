@@ -1,11 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ChevronRight, Search } from 'lucide-react';
 
 import { FilterChips } from '@/components/agent/filter-chips';
 import { StatusBanner } from '@/components/agent/status-banner';
+import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
@@ -34,7 +33,17 @@ export default function InspectionsPage() {
         i.propertyAddress.toLowerCase().includes(q),
       );
     }
-    return items;
+    return items.map((insp) => ({
+      id: insp.id,
+      propertyAddress: insp.propertyAddress,
+      taskLabel: `${insp.type} inspection${insp.scheduledAt ? ` · ${formatDateTime(insp.scheduledAt)}` : ''}`,
+      status: insp.status,
+      href: inspectionDetail(insp.id),
+      module: 'Inspection',
+      tone: ['Scheduled', 'Confirmed', 'In Progress'].includes(insp.status)
+        ? ('neutral' as const)
+        : ('ok' as const),
+    }));
   }, [inspections, filter, search]);
 
   return (
@@ -45,38 +54,16 @@ export default function InspectionsPage() {
           tone="default"
         />
 
-        <div className="relative">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <Input
-            placeholder="Search by address…"
-            className="pl-10"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <Input
+          placeholder="Search by address…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <FilterChips options={TYPE_FILTERS} value={filter} onChange={setFilter} />
 
         <div className="space-y-2">
-          {list.map((insp) => (
-            <Link
-              key={insp.id}
-              href={inspectionDetail(insp.id)}
-              className="block rounded-xl border bg-card p-4 active:bg-secondary/50"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 space-y-1">
-                  <p className="text-primary text-xs font-medium">{insp.status}</p>
-                  <p className="text-sm font-medium">{insp.propertyAddress}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {insp.type}
-                    {insp.scheduledAt
-                      ? ` · ${formatDateTime(insp.scheduledAt)}`
-                      : ''}
-                  </p>
-                </div>
-                <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-              </div>
-            </Link>
+          {list.map((item) => (
+            <TaskStatusRow key={item.id} item={item} />
           ))}
         </div>
       </div>

@@ -1,38 +1,30 @@
 'use client';
 
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
-
-import { StatusBadge } from '@/components/agent/status-badge';
+import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { AgentShell } from '@/components/layout/agent-shell';
-import { VACATING } from '@/lib/mock-data';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { vacatingDetail } from '@/constants/routes';
-import { formatDate } from '@/lib/utils';
 
 export default function VacatingPage() {
+  const { vacating } = useAgentData();
+
   return (
     <AgentShell title="Vacating">
       <div className="space-y-2">
-        {VACATING.map((v) => (
-          <Link
+        {vacating.map((v) => (
+          <TaskStatusRow
             key={v.id}
-            href={vacatingDetail(v.id)}
-            className="block rounded-xl border bg-card p-4 active:bg-secondary/50"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="space-y-1">
-                <StatusBadge label={`${v.checklistProgress}% complete`} />
-                <p className="text-sm font-semibold">{v.propertyAddress}</p>
-                <p className="text-muted-foreground text-xs">
-                  Vacate {formatDate(v.vacateDate)} · {v.reason}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Bond: {v.bondStatus} · Outgoing: {v.outgoingInspectionStatus}
-                </p>
-              </div>
-              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-            </div>
-          </Link>
+            item={{
+              id: v.id,
+              propertyAddress: v.propertyAddress,
+              taskLabel: 'Vacating',
+              status: `${v.checklistProgress}% complete · ${v.bondStatus}`,
+              href: vacatingDetail(v.id),
+              module: 'Vacating',
+              tone: v.requiresApproval ? 'warning' : 'neutral',
+              requiresApproval: v.requiresApproval,
+            }}
+          />
         ))}
       </div>
     </AgentShell>

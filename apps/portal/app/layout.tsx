@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
+import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -34,7 +35,10 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
           <ProviderErrorBoundary>
-            <AgentDataProvider>{children}</AgentDataProvider>
+            <AgentDataProvider>
+              {children}
+              <WelcomeOnboarding />
+            </AgentDataProvider>
           </ProviderErrorBoundary>
         </AuthProvider>
         <Toaster position="bottom-right" />

@@ -34,11 +34,11 @@ export function TaskCard({
               </span>
             )}
           </div>
-          <p className="text-primary text-xs font-medium">{item.status}</p>
-          <p className="text-sm font-semibold leading-snug">{item.title}</p>
-          <p className="text-muted-foreground truncate text-xs">
+          <p className="text-muted-foreground truncate text-xs font-medium">
             {item.propertyAddress}
           </p>
+          <p className="text-sm font-semibold leading-snug">{item.title}</p>
+          <p className="text-primary text-xs font-medium">{item.status}</p>
           {!compact && item.subtitle && (
             <p className="text-muted-foreground text-xs">{item.subtitle}</p>
           )}

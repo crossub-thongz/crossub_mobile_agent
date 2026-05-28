@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { useState } from 'react';
 
-import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { PropertyChatFab } from '@/components/agent/property-chat-fab';
 import { StatusBanner } from '@/components/agent/status-banner';
+import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -46,13 +47,11 @@ export default function PropertyDetailPage() {
 
   return (
     <AgentShell title={property.address} backHref={ROUTES.PROPERTIES}>
-      <div className="space-y-4">
+      <div className="space-y-4 pb-8">
         <StatusBanner
           status={property.leaseStatus}
           subtitle={`${property.homeOwnerName} · ${property.tenantName}`}
         />
-
-        <CaseContactActions propertyId={property.id} caseLabel={property.address} />
 
         <div className="rounded-xl border bg-card p-4">
           <p className="text-muted-foreground text-xs">{property.suburb}</p>
@@ -129,16 +128,63 @@ export default function PropertyDetailPage() {
         {tab === 'Tasks' && (
           <div className="space-y-2">
             {tasks.maintenance.map((m) => (
-              <TaskLink key={m.id} href={maintenanceDetail(m.id)} title={m.title} status={m.status} approval={m.requiresApproval} />
+              <TaskStatusRow
+                key={m.id}
+                item={{
+                  id: m.id,
+                  propertyAddress: m.propertyAddress,
+                  taskLabel: m.title,
+                  status: m.status,
+                  href: maintenanceDetail(m.id),
+                  module: 'Maintenance',
+                  tone: m.requiresApproval ? 'warning' : 'neutral',
+                  requiresApproval: m.requiresApproval,
+                }}
+              />
             ))}
             {tasks.inspections.map((i) => (
-              <TaskLink key={i.id} href={inspectionDetail(i.id)} title={`${i.type} — ${i.trackingNumber}`} status={i.status} />
+              <TaskStatusRow
+                key={i.id}
+                item={{
+                  id: i.id,
+                  propertyAddress: i.propertyAddress,
+                  taskLabel: `${i.type} inspection`,
+                  status: i.status,
+                  href: inspectionDetail(i.id),
+                  module: 'Inspection',
+                  tone: 'neutral',
+                }}
+              />
             ))}
             {tasks.rentReviews.map((r) => (
-              <TaskLink key={r.id} href={rentReviewDetail(r.id)} title="Rent review" status={r.status} approval={r.requiresApproval} />
+              <TaskStatusRow
+                key={r.id}
+                item={{
+                  id: r.id,
+                  propertyAddress: r.propertyAddress,
+                  taskLabel: 'Rent review',
+                  status: r.status,
+                  href: rentReviewDetail(r.id),
+                  module: 'Rent review',
+                  tone: r.requiresApproval ? 'warning' : 'ok',
+                  requiresApproval: r.requiresApproval,
+                }}
+              />
             ))}
             {tasks.vacating.map((v) => (
-              <TaskLink key={v.id} href={vacatingDetail(v.id)} title="Vacating" status={`${v.checklistProgress}%`} />
+              <TaskStatusRow
+                key={v.id}
+                item={{
+                  id: v.id,
+                  propertyAddress: v.propertyAddress,
+                  taskLabel: 'Vacating',
+                  status: `${v.checklistProgress}% complete`,
+                  href: vacatingDetail(v.id),
+                  module: 'Vacating',
+                  tone: v.requiresApproval ? 'warning' : 'neutral',
+                  requiresApproval: v.requiresApproval,
+                }}
+              />
             ))}
           </div>
         )}
@@ -160,33 +206,7 @@ export default function PropertyDetailPage() {
           </div>
         )}
       </div>
+      <PropertyChatFab propertyId={property.id} />
     </AgentShell>
-  );
-}
-
-function TaskLink({
-  href,
-  title,
-  status,
-  approval,
-}: {
-  href: string;
-  title: string;
-  status: string;
-  approval?: boolean;
-}) {
-  return (
-    <Link href={href} className="flex items-center justify-between rounded-xl border bg-card px-4 py-3">
-      <div>
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-primary mt-1 text-xs font-medium">{status}</p>
-        {approval && (
-          <p className="text-primary text-[10px] font-semibold uppercase">
-            Action needed
-          </p>
-        )}
-      </div>
-      <span className="text-primary text-xs">Open</span>
-    </Link>
   );
 }

@@ -216,6 +216,17 @@ export interface SectionStatus {
   count?: number;
 }
 
+export interface TaskStatusItem {
+  id: string;
+  propertyAddress: string;
+  taskLabel: string;
+  status: string;
+  href: string;
+  module: string;
+  tone?: SectionStatus['tone'];
+  requiresApproval?: boolean;
+}
+
 export interface AgentDocument {
   id: string;
   title: string;

@@ -14,6 +14,7 @@ export const ROUTES = {
   REPORTS: '/reports',
   SEARCH: '/search',
   PROFILE: '/profile',
+  SETTINGS: '/settings',
   TENANT_SELECTION: '/tenant-selection',
 } as const;
 
@@ -27,6 +28,7 @@ export const isPublicRoute = (pathname: string): boolean =>
   PUBLIC_ROUTE_PATTERNS.some((rx) => rx.test(pathname));
 
 export const propertyDetail = (id: string) => `/properties/${id}`;
+export const propertyNew = () => `/properties/new`;
 export const inspectionDetail = (id: string) => `/inspections/${id}`;
 export const maintenanceDetail = (id: string) => `/maintenance/${id}`;
 export const rentReviewDetail = (id: string) => `/rent-review/${id}`;

@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Search } from 'lucide-react';
+import { ChevronRight, Plus, Search } from 'lucide-react';
 
+import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
-import { propertyDetail } from '@/constants/routes';
+import { propertyDetail, propertyNew } from '@/constants/routes';
 import { formatCurrency } from '@/lib/utils';
 
 const FILTERS = [
@@ -58,6 +60,30 @@ export default function PropertiesPage() {
         </div>
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
+        <Button className="w-full" asChild>
+          <Link href={propertyNew()}>
+            <Plus className="size-4" />
+            Add property
+          </Link>
+        </Button>
+
+        {list.length === 0 ? (
+          <EmptyState
+            title={search || filter !== 'all' ? 'No matching properties' : 'No properties yet'}
+            description={
+              search || filter !== 'all'
+                ? 'Try a different search or filter.'
+                : 'Add a property to start managing landlords and tenants.'
+            }
+            action={
+              !search && filter === 'all' ? (
+                <Button size="sm" asChild>
+                  <Link href={propertyNew()}>Add property</Link>
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
         <div className="space-y-2">
           {list.map((p) => (
             <Link
@@ -94,6 +120,7 @@ export default function PropertiesPage() {
             </Link>
           ))}
         </div>
+        )}
       </div>
     </AgentShell>
   );

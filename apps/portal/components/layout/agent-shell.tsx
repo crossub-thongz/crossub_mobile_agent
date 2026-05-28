@@ -9,12 +9,14 @@ import {
   ListChecks,
   Menu,
   MessageSquare,
+  Search,
   User,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import { cn, displayName } from '@/lib/utils';
@@ -27,12 +29,15 @@ const PRIMARY_NAV = [
 ] as const;
 
 const MORE_NAV = [
+  { href: ROUTES.SEARCH, label: 'Search' },
+  { href: ROUTES.TENANT_SELECTION, label: 'Tenant selection' },
   { href: ROUTES.MAINTENANCE, label: 'Maintenance' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections' },
   { href: ROUTES.RENT_REVIEW, label: 'Rent review' },
   { href: ROUTES.VACATING, label: 'Vacating' },
   { href: ROUTES.REPORTS, label: 'Reports' },
   { href: ROUTES.NOTIFICATIONS, label: 'Alerts' },
+  { href: ROUTES.SETTINGS, label: 'Settings' },
   { href: ROUTES.PROFILE, label: 'Profile' },
 ] as const;
 
@@ -95,6 +100,13 @@ export function AgentShell({
           )}
 
           <div className="flex items-center gap-1">
+            <Link
+              href={ROUTES.SEARCH}
+              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Search"
+            >
+              <Search className="size-5" />
+            </Link>
             <Link
               href={ROUTES.MESSAGES}
               className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -171,6 +183,11 @@ export function AgentShell({
         className="flex-1 px-4 py-4 pb-24"
         style={{ paddingTop: headerHeight + 16 }}
       >
+        {user && (
+          <div className="mb-4">
+            <ConnectionBanner />
+          </div>
+        )}
         {children}
       </main>
 
