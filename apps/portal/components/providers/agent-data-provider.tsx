@@ -28,9 +28,11 @@ import {
   type MappedMaintenance,
 } from '@/lib/data/map-maintenance';
 import {
+  ACCOUNTING,
   DASHBOARD_ITEMS,
   DOCUMENTS,
   INSPECTIONS,
+  LEASING_RECORDS,
   MAINTENANCE as DEMO_MAINTENANCE,
   MESSAGE_THREADS,
   NOTIFICATIONS as DEMO_NOTIFICATIONS,
@@ -39,6 +41,8 @@ import {
   TENANT_SELECTIONS,
   VACATING,
 } from '@/lib/mock-data';
+import { buildDashboardKpis } from '@/lib/dashboard-kpis';
+import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-actions';
 import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
 import { useAgentStore } from '@/lib/store';
@@ -47,11 +51,16 @@ import type {
   AgentDocument,
   AgentNotification,
   DashboardItem,
+  DashboardKpis,
   Inspection,
+  LeasingRecord,
   MaintenanceRequest,
+  MessageCategory,
   MessageMention,
   MessageThread,
   Property,
+  PropertyAccounting,
+  PropertyNeedAction,
   RentReviewCase,
   SectionStatus,
   TaskStatusItem,
@@ -93,11 +102,19 @@ interface AgentDataContextValue {
   dashboardItems: DashboardItem[];
   sectionStatus: SectionStatus[];
   taskStatusList: TaskStatusItem[];
+  dashboardKpis: DashboardKpis;
+  leasingRecords: LeasingRecord[];
+  accounting: PropertyAccounting[];
+  remindingItems: PropertyNeedAction[];
+  getPropertyActions: (propertyId: string) => PropertyNeedAction[];
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   uploadDocument: (file: File, category: AgentDocument['category'], propertyAddress: string) => void;
   sendMessage: (threadId: string, body: string, mentions?: MessageMention[]) => void;
-  ensureMessageThread: (propertyId: string) => string;
+  ensureMessageThread: (
+    propertyId: string,
+    options?: { category?: MessageCategory; subject?: string },
+  ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Property;
   approveMaintenanceQuote: (quotationId: string) => Promise<void>;
   declineMaintenanceQuote: (quotationId: string, reason: string) => Promise<void>;
@@ -274,6 +291,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [propertyIds],
   );
 
+  const leasingRecords = useMemo(
+    () => filterByPropertyIds(LEASING_RECORDS, propertyIds),
+    [propertyIds],
+  );
+
+  const accounting = useMemo(
+    () => ACCOUNTING.filter((a) => propertyIds.has(a.propertyId)),
+    [propertyIds],
+  );
+
   const messages = useMemo(() => {
     const demoThreads = MESSAGE_THREADS.filter(
       (m) => m.assignedAgentId === agentPortfolioId,
@@ -320,14 +347,24 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const ensureMessageThread = useCallback(
-    (propertyId: string) => {
+    (
+      propertyId: string,
+      options?: { category?: MessageCategory; subject?: string },
+    ) => {
       const property = properties.find((p) => p.id === propertyId);
       if (!property) return '';
-      const existing = messages.find((m) => m.propertyId === propertyId);
+      const existing = messages.find(
+        (m) =>
+          m.propertyId === propertyId &&
+          (!options?.category ||
+            m.messageCategory === options.category ||
+            m.taskType === options.category),
+      );
       return storeEnsureMessageThread(
         property,
         agentPortfolioId,
         existing?.id,
+        options,
       );
     },
     [properties, messages, agentPortfolioId, storeEnsureMessageThread],
@@ -434,6 +471,45 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [maintenanceAll, inspections, rentReviews, vacating],
   );
 
+  const dashboardKpis = useMemo(
+    () =>
+      buildDashboardKpis({
+        properties,
+        maintenance: maintenanceAll,
+        inspections,
+        rentReviews,
+        tenantSelections,
+        accounting,
+      }),
+    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting],
+  );
+
+  const getPropertyActions = useCallback(
+    (propertyId: string) => {
+      const property = properties.find((p) => p.id === propertyId);
+      if (!property) return [];
+      return getPropertyNeedActions(property, {
+        maintenance: maintenanceAll,
+        inspections,
+        rentReviews,
+        tenantSelections,
+        accounting: accounting.find((a) => a.propertyId === propertyId),
+      });
+    },
+    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting],
+  );
+
+  const remindingItems = useMemo(
+    () => buildRemindingQueue(properties, (p) => getPropertyNeedActions(p, {
+      maintenance: maintenanceAll,
+      inspections,
+      rentReviews,
+      tenantSelections,
+      accounting: accounting.find((a) => a.propertyId === p.id),
+    })),
+    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting],
+  );
+
   const approveMaintenanceQuote = useCallback(
     async (quotationId: string) => {
       const state = await approveMaintenanceQuotation(quotationId, 'agent');
@@ -470,6 +546,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     dashboardItems,
     sectionStatus,
     taskStatusList,
+    dashboardKpis,
+    leasingRecords,
+    accounting,
+    remindingItems,
+    getPropertyActions,
     markNotificationRead: (id) =>
       setReadIds((prev) => new Set(prev).add(id)),
     markAllNotificationsRead: () =>

@@ -25,6 +25,13 @@ export interface PropertyContact {
   phone?: string;
 }
 
+export type MessageCategory =
+  | 'Leasing'
+  | 'Maintenance'
+  | 'Inspection'
+  | 'Accounting'
+  | 'Others';
+
 export interface Property {
   id: string;
   address: string;
@@ -32,16 +39,111 @@ export interface Property {
   /** Landlord / home owner this property belongs to */
   homeOwnerName: string;
   homeOwnerContact: PropertyContact;
+  homeOwnerAddress?: string;
   /** Which agent manages this property — filtered per logged-in agent */
   assignedAgentId: 'agent-1' | 'agent-2';
   tenantName: string;
   tenantContact: PropertyContact;
   leaseStatus: 'active' | 'periodic' | 'vacating' | 'vacant';
   rentWeekly: number;
+  bondAmount?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  carSpaces?: number;
+  leaseStart?: string;
+  leaseEnd?: string;
   nextRentReview?: string;
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;
+}
+
+export interface LeasingRecord {
+  id: string;
+  propertyId: string;
+  leaseStart: string;
+  leaseEnd: string;
+  rentWeekly: number;
+  approvedTenant: string;
+  openInspectionDate?: string;
+  openOfficer?: string;
+  attendeeCount?: number;
+  applicationCount?: number;
+  moveInDate?: string;
+  ingoingInspectionId?: string;
+  status: 'current' | 'ended' | 'upcoming';
+}
+
+export interface PropertyAccounting {
+  propertyId: string;
+  propertyAddress: string;
+  tenantName: string;
+  rentPaidYtd: number;
+  rentOutstanding: number;
+  currentBalance: number;
+  daysInArrears: number;
+  arrearsAmount: number;
+  collectionActivity: {
+    id: string;
+    at: string;
+    type: 'phone' | 'email' | 'sms';
+    summary: string;
+    detail?: string;
+  }[];
+}
+
+export interface PropertyNeedAction {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  label: string;
+  category: 'Leasing' | 'Maintenance' | 'Inspection' | 'Accounting' | 'Others';
+  href: string;
+  priority: Priority;
+}
+
+export interface DashboardKpis {
+  properties: {
+    total: number;
+    occupied: number;
+    vacant: number;
+    href: string;
+  };
+  leasing: {
+    upcomingRentReviews: number;
+    newLeasing: number;
+    rentReviewHref: string;
+    newLeasingHref: string;
+  };
+  maintenance: {
+    inProgress: number;
+    completed: number;
+    pendingApproval: number;
+    inProgressHref: string;
+    completedHref: string;
+    approvalHref: string;
+  };
+  inspection: {
+    openPending: number;
+    openCompleted: number;
+    ingoingPending: number;
+    ingoingCompleted: number;
+    outgoingPending: number;
+    outgoingCompleted: number;
+    routinePending: number;
+    routineCompleted: number;
+    openHref: string;
+    ingoingHref: string;
+    outgoingHref: string;
+    routineHref: string;
+  };
+  accounting: {
+    totalRentalIncome: number;
+    propertiesInArrears: number;
+    totalArrearsAmount: number;
+    incomeHref: string;
+    arrearsHref: string;
+  };
 }
 
 export interface DashboardItem {
@@ -155,6 +257,7 @@ export interface MessageThread {
   tenantContact: PropertyContact;
   subject: string;
   taskType: string;
+  messageCategory?: MessageCategory;
   lastMessage: string;
   lastAt: string;
   unread: number;

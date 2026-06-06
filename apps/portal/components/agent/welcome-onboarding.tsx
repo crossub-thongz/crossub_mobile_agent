@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, ListChecks, MessageSquare, X } from 'lucide-react';
+import { BellRing, Building2, LayoutDashboard, MessageSquare, X } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -34,9 +34,15 @@ export function WelcomeOnboarding() {
         </p>
         <ul className="mt-4 space-y-2 text-sm">
           <li className="flex items-center gap-2">
-            <ListChecks className="text-primary size-4 shrink-0" />
+            <LayoutDashboard className="text-primary size-4 shrink-0" />
             <span>
-              <strong>Status</strong> — every task with address + status
+              <strong>Dashboard</strong> — portfolio KPIs at a glance
+            </span>
+          </li>
+          <li className="flex items-center gap-2">
+            <BellRing className="text-primary size-4 shrink-0" />
+            <span>
+              <strong>Reminding</strong> — everything that needs your action
             </span>
           </li>
           <li className="flex items-center gap-2">
@@ -57,7 +63,7 @@ export function WelcomeOnboarding() {
             <Link href={propertyNew()}>Add your first property</Link>
           </Button>
           <Button variant="outline" asChild onClick={dismiss}>
-            <Link href={ROUTES.STATUS}>View task status</Link>
+            <Link href={ROUTES.REMINDING}>View reminding queue</Link>
           </Button>
           <Button variant="ghost" className="text-muted-foreground" onClick={dismiss}>
             Got it — explore the app

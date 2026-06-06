@@ -5,19 +5,16 @@ import Link from 'next/link';
 import { ChevronRight, Plus, Search } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
-import { PropertyPicker } from '@/components/agent/property-picker';
-import { SectionStatusGrid } from '@/components/agent/section-status-grid';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
-import { messageDetail } from '@/constants/routes';
+import { messageDetail, messagesNew } from '@/constants/routes';
 import { formatRelative } from '@/lib/utils';
 
 export default function MessagesPage() {
   const { messages } = useAgentData();
   const [search, setSearch] = useState('');
-  const [showNew, setShowNew] = useState(false);
   const [propertyFilter, setPropertyFilter] = useState('all');
 
   const list = useMemo(() => {
@@ -77,8 +74,8 @@ export default function MessagesPage() {
             title={search || propertyFilter !== 'all' ? 'No matching threads' : 'No messages yet'}
             description="Choose a property below to start a conversation with the landlord or tenant."
             action={
-              <Button variant="outline" size="sm" onClick={() => setShowNew(true)}>
-                Choose property
+              <Button variant="outline" size="sm" asChild>
+                <Link href={messagesNew()}>New message</Link>
               </Button>
             }
           />
@@ -115,23 +112,12 @@ export default function MessagesPage() {
           </div>
         )}
 
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => setShowNew((v) => !v)}
-        >
-          <Plus className="size-4" />
-          {showNew ? 'Hide property list' : 'New message — choose property'}
+        <Button variant="default" className="w-full" asChild>
+          <Link href={messagesNew()}>
+            <Plus className="size-4" />
+            New message
+          </Link>
         </Button>
-
-        {showNew && (
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs">
-              Select a property to open or start a conversation.
-            </p>
-            <PropertyPicker />
-          </div>
-        )}
       </div>
     </AgentShell>
   );

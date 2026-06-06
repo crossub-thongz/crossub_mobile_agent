@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { FilterChips } from '@/components/agent/filter-chips';
 import { StatusBanner } from '@/components/agent/status-banner';
@@ -13,13 +14,19 @@ import { formatDateTime } from '@/lib/utils';
 
 const TYPE_FILTERS = [
   { id: 'all', label: 'All' },
+  { id: 'OPEN', label: 'Open' },
+  { id: 'INGOING', label: 'Ingoing' },
   { id: 'OUTGOING', label: 'Outgoing' },
   { id: 'ROUTINE', label: 'Routine' },
 ];
 
 export default function InspectionsPage() {
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get('type');
   const { inspections, sectionStatus } = useAgentData();
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(
+    typeParam && TYPE_FILTERS.some((f) => f.id === typeParam) ? typeParam : 'all',
+  );
   const [search, setSearch] = useState('');
 
   const summary = sectionStatus.find((s) => s.id === 'inspections');

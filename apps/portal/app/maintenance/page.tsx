@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -14,10 +15,16 @@ import { maintenanceDetail } from '@/constants/routes';
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'approval', label: 'Needs approval' },
+  { id: 'progress', label: 'In progress' },
+  { id: 'completed', label: 'Completed' },
 ];
 
 export default function MaintenancePage() {
-  const [filter, setFilter] = useState('all');
+  const searchParams = useSearchParams();
+  const urlFilter = searchParams.get('filter');
+  const [filter, setFilter] = useState(
+    urlFilter === 'approval' ? 'approval' : urlFilter === 'completed' ? 'completed' : 'all',
+  );
   const [search, setSearch] = useState('');
   const { maintenanceAll, sectionStatus } = useAgentData();
 
@@ -25,8 +32,19 @@ export default function MaintenancePage() {
 
   const list = useMemo(() => {
     let items = [...maintenanceAll];
-    if (filter === 'approval')
-      items = items.filter((m) => m.requiresApproval);
+    if (filter === 'approval') items = items.filter((m) => m.requiresApproval);
+    if (filter === 'progress')
+      items = items.filter(
+        (m) =>
+          !m.status.toLowerCase().includes('complete') &&
+          !m.status.toLowerCase().includes('closed'),
+      );
+    if (filter === 'completed')
+      items = items.filter(
+        (m) =>
+          m.status.toLowerCase().includes('complete') ||
+          m.status.toLowerCase().includes('closed'),
+      );
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(

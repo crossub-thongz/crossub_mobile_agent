@@ -1,11 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, Plus, Search } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { NeedActionBadge } from '@/components/agent/need-action-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -21,8 +23,16 @@ const FILTERS = [
 ];
 
 export default function PropertiesPage() {
-  const { properties } = useAgentData();
-  const [filter, setFilter] = useState('all');
+  const searchParams = useSearchParams();
+  const urlFilter = searchParams.get('filter');
+  const { properties, getPropertyActions } = useAgentData();
+  const [filter, setFilter] = useState(
+    urlFilter && ['active', 'vacating', 'vacant', 'periodic'].includes(urlFilter)
+      ? urlFilter === 'active'
+        ? 'active'
+        : urlFilter
+      : 'all',
+  );
   const [search, setSearch] = useState('');
 
   const list = useMemo(() => {
@@ -85,7 +95,9 @@ export default function PropertiesPage() {
           />
         ) : (
         <div className="space-y-2">
-          {list.map((p) => (
+          {list.map((p) => {
+            const actions = getPropertyActions(p.id);
+            return (
             <Link
               key={p.id}
               href={propertyDetail(p.id)}
@@ -93,6 +105,9 @@ export default function PropertiesPage() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 space-y-1">
+                  {actions.length > 0 && (
+                    <NeedActionBadge count={actions.length} className="mb-1" />
+                  )}
                   <p className="font-semibold">{p.address}</p>
                   <p className="text-muted-foreground text-xs">{p.suburb}</p>
                   <p className="text-xs">
@@ -118,7 +133,8 @@ export default function PropertiesPage() {
                 </div>
               </div>
             </Link>
-          ))}
+          );
+          })}
         </div>
         )}
       </div>

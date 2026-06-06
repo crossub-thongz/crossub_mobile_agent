@@ -2,19 +2,17 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { AgentPortfolioBanner } from '@/components/agent/agent-portfolio-banner';
-import { TaskCard } from '@/components/agent/task-card';
+import { DashboardSection, KpiTile } from '@/components/agent/dashboard-kpi-section';
 import { AgentShell } from '@/components/layout/agent-shell';
-import { ROUTES } from '@/constants/routes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { ROUTES } from '@/constants/routes';
+import { formatCurrency } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const { dashboardItems, notifications, properties, loading } = useAgentData();
-
-  const approvals = dashboardItems.filter((i) => i.requiresApproval);
+  const { dashboardKpis, notifications, loading } = useAgentData();
+  const k = dashboardKpis;
   const pushShown = useRef(false);
 
   useEffect(() => {
@@ -35,29 +33,87 @@ export default function DashboardPage() {
   }, [loading, notifications]);
 
   return (
-    <AgentShell title="Home">
-      <div className="space-y-5">
-        <AgentPortfolioBanner propertyCount={properties.length} />
+    <AgentShell title="Dashboard">
+      <div className="space-y-6">
+        <p className="text-muted-foreground text-sm">
+          Portfolio overview — tap any figure for details.
+        </p>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold">Needs your action</h2>
-          {approvals.length === 0 ? (
-            <div className="text-muted-foreground flex items-center gap-2 rounded-xl border border-dashed p-4 text-sm">
-              <CheckCircle2 className="text-primary size-4 shrink-0" />
-              Nothing waiting — you&apos;re all caught up
-            </div>
-          ) : (
-            approvals.slice(0, 5).map((item) => <TaskCard key={item.id} item={item} />)
-          )}
-          {approvals.length > 5 && (
-            <Link
-              href={ROUTES.NOTIFICATIONS}
-              className="text-primary block text-center text-xs font-medium"
-            >
-              View all {approvals.length} items
-            </Link>
-          )}
-        </section>
+        <DashboardSection title="Properties">
+          <KpiTile label="Total properties" value={k.properties.total} href={k.properties.href} />
+          <KpiTile label="Occupied" value={k.properties.occupied} href={ROUTES.PROPERTIES} />
+          <KpiTile label="Vacant" value={k.properties.vacant} href={`${ROUTES.PROPERTIES}?filter=vacant`} highlight={k.properties.vacant > 0} />
+        </DashboardSection>
+
+        <DashboardSection title="Leasing">
+          <KpiTile
+            label="Upcoming rent reviews"
+            value={k.leasing.upcomingRentReviews}
+            href={k.leasing.rentReviewHref}
+            highlight={k.leasing.upcomingRentReviews > 0}
+          />
+          <KpiTile
+            label="New leasing"
+            value={k.leasing.newLeasing}
+            href={k.leasing.newLeasingHref}
+            highlight={k.leasing.newLeasing > 0}
+          />
+        </DashboardSection>
+
+        <DashboardSection title="Maintenance">
+          <KpiTile label="In progress" value={k.maintenance.inProgress} href={k.maintenance.inProgressHref} />
+          <KpiTile label="Completed" value={k.maintenance.completed} href={k.maintenance.completedHref} />
+          <KpiTile
+            label="Needs your approval"
+            value={k.maintenance.pendingApproval}
+            href={k.maintenance.approvalHref}
+            highlight={k.maintenance.pendingApproval > 0}
+          />
+        </DashboardSection>
+
+        <DashboardSection title="Inspection — Open">
+          <KpiTile label="Pending" value={k.inspection.openPending} href={k.inspection.openHref} />
+          <KpiTile label="Completed" value={k.inspection.openCompleted} href={k.inspection.openHref} />
+        </DashboardSection>
+
+        <DashboardSection title="Inspection — Ingoing / Outgoing">
+          <KpiTile label="Ingoing pending" value={k.inspection.ingoingPending} href={k.inspection.ingoingHref} />
+          <KpiTile label="Ingoing complete" value={k.inspection.ingoingCompleted} href={k.inspection.ingoingHref} />
+          <KpiTile label="Outgoing pending" value={k.inspection.outgoingPending} href={k.inspection.outgoingHref} />
+          <KpiTile label="Outgoing complete" value={k.inspection.outgoingCompleted} href={k.inspection.outgoingHref} />
+        </DashboardSection>
+
+        <DashboardSection title="Inspection — Routine">
+          <KpiTile label="Routine pending" value={k.inspection.routinePending} href={k.inspection.routineHref} />
+          <KpiTile label="Routine complete" value={k.inspection.routineCompleted} href={k.inspection.routineHref} />
+        </DashboardSection>
+
+        <DashboardSection title="Accounting">
+          <KpiTile
+            label="Rental income (YTD)"
+            value={formatCurrency(k.accounting.totalRentalIncome)}
+            href={k.accounting.incomeHref}
+          />
+          <KpiTile
+            label="Properties in arrears"
+            value={k.accounting.propertiesInArrears}
+            href={k.accounting.arrearsHref}
+            highlight={k.accounting.propertiesInArrears > 0}
+          />
+          <KpiTile
+            label="Total arrears"
+            value={formatCurrency(k.accounting.totalArrearsAmount)}
+            href={k.accounting.arrearsHref}
+            highlight={k.accounting.totalArrearsAmount > 0}
+          />
+        </DashboardSection>
+
+        <Link
+          href={ROUTES.REMINDING}
+          className="text-primary block text-center text-sm font-medium"
+        >
+          View all items needing action →
+        </Link>
       </div>
     </AgentShell>
   );

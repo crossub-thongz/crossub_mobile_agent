@@ -70,8 +70,9 @@ export default function AddPropertyPage() {
     <AgentShell title="Add property" backHref={ROUTES.PROPERTIES}>
       <form onSubmit={onSubmit} className="space-y-5">
         <p className="text-muted-foreground text-sm">
-          Add a property to your portfolio. Saved on this device until connected
-          to crossub_web.
+          Add a property to your portfolio. Full fields (management agreement,
+          documents, leasing requirements) will be updated once confirmed with the
+          Leasing team. Saved on this device until connected to crossub_web.
         </p>
 
         <fieldset className="space-y-3 rounded-xl border bg-card p-4">

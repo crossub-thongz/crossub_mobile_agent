@@ -6,7 +6,7 @@ import {
   Bell,
   Building2,
   LayoutDashboard,
-  ListChecks,
+  BellRing,
   Menu,
   MessageSquare,
   Search,
@@ -22,10 +22,10 @@ import { ROUTES } from '@/constants/routes';
 import { cn, displayName } from '@/lib/utils';
 
 const PRIMARY_NAV = [
-  { href: ROUTES.DASHBOARD, label: 'Home', icon: LayoutDashboard },
+  { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
   { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
   { href: ROUTES.MESSAGES, label: 'Messages', icon: MessageSquare },
-  { href: ROUTES.STATUS, label: 'Status', icon: ListChecks },
+  { href: ROUTES.REMINDING, label: 'Reminding', icon: BellRing },
 ] as const;
 
 const MORE_NAV = [
@@ -34,6 +34,7 @@ const MORE_NAV = [
   { href: ROUTES.MAINTENANCE, label: 'Maintenance' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections' },
   { href: ROUTES.RENT_REVIEW, label: 'Rent review' },
+  { href: ROUTES.ACCOUNTING, label: 'Accounting' },
   { href: ROUTES.VACATING, label: 'Vacating' },
   { href: ROUTES.REPORTS, label: 'Reports' },
   { href: ROUTES.NOTIFICATIONS, label: 'Alerts' },
@@ -60,9 +61,10 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { notifications, messages } = useAgentData();
+  const { notifications, messages, remindingItems } = useAgentData();
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const unreadMessages = messages.reduce((s, m) => s + m.unread, 0);
+  const remindingCount = remindingItems.length;
 
   useEffect(() => {
     const el = headerRef.current;
@@ -196,7 +198,11 @@ export function AgentShell({
           {PRIMARY_NAV.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             const badge =
-              href === ROUTES.MESSAGES && unreadMessages > 0 ? unreadMessages : 0;
+              href === ROUTES.MESSAGES && unreadMessages > 0
+                ? unreadMessages
+                : href === ROUTES.REMINDING && remindingCount > 0
+                  ? remindingCount
+                  : 0;
             return (
               <Link
                 key={href}

@@ -45,6 +45,7 @@ interface AgentStore {
     property: Property,
     agentPortfolioId: AgentPortfolioId,
     existingThreadId?: string,
+    options?: { category?: import('@/lib/types').MessageCategory; subject?: string },
   ) => string;
   onboardingDismissed: boolean;
   dismissOnboarding: () => void;
@@ -108,10 +109,13 @@ export const useAgentStore = create<AgentStore>()(
         set((s) => ({ addedProperties: [property, ...s.addedProperties] }));
         return property;
       },
-      ensureMessageThread: (property, agentPortfolioId, existingThreadId) => {
+      ensureMessageThread: (property, agentPortfolioId, existingThreadId, options) => {
         if (existingThreadId) return existingThreadId;
+        const category = options?.category ?? 'Others';
         const custom = get().customMessageThreads.find(
-          (t) => t.propertyId === property.id,
+          (t) =>
+            t.propertyId === property.id &&
+            (t.messageCategory === category || t.taskType === category),
         );
         if (custom) return custom.id;
 
@@ -124,8 +128,9 @@ export const useAgentStore = create<AgentStore>()(
           homeOwnerContact: property.homeOwnerContact,
           tenantName: property.tenantName,
           tenantContact: property.tenantContact,
-          subject: `${property.address} — messages`,
-          taskType: 'General',
+          subject: options?.subject ?? `${property.address} — ${category}`,
+          taskType: category,
+          messageCategory: category,
           lastMessage: 'Start a conversation',
           lastAt: new Date().toISOString(),
           unread: 0,

@@ -1,6 +1,8 @@
 export const ROUTES = {
   STATUS: '/status',
+  REMINDING: '/reminding',
   DASHBOARD: '/dashboard',
+  ACCOUNTING: '/accounting',
   LOGIN: '/login',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
@@ -33,6 +35,7 @@ export const inspectionDetail = (id: string) => `/inspections/${id}`;
 export const maintenanceDetail = (id: string) => `/maintenance/${id}`;
 export const rentReviewDetail = (id: string) => `/rent-review/${id}`;
 export const vacatingDetail = (id: string) => `/vacating/${id}`;
+export const messagesNew = () => '/messages/new';
 export const messageDetail = (id: string) => `/messages/${id}`;
 export const messageDetailParty = (id: string, party: 'tenant' | 'owner') =>
   `/messages/${id}?party=${party}`;
