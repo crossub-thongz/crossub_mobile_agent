@@ -207,7 +207,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void useAgentStore.persist.rehydrate().catch(() => {
+    void Promise.resolve(useAgentStore.persist.rehydrate()).catch(() => {
       try {
         localStorage.removeItem('crossub-agent-store');
       } catch {
