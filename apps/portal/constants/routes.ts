@@ -9,6 +9,7 @@ export const ROUTES = {
   PROPERTIES: '/properties',
   INSPECTIONS: '/inspections',
   MAINTENANCE: '/maintenance',
+  LEASING: '/leasing',
   RENT_REVIEW: '/rent-review',
   VACATING: '/vacating',
   MESSAGES: '/messages',

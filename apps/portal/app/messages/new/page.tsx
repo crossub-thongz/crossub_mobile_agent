@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { MapPin, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { FormStep, SelectChip } from '@/components/agent/form-step';
+import { PageIntro } from '@/components/agent/page-intro';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { messageDetail, ROUTES } from '@/constants/routes';
 import type { MessageCategory } from '@/lib/types';
@@ -53,6 +54,7 @@ export default function NewMessagePage() {
   }, [properties, search]);
 
   const selected = properties.find((p) => p.id === propertyId);
+  const step = !propertyId ? 1 : !category ? 2 : 3;
 
   const onStart = () => {
     if (!propertyId) {
@@ -71,101 +73,107 @@ export default function NewMessagePage() {
 
   return (
     <AgentShell title="New message" backHref={ROUTES.MESSAGES}>
-      <div className="space-y-5">
-        <div className="space-y-2">
-          <Label>Property</Label>
+      <div className="space-y-4">
+        <PageIntro description="Choose a property, category, and recipient to start a tracked conversation." />
+
+        <FormStep
+          step={1}
+          title="Select property"
+          description="Search your portfolio"
+          active={step === 1}
+        >
           <div className="relative">
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
-              placeholder="Search property address…"
-              className="pl-10"
+              placeholder="Search address or tenant…"
+              className="rounded-xl pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border p-1">
+          <div className="mt-3 max-h-44 space-y-1.5 overflow-y-auto">
             {filteredProperties.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => setPropertyId(p.id)}
                 className={cn(
-                  'w-full rounded-lg px-3 py-2 text-left text-sm',
-                  propertyId === p.id ? 'bg-primary/10 text-primary' : 'hover:bg-secondary',
+                  'flex w-full items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition',
+                  propertyId === p.id
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:border-primary/30',
                 )}
               >
-                {p.address}, {p.suburb}
+                <MapPin className="text-primary mt-0.5 size-4 shrink-0" />
+                <span>
+                  <span className="font-medium">{p.address}</span>
+                  <span className="text-muted-foreground block text-xs">{p.suburb}</span>
+                </span>
               </button>
             ))}
           </div>
-          {selected && (
-            <p className="text-muted-foreground text-xs">
-              Selected: {selected.address} — {selected.tenantName}
-            </p>
-          )}
-        </div>
+        </FormStep>
 
-        <div className="space-y-2">
-          <Label>Category</Label>
+        <FormStep
+          step={2}
+          title="Category"
+          description="What is this message about?"
+          active={step >= 2}
+        >
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((c) => (
-              <button
+              <SelectChip
                 key={c}
-                type="button"
+                selected={category === c}
                 onClick={() => {
                   setCategory(c);
                   setRecipient('');
                 }}
-                className={cn(
-                  'rounded-full border px-3 py-1.5 text-xs font-medium',
-                  category === c
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border text-muted-foreground',
-                )}
               >
                 {c}
-              </button>
+              </SelectChip>
             ))}
           </div>
-        </div>
+        </FormStep>
 
-        <div className="space-y-2">
-          <Label>Recipient</Label>
-          <div className="flex flex-wrap gap-2">
-            {RECIPIENTS[category].map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRecipient(r)}
-                className={cn(
-                  'rounded-full border px-3 py-1.5 text-xs font-medium',
-                  recipient === r
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border text-muted-foreground',
-                )}
-              >
-                {r}
-              </button>
-            ))}
+        <FormStep
+          step={3}
+          title="Recipient & type"
+          description="Who should receive this?"
+          active={step >= 3}
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {RECIPIENTS[category].map((r) => (
+                <SelectChip key={r} selected={recipient === r} onClick={() => setRecipient(r)}>
+                  {r}
+                </SelectChip>
+              ))}
+            </div>
+            <select
+              value={messageType}
+              onChange={(e) => setMessageType(e.target.value as (typeof MESSAGE_TYPES)[number])}
+              className="border-input h-10 w-full rounded-xl border bg-transparent px-3 text-sm outline-none dark:bg-input/30"
+            >
+              {MESSAGE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
+        </FormStep>
 
-        <div className="space-y-2">
-          <Label>Message type</Label>
-          <select
-            value={messageType}
-            onChange={(e) => setMessageType(e.target.value as (typeof MESSAGE_TYPES)[number])}
-            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30"
-          >
-            {MESSAGE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
+        {selected && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs">
+            <span className="text-muted-foreground">Summary · </span>
+            <span className="font-medium">
+              {selected.address} · {category} · {recipient || 'General'} · {messageType}
+            </span>
+          </div>
+        )}
 
-        <Button className="w-full" onClick={onStart}>
+        <Button className="w-full rounded-xl" size="lg" onClick={onStart}>
           Start conversation
         </Button>
       </div>

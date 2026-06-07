@@ -69,8 +69,8 @@ export function buildDashboardKpis(input: {
     leasing: {
       upcomingRentReviews,
       newLeasing,
-      rentReviewHref: ROUTES.RENT_REVIEW,
-      newLeasingHref: ROUTES.TENANT_SELECTION,
+      rentReviewHref: `${ROUTES.LEASING}?tab=rent-review`,
+      newLeasingHref: `${ROUTES.LEASING}?tab=new-leasing`,
     },
     maintenance: {
       inProgress: maintenanceInProgress,

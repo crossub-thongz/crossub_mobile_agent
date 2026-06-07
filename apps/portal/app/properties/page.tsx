@@ -3,17 +3,17 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Plus, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { NeedActionBadge } from '@/components/agent/need-action-badge';
+import { PageIntro } from '@/components/agent/page-intro';
+import { PropertyListCard } from '@/components/agent/property-list-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import { propertyDetail, propertyNew } from '@/constants/routes';
-import { formatCurrency } from '@/lib/utils';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -37,8 +37,7 @@ export default function PropertiesPage() {
 
   const list = useMemo(() => {
     let items = [...properties];
-    if (filter !== 'all')
-      items = items.filter((p) => p.leaseStatus === filter);
+    if (filter !== 'all') items = items.filter((p) => p.leaseStatus === filter);
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(
@@ -51,26 +50,35 @@ export default function PropertiesPage() {
     return items;
   }, [properties, filter, search]);
 
+  const needActionCount = properties.filter((p) => getPropertyActions(p.id).length > 0).length;
+
   return (
     <AgentShell title="Properties">
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          Your assigned landlords and tenants — each agent sees only their own
-          portfolio.
-        </p>
+        <PageIntro description="Your assigned portfolio — properties needing action are highlighted." />
+
+        {needActionCount > 0 && (
+          <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
+            <span className="font-semibold text-destructive">{needActionCount}</span>
+            <span className="text-muted-foreground">
+              {' '}
+              propert{needActionCount === 1 ? 'y' : 'ies'} need your attention
+            </span>
+          </div>
+        )}
 
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Address, landlord, tenant…"
-            className="pl-10"
+            className="rounded-xl pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
-        <Button className="w-full" asChild>
+        <Button className="w-full rounded-xl" size="lg" asChild>
           <Link href={propertyNew()}>
             <Plus className="size-4" />
             Add property
@@ -94,48 +102,16 @@ export default function PropertiesPage() {
             }
           />
         ) : (
-        <div className="space-y-2">
-          {list.map((p) => {
-            const actions = getPropertyActions(p.id);
-            return (
-            <Link
-              key={p.id}
-              href={propertyDetail(p.id)}
-              className="block rounded-xl border bg-card p-4 active:bg-secondary/50"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 space-y-1">
-                  {actions.length > 0 && (
-                    <NeedActionBadge count={actions.length} className="mb-1" />
-                  )}
-                  <p className="font-semibold">{p.address}</p>
-                  <p className="text-muted-foreground text-xs">{p.suburb}</p>
-                  <p className="text-xs">
-                    <span className="text-muted-foreground">Landlord: </span>
-                    {p.homeOwnerName}
-                  </p>
-                  <p className="text-xs">
-                    <span className="text-muted-foreground">Tenant: </span>
-                    {p.tenantName}
-                  </p>
-                  <p className="text-primary pt-1 text-xs font-medium capitalize">
-                    {p.leaseStatus}
-                    {p.openTasks > 0 ? ` · ${p.openTasks} open tasks` : ''}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  {p.rentWeekly > 0 && (
-                    <span className="text-sm font-medium">
-                      {formatCurrency(p.rentWeekly)}/wk
-                    </span>
-                  )}
-                  <ChevronRight className="text-muted-foreground size-4" />
-                </div>
-              </div>
-            </Link>
-          );
-          })}
-        </div>
+          <div className="space-y-3">
+            {list.map((p) => (
+              <PropertyListCard
+                key={p.id}
+                property={p}
+                actionCount={getPropertyActions(p.id).length}
+                href={propertyDetail(p.id)}
+              />
+            ))}
+          </div>
         )}
       </div>
     </AgentShell>

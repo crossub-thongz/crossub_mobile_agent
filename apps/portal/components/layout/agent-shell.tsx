@@ -25,15 +25,16 @@ const PRIMARY_NAV = [
   { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
   { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
   { href: ROUTES.MESSAGES, label: 'Messages', icon: MessageSquare },
-  { href: ROUTES.REMINDING, label: 'Reminding', icon: BellRing },
+  { href: ROUTES.REMINDING, label: 'Reminder', icon: BellRing },
 ] as const;
 
 const MORE_NAV = [
   { href: ROUTES.SEARCH, label: 'Search' },
-  { href: ROUTES.TENANT_SELECTION, label: 'Tenant selection' },
+  { href: ROUTES.LEASING, label: 'Leasing' },
   { href: ROUTES.MAINTENANCE, label: 'Maintenance' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections' },
   { href: ROUTES.RENT_REVIEW, label: 'Rent review' },
+  { href: ROUTES.TENANT_SELECTION, label: 'Tenant selection' },
   { href: ROUTES.ACCOUNTING, label: 'Accounting' },
   { href: ROUTES.VACATING, label: 'Vacating' },
   { href: ROUTES.REPORTS, label: 'Reports' },

@@ -3,7 +3,7 @@
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { rentReviewDetail } from '@/constants/routes';
+import { rentReviewDetail, ROUTES } from '@/constants/routes';
 import { useAgentStore } from '@/lib/store';
 
 export default function RentReviewPage() {
@@ -11,7 +11,7 @@ export default function RentReviewPage() {
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
 
   return (
-    <AgentShell title="Rent Review">
+    <AgentShell title="Rent Review" backHref={ROUTES.LEASING}>
       <div className="space-y-2">
         {rentReviews.map((r) => (
           <TaskStatusRow

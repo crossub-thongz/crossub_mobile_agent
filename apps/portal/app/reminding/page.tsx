@@ -1,12 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { StatusBadge } from '@/components/agent/status-badge';
+import { PageIntro } from '@/components/agent/page-intro';
+import { RemindingCard } from '@/components/agent/reminding-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 
@@ -28,38 +28,40 @@ export default function RemindingPage() {
     return remindingItems.filter((i) => i.category === filter);
   }, [remindingItems, filter]);
 
+  const urgentCount = remindingItems.filter(
+    (i) => i.priority === 'urgent' || i.priority === 'high',
+  ).length;
+
   return (
     <AgentShell title="Reminding">
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm leading-relaxed">
-          Everything that needs your action — approvals, arrears, inspections, and
-          leasing.
-        </p>
+        <PageIntro description="Central action queue — everything that needs your approval or follow-up." />
+
+        {remindingItems.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border bg-card p-3 text-center">
+              <p className="text-muted-foreground text-[10px] font-medium uppercase">Total</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums">{remindingItems.length}</p>
+            </div>
+            <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-center">
+              <p className="text-destructive text-[10px] font-medium uppercase">Urgent</p>
+              <p className="text-destructive mt-1 text-2xl font-bold tabular-nums">{urgentCount}</p>
+            </div>
+          </div>
+        )}
+
         <FilterChips options={CATEGORY_FILTERS} value={filter} onChange={setFilter} />
+
         {list.length === 0 ? (
           <EmptyState
+            icon={CheckCircle2}
             title="All caught up"
             description="No items need your action right now."
           />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {list.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="block rounded-xl border bg-card p-4 active:bg-secondary/50"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge label={item.category} priority={item.priority} />
-                    </div>
-                    <p className="truncate text-sm font-semibold">{item.propertyAddress}</p>
-                    <p className="text-sm">{item.label}</p>
-                  </div>
-                  <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-                </div>
-              </Link>
+              <RemindingCard key={item.id} item={item} />
             ))}
           </div>
         )}

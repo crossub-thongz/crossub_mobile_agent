@@ -7,14 +7,14 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { tenantSelectionDetail } from '@/constants/routes';
+import { ROUTES, tenantSelectionDetail } from '@/constants/routes';
 import { formatCurrency } from '@/lib/utils';
 
 export default function TenantSelectionListPage() {
   const { tenantSelections } = useAgentData();
 
   return (
-    <AgentShell title="Tenant selection" backHref="/dashboard">
+    <AgentShell title="Tenant selection" backHref={ROUTES.LEASING}>
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">
           Applicants awaiting your approval after CROSSUB shortlisting.

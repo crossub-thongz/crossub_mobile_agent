@@ -3,9 +3,20 @@
 import Link from 'next/link';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { Bell, Mail, Phone } from 'lucide-react';
+import {
+  BellRing,
+  Building2,
+  FileText,
+  ListTodo,
+  Mail,
+  Phone,
+  User,
+  Wallet,
+} from 'lucide-react';
 
+import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { PropertyChatFab } from '@/components/agent/property-chat-fab';
+import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -16,7 +27,7 @@ import {
   rentReviewDetail,
   ROUTES,
 } from '@/constants/routes';
-import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const TABS = [
   'Overview',
@@ -79,147 +90,127 @@ export default function PropertyDetailPage() {
   return (
     <AgentShell title={property.address} backHref={ROUTES.PROPERTIES}>
       <div className="space-y-4 pb-8">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-muted-foreground text-xs">{property.suburb}</p>
-            {property.rentWeekly > 0 && (
-              <p className="text-sm font-medium">{formatCurrency(property.rentWeekly)}/wk</p>
+        <div className="rounded-2xl border bg-gradient-to-br from-card to-secondary/30 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs">{property.suburb}</p>
+              <p className="mt-0.5 text-lg font-semibold leading-tight">{property.address}</p>
+              {property.rentWeekly > 0 && (
+                <p className="text-primary mt-1 text-sm font-semibold tabular-nums">
+                  {formatCurrency(property.rentWeekly)}
+                  <span className="text-muted-foreground text-xs font-normal">/week</span>
+                </p>
+              )}
+            </div>
+            {needActions.length > 0 && (
+              <Link
+                href={ROUTES.REMINDING}
+                className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive transition hover:bg-destructive/15"
+                aria-label="Reminding"
+              >
+                <BellRing className="size-4" />
+                <span className="text-[10px] font-bold">{needActions.length}</span>
+              </Link>
             )}
           </div>
-          {needActions.length > 0 && (
-            <Link
-              href={ROUTES.REMINDING}
-              className="flex shrink-0 items-center gap-1 rounded-full bg-destructive/15 px-2.5 py-1 text-[10px] font-semibold text-destructive"
-            >
-              <Bell className="size-3.5" />
-              {needActions.length}
-            </Link>
-          )}
         </div>
 
-        <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={cn(
-                'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium',
-                tab === t
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground',
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        <PropertyTabBar tabs={TABS} active={tab} onChange={setTab} />
 
         {tab === 'Overview' && (
           <div className="space-y-4">
-            <section className="rounded-xl border bg-card p-4">
-              <h2 className="text-sm font-semibold">Landlord</h2>
-              <p className="mt-2 font-medium">{property.homeOwnerName}</p>
+            <InfoPanel title="Landlord" icon={Building2}>
+              <InfoRow label="Name" value={property.homeOwnerName} />
               {property.homeOwnerContact.email && (
-                <a
-                  href={`mailto:${property.homeOwnerContact.email}`}
-                  className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs"
-                >
-                  <Mail className="size-3" />
-                  {property.homeOwnerContact.email}
-                </a>
+                <InfoRow label="Email">
+                  <a
+                    href={`mailto:${property.homeOwnerContact.email}`}
+                    className="flex items-center gap-1.5 text-primary"
+                  >
+                    <Mail className="size-3.5" />
+                    {property.homeOwnerContact.email}
+                  </a>
+                </InfoRow>
               )}
               {property.homeOwnerContact.phone && (
-                <a
-                  href={`tel:${property.homeOwnerContact.phone.replace(/\s/g, '')}`}
-                  className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs"
-                >
-                  <Phone className="size-3" />
-                  {property.homeOwnerContact.phone}
-                </a>
+                <InfoRow label="Mobile">
+                  <a
+                    href={`tel:${property.homeOwnerContact.phone.replace(/\s/g, '')}`}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Phone className="size-3.5" />
+                    {property.homeOwnerContact.phone}
+                  </a>
+                </InfoRow>
               )}
-            </section>
+            </InfoPanel>
 
-            <section className="rounded-xl border bg-card p-4">
-              <h2 className="text-sm font-semibold">Tenant</h2>
-              <p className="mt-2 font-medium">{property.tenantName}</p>
+            <InfoPanel title="Tenant" icon={User}>
+              <InfoRow label="Name" value={property.tenantName} />
               {property.tenantContact.email && (
-                <a
-                  href={`mailto:${property.tenantContact.email}`}
-                  className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs"
-                >
-                  <Mail className="size-3" />
-                  {property.tenantContact.email}
-                </a>
+                <InfoRow label="Email">
+                  <a
+                    href={`mailto:${property.tenantContact.email}`}
+                    className="flex items-center gap-1.5 text-primary"
+                  >
+                    <Mail className="size-3.5" />
+                    {property.tenantContact.email}
+                  </a>
+                </InfoRow>
               )}
               {property.tenantContact.phone && (
-                <a
-                  href={`tel:${property.tenantContact.phone.replace(/\s/g, '')}`}
-                  className="text-muted-foreground mt-1 flex items-center gap-1.5 text-xs"
-                >
-                  <Phone className="size-3" />
-                  {property.tenantContact.phone}
-                </a>
+                <InfoRow label="Mobile">
+                  <a
+                    href={`tel:${property.tenantContact.phone.replace(/\s/g, '')}`}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Phone className="size-3.5" />
+                    {property.tenantContact.phone}
+                  </a>
+                </InfoRow>
               )}
               {property.leaseStart && (
-                <p className="text-muted-foreground mt-2 text-xs">
-                  Lease {formatDate(property.leaseStart)}
-                  {property.leaseEnd ? ` — ${formatDate(property.leaseEnd)}` : ''}
-                </p>
+                <InfoRow
+                  label="Lease period"
+                  value={`${formatDate(property.leaseStart)}${property.leaseEnd ? ` — ${formatDate(property.leaseEnd)}` : ''}`}
+                />
               )}
-            </section>
+            </InfoPanel>
 
-            <section className="rounded-xl border bg-card p-4">
-              <h2 className="text-sm font-semibold">Property</h2>
-              <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <dt className="text-muted-foreground">Bedrooms</dt>
-                  <dd className="font-medium">{property.bedrooms ?? '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Bathrooms</dt>
-                  <dd className="font-medium">{property.bathrooms ?? '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Car spaces</dt>
-                  <dd className="font-medium">{property.carSpaces ?? '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Bond</dt>
-                  <dd className="font-medium">
-                    {property.bondAmount ? formatCurrency(property.bondAmount) : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Rent</dt>
-                  <dd className="font-medium">
-                    {property.rentWeekly > 0
+            <InfoPanel title="Property details" icon={Building2}>
+              <div className="grid grid-cols-2 gap-x-4">
+                <InfoRow label="Bedrooms" value={property.bedrooms ?? '—'} />
+                <InfoRow label="Bathrooms" value={property.bathrooms ?? '—'} />
+                <InfoRow label="Car spaces" value={property.carSpaces ?? '—'} />
+                <InfoRow
+                  label="Bond"
+                  value={property.bondAmount ? formatCurrency(property.bondAmount) : '—'}
+                />
+                <InfoRow
+                  label="Current rent"
+                  value={
+                    property.rentWeekly > 0
                       ? `${formatCurrency(property.rentWeekly)}/wk`
-                      : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Status</dt>
-                  <dd className="font-medium capitalize">{property.leaseStatus}</dd>
-                </div>
-              </dl>
-            </section>
+                      : '—'
+                  }
+                />
+                <InfoRow label="Status" value={property.leaseStatus} />
+              </div>
+            </InfoPanel>
 
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold">Tasks</h2>
+            <InfoPanel title="Tasks" icon={ListTodo} tone={needActions.length > 0 ? 'warning' : 'default'}>
+              <div className="space-y-2">
               {needActions.length === 0 &&
               tasks.maintenance.length === 0 &&
               tasks.rentReviews.length === 0 ? (
-                <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-sm">
-                  No active tasks.
-                </p>
+                <p className="text-muted-foreground text-sm">No active tasks.</p>
               ) : (
                 <>
                   {needActions.map((a) => (
                     <Link
                       key={a.id}
                       href={a.href}
-                      className="block rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs font-medium text-destructive"
+                      className="block rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs font-semibold text-destructive"
                     >
                       {a.label}
                     </Link>
@@ -240,27 +231,29 @@ export default function PropertyDetailPage() {
                   ))}
                 </>
               )}
-            </section>
+              </div>
+            </InfoPanel>
 
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold">Documents</h2>
+            <InfoPanel title="Documents" icon={FileText}>
               {propertyDocs.length === 0 ? (
-                <p className="text-muted-foreground text-xs">
+                <p className="text-muted-foreground text-sm">
                   Document types pending confirmation from Leasing.
                 </p>
               ) : (
-                propertyDocs.map((d) => (
-                  <Link
-                    key={d.id}
-                    href={d.href}
-                    className="flex justify-between rounded-lg border px-3 py-3 text-sm"
-                  >
-                    <span>{d.title}</span>
-                    <span className="text-primary text-xs">View</span>
-                  </Link>
-                ))
+                <div className="space-y-2">
+                  {propertyDocs.map((d) => (
+                    <Link
+                      key={d.id}
+                      href={d.href}
+                      className="flex items-center justify-between rounded-xl border border-border/80 bg-secondary/20 px-3 py-3 text-sm transition hover:border-primary/30"
+                    >
+                      <span className="font-medium">{d.title}</span>
+                      <span className="text-primary text-xs font-semibold">View</span>
+                    </Link>
+                  ))}
+                </div>
               )}
-            </section>
+            </InfoPanel>
           </div>
         )}
 
@@ -272,7 +265,7 @@ export default function PropertyDetailPage() {
               </p>
             ) : (
               leasing.map((l) => (
-                <div key={l.id} className="rounded-xl border bg-card p-4 text-sm">
+                <div key={l.id} className="rounded-2xl border bg-card p-4 text-sm shadow-sm">
                   <p className="font-semibold capitalize">{l.status} tenancy</p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     {formatDate(l.leaseStart)} — {formatDate(l.leaseEnd)} ·{' '}
@@ -414,32 +407,21 @@ export default function PropertyDetailPage() {
               </p>
             ) : (
               <>
-                <dl className="grid grid-cols-2 gap-3 rounded-xl border bg-card p-4 text-xs">
-                  <div>
-                    <dt className="text-muted-foreground">Rent paid (YTD)</dt>
-                    <dd className="font-semibold">{formatCurrency(acct.rentPaidYtd)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Outstanding</dt>
-                    <dd className="font-semibold">{formatCurrency(acct.rentOutstanding)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Balance</dt>
-                    <dd className="font-semibold">{formatCurrency(acct.currentBalance)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Arrears</dt>
-                    <dd
-                      className={
-                        acct.arrearsAmount > 0 ? 'font-semibold text-destructive' : 'font-semibold'
-                      }
-                    >
-                      {acct.arrearsAmount > 0
-                        ? `${formatCurrency(acct.arrearsAmount)} (${acct.daysInArrears} days)`
-                        : 'None'}
-                    </dd>
-                  </div>
-                </dl>
+                <InfoPanel title="Rent ledger" icon={Wallet}>
+                <div className="grid grid-cols-2 gap-x-4">
+                  <InfoRow label="Rent paid (YTD)" value={formatCurrency(acct.rentPaidYtd)} />
+                  <InfoRow label="Outstanding" value={formatCurrency(acct.rentOutstanding)} />
+                  <InfoRow label="Balance" value={formatCurrency(acct.currentBalance)} />
+                  <InfoRow
+                    label="Arrears"
+                    value={
+                      acct.arrearsAmount > 0
+                        ? `${formatCurrency(acct.arrearsAmount)} · ${acct.daysInArrears} days`
+                        : 'None'
+                    }
+                  />
+                </div>
+                </InfoPanel>
                 {acct.arrearsAmount > 0 && acct.collectionActivity.length > 0 && (
                   <section className="space-y-2">
                     <h2 className="text-sm font-semibold">Collection activity</h2>
