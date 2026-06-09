@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Bell, ChevronRight } from 'lucide-react';
 
+import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
@@ -33,14 +34,15 @@ export default function SettingsPage() {
   ];
 
   return (
-    <AgentShell title="Settings" backHref={ROUTES.PROFILE}>
+    <AgentShell title="Settings" backHref={ROUTES.PROFILE} showConnectionBanner>
       <div className="space-y-5">
-        <section className="rounded-xl border bg-card p-4">
+        <section className="space-y-2">
           <h2 className="text-sm font-semibold">Connection</h2>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <ConnectionBanner />
+          <p className="text-muted-foreground px-1 text-xs">
             {apiConnected
               ? 'Live maintenance data from crossub_web'
-              : 'Demo mode — connect API_INTERNAL_URL on Render for live data'}
+              : 'Demo mode — set API_INTERNAL_URL for live data'}
           </p>
         </section>
 

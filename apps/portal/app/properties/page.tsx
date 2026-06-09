@@ -17,27 +17,47 @@ import { propertyDetail, propertyNew } from '@/constants/routes';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
-  { id: 'active', label: 'Active' },
-  { id: 'vacating', label: 'Vacating' },
+  { id: 'occupied', label: 'Occupied' },
   { id: 'vacant', label: 'Vacant' },
+  { id: 'arrears', label: 'Arrears' },
+  { id: 'maintenance', label: 'Maintenance' },
+  { id: 'tribunal', label: 'Tribunal' },
 ];
 
 export default function PropertiesPage() {
   const searchParams = useSearchParams();
   const urlFilter = searchParams.get('filter');
-  const { properties, getPropertyActions } = useAgentData();
+  const { properties, getPropertyActions, accounting, tribunalCases, maintenanceAll } =
+    useAgentData();
   const [filter, setFilter] = useState(
-    urlFilter && ['active', 'vacating', 'vacant', 'periodic'].includes(urlFilter)
-      ? urlFilter === 'active'
-        ? 'active'
-        : urlFilter
-      : 'all',
+    urlFilter && FILTERS.some((f) => f.id === urlFilter) ? urlFilter : 'all',
   );
   const [search, setSearch] = useState('');
 
   const list = useMemo(() => {
     let items = [...properties];
-    if (filter !== 'all') items = items.filter((p) => p.leaseStatus === filter);
+    if (filter === 'occupied') {
+      items = items.filter(
+        (p) =>
+          p.leaseStatus === 'active' ||
+          p.leaseStatus === 'periodic' ||
+          p.leaseStatus === 'vacating',
+      );
+    }
+    if (filter === 'vacant') items = items.filter((p) => p.leaseStatus === 'vacant');
+    if (filter === 'arrears') {
+      items = items.filter((p) => (accounting.find((a) => a.propertyId === p.id)?.arrearsAmount ?? 0) > 0);
+    }
+    if (filter === 'maintenance') {
+      items = items.filter((p) =>
+        getPropertyActions(p.id).some((a) => a.category === 'Maintenance'),
+      );
+    }
+    if (filter === 'tribunal') {
+      items = items.filter((p) =>
+        tribunalCases.some((t) => t.propertyId === p.id && t.status === 'active'),
+      );
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(
@@ -48,21 +68,21 @@ export default function PropertiesPage() {
       );
     }
     return items;
-  }, [properties, filter, search]);
+  }, [properties, filter, search, accounting, getPropertyActions, tribunalCases]);
 
   const needActionCount = properties.filter((p) => getPropertyActions(p.id).length > 0).length;
 
   return (
     <AgentShell title="Properties">
       <div className="space-y-4">
-        <PageIntro description="Your assigned portfolio — properties needing action are highlighted." />
+        <PageIntro description="List view — properties needing action are highlighted." />
 
         {needActionCount > 0 && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
             <span className="font-semibold text-destructive">{needActionCount}</span>
             <span className="text-muted-foreground">
               {' '}
-              propert{needActionCount === 1 ? 'y' : 'ies'} need your attention
+              propert{needActionCount === 1 ? 'y' : 'ies'} need action
             </span>
           </div>
         )}
@@ -70,7 +90,7 @@ export default function PropertiesPage() {
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Address, landlord, tenant…"
+            placeholder="Search by address…"
             className="rounded-xl pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

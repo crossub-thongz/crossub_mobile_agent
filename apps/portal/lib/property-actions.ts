@@ -4,8 +4,10 @@ import {
   propertyDetail,
   rentReviewDetail,
   tenantSelectionDetail,
+  tribunalDetail,
 } from '@/constants/routes';
 import type {
+  AgentDocument,
   Inspection,
   MaintenanceRequest,
   Property,
@@ -13,6 +15,7 @@ import type {
   PropertyNeedAction,
   RentReviewCase,
   TenantSelectionCase,
+  TribunalCase,
 } from '@/lib/types';
 
 export function getPropertyNeedActions(
@@ -22,7 +25,9 @@ export function getPropertyNeedActions(
     inspections: Inspection[];
     rentReviews: RentReviewCase[];
     tenantSelections: TenantSelectionCase[];
+    tribunalCases?: TribunalCase[];
     accounting?: PropertyAccounting;
+    documents?: AgentDocument[];
   },
 ): PropertyNeedAction[] {
   const actions: PropertyNeedAction[] = [];
@@ -50,7 +55,7 @@ export function getPropertyNeedActions(
         id: `rr-${r.id}`,
         propertyId: property.id,
         propertyAddress: addr,
-        label: 'Rent review required',
+        label: 'Rent review approval required',
         category: 'Leasing',
         href: rentReviewDetail(r.id),
         priority: 'high',
@@ -104,7 +109,7 @@ export function getPropertyNeedActions(
       propertyAddress: addr,
       label: `Rent arrears — $${data.accounting.arrearsAmount}`,
       category: 'Accounting',
-      href: `${propertyDetail(property.id)}?tab=Accounting`,
+      href: `${propertyDetail(property.id)}?tab=Accounting&focus=arrears`,
       priority: data.accounting.daysInArrears > 14 ? 'urgent' : 'high',
     });
   }
@@ -129,12 +134,42 @@ export function getPropertyNeedActions(
         id: `lease-expiry-${property.id}`,
         propertyId: property.id,
         propertyAddress: addr,
-        label: 'Lease / rent review upcoming',
+        label: 'Lease renewal required',
         category: 'Leasing',
-        href: `${propertyDetail(property.id)}?tab=Rent Review`,
+        href: `${propertyDetail(property.id)}?tab=Leasing`,
         priority: days <= 30 ? 'high' : 'normal',
       });
     }
+  }
+
+  for (const t of (data.tribunalCases ?? []).filter((x) => x.propertyId === property.id)) {
+    if (t.requiresAction && t.status === 'active') {
+      actions.push({
+        id: `trib-${t.id}`,
+        propertyId: property.id,
+        propertyAddress: addr,
+        label: 'Tribunal action required',
+        category: 'Tribunal',
+        href: tribunalDetail(t.id),
+        priority: 'urgent',
+      });
+    }
+  }
+
+  const propertyDocs = (data.documents ?? []).filter((d) =>
+    d.propertyAddress.includes(property.address.split(',')[0]),
+  );
+  const hasLeaseDoc = propertyDocs.some((d) => d.category === 'lease');
+  if (!hasLeaseDoc && property.leaseStatus !== 'vacant') {
+    actions.push({
+      id: `docs-${property.id}`,
+      propertyId: property.id,
+      propertyAddress: addr,
+      label: 'Documents missing',
+      category: 'Others',
+      href: `${propertyDetail(property.id)}?tab=Documents`,
+      priority: 'normal',
+    });
   }
 
   return actions;

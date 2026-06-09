@@ -24,6 +24,10 @@ export default function AccountingPage() {
 
   const totalIncome = accounting.reduce((s, a) => s + a.rentPaidYtd, 0);
   const totalArrears = accounting.reduce((s, a) => s + a.arrearsAmount, 0);
+  const totalBills = accounting.reduce(
+    (s, a) => s + (a.bills?.filter((b) => b.status === 'outstanding').reduce((t, b) => t + b.amount, 0) ?? 0),
+    0,
+  );
 
   return (
     <AgentShell title="Accounting" backHref={ROUTES.DASHBOARD}>
@@ -35,6 +39,15 @@ export default function AccountingPage() {
               : 'Rental income and arrears across your portfolio.'
           }
         />
+
+        {totalBills > 0 && (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm">
+            <span className="font-semibold text-amber-600 dark:text-amber-400">
+              {formatCurrency(totalBills)}
+            </span>
+            <span className="text-muted-foreground"> outstanding bills across portfolio</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border bg-gradient-to-br from-primary/10 to-card p-4">
@@ -121,6 +134,41 @@ export default function AccountingPage() {
                     </dd>
                   </div>
                 </dl>
+                {(a.bills?.length ?? 0) > 0 && (
+                  <div className="space-y-2 border-t border-border/80 px-4 py-3">
+                    <p className="text-xs font-semibold">Bills</p>
+                    {a.bills!.map((b) => (
+                      <div
+                        key={b.id}
+                        className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2 text-xs"
+                      >
+                        <span>{b.label}</span>
+                        <span
+                          className={
+                            b.status === 'outstanding' ? 'text-destructive font-medium' : ''
+                          }
+                        >
+                          {formatCurrency(b.amount)} · {b.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(a.statements?.length ?? 0) > 0 && (
+                  <div className="space-y-2 border-t border-border/80 px-4 py-3">
+                    <p className="text-xs font-semibold">Statements</p>
+                    {a.statements!.map((s) => (
+                      <Link
+                        key={s.id}
+                        href={s.href}
+                        className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2 text-xs hover:bg-secondary/60"
+                      >
+                        <span>{s.period}</span>
+                        <span className="tabular-nums">{formatCurrency(s.amount)}</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
                 {a.collectionActivity.length > 0 && (
                   <div className="space-y-2 border-t border-border/80 px-4 py-3">
                     <p className="text-xs font-semibold">Collection activity</p>

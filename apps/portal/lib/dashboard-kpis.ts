@@ -45,6 +45,11 @@ export function buildDashboardKpis(input: {
     (r) => r.requiresApproval || !isCompleted(r.status),
   ).length;
   const newLeasing = tenantSelections.filter((t) => t.requiresApproval).length;
+  const leaseRenewals = properties.filter((p) => {
+    if (!p.nextRentReview) return false;
+    const days = (new Date(p.nextRentReview).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    return days <= 90 && days >= 0;
+  }).length;
 
   const maintenanceInProgress = maintenance.filter((m) => isInProgress(m.status)).length;
   const maintenanceCompleted = maintenance.filter((m) => isCompleted(m.status)).length;
@@ -69,13 +74,17 @@ export function buildDashboardKpis(input: {
     leasing: {
       upcomingRentReviews,
       newLeasing,
+      leaseRenewals,
+      href: ROUTES.LEASING,
       rentReviewHref: `${ROUTES.LEASING}?tab=rent-review`,
       newLeasingHref: `${ROUTES.LEASING}?tab=new-leasing`,
+      leaseRenewalHref: `${ROUTES.LEASING}?tab=rent-review`,
     },
     maintenance: {
       inProgress: maintenanceInProgress,
       completed: maintenanceCompleted,
       pendingApproval,
+      href: ROUTES.MAINTENANCE,
       inProgressHref: `${ROUTES.MAINTENANCE}?filter=progress`,
       completedHref: `${ROUTES.MAINTENANCE}?filter=completed`,
       approvalHref: `${ROUTES.MAINTENANCE}?filter=approval`,
@@ -93,11 +102,14 @@ export function buildDashboardKpis(input: {
       ingoingHref: `${ROUTES.INSPECTIONS}?type=INGOING`,
       outgoingHref: `${ROUTES.INSPECTIONS}?type=OUTGOING`,
       routineHref: `${ROUTES.INSPECTIONS}?type=ROUTINE`,
+      href: ROUTES.INSPECTIONS,
     },
     accounting: {
       totalRentalIncome: totalIncome,
       propertiesInArrears: inArrears.length,
       totalArrearsAmount: totalArrears,
+      outstandingBills: accounting.reduce((s, a) => s + Math.max(0, a.rentOutstanding), 0),
+      href: ROUTES.ACCOUNTING,
       incomeHref: ROUTES.ACCOUNTING,
       arrearsHref: `${ROUTES.ACCOUNTING}?filter=arrears`,
     },

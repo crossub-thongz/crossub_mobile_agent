@@ -30,6 +30,15 @@ export type MessageCategory =
   | 'Maintenance'
   | 'Inspection'
   | 'Accounting'
+  | 'Tribunal'
+  | 'Others';
+
+export type NeedActionCategory =
+  | 'Leasing'
+  | 'Maintenance'
+  | 'Inspection'
+  | 'Accounting'
+  | 'Tribunal'
   | 'Others';
 
 export interface Property {
@@ -71,7 +80,24 @@ export interface LeasingRecord {
   applicationCount?: number;
   moveInDate?: string;
   ingoingInspectionId?: string;
+  bondAmount?: number;
+  depositAmount?: number;
   status: 'current' | 'ended' | 'upcoming';
+}
+
+export interface AccountingBill {
+  id: string;
+  label: string;
+  amount: number;
+  dueDate: string;
+  status: 'paid' | 'outstanding';
+}
+
+export interface AccountingStatement {
+  id: string;
+  period: string;
+  amount: number;
+  href: string;
 }
 
 export interface PropertyAccounting {
@@ -83,6 +109,8 @@ export interface PropertyAccounting {
   currentBalance: number;
   daysInArrears: number;
   arrearsAmount: number;
+  bills?: AccountingBill[];
+  statements?: AccountingStatement[];
   collectionActivity: {
     id: string;
     at: string;
@@ -97,9 +125,31 @@ export interface PropertyNeedAction {
   propertyId: string;
   propertyAddress: string;
   label: string;
-  category: 'Leasing' | 'Maintenance' | 'Inspection' | 'Accounting' | 'Others';
+  category: NeedActionCategory;
   href: string;
   priority: Priority;
+}
+
+export interface NeedActionGroup {
+  id: string;
+  label: string;
+  count: number;
+  href: string;
+  category: NeedActionCategory;
+}
+
+export interface TribunalCase {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  tenantName: string;
+  status: 'active' | 'closed';
+  hearingDate?: string;
+  inspector?: string;
+  matter: string;
+  requiresAction: boolean;
+  orders?: string;
+  evidence?: string[];
 }
 
 export interface DashboardKpis {
@@ -112,13 +162,17 @@ export interface DashboardKpis {
   leasing: {
     upcomingRentReviews: number;
     newLeasing: number;
+    leaseRenewals: number;
+    href: string;
     rentReviewHref: string;
     newLeasingHref: string;
+    leaseRenewalHref: string;
   };
   maintenance: {
     inProgress: number;
     completed: number;
     pendingApproval: number;
+    href: string;
     inProgressHref: string;
     completedHref: string;
     approvalHref: string;
@@ -132,6 +186,7 @@ export interface DashboardKpis {
     outgoingCompleted: number;
     routinePending: number;
     routineCompleted: number;
+    href: string;
     openHref: string;
     ingoingHref: string;
     outgoingHref: string;
@@ -141,6 +196,8 @@ export interface DashboardKpis {
     totalRentalIncome: number;
     propertiesInArrears: number;
     totalArrearsAmount: number;
+    outstandingBills: number;
+    href: string;
     incomeHref: string;
     arrearsHref: string;
   };

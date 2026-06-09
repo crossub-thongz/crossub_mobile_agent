@@ -39,9 +39,11 @@ import {
   PROPERTIES,
   RENT_REVIEWS,
   TENANT_SELECTIONS,
+  TRIBUNAL_CASES,
   VACATING,
 } from '@/lib/mock-data';
 import { buildDashboardKpis } from '@/lib/dashboard-kpis';
+import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-actions';
 import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
@@ -60,8 +62,10 @@ import type {
   MessageThread,
   Property,
   PropertyAccounting,
+  NeedActionGroup,
   PropertyNeedAction,
   RentReviewCase,
+  TribunalCase,
   SectionStatus,
   TaskStatusItem,
   TenantSelectionCase,
@@ -105,6 +109,10 @@ interface AgentDataContextValue {
   dashboardKpis: DashboardKpis;
   leasingRecords: LeasingRecord[];
   accounting: PropertyAccounting[];
+  needActionItems: PropertyNeedAction[];
+  needActionGroups: NeedActionGroup[];
+  tribunalCases: TribunalCase[];
+  /** @deprecated use needActionItems */
   remindingItems: PropertyNeedAction[];
   getPropertyActions: (propertyId: string) => PropertyNeedAction[];
   markNotificationRead: (id: string) => void;
@@ -301,6 +309,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [propertyIds],
   );
 
+  const tribunalCases = useMemo(
+    () => filterByPropertyIds(TRIBUNAL_CASES, propertyIds),
+    [propertyIds],
+  );
+
   const messages = useMemo(() => {
     const demoThreads = MESSAGE_THREADS.filter(
       (m) => m.assignedAgentId === agentPortfolioId,
@@ -493,21 +506,33 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         inspections,
         rentReviews,
         tenantSelections,
+        tribunalCases,
         accounting: accounting.find((a) => a.propertyId === propertyId),
+        documents,
       });
     },
-    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting],
+    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, tribunalCases, accounting, documents],
   );
 
-  const remindingItems = useMemo(
-    () => buildRemindingQueue(properties, (p) => getPropertyNeedActions(p, {
-      maintenance: maintenanceAll,
-      inspections,
-      rentReviews,
-      tenantSelections,
-      accounting: accounting.find((a) => a.propertyId === p.id),
-    })),
-    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting],
+  const needActionItems = useMemo(
+    () =>
+      buildRemindingQueue(properties, (p) =>
+        getPropertyNeedActions(p, {
+          maintenance: maintenanceAll,
+          inspections,
+          rentReviews,
+          tenantSelections,
+          tribunalCases,
+          accounting: accounting.find((a) => a.propertyId === p.id),
+          documents,
+        }),
+      ),
+    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, tribunalCases, accounting, documents],
+  );
+
+  const needActionGroups = useMemo(
+    () => buildNeedActionGroups(needActionItems),
+    [needActionItems],
   );
 
   const approveMaintenanceQuote = useCallback(
@@ -549,7 +574,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     dashboardKpis,
     leasingRecords,
     accounting,
-    remindingItems,
+    needActionItems,
+    needActionGroups,
+    tribunalCases,
+    remindingItems: needActionItems,
     getPropertyActions,
     markNotificationRead: (id) =>
       setReadIds((prev) => new Set(prev).add(id)),

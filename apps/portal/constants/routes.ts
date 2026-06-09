@@ -1,6 +1,9 @@
 export const ROUTES = {
   STATUS: '/status',
   REMINDING: '/reminding',
+  TASKS: '/tasks',
+  NEED_ACTION: '/tasks',
+  TRIBUNAL: '/tribunal',
   DASHBOARD: '/dashboard',
   ACCOUNTING: '/accounting',
   LOGIN: '/login',
@@ -31,6 +34,8 @@ export const isPublicRoute = (pathname: string): boolean =>
   PUBLIC_ROUTE_PATTERNS.some((rx) => rx.test(pathname));
 
 export const propertyDetail = (id: string) => `/properties/${id}`;
+export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
+  `/properties/${propertyId}/lease/${leaseId}`;
 export const propertyNew = () => `/properties/new`;
 export const inspectionDetail = (id: string) => `/inspections/${id}`;
 export const maintenanceDetail = (id: string) => `/maintenance/${id}`;
@@ -41,3 +46,4 @@ export const messageDetail = (id: string) => `/messages/${id}`;
 export const messageDetailParty = (id: string, party: 'tenant' | 'owner') =>
   `/messages/${id}?party=${party}`;
 export const tenantSelectionDetail = (id: string) => `/tenant-selection/${id}`;
+export const tribunalDetail = (id: string) => `/tribunal/${id}`;

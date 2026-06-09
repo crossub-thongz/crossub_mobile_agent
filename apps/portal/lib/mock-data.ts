@@ -10,6 +10,7 @@ import type {
   PropertyAccounting,
   RentReviewCase,
   TenantSelectionCase,
+  TribunalCase,
   VacatingCase,
 } from './types';
 
@@ -274,6 +275,29 @@ export const INSPECTIONS: Inspection[] = [
     ],
   },
   {
+    id: 'insp-hist-1',
+    trackingNumber: 'INS-2024-0112',
+    type: 'INGOING',
+    propertyId: 'prop-1',
+    propertyAddress: '12 Ocean View Pde, Miami',
+    inspector: 'Lisa Tran',
+    scheduledAt: '2024-08-01T10:00:00',
+    status: 'Completed',
+    reportStatus: 'approved',
+    reportUrl: '#report-insp-hist-1',
+    tenantAck: 'confirmed',
+    timeline: [
+      {
+        id: 't1',
+        at: '2024-08-02T14:00:00',
+        actor: 'Sarah Chen',
+        actorRole: 'tenant',
+        title: 'Ingoing report signed off',
+        source: 'app',
+      },
+    ],
+  },
+  {
     id: 'insp-4',
     trackingNumber: 'INS-2026-0060',
     type: 'INGOING',
@@ -300,6 +324,29 @@ export const INSPECTIONS: Inspection[] = [
 ];
 
 export const RENT_REVIEWS: RentReviewCase[] = [
+  {
+    id: 'rr-2',
+    propertyId: 'prop-1',
+    propertyAddress: '12 Ocean View Pde, Miami',
+    leaseStart: '2024-08-01',
+    leaseEnd: '2026-07-31',
+    currentRent: 700,
+    suggestedRent: 720,
+    reviewDue: '2024-08-01',
+    status: 'Confirmed',
+    requiresApproval: false,
+    tenantResponse: 'accepted',
+    timeline: [
+      {
+        id: 't1',
+        at: '2024-07-20T09:00:00',
+        actor: 'Agent',
+        actorRole: 'agent',
+        title: 'Initial rent set at lease commencement',
+        source: 'system',
+      },
+    ],
+  },
   {
     id: 'rr-1',
     propertyId: 'prop-4',
@@ -435,7 +482,25 @@ export const DOCUMENTS: AgentDocument[] = [
     propertyAddress: '12 Ocean View Pde, Miami',
     category: 'lease',
     uploadedAt: '2025-08-01T09:00:00',
-    href: '/properties/prop-1',
+    href: '/properties/prop-1/lease/lease-1',
+  },
+  {
+    id: 'doc-5',
+    title: 'Bond receipt — Sarah Chen',
+    propertyAddress: '12 Ocean View Pde, Miami',
+    category: 'lease',
+    uploadedAt: '2024-08-01T10:00:00',
+    href: '/properties/prop-1/lease/lease-1',
+    downloadUrl: '#bond-lease-1',
+  },
+  {
+    id: 'doc-6',
+    title: 'Deposit receipt — Sarah Chen',
+    propertyAddress: '12 Ocean View Pde, Miami',
+    category: 'lease',
+    uploadedAt: '2024-08-01T10:00:00',
+    href: '/properties/prop-1/lease/lease-1',
+    downloadUrl: '#deposit-lease-1',
   },
 ];
 
@@ -566,7 +631,21 @@ export const LEASING_RECORDS: LeasingRecord[] = [
     applicationCount: 6,
     moveInDate: '2024-08-01',
     ingoingInspectionId: 'insp-hist-1',
+    bondAmount: 2880,
+    depositAmount: 720,
     status: 'current',
+  },
+  {
+    id: 'lease-1-prev',
+    propertyId: 'prop-1',
+    leaseStart: '2022-08-01',
+    leaseEnd: '2024-07-31',
+    rentWeekly: 680,
+    approvedTenant: 'Michael Torres',
+    moveInDate: '2022-08-01',
+    bondAmount: 2720,
+    depositAmount: 680,
+    status: 'ended',
   },
   {
     id: 'lease-2',
@@ -580,6 +659,8 @@ export const LEASING_RECORDS: LeasingRecord[] = [
     attendeeCount: 22,
     applicationCount: 9,
     moveInDate: '2024-06-01',
+    bondAmount: 2600,
+    depositAmount: 650,
     status: 'current',
   },
   {
@@ -591,6 +672,8 @@ export const LEASING_RECORDS: LeasingRecord[] = [
     approvedTenant: 'Priya Nair',
     moveInDate: '2025-06-01',
     ingoingInspectionId: 'insp-4',
+    bondAmount: 2320,
+    depositAmount: 580,
     status: 'current',
   },
 ];
@@ -605,6 +688,18 @@ export const ACCOUNTING: PropertyAccounting[] = [
     currentBalance: 0,
     daysInArrears: 0,
     arrearsAmount: 0,
+    bills: [
+      {
+        id: 'bill-1',
+        label: 'Water rates Q2',
+        amount: 186,
+        dueDate: '2026-06-01',
+        status: 'paid',
+      },
+    ],
+    statements: [
+      { id: 'stmt-1', period: 'May 2026', amount: 2880, href: '/accounting' },
+    ],
     collectionActivity: [],
   },
   {
@@ -616,6 +711,18 @@ export const ACCOUNTING: PropertyAccounting[] = [
     currentBalance: -650,
     daysInArrears: 0,
     arrearsAmount: 0,
+    bills: [
+      {
+        id: 'bill-2',
+        label: 'Body corporate levy',
+        amount: 420,
+        dueDate: '2026-06-15',
+        status: 'outstanding',
+      },
+    ],
+    statements: [
+      { id: 'stmt-2', period: 'May 2026', amount: 2600, href: '/accounting' },
+    ],
     collectionActivity: [],
   },
   {
@@ -627,6 +734,26 @@ export const ACCOUNTING: PropertyAccounting[] = [
     currentBalance: -1740,
     daysInArrears: 21,
     arrearsAmount: 1740,
+    bills: [
+      {
+        id: 'bill-3',
+        label: 'Council rates',
+        amount: 890,
+        dueDate: '2026-05-30',
+        status: 'outstanding',
+      },
+      {
+        id: 'bill-4',
+        label: 'Insurance premium',
+        amount: 1240,
+        dueDate: '2026-04-01',
+        status: 'paid',
+      },
+    ],
+    statements: [
+      { id: 'stmt-3', period: 'May 2026', amount: 2320, href: '/accounting' },
+      { id: 'stmt-4', period: 'Apr 2026', amount: 2320, href: '/accounting' },
+    ],
     collectionActivity: [
       {
         id: 'c1',
@@ -648,6 +775,22 @@ export const ACCOUNTING: PropertyAccounting[] = [
         summary: 'SMS reminder sent',
       },
     ],
+  },
+];
+
+export const TRIBUNAL_CASES: TribunalCase[] = [
+  {
+    id: 'trib-1',
+    propertyId: 'prop-4',
+    propertyAddress: '22 Hinterland Dr, Robina',
+    tenantName: 'Priya Nair',
+    status: 'active',
+    hearingDate: '2026-06-12T09:30:00',
+    inspector: 'QCAT Member J. Walsh',
+    matter: 'Rent arrears — breach notice',
+    requiresAction: true,
+    evidence: ['Arrears ledger.pdf', 'Breach notice.pdf', 'Email thread.pdf'],
+    orders: 'Pending hearing',
   },
 ];
 

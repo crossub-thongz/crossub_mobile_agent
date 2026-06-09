@@ -2,23 +2,23 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { BellRing, ChevronRight } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
-  DashboardSection,
+  DashboardHubSection,
   DASHBOARD_ICONS,
   InspectionKpiGroup,
-  KpiTile,
 } from '@/components/agent/dashboard-kpi-section';
-import { PageIntro } from '@/components/agent/page-intro';
+import { NeedActionAlertCard } from '@/components/agent/need-action-alert-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
 import { formatCurrency } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const { dashboardKpis, notifications, remindingItems, loading } = useAgentData();
+  const { dashboardKpis, notifications, needActionGroups, needActionItems, loading } =
+    useAgentData();
   const k = dashboardKpis;
   const pushShown = useRef(false);
 
@@ -41,77 +41,102 @@ export default function DashboardPage() {
 
   return (
     <AgentShell title="Dashboard">
-      <div className="space-y-5">
-        <PageIntro description="Portfolio overview — tap any metric to open detailed records." />
-
-        {remindingItems.length > 0 && (
-          <Link
-            href={ROUTES.REMINDING}
-            className="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-gradient-to-r from-destructive/10 to-destructive/5 p-4 transition hover:border-destructive/50"
-          >
-            <div className="flex size-11 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
-              <BellRing className="size-5" />
+      <div className="space-y-4">
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Need action</h2>
+          {needActionGroups.length === 0 ? (
+            <div className="flex items-center gap-2 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+              <CheckCircle2 className="text-primary size-4 shrink-0" />
+              Nothing waiting — you&apos;re all caught up
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">
-                {remindingItems.length} item{remindingItems.length === 1 ? '' : 's'} need action
-              </p>
-              <p className="text-muted-foreground text-xs">Open your reminding queue</p>
-            </div>
-            <ChevronRight className="text-destructive size-5 shrink-0" />
-          </Link>
-        )}
+          ) : (
+            needActionGroups.map((g) => <NeedActionAlertCard key={g.id} group={g} />)
+          )}
+          {needActionItems.length > 0 && (
+            <Link href={ROUTES.TASKS} className="text-primary block text-center text-xs font-medium">
+              View all {needActionItems.length} items →
+            </Link>
+          )}
+        </section>
 
-        <DashboardSection title="Properties" icon={DASHBOARD_ICONS.properties}>
-          <KpiTile label="Total" value={k.properties.total} href={k.properties.href} />
-          <KpiTile label="Occupied" value={k.properties.occupied} href={ROUTES.PROPERTIES} />
-          <KpiTile
-            label="Vacant"
-            value={k.properties.vacant}
-            href={`${ROUTES.PROPERTIES}?filter=vacant`}
-            highlight={k.properties.vacant > 0}
-          />
-        </DashboardSection>
+        <DashboardHubSection
+          title="Properties"
+          icon={DASHBOARD_ICONS.properties}
+          href={k.properties.href}
+          accent="primary"
+          description="Portfolio overview"
+          stats={[
+            { label: 'Total', value: k.properties.total, href: k.properties.href },
+            {
+              label: 'Occupied',
+              value: k.properties.occupied,
+              href: `${ROUTES.PROPERTIES}?filter=occupied`,
+            },
+            {
+              label: 'Vacant',
+              value: k.properties.vacant,
+              href: `${ROUTES.PROPERTIES}?filter=vacant`,
+              highlight: k.properties.vacant > 0,
+            },
+          ]}
+        />
 
-        <DashboardSection
+        <DashboardHubSection
           title="Leasing"
           icon={DASHBOARD_ICONS.leasing}
-          description="Tap to open the Leasing hub"
-        >
-          <KpiTile
-            label="Upcoming rent reviews"
-            value={k.leasing.upcomingRentReviews}
-            href={k.leasing.rentReviewHref}
-            highlight={k.leasing.upcomingRentReviews > 0}
-          />
-          <KpiTile
-            label="New leasing"
-            value={k.leasing.newLeasing}
-            href={k.leasing.newLeasingHref}
-            highlight={k.leasing.newLeasing > 0}
-          />
-        </DashboardSection>
+          href={k.leasing.href}
+          accent="violet"
+          description="Applications, rent reviews & renewals"
+          stats={[
+            {
+              label: 'New leasing',
+              value: k.leasing.newLeasing,
+              href: k.leasing.newLeasingHref,
+              highlight: k.leasing.newLeasing > 0,
+            },
+            {
+              label: 'Rent reviews',
+              value: k.leasing.upcomingRentReviews,
+              href: k.leasing.rentReviewHref,
+              highlight: k.leasing.upcomingRentReviews > 0,
+            },
+            {
+              label: 'Lease renewals',
+              value: k.leasing.leaseRenewals,
+              href: k.leasing.leaseRenewalHref,
+              highlight: k.leasing.leaseRenewals > 0,
+            },
+          ]}
+        />
 
-        <DashboardSection title="Maintenance" icon={DASHBOARD_ICONS.maintenance}>
-          <KpiTile
-            label="In progress"
-            value={k.maintenance.inProgress}
-            href={k.maintenance.inProgressHref}
-          />
-          <KpiTile
-            label="Completed"
-            value={k.maintenance.completed}
-            href={k.maintenance.completedHref}
-          />
-          <KpiTile
-            label="Awaiting approval"
-            value={k.maintenance.pendingApproval}
-            href={k.maintenance.approvalHref}
-            highlight={k.maintenance.pendingApproval > 0}
-          />
-        </DashboardSection>
+        <DashboardHubSection
+          title="Maintenance"
+          icon={DASHBOARD_ICONS.maintenance}
+          href={k.maintenance.href}
+          accent="amber"
+          description="Jobs across your portfolio"
+          stats={[
+            {
+              label: 'Pending approval',
+              value: k.maintenance.pendingApproval,
+              href: k.maintenance.approvalHref,
+              highlight: k.maintenance.pendingApproval > 0,
+            },
+            {
+              label: 'In progress',
+              value: k.maintenance.inProgress,
+              href: k.maintenance.inProgressHref,
+            },
+            {
+              label: 'Completed',
+              value: k.maintenance.completed,
+              href: k.maintenance.completedHref,
+            },
+          ]}
+        />
 
         <InspectionKpiGroup
+          href={k.inspection.href}
           openPending={k.inspection.openPending}
           openCompleted={k.inspection.openCompleted}
           ingoingPending={k.inspection.ingoingPending}
@@ -126,25 +151,27 @@ export default function DashboardPage() {
           routineHref={k.inspection.routineHref}
         />
 
-        <DashboardSection title="Accounting" icon={DASHBOARD_ICONS.accounting}>
-          <KpiTile
-            label="Rental income (YTD)"
-            value={formatCurrency(k.accounting.totalRentalIncome)}
-            href={k.accounting.incomeHref}
-          />
-          <KpiTile
-            label="In arrears"
-            value={k.accounting.propertiesInArrears}
-            href={k.accounting.arrearsHref}
-            highlight={k.accounting.propertiesInArrears > 0}
-          />
-          <KpiTile
-            label="Total arrears"
-            value={formatCurrency(k.accounting.totalArrearsAmount)}
-            href={k.accounting.arrearsHref}
-            highlight={k.accounting.totalArrearsAmount > 0}
-          />
-        </DashboardSection>
+        <DashboardHubSection
+          title="Accounting"
+          icon={DASHBOARD_ICONS.accounting}
+          href={k.accounting.href}
+          accent="emerald"
+          description="Income, arrears & bills"
+          stats={[
+            {
+              label: 'Rent arrears',
+              value: formatCurrency(k.accounting.totalArrearsAmount),
+              href: k.accounting.arrearsHref,
+              highlight: k.accounting.totalArrearsAmount > 0,
+            },
+            {
+              label: 'Outstanding bills',
+              value: formatCurrency(k.accounting.outstandingBills),
+              href: k.accounting.arrearsHref,
+              highlight: k.accounting.outstandingBills > 0,
+            },
+          ]}
+        />
       </div>
     </AgentShell>
   );

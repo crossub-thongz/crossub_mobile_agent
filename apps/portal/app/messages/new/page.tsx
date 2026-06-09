@@ -20,6 +20,7 @@ const CATEGORIES: MessageCategory[] = [
   'Maintenance',
   'Inspection',
   'Accounting',
+  'Tribunal',
   'Others',
 ];
 
@@ -28,6 +29,7 @@ const RECIPIENTS: Record<MessageCategory, string[]> = {
   Maintenance: ['Maintenance team', 'Contractor', 'Landlord', 'Tenant'],
   Inspection: ['Inspector', 'Inspection team', 'Landlord'],
   Accounting: ['Accounting team', 'Landlord', 'Tenant'],
+  Tribunal: ['Tribunal team', 'Landlord', 'Tenant'],
   Others: ['CROSSUB support', 'Landlord', 'Tenant'],
 };
 

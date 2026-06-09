@@ -99,7 +99,16 @@ export default function MessagesPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p className="truncate text-sm font-semibold">{thread.propertyAddress}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold">{thread.propertyAddress}</p>
+                      <span className="bg-secondary shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                        {thread.channel === 'mixed'
+                          ? 'App & email'
+                          : thread.channel === 'email'
+                            ? 'Email'
+                            : 'App'}
+                      </span>
+                    </div>
                     <p className="text-muted-foreground truncate text-xs">{thread.subject}</p>
                     <p className="text-muted-foreground line-clamp-1 text-xs">
                       {thread.lastMessage}

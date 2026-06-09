@@ -17,14 +17,17 @@ const FILTERS = [
   { id: 'approval', label: 'Needs approval' },
   { id: 'progress', label: 'In progress' },
   { id: 'completed', label: 'Completed' },
-];
+] as const;
 
 export default function MaintenancePage() {
   const searchParams = useSearchParams();
   const urlFilter = searchParams.get('filter');
-  const [filter, setFilter] = useState(
-    urlFilter === 'approval' ? 'approval' : urlFilter === 'completed' ? 'completed' : 'all',
-  );
+  const [filter, setFilter] = useState(() => {
+    if (urlFilter === 'approval') return 'approval';
+    if (urlFilter === 'completed') return 'completed';
+    if (urlFilter === 'progress') return 'progress';
+    return 'all';
+  });
   const [search, setSearch] = useState('');
   const { maintenanceAll, sectionStatus } = useAgentData();
 
