@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ChevronRight, Gavel } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
@@ -20,8 +21,14 @@ const FILTERS = [
 ];
 
 export default function TribunalPage() {
+  const searchParams = useSearchParams();
+  const urlFilter = searchParams.get('filter');
   const { tribunalCases } = useAgentData();
-  const [filter, setFilter] = useState('active');
+  const [filter, setFilter] = useState(() => {
+    if (urlFilter === 'closed') return 'closed';
+    if (urlFilter === 'all') return 'all';
+    return 'active';
+  });
 
   const list = useMemo(() => {
     if (filter === 'all') return tribunalCases;

@@ -201,6 +201,15 @@ export interface DashboardKpis {
     incomeHref: string;
     arrearsHref: string;
   };
+  tribunal: {
+    active: number;
+    closed: number;
+    actionRequired: number;
+    href: string;
+    activeHref: string;
+    closedHref: string;
+    actionHref: string;
+  };
 }
 
 export interface DashboardItem {

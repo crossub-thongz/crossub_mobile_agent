@@ -7,13 +7,14 @@ import {
   ChevronRight,
   ClipboardList,
   FileText,
+  Gavel,
   Wallet,
   Wrench,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-export type DashboardAccent = 'primary' | 'violet' | 'amber' | 'teal' | 'emerald';
+export type DashboardAccent = 'primary' | 'violet' | 'amber' | 'teal' | 'emerald' | 'rose';
 
 const ACCENT_STYLES: Record<
   DashboardAccent,
@@ -48,6 +49,12 @@ const ACCENT_STYLES: Record<
     icon: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
     header: 'hover:bg-emerald-500/5',
     tileHighlight: 'border-emerald-500/35 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400',
+  },
+  rose: {
+    card: 'from-rose-500/10 via-card to-card',
+    icon: 'bg-rose-500/15 text-rose-600 dark:text-rose-400',
+    header: 'hover:bg-rose-500/5',
+    tileHighlight: 'border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400',
   },
 };
 
@@ -324,4 +331,5 @@ export const DASHBOARD_ICONS = {
   maintenance: Wrench,
   inspection: ClipboardList,
   accounting: Wallet,
+  tribunal: Gavel,
 };

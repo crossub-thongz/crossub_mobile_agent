@@ -60,6 +60,33 @@ export default function DashboardPage() {
         </section>
 
         <DashboardHubSection
+          title="Tribunal"
+          icon={DASHBOARD_ICONS.tribunal}
+          href={k.tribunal.href}
+          accent="rose"
+          description="QCAT matters — hearings, evidence & orders"
+          stats={[
+            {
+              label: 'Active',
+              value: k.tribunal.active,
+              href: k.tribunal.activeHref,
+              highlight: k.tribunal.active > 0,
+            },
+            {
+              label: 'Action required',
+              value: k.tribunal.actionRequired,
+              href: `${ROUTES.TASKS}?filter=Tribunal`,
+              highlight: k.tribunal.actionRequired > 0,
+            },
+            {
+              label: 'Closed',
+              value: k.tribunal.closed,
+              href: k.tribunal.closedHref,
+            },
+          ]}
+        />
+
+        <DashboardHubSection
           title="Properties"
           icon={DASHBOARD_ICONS.properties}
           href={k.properties.href}

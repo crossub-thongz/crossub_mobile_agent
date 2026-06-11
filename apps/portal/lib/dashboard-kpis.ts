@@ -7,6 +7,7 @@ import type {
   PropertyAccounting,
   RentReviewCase,
   TenantSelectionCase,
+  TribunalCase,
 } from '@/lib/types';
 
 function isCompleted(status: string): boolean {
@@ -32,9 +33,17 @@ export function buildDashboardKpis(input: {
   rentReviews: RentReviewCase[];
   tenantSelections: TenantSelectionCase[];
   accounting: PropertyAccounting[];
+  tribunalCases: TribunalCase[];
 }): DashboardKpis {
-  const { properties, maintenance, inspections, rentReviews, tenantSelections, accounting } =
-    input;
+  const {
+    properties,
+    maintenance,
+    inspections,
+    rentReviews,
+    tenantSelections,
+    accounting,
+    tribunalCases,
+  } = input;
 
   const occupied = properties.filter(
     (p) => p.leaseStatus === 'active' || p.leaseStatus === 'periodic' || p.leaseStatus === 'vacating',
@@ -112,6 +121,16 @@ export function buildDashboardKpis(input: {
       href: ROUTES.ACCOUNTING,
       incomeHref: ROUTES.ACCOUNTING,
       arrearsHref: `${ROUTES.ACCOUNTING}?filter=arrears`,
+    },
+    tribunal: {
+      active: tribunalCases.filter((c) => c.status === 'active').length,
+      closed: tribunalCases.filter((c) => c.status === 'closed').length,
+      actionRequired: tribunalCases.filter((c) => c.requiresAction && c.status === 'active')
+        .length,
+      href: ROUTES.TRIBUNAL,
+      activeHref: `${ROUTES.TRIBUNAL}?filter=active`,
+      closedHref: `${ROUTES.TRIBUNAL}?filter=closed`,
+      actionHref: ROUTES.TASKS,
     },
   };
 }

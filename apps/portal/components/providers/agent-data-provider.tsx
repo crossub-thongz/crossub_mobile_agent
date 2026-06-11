@@ -493,8 +493,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         rentReviews,
         tenantSelections,
         accounting,
+        tribunalCases,
       }),
-    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting],
+    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting, tribunalCases],
   );
 
   const getPropertyActions = useCallback(
