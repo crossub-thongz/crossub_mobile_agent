@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import type { AgentPortfolioId } from '@/lib/agent-scope';
+import type { BuiltinQuickActionId, CustomQuickAction } from '@/lib/quick-actions';
 import type { AgentDocument, MessageMention, MessageThread, Property, ThreadMessage } from '@/lib/types';
 
 export interface NotificationPrefs {
@@ -53,6 +54,12 @@ interface AgentStore {
   addUploadedDocument: (doc: AgentDocument) => void;
   notificationPrefs: NotificationPrefs;
   setNotificationPref: (key: keyof NotificationPrefs, value: boolean) => void;
+  hiddenBuiltinQuickActionIds: BuiltinQuickActionId[];
+  customQuickActions: CustomQuickAction[];
+  toggleBuiltinQuickAction: (id: BuiltinQuickActionId) => void;
+  addCustomQuickAction: (label: string, href: string) => void;
+  removeCustomQuickAction: (id: string) => void;
+  resetQuickActions: () => void;
 }
 
 export const useAgentStore = create<AgentStore>()(
@@ -152,6 +159,33 @@ export const useAgentStore = create<AgentStore>()(
         set((s) => ({
           notificationPrefs: { ...s.notificationPrefs, [key]: value },
         })),
+      hiddenBuiltinQuickActionIds: [],
+      customQuickActions: [],
+      toggleBuiltinQuickAction: (id) =>
+        set((s) => {
+          const hidden = s.hiddenBuiltinQuickActionIds;
+          const next = hidden.includes(id)
+            ? hidden.filter((x) => x !== id)
+            : [...hidden, id];
+          return { hiddenBuiltinQuickActionIds: next };
+        }),
+      addCustomQuickAction: (label, href) => {
+        const trimmedLabel = label.trim();
+        const trimmedHref = href.trim();
+        if (!trimmedLabel || !trimmedHref) return;
+        const action: CustomQuickAction = {
+          id: `custom-${Date.now()}`,
+          label: trimmedLabel,
+          href: trimmedHref.startsWith('/') ? trimmedHref : `/${trimmedHref}`,
+        };
+        set((s) => ({ customQuickActions: [...s.customQuickActions, action] }));
+      },
+      removeCustomQuickAction: (id) =>
+        set((s) => ({
+          customQuickActions: s.customQuickActions.filter((a) => a.id !== id),
+        })),
+      resetQuickActions: () =>
+        set({ hiddenBuiltinQuickActionIds: [], customQuickActions: [] }),
     }),
     {
       name: 'crossub-agent-store',

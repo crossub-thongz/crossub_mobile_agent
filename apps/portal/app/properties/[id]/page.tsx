@@ -10,16 +10,13 @@ import {
   Mail,
   MessageSquare,
   Phone,
-  Plus,
   User,
   Wallet,
 } from 'lucide-react';
 
-import { CommunicationHubFab } from '@/components/agent/communication-hub-fab';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { MaintenanceInlineActions } from '@/components/agent/maintenance-inline-actions';
-import { PropertyQuickActions } from '@/components/agent/property-quick-actions';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { Timeline } from '@/components/agent/timeline';
@@ -161,7 +158,6 @@ export default function PropertyDetailPage() {
                   <span className="text-[10px] font-bold">{needActions.length}</span>
                 </Link>
               )}
-              <PropertyQuickActions propertyId={property.id} />
             </div>
           </div>
         </div>
@@ -636,7 +632,6 @@ export default function PropertyDetailPage() {
           </InfoPanel>
         )}
       </div>
-      <CommunicationHubFab propertyId={property.id} />
     </AgentShell>
   );
 }

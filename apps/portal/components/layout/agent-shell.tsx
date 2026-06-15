@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ConnectionBanner } from '@/components/agent/connection-banner';
+import { GlobalShellFabs } from '@/components/agent/global-shell-fabs';
 import { ROUTES } from '@/constants/routes';
 import { cn, displayName } from '@/lib/utils';
 
@@ -52,12 +53,15 @@ export function AgentShell({
   title,
   backHref,
   hideNeedAction,
+  hideGlobalFabs,
   showConnectionBanner,
 }: {
   children: React.ReactNode;
   title?: string;
   backHref?: string;
   hideNeedAction?: boolean;
+  /** Hide bottom-right + and chat FABs (e.g. auth screens) */
+  hideGlobalFabs?: boolean;
   /** Show live/demo connection banner — only on Settings by default */
   showConnectionBanner?: boolean;
 }) {
@@ -253,6 +257,8 @@ export function AgentShell({
           </button>
         </div>
       </nav>
+
+      {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
     </div>
   );
 }
