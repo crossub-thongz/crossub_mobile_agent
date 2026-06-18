@@ -5,7 +5,11 @@ import { persist } from 'zustand/middleware';
 
 import type { AgentPortfolioId } from '@/lib/agent-scope';
 import type { BuiltinQuickActionId, CustomQuickAction } from '@/lib/quick-actions';
-import type { AgentDocument, MessageMention, MessageThread, Property, ThreadMessage } from '@/lib/types';
+import type {
+  OpenConductedBy,
+  OpenListingContext,
+} from '@/lib/open-inspection';
+import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, ThreadMessage } from '@/lib/types';
 
 export interface NotificationPrefs {
   approvals: boolean;
@@ -24,6 +28,15 @@ export interface NewPropertyInput {
   tenantPhone?: string;
   leaseStatus: Property['leaseStatus'];
   rentWeekly: number;
+}
+
+export interface NewOpenInspectionInput {
+  property: Property;
+  openConductedBy: OpenConductedBy;
+  openListingContext: OpenListingContext;
+  scheduledAt?: string;
+  preferredNotes?: string;
+  agentTenantNotifiedConfirmed?: boolean;
 }
 
 interface AgentStore {
@@ -60,6 +73,8 @@ interface AgentStore {
   addCustomQuickAction: (label: string, href: string) => void;
   removeCustomQuickAction: (id: string) => void;
   resetQuickActions: () => void;
+  addedInspections: Inspection[];
+  addOpenInspection: (input: NewOpenInspectionInput) => Inspection;
 }
 
 export const useAgentStore = create<AgentStore>()(
@@ -186,6 +201,76 @@ export const useAgentStore = create<AgentStore>()(
         })),
       resetQuickActions: () =>
         set({ hiddenBuiltinQuickActionIds: [], customQuickActions: [] }),
+      addedInspections: [],
+      addOpenInspection: (input) => {
+        const now = new Date().toISOString();
+        const id = `insp-agent-${Date.now()}`;
+        const trackingNumber = `INS-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+        const { property, openConductedBy, openListingContext, scheduledAt, preferredNotes } =
+          input;
+        const isSelf = openConductedBy === 'agent';
+        const isOccupied = openListingContext === 'occupied';
+
+        const status = isSelf
+          ? isOccupied && !input.agentTenantNotifiedConfirmed
+            ? 'Awaiting tenant notice'
+            : 'Agent scheduled'
+          : 'Requested — CROSSUB scheduling';
+
+        const timeline: Inspection['timeline'] = [
+          {
+            id: `${id}-created`,
+            at: now,
+            actor: 'Agent',
+            actorRole: 'agent',
+            source: 'app',
+            title: isSelf
+              ? 'Self open inspection requested by agent'
+              : 'Open inspection requested — CROSSUB will arrange',
+            detail: isSelf
+              ? isOccupied
+                ? 'Agent responsible for notifying tenant of date and time.'
+                : 'Agent responsible for promoting and contacting prospects.'
+              : preferredNotes?.trim() || 'CROSSUB will contact tenant and arrange timing.',
+          },
+        ];
+
+        if (isSelf && input.agentTenantNotifiedConfirmed) {
+          timeline.push({
+            id: `${id}-tenant-notified`,
+            at: now,
+            actor: 'Agent',
+            actorRole: 'agent',
+            source: 'app',
+            title: 'Agent confirmed tenant notified',
+            detail: scheduledAt
+              ? `Open scheduled for ${scheduledAt}`
+              : 'Tenant notified of open inspection timing.',
+          });
+        }
+
+        const inspection: Inspection = {
+          id,
+          trackingNumber,
+          type: 'OPEN',
+          propertyId: property.id,
+          propertyAddress: `${property.address}, ${property.suburb}`,
+          status,
+          reportStatus: 'pending',
+          openConductedBy,
+          openListingContext,
+          scheduledAt: scheduledAt || undefined,
+          inspector: isSelf ? 'Agent (self)' : undefined,
+          agentTenantNotifiedAt:
+            isSelf && input.agentTenantNotifiedConfirmed ? now : undefined,
+          agentTenantNotifiedConfirmed: isSelf ? input.agentTenantNotifiedConfirmed : undefined,
+          tenantAck: isSelf && isOccupied ? 'pending' : undefined,
+          timeline,
+        };
+
+        set((s) => ({ addedInspections: [inspection, ...s.addedInspections] }));
+        return inspection;
+      },
     }),
     {
       name: 'crossub-agent-store',

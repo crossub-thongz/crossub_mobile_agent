@@ -1,15 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Plus } from 'lucide-react';
 
 import { FilterChips } from '@/components/agent/filter-chips';
 import { StatusBanner } from '@/components/agent/status-banner';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { inspectionDetail } from '@/constants/routes';
+import { inspectionDetail, inspectionNew } from '@/constants/routes';
+import { OPEN_CONDUCTED_BY_LABEL } from '@/lib/open-inspection';
 import { formatDateTime } from '@/lib/utils';
 
 const TYPE_FILTERS = [
@@ -23,7 +27,8 @@ const TYPE_FILTERS = [
 export default function InspectionsPage() {
   const searchParams = useSearchParams();
   const typeParam = searchParams.get('type');
-  const { inspections, sectionStatus } = useAgentData();
+  const propertyParam = searchParams.get('property');
+  const { inspections, properties, sectionStatus } = useAgentData();
   const [filter, setFilter] = useState(
     typeParam && TYPE_FILTERS.some((f) => f.id === typeParam) ? typeParam : 'all',
   );
@@ -34,24 +39,35 @@ export default function InspectionsPage() {
   const list = useMemo(() => {
     let items = [...inspections];
     if (filter !== 'all') items = items.filter((i) => i.type === filter);
+    if (propertyParam) items = items.filter((i) => i.propertyId === propertyParam);
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter((i) =>
         i.propertyAddress.toLowerCase().includes(q),
       );
     }
-    return items.map((insp) => ({
-      id: insp.id,
-      propertyAddress: insp.propertyAddress,
-      taskLabel: `${insp.type} inspection${insp.scheduledAt ? ` · ${formatDateTime(insp.scheduledAt)}` : ''}`,
-      status: insp.status,
-      href: inspectionDetail(insp.id),
-      module: 'Inspection',
-      tone: ['Scheduled', 'Confirmed', 'In Progress'].includes(insp.status)
-        ? ('neutral' as const)
-        : ('ok' as const),
-    }));
-  }, [inspections, filter, search]);
+    return items.map((insp) => {
+      const conductor =
+        insp.type === 'OPEN' && insp.openConductedBy
+          ? ` · ${OPEN_CONDUCTED_BY_LABEL[insp.openConductedBy]}`
+          : '';
+      return {
+        id: insp.id,
+        propertyAddress: insp.propertyAddress,
+        taskLabel: `${insp.type} inspection${conductor}${insp.scheduledAt ? ` · ${formatDateTime(insp.scheduledAt)}` : ''}`,
+        status: insp.status,
+        href: inspectionDetail(insp.id),
+        module: 'Inspection',
+        tone: ['Scheduled', 'Confirmed', 'In Progress', 'Agent scheduled', 'Requested — CROSSUB scheduling', 'Awaiting tenant notice'].includes(insp.status)
+          ? ('neutral' as const)
+          : ('ok' as const),
+      };
+    });
+  }, [inspections, filter, search, propertyParam]);
+
+  const propertyLabel = propertyParam
+    ? properties.find((p) => p.id === propertyParam)
+    : undefined;
 
   return (
     <AgentShell title="Inspections">
@@ -60,6 +76,19 @@ export default function InspectionsPage() {
           status={summary?.statusLabel ?? 'Nothing scheduled'}
           tone="default"
         />
+
+        {propertyLabel && (
+          <p className="text-muted-foreground text-xs">
+            Filtered to {propertyLabel.address}, {propertyLabel.suburb}
+          </p>
+        )}
+
+        <Button asChild className="w-full">
+          <Link href={inspectionNew(propertyParam ?? undefined)}>
+            <Plus className="size-4" />
+            Add open inspection
+          </Link>
+        </Button>
 
         <Input
           placeholder="Search by address…"

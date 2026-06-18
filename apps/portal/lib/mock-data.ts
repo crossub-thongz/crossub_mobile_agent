@@ -263,6 +263,8 @@ export const INSPECTIONS: Inspection[] = [
     reportStatus: 'pending',
     keyStatus: 'Office lockbox',
     visitorCount: 12,
+    openConductedBy: 'crossub',
+    openListingContext: 'new_listing',
     timeline: [
       {
         id: 't1',

@@ -8,7 +8,7 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import { messagesNew, propertyNew, ROUTES } from '@/constants/routes';
+import { messagesNew, propertyNew, ROUTES, inspectionNew } from '@/constants/routes';
 
 export type BuiltinQuickActionId =
   | 'add-property'
@@ -42,10 +42,7 @@ export const BUILTIN_QUICK_ACTIONS: BuiltinQuickAction[] = [
     id: 'open-inspection',
     label: 'Open inspection',
     icon: ClipboardList,
-    resolveHref: (propertyId) =>
-      propertyId
-        ? `${ROUTES.INSPECTIONS}?property=${propertyId}&type=OPEN`
-        : `${ROUTES.INSPECTIONS}?type=OPEN`,
+    resolveHref: (propertyId) => inspectionNew(propertyId),
   },
   {
     id: 'maintenance',

@@ -22,8 +22,10 @@ import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
 import {
   inspectionDetail,
+  inspectionNew,
   maintenanceDetail,
   messageDetail,
   messagesNew,
@@ -463,7 +465,14 @@ export default function PropertyDetailPage() {
               onChange={(v) => setInspType(v as InspTypeFilter)}
             />
             {filteredInspections.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No {inspView} inspections.</p>
+              <div className="space-y-3 rounded-xl border border-dashed p-4 text-center">
+                <p className="text-muted-foreground text-sm">No {inspView} inspections.</p>
+                {inspView === 'current' && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={inspectionNew(id)}>Add open inspection</Link>
+                  </Button>
+                )}
+              </div>
             ) : (
               filteredInspections.map((i) => (
                 <Link key={i.id} href={inspectionDetail(i.id)} className="block">

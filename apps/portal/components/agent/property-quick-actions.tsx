@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { ClipboardList, Gavel, MessageSquare, Plus, TrendingUp, Wrench, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { messagesNew, ROUTES } from '@/constants/routes';
+import { messagesNew, ROUTES, inspectionNew } from '@/constants/routes';
 
 const ACTIONS = [
   { id: 'maintenance', label: 'Maintenance request', icon: Wrench, href: (id: string) => `${ROUTES.MAINTENANCE}?property=${id}` },
-  { id: 'inspection', label: 'Inspection', icon: ClipboardList, href: (id: string) => `${ROUTES.INSPECTIONS}?property=${id}` },
+  { id: 'inspection', label: 'Open inspection', icon: ClipboardList, href: (id: string) => inspectionNew(id) },
   { id: 'rent-review', label: 'Rent review', icon: TrendingUp, href: () => ROUTES.RENT_REVIEW },
   { id: 'tribunal', label: 'Tribunal case', icon: Gavel, href: () => ROUTES.TRIBUNAL },
   { id: 'message', label: 'Message', icon: MessageSquare, href: () => messagesNew() },

@@ -269,6 +269,13 @@ export interface Inspection {
   areaOutcomes?: { area: string; outcome: string; note?: string }[];
   maintenanceEscalations?: { label: string; severity: Priority }[];
   routineMode?: 'self' | 'in_person';
+  /** OPEN inspections only — who runs the viewing */
+  openConductedBy?: 'agent' | 'crossub';
+  /** OPEN inspections only — occupied vs vacant/new listing */
+  openListingContext?: 'occupied' | 'new_listing';
+  /** Agent confirmed they notified tenant (self + occupied) */
+  agentTenantNotifiedAt?: string;
+  agentTenantNotifiedConfirmed?: boolean;
   nextDueDate?: string;
   visitorCount?: number;
   reportUrl?: string;

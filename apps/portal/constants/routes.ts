@@ -40,6 +40,8 @@ export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
   `/properties/${propertyId}/lease/${leaseId}`;
 export const propertyNew = () => `/properties/new`;
 export const inspectionDetail = (id: string) => `/inspections/${id}`;
+export const inspectionNew = (propertyId?: string) =>
+  propertyId ? `/inspections/new?property=${propertyId}` : '/inspections/new';
 export const maintenanceDetail = (id: string) => `/maintenance/${id}`;
 export const rentReviewDetail = (id: string) => `/rent-review/${id}`;
 export const vacatingDetail = (id: string) => `/vacating/${id}`;

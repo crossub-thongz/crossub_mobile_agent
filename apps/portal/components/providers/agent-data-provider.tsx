@@ -124,6 +124,7 @@ interface AgentDataContextValue {
     options?: { category?: MessageCategory; subject?: string },
   ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Property;
+  addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Inspection;
   approveMaintenanceQuote: (quotationId: string) => Promise<void>;
   declineMaintenanceQuote: (quotationId: string, reason: string) => Promise<void>;
 }
@@ -180,8 +181,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const sentThreadMessages = useAgentStore((s) => s.sentThreadMessages);
   const sendThreadMessage = useAgentStore((s) => s.sendThreadMessage);
   const addedProperties = useAgentStore((s) => s.addedProperties);
+  const addedInspections = useAgentStore((s) => s.addedInspections);
   const customMessageThreads = useAgentStore((s) => s.customMessageThreads);
   const storeAddProperty = useAgentStore((s) => s.addProperty);
+  const storeAddOpenInspection = useAgentStore((s) => s.addOpenInspection);
   const storeEnsureMessageThread = useAgentStore((s) => s.ensureMessageThread);
   const uploadedDocuments = useAgentStore((s) => s.uploadedDocuments);
   const addUploadedDocument = useAgentStore((s) => s.addUploadedDocument);
@@ -279,10 +282,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     return filterByPropertyIds(merged, propertyIds);
   }, [maintenanceFromApi, propertyIds]);
 
-  const inspections = useMemo(
-    () => filterByPropertyIds(INSPECTIONS, propertyIds),
-    [propertyIds],
-  );
+  const inspections = useMemo(() => {
+    const demo = filterByPropertyIds(INSPECTIONS, propertyIds);
+    const added = filterByPropertyIds(addedInspections, propertyIds);
+    return [...added, ...demo];
+  }, [propertyIds, addedInspections]);
 
   const rentReviews = useMemo(
     () => filterByPropertyIds(RENT_REVIEWS, propertyIds),
@@ -387,6 +391,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     (input: import('@/lib/store').NewPropertyInput) =>
       storeAddProperty(input, agentPortfolioId),
     [storeAddProperty, agentPortfolioId],
+  );
+
+  const addOpenInspection = useCallback(
+    (input: import('@/lib/store').NewOpenInspectionInput) =>
+      storeAddOpenInspection(input),
+    [storeAddOpenInspection],
   );
 
   const uploadDocument = useCallback(
@@ -591,6 +601,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     ensureMessageThread,
     addProperty,
+    addOpenInspection,
     uploadDocument,
     approveMaintenanceQuote,
     declineMaintenanceQuote,

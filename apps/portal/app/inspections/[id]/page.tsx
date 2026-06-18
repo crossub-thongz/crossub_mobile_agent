@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { notFound, useParams } from 'next/navigation';
+import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
@@ -13,6 +14,11 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import {
+  OPEN_CONDUCTED_BY_LABEL,
+  OPEN_LISTING_CONTEXT_LABEL,
+  SELF_OPEN_INSPECTION_DISCLAIMER,
+} from '@/lib/open-inspection';
 import { formatDateTime } from '@/lib/utils';
 
 export default function InspectionDetailPage() {
@@ -24,6 +30,9 @@ export default function InspectionDetailPage() {
 
   if (!insp) notFound();
 
+  const isSelfOpen = insp.type === 'OPEN' && insp.openConductedBy === 'agent';
+  const isCrossubOpen = insp.type === 'OPEN' && insp.openConductedBy === 'crossub';
+
   return (
     <AgentShell title={insp.trackingNumber} backHref={ROUTES.INSPECTIONS}>
       <div className="space-y-4">
@@ -32,6 +41,56 @@ export default function InspectionDetailPage() {
           subtitle={`${insp.type} · ${insp.propertyAddress}`}
           tone={insp.reportStatus === 'sent' ? 'ok' : 'default'}
         />
+
+        {insp.type === 'OPEN' && insp.openConductedBy && (
+          <div className="rounded-xl border bg-card p-4 text-xs">
+            <dl className="grid gap-2">
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">Conducted by</dt>
+                <dd className="text-right font-medium">
+                  {OPEN_CONDUCTED_BY_LABEL[insp.openConductedBy]}
+                </dd>
+              </div>
+              {insp.openListingContext && (
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">Property context</dt>
+                  <dd className="text-right font-medium">
+                    {OPEN_LISTING_CONTEXT_LABEL[insp.openListingContext]}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
+
+        {isSelfOpen && (
+          <div className="flex gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <div className="space-y-2">
+              <p>{SELF_OPEN_INSPECTION_DISCLAIMER}</p>
+              {insp.openListingContext === 'occupied' &&
+                !insp.agentTenantNotifiedConfirmed && (
+                  <p className="font-medium text-amber-800 dark:text-amber-200">
+                    Action required: notify the tenant of the open date and time.
+                  </p>
+                )}
+              {insp.agentTenantNotifiedConfirmed && insp.agentTenantNotifiedAt && (
+                <p className="text-muted-foreground">
+                  Tenant notification confirmed{' '}
+                  {formatDateTime(insp.agentTenantNotifiedAt)}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isCrossubOpen && (
+          <p className="text-muted-foreground rounded-xl border bg-secondary/20 p-3 text-xs">
+            CROSSUB is arranging this open inspection and will contact the{' '}
+            {insp.openListingContext === 'occupied' ? 'tenant' : 'listing contacts'} on your
+            behalf.
+          </p>
+        )}
 
         <CaseContactActions propertyId={insp.propertyId} caseLabel={`${insp.type} inspection`} />
 
