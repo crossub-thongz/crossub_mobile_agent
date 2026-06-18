@@ -25,6 +25,7 @@ import { PASSWORD_MAX, PASSWORD_MIN } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
+import { loginLocalAccount } from '@/lib/local-auth';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -61,19 +62,26 @@ export default function LoginPage() {
       await api.post<{ user: AuthUser }>('/auth/login', values);
       await refresh();
       router.replace(ROUTES.DASHBOARD);
+      return;
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        toast.error(
-          'Invalid email or password. Staging uses a separate database — your local account may not exist there yet.',
-        );
-        return;
+      if (err instanceof ApiError && err.status !== 401 && err.status >= 400) {
+        if (err.status >= 500 || err.status === 0) {
+          /* fall through to local account */
+        } else if (err.status !== 401) {
+          toast.error(`Sign in failed (${err.status}). Check API connection.`);
+          return;
+        }
       }
-      if (err instanceof ApiError) {
-        toast.error(`Sign in failed (${err.status}). Check API connection.`);
-        return;
-      }
-      toast.error('Something went wrong. Please try again.');
     }
+
+    const localUser = loginLocalAccount(values.email, values.password);
+    if (localUser) {
+      await refresh();
+      router.replace(ROUTES.DASHBOARD);
+      return;
+    }
+
+    toast.error('Invalid email or password.');
   };
 
   return (
@@ -83,7 +91,7 @@ export default function LoginPage() {
           <Building2 className="size-5" />
         </div>
         <div>
-          <p className="text-lg font-semibold">CROSSUB Agent Portal</p>
+          <p className="text-lg font-semibold">CROSSUB Agent PC Portal</p>
           <p className="text-sm text-muted-foreground">
             For listing agents and external partners
           </p>
@@ -149,10 +157,13 @@ export default function LoginPage() {
             )}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-between text-sm">
+            <Link href={ROUTES.REGISTER} className="text-primary hover:underline">
+              First time? Register
+            </Link>
             <Link
               href={ROUTES.FORGOT_PASSWORD}
-              className="text-sm text-primary hover:underline"
+              className="text-primary hover:underline"
             >
               Forgot password?
             </Link>
@@ -172,6 +183,14 @@ export default function LoginPage() {
             )}
           </Button>
         </form>
+
+        <p className="text-muted-foreground mt-6 text-center text-xs">
+          First-time login?{' '}
+          <Link href={ROUTES.REGISTER} className="text-primary hover:underline">
+            Register here
+          </Link>
+          {' — '}contact the Leasing Team for registration details.
+        </p>
       </div>
     </div>
   );
