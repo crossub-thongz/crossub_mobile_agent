@@ -5,16 +5,11 @@ import Link from 'next/link';
 import { CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import {
-  DashboardHubSection,
-  DASHBOARD_ICONS,
-  InspectionKpiGroup,
-} from '@/components/agent/dashboard-kpi-section';
+import { DashboardChartHub } from '@/components/agent/dashboard-chart-hub';
 import { NeedActionAlertCard } from '@/components/agent/need-action-alert-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
-import { formatCurrency } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { dashboardKpis, notifications, needActionGroups, needActionItems, loading } =
@@ -59,146 +54,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <DashboardHubSection
-          title="Tribunal"
-          icon={DASHBOARD_ICONS.tribunal}
-          href={k.tribunal.href}
-          accent="rose"
-          description="QCAT matters — hearings, evidence & orders"
-          stats={[
-            {
-              label: 'Active',
-              value: k.tribunal.active,
-              href: k.tribunal.activeHref,
-              highlight: k.tribunal.active > 0,
-            },
-            {
-              label: 'Action required',
-              value: k.tribunal.actionRequired,
-              href: `${ROUTES.TASKS}?filter=Tribunal`,
-              highlight: k.tribunal.actionRequired > 0,
-            },
-            {
-              label: 'Closed',
-              value: k.tribunal.closed,
-              href: k.tribunal.closedHref,
-            },
-          ]}
-        />
-
-        <DashboardHubSection
-          title="Properties"
-          icon={DASHBOARD_ICONS.properties}
-          href={k.properties.href}
-          accent="primary"
-          description="Portfolio overview"
-          stats={[
-            { label: 'Total', value: k.properties.total, href: k.properties.href },
-            {
-              label: 'Occupied',
-              value: k.properties.occupied,
-              href: `${ROUTES.PROPERTIES}?filter=occupied`,
-            },
-            {
-              label: 'Vacant',
-              value: k.properties.vacant,
-              href: `${ROUTES.PROPERTIES}?filter=vacant`,
-              highlight: k.properties.vacant > 0,
-            },
-          ]}
-        />
-
-        <DashboardHubSection
-          title="Leasing"
-          icon={DASHBOARD_ICONS.leasing}
-          href={k.leasing.href}
-          accent="violet"
-          description="Applications, rent reviews & renewals"
-          stats={[
-            {
-              label: 'New leasing',
-              value: k.leasing.newLeasing,
-              href: k.leasing.newLeasingHref,
-              highlight: k.leasing.newLeasing > 0,
-            },
-            {
-              label: 'Rent reviews',
-              value: k.leasing.upcomingRentReviews,
-              href: k.leasing.rentReviewHref,
-              highlight: k.leasing.upcomingRentReviews > 0,
-            },
-            {
-              label: 'Lease renewals',
-              value: k.leasing.leaseRenewals,
-              href: k.leasing.leaseRenewalHref,
-              highlight: k.leasing.leaseRenewals > 0,
-            },
-          ]}
-        />
-
-        <DashboardHubSection
-          title="Maintenance"
-          icon={DASHBOARD_ICONS.maintenance}
-          href={k.maintenance.href}
-          accent="amber"
-          description="Jobs across your portfolio"
-          stats={[
-            {
-              label: 'Pending approval',
-              value: k.maintenance.pendingApproval,
-              href: k.maintenance.approvalHref,
-              highlight: k.maintenance.pendingApproval > 0,
-            },
-            {
-              label: 'In progress',
-              value: k.maintenance.inProgress,
-              href: k.maintenance.inProgressHref,
-            },
-            {
-              label: 'Completed',
-              value: k.maintenance.completed,
-              href: k.maintenance.completedHref,
-            },
-          ]}
-        />
-
-        <InspectionKpiGroup
-          href={k.inspection.href}
-          openPending={k.inspection.openPending}
-          openCompleted={k.inspection.openCompleted}
-          ingoingPending={k.inspection.ingoingPending}
-          ingoingCompleted={k.inspection.ingoingCompleted}
-          outgoingPending={k.inspection.outgoingPending}
-          outgoingCompleted={k.inspection.outgoingCompleted}
-          routinePending={k.inspection.routinePending}
-          routineCompleted={k.inspection.routineCompleted}
-          openHref={k.inspection.openHref}
-          ingoingHref={k.inspection.ingoingHref}
-          outgoingHref={k.inspection.outgoingHref}
-          routineHref={k.inspection.routineHref}
-        />
-
-        <DashboardHubSection
-          title="Accounting"
-          icon={DASHBOARD_ICONS.accounting}
-          href={k.accounting.href}
-          accent="emerald"
-          description="Income, arrears & bills"
-          stats={[
-            {
-              label: 'Rent arrears',
-              value: formatCurrency(k.accounting.totalArrearsAmount),
-              href: k.accounting.arrearsHref,
-              highlight: k.accounting.totalArrearsAmount > 0,
-            },
-            {
-              label: 'Outstanding bills',
-              value: formatCurrency(k.accounting.outstandingBills),
-              href: k.accounting.arrearsHref,
-              highlight: k.accounting.outstandingBills > 0,
-            },
-          ]}
-        />
+        <DashboardChartHub k={k} />
       </div>
     </AgentShell>
   );

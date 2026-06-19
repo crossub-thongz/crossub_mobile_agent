@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
+import { ThemeProvider } from '@/components/theme-provider';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
-import { Toaster } from '@/components/ui/sonner';
+import { ThemedToaster } from '@/components/ui/themed-toaster';
 import './globals.css';
 
 const inter = Inter({
@@ -20,7 +22,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0b0f10',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b0f10' },
+  ],
 };
 
 export const dynamic = 'force-dynamic';
@@ -31,17 +36,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark bg-background">
+    <html lang="en" className="bg-background" suppressHydrationWarning>
+      <head>
+        <Script id="crossub-theme-init" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem('theme');var d=document.documentElement;if(t==='dark')d.classList.add('dark');else d.classList.remove('dark')}catch(e){}})();`}
+        </Script>
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <ProviderErrorBoundary>
-            <AgentDataProvider>
-              {children}
-              <WelcomeOnboarding />
-            </AgentDataProvider>
-          </ProviderErrorBoundary>
-        </AuthProvider>
-        <Toaster position="bottom-right" />
+        <ThemeProvider>
+          <AuthProvider>
+            <ProviderErrorBoundary>
+              <AgentDataProvider>
+                {children}
+                <WelcomeOnboarding />
+              </AgentDataProvider>
+            </ProviderErrorBoundary>
+          </AuthProvider>
+          <ThemedToaster position="bottom-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

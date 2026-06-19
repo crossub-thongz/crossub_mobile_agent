@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   AlertTriangle,
+  Bot,
   Building2,
   LayoutDashboard,
   ListTodo,
@@ -14,10 +15,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { AgentAiAssistant } from '@/components/agent/agent-ai-assistant';
+import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { GlobalShellFabs } from '@/components/agent/global-shell-fabs';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ROUTES } from '@/constants/routes';
 import { cn, displayName } from '@/lib/utils';
 
@@ -68,6 +72,7 @@ export function AgentShell({
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
   const { messages, needActionItems } = useAgentData();
@@ -86,6 +91,7 @@ export function AgentShell({
 
   useEffect(() => {
     setMoreOpen(false);
+    setAiOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -109,15 +115,10 @@ export function AgentShell({
               ← Back
             </Link>
           ) : (
-            <Link href={ROUTES.DASHBOARD} className="flex min-w-0 items-center gap-2">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Building2 className="size-4" />
-              </div>
-              <span className="truncate text-sm font-semibold">CROSSUB Agent</span>
-            </Link>
+            <CrossubLogo size="sm" />
           )}
 
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-0.5">
             {!hideNeedAction && (
               <Link
                 href={ROUTES.TASKS}
@@ -138,6 +139,15 @@ export function AgentShell({
                 )}
               </Link>
             )}
+            <button
+              type="button"
+              onClick={() => setAiOpen(true)}
+              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
+              aria-label="Agent AI assistant"
+            >
+              <Bot className="size-5" />
+            </button>
+            <ThemeToggle />
             <Link
               href={ROUTES.SEARCH}
               className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
@@ -259,6 +269,7 @@ export function AgentShell({
       </nav>
 
       {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
+      <AgentAiAssistant open={aiOpen} onClose={() => setAiOpen(false)} />
     </div>
   );
 }

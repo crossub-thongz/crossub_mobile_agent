@@ -1,17 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { Bell, ChevronRight } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useTheme } from '@/components/theme-provider';
 import { ROUTES } from '@/constants/routes';
 import { useAgentStore, type NotificationPrefs } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
   const { apiConnected } = useAgentData();
+  const { resolvedTheme, setTheme } = useTheme();
   const prefs = useAgentStore((s) => s.notificationPrefs);
   const setPref = useAgentStore((s) => s.setNotificationPref);
 
@@ -47,8 +49,39 @@ export default function SettingsPage() {
         </section>
 
         <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Appearance</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setTheme('light')}
+              className={cn(
+                'flex items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium',
+                resolvedTheme === 'light'
+                  ? 'border-primary bg-primary/5 text-foreground'
+                  : 'text-muted-foreground',
+              )}
+            >
+              <Sun className="size-4" />
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('dark')}
+              className={cn(
+                'flex items-center justify-center gap-2 rounded-xl border p-4 text-sm font-medium',
+                resolvedTheme === 'dark'
+                  ? 'border-primary bg-primary/5 text-foreground'
+                  : 'text-muted-foreground',
+              )}
+            >
+              <Moon className="size-4" />
+              Dark
+            </button>
+          </div>
+        </section>
+
+        <section className="space-y-2">
           <div className="flex items-center gap-2 px-1">
-            <Bell className="text-muted-foreground size-4" />
             <h2 className="text-sm font-semibold">Notifications</h2>
           </div>
           {toggles.map(({ key, label, description }) => (

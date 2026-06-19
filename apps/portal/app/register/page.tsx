@@ -3,7 +3,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowRight,
-  Building2,
   Eye,
   EyeOff,
   KeyRound,
@@ -21,6 +20,8 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import { CrossubLogo } from '@/components/brand/crossub-logo';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -163,15 +164,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
-      <div className="mb-8 flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Building2 className="size-5" />
-        </div>
-        <div>
-          <p className="text-lg font-semibold">CROSSUB Agent PC Portal</p>
-          <p className="text-sm text-muted-foreground">First-time registration</p>
-        </div>
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+      <div className="mb-8 flex flex-col items-center gap-2">
+        <CrossubLogo size="lg" showTagline />
+        <p className="text-muted-foreground text-sm">First-time registration</p>
       </div>
 
       <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg">

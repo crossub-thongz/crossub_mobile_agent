@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
-import { Mail, MessageSquare, Send, Sparkles } from 'lucide-react';
+import { Mail, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ContactDetails } from '@/components/agent/contact-details';
@@ -12,7 +12,6 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
-import { buildAiDraftReply } from '@/lib/message-ai-draft';
 import {
   buildThreadMentionCandidates,
   extractMentions,
@@ -29,7 +28,6 @@ export default function MessageDetailPage() {
   const { messages, sendMessage } = useAgentData();
   const thread = messages.find((m) => m.id === threadId);
   const [reply, setReply] = useState('');
-  const [drafting, setDrafting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageCount = thread?.messages.length ?? 0;
 
@@ -48,13 +46,6 @@ export default function MessageDetailPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messageCount]);
 
-  useEffect(() => {
-    const current = messages.find((m) => m.id === threadId);
-    if (!current || !highlightParty) return;
-    const draft = buildAiDraftReply(current, highlightParty);
-    setReply(draft);
-  }, [messages, threadId, highlightParty]);
-
   if (!thread) notFound();
 
   const partyLabel =
@@ -63,18 +54,6 @@ export default function MessageDetailPage() {
       : highlightParty === 'owner'
         ? thread.homeOwnerName
         : null;
-
-  const applyAiDraft = () => {
-    setDrafting(true);
-    const draft = buildAiDraftReply(thread, highlightParty);
-    setReply(draft);
-    setDrafting(false);
-    toast.success(
-      highlightParty
-        ? `Draft for ${partyLabel} inserted — edit before sending`
-        : 'AI draft inserted — edit before sending',
-    );
-  };
 
   const handleSend = () => {
     const text = reply.trim();
@@ -145,21 +124,6 @@ export default function MessageDetailPage() {
         </div>
 
         <div className="sticky bottom-20 z-30 space-y-2 rounded-xl border border-border bg-background p-3 shadow-lg">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full"
-            disabled={drafting}
-            onClick={applyAiDraft}
-          >
-            <Sparkles className="size-3.5" />
-            {drafting
-              ? 'Drafting…'
-              : highlightParty
-                ? `AI draft for ${partyLabel}`
-                : 'AI draft reply'}
-          </Button>
           <MessageCompose
             value={reply}
             onChange={setReply}

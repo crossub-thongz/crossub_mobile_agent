@@ -3,27 +3,36 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* CROSSUB — light default, dark via .dark class (aligned with crossub_web) */
 :root {
-  --background: #0b0f10;
-  --card: #111617;
-  --card-foreground: #ffffff;
-  --popover: #111617;
-  --popover-foreground: #ffffff;
-  --foreground: #ffffff;
-  --primary: #00d4a4;
-  --primary-foreground: #0b0f10;
-  --secondary: #1c2326;
-  --secondary-foreground: #ffffff;
-  --muted: #1c2326;
-  --muted-foreground: #6b7280;
-  --accent: #00d4a4;
-  --accent-foreground: #0b0f10;
+  --background: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --foreground: #0f172a;
+  --primary: #00b894;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #ecfdf8;
+  --accent-foreground: #047857;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #1c2326;
-  --input: #1c2326;
-  --ring: #00d4a4;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #00b894;
+  --chart-1: #00b894;
+  --chart-2: #3b82f6;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
   --radius: 0.75rem;
+  --warning: #f59e0b;
+  --success: #00b894;
+  --info: #3b82f6;
 }
 
 .dark {
@@ -46,6 +55,14 @@
   --border: #1c2326;
   --input: #1c2326;
   --ring: #00d4a4;
+  --chart-1: #00d4a4;
+  --chart-2: #3b82f6;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
+  --warning: #f59e0b;
+  --success: #00d4a4;
+  --info: #3b82f6;
 }
 
 @theme inline {
@@ -68,6 +85,14 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-info: var(--info);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
