@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   AlertTriangle,
-  Bot,
   Building2,
   LayoutDashboard,
   ListTodo,
@@ -15,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { AgentAiAssistant } from '@/components/agent/agent-ai-assistant';
+import { AgentAiFab } from '@/components/agent/agent-ai-fab';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -72,7 +71,6 @@ export function AgentShell({
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
   const { messages, needActionItems } = useAgentData();
@@ -91,7 +89,6 @@ export function AgentShell({
 
   useEffect(() => {
     setMoreOpen(false);
-    setAiOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -139,14 +136,6 @@ export function AgentShell({
                 )}
               </Link>
             )}
-            <button
-              type="button"
-              onClick={() => setAiOpen(true)}
-              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
-              aria-label="Agent AI assistant"
-            >
-              <Bot className="size-5" />
-            </button>
             <ThemeToggle />
             <Link
               href={ROUTES.SEARCH}
@@ -268,8 +257,12 @@ export function AgentShell({
         </div>
       </nav>
 
-      {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
-      <AgentAiAssistant open={aiOpen} onClose={() => setAiOpen(false)} />
+      {!hideGlobalFabs && (
+        <>
+          <GlobalShellFabs pathname={pathname} />
+          <AgentAiFab />
+        </>
+      )}
     </div>
   );
 }
