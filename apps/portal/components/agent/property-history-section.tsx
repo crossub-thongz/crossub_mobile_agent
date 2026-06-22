@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight, History, Mail, MessageSquare } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import type { PropertyHistoryEntry } from '@/lib/property-history';
 import { propertyHistoryKindLabel } from '@/lib/property-history';
 import { formatDateTime } from '@/lib/utils';
@@ -20,7 +21,15 @@ export function PropertyHistorySection({
 
   if (entries.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">No historical records yet for this property.</p>
+      <div className="space-y-3">
+        <p className="text-muted-foreground text-sm">No historical records yet for this property.</p>
+        {compact && onViewAll && (
+          <Button type="button" variant="outline" className="w-full" onClick={onViewAll}>
+            View history
+            <ChevronRight className="size-4" />
+          </Button>
+        )}
+      </div>
     );
   }
 
@@ -54,14 +63,11 @@ export function PropertyHistorySection({
           <ChevronRight className="text-muted-foreground size-4 shrink-0" />
         </Link>
       ))}
-      {compact && entries.length > preview.length && onViewAll && (
-        <button
-          type="button"
-          onClick={onViewAll}
-          className="text-primary w-full py-2 text-center text-xs font-semibold"
-        >
-          View all {entries.length} records →
-        </button>
+      {compact && onViewAll && (
+        <Button type="button" variant="outline" className="mt-1 w-full" onClick={onViewAll}>
+          View all {entries.length} record{entries.length === 1 ? '' : 's'}
+          <ChevronRight className="size-4" />
+        </Button>
       )}
     </div>
   );
