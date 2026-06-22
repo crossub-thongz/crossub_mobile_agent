@@ -6,10 +6,11 @@ import { useMemo, useState } from 'react';
 import {
   Building2,
   FileText,
+  History,
   ListTodo,
   Mail,
-  MessageSquare,
   Phone,
+  Plus,
   User,
   Wallet,
 } from 'lucide-react';
@@ -17,6 +18,8 @@ import {
 import { FilterChips } from '@/components/agent/filter-chips';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { MaintenanceInlineActions } from '@/components/agent/maintenance-inline-actions';
+import { ModuleCommunications } from '@/components/agent/module-communications';
+import { PropertyHistorySection } from '@/components/agent/property-history-section';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { Timeline } from '@/components/agent/timeline';
@@ -35,7 +38,17 @@ import {
   tenantSelectionDetail,
 } from '@/constants/routes';
 import { leaseHistoryLabel } from '@/lib/lease-label';
+import { buildPropertyHistory } from '@/lib/property-history';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+
+const TABS = [
+  'Overview',
+  'Leasing',
+  'Maintenance',
+  'Inspection',
+  'Accounting',
+  'Documents',
+] as const;
 
 const INSP_TYPE_FILTERS = [
   { id: 'all', label: 'All' },
@@ -47,26 +60,10 @@ const INSP_TYPE_FILTERS = [
 
 type InspTypeFilter = (typeof INSP_TYPE_FILTERS)[number]['id'];
 
-function channelLabel(channel: 'app' | 'email' | 'mixed'): string {
-  if (channel === 'mixed') return 'App & email';
-  return channel === 'email' ? 'Email' : 'App';
-}
-
-const TABS = [
-  'Overview',
-  'Tenancy',
-  'Leasing',
-  'Maintenance',
-  'Inspection',
-  'Accounting',
-  'Communication',
-  'Documents',
-] as const;
-
 type Tab = (typeof TABS)[number];
 
 function normalizeTab(raw: string | null): Tab {
-  if (raw === 'Rent Review') return 'Leasing';
+  if (raw === 'Rent Review' || raw === 'Tenancy' || raw === 'Communication') return 'Leasing';
   if (TABS.includes(raw as Tab)) return raw as Tab;
   return 'Overview';
 }
@@ -89,6 +86,7 @@ export default function PropertyDetailPage() {
   } = useAgentData();
   const property = properties.find((p) => p.id === id);
   const [tab, setTab] = useState<Tab>(normalizeTab(searchParams.get('tab')));
+  const [overviewView, setOverviewView] = useState<'summary' | 'history'>('summary');
   const [tenancyView, setTenancyView] = useState<'current' | 'previous'>('current');
   const [inspView, setInspView] = useState<'current' | 'completed'>('current');
   const [inspType, setInspType] = useState<InspTypeFilter>('all');
@@ -127,6 +125,39 @@ export default function PropertyDetailPage() {
     if (inspType === 'all') return base;
     return base.filter((i) => i.type === inspType);
   }, [inspView, inspType, currentInspections, completedInspections]);
+
+  const historyEntries = useMemo(
+    () =>
+      buildPropertyHistory({
+        propertyId: id,
+        leasing,
+        maintenance: tasks.maintenance,
+        inspections: tasks.inspections,
+        rentReviews: tasks.rentReviews,
+        tenantSelections: propertyLeasingCases,
+        messages: propertyMessages,
+        documents: propertyDocs,
+        propertyAddressPrefix: property.address.split(',')[0],
+        leasePackageHref: (leaseId) => propertyLeasePackage(property.id, leaseId),
+        maintenanceHref: maintenanceDetail,
+        inspectionHref: inspectionDetail,
+        rentReviewHref: rentReviewDetail,
+        tenantSelectionHref: tenantSelectionDetail,
+        messageHref: messageDetail,
+      }),
+    [
+      id,
+      leasing,
+      tasks.maintenance,
+      tasks.inspections,
+      tasks.rentReviews,
+      propertyLeasingCases,
+      propertyMessages,
+      propertyDocs,
+      property.address,
+      property.id,
+    ],
+  );
   const activeMaintenance = tasks.maintenance.filter(
     (m) => !m.status.toLowerCase().includes('complete') && !m.status.toLowerCase().includes('closed'),
   );
@@ -168,6 +199,21 @@ export default function PropertyDetailPage() {
 
         {tab === 'Overview' && (
           <div className="space-y-4">
+            {overviewView === 'history' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setOverviewView('summary')}
+                  className="text-primary text-sm font-medium"
+                >
+                  ← Back to overview
+                </button>
+                <InfoPanel title="History" icon={History}>
+                  <PropertyHistorySection entries={historyEntries} />
+                </InfoPanel>
+              </>
+            ) : (
+              <>
             <InfoPanel title="Landlord" icon={Building2}>
               <InfoRow label="Name" value={property.homeOwnerName} />
               {property.homeOwnerContact.email && (
@@ -301,46 +347,64 @@ export default function PropertyDetailPage() {
                 }
               />
             </InfoPanel>
-          </div>
-        )}
 
-        {tab === 'Tenancy' && (
-          <div className="space-y-4">
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Each lease is named by period and tenant. Tap a record to view the full leasing
-              package — agreement, inspections, bond, rent, tribunal, maintenance and more.
-            </p>
-            <FilterChips
-              options={[
-                { id: 'current', label: 'Current' },
-                { id: 'previous', label: 'Previous' },
-              ]}
-              value={tenancyView}
-              onChange={(v) => setTenancyView(v as 'current' | 'previous')}
-            />
-            {(tenancyView === 'current' ? currentTenancy : previousTenancy).length === 0 ? (
-              <p className="text-muted-foreground text-sm">No {tenancyView} tenancy records.</p>
-            ) : (
-              (tenancyView === 'current' ? currentTenancy : previousTenancy).map((l) => (
-                <Link
-                  key={l.id}
-                  href={propertyLeasePackage(property.id, l.id)}
-                  className="block rounded-2xl border bg-card p-4 text-sm transition hover:border-primary/30"
-                >
-                  <p className="font-semibold">{leaseHistoryLabel(l)}</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {formatDate(l.leaseStart)} — {formatDate(l.leaseEnd)} ·{' '}
-                    {formatCurrency(l.rentWeekly)}/wk
-                  </p>
-                  <p className="text-primary mt-2 text-xs font-medium">View leasing package →</p>
-                </Link>
-              ))
+            <InfoPanel title="History" icon={History}>
+              <p className="text-muted-foreground mb-3 text-xs">
+                All historical records and activities for this property.
+              </p>
+              <PropertyHistorySection
+                entries={historyEntries}
+                compact
+                onViewAll={() => setOverviewView('history')}
+              />
+            </InfoPanel>
+              </>
             )}
           </div>
         )}
 
         {tab === 'Leasing' && (
           <div className="space-y-4">
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold">Tenancy records</h2>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Each lease is named by period and tenant. Tap a record to view the full leasing
+                package.
+              </p>
+              <FilterChips
+                options={[
+                  { id: 'current', label: 'Current' },
+                  { id: 'previous', label: 'Previous' },
+                ]}
+                value={tenancyView}
+                onChange={(v) => setTenancyView(v as 'current' | 'previous')}
+              />
+              {(tenancyView === 'current' ? currentTenancy : previousTenancy).length === 0 ? (
+                <p className="text-muted-foreground text-sm">No {tenancyView} tenancy records.</p>
+              ) : (
+                (tenancyView === 'current' ? currentTenancy : previousTenancy).map((l) => (
+                  <Link
+                    key={l.id}
+                    href={propertyLeasePackage(property.id, l.id)}
+                    className="block rounded-2xl border bg-card p-4 text-sm transition hover:border-primary/30"
+                  >
+                    <p className="font-semibold">{leaseHistoryLabel(l)}</p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {formatDate(l.leaseStart)} — {formatDate(l.leaseEnd)} ·{' '}
+                      {formatCurrency(l.rentWeekly)}/wk
+                    </p>
+                    <p className="text-primary mt-2 text-xs font-medium">View leasing package →</p>
+                  </Link>
+                ))
+              )}
+            </section>
+
+            <ModuleCommunications
+              propertyId={id}
+              categories={['Leasing']}
+              title="Leasing emails & messages"
+            />
+
             <Link
               href={messagesNew()}
               className="flex items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium text-primary"
@@ -446,6 +510,11 @@ export default function PropertyDetailPage() {
                 ))
               )}
             </section>
+            <ModuleCommunications
+              propertyId={id}
+              categories={['Maintenance']}
+              title="Maintenance emails & messages"
+            />
           </div>
         )}
 
@@ -494,6 +563,11 @@ export default function PropertyDetailPage() {
                 </Link>
               ))
             )}
+            <ModuleCommunications
+              propertyId={id}
+              categories={['Inspection']}
+              title="Inspection emails & messages"
+            />
           </div>
         )}
 
@@ -582,38 +656,11 @@ export default function PropertyDetailPage() {
                 )}
               </>
             )}
-          </div>
-        )}
-
-        {tab === 'Communication' && (
-          <div className="space-y-3">
-            <Link
-              href={messagesNew()}
-              className="flex items-center gap-2 rounded-xl border bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
-            >
-              <MessageSquare className="size-4" />
-              New message for this property
-            </Link>
-            {propertyMessages.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No conversations yet.</p>
-            ) : (
-              propertyMessages.map((m) => (
-                <Link
-                  key={m.id}
-                  href={messageDetail(m.id)}
-                  className="block rounded-xl border bg-card p-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-semibold text-primary">{m.taskType}</p>
-                    <span className="bg-secondary rounded-full px-2 py-0.5 text-[10px] font-medium">
-                      {channelLabel(m.channel)}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium">{m.subject}</p>
-                  <p className="text-muted-foreground line-clamp-1 text-xs">{m.lastMessage}</p>
-                </Link>
-              ))
-            )}
+            <ModuleCommunications
+              propertyId={id}
+              categories={['Accounting']}
+              title="Accounting emails & messages"
+            />
           </div>
         )}
 

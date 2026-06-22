@@ -7,6 +7,7 @@ import { ChevronRight, Gavel } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -82,6 +83,11 @@ export default function TribunalPage() {
             ))}
           </div>
         )}
+        <ModuleCommunications
+          categories={['Tribunal']}
+          title="Tribunal emails & messages"
+          emptyHint="Tribunal-related emails and messages across your portfolio appear here."
+        />
       </div>
     </AgentShell>
   );

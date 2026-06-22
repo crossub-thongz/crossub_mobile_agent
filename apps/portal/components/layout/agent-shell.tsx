@@ -14,12 +14,11 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { AgentAiFab } from '@/components/agent/agent-ai-fab';
+import { ConnectionBanner } from '@/components/agent/connection-banner';
+import { GlobalShellFabs } from '@/components/agent/global-shell-fabs';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ConnectionBanner } from '@/components/agent/connection-banner';
-import { GlobalShellFabs } from '@/components/agent/global-shell-fabs';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ROUTES } from '@/constants/routes';
 import { cn, displayName } from '@/lib/utils';
@@ -257,12 +256,7 @@ export function AgentShell({
         </div>
       </nav>
 
-      {!hideGlobalFabs && (
-        <>
-          <GlobalShellFabs pathname={pathname} />
-          <AgentAiFab />
-        </>
-      )}
+      {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
     </div>
   );
 }

@@ -72,7 +72,7 @@ export default function LeasePackagePage() {
   const propertyThread = messages.find((m) => m.propertyId === propertyId);
 
   return (
-    <AgentShell title="Leasing package" backHref={`${propertyDetail(propertyId)}?tab=Tenancy`}>
+    <AgentShell title="Leasing package" backHref={`${propertyDetail(propertyId)}?tab=Leasing`}>
       <div className="space-y-4">
         <InfoPanel title={leaseHistoryLabel(record)} icon={FileText}>
           <InfoRow label="Tenant" value={record.approvedTenant} />

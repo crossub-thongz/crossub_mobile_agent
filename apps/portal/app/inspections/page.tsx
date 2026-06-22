@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 
 import { FilterChips } from '@/components/agent/filter-chips';
+import { ModuleCommunications } from '@/components/agent/module-communications';
 import { StatusBanner } from '@/components/agent/status-banner';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -102,6 +103,11 @@ export default function InspectionsPage() {
             <TaskStatusRow key={item.id} item={item} />
           ))}
         </div>
+        <ModuleCommunications
+          categories={['Inspection']}
+          title="Inspection emails & messages"
+          emptyHint="Inspection-related emails and messages across your portfolio appear here."
+        />
       </div>
     </AgentShell>
   );

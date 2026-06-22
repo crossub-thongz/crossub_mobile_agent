@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { GiiFab } from '@/components/agent/gii-fab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { messageDetail, messagesNew, ROUTES } from '@/constants/routes';
@@ -42,12 +43,13 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed right-4 z-40 flex flex-col items-end gap-3',
+        'pointer-events-none fixed right-4 z-40 flex flex-col-reverse items-end gap-3',
         'bottom-[calc(4.5rem+env(safe-area-inset-bottom))]',
       )}
     >
-      <QuickCreateFab propertyId={propertyId} />
+      <GiiFab />
       {!hideChat && <ChatFab propertyId={propertyId} />}
+      <QuickCreateFab propertyId={propertyId} />
     </div>
   );
 }

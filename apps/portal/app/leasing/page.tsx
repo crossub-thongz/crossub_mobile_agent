@@ -7,6 +7,7 @@ import { ChevronRight, FileText, History, UserCheck } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { StatusBadge } from '@/components/agent/status-badge';
@@ -181,6 +182,11 @@ export default function LeasingPage() {
             )}
           </section>
         )}
+        <ModuleCommunications
+          categories={['Leasing']}
+          title="Leasing emails & messages"
+          emptyHint="Leasing-related emails and messages across your portfolio appear here."
+        />
       </div>
     </AgentShell>
   );

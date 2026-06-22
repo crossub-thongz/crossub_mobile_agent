@@ -5,8 +5,6 @@ import {
   Building2,
   ClipboardList,
   FileText,
-  MessageSquare,
-  Users,
   Wallet,
   Wrench,
 } from 'lucide-react';
@@ -15,12 +13,10 @@ import { cn } from '@/lib/utils';
 
 const TAB_ICONS: Record<string, LucideIcon> = {
   Overview: Building2,
-  Tenancy: Users,
   Leasing: FileText,
   Maintenance: Wrench,
   Inspection: ClipboardList,
   Accounting: Wallet,
-  Communication: MessageSquare,
   Documents: FileText,
 };
 
