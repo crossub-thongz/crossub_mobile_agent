@@ -325,13 +325,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     const customThreads = customMessageThreads.filter(
       (m) => m.assignedAgentId === agentPortfolioId,
     );
-    const byProperty = new Map<string, (typeof demoThreads)[0]>();
+    const byKey = new Map<string, (typeof demoThreads)[0]>();
     for (const thread of [...demoThreads, ...customThreads]) {
-      const key = thread.propertyId ?? thread.id;
-      if (!byProperty.has(key)) byProperty.set(key, thread);
+      const category = thread.messageCategory ?? thread.taskType ?? 'Others';
+      const key = thread.propertyId ? `${thread.propertyId}::${category}` : thread.id;
+      if (!byKey.has(key)) byKey.set(key, thread);
     }
 
-    return [...byProperty.values()].map((thread) => {
+    return [...byKey.values()].map((thread) => {
       const prop = thread.propertyId
         ? properties.find((p) => p.id === thread.propertyId)
         : properties.find((p) => thread.propertyAddress.includes(p.address));

@@ -60,19 +60,25 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (values: FormValues) => {
+    let apiUnreachable = false;
+
     try {
       await api.post<{ user: AuthUser }>('/auth/login', values);
       await refresh();
       router.replace(ROUTES.DASHBOARD);
       return;
     } catch (err) {
-      if (err instanceof ApiError && err.status !== 401 && err.status >= 400) {
-        if (err.status >= 500 || err.status === 0) {
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
           /* fall through to local account */
-        } else if (err.status !== 401) {
+        } else if (err.status >= 500 || err.status === 0) {
+          apiUnreachable = true;
+        } else {
           toast.error(`Sign in failed (${err.status}). Check API connection.`);
           return;
         }
+      } else {
+        apiUnreachable = true;
       }
     }
 
@@ -80,6 +86,13 @@ export default function LoginPage() {
     if (localUser) {
       await refresh();
       router.replace(ROUTES.DASHBOARD);
+      return;
+    }
+
+    if (apiUnreachable) {
+      toast.error(
+        'Cannot reach the CROSSUB API. Start crossub_web on port 3001 (pnpm dev:api), or use Register for a local-only account.',
+      );
       return;
     }
 

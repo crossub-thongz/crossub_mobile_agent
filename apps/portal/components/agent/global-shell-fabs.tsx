@@ -103,7 +103,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
       <div
         className={cn(
           'pointer-events-none fixed right-6 z-50 flex flex-col items-end gap-2',
-          'bottom-[calc(4.5rem+env(safe-area-inset-bottom))]',
+          'bottom-[calc(4.5rem+env(safe-area-inset-bottom))] lg:bottom-6',
         )}
       >
         {visibleButtons.map((btn) => {

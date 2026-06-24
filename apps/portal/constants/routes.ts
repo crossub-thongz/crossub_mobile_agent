@@ -17,6 +17,7 @@ export const ROUTES = {
   RENT_REVIEW: '/rent-review',
   VACATING: '/vacating',
   MESSAGES: '/messages',
+  COMMUNICATIONS: '/communications',
   NOTIFICATIONS: '/notifications',
   REPORTS: '/reports',
   SEARCH: '/search',

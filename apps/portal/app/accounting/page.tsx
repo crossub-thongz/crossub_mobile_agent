@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { ChevronRight, Mail, MessageSquare, Phone, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -203,6 +204,12 @@ export default function AccountingPage() {
             ))}
           </div>
         )}
+
+        <ModuleCommunications
+          categories={['Accounting']}
+          title="Rent reminders, invoices & receipts"
+          emptyHint="No accounting emails or messages yet."
+        />
       </div>
     </AgentShell>
   );
