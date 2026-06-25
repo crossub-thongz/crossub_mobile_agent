@@ -3,14 +3,15 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, Gavel } from 'lucide-react';
+import { ChevronRight, Gavel, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES, tribunalDetail } from '@/constants/routes';
 import { formatDateTime } from '@/lib/utils';
@@ -39,7 +40,18 @@ export default function TribunalPage() {
   return (
     <AgentShell title="Tribunal" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
-        <PageIntro description="Standalone tribunal matters — hearings, evidence, and orders." />
+        <PageIntro description="Review and approve tribunal matters proposed by CROSSUB, or add a new case." />
+
+        <Button
+          type="button"
+          className="w-full rounded-xl"
+          onClick={() =>
+            toast.info('Add Tribunal Case — workflow to be confirmed with Leasing team')
+          }
+        >
+          <Plus className="size-4" />
+          Add tribunal case
+        </Button>
 
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
@@ -83,11 +95,6 @@ export default function TribunalPage() {
             ))}
           </div>
         )}
-        <ModuleCommunications
-          categories={['Tribunal']}
-          title="Tribunal emails & messages"
-          emptyHint="Tribunal-related emails and messages across your portfolio appear here."
-        />
       </div>
     </AgentShell>
   );

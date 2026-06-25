@@ -45,3 +45,13 @@ export function formatRelative(iso: string): string {
 export function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString('en-AU')}`;
 }
+
+export function formatMonthYear(iso: string): string {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${mm}/${d.getFullYear()}`;
+}
+
+export function formatLeasePeriodMonthYear(start: string, end: string): string {
+  return `${formatMonthYear(start)} – ${formatMonthYear(end)}`;
+}

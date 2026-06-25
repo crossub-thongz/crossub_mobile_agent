@@ -34,13 +34,13 @@ export const MORE_NAV = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: FileText },
 ] as const;
 
-/** Desktop-only — centralized communications log */
+/** Desktop-only — centralized message center */
 export const DESKTOP_NAV = [
   {
     href: ROUTES.COMMUNICATIONS,
-    label: 'Communications log',
+    label: 'Message Center',
     icon: Inbox,
-    description: 'Full email & message history by module',
+    description: 'Emails, messages & connected accounts',
   },
 ] as const satisfies ReadonlyArray<{
   href: string;

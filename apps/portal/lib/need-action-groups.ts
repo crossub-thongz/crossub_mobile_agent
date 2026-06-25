@@ -70,28 +70,30 @@ export function buildNeedActionGroups(items: PropertyNeedAction[]): NeedActionGr
   const groups: NeedActionGroup[] = [];
 
   for (const def of GROUP_DEFS) {
-    const count = items.filter((i) => def.match(i.label, i.category)).length;
-    if (count > 0) {
+    const matched = items.filter((i) => def.match(i.label, i.category));
+    if (matched.length > 0) {
       groups.push({
         id: def.id,
         label: def.label,
-        count,
+        count: matched.length,
         href: def.href,
         category: def.category,
+        items: matched,
       });
     }
   }
 
-  const otherCount = items.filter(
+  const otherItems = items.filter(
     (i) => !GROUP_DEFS.some((d) => d.match(i.label, i.category)),
-  ).length;
-  if (otherCount > 0) {
+  );
+  if (otherItems.length > 0) {
     groups.push({
       id: 'other',
       label: 'Other actions required',
-      count: otherCount,
+      count: otherItems.length,
       href: ROUTES.TASKS,
       category: 'Others',
+      items: otherItems,
     });
   }
 

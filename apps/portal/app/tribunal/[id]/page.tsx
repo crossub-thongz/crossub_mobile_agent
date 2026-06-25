@@ -2,9 +2,12 @@
 
 import { notFound, useParams } from 'next/navigation';
 import { FileText, Gavel } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
+import { ModuleCommunications } from '@/components/agent/module-communications';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
 import { formatDateTime } from '@/lib/utils';
@@ -20,6 +23,29 @@ export default function TribunalDetailPage() {
   return (
     <AgentShell title="Tribunal case" backHref={ROUTES.TRIBUNAL}>
       <div className="space-y-4">
+        {c.requiresAction && c.status === 'active' && (
+          <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+            <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+              CROSSUB recommends a tribunal matter — your review required
+            </p>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() => toast.success('Tribunal case approved')}
+              >
+                Approve case
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => toast.info('Case returned to CROSSUB for review')}
+              >
+                Request changes
+              </Button>
+            </div>
+          </div>
+        )}
+
         <InfoPanel title="Case summary" icon={Gavel}>
           <InfoRow label="Property" value={c.propertyAddress} />
           <InfoRow label="Tenant" value={c.tenantName} />
@@ -43,6 +69,12 @@ export default function TribunalDetailPage() {
             </ul>
           </InfoPanel>
         )}
+
+        <ModuleCommunications
+          propertyId={c.propertyId}
+          categories={['Tribunal']}
+          title="Tribunal communications"
+        />
       </div>
     </AgentShell>
   );

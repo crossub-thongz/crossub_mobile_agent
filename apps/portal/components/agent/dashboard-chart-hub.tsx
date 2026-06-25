@@ -20,25 +20,29 @@ function DonutChart({
   segments,
   size = 72,
   stroke = 9,
+  large = false,
 }: {
   segments: Segment[];
   size?: number;
   stroke?: number;
+  large?: boolean;
 }) {
+  const chartSize = large ? 96 : size;
+  const chartStroke = large ? 11 : stroke;
   const total = segments.reduce((s, x) => s + x.value, 0) || 1;
-  const r = (size - stroke) / 2;
+  const r = (chartSize - chartStroke) / 2;
   const c = 2 * Math.PI * r;
   let offset = 0;
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+    <svg width={chartSize} height={chartSize} viewBox={`0 0 ${chartSize} ${chartSize}`} className="shrink-0">
       <circle
-        cx={size / 2}
-        cy={size / 2}
+        cx={chartSize / 2}
+        cy={chartSize / 2}
         r={r}
         fill="none"
         stroke="var(--border)"
-        strokeWidth={stroke}
+        strokeWidth={chartStroke}
       />
       {segments.map((seg) => {
         if (seg.value <= 0) return null;
@@ -46,16 +50,16 @@ function DonutChart({
         const el = (
           <circle
             key={seg.label}
-            cx={size / 2}
-            cy={size / 2}
+            cx={chartSize / 2}
+            cy={chartSize / 2}
             r={r}
             fill="none"
             stroke={seg.color}
-            strokeWidth={stroke}
+            strokeWidth={chartStroke}
             strokeDasharray={`${dash} ${c - dash}`}
             strokeDashoffset={-offset}
             strokeLinecap="round"
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            transform={`rotate(-90 ${chartSize / 2} ${chartSize / 2})`}
           />
         );
         offset += dash;
@@ -66,7 +70,7 @@ function DonutChart({
         y="50%"
         textAnchor="middle"
         dominantBaseline="central"
-        className="fill-foreground text-[11px] font-bold"
+        className={cn('fill-foreground font-bold', large ? 'text-sm' : 'text-[11px]')}
       >
         {total}
       </text>
@@ -93,19 +97,22 @@ function ChartCard({
     <Link
       href={href}
       className={cn(
-        'flex gap-3 rounded-2xl border bg-card p-3 transition active:scale-[0.98] hover:border-primary/30 hover:shadow-sm',
+        'flex gap-3 rounded-2xl border bg-card p-3 transition active:scale-[0.98] hover:border-primary/30 hover:shadow-sm lg:gap-4 lg:p-4',
         className,
       )}
     >
-      <DonutChart segments={active.length ? active : [{ label: '—', value: 1, color: 'var(--border)' }]} />
+      <DonutChart
+        segments={active.length ? active : [{ label: '—', value: 1, color: 'var(--border)' }]}
+        large
+      />
       <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center gap-1.5">
-          <Icon className="text-primary size-3.5 shrink-0" />
-          <p className="truncate text-xs font-semibold">{title}</p>
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <Icon className="text-primary size-4 shrink-0" />
+          <p className="truncate text-sm font-semibold lg:text-base">{title}</p>
         </div>
-        <ul className="space-y-0.5">
+        <ul className="space-y-1">
           {segments.map((s) => (
-            <li key={s.label} className="flex items-center justify-between gap-1 text-[10px]">
+            <li key={s.label} className="flex items-center justify-between gap-1 text-xs lg:text-sm">
               <span className="text-muted-foreground flex items-center gap-1 truncate">
                 <span className="size-1.5 shrink-0 rounded-full" style={{ background: s.color }} />
                 {s.label}
@@ -129,9 +136,9 @@ const CHART_COLORS = {
 
 export function DashboardChartHub({ k }: { k: DashboardKpis }) {
   return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-semibold">Portfolio overview</h2>
-      <div className="grid grid-cols-2 gap-2">
+    <section className="space-y-3">
+      <h2 className="text-base font-semibold lg:text-lg">Portfolio overview</h2>
+      <div className="grid grid-cols-2 gap-2 lg:gap-3">
         <ChartCard
           title="Properties"
           icon={Building2}

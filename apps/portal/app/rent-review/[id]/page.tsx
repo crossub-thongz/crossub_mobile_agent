@@ -8,6 +8,7 @@ import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CounterOfferTimeline } from '@/components/agent/counter-offer-timeline';
 import { DataSourceBadge } from '@/components/agent/data-source-badge';
+import { ModuleCommunications } from '@/components/agent/module-communications';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -128,6 +129,12 @@ export default function RentReviewDetailPage() {
           <h2 className="mb-3 text-sm font-semibold">Timeline</h2>
           <Timeline entries={item.timeline} />
         </section>
+
+        <ModuleCommunications
+          propertyId={item.propertyId}
+          categories={['Leasing']}
+          title="Rent review communications"
+        />
       </div>
     </AgentShell>
   );

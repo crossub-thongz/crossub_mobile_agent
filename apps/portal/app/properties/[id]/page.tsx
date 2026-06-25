@@ -10,18 +10,19 @@ import {
   ListTodo,
   Mail,
   Phone,
-  Plus,
   User,
   Wallet,
 } from 'lucide-react';
 
 import { FilterChips } from '@/components/agent/filter-chips';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
+import { LeasingTicketCard } from '@/components/agent/leasing-ticket-card';
 import { MaintenanceInlineActions } from '@/components/agent/maintenance-inline-actions';
-import { ModuleCommunications } from '@/components/agent/module-communications';
-import { PropertyHistorySection } from '@/components/agent/property-history-section';
+import { PropertyPhotosButton } from '@/components/agent/property-photos-dialog';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
+import { RentReviewSummaryList } from '@/components/agent/rent-review-summary-list';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
+import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -30,15 +31,9 @@ import {
   inspectionDetail,
   inspectionNew,
   maintenanceDetail,
-  messageDetail,
-  messagesNew,
   propertyLeasePackage,
-  rentReviewDetail,
   ROUTES,
-  tenantSelectionDetail,
 } from '@/constants/routes';
-import { leaseHistoryLabel } from '@/lib/lease-label';
-import { buildPropertyHistory } from '@/lib/property-history';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const TABS = [
@@ -52,7 +47,6 @@ const TABS = [
 
 const INSP_TYPE_FILTERS = [
   { id: 'all', label: 'All' },
-  { id: 'OPEN', label: 'Open' },
   { id: 'INGOING', label: 'Ingoing' },
   { id: 'OUTGOING', label: 'Outgoing' },
   { id: 'ROUTINE', label: 'Routine' },
@@ -80,14 +74,13 @@ export default function PropertyDetailPage() {
     documents,
     leasingRecords,
     accounting,
-    messages,
     tenantSelections,
     getPropertyActions,
   } = useAgentData();
   const property = properties.find((p) => p.id === id);
   const [tab, setTab] = useState<Tab>(normalizeTab(searchParams.get('tab')));
   const [overviewView, setOverviewView] = useState<'summary' | 'history'>('summary');
-  const [tenancyView, setTenancyView] = useState<'current' | 'previous'>('current');
+  const [maintView, setMaintView] = useState<'current' | 'history'>('current');
   const [inspView, setInspView] = useState<'current' | 'completed'>('current');
   const [inspType, setInspType] = useState<InspTypeFilter>('all');
 
@@ -110,15 +103,20 @@ export default function PropertyDetailPage() {
   );
   const leasing = leasingRecords.filter((l) => l.propertyId === id);
   const acct = accounting.find((a) => a.propertyId === id);
-  const propertyMessages = messages.filter((m) => m.propertyId === id);
   const propertyLeasingCases = tenantSelections.filter((t) => t.propertyId === id);
   const currentTenancy = leasing.filter((l) => l.status === 'current');
-  const previousTenancy = leasing.filter((l) => l.status !== 'current');
+  const currentLease = currentTenancy[0];
+  const isVacant =
+    property.leaseStatus === 'vacant' ||
+    property.tenantName === 'Vacant' ||
+    currentTenancy.length === 0;
   const currentInspections = tasks.inspections.filter(
-    (i) => !i.status.toLowerCase().includes('complete'),
+    (i) =>
+      i.type !== 'OPEN' &&
+      !i.status.toLowerCase().includes('complete'),
   );
-  const completedInspections = tasks.inspections.filter((i) =>
-    i.status.toLowerCase().includes('complete'),
+  const completedInspections = tasks.inspections.filter(
+    (i) => i.type !== 'OPEN' && i.status.toLowerCase().includes('complete'),
   );
   const filteredInspections = useMemo(() => {
     const base = inspView === 'current' ? currentInspections : completedInspections;
@@ -126,38 +124,6 @@ export default function PropertyDetailPage() {
     return base.filter((i) => i.type === inspType);
   }, [inspView, inspType, currentInspections, completedInspections]);
 
-  const historyEntries = useMemo(
-    () =>
-      buildPropertyHistory({
-        propertyId: id,
-        leasing,
-        maintenance: tasks.maintenance,
-        inspections: tasks.inspections,
-        rentReviews: tasks.rentReviews,
-        tenantSelections: propertyLeasingCases,
-        messages: propertyMessages,
-        documents: propertyDocs,
-        propertyAddressPrefix: property.address.split(',')[0],
-        leasePackageHref: (leaseId) => propertyLeasePackage(property.id, leaseId),
-        maintenanceHref: maintenanceDetail,
-        inspectionHref: inspectionDetail,
-        rentReviewHref: rentReviewDetail,
-        tenantSelectionHref: tenantSelectionDetail,
-        messageHref: messageDetail,
-      }),
-    [
-      id,
-      leasing,
-      tasks.maintenance,
-      tasks.inspections,
-      tasks.rentReviews,
-      propertyLeasingCases,
-      propertyMessages,
-      propertyDocs,
-      property.address,
-      property.id,
-    ],
-  );
   const activeMaintenance = tasks.maintenance.filter(
     (m) => !m.status.toLowerCase().includes('complete') && !m.status.toLowerCase().includes('closed'),
   );
@@ -208,12 +174,48 @@ export default function PropertyDetailPage() {
                 >
                   ← Back to overview
                 </button>
-                <InfoPanel title="History" icon={History}>
-                  <PropertyHistorySection entries={historyEntries} />
+                <InfoPanel title="Tenancy history" icon={History}>
+                  <TenancyHistorySection propertyId={id} records={leasing} />
                 </InfoPanel>
               </>
             ) : (
               <>
+            <InfoPanel title="Tasks" icon={ListTodo} tone={needActions.length > 0 ? 'warning' : 'default'}>
+              <div className="space-y-2">
+              {needActions.length === 0 &&
+              tasks.maintenance.length === 0 &&
+              tasks.rentReviews.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No active tasks.</p>
+              ) : (
+                <>
+                  {needActions.map((a) => (
+                    <Link
+                      key={a.id}
+                      href={a.href}
+                      className="block rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs font-semibold text-destructive"
+                    >
+                      {a.label}
+                    </Link>
+                  ))}
+                  {tasks.maintenance.map((m) => (
+                    <TaskStatusRow
+                      key={m.id}
+                      item={{
+                        id: m.id,
+                        propertyAddress: m.propertyAddress,
+                        taskLabel: m.title,
+                        status: m.status,
+                        href: maintenanceDetail(m.id),
+                        module: 'Maintenance',
+                        requiresApproval: m.requiresApproval,
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+              </div>
+            </InfoPanel>
+
             <InfoPanel title="Landlord" icon={Building2}>
               <InfoRow label="Name" value={property.homeOwnerName} />
               {property.homeOwnerContact.email && (
@@ -291,69 +293,19 @@ export default function PropertyDetailPage() {
                 />
                 <InfoRow label="Status" value={property.leaseStatus} />
               </div>
-            </InfoPanel>
-
-            <InfoPanel title="Tasks" icon={ListTodo} tone={needActions.length > 0 ? 'warning' : 'default'}>
-              <div className="space-y-2">
-              {needActions.length === 0 &&
-              tasks.maintenance.length === 0 &&
-              tasks.rentReviews.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No active tasks.</p>
-              ) : (
-                <>
-                  {needActions.map((a) => (
-                    <Link
-                      key={a.id}
-                      href={a.href}
-                      className="block rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs font-semibold text-destructive"
-                    >
-                      {a.label}
-                    </Link>
-                  ))}
-                  {tasks.maintenance.map((m) => (
-                    <TaskStatusRow
-                      key={m.id}
-                      item={{
-                        id: m.id,
-                        propertyAddress: m.propertyAddress,
-                        taskLabel: m.title,
-                        status: m.status,
-                        href: maintenanceDetail(m.id),
-                        module: 'Maintenance',
-                        requiresApproval: m.requiresApproval,
-                      }}
-                    />
-                  ))}
-                </>
-              )}
+              <div className="mt-4">
+                <PropertyPhotosButton propertyAddress={property.address} />
               </div>
             </InfoPanel>
 
-            <InfoPanel title="Current lease" icon={FileText}>
-              <InfoRow
-                label="Period"
-                value={
-                  property.leaseStart
-                    ? `${formatDate(property.leaseStart)}${property.leaseEnd ? ` — ${formatDate(property.leaseEnd)}` : ''}`
-                    : '—'
-                }
-              />
-              <InfoRow
-                label="Rent"
-                value={
-                  property.rentWeekly > 0
-                    ? `${formatCurrency(property.rentWeekly)}/wk`
-                    : '—'
-                }
-              />
+            <InfoPanel title="Rent review" icon={FileText}>
+              <RentReviewSummaryList reviews={tasks.rentReviews} compact />
             </InfoPanel>
 
             <InfoPanel title="History" icon={History}>
-              <p className="text-muted-foreground mb-3 text-xs">
-                All historical records and activities for this property.
-              </p>
-              <PropertyHistorySection
-                entries={historyEntries}
+              <TenancyHistorySection
+                propertyId={id}
+                records={leasing}
                 compact
                 onViewAll={() => setOverviewView('history')}
               />
@@ -365,115 +317,66 @@ export default function PropertyDetailPage() {
 
         {tab === 'Leasing' && (
           <div className="space-y-4">
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold">Tenancy records</h2>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Each lease is named by period and tenant. Tap a record to view the full leasing
-                package.
-              </p>
-              <FilterChips
-                options={[
-                  { id: 'current', label: 'Current' },
-                  { id: 'previous', label: 'Previous' },
-                ]}
-                value={tenancyView}
-                onChange={(v) => setTenancyView(v as 'current' | 'previous')}
-              />
-              {(tenancyView === 'current' ? currentTenancy : previousTenancy).length === 0 ? (
-                <p className="text-muted-foreground text-sm">No {tenancyView} tenancy records.</p>
-              ) : (
-                (tenancyView === 'current' ? currentTenancy : previousTenancy).map((l) => (
-                  <Link
-                    key={l.id}
-                    href={propertyLeasePackage(property.id, l.id)}
-                    className="block rounded-2xl border bg-card p-4 text-sm transition hover:border-primary/30"
-                  >
-                    <p className="font-semibold">{leaseHistoryLabel(l)}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {formatDate(l.leaseStart)} — {formatDate(l.leaseEnd)} ·{' '}
-                      {formatCurrency(l.rentWeekly)}/wk
-                    </p>
-                    <p className="text-primary mt-2 text-xs font-medium">View leasing package →</p>
-                  </Link>
-                ))
-              )}
-            </section>
-
-            <ModuleCommunications
-              propertyId={id}
-              categories={['Leasing']}
-              title="Leasing emails & messages"
-            />
-
-            <Link
-              href={messagesNew()}
-              className="flex items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium text-primary"
-            >
-              <Plus className="size-4" />
-              Create new case
-            </Link>
+            {!isVacant && currentLease ? (
+              <InfoPanel title="Current leasing agreement" icon={FileText}>
+                <InfoRow label="Tenant" value={currentLease.approvedTenant} />
+                <InfoRow
+                  label="Lease period"
+                  value={`${formatDate(currentLease.leaseStart)} — ${formatDate(currentLease.leaseEnd)}`}
+                />
+                <InfoRow
+                  label="Rent"
+                  value={`${formatCurrency(currentLease.rentWeekly)}/wk`}
+                />
+                <InfoRow label="Status" value={currentLease.status} />
+                <Link
+                  href={propertyLeasePackage(property.id, currentLease.id)}
+                  className="text-primary mt-3 inline-block text-xs font-medium"
+                >
+                  View agreement details →
+                </Link>
+              </InfoPanel>
+            ) : (
+              <div className="space-y-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5 text-center">
+                <p className="text-sm font-semibold">Vacant property</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Schedule an open inspection. CROSSUB confirms the time, then you confirm before
+                  publishing ads on your platforms.
+                </p>
+                <Button asChild size="lg" className="w-full rounded-xl">
+                  <Link href={inspectionNew(id)}>Add open inspection</Link>
+                </Button>
+              </div>
+            )}
 
             {propertyLeasingCases.map((t) => (
-              <Link key={t.id} href={tenantSelectionDetail(t.id)} className="block rounded-xl border bg-card p-4">
-                <p className="text-xs font-semibold text-primary">New leasing</p>
-                <p className="text-sm font-medium">{t.applicantName}</p>
-                <p className="text-muted-foreground text-xs">{t.status}</p>
-              </Link>
+              <LeasingTicketCard key={t.id} propertyId={id} selection={t} />
             ))}
 
-            {tasks.rentReviews.map((r) => (
-              <Link key={r.id} href={rentReviewDetail(r.id)} className="block rounded-xl border bg-card p-4">
-                <p className="text-xs font-semibold text-primary">Rent review</p>
-                <p className="text-sm font-medium">Due {formatDate(r.reviewDue)}</p>
-                <p className="text-muted-foreground text-xs">{r.status}</p>
-              </Link>
-            ))}
+            {currentLease && (
+              <LeasingTicketCard propertyId={id} record={currentLease} />
+            )}
 
-            {leasing.length === 0 && tasks.rentReviews.length === 0 && propertyLeasingCases.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No leasing cases for this property.</p>
-            ) : (
-              leasing.map((l) => (
-                <Link
-                  key={l.id}
-                  href={propertyLeasePackage(property.id, l.id)}
-                  className="block rounded-2xl border bg-card p-4 text-sm shadow-sm transition hover:border-primary/30"
-                >
-                  <p className="font-semibold">{leaseHistoryLabel(l)}</p>
-                  <p className="text-muted-foreground text-[10px] capitalize">{l.status} tenancy</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {formatDate(l.leaseStart)} — {formatDate(l.leaseEnd)} ·{' '}
-                    {formatCurrency(l.rentWeekly)}/wk
-                  </p>
-                  <p className="mt-2">Tenant: {l.approvedTenant}</p>
-                  {l.openInspectionDate && (
-                    <dl className="mt-3 space-y-1 border-t pt-3 text-xs">
-                      <div>
-                        <dt className="text-muted-foreground">Open inspection</dt>
-                        <dd>
-                          {formatDate(l.openInspectionDate)} · {l.openOfficer} ·{' '}
-                          {l.attendeeCount} attendees · {l.applicationCount} applications
-                        </dd>
-                      </div>
-                      {l.moveInDate && (
-                        <div>
-                          <dt className="text-muted-foreground">Move in</dt>
-                          <dd>{formatDate(l.moveInDate)}</dd>
-                        </div>
-                      )}
-                    </dl>
-                  )}
-                  <p className="text-primary mt-3 text-xs font-medium">Leasing package →</p>
-                </Link>
-              ))
+            {propertyLeasingCases.length === 0 && !currentLease && isVacant && (
+              <p className="text-muted-foreground text-sm">
+                No active leasing tickets. Add an open inspection to begin.
+              </p>
             )}
           </div>
         )}
 
         {tab === 'Maintenance' && (
           <div className="space-y-4">
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold">Current</h2>
-              {activeMaintenance.length === 0 ? (
+            <FilterChips
+              options={[
+                { id: 'current', label: 'Current' },
+                { id: 'history', label: 'History' },
+              ]}
+              value={maintView}
+              onChange={(v) => setMaintView(v as 'current' | 'history')}
+            />
+            {maintView === 'current' ? (
+              activeMaintenance.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No active maintenance.</p>
               ) : (
                 activeMaintenance.map((m) => (
@@ -493,28 +396,19 @@ export default function PropertyDetailPage() {
                     <MaintenanceInlineActions item={m} />
                   </div>
                 ))
-              )}
-            </section>
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold">Completed</h2>
-              {completedMaintenance.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No completed jobs yet.</p>
-              ) : (
-                completedMaintenance.map((m) => (
-                  <Link key={m.id} href={maintenanceDetail(m.id)} className="block">
-                    <div className="rounded-xl border bg-card p-4 opacity-90">
-                      <p className="text-sm font-medium">{m.title}</p>
-                      <p className="text-muted-foreground text-xs">{m.status}</p>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </section>
-            <ModuleCommunications
-              propertyId={id}
-              categories={['Maintenance']}
-              title="Maintenance emails & messages"
-            />
+              )
+            ) : completedMaintenance.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No completed maintenance cases.</p>
+            ) : (
+              completedMaintenance.map((m) => (
+                <Link key={m.id} href={maintenanceDetail(m.id)} className="block">
+                  <div className="rounded-xl border bg-card p-4 opacity-90">
+                    <p className="text-sm font-medium">{m.title}</p>
+                    <p className="text-muted-foreground text-xs">{m.status}</p>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         )}
 
@@ -534,14 +428,9 @@ export default function PropertyDetailPage() {
               onChange={(v) => setInspType(v as InspTypeFilter)}
             />
             {filteredInspections.length === 0 ? (
-              <div className="space-y-3 rounded-xl border border-dashed p-4 text-center">
-                <p className="text-muted-foreground text-sm">No {inspView} inspections.</p>
-                {inspView === 'current' && (
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={inspectionNew(id)}>Add open inspection</Link>
-                  </Button>
-                )}
-              </div>
+              <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
+                No {inspView} inspections. Open inspections are managed under Leasing.
+              </p>
             ) : (
               filteredInspections.map((i) => (
                 <Link key={i.id} href={inspectionDetail(i.id)} className="block">
@@ -563,11 +452,6 @@ export default function PropertyDetailPage() {
                 </Link>
               ))
             )}
-            <ModuleCommunications
-              propertyId={id}
-              categories={['Inspection']}
-              title="Inspection emails & messages"
-            />
           </div>
         )}
 
@@ -656,11 +540,6 @@ export default function PropertyDetailPage() {
                 )}
               </>
             )}
-            <ModuleCommunications
-              propertyId={id}
-              categories={['Accounting']}
-              title="Accounting emails & messages"
-            />
           </div>
         )}
 

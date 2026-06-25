@@ -34,6 +34,11 @@ export default function AddPropertyPage() {
     tenantPhone: '',
     leaseStatus: 'active' as Property['leaseStatus'],
     rentWeekly: '',
+    bedrooms: '',
+    bathrooms: '',
+    carSpaces: '',
+    bondAmount: '',
+    propertyType: 'house',
   });
 
   const update = (key: keyof typeof form, value: string) =>
@@ -58,6 +63,10 @@ export default function AddPropertyPage() {
         tenantPhone: form.tenantPhone || undefined,
         leaseStatus: form.leaseStatus,
         rentWeekly: Number(form.rentWeekly) || 0,
+        bedrooms: Number(form.bedrooms) || undefined,
+        bathrooms: Number(form.bathrooms) || undefined,
+        carSpaces: Number(form.carSpaces) || undefined,
+        bondAmount: Number(form.bondAmount) || undefined,
       });
       toast.success('Property added to your portfolio');
       router.push(propertyDetail(property.id));
@@ -70,9 +79,8 @@ export default function AddPropertyPage() {
     <AgentShell title="Add property" backHref={ROUTES.PROPERTIES}>
       <form onSubmit={onSubmit} className="space-y-5">
         <p className="text-muted-foreground text-sm">
-          Add a property to your portfolio. Full fields (management agreement,
-          documents, leasing requirements) will be updated once confirmed with the
-          Leasing team. Saved on this device until connected to crossub_web.
+          Property setup fields are being aligned with the Leasing team. Required details below
+          save to your portfolio on this device until connected to crossub_web.
         </p>
 
         <fieldset className="space-y-3 rounded-xl border bg-card p-4">
@@ -122,6 +130,63 @@ export default function AddPropertyPage() {
                 value={form.rentWeekly}
                 onChange={(e) => update('rentWeekly', e.target.value)}
                 placeholder="650"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="bedrooms">Bedrooms</Label>
+              <Input
+                id="bedrooms"
+                type="number"
+                min={0}
+                value={form.bedrooms}
+                onChange={(e) => update('bedrooms', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bathrooms">Bathrooms</Label>
+              <Input
+                id="bathrooms"
+                type="number"
+                min={0}
+                value={form.bathrooms}
+                onChange={(e) => update('bathrooms', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="carSpaces">Car spaces</Label>
+              <Input
+                id="carSpaces"
+                type="number"
+                min={0}
+                value={form.carSpaces}
+                onChange={(e) => update('carSpaces', e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="propertyType">Property type</Label>
+              <select
+                id="propertyType"
+                value={form.propertyType}
+                onChange={(e) => update('propertyType', e.target.value)}
+                className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30"
+              >
+                <option value="house">House</option>
+                <option value="unit">Unit / Apartment</option>
+                <option value="townhouse">Townhouse</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bondAmount">Bond ($)</Label>
+              <Input
+                id="bondAmount"
+                type="number"
+                min={0}
+                value={form.bondAmount}
+                onChange={(e) => update('bondAmount', e.target.value)}
               />
             </div>
           </div>

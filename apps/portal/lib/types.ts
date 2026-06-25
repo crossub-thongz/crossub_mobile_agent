@@ -136,6 +136,7 @@ export interface NeedActionGroup {
   count: number;
   href: string;
   category: NeedActionCategory;
+  items: PropertyNeedAction[];
 }
 
 export interface TribunalCase {

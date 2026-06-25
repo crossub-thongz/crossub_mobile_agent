@@ -20,6 +20,25 @@ import { cn } from '@/lib/utils';
 type ChatLine = { id: string; role: 'user' | 'assistant'; text: string; results?: SystemSearchResult[] };
 type InputMode = 'voice' | 'text';
 
+function resolveSpeechLanguage(): string {
+  if (typeof navigator === 'undefined') return 'en-AU';
+  const lang = navigator.language || 'en-AU';
+  if (lang.startsWith('zh')) return lang.includes('TW') ? 'zh-TW' : 'zh-CN';
+  if (lang.startsWith('ms')) return 'ms-MY';
+  if (lang.startsWith('vi')) return 'vi-VN';
+  if (lang.startsWith('ja')) return 'ja-JP';
+  if (lang.startsWith('ko')) return 'ko-KR';
+  if (lang.startsWith('en')) return 'en-AU';
+  return lang;
+}
+
+function multilingualHint(): string {
+  const lang = resolveSpeechLanguage();
+  if (lang.startsWith('zh')) return 'Gii 支持中文语音和文字输入。';
+  if (lang.startsWith('ms')) return 'Gii menyokong input suara dan teks dalam Bahasa Melayu.';
+  return 'Gii detects your language automatically — speak or type in any supported language.';
+}
+
 export function GiiAssistant({
   open,
   onClose,
@@ -68,7 +87,7 @@ export function GiiAssistant({
       return;
     }
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-AU';
+    recognition.lang = resolveSpeechLanguage();
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => setListening(true);
@@ -126,7 +145,7 @@ export function GiiAssistant({
             </div>
             <div>
               <p className="text-sm font-bold">Gii</p>
-              <p className="text-muted-foreground text-[10px]">Your property assistant</p>
+              <p className="text-muted-foreground text-[10px]">Your property assistant · {multilingualHint()}</p>
             </div>
           </div>
           <button

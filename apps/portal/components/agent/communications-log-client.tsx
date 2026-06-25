@@ -241,7 +241,7 @@ export function CommunicationsLogClient() {
         <div className="flex flex-col items-center gap-4 rounded-xl border bg-card px-6 py-10 text-center">
           <Monitor className="text-muted-foreground size-10" />
           <div>
-            <h2 className="text-base font-semibold">Desktop communications log</h2>
+            <h2 className="text-base font-semibold">Desktop Message Center</h2>
             <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
               Full email and message history across Leasing, Maintenance, Inspection,
               and Accounting is available on desktop. Use Messages for conversations on
@@ -256,10 +256,16 @@ export function CommunicationsLogClient() {
 
       <div className="hidden h-[calc(100dvh-3.5rem)] min-h-[480px] flex-col lg:flex lg:h-[100dvh]">
         <div className="shrink-0 border-b px-4 py-3">
-          <h1 className="text-lg font-semibold">Centralized communications log</h1>
+          <h1 className="text-lg font-semibold">Message Center</h1>
           <p className="text-muted-foreground text-xs">
-            Full visibility into platform and AI correspondence with tenants — by module.
+            Connect email accounts, search, and manage all tenant correspondence in one place.
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => toast.info('Email account connection — configure in crossub_web settings')}>
+              <Mail className="mr-1.5 size-3.5" />
+              Connect email account
+            </Button>
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1">

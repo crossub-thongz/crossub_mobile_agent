@@ -28,6 +28,10 @@ export interface NewPropertyInput {
   tenantPhone?: string;
   leaseStatus: Property['leaseStatus'];
   rentWeekly: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  carSpaces?: number;
+  bondAmount?: number;
 }
 
 export interface NewOpenInspectionInput {
@@ -124,6 +128,10 @@ export const useAgentStore = create<AgentStore>()(
           },
           leaseStatus: input.leaseStatus,
           rentWeekly: input.rentWeekly,
+          bedrooms: input.bedrooms,
+          bathrooms: input.bathrooms,
+          carSpaces: input.carSpaces,
+          bondAmount: input.bondAmount,
           openTasks: 0,
           inspectionStatus: 'Not scheduled',
           maintenanceStatus: 'None',
