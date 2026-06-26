@@ -211,7 +211,7 @@ export function AgentShell({
 
         <main
           className={cn(
-            'flex-1',
+            'flex min-h-0 flex-1 flex-col',
             wide ? 'lg:p-0' : 'lg:px-8 lg:pb-8',
             title && !immersive && 'lg:pt-6',
             immersive && 'lg:pt-2 lg:pb-0',
@@ -219,8 +219,10 @@ export function AgentShell({
         >
           <div
             className={cn(
-              wide ? (immersive ? 'px-2 pb-0 lg:px-4' : 'px-4 pb-4 lg:p-0') : 'px-4 py-4',
-              immersive ? 'max-lg:pt-2 lg:pt-0' : 'pb-24 lg:pb-0 max-lg:pt-[var(--shell-header-offset)] lg:pt-0',
+              wide ? (immersive ? 'flex min-h-0 flex-1 flex-col px-2 lg:px-4' : 'px-4 pb-4 lg:p-0') : 'px-4 py-4',
+              immersive
+                ? 'flex min-h-0 flex-1 flex-col max-lg:pt-2 lg:pt-0'
+                : 'pb-24 lg:pb-0 max-lg:pt-[var(--shell-header-offset)] lg:pt-0',
             )}
             style={{ ['--shell-header-offset' as string]: `${headerHeight + 16}px` }}
           >

@@ -12,7 +12,7 @@ export function WorkspaceBottomNav({
   setBottomNavTab: (tab: 'details' | 'chat') => void;
 }) {
   return (
-    <div className="border-border bg-card/95 sticky bottom-0 z-20 border-t px-4 py-3 backdrop-blur">
+    <div className="border-border bg-card shrink-0 border-t px-4 py-3">
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"

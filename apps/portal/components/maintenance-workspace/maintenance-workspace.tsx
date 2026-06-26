@@ -16,15 +16,25 @@ import { toast } from 'sonner';
 import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { Button } from '@/components/ui/button';
 import { generateWorkspaceAdvice } from '@/lib/maintenance-workspace/advice';
+import {
+  getQuickJumpCurrentRank,
+  isStageEnabled,
+  previewTitleForTarget,
+  stepIdToTargetKey,
+  targetKeyToStatus,
+  type QuickJumpTarget,
+} from '@/lib/maintenance-workspace/quick-jump';
 import { SOURCE_LABELS, STATUS_LABELS } from '@/lib/maintenance-workspace/status-labels';
-import type { MaintenanceWorkspaceCase, WorkspaceResponsibility } from '@/lib/maintenance-workspace/types';
+import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceStatus, WorkspaceResponsibility } from '@/lib/maintenance-workspace/types';
 import { getWorkflowSteps } from '@/lib/maintenance-workspace/workflow-model';
 import { cn, formatCurrency } from '@/lib/utils';
 
-// import { WorkspaceBottomNav } from './bottom-nav';
+import { WorkspaceBottomNav } from './bottom-nav';
 import { WorkspaceTimelinePanel } from './audit-timeline';
 import { WorkspaceSideInformationPanel } from './side-information-panel';
 import { WorkspaceHeader } from './workspace-header';
+import { WorkspaceChatPanel } from './workspace-chat-panel';
+import { WorkflowStepPreview } from './workflow-step-preview';
 
 export function MaintenanceWorkspace({
   workspaceCase,
@@ -53,21 +63,98 @@ export function MaintenanceWorkspace({
 }) {
   const [bottomNavTab, setBottomNavTab] = useState<'details' | 'chat'>('details');
   const [caseFlagged, setCaseFlagged] = useState(false);
+  const [notifications, setNotifications] = useState(workspaceCase.notifications);
   const [pendingResponsibility, setPendingResponsibility] = useState<WorkspaceResponsibility | null>(
     workspaceCase.responsibility ?? null,
   );
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
   const [moreEvidenceOpen, setMoreEvidenceOpen] = useState(false);
   const [aiAdvice, setAiAdvice] = useState('');
+  const [quickJumpReadOnlyMode, setQuickJumpReadOnlyMode] = useState(false);
+  const [quickJumpTargetKey, setQuickJumpTargetKey] = useState<QuickJumpTarget | null>(null);
+
+  useEffect(() => {
+    setQuickJumpReadOnlyMode(false);
+    setQuickJumpTargetKey(null);
+  }, [workspaceCase.id]);
+
+  useEffect(() => {
+    setNotifications(workspaceCase.notifications);
+  }, [workspaceCase.notifications]);
+
+  useEffect(() => {
+    if (bottomNavTab !== 'chat') return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, [bottomNavTab]);
+
+  const workspaceWithNotifications = useMemo(
+    () => ({ ...workspaceCase, notifications }),
+    [workspaceCase, notifications],
+  );
 
   const steps = useMemo(
     () => getWorkflowSteps(workspaceCase, workspaceCase.quotations),
     [workspaceCase],
   );
   const activeStep = steps.find((s) => s.status === 'active') ?? steps[steps.length - 1];
+  const quickJumpCurrentRank = getQuickJumpCurrentRank(workspaceCase.status);
+
+  const uiStatusForUI = useMemo((): MaintenanceWorkspaceStatus => {
+    if (quickJumpReadOnlyMode && quickJumpTargetKey) {
+      return targetKeyToStatus(quickJumpTargetKey);
+    }
+    return workspaceCase.status;
+  }, [quickJumpReadOnlyMode, quickJumpTargetKey, workspaceCase.status]);
+
   const statusLabel = STATUS_LABELS[workspaceCase.status] ?? workspaceCase.status;
   const isReviewStep =
-    workspaceCase.status === 'under_review' || workspaceCase.status === 'pending_evidence';
+    uiStatusForUI === 'under_review' || uiStatusForUI === 'pending_evidence';
+
+  const displayActionLabel =
+    quickJumpReadOnlyMode && quickJumpTargetKey
+      ? previewTitleForTarget(quickJumpTargetKey, workspaceCase)
+      : (activeStep?.label ?? '—');
+
+  const displayActionSublabel =
+    quickJumpReadOnlyMode && quickJumpTargetKey
+      ? 'Historical view — read only'
+      : activeStep?.sublabel;
+
+  const goToStage = (target: QuickJumpTarget | null) => {
+    if (!target) {
+      setQuickJumpReadOnlyMode(false);
+      setQuickJumpTargetKey(null);
+      return;
+    }
+    const isLiveStage =
+      (target === 'review' &&
+        (workspaceCase.status === 'under_review' || workspaceCase.status === 'pending_evidence')) ||
+      (target === 'quotation' && workspaceCase.status === 'pending_quotation') ||
+      (target === 'approval' && workspaceCase.status === 'pending_approval') ||
+      (target === 'in_progress' && workspaceCase.status === 'in_progress') ||
+      (target === 'completion' && workspaceCase.status === 'completed') ||
+      (target === 'closed' && workspaceCase.status === 'closed');
+
+    if (isLiveStage) {
+      setQuickJumpReadOnlyMode(false);
+      setQuickJumpTargetKey(null);
+      return;
+    }
+
+    if (!isStageEnabled(target, quickJumpCurrentRank)) return;
+    setQuickJumpReadOnlyMode(true);
+    setQuickJumpTargetKey(target);
+  };
+
+  const handleWorkflowStepClick = (stepId: string, stepStatus: 'done' | 'active' | 'upcoming') => {
+    const target = stepIdToTargetKey(stepId);
+    if (!target || stepStatus === 'upcoming') return;
+    if (stepStatus === 'active') {
+      goToStage(null);
+      return;
+    }
+    goToStage(target);
+  };
 
   useEffect(() => {
     const flagKey = `crossub-maintenance-flagged:${workspaceCase.id}`;
@@ -91,55 +178,75 @@ export function MaintenanceWorkspace({
 
   const renderStageTags = () => {
     if (!workspaceCase.responsibility) return null;
-    const tags =
-      workspaceCase.responsibility === 'tenant'
-        ? ['REVIEW', 'IN PROGRESS', 'COMPLETE']
-        : workspaceCase.responsibility === 'strata'
-          ? ['REVIEW', 'IN PROGRESS', 'COMPLETE']
-          : ['REVIEW', 'PENDING QUOTATION', 'PENDING APPROVAL', 'IN PROGRESS', 'COMPLETE'];
 
-    const activeTag = (() => {
+    const tagConfig: { label: string; target: QuickJumpTarget }[] =
+      workspaceCase.responsibility === 'tenant' || workspaceCase.responsibility === 'strata'
+        ? [
+            { label: 'REVIEW', target: 'review' },
+            { label: 'IN PROGRESS', target: 'in_progress' },
+            { label: 'COMPLETE', target: 'closed' },
+          ]
+        : [
+            { label: 'REVIEW', target: 'review' },
+            { label: 'PENDING QUOTATION', target: 'quotation' },
+            { label: 'PENDING APPROVAL', target: 'approval' },
+            { label: 'IN PROGRESS', target: 'in_progress' },
+            { label: 'COMPLETE', target: 'closed' },
+          ];
+
+    const liveTarget = ((): QuickJumpTarget | null => {
       switch (workspaceCase.status) {
         case 'under_review':
         case 'pending_evidence':
-          return 'REVIEW';
+          return 'review';
         case 'pending_quotation':
-          return 'PENDING QUOTATION';
+          return 'quotation';
         case 'pending_approval':
-          return 'PENDING APPROVAL';
+          return 'approval';
         case 'in_progress':
-          return 'IN PROGRESS';
+          return 'in_progress';
         case 'completed':
+          return 'completion';
         case 'closed':
-          return 'COMPLETE';
+          return 'closed';
         default:
-          return 'REVIEW';
+          return 'review';
       }
     })();
 
+    const highlightedTarget = quickJumpReadOnlyMode ? quickJumpTargetKey : liveTarget;
+
     return (
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className={cn(
-              'rounded-full border px-3 py-1 text-[11px] font-semibold',
-              tag === activeTag
-                ? 'border-primary/80 bg-primary/15 text-primary'
-                : 'border-primary/40 bg-primary/5 text-primary',
-            )}
-          >
-            {tag}
-          </span>
-        ))}
+        {tagConfig.map(({ label, target }) => {
+          const enabled = isStageEnabled(target, quickJumpCurrentRank);
+          const active = highlightedTarget === target;
+          return (
+            <button
+              key={label}
+              type="button"
+              disabled={!enabled}
+              onClick={() => goToStage(active ? null : target)}
+              className={cn(
+                'rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors',
+                !enabled && 'cursor-not-allowed opacity-50',
+                active
+                  ? 'border-primary/80 bg-primary/15 text-primary'
+                  : 'border-primary/40 bg-primary/5 text-primary hover:border-primary/60',
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
     );
   };
 
   return (
-    <div className="border-border bg-background flex flex-col overflow-hidden rounded-xl border">
+    <div className="border-border bg-background flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
       <WorkspaceHeader
-        workspaceCase={workspaceCase}
+        workspaceCase={workspaceWithNotifications}
         caseFlagged={caseFlagged}
         backHref={backHref}
         backLabel={backLabel}
@@ -147,8 +254,8 @@ export function MaintenanceWorkspace({
         onToggleFlag={toggleFlag}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <aside className="border-border bg-muted/[0.2] max-h-[42vh] shrink-0 overflow-y-auto border-b px-4 py-4 lg:max-h-none lg:w-[35%] lg:min-w-[240px] lg:max-w-md lg:border-r lg:border-b-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <aside className="border-border bg-muted/[0.2] shrink-0 overflow-y-auto border-b px-4 py-4 lg:w-[35%] lg:min-w-[240px] lg:max-w-md lg:border-r lg:border-b-0">
           <div className="space-y-3">
             <WorkspaceSideInformationPanel
               tenantName={workspaceCase.tenant?.name ?? '—'}
@@ -176,7 +283,7 @@ export function MaintenanceWorkspace({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div className="min-h-0 flex-1 overflow-y-auto">
             {bottomNavTab === 'details' ? (
-              <div className="space-y-5 px-4 py-5 pb-5 sm:px-5 sm:py-6 sm:pb-6">
+              <div className="space-y-5 px-4 py-5 sm:px-5 sm:py-6">
                 {renderStageTags()}
 
                 <div>
@@ -184,12 +291,25 @@ export function MaintenanceWorkspace({
                     Workflow
                   </p>
                   <div className="flex w-full items-start justify-between gap-0 pb-1">
-                    {steps.map((step, i) => (
+                    {steps.map((step, i) => {
+                      const isPreviewStep =
+                        quickJumpReadOnlyMode &&
+                        quickJumpTargetKey === stepIdToTargetKey(step.id);
+                      return (
                       <div key={step.id} className="flex flex-1 items-center justify-center">
-                        <div className="flex min-w-[56px] flex-1 flex-col items-center">
+                        <button
+                          type="button"
+                          disabled={step.status === 'upcoming'}
+                          onClick={() => handleWorkflowStepClick(step.id, step.status)}
+                          className={cn(
+                            'flex min-w-[56px] flex-1 flex-col items-center focus:outline-none',
+                            step.status === 'upcoming' && 'cursor-not-allowed opacity-60',
+                          )}
+                        >
                           <div
                             className={cn(
                               'flex size-7 items-center justify-center rounded-full border-2 transition-colors',
+                              isPreviewStep && 'ring-2 ring-primary/30',
                               step.tone === 'declined'
                                 ? 'border-destructive bg-destructive/10 text-destructive'
                                 : step.status === 'done'
@@ -212,7 +332,7 @@ export function MaintenanceWorkspace({
                           <p
                             className={cn(
                               'mt-2 text-center text-[10px] font-semibold leading-tight',
-                              step.status === 'active'
+                              isPreviewStep || step.status === 'active'
                                 ? 'text-primary'
                                 : step.status === 'done'
                                   ? 'text-muted-foreground'
@@ -221,7 +341,7 @@ export function MaintenanceWorkspace({
                           >
                             {step.label}
                           </p>
-                        </div>
+                        </button>
                         {i < steps.length - 1 && (
                           <div
                             className={cn(
@@ -231,7 +351,8 @@ export function MaintenanceWorkspace({
                           />
                         )}
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
 
@@ -293,27 +414,55 @@ export function MaintenanceWorkspace({
                   <div
                     className={cn(
                       'rounded-t-xl border-b border-border px-4 py-3',
-                      activeStep?.status === 'active' ? 'bg-primary/5' : 'bg-muted/30',
+                      quickJumpReadOnlyMode || activeStep?.status === 'active'
+                        ? 'bg-primary/5'
+                        : 'bg-muted/30',
                     )}
                   >
                     <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                      Current Action
+                      {quickJumpReadOnlyMode ? 'Stage view' : 'Current Action'}
                     </p>
                     <p
                       className={cn(
                         'mt-0.5 text-sm font-semibold',
-                        activeStep?.status === 'active' ? 'text-primary' : 'text-muted-foreground',
+                        quickJumpReadOnlyMode || activeStep?.status === 'active'
+                          ? 'text-primary'
+                          : 'text-muted-foreground',
                       )}
                     >
-                      {activeStep?.label ?? '—'}
+                      {displayActionLabel}
                     </p>
-                    {activeStep?.sublabel && (
-                      <p className="text-muted-foreground text-[11px]">{activeStep.sublabel}</p>
+                    {displayActionSublabel && (
+                      <p className="text-muted-foreground text-[11px]">{displayActionSublabel}</p>
                     )}
                   </div>
 
-                  <div className="space-y-3 p-4">
-                    {workspaceCase.status === 'under_review' && (
+                  <div
+                    className={cn(
+                      'space-y-3 p-4',
+                      quickJumpReadOnlyMode && 'pointer-events-none opacity-95',
+                    )}
+                  >
+                    {quickJumpReadOnlyMode && quickJumpTargetKey && (
+                      <div className="pointer-events-auto mb-3 rounded-lg border border-border bg-background px-3 py-2">
+                        <p className="text-xs font-semibold text-muted-foreground">Quick view: read-only</p>
+                        <p className="text-muted-foreground mt-1 text-[11px]">
+                          Review historical data for this stage. Click the active workflow step to return to live actions.
+                        </p>
+                      </div>
+                    )}
+
+                    {quickJumpReadOnlyMode && quickJumpTargetKey ? (
+                      <div className="pointer-events-auto">
+                        <WorkflowStepPreview
+                          target={quickJumpTargetKey}
+                          workspaceCase={workspaceCase}
+                          aiAdvice={aiAdvice}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                    {uiStatusForUI === 'under_review' && (
                       <>
                         <p className="text-muted-foreground text-xs">
                           Assign who is responsible for this issue:
@@ -383,7 +532,7 @@ export function MaintenanceWorkspace({
                       </>
                     )}
 
-                    {workspaceCase.status === 'pending_approval' && requiresApproval && (
+                    {uiStatusForUI === 'pending_approval' && requiresApproval && (
                       <ApprovalPanel
                         title={workspaceCase.issueType}
                         amount={quoteAmount}
@@ -398,7 +547,7 @@ export function MaintenanceWorkspace({
                       />
                     )}
 
-                    {workspaceCase.status === 'pending_quotation' && (
+                    {uiStatusForUI === 'pending_quotation' && (
                       <p className="text-muted-foreground text-sm">
                         Awaiting contractor quotation
                         {contractorName ? ` from ${contractorName}` : ''}.
@@ -410,7 +559,7 @@ export function MaintenanceWorkspace({
                       </p>
                     )}
 
-                    {workspaceCase.status === 'in_progress' && (
+                    {uiStatusForUI === 'in_progress' && (
                       <dl className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <dt className="text-muted-foreground">Completion evidence</dt>
@@ -427,40 +576,25 @@ export function MaintenanceWorkspace({
                       </dl>
                     )}
 
-                    {workspaceCase.status === 'closed' && (
+                    {uiStatusForUI === 'closed' && (
                       <p className="text-muted-foreground text-sm">This maintenance case is closed.</p>
+                    )}
+                      </>
                     )}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3 px-4 py-5 sm:px-5 sm:py-6">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Communications transcript
-                </p>
-                {workspaceCase.notifications.length === 0 ? (
-                  <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-                    No messages yet for this case.
-                  </p>
-                ) : (
-                  workspaceCase.notifications.map((n) => (
-                    <div key={n.id} className="rounded-lg border border-border bg-background p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold">{n.title}</p>
-                        <span className="text-muted-foreground text-[10px] uppercase">{n.channel}</span>
-                      </div>
-                      <p className="text-muted-foreground mt-1 text-sm">{n.message}</p>
-                    </div>
-                  ))
-                )}
-              </div>
+              <WorkspaceChatPanel
+                workspaceCase={workspaceWithNotifications}
+                agentName={workspaceCase.agent?.name ?? 'Agent'}
+              />
             )}
           </div>
-
-          {/* Case / Chat bottom nav — hidden for now; workspace shows Case content by default */}
-          {/* <WorkspaceBottomNav bottomNavTab={bottomNavTab} setBottomNavTab={setBottomNavTab} /> */}
         </div>
       </div>
+
+      <WorkspaceBottomNav bottomNavTab={bottomNavTab} setBottomNavTab={setBottomNavTab} />
     </div>
   );
 }

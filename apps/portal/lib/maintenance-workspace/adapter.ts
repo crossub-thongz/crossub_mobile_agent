@@ -149,6 +149,13 @@ export function buildWorkspaceCaseFromDemo(
           },
         ]
       : [],
-    notifications: [],
+    notifications: item.timeline.map((entry, index) => ({
+      id: `demo-notif-${entry.id}`,
+      title: entry.title,
+      message: entry.detail ?? entry.title,
+      channel: entry.source === 'email' ? ('email' as const) : ('in_app' as const),
+      createdAt: entry.at,
+      read: index > 0,
+    })),
   };
 }

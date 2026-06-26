@@ -31,13 +31,13 @@ export function WorkspaceSideInformationPanel({
 }) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-col gap-3">
         <div className="rounded-lg border border-border bg-background p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Tenant Information
           </p>
-          <p className="mt-2 truncate text-sm font-semibold text-foreground">{tenantName || '—'}</p>
-          <div className="mt-1 space-y-1">
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="text-sm font-semibold text-foreground">{tenantName || '—'}</p>
             {tenantEmail ? (
               <p className="text-xs break-words text-muted-foreground">{tenantEmail}</p>
             ) : null}
@@ -54,7 +54,7 @@ export function WorkspaceSideInformationPanel({
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Agent Information
           </p>
-          <div className="mt-2 space-y-1">
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="text-sm font-semibold text-foreground">{agentName || '—'}</p>
             {agentEmail ? (
               <p className="text-xs break-words text-muted-foreground">{agentEmail}</p>
