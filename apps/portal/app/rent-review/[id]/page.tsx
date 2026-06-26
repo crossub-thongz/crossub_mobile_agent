@@ -56,7 +56,7 @@ export default function RentReviewDetailPage() {
               <dd className="font-medium">{formatCurrency(item.currentRent)}/wk</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">AI suggested</dt>
+              <dt className="text-muted-foreground">CROSSUB suggested</dt>
               <dd className="text-primary font-medium">
                 {formatCurrency(item.suggestedRent)}/wk
               </dd>
@@ -79,7 +79,7 @@ export default function RentReviewDetailPage() {
                 toast.success('Rent review confirmed — tenant notice will be sent');
               }}
             >
-              Agree with AI suggested {formatCurrency(item.suggestedRent)}/wk
+              Agree with CROSSUB suggested {formatCurrency(item.suggestedRent)}/wk
             </Button>
             <div className="space-y-2">
               <Label htmlFor="custom">Or enter proposed rent ($/week)</Label>

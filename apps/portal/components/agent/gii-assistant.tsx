@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { messageDetail } from '@/constants/routes';
 import {
-  buildAgentAiReply,
+  buildGiiReply,
   searchAgentSystem,
   type SystemSearchResult,
 } from '@/lib/agent-system-search';
@@ -69,7 +69,7 @@ export function GiiAssistant({
       {
         id: `a-${Date.now()}`,
         role: 'assistant',
-        text: buildAgentAiReply(trimmed, found),
+        text: buildGiiReply(trimmed, found),
         results: found,
       },
     ]);

@@ -193,7 +193,7 @@ export function searchAgentSystem(query: string, data: SearchData): SystemSearch
   return out.slice(0, 12);
 }
 
-export function buildAgentAiReply(query: string, results: SystemSearchResult[]): string {
+export function buildGiiReply(query: string, results: SystemSearchResult[]): string {
   const trimmed = query.trim();
   if (!trimmed) {
     return 'Ask me to find a property, maintenance job, inspection, tribunal case, or message thread.';

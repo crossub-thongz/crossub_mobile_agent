@@ -363,7 +363,7 @@ export const RENT_REVIEWS: RentReviewCase[] = [
     tenantResponse: 'counter',
     counterOffer: 600,
     negotiationHistory: [
-      { at: '2026-05-22T09:30:00', party: 'CROSSUB AI', amount: 620, note: 'Market report suggested' },
+      { at: '2026-05-22T09:30:00', party: 'CROSSUB', amount: 620, note: 'Market report suggested' },
       { at: '2026-05-24T14:00:00', party: 'Agent', amount: 620, note: 'Proposed to tenant' },
       { at: '2026-05-25T11:00:00', party: 'Tenant', amount: 600, note: 'Counter offer submitted' },
     ],
@@ -379,7 +379,7 @@ export const RENT_REVIEWS: RentReviewCase[] = [
       {
         id: 't2',
         at: '2026-05-22T09:30:00',
-        actor: 'CROSSUB AI',
+        actor: 'CROSSUB',
         actorRole: 'crossub',
         title: 'Comparable market report generated — $620/week suggested',
         source: 'system',
@@ -947,7 +947,7 @@ export const DASHBOARD_ITEMS: DashboardItem[] = [
     propertyId: 'prop-4',
     propertyAddress: '22 Hinterland Dr, Robina',
     title: 'Confirm rent review',
-    subtitle: 'AI suggests $620/week (currently $580)',
+    subtitle: 'CROSSUB suggests $620/week (currently $580)',
     priority: 'high',
     status: 'Agent Confirmation',
     dueAt: '2026-06-01',
