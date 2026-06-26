@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { isRentReviewDecided } from '@/lib/rent-review';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAgentStore } from '@/lib/store';
 
@@ -33,7 +34,7 @@ export default function RentReviewDetailPage() {
 
   if (!item) notFound();
 
-  const decided = decision != null;
+  const decided = isRentReviewDecided(item, decision);
 
   return (
     <AgentShell title="Rent Review" backHref={back.href} backLabel={back.label}>
@@ -106,10 +107,19 @@ export default function RentReviewDetailPage() {
           </div>
         ) : (
           <div className="rounded-xl border bg-primary/5 p-4 text-sm">
-            Decision recorded:{' '}
-            {decision.action === 'confirmed'
-              ? `Agreed ${formatCurrency(item.suggestedRent)}/wk`
-              : `Proposed ${formatCurrency(decision.amount ?? 0)}/wk`}
+            {decision ? (
+              <>
+                Decision recorded:{' '}
+                {decision.action === 'confirmed'
+                  ? `Agreed ${formatCurrency(item.suggestedRent)}/wk`
+                  : `Proposed ${formatCurrency(decision.amount ?? 0)}/wk`}
+              </>
+            ) : (
+              <>
+                Rent review confirmed —{' '}
+                {formatCurrency(item.suggestedRent ?? item.currentRent)}/wk
+              </>
+            )}
           </div>
         )}
 

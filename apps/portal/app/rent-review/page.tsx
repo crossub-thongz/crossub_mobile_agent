@@ -11,6 +11,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { rentReviewDetail, ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import type { DetailNavContext } from '@/lib/detail-navigation';
+import { isRentReviewDecided, isRentReviewPendingApproval } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
 
 const VIEW_FILTERS = [
@@ -41,12 +42,8 @@ export default function RentReviewPage() {
     const cur: typeof rentReviews = [];
     const done: typeof rentReviews = [];
     for (const r of rentReviews) {
-      const decided = Boolean(decisions[r.id]);
-      const isComplete =
-        decided ||
-        r.status.toLowerCase().includes('confirm') ||
-        r.status.toLowerCase().includes('complete');
-      if (isComplete) done.push(r);
+      const decision = decisions[r.id];
+      if (isRentReviewDecided(r, decision)) done.push(r);
       else cur.push(r);
     }
     return { current: cur, completed: done };
@@ -85,13 +82,12 @@ export default function RentReviewPage() {
                     : r.status,
                   href: rentReviewDetail(r.id, detailNav),
                   module: 'Rent review',
-                  tone:
-                    r.requiresApproval && !decisions[r.id]
-                      ? 'warning'
-                      : r.tenantResponse === 'counter'
-                        ? 'neutral'
-                        : 'ok',
-                  requiresApproval: r.requiresApproval && !decisions[r.id],
+                  tone: isRentReviewPendingApproval(r, decisions[r.id])
+                    ? 'warning'
+                    : r.tenantResponse === 'counter'
+                      ? 'neutral'
+                      : 'ok',
+                  requiresApproval: isRentReviewPendingApproval(r, decisions[r.id]),
                 }}
               />
             ))}

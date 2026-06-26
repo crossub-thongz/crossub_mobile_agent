@@ -20,6 +20,7 @@ import {
   tenantSelectionDetail,
 } from '@/constants/routes';
 import { fromLeasing } from '@/lib/detail-navigation';
+import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -44,7 +45,9 @@ export default function LeasingPage() {
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
 
   const pendingApplications = tenantSelections.filter((t) => t.requiresApproval);
-  const pendingReviews = rentReviews.filter((r) => r.requiresApproval && !decisions[r.id]);
+  const pendingReviews = rentReviews.filter((r) =>
+    isRentReviewPendingApproval(r, decisions[r.id]),
+  );
 
   const history = useMemo(() => {
     return leasingRecords.map((l) => {
@@ -134,13 +137,12 @@ export default function LeasingPage() {
                       : r.status,
                     href: rentReviewDetail(r.id, fromLeasing('rent-review')),
                     module: 'Rent review',
-                    tone:
-                      r.requiresApproval && !decisions[r.id]
-                        ? 'warning'
-                        : r.tenantResponse === 'counter'
-                          ? 'neutral'
-                          : 'ok',
-                    requiresApproval: r.requiresApproval && !decisions[r.id],
+                    tone: isRentReviewPendingApproval(r, decisions[r.id])
+                      ? 'warning'
+                      : r.tenantResponse === 'counter'
+                        ? 'neutral'
+                        : 'ok',
+                    requiresApproval: isRentReviewPendingApproval(r, decisions[r.id]),
                   }}
                 />
               ))

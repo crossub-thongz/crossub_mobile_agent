@@ -7,6 +7,7 @@ import {
   tribunalDetail,
 } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import type {
   AgentDocument,
   Inspection,
@@ -51,7 +52,7 @@ export function getPropertyNeedActions(
   }
 
   for (const r of data.rentReviews.filter((x) => x.propertyId === property.id)) {
-    if (r.requiresApproval) {
+    if (isRentReviewPendingApproval(r)) {
       actions.push({
         id: `rr-${r.id}`,
         propertyId: property.id,
