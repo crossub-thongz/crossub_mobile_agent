@@ -485,6 +485,7 @@ export const DOCUMENTS: AgentDocument[] = [
     category: 'lease',
     uploadedAt: '2025-08-01T09:00:00',
     href: '/properties/prop-1/lease/lease-1',
+    downloadUrl: '#lease-agreement-lease-1',
   },
   {
     id: 'doc-5',
@@ -519,6 +520,7 @@ export const MESSAGE_THREADS: MessageThread[] = [
     subject: 'Hot water quote approval',
     taskType: 'Maintenance',
     messageCategory: 'Maintenance',
+    relatedCaseId: 'mnt-1',
     lastMessage: 'Quote attached — please approve by Wed.',
     lastAt: '2026-05-25T08:05:00',
     unread: 1,
@@ -535,7 +537,7 @@ export const MESSAGE_THREADS: MessageThread[] = [
         id: 'm2',
         at: '2026-05-25T08:05:00',
         from: 'CROSSUB Ops',
-        body: 'Quote attached — please approve by Wed.',
+        body: 'Subject: Hot water plumber quote approval\n\nQuote attached — please approve by Wed.',
         channel: 'email',
       },
     ],
@@ -829,7 +831,13 @@ export const ACCOUNTING: PropertyAccounting[] = [
       },
     ],
     statements: [
-      { id: 'stmt-1', period: 'May 2026', amount: 2880, href: '/accounting' },
+      {
+        id: 'stmt-1',
+        period: 'May 2026',
+        amount: 2880,
+        href: '/accounting',
+        downloadUrl: '#statement-prop-1-may-2026',
+      },
     ],
     collectionActivity: [],
   },
@@ -852,7 +860,13 @@ export const ACCOUNTING: PropertyAccounting[] = [
       },
     ],
     statements: [
-      { id: 'stmt-2', period: 'May 2026', amount: 2600, href: '/accounting' },
+      {
+        id: 'stmt-2',
+        period: 'May 2026',
+        amount: 2600,
+        href: '/accounting',
+        downloadUrl: '#statement-prop-2-may-2026',
+      },
     ],
     collectionActivity: [],
   },
@@ -882,8 +896,20 @@ export const ACCOUNTING: PropertyAccounting[] = [
       },
     ],
     statements: [
-      { id: 'stmt-3', period: 'May 2026', amount: 2320, href: '/accounting' },
-      { id: 'stmt-4', period: 'Apr 2026', amount: 2320, href: '/accounting' },
+      {
+        id: 'stmt-3',
+        period: 'May 2026',
+        amount: 2320,
+        href: '/accounting',
+        downloadUrl: '#statement-prop-4-may-2026',
+      },
+      {
+        id: 'stmt-4',
+        period: 'Apr 2026',
+        amount: 2320,
+        href: '/accounting',
+        downloadUrl: '#statement-prop-4-apr-2026',
+      },
     ],
     collectionActivity: [
       {

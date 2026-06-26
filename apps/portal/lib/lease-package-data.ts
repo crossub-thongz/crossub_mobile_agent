@@ -27,6 +27,7 @@ export interface LeaseDocumentItem {
   id: string;
   label: string;
   href?: string;
+  downloadUrl?: string;
   status: 'available' | 'pending';
   category: 'lease' | 'bond' | 'deposit' | 'inspection' | 'other';
 }
@@ -37,6 +38,7 @@ export interface LeaseHistoryItem {
   sublabel?: string;
   href: string;
   date?: string;
+  messageCategory: import('@/lib/types').MessageCategory;
 }
 
 export interface LeasePackageData {
@@ -148,6 +150,7 @@ function buildDocuments(
       id: 'doc-lease',
       label: 'Lease agreement',
       href: leaseDoc?.href,
+      downloadUrl: leaseDoc?.downloadUrl ?? leaseDoc?.href,
       status: leaseDoc ? 'available' : 'pending',
       category: 'lease',
     },
@@ -155,6 +158,7 @@ function buildDocuments(
       id: 'doc-bond',
       label: 'Bond receipt',
       href: bondDoc?.href,
+      downloadUrl: bondDoc?.downloadUrl ?? bondDoc?.href,
       status: lease.bondAmount != null || bondDoc ? 'available' : 'pending',
       category: 'bond',
     },
@@ -162,6 +166,7 @@ function buildDocuments(
       id: 'doc-deposit',
       label: 'Deposit receipt',
       href: depositDoc?.href,
+      downloadUrl: depositDoc?.downloadUrl ?? depositDoc?.href,
       status: lease.depositAmount != null || depositDoc ? 'available' : 'pending',
       category: 'deposit',
     },
@@ -169,6 +174,7 @@ function buildDocuments(
       id: 'doc-ingoing',
       label: 'Ingoing inspection report',
       href: ingoing ? inspectionDetail(ingoing.id) : undefined,
+      downloadUrl: ingoing?.reportUrl,
       status: ingoing ? 'available' : 'pending',
       category: 'inspection',
     },
@@ -176,6 +182,7 @@ function buildDocuments(
       id: 'doc-outgoing',
       label: 'Outgoing inspection report',
       href: outgoing ? inspectionDetail(outgoing.id) : undefined,
+      downloadUrl: outgoing?.reportUrl,
       status: outgoing ? 'available' : 'pending',
       category: 'inspection',
     },
@@ -187,6 +194,7 @@ function buildDocuments(
         id: `doc-routine-${i.id}`,
         label: `Routine inspection — ${i.scheduledAt.slice(0, 7)}`,
         href: inspectionDetail(i.id),
+        downloadUrl: i.reportUrl,
         status: 'available',
         category: 'inspection',
       });
@@ -220,6 +228,7 @@ export function buildLeasePackageData(
       sublabel: m.status,
       href: maintenanceDetail(m.id),
       date: itemDateFromMaintenance(m),
+      messageCategory: 'Maintenance' as const,
     }));
 
   const inspections = input.inspections
@@ -231,6 +240,7 @@ export function buildLeasePackageData(
       sublabel: i.status,
       href: inspectionDetail(i.id),
       date: i.scheduledAt,
+      messageCategory: 'Inspection' as const,
     }));
 
   const rentReviews = input.rentReviews
@@ -242,6 +252,7 @@ export function buildLeasePackageData(
       sublabel: `${r.currentRent} → ${r.suggestedRent} proposed`,
       href: rentReviewDetail(r.id),
       date: r.reviewDue,
+      messageCategory: 'Leasing' as const,
     }));
 
   const tribunal = input.tribunalCases
@@ -258,6 +269,7 @@ export function buildLeasePackageData(
       sublabel: t.status,
       href: tribunalDetail(t.id),
       date: t.hearingDate,
+      messageCategory: 'Tribunal' as const,
     }));
 
   return {

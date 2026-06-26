@@ -98,6 +98,7 @@ export interface AccountingStatement {
   period: string;
   amount: number;
   href: string;
+  downloadUrl?: string;
 }
 
 export interface PropertyAccounting {
@@ -332,6 +333,8 @@ export interface MessageThread {
   subject: string;
   taskType: string;
   messageCategory?: MessageCategory;
+  /** Links this thread to a specific maintenance, inspection, tribunal, etc. case */
+  relatedCaseId?: string;
   lastMessage: string;
   lastAt: string;
   unread: number;

@@ -195,8 +195,8 @@ export function WorkspaceChatPanel({
         </p>
       </div>
 
-      <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 px-1 py-2">
+      <div className="border-border bg-background flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
+        <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
           <button
             type="button"
             onClick={() => setChatTab('app')}
@@ -271,7 +271,7 @@ export function WorkspaceChatPanel({
           )}
         </div>
 
-        <div className="p-1 pt-2">
+        <div className="border-border border-t p-3 pt-3">
           <div className="flex items-end gap-2">
             <textarea
               value={draft}
@@ -288,7 +288,7 @@ export function WorkspaceChatPanel({
                   ? 'Write an in-app message…'
                   : 'Write an email message…'
               }
-              className="bg-muted/40 focus:ring-primary/20 min-h-[44px] flex-1 resize-none rounded-lg px-3 py-2 text-sm outline-none focus:ring-2"
+              className="border-border focus:ring-primary/20 min-h-[44px] flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2"
             />
             <Button
               type="button"

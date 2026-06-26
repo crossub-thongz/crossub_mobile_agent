@@ -7,7 +7,9 @@ import {
   tribunalDetail,
 } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { isPropertyVacant } from '@/lib/property-leasing';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
+import { isTenantSelectionPending } from '@/lib/tenant-selection';
 import type {
   AgentDocument,
   Inspection,
@@ -34,6 +36,7 @@ export function getPropertyNeedActions(
 ): PropertyNeedAction[] {
   const actions: PropertyNeedAction[] = [];
   const addr = `${property.address}, ${property.suburb}`;
+  const vacant = isPropertyVacant(property);
 
   for (const m of data.maintenance.filter(
     (x) => x.propertyId === property.id || x.propertyAddress.includes(property.address),
@@ -51,22 +54,24 @@ export function getPropertyNeedActions(
     }
   }
 
-  for (const r of data.rentReviews.filter((x) => x.propertyId === property.id)) {
-    if (isRentReviewPendingApproval(r)) {
-      actions.push({
-        id: `rr-${r.id}`,
-        propertyId: property.id,
-        propertyAddress: addr,
-        label: 'Rent review approval required',
-        category: 'Leasing',
-        href: rentReviewDetail(r.id, fromProperty(property.id, 'Overview')),
-        priority: 'high',
-      });
+  if (!vacant) {
+    for (const r of data.rentReviews.filter((x) => x.propertyId === property.id)) {
+      if (isRentReviewPendingApproval(r)) {
+        actions.push({
+          id: `rr-${r.id}`,
+          propertyId: property.id,
+          propertyAddress: addr,
+          label: 'Rent review approval required',
+          category: 'Leasing',
+          href: rentReviewDetail(r.id, fromProperty(property.id, 'Leasing')),
+          priority: 'high',
+        });
+      }
     }
   }
 
   for (const t of data.tenantSelections.filter((x) => x.propertyId === property.id)) {
-    if (t.requiresApproval) {
+    if (isTenantSelectionPending(t)) {
       actions.push({
         id: `ts-${t.id}`,
         propertyId: property.id,
@@ -79,28 +84,30 @@ export function getPropertyNeedActions(
     }
   }
 
-  for (const i of data.inspections.filter((x) => x.propertyId === property.id)) {
-    if (i.type === 'ROUTINE' && i.status.toLowerCase().includes('scheduled')) {
-      actions.push({
-        id: `insp-${i.id}`,
-        propertyId: property.id,
-        propertyAddress: addr,
-        label: 'Routine inspection due',
-        category: 'Inspection',
-        href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
-        priority: 'normal',
-      });
-    }
-    if (i.reportStatus === 'pending' && i.status.toLowerCase().includes('complete')) {
-      actions.push({
-        id: `insp-report-${i.id}`,
-        propertyId: property.id,
-        propertyAddress: addr,
-        label: 'Inspection report review',
-        category: 'Inspection',
-        href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
-        priority: 'normal',
-      });
+  if (!vacant) {
+    for (const i of data.inspections.filter((x) => x.propertyId === property.id)) {
+      if (i.type === 'ROUTINE' && i.status.toLowerCase().includes('scheduled')) {
+        actions.push({
+          id: `insp-${i.id}`,
+          propertyId: property.id,
+          propertyAddress: addr,
+          label: 'Routine inspection due',
+          category: 'Inspection',
+          href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
+          priority: 'normal',
+        });
+      }
+      if (i.reportStatus === 'pending' && i.status.toLowerCase().includes('complete')) {
+        actions.push({
+          id: `insp-report-${i.id}`,
+          propertyId: property.id,
+          propertyAddress: addr,
+          label: 'Inspection report review',
+          category: 'Inspection',
+          href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
+          priority: 'normal',
+        });
+      }
     }
   }
 
@@ -123,12 +130,12 @@ export function getPropertyNeedActions(
       propertyAddress: addr,
       label: 'Vacant property — leasing required',
       category: 'Leasing',
-      href: `${propertyDetail(property.id)}?tab=Leasing`,
+      href: `${propertyDetail(property.id)}?tab=Leasing&leasing=new-leasing`,
       priority: 'normal',
     });
   }
 
-  if (property.nextRentReview) {
+  if (!vacant && property.nextRentReview) {
     const due = new Date(property.nextRentReview);
     const days = (due.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
     if (days <= 90 && days >= 0) {
@@ -138,7 +145,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Lease renewal required',
         category: 'Leasing',
-        href: `${propertyDetail(property.id)}?tab=Leasing`,
+        href: `${propertyDetail(property.id)}?tab=Leasing&leasing=rent-review`,
         priority: days <= 30 ? 'high' : 'normal',
       });
     }

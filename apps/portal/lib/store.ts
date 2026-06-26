@@ -10,6 +10,7 @@ import type {
   OpenListingContext,
 } from '@/lib/open-inspection';
 import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, ThreadMessage } from '@/lib/types';
+import type { TenantSelectionDecision } from '@/lib/tenant-selection';
 
 export interface NotificationPrefs {
   approvals: boolean;
@@ -49,12 +50,18 @@ interface AgentStore {
     id: string,
     decision: { action: 'confirmed' | 'custom'; amount?: number },
   ) => void;
+  tenantSelectionDecisions: Record<string, TenantSelectionDecision>;
+  setTenantSelectionDecision: (
+    key: string,
+    decision: TenantSelectionDecision,
+  ) => void;
   sentThreadMessages: Record<string, ThreadMessage[]>;
   sendThreadMessage: (
     threadId: string,
     body: string,
     from: string,
     mentions?: MessageMention[],
+    channel?: 'app' | 'email',
   ) => ThreadMessage;
   addedProperties: Property[];
   customMessageThreads: MessageThread[];
@@ -63,7 +70,11 @@ interface AgentStore {
     property: Property,
     agentPortfolioId: AgentPortfolioId,
     existingThreadId?: string,
-    options?: { category?: import('@/lib/types').MessageCategory; subject?: string },
+    options?: {
+      category?: import('@/lib/types').MessageCategory;
+      subject?: string;
+      caseId?: string;
+    },
   ) => string;
   onboardingDismissed: boolean;
   dismissOnboarding: () => void;
@@ -89,14 +100,19 @@ export const useAgentStore = create<AgentStore>()(
         set((s) => ({
           rentReviewDecisions: { ...s.rentReviewDecisions, [id]: decision },
         })),
+      tenantSelectionDecisions: {},
+      setTenantSelectionDecision: (key, decision) =>
+        set((s) => ({
+          tenantSelectionDecisions: { ...s.tenantSelectionDecisions, [key]: decision },
+        })),
       sentThreadMessages: {},
-      sendThreadMessage: (threadId, body, from, mentions) => {
+      sendThreadMessage: (threadId, body, from, mentions, channel) => {
         const message: ThreadMessage = {
           id: `agent-${Date.now()}`,
           at: new Date().toISOString(),
           from,
           body: body.trim(),
-          channel: 'app',
+          channel: channel ?? 'app',
           sentByAgent: true,
           mentions,
         };
@@ -142,11 +158,11 @@ export const useAgentStore = create<AgentStore>()(
       ensureMessageThread: (property, agentPortfolioId, existingThreadId, options) => {
         if (existingThreadId) return existingThreadId;
         const category = options?.category ?? 'Others';
-        const custom = get().customMessageThreads.find(
-          (t) =>
-            t.propertyId === property.id &&
-            (t.messageCategory === category || t.taskType === category),
-        );
+        const custom = get().customMessageThreads.find((t) => {
+          if (t.propertyId !== property.id) return false;
+          if (options?.caseId) return t.relatedCaseId === options.caseId;
+          return t.messageCategory === category || t.taskType === category;
+        });
         if (custom) return custom.id;
 
         const thread: MessageThread = {
@@ -161,6 +177,7 @@ export const useAgentStore = create<AgentStore>()(
           subject: options?.subject ?? `${property.address} — ${category}`,
           taskType: category,
           messageCategory: category,
+          relatedCaseId: options?.caseId,
           lastMessage: 'Start a conversation',
           lastAt: new Date().toISOString(),
           unread: 0,

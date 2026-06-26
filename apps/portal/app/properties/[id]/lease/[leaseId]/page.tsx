@@ -7,7 +7,6 @@ import {
   ClipboardList,
   FileText,
   Gavel,
-  Receipt,
   TrendingUp,
   Wallet,
   Wrench,
@@ -15,13 +14,14 @@ import {
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import {
+  LeaseDocumentList,
   LeaseHistoryList,
   LeaseHistorySection,
   RentHistoryList,
 } from '@/components/agent/lease-history-section';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { messageDetail, propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyDetail } from '@/constants/routes';
 import { buildLeasePackageData } from '@/lib/lease-package-data';
 import { leaseHistoryLabel } from '@/lib/lease-label';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -39,7 +39,6 @@ export default function LeasePackagePage() {
     rentReviews,
     tribunalCases,
     accounting,
-    messages,
   } = useAgentData();
 
   const record = leasingRecords.find((l) => l.id === leaseId && l.propertyId === propertyId);
@@ -69,11 +68,11 @@ export default function LeasePackagePage() {
 
   if (!record || !property || !packageData) notFound();
 
-  const propertyThread = messages.find((m) => m.propertyId === propertyId);
+  const propertyAddress = `${property.address}, ${property.suburb}`;
 
   return (
-    <AgentShell title="Leasing package" backHref={propertyDetail(propertyId)} backLabel="Property">
-      <div className="space-y-4">
+    <AgentShell title="Lease record" backHref={propertyDetail(propertyId)} backLabel="Property">
+      <div className="space-y-4 pb-8">
         <InfoPanel title={leaseHistoryLabel(record)} icon={FileText}>
           <InfoRow label="Tenant" value={record.approvedTenant} />
           <InfoRow
@@ -97,24 +96,11 @@ export default function LeasePackagePage() {
           icon={FileText}
           isEmpty={packageData.documents.length === 0}
           empty="No documents on file for this lease."
+          collapsible
+          defaultOpen={false}
+          itemCount={packageData.documents.length}
         >
-          <div className="space-y-1.5">
-            {packageData.documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between rounded-xl border bg-secondary/20 px-3 py-2.5 text-sm"
-              >
-                <span>{doc.label}</span>
-                {doc.status === 'available' && doc.href ? (
-                  <Link href={doc.href} className="text-primary text-xs font-semibold">
-                    View
-                  </Link>
-                ) : (
-                  <span className="text-muted-foreground text-xs">Pending</span>
-                )}
-              </div>
-            ))}
-          </div>
+          <LeaseDocumentList documents={packageData.documents} />
         </LeaseHistorySection>
 
         <LeaseHistorySection
@@ -122,6 +108,9 @@ export default function LeasePackagePage() {
           icon={Wallet}
           isEmpty={packageData.rentPayments.length === 0}
           empty="No rent payments recorded for this leasing period."
+          collapsible
+          defaultOpen={false}
+          itemCount={packageData.rentPayments.length}
         >
           <RentHistoryList payments={packageData.rentPayments} />
         </LeaseHistorySection>
@@ -131,8 +120,15 @@ export default function LeasePackagePage() {
           icon={Gavel}
           isEmpty={packageData.tribunal.length === 0}
           empty="No tribunal matters during this leasing period."
+          collapsible
+          defaultOpen={false}
+          itemCount={packageData.tribunal.length}
         >
-          <LeaseHistoryList items={packageData.tribunal} />
+          <LeaseHistoryList
+            items={packageData.tribunal}
+            propertyId={propertyId}
+            propertyAddress={propertyAddress}
+          />
         </LeaseHistorySection>
 
         <LeaseHistorySection
@@ -140,8 +136,15 @@ export default function LeasePackagePage() {
           icon={TrendingUp}
           isEmpty={packageData.rentReviews.length === 0}
           empty="No rent reviews during this leasing period."
+          collapsible
+          defaultOpen={false}
+          itemCount={packageData.rentReviews.length}
         >
-          <LeaseHistoryList items={packageData.rentReviews} />
+          <LeaseHistoryList
+            items={packageData.rentReviews}
+            propertyId={propertyId}
+            propertyAddress={propertyAddress}
+          />
         </LeaseHistorySection>
 
         <LeaseHistorySection
@@ -149,8 +152,15 @@ export default function LeasePackagePage() {
           icon={Wrench}
           isEmpty={packageData.maintenance.length === 0}
           empty="No maintenance jobs during this leasing period."
+          collapsible
+          defaultOpen={false}
+          itemCount={packageData.maintenance.length}
         >
-          <LeaseHistoryList items={packageData.maintenance} />
+          <LeaseHistoryList
+            items={packageData.maintenance}
+            propertyId={propertyId}
+            propertyAddress={propertyAddress}
+          />
         </LeaseHistorySection>
 
         <LeaseHistorySection
@@ -158,27 +168,15 @@ export default function LeasePackagePage() {
           icon={ClipboardList}
           isEmpty={packageData.inspections.length === 0}
           empty="No inspections during this leasing period."
+          collapsible
+          defaultOpen={false}
+          itemCount={packageData.inspections.length}
         >
-          <LeaseHistoryList items={packageData.inspections} />
-        </LeaseHistorySection>
-
-        <LeaseHistorySection title="Communication history" icon={Receipt}>
-          {propertyThread ? (
-            <Link
-              href={messageDetail(propertyThread.id)}
-              className="flex items-center justify-between rounded-xl border px-3 py-3 text-sm hover:border-primary/30"
-            >
-              <div>
-                <p className="font-medium">{propertyThread.subject}</p>
-                <p className="text-muted-foreground line-clamp-1 text-xs">
-                  {propertyThread.lastMessage}
-                </p>
-              </div>
-              <span className="text-primary text-xs font-semibold">Open thread</span>
-            </Link>
-          ) : (
-            <p className="text-muted-foreground px-1 py-2 text-sm">No messages for this property.</p>
-          )}
+          <LeaseHistoryList
+            items={packageData.inspections}
+            propertyId={propertyId}
+            propertyAddress={propertyAddress}
+          />
         </LeaseHistorySection>
 
         <Link
@@ -186,9 +184,6 @@ export default function LeasePackagePage() {
           className="text-primary block text-center text-xs font-medium"
         >
           All property documents →
-        </Link>
-        <Link href={ROUTES.MESSAGES} className="text-muted-foreground block text-center text-xs">
-          Message centre
         </Link>
       </div>
     </AgentShell>

@@ -46,6 +46,9 @@ export type { DetailNavContext };
 export const propertyDetail = (id: string) => `/properties/${id}`;
 export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
   `/properties/${propertyId}/lease/${leaseId}`;
+
+export const propertyLeasingWorkflow = (propertyId: string) =>
+  `/properties/${propertyId}/leasing-workflow`;
 export const propertyNew = () => `/properties/new`;
 export const inspectionDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/inspections/${id}`, ctx);

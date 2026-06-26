@@ -23,6 +23,10 @@ import {
   type AgentPortfolioId,
 } from '@/lib/agent-scope';
 import {
+  applyTenantSelectionDecision,
+  tenantSelectionDecisionKey,
+} from '@/lib/tenant-selection';
+import {
   maintenanceNotificationsToAgent,
   mapApiMaintenanceRequest,
   type MappedMaintenance,
@@ -74,6 +78,21 @@ import type {
 } from '@/lib/types';
 import { maintenanceDetail, tenantSelectionDetail, ROUTES } from '@/constants/routes';
 
+function messageThreadKey(thread: {
+  id: string;
+  propertyId?: string;
+  messageCategory?: MessageCategory;
+  taskType?: string;
+  relatedCaseId?: string;
+}): string {
+  const category = thread.messageCategory ?? thread.taskType ?? 'Others';
+  if (!thread.propertyId) return thread.id;
+  if (thread.relatedCaseId) {
+    return `${thread.propertyId}::${category}::${thread.relatedCaseId}`;
+  }
+  return `${thread.propertyId}::${category}`;
+}
+
 function normalizeSentMessages(value: unknown): ThreadMessage[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
@@ -118,10 +137,15 @@ interface AgentDataContextValue {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   uploadDocument: (file: File, category: AgentDocument['category'], propertyAddress: string) => void;
-  sendMessage: (threadId: string, body: string, mentions?: MessageMention[]) => void;
+  sendMessage: (
+    threadId: string,
+    body: string,
+    mentions?: MessageMention[],
+    channel?: 'app' | 'email',
+  ) => void;
   ensureMessageThread: (
     propertyId: string,
-    options?: { category?: MessageCategory; subject?: string },
+    options?: { category?: MessageCategory; subject?: string; caseId?: string },
   ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Property;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Inspection;
@@ -188,6 +212,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const storeEnsureMessageThread = useAgentStore((s) => s.ensureMessageThread);
   const uploadedDocuments = useAgentStore((s) => s.uploadedDocuments);
   const addUploadedDocument = useAgentStore((s) => s.addUploadedDocument);
+  const tenantSelectionDecisions = useAgentStore((s) => s.tenantSelectionDecisions);
 
   const [apiState, setApiState] = useState<ApiMaintenanceState | null>(null);
   const [kpis, setKpis] = useState<{
@@ -299,8 +324,15 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const tenantSelections = useMemo(
-    () => filterByPropertyIds(TENANT_SELECTIONS, propertyIds),
-    [propertyIds],
+    () =>
+      filterByPropertyIds(TENANT_SELECTIONS, propertyIds).map((selection) => {
+        const key = tenantSelectionDecisionKey(selection.propertyId, selection.id);
+        return applyTenantSelectionDecision(
+          selection,
+          tenantSelectionDecisions[key],
+        );
+      }),
+    [propertyIds, tenantSelectionDecisions],
   );
 
   const leasingRecords = useMemo(
@@ -327,9 +359,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     );
     const byKey = new Map<string, (typeof demoThreads)[0]>();
     for (const thread of [...demoThreads, ...customThreads]) {
-      const category = thread.messageCategory ?? thread.taskType ?? 'Others';
-      const key = thread.propertyId ? `${thread.propertyId}::${category}` : thread.id;
-      if (!byKey.has(key)) byKey.set(key, thread);
+      byKey.set(messageThreadKey(thread), thread);
     }
 
     return [...byKey.values()].map((thread) => {
@@ -357,9 +387,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [agentPortfolioId, properties, sentThreadMessages, customMessageThreads]);
 
   const sendMessage = useCallback(
-    (threadId: string, body: string, mentions?: MessageMention[]) => {
+    (threadId: string, body: string, mentions?: MessageMention[], channel?: 'app' | 'email') => {
       const from = user ? displayName(user) : 'Agent';
-      sendThreadMessage(threadId, body, from, mentions);
+      sendThreadMessage(threadId, body, from, mentions, channel);
     },
     [user, sendThreadMessage],
   );
@@ -367,17 +397,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const ensureMessageThread = useCallback(
     (
       propertyId: string,
-      options?: { category?: MessageCategory; subject?: string },
+      options?: { category?: MessageCategory; subject?: string; caseId?: string },
     ) => {
       const property = properties.find((p) => p.id === propertyId);
       if (!property) return '';
-      const existing = messages.find(
-        (m) =>
-          m.propertyId === propertyId &&
-          (!options?.category ||
-            m.messageCategory === options.category ||
-            m.taskType === options.category),
-      );
+      const existing = messages.find((m) => {
+        if (m.propertyId !== propertyId) return false;
+        if (options?.caseId) return m.relatedCaseId === options.caseId;
+        if (!options?.category) return true;
+        return m.messageCategory === options.category || m.taskType === options.category;
+      });
       return storeEnsureMessageThread(
         property,
         agentPortfolioId,

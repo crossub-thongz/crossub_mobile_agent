@@ -7,16 +7,39 @@ import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
-import { getTenantSelection } from '@/lib/mock-data';
 import { ROUTES } from '@/constants/routes';
+import { useAgentStore } from '@/lib/store';
+import { tenantSelectionDecisionKey } from '@/lib/tenant-selection';
 import { formatCurrency } from '@/lib/utils';
 
 export default function TenantSelectionPage() {
   const params = useParams();
-  const item = getTenantSelection(params.id as string);
+  const id = params.id as string;
+  const { tenantSelections } = useAgentData();
+  const setTenantSelectionDecision = useAgentStore((s) => s.setTenantSelectionDecision);
+  const item = tenantSelections.find((t) => t.id === id);
 
   if (!item) notFound();
+
+  const handleApprove = () => {
+    setTenantSelectionDecision(tenantSelectionDecisionKey(item.propertyId, item.id), {
+      action: 'approved',
+      applicantName: item.applicantName,
+      decidedAt: new Date().toISOString(),
+    });
+    toast.success('Applicant approved — lease communication triggered');
+  };
+
+  const handleDecline = (reason: string) => {
+    setTenantSelectionDecision(tenantSelectionDecisionKey(item.propertyId, item.id), {
+      action: 'rejected',
+      applicantName: item.applicantName,
+      decidedAt: new Date().toISOString(),
+    });
+    toast.success(`Declined: ${reason}`);
+  };
 
   return (
     <AgentShell title="Tenant selection" backHref={ROUTES.DASHBOARD}>
@@ -27,6 +50,7 @@ export default function TenantSelectionPage() {
           <p className="mt-2 text-sm">
             {formatCurrency(item.proposedRent)}/wk · {item.leaseTerm}
           </p>
+          <p className="text-muted-foreground mt-2 text-xs">{item.status}</p>
         </div>
 
         <CaseContactActions propertyId={item.propertyId} caseLabel="Tenant selection" />
@@ -34,8 +58,9 @@ export default function TenantSelectionPage() {
         <ApprovalPanel
           title={`Approve ${item.applicantName}`}
           recommendation="Shortlisted after open inspection — references verified by CROSSUB."
-          onApprove={() => toast.success('Applicant approved — lease communication triggered')}
-          onDecline={(r) => toast.success(`Declined: ${r}`)}
+          disabled={!item.requiresApproval}
+          onApprove={handleApprove}
+          onDecline={handleDecline}
           onRequote={(r) => toast.info(`Query sent: ${r}`)}
         />
 
@@ -45,8 +70,10 @@ export default function TenantSelectionPage() {
             {item.documents.map((d) => (
               <li key={d} className="flex justify-between rounded-lg border px-3 py-2">
                 <span>{d}</span>
-                <Button variant="link" className="h-auto p-0 text-xs">
-                  View
+                <Button variant="link" className="h-auto p-0 text-xs" asChild>
+                  <a href={`#${d.replace(/\s+/g, '-').toLowerCase()}`} download={d}>
+                    Download
+                  </a>
                 </Button>
               </li>
             ))}
