@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
-import { CounterOfferTimeline } from '@/components/agent/counter-offer-timeline';
 import { DataSourceBadge } from '@/components/agent/data-source-badge';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { StatusBadge } from '@/components/agent/status-badge';
@@ -18,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
-import { isRentReviewDecided } from '@/lib/rent-review';
+import { buildRentReviewTimeline, isRentReviewDecided } from '@/lib/rent-review';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAgentStore } from '@/lib/store';
 
@@ -31,10 +30,13 @@ export default function RentReviewDetailPage() {
   const setDecision = useAgentStore((s) => s.setRentReviewDecision);
   const [customRent, setCustomRent] = useState('');
   const back = useBackNavigation(ROUTES.RENT_REVIEW, 'Rent reviews');
+  const decided = item ? isRentReviewDecided(item, decision) : false;
+  const timeline = useMemo(
+    () => (item ? buildRentReviewTimeline(item, decision) : []),
+    [item, decision],
+  );
 
   if (!item) notFound();
-
-  const decided = isRentReviewDecided(item, decision);
 
   return (
     <AgentShell title="Rent Review" backHref={back.href} backLabel={back.label}>
@@ -123,23 +125,9 @@ export default function RentReviewDetailPage() {
           </div>
         )}
 
-        {item.negotiationHistory && item.negotiationHistory.length > 0 && (
-          <section>
-            <h2 className="mb-2 text-sm font-semibold">Counter offer history</h2>
-            <CounterOfferTimeline history={item.negotiationHistory} />
-          </section>
-        )}
-
-        {item.tenantResponse === 'counter' && item.counterOffer && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-            <p className="font-semibold text-amber-400">Tenant counter offer</p>
-            <p className="mt-1">{formatCurrency(item.counterOffer)}/wk</p>
-          </div>
-        )}
-
         <section>
           <h2 className="mb-3 text-sm font-semibold">Timeline</h2>
-          <Timeline entries={item.timeline} />
+          <Timeline entries={timeline} />
         </section>
 
         <ModuleCommunications

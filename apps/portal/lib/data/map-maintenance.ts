@@ -52,6 +52,9 @@ export interface MappedMaintenance extends MaintenanceRequest {
   completionEvidenceUploaded?: boolean;
   auditTimeline: TimelineEntry[];
   apiNotifications: ApiMaintenanceNotification[];
+  apiRequest: ApiMaintenanceRequest;
+  auditEntries: ApiMaintenanceAuditLogEntry[];
+  apiQuotations: ApiQuotation[];
 }
 
 export function mapApiMaintenanceRequest(
@@ -117,6 +120,9 @@ export function mapApiMaintenanceRequest(
     completionEvidenceUploaded: req.completionEvidenceUploaded,
     auditTimeline: auditToTimeline(reqAudit),
     apiNotifications: reqNotifications,
+    apiRequest: req,
+    auditEntries: reqAudit,
+    apiQuotations: quotations.filter((q) => q.maintenanceRequestId === req.id),
   };
 }
 

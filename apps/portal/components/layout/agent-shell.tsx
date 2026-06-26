@@ -36,6 +36,7 @@ export function AgentShell({
   hideGlobalFabs,
   showConnectionBanner,
   wide,
+  immersive,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -49,6 +50,8 @@ export function AgentShell({
   showConnectionBanner?: boolean;
   /** Full-width desktop layout (e.g. communications log) */
   wide?: boolean;
+  /** Hide mobile chrome for immersive workspace pages */
+  immersive?: boolean;
 }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -101,6 +104,7 @@ export function AgentShell({
           className={cn(
             'border-border bg-background/95 z-40 border-b backdrop-blur supports-[backdrop-filter]:bg-background/80',
             'fixed top-0 left-1/2 w-full max-w-lg -translate-x-1/2 lg:hidden',
+            immersive && 'hidden',
           )}
         >
           <div className="flex h-14 items-center justify-between gap-2 px-3">
@@ -158,7 +162,7 @@ export function AgentShell({
           )}
         </header>
 
-        {title && (
+        {title && !immersive && (
           <header className="border-border hidden shrink-0 flex-col gap-2 border-b px-6 py-3 lg:flex">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -209,14 +213,14 @@ export function AgentShell({
           className={cn(
             'flex-1',
             wide ? 'lg:p-0' : 'lg:px-8 lg:pb-8',
-            title && 'lg:pt-6',
+            title && !immersive && 'lg:pt-6',
+            immersive && 'lg:pt-2 lg:pb-0',
           )}
         >
           <div
             className={cn(
-              wide ? 'px-4 pb-4 lg:p-0' : 'px-4 py-4',
-              'pb-24 lg:pb-0',
-              'max-lg:pt-[var(--shell-header-offset)] lg:pt-0',
+              wide ? (immersive ? 'px-2 pb-0 lg:px-4' : 'px-4 pb-4 lg:p-0') : 'px-4 py-4',
+              immersive ? 'max-lg:pt-2 lg:pt-0' : 'pb-24 lg:pb-0 max-lg:pt-[var(--shell-header-offset)] lg:pt-0',
             )}
             style={{ ['--shell-header-offset' as string]: `${headerHeight + 16}px` }}
           >
@@ -274,7 +278,12 @@ export function AgentShell({
           </>
         )}
 
-        <nav className="border-border bg-background/95 fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+        <nav
+          className={cn(
+            'border-border bg-background/95 fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden',
+            immersive && 'hidden',
+          )}
+        >
           <div className="flex h-16 items-stretch justify-around px-1">
             {PRIMARY_NAV.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
