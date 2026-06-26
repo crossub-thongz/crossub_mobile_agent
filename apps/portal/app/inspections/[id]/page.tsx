@@ -14,6 +14,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { useBackNavigation } from '@/hooks/use-back-navigation';
 import {
   OPEN_CONDUCTED_BY_LABEL,
   OPEN_LISTING_CONTEXT_LABEL,
@@ -27,6 +28,7 @@ export default function InspectionDetailPage() {
   const insp = inspections.find((i) => i.id === params.id);
   const [acknowledged, setAcknowledged] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
   if (!insp) notFound();
 
@@ -34,7 +36,7 @@ export default function InspectionDetailPage() {
   const isCrossubOpen = insp.type === 'OPEN' && insp.openConductedBy === 'crossub';
 
   return (
-    <AgentShell title={insp.trackingNumber} backHref={ROUTES.INSPECTIONS}>
+    <AgentShell title={insp.trackingNumber} backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
         <StatusBanner
           status={insp.status}

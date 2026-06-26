@@ -19,6 +19,7 @@ import {
   ROUTES,
   tenantSelectionDetail,
 } from '@/constants/routes';
+import { fromLeasing } from '@/lib/detail-navigation';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -131,7 +132,7 @@ export default function LeasingPage() {
                         ? 'Confirmed'
                         : 'Custom amount submitted'
                       : r.status,
-                    href: rentReviewDetail(r.id),
+                    href: rentReviewDetail(r.id, fromLeasing('rent-review')),
                     module: 'Rent review',
                     tone:
                       r.requiresApproval && !decisions[r.id]

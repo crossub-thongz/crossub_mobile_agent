@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -8,6 +9,8 @@ import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { rentReviewDetail, ROUTES } from '@/constants/routes';
+import { useBackNavigation } from '@/hooks/use-back-navigation';
+import type { DetailNavContext } from '@/lib/detail-navigation';
 import { useAgentStore } from '@/lib/store';
 
 const VIEW_FILTERS = [
@@ -16,9 +19,23 @@ const VIEW_FILTERS = [
 ];
 
 export default function RentReviewPage() {
+  const searchParams = useSearchParams();
   const { rentReviews } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
   const [view, setView] = useState('current');
+
+  const detailNav = useMemo((): DetailNavContext | undefined => {
+    const from = searchParams.get('from');
+    const propertyId = searchParams.get('propertyId');
+    if (from === 'property' && propertyId) {
+      return {
+        from: 'property',
+        propertyId,
+        tab: searchParams.get('tab') ?? undefined,
+      };
+    }
+    return undefined;
+  }, [searchParams]);
 
   const { current, completed } = useMemo(() => {
     const cur: typeof rentReviews = [];
@@ -36,9 +53,10 @@ export default function RentReviewPage() {
   }, [rentReviews, decisions]);
 
   const list = view === 'current' ? current : completed;
+  const back = useBackNavigation(ROUTES.DASHBOARD, 'Dashboard');
 
   return (
-    <AgentShell title="Rent Review" backHref={ROUTES.LEASING}>
+    <AgentShell title="Rent Review" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
         <FilterChips options={VIEW_FILTERS} value={view} onChange={setView} />
 
@@ -65,7 +83,7 @@ export default function RentReviewPage() {
                       ? 'Confirmed'
                       : 'Custom amount submitted'
                     : r.status,
-                  href: rentReviewDetail(r.id),
+                  href: rentReviewDetail(r.id, detailNav),
                   module: 'Rent review',
                   tone:
                     r.requiresApproval && !decisions[r.id]

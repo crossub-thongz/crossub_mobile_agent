@@ -4,14 +4,17 @@ import Link from 'next/link';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 
 import { rentReviewDetail } from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
 import type { RentReviewCase } from '@/lib/types';
 import { formatCurrency, formatMonthYear } from '@/lib/utils';
 
 export function RentReviewSummaryList({
   reviews,
+  propertyId,
   compact = false,
 }: {
   reviews: RentReviewCase[];
+  propertyId: string;
   compact?: boolean;
 }) {
   const sorted = [...reviews].sort(
@@ -30,7 +33,7 @@ export function RentReviewSummaryList({
       {items.map((r) => (
         <Link
           key={r.id}
-          href={rentReviewDetail(r.id)}
+          href={rentReviewDetail(r.id, fromProperty(propertyId, 'Overview'))}
           className="flex items-center gap-3 rounded-xl border bg-card px-3 py-3 text-sm transition hover:border-primary/30"
         >
           <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-lg">

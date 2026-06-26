@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   AlertTriangle,
+  ChevronLeft,
   Menu,
   Search,
   X,
@@ -30,6 +31,7 @@ export function AgentShell({
   children,
   title,
   backHref,
+  backLabel = 'Back',
   hideNeedAction,
   hideGlobalFabs,
   showConnectionBanner,
@@ -38,6 +40,8 @@ export function AgentShell({
   children: React.ReactNode;
   title?: string;
   backHref?: string;
+  /** Label for the back control when `backHref` is set */
+  backLabel?: string;
   hideNeedAction?: boolean;
   /** Hide bottom-right + and chat FABs (e.g. auth screens) */
   hideGlobalFabs?: boolean;
@@ -101,8 +105,12 @@ export function AgentShell({
         >
           <div className="flex h-14 items-center justify-between gap-2 px-3">
             {backHref ? (
-              <Link href={backHref} className="text-primary shrink-0 text-sm font-medium">
-                ← Back
+              <Link
+                href={backHref}
+                className="text-primary flex shrink-0 items-center gap-0.5 text-sm font-medium"
+              >
+                <ChevronLeft className="size-4" />
+                {backLabel}
               </Link>
             ) : (
               <CrossubLogo size="sm" />
@@ -151,14 +159,26 @@ export function AgentShell({
         </header>
 
         {title && (
-          <header className="border-border hidden h-14 shrink-0 items-center justify-between border-b px-6 lg:flex">
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold">{title}</h1>
-              {user && (
-                <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
+          <header className="border-border hidden shrink-0 flex-col gap-2 border-b px-6 py-3 lg:flex">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                {backHref && (
+                  <Link
+                    href={backHref}
+                    className="text-primary hover:bg-primary/5 flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium transition"
+                  >
+                    <ChevronLeft className="size-4" />
+                    {backLabel}
+                  </Link>
+                )}
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-semibold">{title}</h1>
+                  {user && (
+                    <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
               {!hideNeedAction && (
                 <Link
                   href={ROUTES.TASKS}
@@ -180,6 +200,7 @@ export function AgentShell({
               >
                 <Search className="size-5" />
               </Link>
+            </div>
             </div>
           </header>
         )}

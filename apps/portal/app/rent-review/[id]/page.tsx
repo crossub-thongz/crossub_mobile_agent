@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
+import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAgentStore } from '@/lib/store';
 
@@ -28,13 +29,14 @@ export default function RentReviewDetailPage() {
   const decision = useAgentStore((s) => s.rentReviewDecisions[id]);
   const setDecision = useAgentStore((s) => s.setRentReviewDecision);
   const [customRent, setCustomRent] = useState('');
+  const back = useBackNavigation(ROUTES.RENT_REVIEW, 'Rent reviews');
 
   if (!item) notFound();
 
   const decided = decision != null;
 
   return (
-    <AgentShell title="Rent Review" backHref={ROUTES.RENT_REVIEW}>
+    <AgentShell title="Rent Review" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
         <DataSourceBadge source="demo" />
         <div className="rounded-xl border bg-card p-4 space-y-3">

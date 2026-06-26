@@ -13,6 +13,7 @@ import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { useBackNavigation } from '@/hooks/use-back-navigation';
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
 
 export default function MaintenanceDetailPage() {
@@ -30,6 +31,7 @@ export default function MaintenanceDetailPage() {
   const apiItem = maintenanceFromApi.find((m) => m.id === id) as
     | MappedMaintenance
     | undefined;
+  const back = useBackNavigation(ROUTES.MAINTENANCE, 'Maintenance');
 
   if (!item) notFound();
 
@@ -73,7 +75,7 @@ export default function MaintenanceDetailPage() {
   };
 
   return (
-    <AgentShell title={item.trackingNumber} backHref={ROUTES.MAINTENANCE}>
+    <AgentShell title={item.trackingNumber} backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
         <StatusBanner
           status={item.status}

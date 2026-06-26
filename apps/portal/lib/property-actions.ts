@@ -6,6 +6,7 @@ import {
   tenantSelectionDetail,
   tribunalDetail,
 } from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
 import type {
   AgentDocument,
   Inspection,
@@ -43,7 +44,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Maintenance approval required',
         category: 'Maintenance',
-        href: maintenanceDetail(m.id),
+        href: maintenanceDetail(m.id, fromProperty(property.id, 'Maintenance')),
         priority: m.priority === 'urgent' ? 'urgent' : 'high',
       });
     }
@@ -57,7 +58,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Rent review approval required',
         category: 'Leasing',
-        href: rentReviewDetail(r.id),
+        href: rentReviewDetail(r.id, fromProperty(property.id, 'Overview')),
         priority: 'high',
       });
     }
@@ -71,7 +72,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Tenant application approval',
         category: 'Leasing',
-        href: tenantSelectionDetail(t.id),
+        href: tenantSelectionDetail(t.id, fromProperty(property.id, 'Leasing')),
         priority: 'high',
       });
     }
@@ -85,7 +86,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Routine inspection due',
         category: 'Inspection',
-        href: inspectionDetail(i.id),
+        href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
         priority: 'normal',
       });
     }
@@ -96,7 +97,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Inspection report review',
         category: 'Inspection',
-        href: inspectionDetail(i.id),
+        href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
         priority: 'normal',
       });
     }
@@ -150,7 +151,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Tribunal action required',
         category: 'Tribunal',
-        href: tribunalDetail(t.id),
+        href: tribunalDetail(t.id, fromProperty(property.id, 'Overview')),
         priority: 'urgent',
       });
     }

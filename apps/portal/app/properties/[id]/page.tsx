@@ -34,6 +34,7 @@ import {
   propertyLeasePackage,
   ROUTES,
 } from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const TABS = [
@@ -132,7 +133,7 @@ export default function PropertyDetailPage() {
   );
 
   return (
-    <AgentShell title={property.address} backHref={ROUTES.PROPERTIES}>
+    <AgentShell title={property.address} backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <div className="space-y-4 pb-8">
         <div className="rounded-2xl border bg-gradient-to-br from-card to-secondary/30 p-4">
           <div className="flex items-start justify-between gap-3">
@@ -205,7 +206,7 @@ export default function PropertyDetailPage() {
                         propertyAddress: m.propertyAddress,
                         taskLabel: m.title,
                         status: m.status,
-                        href: maintenanceDetail(m.id),
+                        href: maintenanceDetail(m.id, fromProperty(id, 'Maintenance')),
                         module: 'Maintenance',
                         requiresApproval: m.requiresApproval,
                       }}
@@ -299,7 +300,7 @@ export default function PropertyDetailPage() {
             </InfoPanel>
 
             <InfoPanel title="Rent review" icon={FileText}>
-              <RentReviewSummaryList reviews={tasks.rentReviews} compact />
+              <RentReviewSummaryList reviews={tasks.rentReviews} propertyId={id} compact />
             </InfoPanel>
 
             <InfoPanel title="History" icon={History}>
@@ -381,7 +382,7 @@ export default function PropertyDetailPage() {
               ) : (
                 activeMaintenance.map((m) => (
                   <div key={m.id} className="rounded-xl border bg-card p-4">
-                    <Link href={maintenanceDetail(m.id)} className="block">
+                    <Link href={maintenanceDetail(m.id, fromProperty(id, 'Maintenance'))} className="block">
                       <p className="text-sm font-medium">{m.title}</p>
                       <p className="text-primary text-xs">{m.status}</p>
                       {m.contractorName && (
@@ -401,7 +402,7 @@ export default function PropertyDetailPage() {
               <p className="text-muted-foreground text-sm">No completed maintenance cases.</p>
             ) : (
               completedMaintenance.map((m) => (
-                <Link key={m.id} href={maintenanceDetail(m.id)} className="block">
+                <Link key={m.id} href={maintenanceDetail(m.id, fromProperty(id, 'Maintenance'))} className="block">
                   <div className="rounded-xl border bg-card p-4 opacity-90">
                     <p className="text-sm font-medium">{m.title}</p>
                     <p className="text-muted-foreground text-xs">{m.status}</p>
@@ -433,7 +434,7 @@ export default function PropertyDetailPage() {
               </p>
             ) : (
               filteredInspections.map((i) => (
-                <Link key={i.id} href={inspectionDetail(i.id)} className="block">
+                <Link key={i.id} href={inspectionDetail(i.id, fromProperty(id, 'Inspection'))} className="block">
                   <div className="rounded-xl border bg-card p-4">
                     <p className="text-xs font-semibold text-primary">{i.type}</p>
                     <p className="text-sm font-medium">

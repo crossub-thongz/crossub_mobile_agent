@@ -10,6 +10,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { formatDateTime } from '@/lib/utils';
 
 export default function TribunalDetailPage() {
@@ -17,11 +18,12 @@ export default function TribunalDetailPage() {
   const id = params.id as string;
   const { tribunalCases } = useAgentData();
   const c = tribunalCases.find((x) => x.id === id);
+  const back = useBackNavigation(ROUTES.TRIBUNAL, 'Tribunal');
 
   if (!c) notFound();
 
   return (
-    <AgentShell title="Tribunal case" backHref={ROUTES.TRIBUNAL}>
+    <AgentShell title="Tribunal case" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
         {c.requiresAction && c.status === 'active' && (
           <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">

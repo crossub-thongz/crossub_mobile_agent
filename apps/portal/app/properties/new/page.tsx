@@ -76,7 +76,7 @@ export default function AddPropertyPage() {
   };
 
   return (
-    <AgentShell title="Add property" backHref={ROUTES.PROPERTIES}>
+    <AgentShell title="Add property" backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <form onSubmit={onSubmit} className="space-y-5">
         <p className="text-muted-foreground text-sm">
           Property setup fields are being aligned with the Leasing team. Required details below
