@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "../../crossub_web/packages/api-contract"
+    ]
+  }
+}

@@ -10,6 +10,9 @@ importers:
 
   apps/portal:
     dependencies:
+      '@crossub-thongz/api-contract':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@hookform/resolvers':
         specifier: ^3.9.1
         version: 3.10.0(react-hook-form@7.76.1(react@19.2.6))
@@ -83,6 +86,9 @@ packages:
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
+
+  '@crossub-thongz/api-contract@0.1.0':
+    resolution: {integrity: sha512-iYaaHlvUwIs5xwYEW44lIlEXkVod2zyc6ofl3pb71yeaAZWJQPeGUFboPw0ICM+7z2s5rBLscARQWhxWyLYbhw==, tarball: https://npm.pkg.github.com/download/@crossub-thongz/api-contract/0.1.0/ca878d17993fac094095632ec9028d2430323462}
 
   '@emnapi/runtime@1.10.0':
     resolution: {integrity: sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA==}
@@ -582,6 +588,12 @@ packages:
       sass:
         optional: true
 
+  openapi-fetch@0.13.8:
+    resolution: {integrity: sha512-yJ4QKRyNxE44baQ9mY5+r/kAzZ8yXMemtNAOFwOzRXJscdjSxxzWSNlyBAr+o5JjkUw9Lc3W7OIoca0cY3PYnQ==}
+
+  openapi-typescript-helpers@0.0.15:
+    resolution: {integrity: sha512-opyTPaunsklCBpTK8JGef6mfPhLSnyy5a0IN9vKtx3+4aExf+KxEqYwIy3hqkedXIB97u357uLMJsOnm3GVjsw==}
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -691,6 +703,10 @@ packages:
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
+
+  '@crossub-thongz/api-contract@0.1.0':
+    dependencies:
+      openapi-fetch: 0.13.8
 
   '@emnapi/runtime@1.10.0':
     dependencies:
@@ -1066,6 +1082,12 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+
+  openapi-fetch@0.13.8:
+    dependencies:
+      openapi-typescript-helpers: 0.0.15
+
+  openapi-typescript-helpers@0.0.15: {}
 
   picocolors@1.1.1: {}
 
