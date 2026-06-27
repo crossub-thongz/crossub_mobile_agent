@@ -11,12 +11,24 @@ import {
 
 import { useAuth } from '@/components/providers/auth-provider';
 import {
-  approveMaintenanceQuotation,
-  declineMaintenanceQuotation,
-  fetchMaintenanceKpis,
-  fetchMaintenanceState,
-} from '@/lib/crossub-api/maintenance-client';
-import type { ApiMaintenanceState } from '@/lib/crossub-api/types';
+  approveMaintenance as apiApproveMaintenance,
+  declineMaintenance as apiDeclineMaintenance,
+  fetchPortfolio,
+  fetchProperties,
+  type AgentPortfolio,
+} from '@/lib/crossub-api/agent-client';
+import {
+  mapAgentAccounting,
+  mapAgentInspections,
+  mapAgentLeasing,
+  mapAgentMaintenance,
+  mapAgentProperties,
+  mapAgentRentReviews,
+  mapAgentTenantSelections,
+  mapAgentTribunal,
+  mapAgentVacating,
+} from '@/lib/crossub-api/agent-mappers';
+import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import {
   filterByPropertyIds,
   resolveAgentPortfolioId,
@@ -26,11 +38,6 @@ import {
   applyTenantSelectionDecision,
   tenantSelectionDecisionKey,
 } from '@/lib/tenant-selection';
-import {
-  maintenanceNotificationsToAgent,
-  mapApiMaintenanceRequest,
-  type MappedMaintenance,
-} from '@/lib/data/map-maintenance';
 import {
   ACCOUNTING,
   DASHBOARD_ITEMS,
@@ -105,13 +112,20 @@ function normalizeSentMessages(value: unknown): ThreadMessage[] {
   );
 }
 
+/** Lightweight ref the maintenance approve/decline UI keys off — `submittedQuotationId`
+ * is the request id to act on when a quote is pending (status QUOTING). */
+interface AgentApiMaintenanceRef {
+  id: string;
+  submittedQuotationId?: string;
+}
+
 interface AgentDataContextValue {
   loading: boolean;
   apiConnected: boolean;
   apiError: string | null;
   agentPortfolioId: AgentPortfolioId;
   refresh: () => Promise<void>;
-  maintenanceFromApi: MappedMaintenance[];
+  maintenanceFromApi: AgentApiMaintenanceRef[];
   maintenanceAll: MaintenanceRequest[];
   maintenanceKpis: { total: number; overdue: number; breachRate: number } | null;
   properties: Property[];
@@ -149,20 +163,18 @@ interface AgentDataContextValue {
   ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Property;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Inspection;
-  approveMaintenanceQuote: (quotationId: string) => Promise<void>;
-  declineMaintenanceQuote: (quotationId: string, reason: string) => Promise<void>;
+  approveMaintenanceQuote: (requestId: string) => Promise<void>;
+  declineMaintenanceQuote: (requestId: string, reason: string) => Promise<void>;
 }
 
 const AgentDataContext = createContext<AgentDataContextValue | null>(null);
 
-function buildDashboardFromApi(
-  apiItems: MappedMaintenance[],
-  kpis: { overdue: number } | null,
-): DashboardItem[] {
-  const fromApi: DashboardItem[] = apiItems
+/** Dashboard cards for the maintenance quotes the agent needs to approve. */
+function buildMaintenanceDashboard(items: MaintenanceRequest[]): DashboardItem[] {
+  return items
     .filter((m) => m.requiresApproval)
     .map((m) => ({
-      id: `api-${m.id}`,
+      id: `maint-${m.id}`,
       module: 'maintenance' as const,
       propertyId: m.propertyId,
       propertyAddress: m.propertyAddress,
@@ -177,26 +189,6 @@ function buildDashboardFromApi(
       updatedAt: new Date().toISOString(),
       source: 'api' as const,
     }));
-
-  if (kpis && kpis.overdue > 0) {
-    fromApi.unshift({
-      id: 'api-overdue',
-      module: 'maintenance',
-      propertyId: 'api',
-      propertyAddress: 'Portfolio',
-      title: `${kpis.overdue} maintenance item(s) overdue`,
-      subtitle: 'CROSSUB has been notified',
-      priority: 'urgent',
-      status: 'Overdue',
-      overdueHours: 24,
-      requiresApproval: false,
-      href: ROUTES.MAINTENANCE,
-      updatedAt: new Date().toISOString(),
-      source: 'api' as const,
-    });
-  }
-
-  return fromApi;
 }
 
 export function AgentDataProvider({ children }: { children: React.ReactNode }) {
@@ -214,33 +206,46 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const addUploadedDocument = useAgentStore((s) => s.addUploadedDocument);
   const tenantSelectionDecisions = useAgentStore((s) => s.tenantSelectionDecisions);
 
-  const [apiState, setApiState] = useState<ApiMaintenanceState | null>(null);
-  const [kpis, setKpis] = useState<{
-    total: number;
-    overdue: number;
-    breachRate: number;
-  } | null>(null);
+  // The live agent facade: properties come pre-mapped (the mapping needs the portfolio
+  // id); the operational portfolio is held raw and mapped per-domain in the memos below.
+  // Both null = not loaded / failed → every domain falls back to its demo seed (the app
+  // never blanks). They are fetched together so real properties + real domains stay
+  // coherently keyed by the same real property ids.
+  const [apiProperties, setApiProperties] = useState<Property[] | null>(null);
+  const [portfolio, setPortfolio] = useState<AgentPortfolio | null>(null);
   const [loading, setLoading] = useState(true);
+  const [apiConnected, setApiConnected] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
+    if (status !== 'authed') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setApiError(null);
     try {
-      const [state, kpiData] = await Promise.all([
-        fetchMaintenanceState(),
-        fetchMaintenanceKpis('agent'),
+      const [props, port] = await Promise.all([
+        fetchProperties(),
+        fetchPortfolio(),
       ]);
-      setApiState(state);
-      setKpis(kpiData);
+      setApiProperties(mapAgentProperties(props, agentPortfolioId));
+      setPortfolio(port);
+      setApiConnected(true);
     } catch (err) {
-      setApiError(err instanceof Error ? err.message : 'Unable to reach crossub_web API');
-      setApiState(null);
+      setApiConnected(false);
+      setApiProperties(null);
+      setPortfolio(null);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to reach CROSSUB API — using demo data',
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status, agentPortfolioId]);
 
   useEffect(() => {
     void Promise.resolve(useAgentStore.persist.rehydrate()).catch(() => {
@@ -256,8 +261,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     if (status === 'loading') return;
     if (status !== 'authed') {
       setLoading(false);
-      setApiState(null);
-      setKpis(null);
+      setApiProperties(null);
+      setPortfolio(null);
       setApiError(null);
       return;
     }
@@ -265,89 +270,113 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [refresh, status]);
 
   const properties = useMemo(() => {
-    const demo = PROPERTIES.filter((p) => p.assignedAgentId === agentPortfolioId);
-    const added = addedProperties.filter((p) => p.assignedAgentId === agentPortfolioId);
-    return [...added, ...demo];
-  }, [agentPortfolioId, addedProperties]);
+    const base =
+      apiProperties ??
+      PROPERTIES.filter((p) => p.assignedAgentId === agentPortfolioId);
+    const added = addedProperties.filter(
+      (p) => p.assignedAgentId === agentPortfolioId,
+    );
+    return [...added, ...base];
+  }, [apiProperties, agentPortfolioId, addedProperties]);
 
   const propertyIds = useMemo(
     () => new Set(properties.map((p) => p.id)),
     [properties],
   );
 
-  const maintenanceFromApi = useMemo(() => {
-    if (!apiState?.maintenanceRequests?.length) return [];
-    try {
-      const contractors = apiState.contractors ?? [];
-      const quotations = apiState.quotations ?? [];
-      const auditLog = apiState.maintenanceAuditLog ?? [];
-      const notifications = apiState.maintenanceNotifications ?? [];
-      return apiState.maintenanceRequests.map((req) =>
-        mapApiMaintenanceRequest(
-          req,
-          contractors,
-          quotations,
-          auditLog,
-          notifications,
-        ),
-      );
-    } catch (err) {
-      console.error('[Agent portal] failed to map maintenance API data', err);
-      return [];
-    }
-  }, [apiState]);
-
   const maintenanceAll = useMemo(() => {
-    const demoIds = new Set(DEMO_MAINTENANCE.map((m) => m.id));
-    const apiOnly = maintenanceFromApi.filter((m) => !demoIds.has(m.id));
-    const merged = [
-      ...apiOnly,
-      ...DEMO_MAINTENANCE.map((m) => ({ ...m, source: 'demo' as const })),
-    ];
-    return filterByPropertyIds(merged, propertyIds);
-  }, [maintenanceFromApi, propertyIds]);
+    if (portfolio) return mapAgentMaintenance(portfolio.maintenance);
+    return filterByPropertyIds(
+      DEMO_MAINTENANCE.map((m) => ({ ...m, source: 'demo' as const })),
+      propertyIds,
+    );
+  }, [portfolio, propertyIds]);
+
+  const maintenanceFromApi = useMemo<AgentApiMaintenanceRef[]>(
+    () =>
+      (portfolio?.maintenance ?? []).map((m) => ({
+        id: m.id,
+        submittedQuotationId:
+          m.status === MAINTENANCE_STATUS.QUOTING ? m.id : undefined,
+      })),
+    [portfolio],
+  );
+
+  const maintenanceKpis = useMemo(() => {
+    if (!portfolio) return null;
+    const rows = portfolio.maintenance;
+    const overdue = rows.filter(
+      (m) =>
+        m.urgent &&
+        m.status !== MAINTENANCE_STATUS.COMPLETED &&
+        m.status !== MAINTENANCE_STATUS.CANCELLED,
+    ).length;
+    return {
+      total: rows.length,
+      overdue,
+      breachRate: rows.length ? overdue / rows.length : 0,
+    };
+  }, [portfolio]);
 
   const inspections = useMemo(() => {
-    const demo = filterByPropertyIds(INSPECTIONS, propertyIds);
+    const base = portfolio
+      ? mapAgentInspections(portfolio.inspections)
+      : filterByPropertyIds(INSPECTIONS, propertyIds);
     const added = filterByPropertyIds(addedInspections, propertyIds);
-    return [...added, ...demo];
-  }, [propertyIds, addedInspections]);
+    return [...added, ...base];
+  }, [portfolio, propertyIds, addedInspections]);
 
   const rentReviews = useMemo(
-    () => filterByPropertyIds(RENT_REVIEWS, propertyIds),
-    [propertyIds],
+    () =>
+      portfolio
+        ? mapAgentRentReviews(portfolio.rentReviews)
+        : filterByPropertyIds(RENT_REVIEWS, propertyIds),
+    [portfolio, propertyIds],
   );
 
   const vacating = useMemo(
-    () => filterByPropertyIds(VACATING, propertyIds),
-    [propertyIds],
+    () =>
+      portfolio
+        ? mapAgentVacating(portfolio.vacating)
+        : filterByPropertyIds(VACATING, propertyIds),
+    [portfolio, propertyIds],
   );
 
-  const tenantSelections = useMemo(
-    () =>
-      filterByPropertyIds(TENANT_SELECTIONS, propertyIds).map((selection) => {
-        const key = tenantSelectionDecisionKey(selection.propertyId, selection.id);
-        return applyTenantSelectionDecision(
-          selection,
-          tenantSelectionDecisions[key],
-        );
-      }),
-    [propertyIds, tenantSelectionDecisions],
-  );
+  const tenantSelections = useMemo(() => {
+    const base = portfolio
+      ? mapAgentTenantSelections(portfolio.tenantSelections)
+      : filterByPropertyIds(TENANT_SELECTIONS, propertyIds);
+    return base.map((selection) => {
+      const key = tenantSelectionDecisionKey(selection.propertyId, selection.id);
+      return applyTenantSelectionDecision(
+        selection,
+        tenantSelectionDecisions[key],
+      );
+    });
+  }, [portfolio, propertyIds, tenantSelectionDecisions]);
 
   const leasingRecords = useMemo(
-    () => filterByPropertyIds(LEASING_RECORDS, propertyIds),
-    [propertyIds],
+    () =>
+      portfolio
+        ? mapAgentLeasing(portfolio.leasing)
+        : filterByPropertyIds(LEASING_RECORDS, propertyIds),
+    [portfolio, propertyIds],
   );
 
   const accounting = useMemo(
-    () => ACCOUNTING.filter((a) => propertyIds.has(a.propertyId)),
-    [propertyIds],
+    () =>
+      portfolio
+        ? mapAgentAccounting(portfolio.accounting)
+        : ACCOUNTING.filter((a) => propertyIds.has(a.propertyId)),
+    [portfolio, propertyIds],
   );
 
   const tribunalCases = useMemo(
-    () => filterByPropertyIds(TRIBUNAL_CASES, propertyIds),
-    [propertyIds],
+    () =>
+      portfolio
+        ? mapAgentTribunal(portfolio.tribunal)
+        : filterByPropertyIds(TRIBUNAL_CASES, propertyIds),
+    [portfolio, propertyIds],
   );
 
   const messages = useMemo(() => {
@@ -456,31 +485,18 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     return [...uploaded, ...demo];
   }, [properties, uploadedDocuments]);
 
-  const notifications = useMemo(() => {
-    try {
-      const apiNotifs = apiState
-        ? maintenanceNotificationsToAgent(
-            apiState.maintenanceNotifications ?? [],
-            apiState.maintenanceRequests ?? [],
-          )
-        : [];
-      const demo = DEMO_NOTIFICATIONS.map((n) => ({ ...n, source: 'demo' as const }));
-      const seen = new Set<string>();
-      return [...apiNotifs, ...demo]
-        .filter((n) => {
-          if (seen.has(n.id)) return false;
-          seen.add(n.id);
-          return true;
-        })
-        .map((n) => ({ ...n, read: n.read || readIds.has(n.id) }));
-    } catch (err) {
-      console.error('[Agent portal] failed to build notifications', err);
-      return DEMO_NOTIFICATIONS.map((n) => ({ ...n, source: 'demo' as const }));
-    }
-  }, [apiState, readIds]);
+  const notifications = useMemo(
+    () =>
+      DEMO_NOTIFICATIONS.map((n) => ({
+        ...n,
+        source: 'demo' as const,
+        read: n.read || readIds.has(n.id),
+      })),
+    [readIds],
+  );
 
   const dashboardItems = useMemo(() => {
-    const apiDash = buildDashboardFromApi(maintenanceFromApi, kpis);
+    const maintDash = buildMaintenanceDashboard(maintenanceAll);
     const tenantDash: DashboardItem[] = tenantSelections
       .filter((t) => t.requiresApproval)
       .map((t) => ({
@@ -497,9 +513,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date().toISOString(),
         source: 'demo' as const,
       }));
-    const demoDash = filterByPropertyIds(DASHBOARD_ITEMS, propertyIds);
-    return [...apiDash, ...tenantDash, ...demoDash];
-  }, [maintenanceFromApi, kpis, tenantSelections, propertyIds]);
+    const demoDash = portfolio
+      ? []
+      : filterByPropertyIds(DASHBOARD_ITEMS, propertyIds);
+    return [...maintDash, ...tenantDash, ...demoDash];
+  }, [maintenanceAll, tenantSelections, portfolio, propertyIds]);
 
   const sectionStatus = useMemo(
     () =>
@@ -508,9 +526,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         inspections,
         rentReviews,
         vacating,
-        maintenanceOverdue: kpis?.overdue,
+        maintenanceOverdue: maintenanceKpis?.overdue,
       }),
-    [maintenanceAll, inspections, rentReviews, vacating, kpis],
+    [maintenanceAll, inspections, rentReviews, vacating, maintenanceKpis],
   );
 
   const taskStatusList = useMemo(
@@ -577,30 +595,30 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const approveMaintenanceQuote = useCallback(
-    async (quotationId: string) => {
-      const state = await approveMaintenanceQuotation(quotationId, 'agent');
-      setApiState(state);
+    async (requestId: string) => {
+      await apiApproveMaintenance(requestId);
+      await refresh();
     },
-    [],
+    [refresh],
   );
 
   const declineMaintenanceQuote = useCallback(
-    async (quotationId: string, reason: string) => {
-      const state = await declineMaintenanceQuotation(quotationId, reason, 'agent');
-      setApiState(state);
+    async (requestId: string, reason: string) => {
+      await apiDeclineMaintenance(requestId, reason);
+      await refresh();
     },
-    [],
+    [refresh],
   );
 
   const value: AgentDataContextValue = {
     loading,
-    apiConnected: apiState != null,
+    apiConnected,
     apiError,
     agentPortfolioId,
     refresh,
     maintenanceFromApi,
     maintenanceAll,
-    maintenanceKpis: kpis,
+    maintenanceKpis,
     properties,
     inspections,
     rentReviews,

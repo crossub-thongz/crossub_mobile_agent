@@ -10,11 +10,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
-import {
-  buildWorkspaceCaseFromApi,
-  buildWorkspaceCaseFromDemo,
-} from '@/lib/maintenance-workspace/adapter';
-import type { MappedMaintenance } from '@/lib/data/map-maintenance';
+import { buildWorkspaceCaseFromDemo } from '@/lib/maintenance-workspace/adapter';
 
 export default function MaintenanceDetailPage() {
   const params = useParams();
@@ -30,7 +26,7 @@ export default function MaintenanceDetailPage() {
   } = useAgentData();
 
   const item = maintenanceAll.find((m) => m.id === id);
-  const apiItem = maintenanceFromApi.find((m) => m.id === id) as MappedMaintenance | undefined;
+  const apiItem = maintenanceFromApi.find((m) => m.id === id);
   const back = useBackNavigation(ROUTES.MAINTENANCE, 'Maintenance');
 
   const property = useMemo(
@@ -40,11 +36,8 @@ export default function MaintenanceDetailPage() {
 
   const workspaceCase = useMemo(() => {
     if (!item) return null;
-    if (apiItem?.apiRequest) {
-      return buildWorkspaceCaseFromApi(apiItem, property, user);
-    }
     return buildWorkspaceCaseFromDemo(item, property, user);
-  }, [apiItem, item, property, user]);
+  }, [item, property, user]);
 
   if (!item || !workspaceCase) notFound();
 
