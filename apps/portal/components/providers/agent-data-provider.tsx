@@ -14,6 +14,7 @@ import {
   approveMaintenance as apiApproveMaintenance,
   createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
+  fetchAgencies,
   fetchDocuments,
   fetchMessageThreads,
   fetchNotifications,
@@ -27,6 +28,7 @@ import {
 } from '@/lib/crossub-api/agent-client';
 import {
   mapAgentAccounting,
+  mapAgentAgencies,
   mapAgentDocuments,
   mapAgentInspections,
   mapAgentLeasing,
@@ -52,6 +54,7 @@ import {
 } from '@/lib/tenant-selection';
 import {
   ACCOUNTING,
+  AGENCIES as DEMO_AGENCIES,
   DASHBOARD_ITEMS,
   DOCUMENTS,
   INSPECTIONS,
@@ -73,6 +76,7 @@ import { buildTaskStatusList } from '@/lib/task-status-list';
 import { useAgentStore } from '@/lib/store';
 import { displayName } from '@/lib/utils';
 import type {
+  Agency,
   AgentDocument,
   AgentNotification,
   DashboardItem,
@@ -155,6 +159,7 @@ interface AgentDataContextValue {
   maintenanceAll: MaintenanceRequest[];
   maintenanceKpis: { total: number; overdue: number; breachRate: number } | null;
   properties: Property[];
+  agencies: Agency[];
   inspections: Inspection[];
   rentReviews: RentReviewCase[];
   vacating: VacatingCase[];
@@ -249,6 +254,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
   // Live documents (aggregated + uploaded, mapped). null = not loaded / failed → demo seed.
   const [apiDocuments, setApiDocuments] = useState<AgentDocument[] | null>(null);
+  // Live client agencies (mapped). null = not loaded / failed → the demo seed (filtered to
+  // the agencies referenced by the visible properties). Loaded with the other side domains.
+  const [apiAgencies, setApiAgencies] = useState<Agency[] | null>(null);
   // localThreadId → server thread id, populated when an optimistic thread is persisted via
   // createThread. Lets the messages memo promote the local thread (keeping its id so the
   // open detail route stays valid) onto its server content, and routes later replies to it.
@@ -274,12 +282,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiProperties(mappedProps);
       setPortfolio(port);
       setApiConnected(true);
-      // Messages + notifications + documents load after the portfolio; each degrades to its
-      // demo seed independently (a comms/docs hiccup never blanks the portfolio or each other).
-      const [threadsRes, notifsRes, docsRes] = await Promise.allSettled([
+      // Messages + notifications + documents + agencies load after the portfolio; each
+      // degrades to its demo seed independently (one hiccup never blanks the others).
+      const [threadsRes, notifsRes, docsRes, agenciesRes] = await Promise.allSettled([
         fetchMessageThreads(),
         fetchNotifications(),
         fetchDocuments(),
+        fetchAgencies(),
       ]);
       setApiMessages(
         threadsRes.status === 'fulfilled'
@@ -294,6 +303,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiDocuments(
         docsRes.status === 'fulfilled' ? mapAgentDocuments(docsRes.value) : null,
       );
+      setApiAgencies(
+        agenciesRes.status === 'fulfilled'
+          ? mapAgentAgencies(agenciesRes.value)
+          : null,
+      );
     } catch (err) {
       setApiConnected(false);
       setApiProperties(null);
@@ -301,6 +315,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiMessages(null);
       setApiNotifications(null);
       setApiDocuments(null);
+      setApiAgencies(null);
       setApiError(
         err instanceof Error
           ? err.message
@@ -330,6 +345,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiMessages(null);
       setApiNotifications(null);
       setApiDocuments(null);
+      setApiAgencies(null);
       setApiError(null);
       return;
     }
@@ -350,6 +366,22 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     () => new Set(properties.map((p) => p.id)),
     [properties],
   );
+
+  const agencies = useMemo<Agency[]>(() => {
+    // Live agencies (already agent-scoped) when loaded; else the demo seed filtered to the
+    // agencies referenced by the visible (agent-scoped) demo properties — keeps offline coherent.
+    const base =
+      apiAgencies ??
+      DEMO_AGENCIES.filter((a) => properties.some((p) => p.agencyId === a.id));
+    // propertyCount always reflects the live properties grouped by agencyId (no extra fetch).
+    const counts = new Map<string, number>();
+    for (const p of properties) {
+      if (p.agencyId) counts.set(p.agencyId, (counts.get(p.agencyId) ?? 0) + 1);
+    }
+    return base
+      .map((a) => ({ ...a, propertyCount: counts.get(a.id) ?? 0 }))
+      .sort((x, y) => x.name.localeCompare(y.name));
+  }, [apiAgencies, properties]);
 
   const maintenanceAll = useMemo(() => {
     if (portfolio) return mapAgentMaintenance(portfolio.maintenance);
@@ -819,6 +851,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     maintenanceAll,
     maintenanceKpis,
     properties,
+    agencies,
     inspections,
     rentReviews,
     vacating,

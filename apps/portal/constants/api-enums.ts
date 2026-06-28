@@ -125,6 +125,13 @@ export const AGENT_NOTIFICATION_TYPE = {
   REMINDER: 'REMINDER',
 } as const;
 
+/** AgencyStatus — the client-agency lifecycle. */
+export const AGENCY_STATUS = {
+  ONBOARDING: 'ONBOARDING',
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+} as const;
+
 /** Agent document category — the agent-facade document vocabulary (matches the view union). */
 export const DOCUMENT_CATEGORY = {
   INSPECTION: 'inspection',

@@ -20,6 +20,7 @@ export const PRIMARY_NAV = [
 ] as const;
 
 export const MORE_NAV = [
+  { href: ROUTES.AGENCIES, label: 'Agencies', icon: Building2 },
   { href: ROUTES.LEASING, label: 'Leasing', icon: FileText },
   { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
   { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench },

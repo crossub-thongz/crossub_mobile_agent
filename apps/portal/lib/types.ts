@@ -43,6 +43,8 @@ export type NeedActionCategory =
 
 export interface Property {
   id: string;
+  /** The client agency that owns this property — lets the Agencies screen group by client */
+  agencyId?: string;
   address: string;
   suburb: string;
   /** Landlord / home owner this property belongs to */
@@ -65,6 +67,21 @@ export interface Property {
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;
+}
+
+export type AgencyStatus = 'ONBOARDING' | 'ACTIVE' | 'INACTIVE';
+
+/** A client agency (the AM's "client") the signed-in agent is assigned to manage. */
+export interface Agency {
+  id: string;
+  name: string;
+  status: AgencyStatus;
+  company?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  /** Properties under this agency in the agent's book — derived from the live `properties`. */
+  propertyCount: number;
 }
 
 export interface LeasingRecord {

@@ -12,6 +12,7 @@
  */
 import type {
   AgentAccounting,
+  AgentAgency,
   AgentDocumentDto,
   AgentInspection,
   AgentLeasing,
@@ -40,6 +41,7 @@ import {
   VACATING_STATUS,
 } from '@/constants/api-enums';
 import type {
+  Agency,
   AgentDocument,
   AgentNotification,
   Inspection,
@@ -70,6 +72,7 @@ export function mapAgentProperty(
 ): Property {
   return {
     id: dto.id,
+    agencyId: dto.agencyId,
     address: dto.address,
     suburb: dto.suburb ?? '',
     homeOwnerName: dto.landlordName ?? '—',
@@ -102,6 +105,38 @@ export function mapAgentProperties(
   agentId: AgentPortfolioId,
 ): Property[] {
   return dtos.map((d) => mapAgentProperty(d, agentId));
+}
+
+// ---------------------------------------------------------------------------
+// Agencies (clients)
+// ---------------------------------------------------------------------------
+
+/**
+ * The agency DTO's optional contact fields are typed by the *installed* contract as
+ * `Record<string, never> | null` (it predates the `type: String` fix-at-source applied to
+ * the source DTO), so they're coerced with a typeof guard rather than a plain `?? fallback`
+ * — robust whether the resolved contract types them as `string | null` or the older shape.
+ */
+function asString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+/**
+ * Map the thin agency DTOs onto the app's `Agency` view-model. `propertyCount` is left at 0
+ * here and filled by the provider from the already-live `properties` (grouped by `agencyId`),
+ * so the count always agrees with what the Properties screen shows — no extra fetch.
+ */
+export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
+  return dtos.map((a) => ({
+    id: a.id,
+    name: a.name,
+    status: a.status,
+    company: asString(a.company),
+    contactName: asString(a.contactName),
+    contactEmail: asString(a.contactEmail),
+    contactPhone: asString(a.contactPhone),
+    propertyCount: 0,
+  }));
 }
 
 // ---------------------------------------------------------------------------

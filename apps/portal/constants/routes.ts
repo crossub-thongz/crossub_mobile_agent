@@ -11,6 +11,7 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
   PROPERTIES: '/properties',
+  AGENCIES: '/agencies',
   INSPECTIONS: '/inspections',
   MAINTENANCE: '/maintenance',
   LEASING: '/leasing',
@@ -44,6 +45,7 @@ import {
 export type { DetailNavContext };
 
 export const propertyDetail = (id: string) => `/properties/${id}`;
+export const agencyDetail = (id: string) => `/agencies/${id}`;
 export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
   `/properties/${propertyId}/lease/${leaseId}`;
 

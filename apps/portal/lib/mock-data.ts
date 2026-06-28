@@ -1,4 +1,5 @@
 import type {
+  Agency,
   AgentDocument,
   AgentNotification,
   DashboardItem,
@@ -14,9 +15,36 @@ import type {
   VacatingCase,
 } from './types';
 
+/** Demo client agencies for offline / not-yet-loaded mode (the live list comes from
+ * `GET /agent/agencies`). The ids match the demo properties' `agencyId` so the Agencies
+ * screen can group them; `propertyCount` is recomputed from the visible properties. */
+export const AGENCIES: Agency[] = [
+  {
+    id: 'agency-demo-1',
+    name: 'Coastline Realty',
+    status: 'ACTIVE',
+    company: 'Coastline Realty Pty Ltd',
+    contactName: 'Mr & Mrs Thompson',
+    contactEmail: 'thompson@email.com',
+    contactPhone: '+61 412 000 111',
+    propertyCount: 2,
+  },
+  {
+    id: 'agency-demo-2',
+    name: 'Hinterland Property Co',
+    status: 'ACTIVE',
+    company: 'Hinterland Property Co',
+    contactName: 'Rivera Family Trust',
+    contactEmail: 'rivera.trust@email.com',
+    contactPhone: '+61 400 555 666',
+    propertyCount: 2,
+  },
+];
+
 export const PROPERTIES: Property[] = [
   {
     id: 'prop-1',
+    agencyId: 'agency-demo-1',
     address: '12 Ocean View Pde',
     suburb: 'Miami',
     homeOwnerName: 'Mr & Mrs Thompson',
@@ -39,6 +67,7 @@ export const PROPERTIES: Property[] = [
   },
   {
     id: 'prop-2',
+    agencyId: 'agency-demo-1',
     address: '4/88 Surf Rd',
     suburb: 'Broadbeach',
     homeOwnerName: 'Mr & Mrs Thompson',
@@ -60,6 +89,7 @@ export const PROPERTIES: Property[] = [
   },
   {
     id: 'prop-3',
+    agencyId: 'agency-demo-2',
     address: '7 Palm Court',
     suburb: 'Burleigh Heads',
     homeOwnerName: 'Rivera Family Trust',
@@ -79,6 +109,7 @@ export const PROPERTIES: Property[] = [
   },
   {
     id: 'prop-4',
+    agencyId: 'agency-demo-2',
     address: '22 Hinterland Dr',
     suburb: 'Robina',
     homeOwnerName: 'Rivera Family Trust',
