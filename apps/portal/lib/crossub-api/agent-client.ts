@@ -22,6 +22,8 @@ export type AgentThreadMessage =
   components['schemas']['AgentThreadMessageResponseDto'];
 export type CreateAgentThreadInput =
   components['schemas']['CreateAgentMessageThreadDto'];
+export type AgentNotificationDto =
+  components['schemas']['AgentNotificationResponseDto'];
 
 /** Assigned client agencies (`GET /api/v1/agent/agencies`). */
 export async function fetchAgencies(): Promise<AgentAgency[]> {
@@ -117,5 +119,31 @@ export async function createThread(
 ): Promise<AgentMessageThread> {
   const { data, error } = await crossub.POST('/agent/messages', { body: input });
   if (error || !data) throw new Error('Failed to open message thread');
+  return data;
+}
+
+/** Notifications for the signed-in agent (`GET /agent/notifications`). */
+export async function fetchNotifications(): Promise<AgentNotificationDto[]> {
+  const { data, error } = await crossub.GET('/agent/notifications');
+  if (error || !data) throw new Error('Failed to load notifications');
+  return data;
+}
+
+/** Mark one notification read (`PATCH /agent/notifications/{notificationId}/read`). */
+export async function markNotificationRead(
+  notificationId: string,
+): Promise<AgentNotificationDto> {
+  const { data, error } = await crossub.PATCH(
+    '/agent/notifications/{notificationId}/read',
+    { params: { path: { notificationId } } },
+  );
+  if (error || !data) throw new Error('Failed to mark notification read');
+  return data;
+}
+
+/** Mark all unread notifications read (`POST /agent/notifications/read-all`). */
+export async function markAllNotificationsRead(): Promise<{ updated: number }> {
+  const { data, error } = await crossub.POST('/agent/notifications/read-all');
+  if (error || !data) throw new Error('Failed to mark all notifications read');
   return data;
 }

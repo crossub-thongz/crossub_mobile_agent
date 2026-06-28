@@ -16,6 +16,7 @@ import type {
   AgentLeasing,
   AgentMaintenance,
   AgentMessageThread,
+  AgentNotificationDto,
   AgentProperty,
   AgentRentReview,
   AgentTenantSelection,
@@ -24,6 +25,7 @@ import type {
   AgentVacating,
 } from './agent-client';
 import {
+  AGENT_NOTIFICATION_TYPE,
   APPLICATION_STATUS,
   COMM_CHANNEL,
   COMM_DEPARTMENT,
@@ -37,6 +39,7 @@ import {
   VACATING_STATUS,
 } from '@/constants/api-enums';
 import type {
+  AgentNotification,
   Inspection,
   LeasingRecord,
   MaintenanceRequest,
@@ -437,4 +440,45 @@ export function mapAgentMessages(
       messages,
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+/** AgentNotificationType → the app's lower-cased notification union. */
+const NOTIFICATION_TYPE_VIEW: Record<
+  AgentNotificationDto['type'],
+  AgentNotification['type']
+> = {
+  [AGENT_NOTIFICATION_TYPE.APPROVAL]: 'approval',
+  [AGENT_NOTIFICATION_TYPE.URGENT]: 'urgent',
+  [AGENT_NOTIFICATION_TYPE.UPDATE]: 'update',
+  [AGENT_NOTIFICATION_TYPE.REPORT]: 'report',
+  [AGENT_NOTIFICATION_TYPE.REMINDER]: 'reminder',
+};
+
+/**
+ * Map the agent notification DTOs onto the app's `AgentNotification` view-model. The DTO
+ * is thin, so view-only fields the facade doesn't carry (`taskType`, `status`,
+ * `overdueHours`, `escalationNote`) land on safe empty defaults — the same shape the
+ * screen already tolerates for demo data. `source: 'api'` marks the live origin.
+ */
+export function mapAgentNotifications(
+  dtos: AgentNotificationDto[],
+): AgentNotification[] {
+  return dtos.map((n) => ({
+    id: n.id,
+    type: NOTIFICATION_TYPE_VIEW[n.type] ?? 'update',
+    title: n.title,
+    body: n.body,
+    propertyAddress: n.propertyAddress ?? '',
+    taskType: '',
+    status: '',
+    at: n.createdAt,
+    read: n.read,
+    href: n.href,
+    actionRequired: n.actionRequired ?? undefined,
+    source: 'api',
+  }));
 }

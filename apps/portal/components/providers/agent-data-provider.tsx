@@ -15,8 +15,11 @@ import {
   createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
   fetchMessageThreads,
+  fetchNotifications,
   fetchPortfolio,
   fetchProperties,
+  markAllNotificationsRead as apiMarkAllNotificationsRead,
+  markNotificationRead as apiMarkNotificationRead,
   replyToThread as apiReplyToThread,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
@@ -26,6 +29,7 @@ import {
   mapAgentLeasing,
   mapAgentMaintenance,
   mapAgentMessages,
+  mapAgentNotifications,
   mapAgentProperties,
   mapAgentRentReviews,
   mapAgentTenantSelections,
@@ -222,6 +226,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   // back to the demo + optimistic store layer (the app never blanks). Loaded independently
   // of the portfolio so a messaging hiccup never blanks the rest.
   const [apiMessages, setApiMessages] = useState<MessageThread[] | null>(null);
+  // Live notifications (mapped). null = not loaded / failed → falls back to the demo seed.
+  const [apiNotifications, setApiNotifications] = useState<AgentNotification[] | null>(
+    null,
+  );
   // localThreadId → server thread id, populated when an optimistic thread is persisted via
   // createThread. Lets the messages memo promote the local thread (keeping its id so the
   // open detail route stays valid) onto its server content, and routes later replies to it.
@@ -247,19 +255,28 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiProperties(mappedProps);
       setPortfolio(port);
       setApiConnected(true);
-      // Messages load after the portfolio is set so a messaging failure degrades only the
-      // messages surface (to demo) rather than blanking the live portfolio.
-      try {
-        const threads = await fetchMessageThreads();
-        setApiMessages(mapAgentMessages(threads, mappedProps, agentPortfolioId));
-      } catch {
-        setApiMessages(null);
-      }
+      // Messages + notifications load after the portfolio; each degrades to its demo seed
+      // independently (a comms hiccup never blanks the live portfolio or each other).
+      const [threadsRes, notifsRes] = await Promise.allSettled([
+        fetchMessageThreads(),
+        fetchNotifications(),
+      ]);
+      setApiMessages(
+        threadsRes.status === 'fulfilled'
+          ? mapAgentMessages(threadsRes.value, mappedProps, agentPortfolioId)
+          : null,
+      );
+      setApiNotifications(
+        notifsRes.status === 'fulfilled'
+          ? mapAgentNotifications(notifsRes.value)
+          : null,
+      );
     } catch (err) {
       setApiConnected(false);
       setApiProperties(null);
       setPortfolio(null);
       setApiMessages(null);
+      setApiNotifications(null);
       setApiError(
         err instanceof Error
           ? err.message
@@ -287,6 +304,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiProperties(null);
       setPortfolio(null);
       setApiMessages(null);
+      setApiNotifications(null);
       setApiError(null);
       return;
     }
@@ -586,15 +604,39 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     return [...uploaded, ...demo];
   }, [properties, uploadedDocuments]);
 
-  const notifications = useMemo(
-    () =>
-      DEMO_NOTIFICATIONS.map((n) => ({
-        ...n,
-        source: 'demo' as const,
-        read: n.read || readIds.has(n.id),
-      })),
-    [readIds],
+  const notifications = useMemo<AgentNotification[]>(() => {
+    // Live notifications when loaded, else the demo seed; `readIds` overlays optimistic
+    // mark-read on top of either (a just-read id stays read until refresh reconciles).
+    const base: AgentNotification[] =
+      apiNotifications ??
+      DEMO_NOTIFICATIONS.map((n) => ({ ...n, source: 'demo' as const }));
+    return base.map((n) => ({ ...n, read: n.read || readIds.has(n.id) }));
+  }, [apiNotifications, readIds]);
+
+  const markNotificationRead = useCallback(
+    (id: string) => {
+      setReadIds((prev) => new Set(prev).add(id)); // optimistic
+      if (apiConnected && apiNotifications?.some((n) => n.id === id)) {
+        void apiMarkNotificationRead(id)
+          .then(() => refresh())
+          .catch(() => {});
+      }
+    },
+    [apiConnected, apiNotifications, refresh],
   );
+
+  const markAllNotificationsRead = useCallback(() => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      for (const n of notifications) next.add(n.id);
+      return next;
+    });
+    if (apiConnected && apiNotifications) {
+      void apiMarkAllNotificationsRead()
+        .then(() => refresh())
+        .catch(() => {});
+    }
+  }, [notifications, apiConnected, apiNotifications, refresh]);
 
   const dashboardItems = useMemo(() => {
     const maintDash = buildMaintenanceDashboard(maintenanceAll);
@@ -739,14 +781,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     tribunalCases,
     remindingItems: needActionItems,
     getPropertyActions,
-    markNotificationRead: (id) =>
-      setReadIds((prev) => new Set(prev).add(id)),
-    markAllNotificationsRead: () =>
-      setReadIds((prev) => {
-        const next = new Set(prev);
-        for (const n of notifications) next.add(n.id);
-        return next;
-      }),
+    markNotificationRead,
+    markAllNotificationsRead,
     sendMessage,
     ensureMessageThread,
     addProperty,

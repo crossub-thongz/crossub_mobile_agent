@@ -115,3 +115,12 @@ export const COMM_CHANNEL = {
   INTERNAL_NOTE: 'INTERNAL_NOTE',
   PUSH: 'PUSH',
 } as const;
+
+/** AgentNotificationType — the agent notification kind (mirrors the app's view union). */
+export const AGENT_NOTIFICATION_TYPE = {
+  APPROVAL: 'APPROVAL',
+  URGENT: 'URGENT',
+  UPDATE: 'UPDATE',
+  REPORT: 'REPORT',
+  REMINDER: 'REMINDER',
+} as const;
