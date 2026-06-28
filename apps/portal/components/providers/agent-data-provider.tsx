@@ -14,6 +14,7 @@ import {
   approveMaintenance as apiApproveMaintenance,
   createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
+  fetchDocuments,
   fetchMessageThreads,
   fetchNotifications,
   fetchPortfolio,
@@ -21,10 +22,12 @@ import {
   markAllNotificationsRead as apiMarkAllNotificationsRead,
   markNotificationRead as apiMarkNotificationRead,
   replyToThread as apiReplyToThread,
+  uploadDocument as apiUploadDocument,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
 import {
   mapAgentAccounting,
+  mapAgentDocuments,
   mapAgentInspections,
   mapAgentLeasing,
   mapAgentMaintenance,
@@ -107,6 +110,20 @@ function messageThreadKey(thread: {
     return `${thread.propertyId}::${category}::${thread.relatedCaseId}`;
   }
   return `${thread.propertyId}::${category}`;
+}
+
+/** Read a File as base64 (no `data:` URI prefix) for the base64-through-API upload. */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 function normalizeSentMessages(value: unknown): ThreadMessage[] {
@@ -230,6 +247,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const [apiNotifications, setApiNotifications] = useState<AgentNotification[] | null>(
     null,
   );
+  // Live documents (aggregated + uploaded, mapped). null = not loaded / failed → demo seed.
+  const [apiDocuments, setApiDocuments] = useState<AgentDocument[] | null>(null);
   // localThreadId → server thread id, populated when an optimistic thread is persisted via
   // createThread. Lets the messages memo promote the local thread (keeping its id so the
   // open detail route stays valid) onto its server content, and routes later replies to it.
@@ -255,11 +274,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiProperties(mappedProps);
       setPortfolio(port);
       setApiConnected(true);
-      // Messages + notifications load after the portfolio; each degrades to its demo seed
-      // independently (a comms hiccup never blanks the live portfolio or each other).
-      const [threadsRes, notifsRes] = await Promise.allSettled([
+      // Messages + notifications + documents load after the portfolio; each degrades to its
+      // demo seed independently (a comms/docs hiccup never blanks the portfolio or each other).
+      const [threadsRes, notifsRes, docsRes] = await Promise.allSettled([
         fetchMessageThreads(),
         fetchNotifications(),
+        fetchDocuments(),
       ]);
       setApiMessages(
         threadsRes.status === 'fulfilled'
@@ -271,12 +291,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           ? mapAgentNotifications(notifsRes.value)
           : null,
       );
+      setApiDocuments(
+        docsRes.status === 'fulfilled' ? mapAgentDocuments(docsRes.value) : null,
+      );
     } catch (err) {
       setApiConnected(false);
       setApiProperties(null);
       setPortfolio(null);
       setApiMessages(null);
       setApiNotifications(null);
+      setApiDocuments(null);
       setApiError(
         err instanceof Error
           ? err.message
@@ -305,6 +329,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setPortfolio(null);
       setApiMessages(null);
       setApiNotifications(null);
+      setApiDocuments(null);
       setApiError(null);
       return;
     }
@@ -579,6 +604,34 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const uploadDocument = useCallback(
     (file: File, category: AgentDocument['category'], propertyAddress: string) => {
+      // Connected: read the File as base64 and persist it (→ R2 + PortalDocument), then
+      // refresh() surfaces it. Resolve the chosen address back to a managed property id;
+      // an unmatched address (e.g. 'Portfolio') uploads as a portfolio-level document.
+      if (apiConnected) {
+        const prop = properties.find(
+          (p) =>
+            `${p.address}, ${p.suburb}` === propertyAddress ||
+            (p.address.length > 0 && propertyAddress.includes(p.address)),
+        );
+        void (async () => {
+          try {
+            const contentBase64 = await fileToBase64(file);
+            await apiUploadDocument({
+              fileName: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              sizeBytes: file.size,
+              contentBase64,
+              category,
+              propertyId: prop?.id,
+            });
+            await refresh();
+          } catch {
+            // Swallow — the screen already toasts; the doc simply won't appear.
+          }
+        })();
+        return;
+      }
+      // Offline: device-local optimistic only (the legacy metadata-only mock).
       const doc: AgentDocument = {
         id: `upload-${Date.now()}`,
         title: file.name,
@@ -590,10 +643,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       };
       addUploadedDocument(doc);
     },
-    [addUploadedDocument],
+    [apiConnected, properties, refresh, addUploadedDocument],
   );
 
-  const documents = useMemo(() => {
+  const documents = useMemo<AgentDocument[]>(() => {
+    // Live documents (aggregated + uploaded) when connected; else the demo seed + any
+    // device-local optimistic uploads, both filtered to the agent's properties.
+    if (apiDocuments) return apiDocuments;
     const prefixes = properties.map((p) => p.address.split(',')[0]);
     const demo = DOCUMENTS.filter((d) =>
       prefixes.some((a) => d.propertyAddress.includes(a)),
@@ -602,7 +658,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       prefixes.some((a) => d.propertyAddress.includes(a) || d.propertyAddress === 'Portfolio'),
     );
     return [...uploaded, ...demo];
-  }, [properties, uploadedDocuments]);
+  }, [apiDocuments, properties, uploadedDocuments]);
 
   const notifications = useMemo<AgentNotification[]>(() => {
     // Live notifications when loaded, else the demo seed; `readIds` overlays optimistic

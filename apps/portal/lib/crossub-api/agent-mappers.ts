@@ -12,6 +12,7 @@
  */
 import type {
   AgentAccounting,
+  AgentDocumentDto,
   AgentInspection,
   AgentLeasing,
   AgentMaintenance,
@@ -39,6 +40,7 @@ import {
   VACATING_STATUS,
 } from '@/constants/api-enums';
 import type {
+  AgentDocument,
   AgentNotification,
   Inspection,
   LeasingRecord,
@@ -480,5 +482,27 @@ export function mapAgentNotifications(
     href: n.href,
     actionRequired: n.actionRequired ?? undefined,
     source: 'api',
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Documents
+// ---------------------------------------------------------------------------
+
+/**
+ * Map the agent document DTOs onto the app's `AgentDocument` view-model. The facade
+ * normalises every doc (aggregated or uploaded) onto the app's category vocabulary, so
+ * `category` is a straight passthrough; `url` (the R2/aggregated file URL) backs both the
+ * in-app link and the download. A null property (portfolio-level upload) shows as 'Portfolio'.
+ */
+export function mapAgentDocuments(dtos: AgentDocumentDto[]): AgentDocument[] {
+  return dtos.map((d) => ({
+    id: d.id,
+    title: d.name,
+    propertyAddress: d.propertyAddress ?? 'Portfolio',
+    category: d.category,
+    uploadedAt: d.uploadedAt,
+    href: d.url,
+    downloadUrl: d.url,
   }));
 }

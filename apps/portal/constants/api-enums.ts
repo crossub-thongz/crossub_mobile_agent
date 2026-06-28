@@ -124,3 +124,12 @@ export const AGENT_NOTIFICATION_TYPE = {
   REPORT: 'REPORT',
   REMINDER: 'REMINDER',
 } as const;
+
+/** Agent document category — the agent-facade document vocabulary (matches the view union). */
+export const DOCUMENT_CATEGORY = {
+  INSPECTION: 'inspection',
+  RENT_REVIEW: 'rent_review',
+  MAINTENANCE: 'maintenance',
+  LEASE: 'lease',
+  VACATING: 'vacating',
+} as const;

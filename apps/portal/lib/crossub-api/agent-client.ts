@@ -24,6 +24,10 @@ export type CreateAgentThreadInput =
   components['schemas']['CreateAgentMessageThreadDto'];
 export type AgentNotificationDto =
   components['schemas']['AgentNotificationResponseDto'];
+export type AgentDocumentDto =
+  components['schemas']['AgentDocumentResponseDto'];
+export type UploadAgentDocumentInput =
+  components['schemas']['UploadAgentDocumentDto'];
 
 /** Assigned client agencies (`GET /api/v1/agent/agencies`). */
 export async function fetchAgencies(): Promise<AgentAgency[]> {
@@ -145,5 +149,21 @@ export async function markNotificationRead(
 export async function markAllNotificationsRead(): Promise<{ updated: number }> {
   const { data, error } = await crossub.POST('/agent/notifications/read-all');
   if (error || !data) throw new Error('Failed to mark all notifications read');
+  return data;
+}
+
+/** Documents across the agent's managed properties (`GET /agent/documents`). */
+export async function fetchDocuments(): Promise<AgentDocumentDto[]> {
+  const { data, error } = await crossub.GET('/agent/documents');
+  if (error || !data) throw new Error('Failed to load documents');
+  return data;
+}
+
+/** Upload a document, base64-through-API → R2 (`POST /agent/documents`). */
+export async function uploadDocument(
+  input: UploadAgentDocumentInput,
+): Promise<AgentDocumentDto> {
+  const { data, error } = await crossub.POST('/agent/documents', { body: input });
+  if (error || !data) throw new Error('Failed to upload document');
   return data;
 }
