@@ -96,3 +96,22 @@ export const VACATING_STATUS = {
   OPEN: 'OPEN',
   COMPLETED: 'COMPLETED',
 } as const;
+
+/** CommDepartment — the staff queue a message thread is routed to. */
+export const COMM_DEPARTMENT = {
+  LEASING: 'LEASING',
+  MAINTENANCE: 'MAINTENANCE',
+  INSPECTION: 'INSPECTION',
+  ACCOUNTING: 'ACCOUNTING',
+  TRIBUNAL: 'TRIBUNAL',
+  GENERAL: 'GENERAL',
+} as const;
+
+/** CommChannel — the medium a single message was sent on. */
+export const COMM_CHANNEL = {
+  APP: 'APP',
+  EMAIL: 'EMAIL',
+  VOICE: 'VOICE',
+  INTERNAL_NOTE: 'INTERNAL_NOTE',
+  PUSH: 'PUSH',
+} as const;

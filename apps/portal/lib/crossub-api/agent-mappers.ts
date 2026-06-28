@@ -15,14 +15,18 @@ import type {
   AgentInspection,
   AgentLeasing,
   AgentMaintenance,
+  AgentMessageThread,
   AgentProperty,
   AgentRentReview,
   AgentTenantSelection,
+  AgentThreadMessage,
   AgentTribunal,
   AgentVacating,
 } from './agent-client';
 import {
   APPLICATION_STATUS,
+  COMM_CHANNEL,
+  COMM_DEPARTMENT,
   INSPECTION_STATUS,
   INSPECTION_TYPE,
   LEASE_STATUS,
@@ -36,11 +40,14 @@ import type {
   Inspection,
   LeasingRecord,
   MaintenanceRequest,
+  MessageCategory,
+  MessageThread,
   Priority,
   Property,
   PropertyAccounting,
   RentReviewCase,
   TenantSelectionCase,
+  ThreadMessage,
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
@@ -328,6 +335,106 @@ export function mapAgentTribunal(dtos: AgentTribunal[]): TribunalCase[] {
       status: closed ? 'closed' : 'active',
       matter: t.matter,
       requiresAction: !closed,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Messages
+// ---------------------------------------------------------------------------
+
+/** CommDepartment → the app's MessageCategory (both taskType and messageCategory). */
+const MESSAGE_CATEGORY_BY_DEPARTMENT: Record<
+  AgentMessageThread['department'],
+  MessageCategory
+> = {
+  [COMM_DEPARTMENT.LEASING]: 'Leasing',
+  [COMM_DEPARTMENT.MAINTENANCE]: 'Maintenance',
+  [COMM_DEPARTMENT.INSPECTION]: 'Inspection',
+  [COMM_DEPARTMENT.ACCOUNTING]: 'Accounting',
+  [COMM_DEPARTMENT.TRIBUNAL]: 'Tribunal',
+  [COMM_DEPARTMENT.GENERAL]: 'Others',
+};
+
+/** The inverse: an app MessageCategory → the CommDepartment to route a new thread to. */
+export function messageCategoryToDepartment(
+  category: MessageCategory | undefined,
+): AgentMessageThread['department'] {
+  switch (category) {
+    case 'Leasing':
+      return COMM_DEPARTMENT.LEASING;
+    case 'Maintenance':
+      return COMM_DEPARTMENT.MAINTENANCE;
+    case 'Inspection':
+      return COMM_DEPARTMENT.INSPECTION;
+    case 'Accounting':
+      return COMM_DEPARTMENT.ACCOUNTING;
+    case 'Tribunal':
+      return COMM_DEPARTMENT.TRIBUNAL;
+    default:
+      return COMM_DEPARTMENT.GENERAL;
+  }
+}
+
+/** A single message channel → the app's two-value channel ('app' | 'email'). */
+function threadMessageChannel(
+  channel: AgentThreadMessage['channel'],
+): ThreadMessage['channel'] {
+  return channel === COMM_CHANNEL.EMAIL ? 'email' : 'app';
+}
+
+/** The thread-level channel: 'mixed' across both, else whichever single value is used. */
+function threadChannel(messages: ThreadMessage[]): MessageThread['channel'] {
+  const seen = new Set(messages.map((m) => m.channel));
+  if (seen.size > 1) return 'mixed';
+  return seen.has('email') ? 'email' : 'app';
+}
+
+/**
+ * Map the agent message-thread DTOs onto the app's richer MessageThread view-model. The
+ * DTO is a thin projection, so the parties (home owner / tenant names + contacts) are
+ * filled from the already-live `properties` by propertyId; `taskType`/`messageCategory`
+ * derive from `department`; `relatedCaseId` from `caseId`. Per-message `mentions` stay
+ * client-side (the backend reply body carries no mentions) — a documented fidelity caveat.
+ */
+export function mapAgentMessages(
+  dtos: AgentMessageThread[],
+  properties: Property[],
+  agentId: AgentPortfolioId,
+): MessageThread[] {
+  const propertyById = new Map(properties.map((p) => [p.id, p]));
+  return dtos.map((t) => {
+    const prop = t.propertyId ? propertyById.get(t.propertyId) : undefined;
+    const category = MESSAGE_CATEGORY_BY_DEPARTMENT[t.department] ?? 'Others';
+    const messages: ThreadMessage[] = t.messages.map((m) => ({
+      id: m.id,
+      at: m.at,
+      from: m.from,
+      body: m.body,
+      channel: threadMessageChannel(m.channel),
+      sentByAgent: m.fromSelf,
+      mentions: [],
+    }));
+    return {
+      id: t.id,
+      assignedAgentId: agentId,
+      propertyId: t.propertyId ?? undefined,
+      propertyAddress: prop
+        ? `${prop.address}, ${prop.suburb}`
+        : t.propertyAddress ?? '—',
+      homeOwnerName: prop?.homeOwnerName ?? '—',
+      homeOwnerContact: prop?.homeOwnerContact ?? {},
+      tenantName: prop?.tenantName ?? '—',
+      tenantContact: prop?.tenantContact ?? {},
+      subject: t.subject,
+      taskType: category,
+      messageCategory: category,
+      relatedCaseId: t.caseId ?? undefined,
+      lastMessage: t.lastMessage ?? messages[messages.length - 1]?.body ?? '',
+      lastAt: t.lastAt ?? messages[messages.length - 1]?.at ?? '',
+      unread: t.unread,
+      channel: threadChannel(messages),
+      messages,
     };
   });
 }

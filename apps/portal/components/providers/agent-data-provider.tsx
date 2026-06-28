@@ -12,9 +12,12 @@ import {
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   approveMaintenance as apiApproveMaintenance,
+  createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
+  fetchMessageThreads,
   fetchPortfolio,
   fetchProperties,
+  replyToThread as apiReplyToThread,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
 import {
@@ -22,11 +25,13 @@ import {
   mapAgentInspections,
   mapAgentLeasing,
   mapAgentMaintenance,
+  mapAgentMessages,
   mapAgentProperties,
   mapAgentRentReviews,
   mapAgentTenantSelections,
   mapAgentTribunal,
   mapAgentVacating,
+  messageCategoryToDepartment,
 } from '@/lib/crossub-api/agent-mappers';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import {
@@ -213,6 +218,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   // coherently keyed by the same real property ids.
   const [apiProperties, setApiProperties] = useState<Property[] | null>(null);
   const [portfolio, setPortfolio] = useState<AgentPortfolio | null>(null);
+  // Live message threads (mapped). null = not loaded / failed → the messages memo falls
+  // back to the demo + optimistic store layer (the app never blanks). Loaded independently
+  // of the portfolio so a messaging hiccup never blanks the rest.
+  const [apiMessages, setApiMessages] = useState<MessageThread[] | null>(null);
+  // localThreadId → server thread id, populated when an optimistic thread is persisted via
+  // createThread. Lets the messages memo promote the local thread (keeping its id so the
+  // open detail route stays valid) onto its server content, and routes later replies to it.
+  const [createdThreadIds, setCreatedThreadIds] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [apiConnected, setApiConnected] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -230,13 +243,23 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         fetchProperties(),
         fetchPortfolio(),
       ]);
-      setApiProperties(mapAgentProperties(props, agentPortfolioId));
+      const mappedProps = mapAgentProperties(props, agentPortfolioId);
+      setApiProperties(mappedProps);
       setPortfolio(port);
       setApiConnected(true);
+      // Messages load after the portfolio is set so a messaging failure degrades only the
+      // messages surface (to demo) rather than blanking the live portfolio.
+      try {
+        const threads = await fetchMessageThreads();
+        setApiMessages(mapAgentMessages(threads, mappedProps, agentPortfolioId));
+      } catch {
+        setApiMessages(null);
+      }
     } catch (err) {
       setApiConnected(false);
       setApiProperties(null);
       setPortfolio(null);
+      setApiMessages(null);
       setApiError(
         err instanceof Error
           ? err.message
@@ -263,6 +286,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       setApiProperties(null);
       setPortfolio(null);
+      setApiMessages(null);
       setApiError(null);
       return;
     }
@@ -379,48 +403,125 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [portfolio, propertyIds],
   );
 
-  const messages = useMemo(() => {
-    const demoThreads = MESSAGE_THREADS.filter(
-      (m) => m.assignedAgentId === agentPortfolioId,
-    );
+  const messages = useMemo<MessageThread[]>(() => {
     const customThreads = customMessageThreads.filter(
       (m) => m.assignedAgentId === agentPortfolioId,
     );
-    const byKey = new Map<string, (typeof demoThreads)[0]>();
-    for (const thread of [...demoThreads, ...customThreads]) {
-      byKey.set(messageThreadKey(thread), thread);
-    }
 
-    return [...byKey.values()].map((thread) => {
+    // Fill the parties from the live property by id (or address fallback).
+    const reconcileContacts = (thread: MessageThread): MessageThread => {
       const prop = thread.propertyId
         ? properties.find((p) => p.id === thread.propertyId)
         : properties.find((p) => thread.propertyAddress.includes(p.address));
+      return {
+        ...thread,
+        propertyId: prop?.id ?? thread.propertyId,
+        homeOwnerName: prop?.homeOwnerName ?? thread.homeOwnerName,
+        homeOwnerContact: prop?.homeOwnerContact ?? thread.homeOwnerContact ?? {},
+        tenantName: prop?.tenantName ?? thread.tenantName,
+        tenantContact: prop?.tenantContact ?? thread.tenantContact ?? {},
+      };
+    };
+    // Overlay device-local sent messages (used for optimistic threads only).
+    const overlaySent = (thread: MessageThread): MessageThread => {
       const sent = normalizeSentMessages(sentThreadMessages[thread.id]);
+      if (sent.length === 0) return thread;
       const allMessages = [...thread.messages, ...sent].sort((a, b) =>
         (a.at ?? '').localeCompare(b.at ?? ''),
       );
       const last = allMessages[allMessages.length - 1];
       return {
         ...thread,
-        propertyId: prop?.id ?? thread.propertyId,
-        homeOwnerName: prop?.homeOwnerName ?? thread.homeOwnerName,
-        homeOwnerContact:
-          prop?.homeOwnerContact ?? thread.homeOwnerContact ?? {},
-        tenantName: prop?.tenantName ?? thread.tenantName,
-        tenantContact: prop?.tenantContact ?? thread.tenantContact ?? {},
         messages: allMessages,
         lastMessage: last?.body ?? thread.lastMessage,
         lastAt: last?.at ?? thread.lastAt,
       };
-    });
-  }, [agentPortfolioId, properties, sentThreadMessages, customMessageThreads]);
+    };
+
+    // OFFLINE / not yet loaded: demo base + optimistic custom threads (unchanged behavior).
+    if (apiMessages === null) {
+      const demoThreads = MESSAGE_THREADS.filter(
+        (m) => m.assignedAgentId === agentPortfolioId,
+      );
+      const byKey = new Map<string, MessageThread>();
+      for (const thread of [...demoThreads, ...customThreads]) {
+        byKey.set(messageThreadKey(thread), thread);
+      }
+      return [...byKey.values()].map((t) => overlaySent(reconcileContacts(t)));
+    }
+
+    // ONLINE: the live API threads are the source of truth. An optimistic custom thread
+    // already persisted (createdThreadIds maps it to a server id) is "promoted" — rendered
+    // with its LOCAL id (so an open detail route stays valid) but the server's content; the
+    // matching server thread is then not emitted again. Custom threads not yet persisted
+    // stay optimistic, with their device-local messages overlaid.
+    const consumed = new Set<string>();
+    const out: MessageThread[] = [];
+    for (const custom of customThreads) {
+      const serverId = createdThreadIds[custom.id];
+      const server = serverId
+        ? apiMessages.find((t) => t.id === serverId)
+        : undefined;
+      if (server) {
+        consumed.add(server.id);
+        out.push({ ...server, id: custom.id, serverThreadId: server.id });
+      } else {
+        out.push(overlaySent(custom));
+      }
+    }
+    for (const server of apiMessages) {
+      if (consumed.has(server.id)) continue;
+      out.push({ ...server, serverThreadId: server.id });
+    }
+    return out.map(reconcileContacts);
+  }, [
+    apiMessages,
+    agentPortfolioId,
+    properties,
+    sentThreadMessages,
+    customMessageThreads,
+    createdThreadIds,
+  ]);
 
   const sendMessage = useCallback(
     (threadId: string, body: string, mentions?: MessageMention[], channel?: 'app' | 'email') => {
       const from = user ? displayName(user) : 'Agent';
-      sendThreadMessage(threadId, body, from, mentions, channel);
+      const text = body.trim();
+      if (!text) return;
+      const thread = messages.find((m) => m.id === threadId);
+      const serverThreadId = thread?.serverThreadId ?? createdThreadIds[threadId];
+
+      // Connected + the thread is persisted → reply through the API; refresh() reconciles.
+      if (apiConnected && serverThreadId) {
+        void apiReplyToThread(serverThreadId, text)
+          .then(() => refresh())
+          .catch(() => {});
+        return;
+      }
+      // Connected + an optimistic thread about a property → persist it (thread + first
+      // message), remembering its server id so later replies route to the API and the
+      // messages memo can promote the local thread onto its server content.
+      if (apiConnected && thread?.propertyId) {
+        sendThreadMessage(threadId, text, from, mentions, channel);
+        void apiCreateThread({
+          subject: thread.subject,
+          body: text,
+          department: messageCategoryToDepartment(
+            thread.messageCategory ?? (thread.taskType as MessageCategory),
+          ),
+          propertyId: thread.propertyId,
+        })
+          .then((created) => {
+            setCreatedThreadIds((prev) => ({ ...prev, [threadId]: created.id }));
+            return refresh();
+          })
+          .catch(() => {});
+        return;
+      }
+      // Offline / no property anchor → device-local optimistic only.
+      sendThreadMessage(threadId, text, from, mentions, channel);
     },
-    [user, sendThreadMessage],
+    [user, messages, createdThreadIds, apiConnected, sendThreadMessage, refresh],
   );
 
   const ensureMessageThread = useCallback(

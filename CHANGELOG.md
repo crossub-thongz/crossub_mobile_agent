@@ -1,6 +1,13 @@
 # Changelog
 
-## 2026-06-27
+## 2026-06-28
+
+### Added
+- `lib/crossub-api/agent-client.ts` — `fetchMessageThreads` / `replyToThread` / `createThread` typed fetchers for the new `/api/v1/agent/messages` facade.
+- `lib/crossub-api/agent-mappers.ts` — `mapAgentMessages(dtos, properties, agentId)` (fills the thread parties from the live `properties`; `taskType`/`messageCategory` from `department`, `relatedCaseId` from `caseId`; mentions stay client-side) + `messageCategoryToDepartment`. New `COMM_DEPARTMENT` / `COMM_CHANNEL` enum mirrors in `constants/api-enums.ts`.
+
+### Changed
+- Messages now render from the live agent facade instead of the `MESSAGE_THREADS` demo seed: `AgentDataProvider.refresh()` loads message threads (independently of the portfolio, so a messaging hiccup never blanks it) and the `messages` memo reconciles optimistic store threads against the server. `sendMessage` is repointed to the API — replies to a persisted thread hit `POST .../reply`; a first message on an optimistic thread persists it via `POST /agent/messages` and is promoted onto its server content (keeping the local id so an open detail route stays valid). Offline falls back to the device-local optimistic store. New optional `MessageThread.serverThreadId` carries the persisted thread id.
 
 ### Added
 - `lib/crossub-api/agent-mappers.ts` — 9 pure DTO→view-model adapters for the agent facade (properties + inspections, maintenance, rent reviews, vacating, tenant selections, leasing, accounting, tribunal); `constants/api-enums.ts` mirroring the API's Prisma enums; `fetchPortfolio` / `approveMaintenance` / `declineMaintenance` typed fetchers in `agent-client.ts`.

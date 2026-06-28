@@ -16,6 +16,13 @@ export type AgentLeasing = components['schemas']['AgentLeasingDto'];
 export type AgentAccounting = components['schemas']['AgentAccountingDto'];
 export type AgentTribunal = components['schemas']['AgentTribunalDto'];
 
+export type AgentMessageThread =
+  components['schemas']['AgentMessageThreadResponseDto'];
+export type AgentThreadMessage =
+  components['schemas']['AgentThreadMessageResponseDto'];
+export type CreateAgentThreadInput =
+  components['schemas']['CreateAgentMessageThreadDto'];
+
 /** Assigned client agencies (`GET /api/v1/agent/agencies`). */
 export async function fetchAgencies(): Promise<AgentAgency[]> {
   const { data, error } = await crossub.GET('/agent/agencies');
@@ -81,5 +88,34 @@ export async function declineMaintenance(
     { params: { path: { requestId } }, body: { reason } },
   );
   if (error || !data) throw new Error('Failed to decline maintenance quote');
+  return data;
+}
+
+/** Message threads across the agent's managed properties (`GET /agent/messages`). */
+export async function fetchMessageThreads(): Promise<AgentMessageThread[]> {
+  const { data, error } = await crossub.GET('/agent/messages');
+  if (error || !data) throw new Error('Failed to load message threads');
+  return data;
+}
+
+/** Append a reply to one thread (`POST /agent/messages/{threadId}/reply`). */
+export async function replyToThread(
+  threadId: string,
+  body: string,
+): Promise<AgentMessageThread> {
+  const { data, error } = await crossub.POST(
+    '/agent/messages/{threadId}/reply',
+    { params: { path: { threadId } }, body: { body } },
+  );
+  if (error || !data) throw new Error('Failed to send message');
+  return data;
+}
+
+/** Open a new thread with its first message (`POST /agent/messages`). */
+export async function createThread(
+  input: CreateAgentThreadInput,
+): Promise<AgentMessageThread> {
+  const { data, error } = await crossub.POST('/agent/messages', { body: input });
+  if (error || !data) throw new Error('Failed to open message thread');
   return data;
 }

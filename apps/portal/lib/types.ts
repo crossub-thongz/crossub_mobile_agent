@@ -324,6 +324,13 @@ export interface VacatingCase {
 export interface MessageThread {
   id: string;
   assignedAgentId: 'agent-1' | 'agent-2';
+  /**
+   * The persisted CROSSUB thread id, when this thread is backed by the live API. For an
+   * optimistic thread that has since been persisted, `id` stays the original local id (so
+   * an already-open detail route remains valid) while this points at the server thread the
+   * reply API targets. Absent for purely device-local (offline) threads.
+   */
+  serverThreadId?: string;
   propertyId?: string;
   propertyAddress: string;
   homeOwnerName: string;
