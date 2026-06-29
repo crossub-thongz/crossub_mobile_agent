@@ -20,14 +20,12 @@ import {
 import { FilterChips } from '@/components/agent/filter-chips';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
-import { LeasingQuickActions } from '@/components/agent/leasing-quick-actions';
-import { LeasingTicketCard } from '@/components/agent/leasing-ticket-card';
-import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
-import { OpenInspectionLeasingPanel } from '@/components/agent/open-inspection-leasing-panel';
-import { MaintenanceInlineActions } from '@/components/agent/maintenance-inline-actions';
+import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
+import { PropertyMaintenanceJobPanel } from '@/components/agent/property-maintenance-job-panel';
 import { PropertyPhotosButton } from '@/components/agent/property-photos-dialog';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
+import { RentIncomeHistoryList } from '@/components/agent/rent-income-history-list';
 import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
 import { RentReviewSummaryList } from '@/components/agent/rent-review-summary-list';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
@@ -37,17 +35,15 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import {
-  inspectionNew,
   maintenanceDetail,
-  rentReviewDetail,
   ROUTES,
-  vacatingDetail,
 } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import {
   filterTenancyInspections,
   filterTenancyRentReviews,
   getActiveOpenInspection,
+  getActiveOutgoingInspection,
   getNextRentReviewCase,
   getNextRentReviewDate,
   isInOpenInspectionPhase,
@@ -55,7 +51,9 @@ import {
   VACANT_RENT_REVIEW_HINT,
   VACANT_TENANCY_INSPECTIONS_HINT,
 } from '@/lib/property-leasing';
-import { isRentReviewPendingApproval } from '@/lib/rent-review';
+import { pickPrimaryMaintenance } from '@/lib/property-maintenance-job';
+import { resolvePropertyRentIncome } from '@/lib/property-rent-income';
+import { resolvePropertyLeasingJob } from '@/lib/property-leasing-job';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
@@ -75,15 +73,7 @@ const INSP_TYPE_FILTERS = [
   { id: 'ROUTINE', label: 'Routine' },
 ] as const;
 
-const LEASING_VIEW_FILTERS = [
-  { id: 'current', label: 'Current leasing' },
-  { id: 'new-leasing', label: 'New leasing' },
-  { id: 'rent-review', label: 'Rent review' },
-  { id: 'history', label: 'History' },
-] as const;
-
 type InspTypeFilter = (typeof INSP_TYPE_FILTERS)[number]['id'];
-type LeasingView = (typeof LEASING_VIEW_FILTERS)[number]['id'];
 
 type Tab = (typeof TABS)[number];
 
@@ -91,18 +81,6 @@ function normalizeTab(raw: string | null): Tab {
   if (raw === 'Rent Review' || raw === 'Tenancy' || raw === 'Communication') return 'Leasing';
   if (TABS.includes(raw as Tab)) return raw as Tab;
   return 'Overview';
-}
-
-function normalizeLeasingView(raw: string | null): LeasingView {
-  if (
-    raw === 'current' ||
-    raw === 'new-leasing' ||
-    raw === 'rent-review' ||
-    raw === 'history'
-  ) {
-    return raw;
-  }
-  return 'current';
 }
 
 export default function PropertyDetailPage() {
@@ -124,11 +102,9 @@ export default function PropertyDetailPage() {
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
   const property = properties.find((p) => p.id === id);
   const [tab, setTab] = useState<Tab>(normalizeTab(searchParams.get('tab')));
-  const [leasingView, setLeasingView] = useState<LeasingView>(
-    normalizeLeasingView(searchParams.get('leasing')),
-  );
   const [overviewView, setOverviewView] = useState<'summary' | 'history'>('summary');
   const [maintView, setMaintView] = useState<'current' | 'history'>('current');
+  const [selectedMaintenanceId, setSelectedMaintenanceId] = useState<string | null>(null);
   const [inspView, setInspView] = useState<'current' | 'completed'>('current');
   const [inspType, setInspType] = useState<InspTypeFilter>('all');
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
@@ -168,17 +144,34 @@ export default function PropertyDetailPage() {
   const isVacant = isPropertyVacant(property, currentTenancy);
   const tenancyRentReviews = filterTenancyRentReviews(tasks.rentReviews, isVacant);
   const tenancyInspections = filterTenancyInspections(tasks.inspections, isVacant);
-  const leasingViewFilters = isVacant
-    ? LEASING_VIEW_FILTERS.filter((f) => f.id !== 'rent-review')
-    : LEASING_VIEW_FILTERS;
-  const effectiveLeasingView =
-    isVacant && leasingView === 'rent-review' ? 'current' : leasingView;
   const activeOpenInspection = getActiveOpenInspection(tasks.inspections, id);
+  const activeOutgoingInspection = getActiveOutgoingInspection(tasks.inspections, id);
   const inOpenInspectionPhase = isInOpenInspectionPhase({
     isVacant,
     currentLease,
     activeOpenInspection,
   });
+  const activeLeasingJob = useMemo(
+    () =>
+      resolvePropertyLeasingJob({
+        isVacant,
+        inOpenInspectionPhase,
+        tenantSelections: propertyLeasingCases,
+        vacatingCases: propertyVacatingCases,
+        rentReviews: tenancyRentReviews,
+        rentReviewDecisions: decisions,
+        currentLease,
+      }),
+    [
+      isVacant,
+      inOpenInspectionPhase,
+      propertyLeasingCases,
+      propertyVacatingCases,
+      tenancyRentReviews,
+      decisions,
+      currentLease,
+    ],
+  );
   const nextRentReviewDate = getNextRentReviewDate(property, tenancyRentReviews, {
     isVacant,
   });
@@ -193,6 +186,10 @@ export default function PropertyDetailPage() {
     selectedRentReviewId != null
       ? tenancyRentReviews.find((r) => r.id === selectedRentReviewId) ?? null
       : null;
+  const rentIncomeHistory = useMemo(
+    () => (acct ? resolvePropertyRentIncome(acct, currentLease) : []),
+    [acct, currentLease],
+  );
   const currentInspections = tenancyInspections.filter(
     (i) => !i.status.toLowerCase().includes('complete'),
   );
@@ -211,6 +208,31 @@ export default function PropertyDetailPage() {
   const completedMaintenance = tasks.maintenance.filter(
     (m) => m.status.toLowerCase().includes('complete') || m.status.toLowerCase().includes('closed'),
   );
+  const primaryMaintenance = useMemo(
+    () => pickPrimaryMaintenance(activeMaintenance),
+    [activeMaintenance],
+  );
+  const selectedMaintenance = useMemo(() => {
+    if (activeMaintenance.length === 0) return undefined;
+    if (selectedMaintenanceId != null) {
+      const match = activeMaintenance.find((m) => m.id === selectedMaintenanceId);
+      if (match) return match;
+    }
+    return primaryMaintenance;
+  }, [activeMaintenance, primaryMaintenance, selectedMaintenanceId]);
+
+  useEffect(() => {
+    if (activeMaintenance.length === 0) {
+      setSelectedMaintenanceId(null);
+      return;
+    }
+    if (
+      selectedMaintenanceId == null ||
+      !activeMaintenance.some((m) => m.id === selectedMaintenanceId)
+    ) {
+      setSelectedMaintenanceId(primaryMaintenance?.id ?? activeMaintenance[0]?.id ?? null);
+    }
+  }, [activeMaintenance, primaryMaintenance, selectedMaintenanceId]);
 
   return (
     <AgentShell title={property.address} backHref={ROUTES.PROPERTIES} backLabel="Properties">
@@ -401,207 +423,20 @@ export default function PropertyDetailPage() {
         )}
 
         {tab === 'Leasing' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <FilterChips
-                  options={[...leasingViewFilters]}
-                  value={effectiveLeasingView}
-                  onChange={(v) => setLeasingView(v as LeasingView)}
-                />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="mb-1 h-7 shrink-0 gap-1 px-2 text-[11px]"
-                onClick={() => setLeasingChatOpen(true)}
-              >
-                <MessageSquare className="size-3" />
-                Messages
-              </Button>
-            </div>
-
-            <LeasingQuickActions propertyId={id} leaseId={currentLease?.id} />
-
-            {effectiveLeasingView === 'current' && (
-              <>
-                {inOpenInspectionPhase && activeOpenInspection ? (
-                  <OpenInspectionLeasingPanel
-                    inspection={activeOpenInspection}
-                    propertyId={id}
-                  />
-                ) : !isVacant && currentLease ? (
-                  <>
-                    <LeasingWorkflowTimeline
-                      propertyId={id}
-                      propertyAddress={property.address}
-                      rentWeekly={currentLease.rentWeekly}
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                      <InfoPanel title="Current leasing agreement" icon={FileText} className="min-w-0">
-                        <InfoRow label="Tenant" value={currentLease.approvedTenant} />
-                        <InfoRow
-                          label="Lease period"
-                          value={`${formatDate(currentLease.leaseStart)} — ${formatDate(currentLease.leaseEnd)}`}
-                        />
-                        <InfoRow
-                          label="Rent"
-                          value={`${formatCurrency(currentLease.rentWeekly)}/wk`}
-                        />
-                        <InfoRow label="Status" value={currentLease.status} />
-                        {nextRentReviewDate && (
-                          <InfoRow label="Next rent review">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span>{formatDate(nextRentReviewDate)}</span>
-                              {nextRentReviewCase && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSelectedRentReviewId(nextRentReviewCase.id)}
-                                >
-                                  View details
-                                </Button>
-                              )}
-                            </div>
-                          </InfoRow>
-                        )}
-                      </InfoPanel>
-                      <div className="min-w-0">
-                        <LeasingTicketCard
-                          propertyId={id}
-                          record={currentLease}
-                          omitOpenInspection
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
-                    No current tenancy on this property.
-                  </p>
-                )}
-              </>
-            )}
-
-            {effectiveLeasingView === 'new-leasing' && (
-              <>
-                {isVacant && !activeOpenInspection && (
-                  <div className="space-y-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5 text-center">
-                    <p className="text-sm font-semibold">Vacant property</p>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
-                      Schedule an open inspection. CROSSUB confirms the time, then you confirm
-                      before publishing ads on your platforms.
-                    </p>
-                    <Button asChild size="lg" className="w-full rounded-xl">
-                      <Link href={inspectionNew(id)}>Add open inspection</Link>
-                    </Button>
-                  </div>
-                )}
-
-                {propertyVacatingCases.map((v) => (
-                  <Link
-                    key={v.id}
-                    href={vacatingDetail(v.id, fromProperty(id, 'Leasing'))}
-                    className="block rounded-xl border bg-card p-4 transition hover:border-primary/25"
-                  >
-                    <p className="text-primary text-[10px] font-semibold uppercase">Termination</p>
-                    <p className="mt-1 text-sm font-semibold">Vacating · {formatDate(v.vacateDate)}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">{v.reason}</p>
-                    <p className="text-primary mt-2 text-xs font-medium">{v.bondStatus}</p>
-                  </Link>
-                ))}
-
-                {propertyLeasingCases.map((t) => (
-                  <LeasingTicketCard key={t.id} propertyId={id} selection={t} />
-                ))}
-
-                {propertyLeasingCases.length === 0 &&
-                  propertyVacatingCases.length === 0 &&
-                  !isVacant && (
-                    <p className="text-muted-foreground text-sm">
-                      No active new leasing, renewal, or termination cases.
-                    </p>
-                  )}
-              </>
-            )}
-
-            {effectiveLeasingView === 'rent-review' && (
-              <>
-                {nextRentReviewDate && (
-                  <div className="rounded-xl border bg-card px-4 py-3">
-                    <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                      Next rent review
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold tabular-nums">
-                        {formatDate(nextRentReviewDate)}
-                      </p>
-                      {nextRentReviewCase && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedRentReviewId(nextRentReviewCase.id)}
-                        >
-                          View details
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {tenancyRentReviews.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">
-                    No rent review cases for this property.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {tenancyRentReviews.map((r) => (
-                      <div key={r.id} className="space-y-2">
-                        <TaskStatusRow
-                          asLink={false}
-                          item={{
-                            id: r.id,
-                            propertyAddress: r.propertyAddress,
-                            taskLabel: `Rent review · due ${formatDate(r.reviewDue)}`,
-                            status: decisions[r.id]
-                              ? decisions[r.id]?.action === 'confirmed'
-                                ? 'Confirmed'
-                                : 'Custom amount submitted'
-                              : r.status,
-                            href: rentReviewDetail(r.id, fromProperty(id, 'Leasing')),
-                            module: 'Rent review',
-                            tone: isRentReviewPendingApproval(r, decisions[r.id])
-                              ? 'warning'
-                              : r.tenantResponse === 'counter'
-                                ? 'neutral'
-                                : 'ok',
-                            requiresApproval: isRentReviewPendingApproval(r, decisions[r.id]),
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => setSelectedRentReviewId(r.id)}
-                        >
-                          View details
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {effectiveLeasingView === 'history' && (
-              <InfoPanel title="Tenancy history" icon={History}>
-                <TenancyHistorySection propertyId={id} records={historyLeasing} />
-              </InfoPanel>
-            )}
-          </div>
+          <PropertyLeasingJobPanel
+            property={property}
+            job={activeLeasingJob}
+            propertyId={id}
+            tenantSelections={propertyLeasingCases}
+            vacatingCases={propertyVacatingCases}
+            outgoingInspection={activeOutgoingInspection}
+            rentReviews={tenancyRentReviews}
+            rentReviewDecisions={decisions}
+            currentLease={currentLease}
+            nextRentReviewDate={nextRentReviewDate}
+            nextRentReviewCase={nextRentReviewCase}
+            onViewRentReview={setSelectedRentReviewId}
+          />
         )}
 
         {tab === 'Maintenance' && (
@@ -617,25 +452,25 @@ export default function PropertyDetailPage() {
             {maintView === 'current' ? (
               activeMaintenance.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No active maintenance.</p>
-              ) : (
-                activeMaintenance.map((m) => (
-                  <div key={m.id} className="rounded-xl border bg-card p-4">
-                    <Link href={maintenanceDetail(m.id, fromProperty(id, 'Maintenance'))} className="block">
-                      <p className="text-sm font-medium">{m.title}</p>
-                      <p className="text-primary text-xs">{m.status}</p>
-                      {m.contractorName && (
-                        <p className="text-muted-foreground text-xs">{m.contractorName}</p>
-                      )}
-                      {m.quoteAmount != null && (
-                        <p className="text-muted-foreground text-xs">
-                          Est. {formatCurrency(m.quoteAmount)}
-                        </p>
-                      )}
-                    </Link>
-                    <MaintenanceInlineActions item={m} />
-                  </div>
-                ))
-              )
+              ) : selectedMaintenance ? (
+                <div className="space-y-4">
+                  {activeMaintenance.length > 1 ? (
+                    <FilterChips
+                      options={activeMaintenance.map((m) => ({
+                        id: m.id,
+                        label: m.title,
+                      }))}
+                      value={selectedMaintenance.id}
+                      onChange={setSelectedMaintenanceId}
+                    />
+                  ) : null}
+                  <PropertyMaintenanceJobPanel
+                    item={selectedMaintenance}
+                    property={property}
+                    propertyId={id}
+                  />
+                </div>
+              ) : null
             ) : completedMaintenance.length === 0 ? (
               <p className="text-muted-foreground text-sm">No completed maintenance cases.</p>
             ) : (
@@ -732,6 +567,10 @@ export default function PropertyDetailPage() {
                   <InfoRow label="Rent paid (YTD)" value={formatCurrency(acct.rentPaidYtd)} />
                   <InfoRow label="Outstanding" value={formatCurrency(acct.rentOutstanding)} />
                   <InfoRow label="Balance" value={formatCurrency(acct.currentBalance)} />
+                </div>
+                <div className="mt-4 space-y-2 border-t pt-3">
+                  <p className="text-xs font-semibold">Rent income history</p>
+                  <RentIncomeHistoryList entries={rentIncomeHistory} />
                 </div>
                 </InfoPanel>
 

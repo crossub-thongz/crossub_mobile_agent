@@ -15,11 +15,13 @@ export function LeasingPackageWorkspace({
   rentWeekly?: number;
 }) {
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
+  const resetActiveStepToHint = useLeasingWorkflowStore((s) => s.resetActiveStepToHint);
   const detail = useLeasingWorkflowStore((s) => s.getDetail(propertyId));
 
   useEffect(() => {
-    ensureDetail(propertyId, propertyAddress, rentWeekly);
-  }, [ensureDetail, propertyId, propertyAddress, rentWeekly]);
+    const seeded = ensureDetail(propertyId, propertyAddress, rentWeekly);
+    resetActiveStepToHint(propertyId, seeded.activeStepHint);
+  }, [ensureDetail, resetActiveStepToHint, propertyId, propertyAddress, rentWeekly]);
 
   if (!detail) return null;
 

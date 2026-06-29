@@ -118,6 +118,15 @@ export interface AccountingStatement {
   downloadUrl?: string;
 }
 
+export interface RentIncomeEntry {
+  id: string;
+  dueDate: string;
+  paidDate?: string;
+  amount: number;
+  description: string;
+  status: 'paid' | 'outstanding' | 'overdue';
+}
+
 export interface PropertyAccounting {
   propertyId: string;
   propertyAddress: string;
@@ -127,6 +136,7 @@ export interface PropertyAccounting {
   currentBalance: number;
   daysInArrears: number;
   arrearsAmount: number;
+  rentIncomeHistory?: RentIncomeEntry[];
   bills?: AccountingBill[];
   statements?: AccountingStatement[];
   collectionActivity: {

@@ -20,6 +20,7 @@ type LeasingWorkflowStore = {
   getDetail: (propertyId: string) => LeasingPropertyDetail | undefined;
   getActiveStep: (propertyId: string) => LeasingLifecycleStep;
   setActiveStep: (propertyId: string, step: LeasingLifecycleStep) => void;
+  resetActiveStepToHint: (propertyId: string, hint?: LeasingLifecycleStep) => void;
   arrangeOpenInspection: (id: string, inspectorName: string, scheduledTime: string) => void;
   pushInspectionToAgentApp: (id: string) => void;
   notifyAgentToAdvertise: (id: string) => void;
@@ -81,6 +82,16 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
   },
 
   setActiveStep(propertyId, step) {
+    set((s) => ({
+      activeStepByProperty: { ...s.activeStepByProperty, [propertyId]: step },
+    }));
+  },
+
+  resetActiveStepToHint(propertyId, hint) {
+    const step =
+      hint ??
+      get().details[propertyId]?.activeStepHint ??
+      LEASING_LIFECYCLE_STEP.OPEN_INSPECTION;
     set((s) => ({
       activeStepByProperty: { ...s.activeStepByProperty, [propertyId]: step },
     }));

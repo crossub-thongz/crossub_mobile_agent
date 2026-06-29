@@ -17,6 +17,17 @@ export function deriveApplicationStatus(detail: LeasingPropertyDetail): LeasingI
   return LEASING_ITEM_STATUS.IN_PROGRESS;
 }
 
+/** True once a tenant has been approved — step 3 becomes read-only history. */
+export function isApplicationApprovalLocked(detail: LeasingPropertyDetail): boolean {
+  return deriveApplicationStatus(detail) === LEASING_ITEM_STATUS.DONE;
+}
+
+export function getApprovedApplications(detail: LeasingPropertyDetail) {
+  return detail.applicationsDetail.filter(
+    (a) => a.agentDecision === LEASING_AGENT_DECISION.APPROVED,
+  );
+}
+
 export function deriveOnboardingStatus(detail: LeasingPropertyDetail): LeasingItemStatus {
   const o = detail.onboarding;
   const statuses: LeasingItemStatus[] = [

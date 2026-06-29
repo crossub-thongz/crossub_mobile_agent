@@ -1,39 +1,44 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
-import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
-import { propertyLeasingWorkflow } from '@/constants/routes';
+import { LeasingLifecycleTabs } from '@/components/leasing-workflow/leasing-lifecycle-tabs';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 
 export function LeasingWorkflowTimeline({
   propertyId,
   propertyAddress,
   rentWeekly,
+  hideSectionLabel = false,
 }: {
   propertyId: string;
   propertyAddress: string;
   rentWeekly?: number;
+  hideSectionLabel?: boolean;
 }) {
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
+  const resetActiveStepToHint = useLeasingWorkflowStore((s) => s.resetActiveStepToHint);
   const detail = useLeasingWorkflowStore((s) => s.getDetail(propertyId));
+  const initializedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    ensureDetail(propertyId, propertyAddress, rentWeekly);
-  }, [ensureDetail, propertyId, propertyAddress, rentWeekly]);
+    const seeded = ensureDetail(propertyId, propertyAddress, rentWeekly);
+    if (initializedIdRef.current !== propertyId) {
+      resetActiveStepToHint(propertyId, seeded.activeStepHint);
+      initializedIdRef.current = propertyId;
+    }
+  }, [ensureDetail, resetActiveStepToHint, propertyId, propertyAddress, rentWeekly]);
 
   if (!detail) return null;
 
   return (
     <div className="space-y-1.5">
-      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-        Leasing workflow
-      </p>
-      <LeasingLifecycleStepRail
-        detail={detail}
-        currentStep={detail.activeStepHint}
-        href={propertyLeasingWorkflow(propertyId)}
-      />
+      {!hideSectionLabel ? (
+        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          Leasing workflow
+        </p>
+      ) : null}
+      <LeasingLifecycleTabs detail={detail} />
     </div>
   );
 }

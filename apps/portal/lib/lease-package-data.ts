@@ -71,7 +71,7 @@ function itemDateFromMaintenance(m: MaintenanceRequest): string | undefined {
   return m.timeline[0]?.at;
 }
 
-function buildRentPayments(
+export function buildRentPayments(
   lease: LeasingRecord,
   accounting?: PropertyAccounting,
 ): RentPaymentRecord[] {
@@ -118,6 +118,34 @@ function buildRentPayments(
   return payments.sort((a, b) => parseTime(b.at) - parseTime(a.at));
 }
 
+function findOpenInspectionForLease(
+  lease: LeasingRecord,
+  inspections: Inspection[],
+): Inspection | undefined {
+  const leaseStart = parseTime(lease.leaseStart);
+
+  const candidates = inspections
+    .filter((i) => i.propertyId === lease.propertyId && i.type === 'OPEN')
+    .filter((i) => !i.scheduledAt || parseTime(i.scheduledAt) <= leaseStart)
+    .sort((a, b) => {
+      const atA = a.scheduledAt ? parseTime(a.scheduledAt) : 0;
+      const atB = b.scheduledAt ? parseTime(b.scheduledAt) : 0;
+      return atB - atA;
+    });
+
+  if (candidates.length > 0) return candidates[0];
+
+  if (!lease.openInspectionDate) return undefined;
+
+  const openDate = lease.openInspectionDate.slice(0, 10);
+  return inspections.find(
+    (i) =>
+      i.propertyId === lease.propertyId &&
+      i.type === 'OPEN' &&
+      i.scheduledAt?.slice(0, 10) === openDate,
+  );
+}
+
 function buildDocuments(
   lease: LeasingRecord,
   property: Property,
@@ -140,10 +168,15 @@ function buildDocuments(
   const outgoing = inspections.find(
     (i) => i.type === 'OUTGOING' && i.propertyId === lease.propertyId,
   );
+  const openInspection = findOpenInspectionForLease(lease, inspections);
+  const openDoc = findDoc(['open inspection', 'open report']);
 
   const leaseDoc = findDoc(['lease agreement', 'lease']);
   const bondDoc = findDoc(['bond']);
   const depositDoc = findDoc(['deposit']);
+
+  const openAvailable =
+    Boolean(openInspection) || Boolean(openDoc) || Boolean(lease.openInspectionDate);
 
   const items: LeaseDocumentItem[] = [
     {
@@ -169,6 +202,16 @@ function buildDocuments(
       downloadUrl: depositDoc?.downloadUrl ?? depositDoc?.href,
       status: lease.depositAmount != null || depositDoc ? 'available' : 'pending',
       category: 'deposit',
+    },
+    {
+      id: 'doc-open',
+      label: 'Open inspection report',
+      href: openInspection
+        ? inspectionDetail(openInspection.id)
+        : openDoc?.href,
+      downloadUrl: openInspection?.reportUrl ?? openDoc?.downloadUrl ?? openDoc?.href,
+      status: openAvailable ? 'available' : 'pending',
+      category: 'inspection',
     },
     {
       id: 'doc-ingoing',

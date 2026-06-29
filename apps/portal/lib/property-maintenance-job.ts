@@ -1,0 +1,29 @@
+import type { MaintenanceRequest } from '@/lib/types';
+
+const PRIORITY_ORDER: Record<MaintenanceRequest['priority'], number> = {
+  urgent: 0,
+  high: 1,
+  normal: 2,
+  low: 3,
+};
+
+export function pickPrimaryMaintenance(
+  jobs: MaintenanceRequest[],
+): MaintenanceRequest | undefined {
+  if (jobs.length === 0) return undefined;
+  return [...jobs].sort(
+    (a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority],
+  )[0];
+}
+
+export function maintenanceStepShortLabel(stepId: string, fallback: string): string {
+  const labels: Record<string, string> = {
+    created: 'Created',
+    resp: 'Review',
+    contractor_quote: 'Quote',
+    agent_approval: 'Approve',
+    in_progress: 'Progress',
+    closed: 'Closed',
+  };
+  return labels[stepId] ?? fallback;
+}

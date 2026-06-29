@@ -12,6 +12,10 @@ import {
   LEASING_TONE,
   LEASING_UI,
 } from '@/lib/leasing/constants';
+import {
+  getApprovedApplications,
+  isApplicationApprovalLocked,
+} from '@/lib/leasing/lifecycle';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
@@ -27,10 +31,11 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
   const sendSelected = useLeasingWorkflowStore((s) => s.sendSelectedToAgent);
   const setDecision = useLeasingWorkflowStore((s) => s.setApplicantDecision);
 
-  const apps = detail.applicationsDetail;
+  const readOnly = isApplicationApprovalLocked(detail);
+  const apps = readOnly ? getApprovedApplications(detail) : detail.applicationsDetail;
   const selectedCount = apps.filter((a) => a.selectedForAgent).length;
 
-  if (apps.length === 0) {
+  if (detail.applicationsDetail.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-14 text-center">
         <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
@@ -38,43 +43,62 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
         </div>
         <p className="mt-3 text-sm font-medium">No applications yet</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Applications appear here once viewers apply via the CROSSUB app or H5 form.
+          Applications appear here once viewers apply via the CROSSUB app or H5 form after the open
+          report (step 2).
         </p>
+      </div>
+    );
+  }
+
+  if (readOnly && apps.length === 0) {
+    return (
+      <div className="rounded-xl border bg-card px-4 py-6 text-center">
+        <p className="text-sm font-medium">No approved tenant on record</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card px-4 py-2.5">
-        <p className="text-muted-foreground text-[12px]">
-          <span className="text-foreground font-semibold tabular-nums">{apps.length}</span>{' '}
-          application{apps.length === 1 ? '' : 's'} ·{' '}
-          <span className="text-foreground font-semibold tabular-nums">{selectedCount}</span>{' '}
-          selected
-        </p>
-        <Button
-          size="sm"
-          className={cn('gap-1.5', LEASING_UI.btnSecondary, 'disabled:opacity-40')}
-          variant="ghost"
-          disabled={selectedCount === 0}
-          onClick={() => {
-            sendSelected(detail.propertyId);
-            toast.success(
-              `${selectedCount} applicant${selectedCount === 1 ? '' : 's'} + AI advice sent to agent`,
-            );
-          }}
-        >
-          <Send className="size-3.5" />
-          Send selected to agent
-        </Button>
-      </div>
+      {readOnly ? (
+        <div className="rounded-xl border bg-card px-4 py-2.5">
+          <p className="text-muted-foreground text-[12px]">
+            Application approval is complete. The approved tenant is shown for reference — decisions
+            cannot be changed.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card px-4 py-2.5">
+          <p className="text-muted-foreground text-[12px]">
+            <span className="text-foreground font-semibold tabular-nums">{apps.length}</span>{' '}
+            application{apps.length === 1 ? '' : 's'} ·{' '}
+            <span className="text-foreground font-semibold tabular-nums">{selectedCount}</span>{' '}
+            selected
+          </p>
+          <Button
+            size="sm"
+            className={cn('gap-1.5', LEASING_UI.btnSecondary, 'disabled:opacity-40')}
+            variant="ghost"
+            disabled={selectedCount === 0}
+            onClick={() => {
+              sendSelected(detail.propertyId);
+              toast.success(
+                `${selectedCount} applicant${selectedCount === 1 ? '' : 's'} + AI advice sent to agent`,
+              );
+            }}
+          >
+            <Send className="size-3.5" />
+            Send selected to agent
+          </Button>
+        </div>
+      )}
 
       <ul className="space-y-2">
         {apps.map((app) => (
           <ApplicantRow
             key={app.id}
             app={app}
+            readOnly={readOnly}
             onToggle={() => toggleSelected(detail.propertyId, app.id)}
             onApprove={() => {
               setDecision(detail.propertyId, app.id, LEASING_AGENT_DECISION.APPROVED);
@@ -93,11 +117,13 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
 function ApplicantRow({
   app,
+  readOnly = false,
   onToggle,
   onApprove,
   onReject,
 }: {
   app: LeasingApplicationDetail;
+  readOnly?: boolean;
   onToggle: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -107,13 +133,15 @@ function ApplicantRow({
   return (
     <li className="rounded-xl border bg-card p-3.5">
       <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={app.selectedForAgent}
-          onChange={onToggle}
-          className="mt-1"
-          aria-label={`Select ${app.applicant}`}
-        />
+        {!readOnly && (
+          <input
+            type="checkbox"
+            checked={app.selectedForAgent}
+            onChange={onToggle}
+            className="mt-1"
+            aria-label={`Select ${app.applicant}`}
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-[13px] font-semibold">{app.applicant}</p>
@@ -124,14 +152,14 @@ function ApplicantRow({
                 size="xs"
               />
             )}
-            {!decisionPending && (
+            {(readOnly || !decisionPending) && (
               <LeasingToneBadge
                 tone={LEASING_AGENT_DECISION_TONE[app.agentDecision]}
                 label={LEASING_AGENT_DECISION_LABEL[app.agentDecision]}
                 size="xs"
               />
             )}
-            {app.sentToAgent && decisionPending && (
+            {!readOnly && app.sentToAgent && decisionPending && (
               <LeasingToneBadge tone={LEASING_TONE.INFO} label="Sent to agent" size="xs" />
             )}
           </div>
@@ -156,7 +184,7 @@ function ApplicantRow({
             </p>
           )}
         </div>
-        {app.sentToAgent && decisionPending && (
+        {!readOnly && app.sentToAgent && decisionPending && (
           <div className="flex shrink-0 gap-1">
             <Button
               size="sm"

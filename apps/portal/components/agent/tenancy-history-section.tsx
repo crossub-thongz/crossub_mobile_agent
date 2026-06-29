@@ -65,12 +65,12 @@ export function TenancyHistorySection({
           <ChevronRight className="size-4" />
         </Button>
       )}
-      {compact && onViewAll && sorted.length <= 4 && sorted.length > 0 && (
+      {/* {compact && onViewAll && sorted.length <= 4 && sorted.length > 0 && (
         <Button type="button" variant="outline" className="mt-1 w-full" onClick={onViewAll}>
           View tenancy history
           <ChevronRight className="size-4" />
         </Button>
-      )}
+      )} */}
     </div>
   );
 }

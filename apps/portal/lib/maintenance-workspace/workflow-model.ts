@@ -43,11 +43,12 @@ export function getWorkflowSteps(
       id: 'resp',
       label: 'Review',
       sublabel: respSublabel,
-      status: request.responsibility
-        ? 'done'
-        : request.status === 'under_review' || request.status === 'pending_evidence'
+      status:
+        request.status === 'under_review' || request.status === 'pending_evidence'
           ? 'active'
-          : 'upcoming',
+          : request.responsibility
+            ? 'done'
+            : 'upcoming',
     },
     ...(requiresContractorFlow
       ? ([
@@ -100,4 +101,12 @@ export function getWorkflowSteps(
   ];
 
   return steps;
+}
+
+export function resolveLiveWorkflowStep(steps: WorkflowStep[]): WorkflowStep {
+  const active = steps.find((s) => s.status === 'active');
+  if (active) return active;
+  const next = steps.find((s) => s.status === 'upcoming');
+  if (next) return next;
+  return steps.filter((s) => s.status === 'done').at(-1) ?? steps[0];
 }

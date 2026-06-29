@@ -62,6 +62,17 @@ export function isInOpenInspectionPhase({
   return isVacant || !currentLease;
 }
 
+export function getActiveOutgoingInspection(
+  inspections: Inspection[],
+  propertyId: string,
+): Inspection | undefined {
+  return inspections.find(
+    (i) =>
+      i.propertyId === propertyId &&
+      i.type === 'OUTGOING' &&
+      !i.status.toLowerCase().includes('complete'),
+  );
+}
 export function getNextRentReviewDate(
   property: Property,
   reviews: RentReviewCase[],

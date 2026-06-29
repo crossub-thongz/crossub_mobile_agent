@@ -22,6 +22,14 @@ export const LEASING_LIFECYCLE_STEP_LABEL: Record<LeasingLifecycleStep, string> 
   [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboarding Procedures',
 };
 
+/** Compact labels for the horizontal workflow stepper. */
+export const LEASING_LIFECYCLE_STEP_SHORT_LABEL: Record<LeasingLifecycleStep, string> = {
+  [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 'Inspection',
+  [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 'Report',
+  [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 'Approval',
+  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboard',
+};
+
 export const LEASING_ITEM_STATUS = {
   NOT_STARTED: 'not_started',
   IN_PROGRESS: 'in_progress',
