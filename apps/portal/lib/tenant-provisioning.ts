@@ -1,6 +1,7 @@
 import type { components } from '@crossub-thongz/api-contract';
 
 import { crossub } from './crossub-api/client';
+import { isUuid } from './utils';
 
 export type TenantProvisionInput = components['schemas']['ProvisionTenantDto'] & {
   applicationId?: string;
@@ -12,17 +13,25 @@ export type ProvisionedTenant =
  * Pull a human-readable message out of the Nest error envelope, which nests the real
  * message at `body.message.message` (a string, or a string[] for validation errors).
  */
-function apiErrorMessage(body: unknown, fallback: string): string {
-  const outer = (body as { message?: unknown } | null | undefined)?.message;
+function apiErrorMessage(body: unknown, status: number, fallback: string): string {
+  const parsed = body as { message?: unknown } | null | undefined;
+  const outer = parsed?.message;
   const inner =
     (outer as { message?: unknown } | null | undefined)?.message ?? outer;
   if (Array.isArray(inner)) {
     const joined = inner
       .filter((m): m is string => typeof m === 'string')
       .join(', ');
-    return joined || fallback;
+    if (joined) return joined;
   }
-  return typeof inner === 'string' && inner ? inner : fallback;
+  if (typeof inner === 'string' && inner) return inner;
+  if (status === 403) {
+    return 'Insufficient role — sign in as an Account Manager (ACCOUNT_MANAGER), not Super Admin or a local Register account.';
+  }
+  if (status === 401) {
+    return 'Not signed in to the API — sign out and sign in with your CROSSUB Account Manager credentials.';
+  }
+  return fallback;
 }
 
 /**
@@ -34,13 +43,28 @@ function apiErrorMessage(body: unknown, fallback: string): string {
 export async function provisionTenantAccount(
   input: TenantProvisionInput,
 ): Promise<ProvisionedTenant> {
-  const { data, error, response } = await crossub.POST('/agent/tenants', {
-    body: input,
-  });
-  if (error || !data) {
-    throw new Error(
-      apiErrorMessage(error, `Tenant provisioning failed (${response.status})`),
-    );
+  const body: TenantProvisionInput = { ...input };
+  if (body.applicationId && !isUuid(body.applicationId)) {
+    delete body.applicationId;
   }
-  return data;
+
+  try {
+    const { data, error, response } = await crossub.POST('/agent/tenants', {
+      body,
+    });
+    if (error || !data) {
+      throw new Error(
+        apiErrorMessage(error, response.status, `Tenant provisioning failed (${response.status})`),
+      );
+    }
+    return data;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : '';
+    if (e instanceof SyntaxError || message.includes('JSON')) {
+      throw new Error(
+        'Invalid response from API — redeploy the agent portal (BFF proxy gzip fix) and try again.',
+      );
+    }
+    throw e;
+  }
 }

@@ -11,7 +11,9 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/components/providers/auth-provider';
 import { ROUTES } from '@/constants/routes';
+import { canProvisionTenant, provisionTenantBlockReason } from '@/lib/can-provision-tenant';
 import { generateTenantPassword } from '@/lib/generate-tenant-password';
 import { provisionTenantAccount, type ProvisionedTenant } from '@/lib/tenant-provisioning';
 import type { TenantProvisionPrefill } from '@/lib/tenant-provision-prefill';
@@ -47,6 +49,9 @@ export function ProvisionTenantForm({
   applicationId?: string;
   onSuccess: (payload: ProvisionTenantSuccessPayload) => void;
 }) {
+  const { user } = useAuth();
+  const provisionBlockReason = provisionTenantBlockReason(user);
+  const canProvision = canProvisionTenant(user);
   const [password, setPassword] = useState(() => generateTenantPassword());
   const [showPassword, setShowPassword] = useState(false);
   const emailFromApplication = Boolean(prefill.applicationLabel && prefill.email);
@@ -104,6 +109,16 @@ export function ProvisionTenantForm({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      {provisionBlockReason ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          <p className="font-medium">Cannot create tenant accounts</p>
+          <p className="mt-1">{provisionBlockReason}</p>
+          <Link href={ROUTES.LOGIN} className="mt-2 inline-block font-medium underline">
+            Sign in with a different account
+          </Link>
+        </div>
+      ) : null}
+
       {prefill.applicationLabel ? (
         <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
           <p className="text-primary font-medium">From tenant application</p>
@@ -192,7 +207,7 @@ export function ProvisionTenantForm({
         </p>
       </div>
 
-      <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+      <Button type="submit" disabled={form.formState.isSubmitting || !canProvision} className="w-full">
         {form.formState.isSubmitting ? (
           <>
             <Loader2 className="size-4 animate-spin" /> Creating tenant account...

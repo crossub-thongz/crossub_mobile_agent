@@ -1,9 +1,10 @@
-import type { Role, UserStatus } from '@/constants/roles';
+import type { UserStatus } from '@/constants/roles';
 
 export interface AuthUser {
   id: string;
   email: string;
-  role: Role;
+  /** Role key from the API (e.g. ACCOUNT_MANAGER, SUPER_ADMIN). */
+  role: string;
   status: UserStatus;
   profileCompleted: boolean;
   firstName?: string | null;

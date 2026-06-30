@@ -36,7 +36,12 @@ const proxy = async (
     redirect: 'manual',
   });
 
-  const response = new NextResponse(upstream.body, {
+  const responseBody =
+    upstream.status === 204 || req.method === 'HEAD'
+      ? null
+      : await upstream.arrayBuffer();
+
+  const response = new NextResponse(responseBody, {
     status: upstream.status,
     statusText: upstream.statusText,
   });
@@ -45,6 +50,9 @@ const proxy = async (
     const lower = key.toLowerCase();
     if (lower === 'set-cookie') return;
     if (lower === 'transfer-encoding') return;
+    // fetch() decompresses gzip/br bodies; forwarding content-encoding breaks browsers.
+    if (lower === 'content-encoding') return;
+    if (lower === 'content-length') return;
     response.headers.set(key, value);
   });
 

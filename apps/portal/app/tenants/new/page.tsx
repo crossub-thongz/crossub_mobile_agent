@@ -17,6 +17,7 @@ import { ROUTES } from '@/constants/routes';
 import { buildProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
 import { resolveTenantProvisionPrefill } from '@/lib/tenant-provision-prefill';
 import { useAgentStore } from '@/lib/store';
+import { isUuid } from '@/lib/utils';
 
 export default function AddTenantPage() {
   const searchParams = useSearchParams();
@@ -72,7 +73,7 @@ export default function AddTenantPage() {
           ) : (
             <ProvisionTenantForm
               prefill={prefill}
-              applicationId={selectionId}
+              applicationId={isUuid(selectionId) ? selectionId : undefined}
               onSuccess={handleSuccess}
             />
           )}
