@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, FileText, History, UserCheck } from 'lucide-react';
+import { ChevronRight, FileText, History, UserCheck, UserPlus } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -13,10 +13,12 @@ import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
 import {
   propertyDetail,
   rentReviewDetail,
   ROUTES,
+  tenantNew,
   tenantSelectionDetail,
 } from '@/constants/routes';
 import { fromLeasing } from '@/lib/detail-navigation';
@@ -63,6 +65,18 @@ export default function LeasingPage() {
     <AgentShell title="Leasing" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
         <PageIntro description="New applications, rent reviews, and tenancy history across your portfolio." />
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button asChild variant="outline" className="w-full">
+            <Link href={tenantNew()}>
+              <UserPlus className="size-4" />
+              Add tenant
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full">
+            <Link href={ROUTES.TENANTS}>Tenant accounts</Link>
+          </Button>
+        </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl border bg-card p-3 text-center">

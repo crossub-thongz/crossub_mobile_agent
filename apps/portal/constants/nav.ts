@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   ListTodo,
   MessageSquare,
+  UserPlus,
   Wrench,
 } from 'lucide-react';
 
@@ -28,6 +29,7 @@ export const MORE_NAV = [
   { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText },
   { href: ROUTES.RENT_REVIEW, label: 'Rent review', icon: FileText },
   { href: ROUTES.TENANT_SELECTION, label: 'Tenant selection', icon: FileText },
+  { href: ROUTES.TENANTS, label: 'Tenant accounts', icon: UserPlus },
   { href: ROUTES.VACATING, label: 'Vacating', icon: FileText },
   { href: ROUTES.REPORTS, label: 'Reports', icon: FileText },
   { href: ROUTES.NOTIFICATIONS, label: 'Alerts', icon: FileText },

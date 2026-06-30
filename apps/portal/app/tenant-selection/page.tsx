@@ -11,19 +11,35 @@ import { ROUTES, tenantSelectionDetail } from '@/constants/routes';
 import { formatCurrency } from '@/lib/utils';
 
 export default function TenantSelectionListPage() {
-  const { tenantSelections } = useAgentData();
+  const { tenantSelections, apiConnected, apiError, loading, refresh } = useAgentData();
 
   return (
     <AgentShell title="Tenant selection" backHref={ROUTES.LEASING}>
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          Applicants awaiting your approval after CROSSUB shortlisting.
+          Applicants from the tenant app and CROSSUB leasing shortlist — loaded from{' '}
+          <code className="text-xs">GET /api/v1/agent/portfolio</code> (staging).
         </p>
+
+        {!loading && !apiConnected && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+            {apiError ??
+              'Not connected to staging API — showing demo applicants only. Set API_INTERNAL_URL to match the tenant app.'}
+            <button
+              type="button"
+              className="text-primary ml-2 font-medium underline"
+              onClick={() => void refresh()}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {tenantSelections.length === 0 ? (
           <EmptyState
             icon={UserCheck}
             title="No pending applications"
-            description="When a tenant is shortlisted for your properties, they'll appear here."
+            description="When an applicant submits from the tenant app or is shortlisted in leasing, they'll appear here."
           />
         ) : (
           <div className="space-y-2">
@@ -41,7 +57,10 @@ export default function TenantSelectionListPage() {
                     <p className="truncate text-sm font-semibold">{t.propertyAddress}</p>
                     <p className="text-sm">{t.applicantName}</p>
                     <p className="text-muted-foreground text-xs">
-                      {formatCurrency(t.proposedRent)}/wk · {t.leaseTerm}
+                      {t.proposedRent > 0
+                        ? `${formatCurrency(t.proposedRent)}/wk`
+                        : 'Rent on application'}
+                      {t.leaseTerm !== '—' ? ` · ${t.leaseTerm}` : ''}
                     </p>
                     <p className="text-primary text-xs font-medium">{t.status}</p>
                   </div>

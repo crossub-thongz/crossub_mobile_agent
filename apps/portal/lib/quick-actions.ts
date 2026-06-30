@@ -5,13 +5,15 @@ import {
   Gavel,
   MessageSquare,
   TrendingUp,
+  UserPlus,
   Wrench,
 } from 'lucide-react';
 
-import { messagesNew, propertyNew, ROUTES, inspectionNew } from '@/constants/routes';
+import { messagesNew, propertyNew, ROUTES, inspectionNew, tenantNew } from '@/constants/routes';
 
 export type BuiltinQuickActionId =
   | 'add-property'
+  | 'add-tenant'
   | 'open-inspection'
   | 'maintenance'
   | 'rent-review'
@@ -37,6 +39,12 @@ export const BUILTIN_QUICK_ACTIONS: BuiltinQuickAction[] = [
     label: 'Add new property',
     icon: Building2,
     resolveHref: () => propertyNew(),
+  },
+  {
+    id: 'add-tenant',
+    label: 'Add tenant',
+    icon: UserPlus,
+    resolveHref: () => tenantNew(),
   },
   {
     id: 'open-inspection',

@@ -25,6 +25,8 @@ export const ROUTES = {
   PROFILE: '/profile',
   SETTINGS: '/settings',
   TENANT_SELECTION: '/tenant-selection',
+  TENANTS: '/tenants',
+  TENANTS_NEW: '/tenants/new',
 } as const;
 
 export const PUBLIC_ROUTE_PATTERNS = [
@@ -52,6 +54,11 @@ export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
 export const propertyLeasingWorkflow = (propertyId: string) =>
   `/properties/${propertyId}/leasing-workflow`;
 export const propertyNew = () => `/properties/new`;
+export const tenantNew = (query?: Record<string, string>) => {
+  if (!query || Object.keys(query).length === 0) return ROUTES.TENANTS_NEW;
+  const params = new URLSearchParams(query);
+  return `${ROUTES.TENANTS_NEW}?${params.toString()}`;
+};
 export const inspectionDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/inspections/${id}`, ctx);
 export const inspectionNew = (propertyId?: string) =>

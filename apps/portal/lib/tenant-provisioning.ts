@@ -2,7 +2,9 @@ import type { components } from '@crossub-thongz/api-contract';
 
 import { crossub } from './crossub-api/client';
 
-export type TenantProvisionInput = components['schemas']['ProvisionTenantDto'];
+export type TenantProvisionInput = components['schemas']['ProvisionTenantDto'] & {
+  applicationId?: string;
+};
 export type ProvisionedTenant =
   components['schemas']['ProvisionedTenantResponseDto'];
 

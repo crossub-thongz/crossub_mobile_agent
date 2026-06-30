@@ -28,6 +28,8 @@ import { Label } from '@/components/ui/label';
 import { PASSWORD_MAX, PASSWORD_MIN } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import { registerLocalAccount } from '@/lib/local-auth';
+import { buildProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
+import { useAgentStore } from '@/lib/store';
 import { provisionTenantAccount } from '@/lib/tenant-provisioning';
 import { cn } from '@/lib/utils';
 
@@ -105,13 +107,22 @@ export default function RegisterPage() {
 
   const onTenantRegister = async (values: TenantValues) => {
     try {
-      await provisionTenantAccount({
+      const provisioned = await provisionTenantAccount({
         email: values.email,
         password: values.password,
         firstName: values.firstName,
         lastName: values.lastName,
         phone: values.phone,
       });
+      useAgentStore.getState().addProvisionedTenant(
+        buildProvisionedTenantRecord({
+          provisioned,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          phone: values.phone,
+          password: values.password,
+        }),
+      );
       setTenantCredentials(values);
       tenantForm.reset();
       toast.success('Tenant account created — share credentials with the tenant.');

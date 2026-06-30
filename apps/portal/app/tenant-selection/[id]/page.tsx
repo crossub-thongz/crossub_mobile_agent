@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -9,8 +10,9 @@ import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, tenantNew } from '@/constants/routes';
 import { useAgentStore } from '@/lib/store';
+import { prefillFromTenantSelection } from '@/lib/tenant-provision-prefill';
 import { tenantSelectionDecisionKey } from '@/lib/tenant-selection';
 import { formatCurrency } from '@/lib/utils';
 
@@ -22,6 +24,15 @@ export default function TenantSelectionPage() {
   const item = tenantSelections.find((t) => t.id === id);
 
   if (!item) notFound();
+
+  const provisionPrefill = prefillFromTenantSelection(item);
+  const createTenantHref = tenantNew({
+    email: provisionPrefill.email,
+    firstName: provisionPrefill.firstName,
+    lastName: provisionPrefill.lastName,
+    selectionId: item.id,
+    propertyId: item.propertyId,
+  });
 
   const handleApprove = () => {
     setTenantSelectionDecision(tenantSelectionDecisionKey(item.propertyId, item.id), {
@@ -63,6 +74,14 @@ export default function TenantSelectionPage() {
           onDecline={handleDecline}
           onRequote={(r) => toast.info(`Query sent: ${r}`)}
         />
+
+        <Button asChild className="w-full">
+          <Link href={createTenantHref}>Create tenant app login</Link>
+        </Button>
+        <p className="text-muted-foreground text-center text-xs">
+          Links this applicant to a tenant login and starts leasing onboarding (step 4) in the
+          tenant app.
+        </p>
 
         <section>
           <h2 className="mb-2 text-sm font-semibold">Documents</h2>

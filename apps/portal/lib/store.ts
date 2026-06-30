@@ -11,6 +11,7 @@ import type {
 } from '@/lib/open-inspection';
 import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, ThreadMessage } from '@/lib/types';
 import type { TenantSelectionDecision } from '@/lib/tenant-selection';
+import type { ProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
 
 export interface NotificationPrefs {
   approvals: boolean;
@@ -90,6 +91,8 @@ interface AgentStore {
   resetQuickActions: () => void;
   addedInspections: Inspection[];
   addOpenInspection: (input: NewOpenInspectionInput) => Inspection;
+  provisionedTenants: ProvisionedTenantRecord[];
+  addProvisionedTenant: (record: ProvisionedTenantRecord) => void;
 }
 
 export const useAgentStore = create<AgentStore>()(
@@ -296,6 +299,14 @@ export const useAgentStore = create<AgentStore>()(
         set((s) => ({ addedInspections: [inspection, ...s.addedInspections] }));
         return inspection;
       },
+      provisionedTenants: [],
+      addProvisionedTenant: (record) =>
+        set((s) => {
+          const withoutDuplicate = s.provisionedTenants.filter(
+            (t) => t.id !== record.id && t.email !== record.email,
+          );
+          return { provisionedTenants: [record, ...withoutDuplicate] };
+        }),
     }),
     {
       name: 'crossub-agent-store',
