@@ -167,3 +167,42 @@ export async function uploadDocument(
   if (error || !data) throw new Error('Failed to upload document');
   return data;
 }
+
+/** Key-collection DTOs — present on backend; awaiting api-contract publish. */
+export interface AgentKeyCollection {
+  time: string | null;
+  location: string | null;
+  custody?: string | null;
+  status?: string | null;
+}
+
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
+
+async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+/** Key-collection state for a property's active leasing cycle. */
+export async function fetchKeyCollection(propertyId: string): Promise<AgentKeyCollection> {
+  return agentFetch(`/agent/properties/${propertyId}/key-collection`);
+}
+
+/** Set key-collection time and place — synced to Tenant onboarding + Inspector jobs. */
+export async function setKeyCollection(
+  propertyId: string,
+  input: { time: string; location: string },
+): Promise<AgentKeyCollection> {
+  return agentFetch(`/agent/properties/${propertyId}/key-collection`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}

@@ -45,6 +45,7 @@ export interface Property {
   id: string;
   /** The client agency that owns this property — lets the Agencies screen group by client */
   agencyId?: string;
+  intakeMode?: 'new' | 'transfer_in';
   address: string;
   suburb: string;
   /** Landlord / home owner this property belongs to */
@@ -61,6 +62,13 @@ export interface Property {
   bedrooms?: number;
   bathrooms?: number;
   carSpaces?: number;
+  propertyType?: string;
+  managementRatePercent?: number;
+  insuranceProvider?: string;
+  handoverDate?: string;
+  previousAgentName?: string;
+  previousAgentEmail?: string;
+  pmsSource?: string;
   leaseStart?: string;
   leaseEnd?: string;
   nextRentReview?: string;
@@ -316,19 +324,47 @@ export interface Inspection {
   }[];
 }
 
+export type RentReviewWorkflowState =
+  | 'PENDING_CONFIRMATION'
+  | 'AGENT_REVIEW'
+  | 'TENANT_NOTIFIED'
+  | 'NEGOTIATION'
+  | 'TENANT_ACCEPTED'
+  | 'TENANT_REJECTED'
+  | 'ACCOUNTING'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'POSTPONED';
+
+export interface InheritedLeaseTerms {
+  waterUsage?: string;
+  petsAllowed?: boolean;
+  electricityTenant?: boolean;
+  gasTenant?: boolean;
+  furnished?: boolean;
+  strataByLaws?: boolean;
+  smokeAlarmType?: string;
+  parkingSpaces?: number;
+  storageLocation?: string;
+  maxOccupants?: number;
+}
+
 export interface RentReviewCase {
   id: string;
   propertyId: string;
   propertyAddress: string;
+  tenantName?: string;
   leaseStart: string;
   leaseEnd: string;
   currentRent: number;
   suggestedRent: number;
   reviewDue: string;
   status: string;
+  workflowState?: RentReviewWorkflowState;
   tenantResponse?: 'pending' | 'accepted' | 'rejected' | 'counter' | 'vacating';
   counterOffer?: number;
   requiresApproval: boolean;
+  inheritedTerms?: InheritedLeaseTerms;
   timeline: TimelineEntry[];
   negotiationHistory?: { at: string; party: string; amount: number; note?: string }[];
 }

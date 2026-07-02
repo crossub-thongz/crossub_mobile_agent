@@ -394,6 +394,17 @@ export const RENT_REVIEWS: RentReviewCase[] = [
     status: 'Confirmed',
     requiresApproval: false,
     tenantResponse: 'accepted',
+    inheritedTerms: {
+      waterUsage: 'Tenant pays separately',
+      petsAllowed: false,
+      electricityTenant: true,
+      gasTenant: false,
+      furnished: false,
+      strataByLaws: false,
+      smokeAlarmType: 'Battery-operated',
+      parkingSpaces: 2,
+      maxOccupants: 4,
+    },
     timeline: [
       {
         id: 't1',
@@ -417,6 +428,18 @@ export const RENT_REVIEWS: RentReviewCase[] = [
     status: 'Agent Confirmation',
     requiresApproval: true,
     tenantResponse: 'counter',
+    inheritedTerms: {
+      waterUsage: 'Tenant pays separately',
+      petsAllowed: true,
+      electricityTenant: true,
+      gasTenant: true,
+      furnished: false,
+      strataByLaws: true,
+      smokeAlarmType: 'Hardwired',
+      parkingSpaces: 1,
+      storageLocation: 'Cage B12',
+      maxOccupants: 2,
+    },
     counterOffer: 600,
     negotiationHistory: [
       { at: '2026-05-22T09:30:00', party: 'CROSSUB', amount: 620, note: 'Market report suggested' },

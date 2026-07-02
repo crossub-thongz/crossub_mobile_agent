@@ -253,16 +253,29 @@ export function mapAgentRentReviews(dtos: AgentRentReview[]): RentReviewCase[] {
     id: r.id,
     propertyId: r.propertyId ?? '',
     propertyAddress: r.propertyAddress,
+    tenantName: r.tenantName ?? undefined,
     leaseStart: '',
     leaseEnd: '',
     currentRent: r.currentRent ?? 0,
     suggestedRent: r.proposedRent ?? r.currentRent ?? 0,
     reviewDue: r.reviewDate ?? '',
     status: r.workflowState.replace(/_/g, ' ').toLowerCase(),
+    workflowState: r.workflowState,
     tenantResponse: RENT_REVIEW_TENANT_RESPONSE[r.workflowState],
     requiresApproval:
       r.workflowState === RENT_REVIEW_WORKFLOW_STATE.AGENT_REVIEW ||
       r.workflowState === RENT_REVIEW_WORKFLOW_STATE.PENDING_CONFIRMATION,
+    inheritedTerms: {
+      waterUsage: 'Tenant pays separately',
+      petsAllowed: false,
+      electricityTenant: true,
+      gasTenant: true,
+      furnished: false,
+      strataByLaws: true,
+      smokeAlarmType: 'Hardwired',
+      parkingSpaces: 1,
+      maxOccupants: 2,
+    },
     timeline: [],
   }));
 }

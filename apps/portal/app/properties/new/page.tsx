@@ -1,16 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import {
+  DocumentChecklistUpload,
+  type ChecklistUploadState,
+} from '@/components/agent/document-checklist-upload';
+import { PropertyImportPanel } from '@/components/agent/property-import-panel';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
-import type { Property } from '@/lib/types';
+import {
+  NEW_PROPERTY_DOCUMENT_CHECKLIST,
+  TRANSFER_IN_DOCUMENT_CHECKLIST,
+} from '@/lib/leasing-workflows/constants';
+import { fileToBase64 } from '@/lib/file-upload';
+import { uploadDocument as apiUploadDocument } from '@/lib/crossub-api/agent-client';
+import type { PropertyImportResult } from '@/lib/property-import';
+import { pmsSourceLabel } from '@/lib/property-import';
+import type { AgentDocument, Property } from '@/lib/types';
+import type { PropertyIntakeMode } from '@/lib/store';
 
 const LEASE_OPTIONS: Property['leaseStatus'][] = [
   'active',
@@ -21,8 +35,11 @@ const LEASE_OPTIONS: Property['leaseStatus'][] = [
 
 export default function AddPropertyPage() {
   const router = useRouter();
-  const { addProperty } = useAgentData();
+  const { addProperty, uploadDocument, apiConnected } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
+  const [intakeMode, setIntakeMode] = useState<PropertyIntakeMode>('transfer_in');
+  const [uploads, setUploads] = useState<ChecklistUploadState>({});
+  const [pmsSource, setPmsSource] = useState<string>('');
   const [form, setForm] = useState({
     address: '',
     suburb: '',
@@ -39,10 +56,92 @@ export default function AddPropertyPage() {
     carSpaces: '',
     bondAmount: '',
     propertyType: 'house',
+    managementRatePercent: '',
+    insuranceProvider: '',
+    handoverDate: '',
+    previousAgentName: '',
+    previousAgentEmail: '',
   });
+
+  const checklist =
+    intakeMode === 'transfer_in'
+      ? TRANSFER_IN_DOCUMENT_CHECKLIST
+      : NEW_PROPERTY_DOCUMENT_CHECKLIST;
 
   const update = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const handleChecklistUpload = useCallback(
+    async (file: File, checklistId: string, category: AgentDocument['category']) => {
+      const address = form.address.trim()
+        ? `${form.address.trim()}, ${form.suburb.trim()}`
+        : 'Portfolio';
+      uploadDocument(file, category, address);
+      setUploads((prev) => ({
+        ...prev,
+        [checklistId]: [
+          ...(prev[checklistId] ?? []),
+          { fileName: file.name, uploadedAt: new Date().toISOString() },
+        ],
+      }));
+    },
+    [form.address, form.suburb, uploadDocument],
+  );
+
+  const applyImport = (result: PropertyImportResult, files: File[]) => {
+    const p = result.prefill;
+    setPmsSource(pmsSourceLabel(result.source));
+    setForm((f) => ({
+      ...f,
+      address: p.address ?? f.address,
+      suburb: p.suburb ?? f.suburb,
+      rentWeekly: p.rentWeekly != null ? String(p.rentWeekly) : f.rentWeekly,
+      bedrooms: p.bedrooms != null ? String(p.bedrooms) : f.bedrooms,
+      bathrooms: p.bathrooms != null ? String(p.bathrooms) : f.bathrooms,
+      carSpaces: p.carSpaces != null ? String(p.carSpaces) : f.carSpaces,
+      bondAmount: p.bondAmount != null ? String(p.bondAmount) : f.bondAmount,
+      homeOwnerName: p.homeOwnerName ?? f.homeOwnerName,
+      homeOwnerEmail: p.homeOwnerEmail ?? f.homeOwnerEmail,
+      homeOwnerPhone: p.homeOwnerPhone ?? f.homeOwnerPhone,
+      tenantName: p.tenantName ?? f.tenantName,
+      tenantEmail: p.tenantEmail ?? f.tenantEmail,
+      tenantPhone: p.tenantPhone ?? f.tenantPhone,
+      managementRatePercent:
+        p.managementRatePercent != null ? String(p.managementRatePercent) : f.managementRatePercent,
+      insuranceProvider: p.insuranceProvider ?? f.insuranceProvider,
+      propertyType: p.propertyType ?? f.propertyType,
+    }));
+    const matched: ChecklistUploadState = {};
+    for (const [id, names] of Object.entries(result.matchedDocuments)) {
+      matched[id] = names.map((fileName) => ({
+        fileName,
+        uploadedAt: new Date().toISOString(),
+      }));
+    }
+    setUploads((prev) => ({ ...prev, ...matched }));
+    toast.success('Import applied — review fields and upload any missing documents');
+    void (async () => {
+      if (!apiConnected) return;
+      for (const file of files.slice(0, 15)) {
+        try {
+          const contentBase64 = await fileToBase64(file);
+          await apiUploadDocument({
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            sizeBytes: file.size,
+            contentBase64,
+            category: 'lease',
+          });
+        } catch {
+          // non-fatal per file
+        }
+      }
+    })();
+  };
+
+  const requiredDocsMet = checklist
+    .filter((item) => item.required)
+    .every((item) => (uploads[item.id]?.length ?? 0) > 0);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,9 +149,14 @@ export default function AddPropertyPage() {
       toast.error('Address, suburb, and landlord name are required');
       return;
     }
+    if (intakeMode === 'transfer_in' && !requiredDocsMet) {
+      toast.error('Upload all required transfer documents before saving');
+      return;
+    }
     setSubmitting(true);
     try {
       const property = addProperty({
+        intakeMode,
         address: form.address,
         suburb: form.suburb,
         homeOwnerName: form.homeOwnerName,
@@ -67,8 +171,19 @@ export default function AddPropertyPage() {
         bathrooms: Number(form.bathrooms) || undefined,
         carSpaces: Number(form.carSpaces) || undefined,
         bondAmount: Number(form.bondAmount) || undefined,
+        propertyType: form.propertyType,
+        managementRatePercent: Number(form.managementRatePercent) || undefined,
+        insuranceProvider: form.insuranceProvider || undefined,
+        handoverDate: form.handoverDate || undefined,
+        previousAgentName: form.previousAgentName || undefined,
+        previousAgentEmail: form.previousAgentEmail || undefined,
+        pmsSource: pmsSource || undefined,
       });
-      toast.success('Property added to your portfolio');
+      toast.success(
+        intakeMode === 'transfer_in'
+          ? 'Transfer IN property saved — staff leasing will activate on crossub_web'
+          : 'Property added to your portfolio',
+      );
       router.push(propertyDetail(property.id));
     } finally {
       setSubmitting(false);
@@ -79,9 +194,61 @@ export default function AddPropertyPage() {
     <AgentShell title="Add property" backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <form onSubmit={onSubmit} className="space-y-5">
         <p className="text-muted-foreground text-sm">
-          Property setup fields are being aligned with the Leasing team. Required details below
-          save to your portfolio on this device until connected to crossub_web.
+          Property intake aligned with Leasing ops: transfer IN from another agent, new leasing
+          setup, document checklist, and PropertyMe / PropertyTree one-click import. Live properties
+          sync documents to Tenant App and Inspector via crossub_web.
         </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant={intakeMode === 'transfer_in' ? 'default' : 'outline'}
+            onClick={() => setIntakeMode('transfer_in')}
+          >
+            Transfer IN
+          </Button>
+          <Button
+            type="button"
+            variant={intakeMode === 'new' ? 'default' : 'outline'}
+            onClick={() => setIntakeMode('new')}
+          >
+            New property
+          </Button>
+        </div>
+
+        <PropertyImportPanel onImport={applyImport} />
+
+        {intakeMode === 'transfer_in' && (
+          <fieldset className="space-y-3 rounded-xl border bg-card p-4">
+            <legend className="px-1 text-sm font-semibold">Previous agent</legend>
+            <div className="space-y-2">
+              <Label htmlFor="previousAgentName">Managing agent name</Label>
+              <Input
+                id="previousAgentName"
+                value={form.previousAgentName}
+                onChange={(e) => update('previousAgentName', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="previousAgentEmail">Previous agent email</Label>
+              <Input
+                id="previousAgentEmail"
+                type="email"
+                value={form.previousAgentEmail}
+                onChange={(e) => update('previousAgentEmail', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="handoverDate">Handover date</Label>
+              <Input
+                id="handoverDate"
+                type="date"
+                value={form.handoverDate}
+                onChange={(e) => update('handoverDate', e.target.value)}
+              />
+            </div>
+          </fieldset>
+        )}
 
         <fieldset className="space-y-3 rounded-xl border bg-card p-4">
           <legend className="px-1 text-sm font-semibold">Property</legend>
@@ -102,6 +269,30 @@ export default function AddPropertyPage() {
               onChange={(e) => update('suburb', e.target.value)}
               placeholder="Miami"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="managementRatePercent">Management rate (%)</Label>
+              <Input
+                id="managementRatePercent"
+                type="number"
+                min={0}
+                max={100}
+                step={0.1}
+                value={form.managementRatePercent}
+                onChange={(e) => update('managementRatePercent', e.target.value)}
+                placeholder="5.5"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="insuranceProvider">Insurance provider</Label>
+              <Input
+                id="insuranceProvider"
+                value={form.insuranceProvider}
+                onChange={(e) => update('insuranceProvider', e.target.value)}
+                placeholder="Terri Scheer"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -250,8 +441,17 @@ export default function AddPropertyPage() {
           </div>
         </fieldset>
 
+        <fieldset className="space-y-3 rounded-xl border bg-card p-4">
+          <legend className="px-1 text-sm font-semibold">Documents</legend>
+          <DocumentChecklistUpload
+            checklist={checklist}
+            uploads={uploads}
+            onUpload={handleChecklistUpload}
+          />
+        </fieldset>
+
         <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Add property'}
+          {submitting ? 'Saving…' : intakeMode === 'transfer_in' ? 'Save transfer IN' : 'Add property'}
         </Button>
       </form>
     </AgentShell>

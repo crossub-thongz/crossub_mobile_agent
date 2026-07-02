@@ -1,3 +1,4 @@
+import { LEASE_RENEWAL_STAGES } from '@/lib/leasing-workflows/constants';
 import type { RentReviewCase, TimelineEntry } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -5,6 +6,46 @@ export type RentReviewDecision = {
   action: 'confirmed' | 'custom';
   amount?: number;
 } | null;
+
+/** Map API workflow state → 7-stage lease renewal rail (LEASE RENEWAL.pdf). */
+export function resolveLeaseRenewalStageIndex(
+  review: RentReviewCase,
+  decision?: RentReviewDecision,
+): number {
+  if (decision) return 2;
+  const state = review.workflowState;
+  if (!state) {
+    if (review.requiresApproval) return 2;
+    if (review.tenantResponse === 'accepted') return 5;
+    if (review.tenantResponse === 'pending') return 4;
+    return 1;
+  }
+  switch (state) {
+    case 'PENDING_CONFIRMATION':
+      return 0;
+    case 'AGENT_REVIEW':
+      return 2;
+    case 'TENANT_NOTIFIED':
+      return 3;
+    case 'NEGOTIATION':
+    case 'TENANT_ACCEPTED':
+      return 4;
+    case 'ACCOUNTING':
+      return 5;
+    case 'COMPLETED':
+      return 6;
+    default:
+      return 1;
+  }
+}
+
+export function leaseRenewalStages(review: RentReviewCase, decision?: RentReviewDecision) {
+  const active = resolveLeaseRenewalStageIndex(review, decision);
+  return LEASE_RENEWAL_STAGES.map((stage, index) => ({
+    ...stage,
+    status: index < active ? ('done' as const) : index === active ? ('current' as const) : ('upcoming' as const),
+  }));
+}
 
 export function isRentReviewDecided(
   review: RentReviewCase,

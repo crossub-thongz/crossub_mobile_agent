@@ -7,9 +7,11 @@ import { toast } from 'sonner';
 import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { DataSourceBadge } from '@/components/agent/data-source-badge';
+import { InheritedLeaseTermsPanel } from '@/components/agent/inherited-lease-terms';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
+import { WorkflowStageRail } from '@/components/agent/workflow-stage-rail';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -17,14 +19,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
-import { buildRentReviewTimeline, isRentReviewDecided } from '@/lib/rent-review';
+import { buildRentReviewTimeline, isRentReviewDecided, leaseRenewalStages } from '@/lib/rent-review';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAgentStore } from '@/lib/store';
 
 export default function RentReviewDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { rentReviews } = useAgentData();
+  const { rentReviews, apiConnected } = useAgentData();
   const item = rentReviews.find((r) => r.id === id);
   const decision = useAgentStore((s) => s.rentReviewDecisions[id]);
   const setDecision = useAgentStore((s) => s.setRentReviewDecision);
@@ -41,7 +43,13 @@ export default function RentReviewDetailPage() {
   return (
     <AgentShell title="Rent Review" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
-        <DataSourceBadge source="demo" />
+        <DataSourceBadge source={apiConnected ? 'api' : 'demo'} />
+
+        <WorkflowStageRail
+          title="Lease renewal workflow (7 stages)"
+          stages={leaseRenewalStages(item, decision)}
+        />
+
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <StatusBadge label={item.status} variant="approval" />
           <p className="font-semibold">{item.propertyAddress}</p>
@@ -70,12 +78,18 @@ export default function RentReviewDetailPage() {
           <LinkButton href={ROUTES.REPORTS}>Download comparable market PDF</LinkButton>
         </div>
 
+        {item.inheritedTerms && <InheritedLeaseTermsPanel terms={item.inheritedTerms} />}
+
         <CaseContactActions propertyId={item.propertyId} caseLabel="Rent review" />
 
         {!decided ? (
           <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
             <p className="text-primary text-xs font-semibold uppercase">
-              Confirm rent review
+              Agent approval (stage 3)
+            </p>
+            <p className="text-muted-foreground text-xs">
+              After you confirm, crossub_web issues the 60-day rent increase notice and notifies the
+              tenant (Tenant App + email). Original lease terms carry forward automatically.
             </p>
             <Button
               className="w-full"

@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import { KeyCollectionForm } from '@/components/agent/key-collection-form';
 import { Button } from '@/components/ui/button';
 import { LEASING_ITEM_STATUS, LEASING_KEY_CUSTODY } from '@/lib/leasing/constants';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
@@ -156,17 +157,12 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         status={o.keyCollection.status}
         footer={
           o.keyCollection.status !== LEASING_ITEM_STATUS.DONE ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => {
-                store.setKeyCollection(id, new Date().toISOString(), 'CROSSUB office');
-                toast.success('Key collection scheduled');
+            <KeyCollectionForm
+              propertyId={id}
+              onScheduled={(time, location) => {
+                store.setKeyCollection(id, time, location);
               }}
-            >
-              Confirm key collection
-            </Button>
+            />
           ) : undefined
         }
       >

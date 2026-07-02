@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, FileText, History, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowLeftRight, Building2, ChevronRight, FileText, History, UserCheck, UserPlus } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -11,23 +11,28 @@ import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { StatusBadge } from '@/components/agent/status-badge';
+import { WorkflowStageRail } from '@/components/agent/workflow-stage-rail';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import {
   propertyDetail,
+  propertyNew,
+  propertyTransfer,
   rentReviewDetail,
   ROUTES,
   tenantNew,
   tenantSelectionDetail,
 } from '@/constants/routes';
 import { fromLeasing } from '@/lib/detail-navigation';
+import { NEW_LEASING_STAGES } from '@/lib/leasing-workflows/constants';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 const TABS = [
   { id: 'new-leasing', label: 'New leasing' },
+  { id: 'transfer', label: 'Transfer' },
   { id: 'rent-review', label: 'Rent review' },
   { id: 'history', label: 'History' },
 ] as const;
@@ -38,7 +43,10 @@ export default function LeasingPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   const initialTab: LeasingTab =
-    tabParam === 'rent-review' || tabParam === 'history' || tabParam === 'new-leasing'
+    tabParam === 'rent-review' ||
+    tabParam === 'history' ||
+    tabParam === 'transfer' ||
+    tabParam === 'new-leasing'
       ? tabParam
       : 'new-leasing';
 
@@ -68,6 +76,21 @@ export default function LeasingPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <Button asChild variant="outline" className="w-full">
+            <Link href={propertyNew()}>
+              <Building2 className="size-4" />
+              Add property
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full">
+            <Link href={propertyTransfer()}>
+              <ArrowLeftRight className="size-4" />
+              Transfer
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button asChild variant="outline" className="w-full">
             <Link href={tenantNew()}>
               <UserPlus className="size-4" />
               Add tenant
@@ -91,10 +114,21 @@ export default function LeasingPage() {
           </div>
         </div>
 
-        <FilterChips options={TABS} value={tab} onChange={(id) => setTab(id as LeasingTab)} />
+        <FilterChips
+          options={TABS.map((t) => ({ id: t.id, label: t.label }))}
+          value={tab}
+          onChange={(id) => setTab(id as LeasingTab)}
+        />
 
         {tab === 'new-leasing' && (
           <section className="space-y-3">
+            <WorkflowStageRail
+              title="New leasing pipeline (13 stages)"
+              stages={NEW_LEASING_STAGES.map((stage, index) => ({
+                ...stage,
+                status: index === 7 ? ('current' as const) : index < 7 ? ('done' as const) : ('upcoming' as const),
+              }))}
+            />
             {tenantSelections.length === 0 ? (
               <EmptyState
                 icon={UserCheck}
@@ -125,6 +159,19 @@ export default function LeasingPage() {
                 </Link>
               ))
             )}
+          </section>
+        )}
+
+        {tab === 'transfer' && (
+          <section className="space-y-3">
+            <p className="text-muted-foreground text-sm">
+              Transfer IN receives management from another agent; Transfer OUT hands documents and
+              keys to the incoming agent. Use one-click PropertyMe / PropertyTree import on the add
+              property screen.
+            </p>
+            <Button asChild className="w-full">
+              <Link href={propertyTransfer()}>Open property transfer workflow</Link>
+            </Button>
           </section>
         )}
 

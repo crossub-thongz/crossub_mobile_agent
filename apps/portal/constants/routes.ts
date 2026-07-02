@@ -27,6 +27,7 @@ export const ROUTES = {
   TENANT_SELECTION: '/tenant-selection',
   TENANTS: '/tenants',
   TENANTS_NEW: '/tenants/new',
+  PROPERTY_TRANSFER: '/leasing/transfer',
 } as const;
 
 export const PUBLIC_ROUTE_PATTERNS = [
@@ -53,6 +54,7 @@ export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
 
 export const propertyLeasingWorkflow = (propertyId: string) =>
   `/properties/${propertyId}/leasing-workflow`;
+export const propertyTransfer = () => ROUTES.PROPERTY_TRANSFER;
 export const propertyNew = () => `/properties/new`;
 export const tenantNew = (query?: Record<string, string>) => {
   if (!query || Object.keys(query).length === 0) return ROUTES.TENANTS_NEW;

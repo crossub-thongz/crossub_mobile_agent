@@ -19,7 +19,10 @@ export interface NotificationPrefs {
   updates: boolean;
 }
 
+export type PropertyIntakeMode = 'new' | 'transfer_in';
+
 export interface NewPropertyInput {
+  intakeMode: PropertyIntakeMode;
   address: string;
   suburb: string;
   homeOwnerName: string;
@@ -34,6 +37,14 @@ export interface NewPropertyInput {
   bathrooms?: number;
   carSpaces?: number;
   bondAmount?: number;
+  propertyType?: string;
+  managementRatePercent?: number;
+  insuranceProvider?: string;
+  handoverDate?: string;
+  previousAgentName?: string;
+  previousAgentEmail?: string;
+  pmsSource?: string;
+  uploadedDocumentIds?: string[];
 }
 
 export interface NewOpenInspectionInput {
@@ -132,6 +143,7 @@ export const useAgentStore = create<AgentStore>()(
       addProperty: (input, agentPortfolioId) => {
         const property: Property = {
           id: `prop-agent-${Date.now()}`,
+          intakeMode: input.intakeMode,
           address: input.address.trim(),
           suburb: input.suburb.trim(),
           homeOwnerName: input.homeOwnerName.trim(),
@@ -151,6 +163,13 @@ export const useAgentStore = create<AgentStore>()(
           bathrooms: input.bathrooms,
           carSpaces: input.carSpaces,
           bondAmount: input.bondAmount,
+          propertyType: input.propertyType,
+          managementRatePercent: input.managementRatePercent,
+          insuranceProvider: input.insuranceProvider,
+          handoverDate: input.handoverDate,
+          previousAgentName: input.previousAgentName,
+          previousAgentEmail: input.previousAgentEmail,
+          pmsSource: input.pmsSource,
           openTasks: 0,
           inspectionStatus: 'Not scheduled',
           maintenanceStatus: 'None',
