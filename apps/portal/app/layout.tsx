@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import Script from 'next/script';
 
 import { AuthProvider } from '@/components/providers/auth-provider';
+import { SystemAccessAgreementGate } from '@/components/auth/system-access-agreement-gate';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -46,10 +47,12 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <ProviderErrorBoundary>
-              <AgentDataProvider>
-                {children}
-                <WelcomeOnboarding />
-              </AgentDataProvider>
+              <SystemAccessAgreementGate>
+                <AgentDataProvider>
+                  {children}
+                  <WelcomeOnboarding />
+                </AgentDataProvider>
+              </SystemAccessAgreementGate>
             </ProviderErrorBoundary>
           </AuthProvider>
           <ThemedToaster position="bottom-right" />

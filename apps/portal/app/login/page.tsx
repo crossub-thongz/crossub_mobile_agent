@@ -28,6 +28,7 @@ import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
 import { loginLocalAccount } from '@/lib/local-auth';
+import { postAuthDestination } from '@/lib/system-access-agreement';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -41,14 +42,16 @@ type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { refresh, status } = useAuth();
+  const { refresh, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (status === 'authed') {
-      router.replace(ROUTES.DASHBOARD);
+    if (status === 'authed' && user) {
+      router.replace(
+        postAuthDestination(user, ROUTES.DASHBOARD, ROUTES.SYSTEM_ACCESS_AGREEMENT),
+      );
     }
-  }, [status, router]);
+  }, [status, user, router]);
 
   const {
     register,
@@ -63,9 +66,15 @@ export default function LoginPage() {
     let apiUnreachable = false;
 
     try {
-      await api.post<{ user: AuthUser }>('/auth/login', values);
+      const result = await api.post<{ user: AuthUser }>('/auth/login', values);
       await refresh();
-      router.replace(ROUTES.DASHBOARD);
+      router.replace(
+        postAuthDestination(
+          result.user,
+          ROUTES.DASHBOARD,
+          ROUTES.SYSTEM_ACCESS_AGREEMENT,
+        ),
+      );
       return;
     } catch (err) {
       if (err instanceof ApiError) {
