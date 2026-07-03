@@ -1,6 +1,14 @@
 # Changelog
 
-## 2026-06-28
+## 2026-07-03
+
+### Added
+- `fetchAgentTenants` / `submitKeyCollectionReport` / `uploadKeyCollectionPhoto` raw fetchers in `lib/crossub-api/agent-client.ts` (backend routes live; api-contract publish still pending) + `AgentTenantAccount`, `AgentKeyCollectionReport(Input)` types; `AgentKeyCollection` extended with `photos` / `report`.
+- Handover report section on `KeyCollectionForm` (live properties only): checklist counts (keys / entry door / window-sliding / fobs / remotes / mailbox / others), tag number, proof-photo upload (base64 → R2 via `POST /agent/properties/{propertyId}/key-collection/photos/upload`, thumbnails shown), and submit via `POST …/key-collection/report`; a submitted report shows its date and can be resubmitted.
+- `recordFromServerTenant` + `mergeProvisionedTenantRecords` in `lib/provisioned-tenant-records.ts` — server rows are the source of truth for existence/status; device-local records contribute the password (never returned by the API) and rows the server can't attribute yet.
+
+### Changed
+- The Tenant accounts page (`app/tenants`) now hydrates from `GET /api/v1/agent/tenants` (agency-scoped, newest first) and merges with the device-local provisioned store, so the list survives a new device or cleared browser data. Falls back silently to local-only when the API is unreachable.
 
 ### Added
 - Agencies / clients screen — the final slice of the agent zero-mock plan (Phase D), taking the agent app fully off mock. New `app/agencies/page.tsx` (list — search + status `FilterChips` over the live agencies) and `app/agencies/[id]/page.tsx` (detail — client contact + its properties grouped from the live `properties` by `agencyId`, with occupied/vacant tallies), plus `components/agent/agency-list-card.tsx` (mirrors `property-list-card`; status badge by `AgencyStatus`). New `mapAgentAgencies` in `agent-mappers.ts`, `Agency` view-model + optional `agencyId` on `Property` in `lib/types.ts`, `AGENCY_STATUS` in `constants/api-enums.ts`, `AGENCIES` route + `agencyDetail()` in `constants/routes.ts`, and an Agencies entry in `MORE_NAV`. A small `AGENCIES` demo seed (and `agencyId` tags on the demo properties) keep offline mode coherent.

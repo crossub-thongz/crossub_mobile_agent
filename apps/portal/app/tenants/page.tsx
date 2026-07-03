@@ -2,16 +2,49 @@
 
 import Link from 'next/link';
 import { UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { PageIntro } from '@/components/agent/page-intro';
 import { ProvisionedTenantList } from '@/components/agent/provisioned-tenant-list';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { ROUTES, tenantNew } from '@/constants/routes';
+import { fetchAgentTenants } from '@/lib/crossub-api/agent-client';
+import {
+  mergeProvisionedTenantRecords,
+  recordFromServerTenant,
+  type ProvisionedTenantRecord,
+} from '@/lib/provisioned-tenant-records';
 import { useAgentStore } from '@/lib/store';
 
 export default function TenantsPage() {
   const provisionedTenants = useAgentStore((s) => s.provisionedTenants);
+
+  // Server list (`GET /agent/tenants`) is the source of truth; device-local
+  // records contribute passwords and rows the server can't attribute yet.
+  const [serverTenants, setServerTenants] = useState<ProvisionedTenantRecord[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetchAgentTenants()
+      .then((tenants) => {
+        if (active) setServerTenants(tenants.map(recordFromServerTenant));
+      })
+      .catch(() => {
+        if (active) setServerTenants(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const records = useMemo(
+    () =>
+      serverTenants
+        ? mergeProvisionedTenantRecords(provisionedTenants, serverTenants)
+        : provisionedTenants,
+    [provisionedTenants, serverTenants],
+  );
 
   return (
     <AgentShell title="Tenant accounts" backHref={ROUTES.LEASING} backLabel="Leasing">
@@ -28,13 +61,13 @@ export default function TenantsPage() {
         <section>
           <h2 className="mb-2 text-sm font-semibold">
             Created accounts
-            {provisionedTenants.length > 0 ? (
+            {records.length > 0 ? (
               <span className="text-muted-foreground ml-1.5 font-normal tabular-nums">
-                ({provisionedTenants.length})
+                ({records.length})
               </span>
             ) : null}
           </h2>
-          <ProvisionedTenantList records={provisionedTenants} showAddButton={false} />
+          <ProvisionedTenantList records={records} showAddButton={false} />
         </section>
       </div>
     </AgentShell>

@@ -169,11 +169,61 @@ export async function uploadDocument(
 }
 
 /** Key-collection DTOs — present on backend; awaiting api-contract publish. */
+export interface AgentKeyCollectionReport {
+  submittedAt: string | null;
+  tagNumber: string | null;
+  keysCount: number | null;
+  entryDoorCount: number | null;
+  windowSlidingCount: number | null;
+  fobsCount: number | null;
+  remoteControlCount: number | null;
+  mailboxCount: number | null;
+  othersCount: number | null;
+}
+
 export interface AgentKeyCollection {
   time: string | null;
   location: string | null;
   custody?: string | null;
   status?: string | null;
+  photos?: string[];
+  report?: AgentKeyCollectionReport | null;
+}
+
+/** Body for `POST /agent/properties/{propertyId}/key-collection/report`. */
+export interface AgentKeyCollectionReportInput {
+  photos?: string[];
+  tagNumber?: string;
+  keysCount?: number;
+  entryDoorCount?: number;
+  windowSlidingCount?: number;
+  fobsCount?: number;
+  remoteControlCount?: number;
+  mailboxCount?: number;
+  othersCount?: number;
+}
+
+/** Tenant login within the agent's book (backend `AgentTenantResponseDto`). */
+export interface AgentTenantAccount {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  role: string;
+  status: string;
+  createdAt: string;
+  propertyId: string | null;
+  propertyAddress: string | null;
+  applicationId: string | null;
+  applicationStatus: string | null;
+}
+
+interface PaginatedAgentTenants {
+  items: AgentTenantAccount[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
@@ -205,4 +255,44 @@ export async function setKeyCollection(
     method: 'PATCH',
     body: JSON.stringify(input),
   });
+}
+
+/**
+ * Submit the full key-collection handover report (checklist counts +
+ * proof-photo URLs) — `POST /agent/properties/{propertyId}/key-collection/report`.
+ */
+export async function submitKeyCollectionReport(
+  propertyId: string,
+  input: AgentKeyCollectionReportInput,
+): Promise<AgentKeyCollection> {
+  return agentFetch(`/agent/properties/${propertyId}/key-collection/report`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Upload a key-handover proof photo (base64 → R2), returns the public URL for
+ * inclusion in the report's `photos` —
+ * `POST /agent/properties/{propertyId}/key-collection/photos/upload`.
+ */
+export async function uploadKeyCollectionPhoto(
+  propertyId: string,
+  input: { fileName: string; mimeType: string; sizeBytes: number; contentBase64: string },
+): Promise<{ url: string }> {
+  return agentFetch(`/agent/properties/${propertyId}/key-collection/photos/upload`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Tenant logins within the agent's book — the read side of tenant
+ * provisioning (`GET /agent/tenants`). Newest first.
+ */
+export async function fetchAgentTenants(): Promise<AgentTenantAccount[]> {
+  const result = await agentFetch<PaginatedAgentTenants>(
+    '/agent/tenants?page=1&pageSize=100',
+  );
+  return result.items;
 }
