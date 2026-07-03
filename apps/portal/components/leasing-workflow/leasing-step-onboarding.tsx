@@ -162,6 +162,9 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
               onScheduled={(time, location) => {
                 store.setKeyCollection(id, time, location);
               }}
+              onKeyCollectionUpdated={(kc) => {
+                store.applyKeyCollectionFromApi(id, kc);
+              }}
             />
           ) : undefined
         }
@@ -176,6 +179,9 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         />
         {o.keyCollection.time && (
           <StepFact label="Time" value={formatDateTime(o.keyCollection.time)} className="mt-2" />
+        )}
+        {o.keyCollection.location && (
+          <StepFact label="Location" value={o.keyCollection.location} className="mt-2" />
         )}
       </StepCard>
 

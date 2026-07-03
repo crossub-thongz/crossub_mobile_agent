@@ -10,8 +10,10 @@ import {
   type LeasingAgentDecision,
   type LeasingLifecycleStep,
 } from '@/lib/leasing/constants';
+import { keyCollectionFromApi } from '@/lib/leasing/key-collection-sync';
 import { getLeasingDetailSeed } from '@/lib/leasing/seed';
 import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { AgentKeyCollection } from '@/lib/crossub-api/agent-client';
 
 type LeasingWorkflowStore = {
   details: Record<string, LeasingPropertyDetail>;
@@ -35,6 +37,8 @@ type LeasingWorkflowStore = {
   confirmContract: (id: string) => void;
   recordSigning: (id: string) => void;
   setKeyCollection: (id: string, time: string, location: string) => void;
+  /** Overlay key-collection state from `GET /agent/properties/:id/key-collection`. */
+  applyKeyCollectionFromApi: (id: string, kc: AgentKeyCollection) => void;
   scheduleIngoingInspection: (id: string, scheduledTime: string, assignee: string) => void;
   tenantConfirmIngoing: (id: string) => void;
   tenantApproveIngoingReport: (id: string) => void;
@@ -303,6 +307,22 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
             status: LEASING_ITEM_STATUS.DONE,
             time,
             location,
+          },
+        },
+      })),
+    }));
+  },
+
+  applyKeyCollectionFromApi(id, kc) {
+    const mapped = keyCollectionFromApi(kc);
+    set((s) => ({
+      details: updateDetail(s.details, id, (p) => ({
+        ...p,
+        onboarding: {
+          ...p.onboarding,
+          keyCollection: {
+            ...p.onboarding.keyCollection,
+            ...mapped,
           },
         },
       })),

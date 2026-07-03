@@ -11,6 +11,7 @@ import {
   setKeyCollection,
   submitKeyCollectionReport,
   uploadKeyCollectionPhoto,
+  type AgentKeyCollection,
   type AgentKeyCollectionReport,
 } from '@/lib/crossub-api/agent-client';
 import { fileToBase64, isUuid, MAX_UPLOAD_BYTES } from '@/lib/file-upload';
@@ -18,6 +19,7 @@ import { fileToBase64, isUuid, MAX_UPLOAD_BYTES } from '@/lib/file-upload';
 interface KeyCollectionFormProps {
   propertyId: string;
   onScheduled?: (time: string, location: string) => void;
+  onKeyCollectionUpdated?: (kc: AgentKeyCollection) => void;
 }
 
 const COUNT_FIELDS = [
@@ -33,7 +35,11 @@ const COUNT_FIELDS = [
 type CountKey = (typeof COUNT_FIELDS)[number]['key'];
 
 /** Bridges Agent → Tenant App (onboarding) → Inspector (ingoing job key panel). */
-export function KeyCollectionForm({ propertyId, onScheduled }: KeyCollectionFormProps) {
+export function KeyCollectionForm({
+  propertyId,
+  onScheduled,
+  onKeyCollectionUpdated,
+}: KeyCollectionFormProps) {
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('CROSSUB office');
   const [loading, setLoading] = useState(false);
@@ -55,27 +61,30 @@ export function KeyCollectionForm({ propertyId, onScheduled }: KeyCollectionForm
   const [uploading, setUploading] = useState(false);
   const [submittingReport, setSubmittingReport] = useState(false);
 
+  const applyFetched = (kc: AgentKeyCollection, notifyParent = false) => {
+    if (kc.time) setTime(kc.time.slice(0, 16));
+    if (kc.location) setLocation(kc.location);
+    if (kc.photos?.length) setPhotos(kc.photos);
+    if (kc.report) {
+      setReport(kc.report);
+      if (kc.report.tagNumber) setTagNumber(kc.report.tagNumber);
+      setCounts((prev) => {
+        const next = { ...prev };
+        for (const field of COUNT_FIELDS) {
+          const value = kc.report?.[field.key];
+          if (value != null) next[field.key] = String(value);
+        }
+        return next;
+      });
+    }
+    setLive(true);
+    if (notifyParent) onKeyCollectionUpdated?.(kc);
+  };
+
   useEffect(() => {
     if (!isUuid(propertyId)) return;
     void fetchKeyCollection(propertyId)
-      .then((kc) => {
-        if (kc.time) setTime(kc.time.slice(0, 16));
-        if (kc.location) setLocation(kc.location);
-        if (kc.photos?.length) setPhotos(kc.photos);
-        if (kc.report) {
-          setReport(kc.report);
-          if (kc.report.tagNumber) setTagNumber(kc.report.tagNumber);
-          setCounts((prev) => {
-            const next = { ...prev };
-            for (const field of COUNT_FIELDS) {
-              const value = kc.report?.[field.key];
-              if (value != null) next[field.key] = String(value);
-            }
-            return next;
-          });
-        }
-        setLive(true);
-      })
+      .then((kc) => applyFetched(kc))
       .catch(() => setLive(false));
   }, [propertyId]);
 
@@ -91,12 +100,13 @@ export function KeyCollectionForm({ propertyId, onScheduled }: KeyCollectionForm
     }
     setLoading(true);
     try {
-      await setKeyCollection(propertyId, {
+      const updated = await setKeyCollection(propertyId, {
         time: new Date(time).toISOString(),
         location: location.trim(),
       });
       toast.success('Key collection synced — Tenant App & Inspector updated');
       onScheduled?.(new Date(time).toISOString(), location);
+      applyFetched(updated, true);
     } catch {
       toast.error('Could not save key collection');
     } finally {
@@ -147,6 +157,7 @@ export function KeyCollectionForm({ propertyId, onScheduled }: KeyCollectionForm
       }
       const updated = await submitKeyCollectionReport(propertyId, body);
       setReport(updated.report ?? null);
+      onKeyCollectionUpdated?.(updated);
       toast.success('Key handover report submitted');
     } catch {
       toast.error('Could not submit the report');

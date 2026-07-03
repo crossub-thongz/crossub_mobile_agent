@@ -26,15 +26,22 @@ export default function TenantsPage() {
 
   useEffect(() => {
     let active = true;
-    void fetchAgentTenants()
-      .then((tenants) => {
-        if (active) setServerTenants(tenants.map(recordFromServerTenant));
-      })
-      .catch(() => {
-        if (active) setServerTenants(null);
-      });
+
+    const load = () => {
+      void fetchAgentTenants()
+        .then((tenants) => {
+          if (active) setServerTenants(tenants.map(recordFromServerTenant));
+        })
+        .catch(() => {
+          if (active) setServerTenants(null);
+        });
+    };
+
+    load();
+    window.addEventListener('focus', load);
     return () => {
       active = false;
+      window.removeEventListener('focus', load);
     };
   }, []);
 

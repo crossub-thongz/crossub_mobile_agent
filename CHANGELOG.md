@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-04
+
+### Changed
+- Leasing workflow hydrates key-collection state from `GET /agent/properties/{propertyId}/key-collection` on open (live properties), so the onboarding step card shows server time/location/status after refresh — not just the offline seed.
+- `KeyCollectionForm` pushes API responses back into the leasing store via `applyKeyCollectionFromApi` after save/report submit; location is shown on the step card.
+- Tenant accounts page refetches `GET /agent/tenants` on window focus so newly provisioned tenants appear when returning from the create flow.
+
 ## 2026-07-03
 
 ### Added
