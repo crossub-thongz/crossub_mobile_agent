@@ -148,7 +148,7 @@ export async function disconnectMailbox(mailboxId: string): Promise<void> {
     method: 'DELETE',
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseApiError(res));
 }
 
 /** Manually sync a linked mailbox (`POST /agent/mailboxes/{mailboxId}/sync`). */
@@ -157,7 +157,18 @@ export async function syncMailbox(mailboxId: string): Promise<void> {
     method: 'POST',
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseApiError(res));
+}
+
+/** Server-side Gmail/Yahoo OAuth readiness (`GET /agent/mailboxes/config`). */
+export interface AgentMailboxLinkConfig {
+  gmail: boolean;
+  yahoo: boolean;
+  encryptionKey: boolean;
+}
+
+export async function fetchMailboxLinkConfig(): Promise<AgentMailboxLinkConfig> {
+  return agentFetch<AgentMailboxLinkConfig>('/agent/mailboxes/config');
 }
 
 /** Reply in Message Center — CROSSUB or external Gmail/Yahoo thread. */
@@ -295,6 +306,17 @@ interface PaginatedAgentTenants {
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
 
+async function parseApiError(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { message?: string | string[] };
+    if (typeof body.message === 'string') return body.message;
+    if (Array.isArray(body.message)) return body.message.join(', ');
+  } catch {
+    // ignore non-JSON bodies
+  }
+  return `Request failed: ${res.status}`;
+}
+
 async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -304,7 +326,8 @@ async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   });
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseApiError(res));
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 

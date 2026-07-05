@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Building2,
   MessageSquare,
+  Phone,
   Plus,
   RotateCcw,
   Settings2,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { GiiAssistant } from '@/components/agent/gii-assistant';
+import { PhonePanel } from '@/components/agent/phone-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +28,7 @@ import {
 import { useAgentStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
-type DockPanel = 'communication' | 'quick' | 'gii' | null;
+type DockPanel = 'communication' | 'phone' | 'quick' | 'gii' | null;
 
 const DOCK_BUTTONS = [
   {
@@ -34,6 +36,13 @@ const DOCK_BUTTONS = [
     label: 'Messages',
     icon: MessageSquare,
     activeClass: 'border-primary/40 bg-primary/10 text-primary',
+  },
+  {
+    id: 'phone' as const,
+    label: 'Calls',
+    icon: Phone,
+    activeClass:
+      'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   },
   {
     id: 'quick' as const,
@@ -93,6 +102,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         onClose={closePanel}
         propertyId={propertyId}
       />
+      <PhoneDockSheet open={activePanel === 'phone'} onClose={closePanel} />
       <QuickCreateDockSheet
         open={activePanel === 'quick'}
         onClose={closePanel}
@@ -137,6 +147,26 @@ function UnreadBadge() {
     <span className="bg-destructive absolute -top-0.5 -right-0.5 flex size-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white">
       {unread > 9 ? '9+' : unread}
     </span>
+  );
+}
+
+function PhoneDockSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+      <div className="flex h-[min(72vh,560px)] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-2xl shadow-black/30 backdrop-blur-xl">
+        <div className="flex min-h-0 flex-1 flex-col p-4">
+          <PhonePanel variant="sheet" onClose={onClose} className="h-full" />
+        </div>
+      </div>
+    </div>
   );
 }
 

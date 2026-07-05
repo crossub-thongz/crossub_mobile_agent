@@ -9,6 +9,8 @@ import {
   Mail,
   MessageSquare,
   Monitor,
+  Phone,
+  PhoneCall,
   RefreshCw,
   Search,
   Send,
@@ -19,6 +21,7 @@ import { toast } from 'sonner';
 import { ContactDetails } from '@/components/agent/contact-details';
 import { MessageBody } from '@/components/agent/message-body';
 import { MessageCompose } from '@/components/agent/message-compose';
+import { PhonePanel } from '@/components/agent/phone-panel';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -34,13 +37,16 @@ import {
   connectGmail,
   connectYahoo,
   disconnectMailbox,
+  fetchMailboxLinkConfig,
   fetchMessageCenter,
   replyInMessageCenter,
   syncMailbox,
   type AgentLinkedMailbox,
+  type AgentMailboxLinkConfig,
 } from '@/lib/crossub-api/agent-client';
 import { mapAgentMessages } from '@/lib/crossub-api/agent-mappers';
 import { resolveAgentPortfolioId } from '@/lib/agent-scope';
+import { placePhoneCall } from '@/lib/phone';
 import {
   buildThreadMentionCandidates,
   extractMentions,
@@ -156,9 +162,42 @@ function ThreadDetailPanel({
             <h2 className="truncate text-base font-semibold">{thread.subject}</h2>
             <p className="text-muted-foreground text-xs">{thread.propertyAddress}</p>
           </div>
-          <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">
-            {channelLabel(thread.channel)}
-          </span>
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            {thread.tenantContact.phone &&
+              thread.tenantName.toLowerCase() !== 'vacant' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 px-2 text-xs"
+                  onClick={() => {
+                    placePhoneCall(thread.tenantContact.phone!);
+                    toast.success(`Calling ${thread.tenantName}…`);
+                  }}
+                >
+                  <PhoneCall className="size-3" />
+                  Tenant
+                </Button>
+              )}
+            {thread.homeOwnerContact.phone && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1 px-2 text-xs"
+                onClick={() => {
+                  placePhoneCall(thread.homeOwnerContact.phone!);
+                  toast.success(`Calling ${thread.homeOwnerName}…`);
+                }}
+              >
+                <PhoneCall className="size-3" />
+                Landlord
+              </Button>
+            )}
+            <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">
+              {channelLabel(thread.channel)}
+            </span>
+          </div>
         </div>
         <div className="mt-3 rounded-lg border bg-card p-3 text-xs">
           <ContactDetails
@@ -317,6 +356,9 @@ export function CommunicationsLogClient() {
   const [centerError, setCenterError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState<'GMAIL' | 'YAHOO' | null>(null);
   const [syncingMailboxId, setSyncingMailboxId] = useState<string | null>(null);
+  const [hubView, setHubView] = useState<'inbox' | 'calls'>('inbox');
+  const [mailboxLinkConfig, setMailboxLinkConfig] =
+    useState<AgentMailboxLinkConfig | null>(null);
 
   const loadMessageCenter = useCallback(
     async (mailboxId?: string | null) => {
@@ -330,7 +372,13 @@ export function CommunicationsLogClient() {
   );
 
   useEffect(() => {
-    if (status !== 'authed') return;
+    if (status !== 'authed' || !apiConnected) return;
+    void fetchMailboxLinkConfig()
+      .then(setMailboxLinkConfig)
+      .catch(() => setMailboxLinkConfig(null));
+  }, [status, apiConnected]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoadingCenter(true);
     setCenterError(null);
@@ -404,13 +452,31 @@ export function CommunicationsLogClient() {
       toast.info('Sign in to the live API to connect a mailbox');
       return;
     }
+    const ready =
+      provider === 'GMAIL'
+        ? mailboxLinkConfig?.gmail && mailboxLinkConfig?.encryptionKey
+        : mailboxLinkConfig?.yahoo && mailboxLinkConfig?.encryptionKey;
+    if (mailboxLinkConfig && !ready) {
+      toast.error(
+        `${providerLabel(provider)} is not configured on the API server. Add OAuth credentials to crossub_web/apps/api/.env and restart the API.`,
+        { duration: 8000 },
+      );
+      return;
+    }
     setConnecting(provider);
     const connect = provider === 'GMAIL' ? connectGmail : connectYahoo;
     void connect()
       .then(({ authorizationUrl }) => {
         window.location.href = authorizationUrl;
       })
-      .catch(() => toast.error(`Failed to start ${providerLabel(provider)} connect`))
+      .catch((err) =>
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : `Failed to start ${providerLabel(provider)} connect`,
+          { duration: 8000 },
+        ),
+      )
       .finally(() => setConnecting(null));
   };
 
@@ -473,13 +539,65 @@ export function CommunicationsLogClient() {
 
       <div className="hidden h-[calc(100dvh-3.5rem)] min-h-[480px] flex-col lg:flex lg:h-[100dvh]">
         <div className="shrink-0 border-b px-4 py-3">
-          <h1 className="text-lg font-semibold">Message Center</h1>
-          <p className="text-muted-foreground text-xs">
-            Connect Gmail or Yahoo to view and reply from your inbox alongside CROSSUB
-            correspondence.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-semibold">Message Center</h1>
+              <p className="text-muted-foreground text-xs">
+                Email, app messages, and calls — your communication hub for managed
+                properties.
+              </p>
+            </div>
+            <div className="bg-secondary/60 flex shrink-0 rounded-lg border p-0.5">
+              <button
+                type="button"
+                onClick={() => setHubView('inbox')}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition',
+                  hubView === 'inbox'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                Inbox
+              </button>
+              <button
+                type="button"
+                onClick={() => setHubView('calls')}
+                className={cn(
+                  'flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                  hubView === 'calls'
+                    ? 'bg-emerald-500/15 text-emerald-700 shadow-sm dark:text-emerald-300'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Phone className="size-3" />
+                Calls
+              </button>
+            </div>
+          </div>
 
+          {hubView === 'inbox' && (
           <div className="mt-3 space-y-2">
+            {apiConnected &&
+              mailboxLinkConfig &&
+              (!mailboxLinkConfig.gmail ||
+                !mailboxLinkConfig.yahoo ||
+                !mailboxLinkConfig.encryptionKey) && (
+                <div className="border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-100 rounded-lg border px-3 py-2 text-xs leading-relaxed">
+                  <p className="font-semibold">Email account connection — configure on the API server</p>
+                  <p className="mt-1 opacity-90">
+                    Gmail/Yahoo OAuth is not fully set up in{' '}
+                    <code className="text-[10px]">crossub_web/apps/api/.env</code>. Add{' '}
+                    <code className="text-[10px]">GOOGLE_MAIL_CLIENT_ID</code>,{' '}
+                    <code className="text-[10px]">GOOGLE_MAIL_CLIENT_SECRET</code>, and{' '}
+                    <code className="text-[10px]">MAILBOX_TOKEN_ENCRYPTION_KEY</code>, then
+                    restart the API. Register redirect URI:{' '}
+                    <code className="text-[10px]">
+                      http://localhost:3001/api/v1/agent/mailboxes/oauth/google/callback
+                    </code>
+                  </p>
+                </div>
+              )}
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
@@ -572,8 +690,9 @@ export function CommunicationsLogClient() {
               </div>
             )}
           </div>
+          )}
 
-          {user && (
+          {user && hubView === 'inbox' && (
             <p className="text-muted-foreground mt-2 text-[11px]">
               Signed in as {displayName(user)} — CROSSUB threads plus linked inbox mail
               for your managed properties.
@@ -581,6 +700,13 @@ export function CommunicationsLogClient() {
           )}
         </div>
 
+        {hubView === 'calls' ? (
+          <div className="flex min-h-0 flex-1 justify-center overflow-hidden p-6">
+            <div className="flex h-full w-full max-w-md flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+              <PhonePanel variant="embedded" className="h-full" />
+            </div>
+          </div>
+        ) : (
         <div className="flex min-h-0 flex-1">
           <aside className="border-border w-[220px] shrink-0 overflow-y-auto border-r p-3">
             <p className="text-muted-foreground mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide">
@@ -674,6 +800,7 @@ export function CommunicationsLogClient() {
             )}
           </div>
         </div>
+        )}
       </div>
     </>
   );
