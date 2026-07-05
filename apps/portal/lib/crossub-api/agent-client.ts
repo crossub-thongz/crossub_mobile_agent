@@ -104,6 +104,73 @@ export async function fetchMessageThreads(): Promise<AgentMessageThread[]> {
   return data;
 }
 
+/** Message Center — linked mailboxes + full correspondence (`GET /agent/message-center`). */
+export type AgentLinkedMailbox = {
+  id: string;
+  provider: 'GMAIL' | 'YAHOO';
+  email: string;
+  status: 'ACTIVE' | 'ERROR' | 'REVOKED';
+  lastSyncAt: string | null;
+  lastError: string | null;
+};
+
+export interface AgentMessageCenter {
+  linkedMailboxes: AgentLinkedMailbox[];
+  selectedMailboxId: string | null;
+  threads: AgentMessageThread[];
+}
+
+export async function fetchMessageCenter(
+  mailboxId?: string,
+): Promise<AgentMessageCenter> {
+  const q = mailboxId ? `?mailboxId=${encodeURIComponent(mailboxId)}` : '';
+  return agentFetch<AgentMessageCenter>(`/agent/message-center${q}`);
+}
+
+/** Gmail/Yahoo mailboxes linked to the signed-in agent (`GET /agent/mailboxes`). */
+export async function fetchMailboxes(): Promise<AgentLinkedMailbox[]> {
+  return agentFetch<AgentLinkedMailbox[]>('/agent/mailboxes');
+}
+
+/** Start Gmail OAuth (`POST /agent/mailboxes/google/connect`). */
+export async function connectGmail(): Promise<{ authorizationUrl: string }> {
+  return agentFetch('/agent/mailboxes/google/connect', { method: 'POST' });
+}
+
+/** Start Yahoo OAuth (`POST /agent/mailboxes/yahoo/connect`). */
+export async function connectYahoo(): Promise<{ authorizationUrl: string }> {
+  return agentFetch('/agent/mailboxes/yahoo/connect', { method: 'POST' });
+}
+
+/** Disconnect a linked mailbox (`DELETE /agent/mailboxes/{mailboxId}`). */
+export async function disconnectMailbox(mailboxId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/agent/mailboxes/${mailboxId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+}
+
+/** Manually sync a linked mailbox (`POST /agent/mailboxes/{mailboxId}/sync`). */
+export async function syncMailbox(mailboxId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/agent/mailboxes/${mailboxId}/sync`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+}
+
+/** Reply in Message Center — CROSSUB or external Gmail/Yahoo thread. */
+export async function replyInMessageCenter(
+  threadId: string,
+  body: string,
+): Promise<AgentMessageThread> {
+  return agentFetch<AgentMessageThread>(
+    `/agent/message-center/threads/${encodeURIComponent(threadId)}/reply`,
+    { method: 'POST', body: JSON.stringify({ body }) },
+  );
+}
+
 /** Append a reply to one thread (`POST /agent/messages/{threadId}/reply`). */
 export async function replyToThread(
   threadId: string,

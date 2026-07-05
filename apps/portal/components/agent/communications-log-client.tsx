@@ -1,13 +1,25 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Mail, MessageSquare, Monitor, Search, Send } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import {
+  AlertCircle,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Monitor,
+  RefreshCw,
+  Search,
+  Send,
+  Unlink,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ContactDetails } from '@/components/agent/contact-details';
 import { MessageBody } from '@/components/agent/message-body';
 import { MessageCompose } from '@/components/agent/message-compose';
+import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,11 +31,26 @@ import {
   threadCategory,
 } from '@/lib/communications-log';
 import {
+  connectGmail,
+  connectYahoo,
+  disconnectMailbox,
+  fetchMessageCenter,
+  replyInMessageCenter,
+  syncMailbox,
+  type AgentLinkedMailbox,
+} from '@/lib/crossub-api/agent-client';
+import { mapAgentMessages } from '@/lib/crossub-api/agent-mappers';
+import { resolveAgentPortfolioId } from '@/lib/agent-scope';
+import {
   buildThreadMentionCandidates,
   extractMentions,
 } from '@/lib/message-mentions';
 import type { MessageCategory, MessageThread } from '@/lib/types';
-import { cn, formatDateTime, formatRelative } from '@/lib/utils';
+import { cn, displayName, formatDateTime, formatRelative } from '@/lib/utils';
+
+function providerLabel(provider: AgentLinkedMailbox['provider']): string {
+  return provider === 'GMAIL' ? 'Gmail' : 'Yahoo';
+}
 
 function ThreadListItem({
   thread,
@@ -49,6 +76,8 @@ function ThreadListItem({
       <div className="mb-1 flex items-center gap-1.5">
         {thread.channel === 'email' ? (
           <Mail className="text-muted-foreground size-3.5 shrink-0" />
+        ) : thread.channel === 'mixed' ? (
+          <Mail className="text-muted-foreground size-3.5 shrink-0" />
         ) : (
           <MessageSquare className="text-muted-foreground size-3.5 shrink-0" />
         )}
@@ -69,8 +98,15 @@ function ThreadListItem({
   );
 }
 
-function ThreadDetailPanel({ thread }: { thread: MessageThread }) {
-  const { sendMessage } = useAgentData();
+function ThreadDetailPanel({
+  thread,
+  onReply,
+  canReply,
+}: {
+  thread: MessageThread;
+  onReply: (body: string, mentions?: ReturnType<typeof extractMentions>) => void;
+  canReply: boolean;
+}) {
   const [reply, setReply] = useState('');
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const messageCount = thread.messages.length;
@@ -107,7 +143,7 @@ function ThreadDetailPanel({ thread }: { thread: MessageThread }) {
     const text = reply.trim();
     if (!text) return;
     const mentions = extractMentions(text, mentionCandidates);
-    sendMessage(thread.id, text, mentions);
+    onReply(text, mentions);
     setReply('');
     toast.success('Message sent');
   };
@@ -174,19 +210,91 @@ function ThreadDetailPanel({ thread }: { thread: MessageThread }) {
         })}
       </div>
 
-      <div className="shrink-0 border-t p-4">
-        <MessageCompose
-          value={reply}
-          onChange={setReply}
-          onSubmit={handleSend}
-          homeOwnerName={thread.homeOwnerName}
-          tenantName={thread.tenantName}
-          placeholder="Reply to thread…"
-          rows={3}
-        />
-        <Button className="mt-2 w-full" onClick={handleSend} disabled={!reply.trim()}>
-          <Send className="mr-2 size-4" />
-          Send
+      {canReply ? (
+        <div className="shrink-0 border-t p-4">
+          <MessageCompose
+            value={reply}
+            onChange={setReply}
+            onSubmit={handleSend}
+            homeOwnerName={thread.homeOwnerName}
+            tenantName={thread.tenantName}
+            placeholder="Reply to thread…"
+            rows={3}
+          />
+          <Button className="mt-2 w-full" onClick={handleSend} disabled={!reply.trim()}>
+            <Send className="mr-2 size-4" />
+            Send
+          </Button>
+        </div>
+      ) : (
+        <div className="text-muted-foreground shrink-0 border-t px-4 py-3 text-center text-xs">
+          Archived email threads are read-only in the app.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LinkedMailboxRow({
+  mailbox,
+  syncing,
+  onSync,
+  onDisconnect,
+}: {
+  mailbox: AgentLinkedMailbox;
+  syncing: boolean;
+  onSync: () => void;
+  onDisconnect: () => void;
+}) {
+  const hasError = mailbox.status === 'ERROR' || Boolean(mailbox.lastError);
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-2 rounded-lg border px-3 py-2 text-sm',
+        hasError ? 'border-destructive/40 bg-destructive/5' : 'border-border bg-card',
+      )}
+    >
+      <Mail className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{mailbox.email}</p>
+        <p className="text-muted-foreground text-[10px]">
+          {providerLabel(mailbox.provider)}
+          {mailbox.lastSyncAt
+            ? ` · synced ${formatRelative(mailbox.lastSyncAt)}`
+            : ' · not synced yet'}
+        </p>
+        {mailbox.lastError && (
+          <p className="text-destructive mt-0.5 flex items-center gap-1 text-[10px]">
+            <AlertCircle className="size-3 shrink-0" />
+            {mailbox.lastError}
+          </p>
+        )}
+      </div>
+      <div className="flex shrink-0 gap-1">
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="size-7"
+          disabled={syncing}
+          onClick={onSync}
+          title="Sync now"
+        >
+          {syncing ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="size-3.5" />
+          )}
+        </Button>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="text-muted-foreground hover:text-destructive size-7"
+          onClick={onDisconnect}
+          title="Disconnect"
+        >
+          <Unlink className="size-3.5" />
         </Button>
       </div>
     </div>
@@ -194,10 +302,66 @@ function ThreadDetailPanel({ thread }: { thread: MessageThread }) {
 }
 
 export function CommunicationsLogClient() {
-  const { messages } = useAgentData();
+  const { user, status } = useAuth();
+  const searchParams = useSearchParams();
+  const { messages: fallbackMessages, properties, apiConnected, refresh } = useAgentData();
+  const agentPortfolioId = resolveAgentPortfolioId(user);
+
   const [module, setModule] = useState<MessageCategory | 'all'>('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [linkedMailboxes, setLinkedMailboxes] = useState<AgentLinkedMailbox[]>([]);
+  const [selectedMailboxId, setSelectedMailboxId] = useState<string | null>(null);
+  const [centerThreads, setCenterThreads] = useState<MessageThread[] | null>(null);
+  const [loadingCenter, setLoadingCenter] = useState(false);
+  const [centerError, setCenterError] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState<'GMAIL' | 'YAHOO' | null>(null);
+  const [syncingMailboxId, setSyncingMailboxId] = useState<string | null>(null);
+
+  const loadMessageCenter = useCallback(
+    async (mailboxId?: string | null) => {
+      const data = await fetchMessageCenter(mailboxId ?? undefined);
+      setLinkedMailboxes(data.linkedMailboxes);
+      setSelectedMailboxId(data.selectedMailboxId);
+      setCenterThreads(mapAgentMessages(data.threads, properties, agentPortfolioId));
+      return data;
+    },
+    [properties, agentPortfolioId],
+  );
+
+  useEffect(() => {
+    if (status !== 'authed') return;
+    let cancelled = false;
+    setLoadingCenter(true);
+    setCenterError(null);
+    void loadMessageCenter(selectedMailboxId)
+      .catch((err) => {
+        if (cancelled) return;
+        setCenterThreads(null);
+        setCenterError(
+          err instanceof Error ? err.message : 'Unable to load Message Center',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCenter(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [status, apiConnected, loadMessageCenter, selectedMailboxId]);
+
+  useEffect(() => {
+    const connected = searchParams.get('mailboxConnected');
+    if (connected !== 'gmail' && connected !== 'yahoo') return;
+    const label = connected === 'gmail' ? 'Gmail' : 'Yahoo';
+    toast.success(`${label} mailbox connected`);
+    window.history.replaceState({}, '', ROUTES.COMMUNICATIONS);
+    void loadMessageCenter(selectedMailboxId).catch(() => {
+      toast.error('Failed to refresh Message Center');
+    });
+  }, [searchParams, loadMessageCenter, selectedMailboxId]);
+
+  const messages = centerThreads ?? fallbackMessages;
 
   const filtered = useMemo(() => {
     let items = filterThreadsByModule(messages, module);
@@ -235,6 +399,59 @@ export function CommunicationsLogClient() {
     return counts;
   }, [messages]);
 
+  const handleConnect = (provider: 'GMAIL' | 'YAHOO') => {
+    if (!apiConnected) {
+      toast.info('Sign in to the live API to connect a mailbox');
+      return;
+    }
+    setConnecting(provider);
+    const connect = provider === 'GMAIL' ? connectGmail : connectYahoo;
+    void connect()
+      .then(({ authorizationUrl }) => {
+        window.location.href = authorizationUrl;
+      })
+      .catch(() => toast.error(`Failed to start ${providerLabel(provider)} connect`))
+      .finally(() => setConnecting(null));
+  };
+
+  const handleSync = (mailboxId: string) => {
+    setSyncingMailboxId(mailboxId);
+    void syncMailbox(mailboxId)
+      .then(() => loadMessageCenter(selectedMailboxId))
+      .then(() => toast.success('Mailbox synced'))
+      .catch(() => toast.error('Sync failed'))
+      .finally(() => setSyncingMailboxId(null));
+  };
+
+  const handleDisconnect = (mailboxId: string) => {
+    void disconnectMailbox(mailboxId)
+      .then(() => {
+        if (selectedMailboxId === mailboxId) setSelectedMailboxId(null);
+        return loadMessageCenter(
+          selectedMailboxId === mailboxId ? null : selectedMailboxId,
+        );
+      })
+      .then(() => toast.success('Mailbox disconnected'))
+      .catch(() => toast.error('Failed to disconnect mailbox'));
+  };
+
+  const handleReply = (threadId: string, body: string) => {
+    const thread = messages.find((m) => m.id === threadId);
+    if (!thread || thread.id.startsWith('email-archive:')) return;
+
+    if (apiConnected && centerThreads) {
+      void replyInMessageCenter(threadId, body)
+        .then(() => loadMessageCenter(selectedMailboxId))
+        .then(() => refresh())
+        .catch(() => toast.error('Failed to send message'));
+      return;
+    }
+
+    toast.info('Sign in to the live API to send replies');
+  };
+
+  const canReplyToThread = (threadId: string) => !threadId.startsWith('email-archive:');
+
   return (
     <>
       <div className="lg:hidden">
@@ -258,14 +475,110 @@ export function CommunicationsLogClient() {
         <div className="shrink-0 border-b px-4 py-3">
           <h1 className="text-lg font-semibold">Message Center</h1>
           <p className="text-muted-foreground text-xs">
-            Connect email accounts, search, and manage all tenant correspondence in one place.
+            Connect Gmail or Yahoo to view and reply from your inbox alongside CROSSUB
+            correspondence.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => toast.info('Email account connection — configure in crossub_web settings')}>
-              <Mail className="mr-1.5 size-3.5" />
-              Connect email account
-            </Button>
+
+          <div className="mt-3 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={connecting === 'GMAIL'}
+                onClick={() => handleConnect('GMAIL')}
+              >
+                {connecting === 'GMAIL' ? (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : (
+                  <Mail className="mr-1.5 size-3.5" />
+                )}
+                Connect Gmail
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={connecting === 'YAHOO'}
+                onClick={() => handleConnect('YAHOO')}
+              >
+                {connecting === 'YAHOO' ? (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : (
+                  <Mail className="mr-1.5 size-3.5" />
+                )}
+                Connect Yahoo
+              </Button>
+              {loadingCenter && (
+                <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Loading…
+                </span>
+              )}
+              {centerError && !loadingCenter && (
+                <span className="text-destructive text-xs">{centerError}</span>
+              )}
+            </div>
+
+            {linkedMailboxes.length > 0 && (
+              <div className="space-y-1.5">
+                {linkedMailboxes.map((mb) => (
+                  <LinkedMailboxRow
+                    key={mb.id}
+                    mailbox={mb}
+                    syncing={syncingMailboxId === mb.id}
+                    onSync={() => handleSync(mb.id)}
+                    onDisconnect={() => handleDisconnect(mb.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {linkedMailboxes.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  Inbox filter
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMailboxId(null)}
+                    className={cn(
+                      'rounded-full px-2.5 py-1 text-xs transition',
+                      selectedMailboxId === null
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground hover:bg-secondary/80',
+                    )}
+                  >
+                    All
+                  </button>
+                  {linkedMailboxes.map((mb) => (
+                    <button
+                      key={mb.id}
+                      type="button"
+                      onClick={() => setSelectedMailboxId(mb.id)}
+                      className={cn(
+                        'max-w-[200px] truncate rounded-full px-2.5 py-1 text-xs transition',
+                        selectedMailboxId === mb.id
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-secondary text-muted-foreground hover:bg-secondary/80',
+                      )}
+                      title={mb.email}
+                    >
+                      {providerLabel(mb.provider)}: {mb.email}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
+          {user && (
+            <p className="text-muted-foreground mt-2 text-[11px]">
+              Signed in as {displayName(user)} — CROSSUB threads plus linked inbox mail
+              for your managed properties.
+            </p>
+          )}
         </div>
 
         <div className="flex min-h-0 flex-1">
@@ -329,7 +642,9 @@ export function CommunicationsLogClient() {
             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
               {filtered.length === 0 ? (
                 <p className="text-muted-foreground px-2 py-6 text-center text-xs">
-                  No communications for this module.
+                  {loadingCenter
+                    ? 'Loading correspondence…'
+                    : 'No communications for this module.'}
                 </p>
               ) : (
                 filtered.map((thread) => (
@@ -346,7 +661,12 @@ export function CommunicationsLogClient() {
 
           <div className="bg-background flex min-w-0 flex-1 flex-col">
             {selected ? (
-              <ThreadDetailPanel key={selected.id} thread={selected} />
+              <ThreadDetailPanel
+                key={selected.id}
+                thread={selected}
+                canReply={canReplyToThread(selected.id)}
+                onReply={(body) => handleReply(selected.id, body)}
+              />
             ) : (
               <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
                 Select a thread to view the full history
