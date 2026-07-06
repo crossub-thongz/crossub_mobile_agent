@@ -20,6 +20,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import { useAuth } from '@/components/providers/auth-provider';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -27,10 +28,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PASSWORD_MAX, PASSWORD_MIN } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
+import {
+  registerAgentAccount,
+  registerAgentErrorMessage,
+} from '@/lib/agent-registration';
 import { registerLocalAccount } from '@/lib/local-auth';
 import { buildProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
+import { postAuthDestination } from '@/lib/system-access-agreement';
 import { useAgentStore } from '@/lib/store';
 import { provisionTenantAccount } from '@/lib/tenant-provisioning';
+import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const credentialsSchema = z.object({
@@ -45,6 +52,7 @@ const agentSchema = credentialsSchema.extend({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   agencyName: z.string().min(1, 'Agency name is required'),
+  agencyCompany: z.string().optional(),
   phone: z.string().optional(),
 });
 
@@ -60,6 +68,7 @@ type RegisterMode = 'agent' | 'tenant';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [mode, setMode] = useState<RegisterMode>('agent');
   const [showPassword, setShowPassword] = useState(false);
   const [tenantCredentials, setTenantCredentials] = useState<TenantValues | null>(null);
@@ -72,6 +81,7 @@ export default function RegisterPage() {
       firstName: '',
       lastName: '',
       agencyName: '',
+      agencyCompany: '',
       phone: '',
     },
   });
@@ -88,21 +98,68 @@ export default function RegisterPage() {
   });
 
   const onAgentRegister = async (values: AgentValues) => {
+    let apiUnreachable = false;
+
     try {
-      registerLocalAccount({
+      const user = await registerAgentAccount({
         email: values.email,
         password: values.password,
         firstName: values.firstName,
         lastName: values.lastName,
         agencyName: values.agencyName,
+        agencyCompany: values.agencyCompany,
         phone: values.phone,
       });
-      toast.success('Agent account created — you are signed in.');
-      router.replace(ROUTES.DASHBOARD);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'Registration failed.';
-      toast.error(message);
+      await refresh();
+      toast.success(
+        'Agent account created — your agency is in crossub_web Clients and you are signed in.',
+      );
+      router.replace(
+        postAuthDestination(user, ROUTES.DASHBOARD, ROUTES.SYSTEM_ACCESS_AGREEMENT),
+      );
+      return;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          toast.error(registerAgentErrorMessage(err));
+          return;
+        }
+        if (err.status >= 500 || err.status === 0) {
+          apiUnreachable = true;
+        } else {
+          toast.error(registerAgentErrorMessage(err));
+          return;
+        }
+      } else {
+        apiUnreachable = true;
+      }
     }
+
+    if (apiUnreachable) {
+      try {
+        registerLocalAccount({
+          email: values.email,
+          password: values.password,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          agencyName: values.agencyName,
+          agencyCompany: values.agencyCompany,
+          phone: values.phone,
+        });
+        await refresh();
+        toast.warning(
+          'Signed in offline only — start the API (pnpm dev:api) to sync your agency to crossub_web.',
+        );
+        router.replace(ROUTES.DASHBOARD);
+        return;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Registration failed.';
+        toast.error(message);
+        return;
+      }
+    }
+
+    toast.error('Registration failed.');
   };
 
   const onTenantRegister = async (values: TenantValues) => {
@@ -222,8 +279,8 @@ export default function RegisterPage() {
         {mode === 'agent' ? (
           <form onSubmit={agentForm.handleSubmit(onAgentRegister)} className="space-y-4">
             <p className="text-muted-foreground text-sm">
-              Register as a listing agent or external partner. Use the details provided by the
-              Leasing Team.
+              Register as a listing agent. Your agency name and company are saved to crossub_web
+              Clients; properties you add later use the same registry database.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -245,14 +302,33 @@ export default function RegisterPage() {
                 )}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="agencyName">Agency name</Label>
-              <Input id="agencyName" placeholder="Your agency" {...agentForm.register('agencyName')} />
-              {agentForm.formState.errors.agencyName && (
-                <p className="text-xs text-destructive">
-                  {agentForm.formState.errors.agencyName.message}
-                </p>
-              )}
+            <div className="rounded-lg border border-border/60 bg-secondary/20 p-3">
+              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Agency details
+              </p>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="agencyName">Agency name</Label>
+                  <Input
+                    id="agencyName"
+                    placeholder="e.g. Skyline Realty"
+                    {...agentForm.register('agencyName')}
+                  />
+                  {agentForm.formState.errors.agencyName && (
+                    <p className="text-xs text-destructive">
+                      {agentForm.formState.errors.agencyName.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agencyCompany">Company</Label>
+                  <Input
+                    id="agencyCompany"
+                    placeholder="e.g. Skyline Realty Pty Ltd"
+                    {...agentForm.register('agencyCompany')}
+                  />
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email (username)</Label>

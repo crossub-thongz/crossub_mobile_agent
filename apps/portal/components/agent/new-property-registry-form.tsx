@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,8 @@ function FormField({
 }
 
 export interface NewPropertyRegistryValues {
+  agencyName: string;
+  agencyCompany: string;
   address: string;
   suburb: string;
   state: AustralianStateKey | '';
@@ -85,7 +87,10 @@ export function NewPropertyRegistryForm({
   submitting: boolean;
 }) {
   const { primaryAgency } = useAgentData();
+  const agencyLocked = !!primaryAgency;
   const [form, setForm] = useState<NewPropertyRegistryValues>({
+    agencyName: primaryAgency?.name ?? '',
+    agencyCompany: primaryAgency?.company ?? '',
     address: '',
     suburb: '',
     state: '',
@@ -106,19 +111,25 @@ export function NewPropertyRegistryForm({
   const set = <K extends keyof NewPropertyRegistryValues>(key: K, value: NewPropertyRegistryValues[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  useEffect(() => {
+    if (!primaryAgency) return;
+    setForm((f) => ({
+      ...f,
+      agencyName: primaryAgency.name,
+      agencyCompany: primaryAgency.company ?? '',
+    }));
+  }, [primaryAgency]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    void onSubmit(form);
+    void onSubmit({
+      ...form,
+      agencyName: agencyLocked ? (primaryAgency?.name ?? form.agencyName) : form.agencyName,
+      agencyCompany: agencyLocked
+        ? (primaryAgency?.company ?? form.agencyCompany)
+        : form.agencyCompany,
+    });
   };
-
-  if (!primaryAgency) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        No client agency is assigned to your profile yet. Contact your administrator to assign
-        an agency before registering properties.
-      </p>
-    );
-  }
 
   return (
     <div className="space-y-3">
@@ -127,9 +138,42 @@ export function NewPropertyRegistryForm({
         maintenance, inspections, and accounting.
       </p>
 
-      <FormField label="Managing agency">
-        <Input value={primaryAgency.name} readOnly disabled className="bg-muted/40" />
-      </FormField>
+      <div className="rounded-lg border border-border/60 bg-secondary/20 p-3">
+        <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Agency details
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField label="Agency name" required>
+            <Input
+              value={agencyLocked ? (primaryAgency?.name ?? '') : form.agencyName}
+              onChange={(e) => set('agencyName', e.target.value)}
+              readOnly={agencyLocked}
+              disabled={agencyLocked}
+              className={agencyLocked ? 'bg-muted/40' : undefined}
+              placeholder="e.g. Skyline Realty"
+            />
+          </FormField>
+          <FormField label="Company">
+            <Input
+              value={agencyLocked ? (primaryAgency?.company ?? '') : form.agencyCompany}
+              onChange={(e) => set('agencyCompany', e.target.value)}
+              readOnly={agencyLocked}
+              disabled={agencyLocked}
+              className={agencyLocked ? 'bg-muted/40' : undefined}
+              placeholder="e.g. Skyline Realty Pty Ltd"
+            />
+          </FormField>
+        </div>
+        {agencyLocked ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            From your profile — shown in crossub_web Clients under this agency.
+          </p>
+        ) : (
+          <p className="text-muted-foreground mt-2 text-xs">
+            Onboards your client agency in crossub_web before the property is registered.
+          </p>
+        )}
+      </div>
 
       <FormField label="State / territory" required>
         <select

@@ -24,6 +24,8 @@ export type PropertyIntakeMode = 'new' | 'transfer_in';
 export interface NewPropertyInput {
   intakeMode: PropertyIntakeMode;
   agencyId?: string;
+  agencyName?: string;
+  agencyCompany?: string;
   address: string;
   suburb: string;
   state?: string;

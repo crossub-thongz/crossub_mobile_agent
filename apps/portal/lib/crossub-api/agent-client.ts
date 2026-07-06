@@ -80,6 +80,22 @@ export async function createProperty(
   });
 }
 
+/** Onboard a client agency (`POST /api/v1/agent/agencies`). */
+export type CreateAgentAgencyInput = {
+  name: string;
+  company?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+};
+
+export async function createAgency(body: CreateAgentAgencyInput): Promise<AgentAgency> {
+  return agentFetch<AgentAgency>('/agent/agencies', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 /** One property by id (`GET /api/v1/agent/properties/{propertyId}`). */
 export async function fetchProperty(propertyId: string): Promise<AgentProperty> {
   const { data, error } = await crossub.GET('/agent/properties/{propertyId}', {

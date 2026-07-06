@@ -13,6 +13,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import {
   approveMaintenance as apiApproveMaintenance,
   createProperty as apiCreateProperty,
+  createAgency as apiCreateAgency,
   createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
   fetchAgencies,
@@ -639,6 +640,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const addProperty = useCallback(
     async (input: import('@/lib/store').NewPropertyInput): Promise<Property> => {
       if (apiConnected && input.intakeMode === 'new') {
+        if (!apiAgencies?.length && input.agencyName?.trim()) {
+          await apiCreateAgency({
+            name: input.agencyName.trim(),
+            company: input.agencyCompany?.trim() || undefined,
+          });
+          await refresh();
+        }
         const created = await apiCreateProperty({
           address: input.address.trim(),
           suburb: input.suburb.trim() || undefined,
@@ -664,7 +672,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       }
       return storeAddProperty(input, agentPortfolioId);
     },
-    [apiConnected, refresh, storeAddProperty, agentPortfolioId],
+    [apiConnected, apiAgencies, refresh, storeAddProperty, agentPortfolioId],
   );
 
   const addOpenInspection = useCallback(

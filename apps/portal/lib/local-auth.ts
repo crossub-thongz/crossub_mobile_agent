@@ -13,6 +13,7 @@ export interface LocalAccount {
   firstName: string;
   lastName: string;
   agencyName?: string;
+  agencyCompany?: string;
   phone?: string;
   createdAt: string;
 }
@@ -23,6 +24,7 @@ export interface RegisterInput {
   firstName: string;
   lastName: string;
   agencyName?: string;
+  agencyCompany?: string;
   phone?: string;
 }
 
@@ -95,6 +97,7 @@ export function registerLocalAccount(input: RegisterInput): AuthUser {
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
     agencyName: input.agencyName?.trim(),
+    agencyCompany: input.agencyCompany?.trim(),
     phone: input.phone?.trim(),
     createdAt: new Date().toISOString(),
   };

@@ -202,11 +202,17 @@ export default function AddPropertyPage() {
       toast.error('Select the property state or territory');
       return;
     }
+    if (!values.agencyName.trim()) {
+      toast.error('Agency name is required');
+      return;
+    }
 
     setSubmitting(true);
     try {
       const property = await addProperty({
         intakeMode: 'new',
+        agencyName: values.agencyName.trim(),
+        agencyCompany: values.agencyCompany.trim() || undefined,
         address,
         suburb: values.suburb.trim(),
         state: values.state,
