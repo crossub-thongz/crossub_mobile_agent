@@ -51,26 +51,11 @@ import {
   resolveAgentPortfolioId,
   type AgentPortfolioId,
 } from '@/lib/agent-scope';
+import { getLocalSessionAccount } from '@/lib/local-auth';
 import {
   applyTenantSelectionDecision,
   tenantSelectionDecisionKey,
 } from '@/lib/tenant-selection';
-import {
-  ACCOUNTING,
-  AGENCIES as DEMO_AGENCIES,
-  DASHBOARD_ITEMS,
-  DOCUMENTS,
-  INSPECTIONS,
-  LEASING_RECORDS,
-  MAINTENANCE as DEMO_MAINTENANCE,
-  MESSAGE_THREADS,
-  NOTIFICATIONS as DEMO_NOTIFICATIONS,
-  PROPERTIES,
-  RENT_REVIEWS,
-  TENANT_SELECTIONS,
-  TRIBUNAL_CASES,
-  VACATING,
-} from '@/lib/mock-data';
 import { buildDashboardKpis } from '@/lib/dashboard-kpis';
 import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-actions';
@@ -244,23 +229,21 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   // The live agent facade: properties come pre-mapped (the mapping needs the portfolio
   // id); the operational portfolio is held raw and mapped per-domain in the memos below.
-  // Both null = not loaded / failed → every domain falls back to its demo seed (the app
-  // never blanks). They are fetched together so real properties + real domains stay
+  // Both null = not loaded / failed → domains render empty until the API responds.
+  // They are fetched together so real properties + real domains stay
   // coherently keyed by the same real property ids.
   const [apiProperties, setApiProperties] = useState<Property[] | null>(null);
   const [portfolio, setPortfolio] = useState<AgentPortfolio | null>(null);
-  // Live message threads (mapped). null = not loaded / failed → the messages memo falls
-  // back to the demo + optimistic store layer (the app never blanks). Loaded independently
+  // Live message threads (mapped). null = not loaded / failed → optimistic store only.
   // of the portfolio so a messaging hiccup never blanks the rest.
   const [apiMessages, setApiMessages] = useState<MessageThread[] | null>(null);
-  // Live notifications (mapped). null = not loaded / failed → falls back to the demo seed.
+  // Live notifications (mapped). null = not loaded / failed → empty list.
   const [apiNotifications, setApiNotifications] = useState<AgentNotification[] | null>(
     null,
   );
-  // Live documents (aggregated + uploaded, mapped). null = not loaded / failed → demo seed.
+  // Live documents (aggregated + uploaded, mapped). null = not loaded / failed → uploads only.
   const [apiDocuments, setApiDocuments] = useState<AgentDocument[] | null>(null);
-  // Live client agencies (mapped). null = not loaded / failed → the demo seed (filtered to
-  // the agencies referenced by the visible properties). Loaded with the other side domains.
+  // Live client agencies (mapped). null = not loaded / failed → empty list.
   const [apiAgencies, setApiAgencies] = useState<Agency[] | null>(null);
   // localThreadId → server thread id, populated when an optimistic thread is persisted via
   // createThread. Lets the messages memo promote the local thread (keeping its id so the
@@ -288,7 +271,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setPortfolio(port);
       setApiConnected(true);
       // Messages + notifications + documents + agencies load after the portfolio; each
-      // degrades to its demo seed independently (one hiccup never blanks the others).
+      // domain degrades independently (one hiccup never blanks the others).
       const [threadsRes, notifsRes, docsRes, agenciesRes] = await Promise.allSettled([
         fetchMessageThreads(),
         fetchNotifications(),
@@ -324,7 +307,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiError(
         err instanceof Error
           ? err.message
-          : 'Unable to reach CROSSUB API — using demo data',
+          : 'Unable to reach CROSSUB API',
       );
     } finally {
       setLoading(false);
@@ -358,14 +341,15 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [refresh, status]);
 
   const properties = useMemo(() => {
-    const base =
-      apiProperties ??
-      PROPERTIES.filter((p) => p.assignedAgentId === agentPortfolioId);
-    const added = addedProperties.filter(
-      (p) => p.assignedAgentId === agentPortfolioId,
-    );
-    return [...added, ...base];
-  }, [apiProperties, agentPortfolioId, addedProperties]);
+    const scoped = (list: Property[]) =>
+      list.filter((p) => p.assignedAgentId === agentPortfolioId);
+
+    if (apiConnected) {
+      return scoped(apiProperties ?? []);
+    }
+
+    return scoped(addedProperties);
+  }, [apiConnected, apiProperties, agentPortfolioId, addedProperties]);
 
   const propertyIds = useMemo(
     () => new Set(properties.map((p) => p.id)),
@@ -373,11 +357,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const agencies = useMemo<Agency[]>(() => {
-    // Live agencies (already agent-scoped) when loaded; else the demo seed filtered to the
-    // agencies referenced by the visible (agent-scoped) demo properties — keeps offline coherent.
-    const base =
-      apiAgencies ??
-      DEMO_AGENCIES.filter((a) => properties.some((p) => p.agencyId === a.id));
+    const base = apiAgencies ?? [];
     // propertyCount always reflects the live properties grouped by agencyId (no extra fetch).
     const counts = new Map<string, number>();
     for (const p of properties) {
@@ -394,17 +374,29 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       const propertyCount = properties.filter((p) => p.agencyId === first.id).length;
       return { ...first, propertyCount };
     }
-    const demo = DEMO_AGENCIES.filter((a) => properties.some((p) => p.agencyId === a.id));
-    return demo[0] ?? agencies[0] ?? null;
-  }, [apiAgencies, properties, agencies]);
+    if (apiConnected) {
+      return null;
+    }
+    const local = getLocalSessionAccount();
+    if (local?.agencyName?.trim()) {
+      return {
+        id: `local-${local.id}`,
+        name: local.agencyName.trim(),
+        status: 'ONBOARDING',
+        company: local.agencyCompany?.trim() || undefined,
+        contactName: `${local.firstName} ${local.lastName}`.trim(),
+        contactEmail: local.email,
+        contactPhone: local.phone,
+        propertyCount: properties.length,
+      };
+    }
+    return null;
+  }, [apiAgencies, apiConnected, properties]);
 
   const maintenanceAll = useMemo(() => {
     if (portfolio) return mapAgentMaintenance(portfolio.maintenance);
-    return filterByPropertyIds(
-      DEMO_MAINTENANCE.map((m) => ({ ...m, source: 'demo' as const })),
-      propertyIds,
-    );
-  }, [portfolio, propertyIds]);
+    return [];
+  }, [portfolio]);
 
   const maintenanceFromApi = useMemo<AgentApiMaintenanceRef[]>(
     () =>
@@ -433,33 +425,23 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [portfolio]);
 
   const inspections = useMemo(() => {
-    const base = portfolio
-      ? mapAgentInspections(portfolio.inspections)
-      : filterByPropertyIds(INSPECTIONS, propertyIds);
+    const base = portfolio ? mapAgentInspections(portfolio.inspections) : [];
     const added = filterByPropertyIds(addedInspections, propertyIds);
     return [...added, ...base];
   }, [portfolio, propertyIds, addedInspections]);
 
   const rentReviews = useMemo(
-    () =>
-      portfolio
-        ? mapAgentRentReviews(portfolio.rentReviews)
-        : filterByPropertyIds(RENT_REVIEWS, propertyIds),
-    [portfolio, propertyIds],
+    () => (portfolio ? mapAgentRentReviews(portfolio.rentReviews) : []),
+    [portfolio],
   );
 
   const vacating = useMemo(
-    () =>
-      portfolio
-        ? mapAgentVacating(portfolio.vacating)
-        : filterByPropertyIds(VACATING, propertyIds),
-    [portfolio, propertyIds],
+    () => (portfolio ? mapAgentVacating(portfolio.vacating) : []),
+    [portfolio],
   );
 
   const tenantSelections = useMemo(() => {
-    const base = portfolio
-      ? mapAgentTenantSelections(portfolio.tenantSelections)
-      : filterByPropertyIds(TENANT_SELECTIONS, propertyIds);
+    const base = portfolio ? mapAgentTenantSelections(portfolio.tenantSelections) : [];
     return base.map((selection) => {
       const key = tenantSelectionDecisionKey(selection.propertyId, selection.id);
       return applyTenantSelectionDecision(
@@ -467,30 +449,21 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         tenantSelectionDecisions[key],
       );
     });
-  }, [portfolio, propertyIds, tenantSelectionDecisions]);
+  }, [portfolio, tenantSelectionDecisions]);
 
   const leasingRecords = useMemo(
-    () =>
-      portfolio
-        ? mapAgentLeasing(portfolio.leasing)
-        : filterByPropertyIds(LEASING_RECORDS, propertyIds),
-    [portfolio, propertyIds],
+    () => (portfolio ? mapAgentLeasing(portfolio.leasing) : []),
+    [portfolio],
   );
 
   const accounting = useMemo(
-    () =>
-      portfolio
-        ? mapAgentAccounting(portfolio.accounting)
-        : ACCOUNTING.filter((a) => propertyIds.has(a.propertyId)),
-    [portfolio, propertyIds],
+    () => (portfolio ? mapAgentAccounting(portfolio.accounting) : []),
+    [portfolio],
   );
 
   const tribunalCases = useMemo(
-    () =>
-      portfolio
-        ? mapAgentTribunal(portfolio.tribunal)
-        : filterByPropertyIds(TRIBUNAL_CASES, propertyIds),
-    [portfolio, propertyIds],
+    () => (portfolio ? mapAgentTribunal(portfolio.tribunal) : []),
+    [portfolio],
   );
 
   const messages = useMemo<MessageThread[]>(() => {
@@ -528,16 +501,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       };
     };
 
-    // OFFLINE / not yet loaded: demo base + optimistic custom threads (unchanged behavior).
+    // Not yet loaded: optimistic custom threads only.
     if (apiMessages === null) {
-      const demoThreads = MESSAGE_THREADS.filter(
-        (m) => m.assignedAgentId === agentPortfolioId,
-      );
-      const byKey = new Map<string, MessageThread>();
-      for (const thread of [...demoThreads, ...customThreads]) {
-        byKey.set(messageThreadKey(thread), thread);
-      }
-      return [...byKey.values()].map((t) => overlaySent(reconcileContacts(t)));
+      return customThreads.map((t) => overlaySent(reconcileContacts(t)));
     }
 
     // ONLINE: the live API threads are the source of truth. An optimistic custom thread
@@ -726,25 +692,15 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const documents = useMemo<AgentDocument[]>(() => {
-    // Live documents (aggregated + uploaded) when connected; else the demo seed + any
-    // device-local optimistic uploads, both filtered to the agent's properties.
     if (apiDocuments) return apiDocuments;
     const prefixes = properties.map((p) => p.address.split(',')[0]);
-    const demo = DOCUMENTS.filter((d) =>
-      prefixes.some((a) => d.propertyAddress.includes(a)),
-    );
-    const uploaded = uploadedDocuments.filter((d) =>
+    return uploadedDocuments.filter((d) =>
       prefixes.some((a) => d.propertyAddress.includes(a) || d.propertyAddress === 'Portfolio'),
     );
-    return [...uploaded, ...demo];
   }, [apiDocuments, properties, uploadedDocuments]);
 
   const notifications = useMemo<AgentNotification[]>(() => {
-    // Live notifications when loaded, else the demo seed; `readIds` overlays optimistic
-    // mark-read on top of either (a just-read id stays read until refresh reconciles).
-    const base: AgentNotification[] =
-      apiNotifications ??
-      DEMO_NOTIFICATIONS.map((n) => ({ ...n, source: 'demo' as const }));
+    const base: AgentNotification[] = apiNotifications ?? [];
     return base.map((n) => ({ ...n, read: n.read || readIds.has(n.id) }));
   }, [apiNotifications, readIds]);
 
@@ -789,13 +745,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         requiresApproval: true,
         href: tenantSelectionDetail(t.id),
         updatedAt: new Date().toISOString(),
-        source: 'demo' as const,
+        source: 'api' as const,
       }));
-    const demoDash = portfolio
-      ? []
-      : filterByPropertyIds(DASHBOARD_ITEMS, propertyIds);
-    return [...maintDash, ...tenantDash, ...demoDash];
-  }, [maintenanceAll, tenantSelections, portfolio, propertyIds]);
+    return [...maintDash, ...tenantDash];
+  }, [maintenanceAll, tenantSelections]);
 
   const sectionStatus = useMemo(
     () =>

@@ -9,7 +9,7 @@ import type {
   OpenConductedBy,
   OpenListingContext,
 } from '@/lib/open-inspection';
-import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, ThreadMessage } from '@/lib/types';
+import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, PropertyPartyContact, ThreadMessage } from '@/lib/types';
 import type { TenantSelectionDecision } from '@/lib/tenant-selection';
 import type { ProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
 
@@ -20,6 +20,8 @@ export interface NotificationPrefs {
 }
 
 export type PropertyIntakeMode = 'new' | 'transfer_in';
+
+export type RentPeriod = 'weekly' | 'monthly';
 
 export interface NewPropertyInput {
   intakeMode: PropertyIntakeMode;
@@ -33,11 +35,16 @@ export interface NewPropertyInput {
   homeOwnerName: string;
   homeOwnerEmail?: string;
   homeOwnerPhone?: string;
+  additionalLandlords?: PropertyPartyContact[];
   tenantName: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  additionalTenants?: PropertyPartyContact[];
   leaseStatus: Property['leaseStatus'];
   rentWeekly: number;
+  rentPeriod?: RentPeriod;
+  leaseStart?: string;
+  leaseEnd?: string;
   bedrooms?: number;
   bathrooms?: number;
   carSpaces?: number;
@@ -160,18 +167,24 @@ export const useAgentStore = create<AgentStore>()(
             email: input.homeOwnerEmail?.trim() || undefined,
             phone: input.homeOwnerPhone?.trim() || undefined,
           },
+          additionalLandlords: input.additionalLandlords?.length
+            ? input.additionalLandlords
+            : undefined,
           assignedAgentId: agentPortfolioId,
           tenantName: input.tenantName.trim() || 'Vacant',
           tenantContact: {
             email: input.tenantEmail?.trim() || undefined,
             phone: input.tenantPhone?.trim() || undefined,
           },
+          additionalTenants: input.additionalTenants?.length ? input.additionalTenants : undefined,
           leaseStatus: input.leaseStatus,
           rentWeekly: input.rentWeekly,
+          leaseStart: input.leaseStart,
+          leaseEnd: input.leaseEnd,
+          bondAmount: input.bondAmount,
           bedrooms: input.bedrooms,
           bathrooms: input.bathrooms,
           carSpaces: input.carSpaces,
-          bondAmount: input.bondAmount,
           propertyType: input.propertyType,
           managementRatePercent: input.managementRatePercent,
           insuranceProvider: input.insuranceProvider,

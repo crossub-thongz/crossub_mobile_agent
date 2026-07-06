@@ -39,7 +39,7 @@ export default function NotificationsPage() {
     <AgentShell title="Notifications">
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <DataSourceBadge source={apiConnected ? 'api' : 'demo'} />
+          <DataSourceBadge source={apiConnected ? 'api' : 'offline'} />
           {unreadCount > 0 && (
             <Button
               variant="ghost"

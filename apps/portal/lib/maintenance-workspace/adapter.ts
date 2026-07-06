@@ -4,7 +4,7 @@ import type { AuthUser } from '@/lib/auth-types';
 
 import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceStatus } from './types';
 
-const DEMO_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
+const REQUEST_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   'under review': 'under_review',
   'quote approval': 'pending_approval',
   'pending quotation': 'pending_quotation',
@@ -13,19 +13,19 @@ const DEMO_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   closed: 'closed',
 };
 
-const DEMO_PRIORITY_MAP: Record<string, MaintenanceWorkspaceCase['priority']> = {
+const REQUEST_PRIORITY_MAP: Record<string, MaintenanceWorkspaceCase['priority']> = {
   urgent: 'critical',
   high: 'high',
   normal: 'medium',
   low: 'low',
 };
 
-function mapDemoStatus(status: string): MaintenanceWorkspaceStatus {
-  return DEMO_STATUS_MAP[status.toLowerCase()] ?? 'under_review';
+function mapRequestStatus(status: string): MaintenanceWorkspaceStatus {
+  return REQUEST_STATUS_MAP[status.toLowerCase()] ?? 'under_review';
 }
 
-function mapDemoPriority(priority: string): MaintenanceWorkspaceCase['priority'] {
-  return DEMO_PRIORITY_MAP[priority] ?? 'medium';
+function mapRequestPriority(priority: string): MaintenanceWorkspaceCase['priority'] {
+  return REQUEST_PRIORITY_MAP[priority] ?? 'medium';
 }
 
 function timelineToAudit(
@@ -95,7 +95,7 @@ export function buildWorkspaceCaseFromApi(
   };
 }
 
-export function buildWorkspaceCaseFromDemo(
+export function buildWorkspaceCaseFromRequest(
   item: MaintenanceRequest,
   property?: Property,
   agent?: AuthUser | null,
@@ -109,9 +109,9 @@ export function buildWorkspaceCaseFromDemo(
     issueType: item.title,
     description: item.description,
     address: item.propertyAddress,
-    priority: mapDemoPriority(item.priority),
+    priority: mapRequestPriority(item.priority),
     responsibility,
-    status: mapDemoStatus(item.status),
+    status: mapRequestStatus(item.status),
     createdAt: firstTimeline,
     dueAt: item.quoteExpiry ?? firstTimeline,
     source: 'agent_submission',
@@ -150,7 +150,7 @@ export function buildWorkspaceCaseFromDemo(
         ]
       : [],
     notifications: item.timeline.map((entry, index) => ({
-      id: `demo-notif-${entry.id}`,
+      id: `timeline-notif-${entry.id}`,
       title: entry.title,
       message: entry.detail ?? entry.title,
       channel: entry.source === 'email' ? ('email' as const) : ('in_app' as const),

@@ -59,6 +59,10 @@ export type DocumentChecklistId =
   | 'strata_levy'
   | 'council_rates'
   | 'water_bill'
+  | 'water_efficiency_certificate'
+  | 'lease_agreement'
+  | 'ingoing_report'
+  | 'routine_report'
   | 'rbo_change_agent'
   | 'compliance_smoke'
   | 'compliance_electrical'
@@ -136,6 +140,42 @@ export const TRANSFER_IN_DOCUMENT_CHECKLIST: DocumentChecklistItem[] = [
     required: false,
     filePatterns: [/smoke/i],
   },
+  {
+    id: 'council_rates',
+    label: 'Council rate notice',
+    required: false,
+    filePatterns: [/council/i, /rates?/i, /rate.?notice/i],
+  },
+  {
+    id: 'water_bill',
+    label: 'Water bill',
+    required: false,
+    filePatterns: [/water/i, /bill/i],
+  },
+  {
+    id: 'water_efficiency_certificate',
+    label: 'Water efficiency certificate',
+    required: false,
+    filePatterns: [/water/i, /efficien/i, /certificate/i, /wecs/i],
+  },
+  {
+    id: 'lease_agreement',
+    label: 'Lease agreement',
+    required: false,
+    filePatterns: [/lease/i, /tenancy/i, /agreement/i, /residential/i],
+  },
+  {
+    id: 'ingoing_report',
+    label: 'Ingoing report',
+    required: false,
+    filePatterns: [/ingoing/i, /entry/i, /condition/i, /inspection/i],
+  },
+  {
+    id: 'routine_report',
+    label: 'Routine report',
+    required: false,
+    filePatterns: [/routine/i, /inspection/i, /periodic/i],
+  },
 ];
 
 export const TRANSFER_OUT_DOCUMENT_CHECKLIST: DocumentChecklistItem[] = [
@@ -145,18 +185,6 @@ export const TRANSFER_OUT_DOCUMENT_CHECKLIST: DocumentChecklistItem[] = [
     label: 'Outgoing inspection report',
     required: true,
     filePatterns: [/outgoing/i, /exit/i],
-  },
-  {
-    id: 'council_rates',
-    label: 'Council rates',
-    required: false,
-    filePatterns: [/council/i, /rates/i],
-  },
-  {
-    id: 'water_bill',
-    label: 'Water bill',
-    required: false,
-    filePatterns: [/water/i],
   },
   {
     id: 'rbo_change_agent',

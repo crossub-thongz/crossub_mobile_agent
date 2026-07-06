@@ -76,6 +76,23 @@ export function getLocalSessionUser(): AuthUser | null {
   }
 }
 
+/** Full local register record for the active session (offline accounts only). */
+export function getLocalSessionAccount(): LocalAccount | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const { userId } = JSON.parse(raw) as { userId: string };
+    return readAccounts().find((a) => a.id === userId) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function isLocalSession(): boolean {
+  return hasLocalAccessCookie();
+}
+
 export function hasLocalAccessCookie(): boolean {
   if (typeof window === 'undefined') return false;
   return document.cookie.split(';').some((c) => {

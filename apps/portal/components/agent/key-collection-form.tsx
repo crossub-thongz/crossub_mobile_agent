@@ -169,7 +169,7 @@ export function KeyCollectionForm({
   return (
     <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
       <p className="text-xs font-medium">
-        Key handover {live ? '(live API)' : '(demo property)'}
+        Key handover {live ? '(live API)' : '(offline)'}
       </p>
       <p className="text-muted-foreground text-[10px]">
         Sets the same arrangement Tenant sees under leasing onboarding and Inspector sees on the

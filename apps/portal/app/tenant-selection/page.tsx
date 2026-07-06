@@ -23,8 +23,7 @@ export default function TenantSelectionListPage() {
 
         {!loading && !apiConnected && (
           <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-            {apiError ??
-              'Not connected to staging API — showing demo applicants only. Set API_INTERNAL_URL to match the tenant app.'}
+            {apiError ?? 'Not connected to the API. Start crossub_web (pnpm dev:api) and retry.'}
             <button
               type="button"
               className="text-primary ml-2 font-medium underline"

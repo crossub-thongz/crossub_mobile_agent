@@ -16,7 +16,7 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
 
   const handleApprove = async () => {
     if (!apiItem?.submittedQuotationId) {
-      toast.success('Quote approved (demo)');
+      toast.error('Connect to the API to approve this quote.');
       return;
     }
     try {
@@ -30,7 +30,7 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
 
   const handleDecline = async () => {
     if (!apiItem?.submittedQuotationId) {
-      toast.message('Quote declined (demo)');
+      toast.error('Connect to the API to decline this quote.');
       return;
     }
     try {

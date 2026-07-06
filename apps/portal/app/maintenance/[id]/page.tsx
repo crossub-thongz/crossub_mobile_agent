@@ -10,7 +10,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
-import { buildWorkspaceCaseFromDemo } from '@/lib/maintenance-workspace/adapter';
+import { buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
 
 export default function MaintenanceDetailPage() {
   const params = useParams();
@@ -36,14 +36,14 @@ export default function MaintenanceDetailPage() {
 
   const workspaceCase = useMemo(() => {
     if (!item) return null;
-    return buildWorkspaceCaseFromDemo(item, property, user);
+    return buildWorkspaceCaseFromRequest(item, property, user);
   }, [item, property, user]);
 
   if (!item || !workspaceCase) notFound();
 
   const handleApprove = async () => {
     if (!apiItem?.submittedQuotationId) {
-      toast.error('No submitted quotation on API — demo action only');
+      toast.error('No submitted quotation on the API.');
       return;
     }
     try {
@@ -57,7 +57,7 @@ export default function MaintenanceDetailPage() {
 
   const handleDecline = async (reason: string) => {
     if (!apiItem?.submittedQuotationId) {
-      toast.error('Demo only — connect API for live decline');
+      toast.error('Connect to the API to decline this quote.');
       return;
     }
     try {

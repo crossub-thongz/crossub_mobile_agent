@@ -4,16 +4,10 @@ import Link from 'next/link';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Building2,
   Download,
-  FileText,
   History,
   ListTodo,
-  Mail,
-  MessageSquare,
-  Phone,
   TrendingDown,
-  User,
   Wallet,
 } from 'lucide-react';
 
@@ -22,13 +16,12 @@ import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceJobPanel } from '@/components/agent/property-maintenance-job-panel';
-import { PropertyPhotosButton } from '@/components/agent/property-photos-dialog';
+import { PropertyOverviewTab } from '@/components/agent/property-overview-tab';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
+import { PropertyDocumentsTab } from '@/components/agent/property-documents-tab';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { RentIncomeHistoryList } from '@/components/agent/rent-income-history-list';
 import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
-import { RentReviewSummaryList } from '@/components/agent/rent-review-summary-list';
-import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -282,142 +275,19 @@ export default function PropertyDetailPage() {
                 </InfoPanel>
               </>
             ) : (
-              <>
-            <InfoPanel title="Tasks" icon={ListTodo} tone={needActions.length > 0 ? 'warning' : 'default'}>
-              <div className="space-y-2">
-              {needActions.length === 0 &&
-              tasks.maintenance.length === 0 &&
-              tenancyRentReviews.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No active tasks.</p>
-              ) : (
-                <>
-                  {needActions.map((a) => (
-                    <Link
-                      key={a.id}
-                      href={a.href}
-                      className="block rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs font-semibold text-destructive"
-                    >
-                      {a.label}
-                    </Link>
-                  ))}
-                  {tasks.maintenance.map((m) => (
-                    <TaskStatusRow
-                      key={m.id}
-                      item={{
-                        id: m.id,
-                        propertyAddress: m.propertyAddress,
-                        taskLabel: m.title,
-                        status: m.status,
-                        href: maintenanceDetail(m.id, fromProperty(id, 'Maintenance')),
-                        module: 'Maintenance',
-                        requiresApproval: m.requiresApproval,
-                      }}
-                    />
-                  ))}
-                </>
-              )}
-              </div>
-            </InfoPanel>
-
-            <InfoPanel title="Landlord" icon={Building2}>
-              <InfoRow label="Name" value={property.homeOwnerName} />
-              {property.homeOwnerContact.email && (
-                <InfoRow label="Email">
-                  <a
-                    href={`mailto:${property.homeOwnerContact.email}`}
-                    className="flex items-center gap-1.5 text-primary"
-                  >
-                    <Mail className="size-3.5" />
-                    {property.homeOwnerContact.email}
-                  </a>
-                </InfoRow>
-              )}
-              {property.homeOwnerContact.phone && (
-                <InfoRow label="Mobile">
-                  <a
-                    href={`tel:${property.homeOwnerContact.phone.replace(/\s/g, '')}`}
-                    className="flex items-center gap-1.5"
-                  >
-                    <Phone className="size-3.5" />
-                    {property.homeOwnerContact.phone}
-                  </a>
-                </InfoRow>
-              )}
-            </InfoPanel>
-
-            <InfoPanel title="Tenant" icon={User}>
-              <InfoRow label="Name" value={property.tenantName} />
-              {property.tenantContact.email && (
-                <InfoRow label="Email">
-                  <a
-                    href={`mailto:${property.tenantContact.email}`}
-                    className="flex items-center gap-1.5 text-primary"
-                  >
-                    <Mail className="size-3.5" />
-                    {property.tenantContact.email}
-                  </a>
-                </InfoRow>
-              )}
-              {property.tenantContact.phone && (
-                <InfoRow label="Mobile">
-                  <a
-                    href={`tel:${property.tenantContact.phone.replace(/\s/g, '')}`}
-                    className="flex items-center gap-1.5"
-                  >
-                    <Phone className="size-3.5" />
-                    {property.tenantContact.phone}
-                  </a>
-                </InfoRow>
-              )}
-              {property.leaseStart && (
-                <InfoRow
-                  label="Lease period"
-                  value={`${formatDate(property.leaseStart)}${property.leaseEnd ? ` — ${formatDate(property.leaseEnd)}` : ''}`}
-                />
-              )}
-            </InfoPanel>
-
-            <InfoPanel title="Property details" icon={Building2}>
-              <div className="grid grid-cols-2 gap-x-4">
-                <InfoRow label="Bedrooms" value={property.bedrooms ?? '—'} />
-                <InfoRow label="Bathrooms" value={property.bathrooms ?? '—'} />
-                <InfoRow label="Car spaces" value={property.carSpaces ?? '—'} />
-                <InfoRow
-                  label="Bond"
-                  value={property.bondAmount ? formatCurrency(property.bondAmount) : '—'}
-                />
-                <InfoRow
-                  label="Current rent"
-                  value={
-                    property.rentWeekly > 0
-                      ? `${formatCurrency(property.rentWeekly)}/wk`
-                      : '—'
-                  }
-                />
-                <InfoRow label="Status" value={property.leaseStatus} />
-              </div>
-              <div className="mt-4">
-                <PropertyPhotosButton propertyAddress={property.address} />
-              </div>
-            </InfoPanel>
-
-            <InfoPanel title="Rent review" icon={FileText}>
-              {isVacant ? (
-                <p className="text-muted-foreground text-sm">{VACANT_RENT_REVIEW_HINT}</p>
-              ) : (
-                <RentReviewSummaryList reviews={tenancyRentReviews} propertyId={id} compact />
-              )}
-            </InfoPanel>
-
-            <InfoPanel title="History" icon={History}>
-              <TenancyHistorySection
+              <PropertyOverviewTab
+                property={property}
                 propertyId={id}
-                records={leasing}
-                compact
-                onViewAll={() => setOverviewView('history')}
+                needActions={needActions}
+                maintenance={tasks.maintenance}
+                inspections={tasks.inspections}
+                propertyDocs={propertyDocs}
+                leasing={leasing}
+                currentLease={currentLease}
+                rentReviewDecisions={decisions}
+                tenancyRentReviews={tenancyRentReviews}
+                onViewHistory={() => setOverviewView('history')}
               />
-            </InfoPanel>
-              </>
             )}
           </div>
         )}
@@ -688,29 +558,7 @@ export default function PropertyDetailPage() {
           </div>
         )}
 
-        {tab === 'Documents' && (
-          <InfoPanel title="Document repository" icon={FileText}>
-            {propertyDocs.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                Lease agreements, inspection reports, bond records, and tribunal documents will
-                appear here.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {propertyDocs.map((d) => (
-                  <Link
-                    key={d.id}
-                    href={d.href}
-                    className="flex items-center justify-between rounded-xl border bg-secondary/20 px-3 py-3 text-sm"
-                  >
-                    <span className="font-medium">{d.title}</span>
-                    <span className="text-primary text-xs font-semibold">View</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </InfoPanel>
-        )}
+        {tab === 'Documents' && <PropertyDocumentsTab documents={propertyDocs} />}
       </div>
 
       <InspectionDetailDialog

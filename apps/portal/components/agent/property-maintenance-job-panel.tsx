@@ -12,7 +12,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { maintenanceDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import { generateWorkspaceAdvice } from '@/lib/maintenance-workspace/advice';
-import { buildWorkspaceCaseFromDemo } from '@/lib/maintenance-workspace/adapter';
+import { buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
 import { stepIdToTargetKey } from '@/lib/maintenance-workspace/quick-jump';
 import { STATUS_LABELS } from '@/lib/maintenance-workspace/status-labels';
 import type { MaintenanceWorkspaceStatus } from '@/lib/maintenance-workspace/types';
@@ -141,7 +141,7 @@ export function PropertyMaintenanceJobPanel({
 }) {
   const { user } = useAuth();
   const workspaceCase = useMemo(
-    () => buildWorkspaceCaseFromDemo(item, property, user),
+    () => buildWorkspaceCaseFromRequest(item, property, user),
     [item, property, user],
   );
   const steps = useMemo(

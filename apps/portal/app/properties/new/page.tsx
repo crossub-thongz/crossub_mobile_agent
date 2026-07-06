@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -14,7 +14,7 @@ import {
   parseCount,
   type NewPropertyRegistryValues,
 } from '@/components/agent/new-property-registry-form';
-import { PropertyImportPanel } from '@/components/agent/property-import-panel';
+import { ContactPartyList } from '@/components/agent/contact-party-list';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,15 +29,35 @@ import { fileToBase64 } from '@/lib/file-upload';
 import { uploadDocument as apiUploadDocument } from '@/lib/crossub-api/agent-client';
 import type { PropertyImportResult } from '@/lib/property-import';
 import { pmsSourceLabel } from '@/lib/property-import';
+import { PropertyImportPanel } from '@/components/agent/property-import-panel';
+import { emptyPartyContact, splitParties } from '@/lib/property-parties';
 import type { AgentDocument, Property } from '@/lib/types';
-import type { PropertyIntakeMode } from '@/lib/store';
+import type { PropertyIntakeMode, RentPeriod } from '@/lib/store';
 
-const LEASE_OPTIONS: Property['leaseStatus'][] = [
-  'active',
-  'periodic',
-  'vacating',
-  'vacant',
+const selectClass =
+  'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
+
+const LEASE_STATUS_OPTIONS: { value: Property['leaseStatus']; label: string }[] = [
+  { value: 'active', label: 'Fixed term' },
+  { value: 'periodic', label: 'Periodic' },
+  { value: 'vacating', label: 'Vacating' },
+  { value: 'vacant', label: 'Vacant' },
 ];
+
+function weeklyRentFromAmount(amount: number, period: RentPeriod): number {
+  if (!amount || amount <= 0) return 0;
+  return period === 'weekly' ? amount : (amount * 12) / 52;
+}
+
+function dailyRentFromWeekly(weekly: number): number {
+  if (!weekly || weekly <= 0) return 0;
+  return Math.round((weekly / 7) * 100) / 100;
+}
+
+function bondFromWeekly(weekly: number): number {
+  if (!weekly || weekly <= 0) return 0;
+  return Math.round(weekly * 4);
+}
 
 export default function AddPropertyPage() {
   const router = useRouter();
@@ -49,18 +69,16 @@ export default function AddPropertyPage() {
   const [form, setForm] = useState({
     address: '',
     suburb: '',
-    homeOwnerName: '',
-    homeOwnerEmail: '',
-    homeOwnerPhone: '',
-    tenantName: '',
-    tenantEmail: '',
-    tenantPhone: '',
+    landlords: [emptyPartyContact()],
+    tenants: [emptyPartyContact()],
     leaseStatus: 'active' as Property['leaseStatus'],
-    rentWeekly: '',
+    rentAmount: '',
+    rentPeriod: 'weekly' as RentPeriod,
+    leaseStart: '',
+    leaseEnd: '',
     bedrooms: '',
     bathrooms: '',
     carSpaces: '',
-    bondAmount: '',
     propertyType: 'house',
     managementRatePercent: '',
     insuranceProvider: '',
@@ -68,6 +86,13 @@ export default function AddPropertyPage() {
     previousAgentName: '',
     previousAgentEmail: '',
   });
+
+  const weeklyRent = useMemo(
+    () => weeklyRentFromAmount(Number(form.rentAmount), form.rentPeriod),
+    [form.rentAmount, form.rentPeriod],
+  );
+  const dailyRent = useMemo(() => dailyRentFromWeekly(weeklyRent), [weeklyRent]);
+  const bondAmount = useMemo(() => bondFromWeekly(weeklyRent), [weeklyRent]);
 
   const checklist =
     intakeMode === 'transfer_in'
@@ -101,17 +126,29 @@ export default function AddPropertyPage() {
       ...f,
       address: p.address ?? f.address,
       suburb: p.suburb ?? f.suburb,
-      rentWeekly: p.rentWeekly != null ? String(p.rentWeekly) : f.rentWeekly,
+      rentAmount: p.rentWeekly != null ? String(p.rentWeekly) : f.rentAmount,
+      rentPeriod: 'weekly',
       bedrooms: p.bedrooms != null ? String(p.bedrooms) : f.bedrooms,
       bathrooms: p.bathrooms != null ? String(p.bathrooms) : f.bathrooms,
       carSpaces: p.carSpaces != null ? String(p.carSpaces) : f.carSpaces,
-      bondAmount: p.bondAmount != null ? String(p.bondAmount) : f.bondAmount,
-      homeOwnerName: p.homeOwnerName ?? f.homeOwnerName,
-      homeOwnerEmail: p.homeOwnerEmail ?? f.homeOwnerEmail,
-      homeOwnerPhone: p.homeOwnerPhone ?? f.homeOwnerPhone,
-      tenantName: p.tenantName ?? f.tenantName,
-      tenantEmail: p.tenantEmail ?? f.tenantEmail,
-      tenantPhone: p.tenantPhone ?? f.tenantPhone,
+      landlords: p.homeOwnerName
+        ? [
+            {
+              name: p.homeOwnerName,
+              email: p.homeOwnerEmail ?? '',
+              phone: p.homeOwnerPhone ?? '',
+            },
+          ]
+        : f.landlords,
+      tenants: p.tenantName
+        ? [
+            {
+              name: p.tenantName,
+              email: p.tenantEmail ?? '',
+              phone: p.tenantPhone ?? '',
+            },
+          ]
+        : f.tenants,
       managementRatePercent:
         p.managementRatePercent != null ? String(p.managementRatePercent) : f.managementRatePercent,
       insuranceProvider: p.insuranceProvider ?? f.insuranceProvider,
@@ -151,8 +188,10 @@ export default function AddPropertyPage() {
 
   const onSubmitTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.address.trim() || !form.suburb.trim() || !form.homeOwnerName.trim()) {
-      toast.error('Address, suburb, and landlord name are required');
+    const landlords = splitParties(form.landlords);
+    const tenants = splitParties(form.tenants);
+    if (!form.address.trim() || !form.suburb.trim() || !landlords.primary?.name) {
+      toast.error('Address, suburb, and at least one landlord name are required');
       return;
     }
     if (intakeMode === 'transfer_in' && !requiredDocsMet) {
@@ -165,18 +204,23 @@ export default function AddPropertyPage() {
         intakeMode,
         address: form.address,
         suburb: form.suburb,
-        homeOwnerName: form.homeOwnerName,
-        homeOwnerEmail: form.homeOwnerEmail || undefined,
-        homeOwnerPhone: form.homeOwnerPhone || undefined,
-        tenantName: form.tenantName || 'Vacant',
-        tenantEmail: form.tenantEmail || undefined,
-        tenantPhone: form.tenantPhone || undefined,
+        homeOwnerName: landlords.label,
+        homeOwnerEmail: landlords.primary?.email,
+        homeOwnerPhone: landlords.primary?.phone,
+        additionalLandlords: landlords.additional.length ? landlords.additional : undefined,
+        tenantName: tenants.label,
+        tenantEmail: tenants.primary?.email,
+        tenantPhone: tenants.primary?.phone,
+        additionalTenants: tenants.additional.length ? tenants.additional : undefined,
         leaseStatus: form.leaseStatus,
-        rentWeekly: Number(form.rentWeekly) || 0,
+        rentWeekly: weeklyRent,
+        rentPeriod: form.rentPeriod,
+        leaseStart: form.leaseStart || undefined,
+        leaseEnd: form.leaseEnd || undefined,
+        bondAmount: bondAmount || undefined,
         bedrooms: Number(form.bedrooms) || undefined,
         bathrooms: Number(form.bathrooms) || undefined,
         carSpaces: Number(form.carSpaces) || undefined,
-        bondAmount: Number(form.bondAmount) || undefined,
         propertyType: form.propertyType,
         managementRatePercent: Number(form.managementRatePercent) || undefined,
         insuranceProvider: form.insuranceProvider || undefined,
@@ -209,6 +253,8 @@ export default function AddPropertyPage() {
 
     setSubmitting(true);
     try {
+      const landlords = splitParties(values.landlords);
+      const tenants = splitParties(values.tenants);
       const property = await addProperty({
         intakeMode: 'new',
         agencyName: values.agencyName.trim(),
@@ -217,12 +263,14 @@ export default function AddPropertyPage() {
         suburb: values.suburb.trim(),
         state: values.state,
         postcode: values.postcode.trim() || undefined,
-        homeOwnerName: values.landlordName.trim() || 'TBC',
-        homeOwnerEmail: values.landlordEmail.trim() || undefined,
-        homeOwnerPhone: values.landlordPhone.trim() || undefined,
-        tenantName: values.tenantName.trim() || 'Vacant',
-        tenantEmail: values.tenantEmail.trim() || undefined,
-        tenantPhone: values.tenantPhone.trim() || undefined,
+        homeOwnerName: landlords.primary ? landlords.label : 'TBC',
+        homeOwnerEmail: landlords.primary?.email,
+        homeOwnerPhone: landlords.primary?.phone,
+        additionalLandlords: landlords.additional.length ? landlords.additional : undefined,
+        tenantName: tenants.label,
+        tenantEmail: tenants.primary?.email,
+        tenantPhone: tenants.primary?.phone,
+        additionalTenants: tenants.additional.length ? tenants.additional : undefined,
         leaseStatus: mapStatusToLeaseStatus(values.status),
         rentWeekly: 0,
         bedrooms: parseCount(values.bedrooms),
@@ -310,7 +358,7 @@ export default function AddPropertyPage() {
               id="address"
               value={form.address}
               onChange={(e) => update('address', e.target.value)}
-              placeholder="12 Ocean View Pde"
+              placeholder="66, Berry Street"
             />
           </div>
           <div className="space-y-2">
@@ -319,7 +367,7 @@ export default function AddPropertyPage() {
               id="suburb"
               value={form.suburb}
               onChange={(e) => update('suburb', e.target.value)}
-              placeholder="Miami"
+              placeholder="e.g. North Sydney"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -346,36 +394,102 @@ export default function AddPropertyPage() {
               />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="leaseStatus">Lease status</Label>
+            <select
+              id="leaseStatus"
+              value={form.leaseStatus}
+              onChange={(e) =>
+                update('leaseStatus', e.target.value as Property['leaseStatus'])
+              }
+              className={selectClass}
+            >
+              {LEASE_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="leaseStatus">Lease status</Label>
-              <select
-                id="leaseStatus"
-                value={form.leaseStatus}
-                onChange={(e) =>
-                  update('leaseStatus', e.target.value as Property['leaseStatus'])
-                }
-                className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm capitalize outline-none dark:bg-input/30"
-              >
-                {LEASE_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+              <Label htmlFor="leaseStart">Lease start date</Label>
+              <Input
+                id="leaseStart"
+                type="date"
+                value={form.leaseStart}
+                onChange={(e) => update('leaseStart', e.target.value)}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="rentWeekly">Rent ($/week)</Label>
+              <Label htmlFor="leaseEnd">Lease end date</Label>
               <Input
-                id="rentWeekly"
-                type="number"
-                min={0}
-                value={form.rentWeekly}
-                onChange={(e) => update('rentWeekly', e.target.value)}
-                placeholder="650"
+                id="leaseEnd"
+                type="date"
+                value={form.leaseEnd}
+                onChange={(e) => update('leaseEnd', e.target.value)}
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="rentAmount">Rent ($)</Label>
+              <Input
+                id="rentAmount"
+                type="number"
+                min={0}
+                step={0.01}
+                value={form.rentAmount}
+                onChange={(e) => update('rentAmount', e.target.value)}
+                placeholder={form.rentPeriod === 'weekly' ? '650' : '2817'}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rentPeriod">Period</Label>
+              <select
+                id="rentPeriod"
+                value={form.rentPeriod}
+                onChange={(e) => update('rentPeriod', e.target.value as RentPeriod)}
+                className={`${selectClass} min-w-[7.5rem]`}
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="dailyRent">Daily rent ($)</Label>
+              <Input
+                id="dailyRent"
+                type="text"
+                readOnly
+                value={dailyRent > 0 ? dailyRent.toFixed(2) : ''}
+                placeholder="Auto from rent"
+                className="bg-muted/40"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bondAmount">Bond ($)</Label>
+              <Input
+                id="bondAmount"
+                type="text"
+                readOnly
+                value={bondAmount > 0 ? String(bondAmount) : ''}
+                placeholder="4 × weekly rent"
+                className="bg-muted/40"
+              />
+            </div>
+          </div>
+          {weeklyRent > 0 ? (
+            <p className="text-muted-foreground text-xs">
+              Stored as ${weeklyRent.toFixed(2)}/week · bond is 4 weeks rent
+            </p>
+          ) : null}
+
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor="bedrooms">Bedrooms</Label>
@@ -408,90 +522,35 @@ export default function AddPropertyPage() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="propertyType">Property type</Label>
-              <select
-                id="propertyType"
-                value={form.propertyType}
-                onChange={(e) => update('propertyType', e.target.value)}
-                className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30"
-              >
-                <option value="house">House</option>
-                <option value="unit">Unit / Apartment</option>
-                <option value="townhouse">Townhouse</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bondAmount">Bond ($)</Label>
-              <Input
-                id="bondAmount"
-                type="number"
-                min={0}
-                value={form.bondAmount}
-                onChange={(e) => update('bondAmount', e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="propertyType">Property type</Label>
+            <select
+              id="propertyType"
+              value={form.propertyType}
+              onChange={(e) => update('propertyType', e.target.value)}
+              className={selectClass}
+            >
+              <option value="house">House</option>
+              <option value="unit">Unit / Apartment</option>
+              <option value="townhouse">Townhouse</option>
+            </select>
           </div>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border bg-card p-4">
-          <legend className="px-1 text-sm font-semibold">Landlord</legend>
-          <div className="space-y-2">
-            <Label htmlFor="homeOwnerName">Name</Label>
-            <Input
-              id="homeOwnerName"
-              value={form.homeOwnerName}
-              onChange={(e) => update('homeOwnerName', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="homeOwnerEmail">Email</Label>
-            <Input
-              id="homeOwnerEmail"
-              type="email"
-              value={form.homeOwnerEmail}
-              onChange={(e) => update('homeOwnerEmail', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="homeOwnerPhone">Phone</Label>
-            <Input
-              id="homeOwnerPhone"
-              value={form.homeOwnerPhone}
-              onChange={(e) => update('homeOwnerPhone', e.target.value)}
-            />
-          </div>
-        </fieldset>
+        <ContactPartyList
+          title="Landlord"
+          parties={form.landlords}
+          onChange={(landlords) => setForm((f) => ({ ...f, landlords }))}
+          addLabel="Add another landlord"
+        />
 
-        <fieldset className="space-y-3 rounded-xl border bg-card p-4">
-          <legend className="px-1 text-sm font-semibold">Tenant (optional)</legend>
-          <div className="space-y-2">
-            <Label htmlFor="tenantName">Name — leave blank if vacant</Label>
-            <Input
-              id="tenantName"
-              value={form.tenantName}
-              onChange={(e) => update('tenantName', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tenantEmail">Email</Label>
-            <Input
-              id="tenantEmail"
-              type="email"
-              value={form.tenantEmail}
-              onChange={(e) => update('tenantEmail', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tenantPhone">Phone</Label>
-            <Input
-              id="tenantPhone"
-              value={form.tenantPhone}
-              onChange={(e) => update('tenantPhone', e.target.value)}
-            />
-          </div>
-        </fieldset>
+        <ContactPartyList
+          title="Tenant (optional)"
+          parties={form.tenants}
+          onChange={(tenants) => setForm((f) => ({ ...f, tenants }))}
+          addLabel="Add another tenant"
+          vacantHint="Leave names blank if the property is vacant."
+        />
 
         <fieldset className="space-y-3 rounded-xl border bg-card p-4">
           <legend className="px-1 text-sm font-semibold">Documents</legend>

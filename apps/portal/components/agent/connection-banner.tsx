@@ -23,7 +23,7 @@ export function ConnectionBanner() {
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2">
         <div className="flex items-center gap-2">
-          <DataSourceBadge source={apiConnected ? 'api' : 'demo'} />
+          <DataSourceBadge source={apiConnected ? 'api' : 'offline'} />
           {typeof navigator !== 'undefined' && !navigator.onLine && (
             <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
               <WifiOff className="size-3" />
@@ -45,7 +45,7 @@ export function ConnectionBanner() {
       </div>
       {apiError && (
         <p className="text-destructive rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs">
-          {apiError} — showing demo data where needed.
+          {apiError}
         </p>
       )}
     </div>

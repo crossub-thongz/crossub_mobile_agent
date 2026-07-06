@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { buildProfileHistory } from '@/lib/profile-history';
 import { buildPhonebook } from '@/lib/phonebook';
 import { ROUTES } from '@/constants/routes';
+import { getLocalSessionAccount } from '@/lib/local-auth';
 import { useAgentStore } from '@/lib/store';
 import { cn, displayName, formatDateTime, formatRelative } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ type ProfileTab = 'history' | 'contacts';
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
-  const { properties, messages, rentReviews } = useAgentData();
+  const { properties, messages, rentReviews, primaryAgency } = useAgentData();
   const sentThreadMessages = useAgentStore((s) => s.sentThreadMessages);
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [tab, setTab] = useState<ProfileTab>('contacts');
@@ -30,6 +31,11 @@ export default function ProfilePage() {
     rentReviewDecisions,
     rentReviews,
   });
+
+  const localAccount = getLocalSessionAccount();
+  const agencyName = primaryAgency?.name ?? localAccount?.agencyName ?? '—';
+  const agencyCompany =
+    primaryAgency?.company ?? localAccount?.agencyCompany ?? '—';
 
   return (
     <AgentShell title="Profile">
@@ -52,6 +58,40 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
+        </section>
+
+        <section className="rounded-xl border bg-card p-4">
+          <h2 className="text-sm font-semibold">Your details</h2>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Information from your agent registration
+          </p>
+          <dl className="mt-3 space-y-2.5 text-sm">
+            <ProfileRow label="First name" value={user?.firstName} />
+            <ProfileRow label="Last name" value={user?.lastName} />
+            <ProfileRow label="Email" value={user?.email} />
+            <ProfileRow label="Phone" value={user?.phone ?? localAccount?.phone} />
+            <ProfileRow label="Role" value={user?.role?.replace(/_/g, ' ')} />
+          </dl>
+        </section>
+
+        <section className="rounded-xl border bg-card p-4">
+          <h2 className="text-sm font-semibold">Agency details</h2>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Your client agency in crossub_web
+          </p>
+          <dl className="mt-3 space-y-2.5 text-sm">
+            <ProfileRow label="Agency name" value={agencyName} />
+            <ProfileRow label="Company" value={agencyCompany} />
+            {primaryAgency?.contactName && (
+              <ProfileRow label="Contact name" value={primaryAgency.contactName} />
+            )}
+            {primaryAgency?.contactEmail && (
+              <ProfileRow label="Contact email" value={primaryAgency.contactEmail} />
+            )}
+            {primaryAgency?.contactPhone && (
+              <ProfileRow label="Contact phone" value={primaryAgency.contactPhone} />
+            )}
+          </dl>
         </section>
 
         <Link
@@ -156,6 +196,22 @@ export default function ProfilePage() {
         </Button>
       </div>
     </AgentShell>
+  );
+}
+
+function ProfileRow({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  const display = value?.trim() || '—';
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-muted-foreground shrink-0 text-xs">{label}</dt>
+      <dd className="min-w-0 text-right font-medium break-words">{display}</dd>
+    </div>
   );
 }
 

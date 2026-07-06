@@ -43,7 +43,7 @@ export default function RentReviewDetailPage() {
   return (
     <AgentShell title="Rent Review" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
-        <DataSourceBadge source={apiConnected ? 'api' : 'demo'} />
+        <DataSourceBadge source={apiConnected ? 'api' : 'offline'} />
 
         <WorkflowStageRail
           title="Lease renewal workflow (7 stages)"

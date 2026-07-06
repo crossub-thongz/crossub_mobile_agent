@@ -43,8 +43,8 @@ export default function SettingsPage() {
           <ConnectionBanner />
           <p className="text-muted-foreground px-1 text-xs">
             {apiConnected
-              ? 'Live maintenance data from crossub_web'
-              : 'Demo mode — set API_INTERNAL_URL for live data'}
+              ? 'Live data from crossub_web'
+              : 'Offline — set API_INTERNAL_URL and start the API (pnpm dev:api)'}
           </p>
         </section>
 

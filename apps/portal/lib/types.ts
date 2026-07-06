@@ -25,6 +25,13 @@ export interface PropertyContact {
   phone?: string;
 }
 
+/** Additional landlord or tenant on a property intake form (beyond the primary contact). */
+export interface PropertyPartyContact {
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 export type MessageCategory =
   | 'Leasing'
   | 'Maintenance'
@@ -58,9 +65,12 @@ export interface Property {
   assignedAgentId: 'agent-1' | 'agent-2';
   tenantName: string;
   tenantContact: PropertyContact;
+  additionalLandlords?: PropertyPartyContact[];
+  additionalTenants?: PropertyPartyContact[];
   leaseStatus: 'active' | 'periodic' | 'vacating' | 'vacant';
   rentWeekly: number;
   bondAmount?: number;
+  bondId?: string;
   bedrooms?: number;
   bathrooms?: number;
   carSpaces?: number;
@@ -265,7 +275,7 @@ export interface DashboardItem {
   requiresApproval: boolean;
   href: string;
   updatedAt: string;
-  source?: 'api' | 'demo';
+  source?: 'api';
 }
 
 export interface MaintenanceRequest {
@@ -286,7 +296,7 @@ export interface MaintenanceRequest {
   quoteDocumentUrl?: string;
   requiresApproval: boolean;
   timeline: TimelineEntry[];
-  source?: 'api' | 'demo';
+  source?: 'api';
   submittedQuotationId?: string;
   invoiceUploaded?: boolean;
   completionEvidenceUploaded?: boolean;
@@ -441,7 +451,7 @@ export interface AgentNotification {
   read: boolean;
   href: string;
   actionRequired?: string;
-  source?: 'api' | 'demo';
+  source?: 'api';
   overdueHours?: number;
   escalationNote?: string;
 }

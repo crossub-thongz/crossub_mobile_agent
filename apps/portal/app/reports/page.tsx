@@ -115,7 +115,7 @@ export default function ReportsPage() {
                 />
               </label>
               <p className="text-muted-foreground text-[10px]">
-                Demo upload — file metadata saved locally until crossub_web sync.
+                When offline, upload metadata is saved on this device until the API syncs.
               </p>
             </div>
 

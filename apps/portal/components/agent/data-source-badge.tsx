@@ -4,7 +4,7 @@ export function DataSourceBadge({
   source,
   className,
 }: {
-  source?: 'api' | 'demo';
+  source?: 'api' | 'offline';
   className?: string;
 }) {
   if (!source) return null;
@@ -18,7 +18,7 @@ export function DataSourceBadge({
         className,
       )}
     >
-      {source === 'api' ? 'Live · crossub_web' : 'Demo'}
+      {source === 'api' ? 'Live · crossub_web' : 'Offline'}
     </span>
   );
 }

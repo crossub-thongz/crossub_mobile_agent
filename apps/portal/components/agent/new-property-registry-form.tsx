@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ContactPartyList } from '@/components/agent/contact-party-list';
+import { PropertyAddressAutocomplete } from '@/components/agent/property-address-autocomplete';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   AUSTRALIAN_STATE_LABEL,
@@ -19,7 +21,9 @@ import {
   type PropertyStatus,
   type PropertyType,
 } from '@/constants/api-enums';
-import type { Property } from '@/lib/types';
+import type { ParsedAustralianAddress } from '@/lib/google-places';
+import { emptyPartyContact } from '@/lib/property-parties';
+import type { Property, PropertyPartyContact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const selectClass =
@@ -59,12 +63,8 @@ export interface NewPropertyRegistryValues {
   bedrooms: string;
   bathrooms: string;
   parking: string;
-  landlordName: string;
-  landlordEmail: string;
-  landlordPhone: string;
-  tenantName: string;
-  tenantEmail: string;
-  tenantPhone: string;
+  landlords: PropertyPartyContact[];
+  tenants: PropertyPartyContact[];
 }
 
 function mapStatusToLeaseStatus(status: PropertyStatus): Property['leaseStatus'] {
@@ -86,7 +86,7 @@ export function NewPropertyRegistryForm({
   onSubmit: (values: NewPropertyRegistryValues) => void | Promise<void>;
   submitting: boolean;
 }) {
-  const { primaryAgency } = useAgentData();
+  const { primaryAgency, loading, apiConnected } = useAgentData();
   const agencyLocked = !!primaryAgency;
   const [form, setForm] = useState<NewPropertyRegistryValues>({
     agencyName: primaryAgency?.name ?? '',
@@ -100,12 +100,8 @@ export function NewPropertyRegistryForm({
     bedrooms: '',
     bathrooms: '',
     parking: '',
-    landlordName: '',
-    landlordEmail: '',
-    landlordPhone: '',
-    tenantName: '',
-    tenantEmail: '',
-    tenantPhone: '',
+    landlords: [emptyPartyContact()],
+    tenants: [emptyPartyContact()],
   });
 
   const set = <K extends keyof NewPropertyRegistryValues>(key: K, value: NewPropertyRegistryValues[K]) =>
@@ -119,6 +115,22 @@ export function NewPropertyRegistryForm({
       agencyCompany: primaryAgency.company ?? '',
     }));
   }, [primaryAgency]);
+
+  if (apiConnected && loading && !primaryAgency) {
+    return (
+      <p className="text-muted-foreground text-sm">Loading your agency details…</p>
+    );
+  }
+
+  const handlePlaceSelect = (parsed: ParsedAustralianAddress) => {
+    setForm((f) => ({
+      ...f,
+      address: parsed.address || f.address,
+      suburb: parsed.suburb || f.suburb,
+      state: parsed.state || f.state,
+      postcode: parsed.postcode || f.postcode,
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,6 +187,15 @@ export function NewPropertyRegistryForm({
         )}
       </div>
 
+      <FormField label="Street address" required>
+        <PropertyAddressAutocomplete
+          value={form.address}
+          onChange={(address) => set('address', address)}
+          onPlaceSelect={handlePlaceSelect}
+          placeholder="66, Berry Street"
+        />
+      </FormField>
+
       <FormField label="State / territory" required>
         <select
           value={form.state}
@@ -207,14 +228,6 @@ export function NewPropertyRegistryForm({
           />
         </FormField>
       </div>
-
-      <FormField label="Street address" required>
-        <Input
-          value={form.address}
-          onChange={(e) => set('address', e.target.value)}
-          placeholder="e.g. 26, 314 Canterbury Road"
-        />
-      </FormField>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <FormField label="Type" className="col-span-2 sm:col-span-1">
@@ -276,48 +289,27 @@ export function NewPropertyRegistryForm({
         <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Landlord (optional)
         </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <FormField label="Name">
-            <Input
-              value={form.landlordName}
-              onChange={(e) => set('landlordName', e.target.value)}
-            />
-          </FormField>
-          <FormField label="Email">
-            <Input
-              type="email"
-              value={form.landlordEmail}
-              onChange={(e) => set('landlordEmail', e.target.value)}
-            />
-          </FormField>
-          <FormField label="Phone">
-            <Input
-              value={form.landlordPhone}
-              onChange={(e) => set('landlordPhone', e.target.value)}
-            />
-          </FormField>
-        </div>
+        <ContactPartyList
+          title="Landlord"
+          asFieldset={false}
+          parties={form.landlords}
+          onChange={(landlords) => setForm((f) => ({ ...f, landlords }))}
+          addLabel="Add another landlord"
+        />
       </div>
 
       <div className="rounded-lg border border-border/60 bg-secondary/20 p-3">
         <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Tenant (optional)
         </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <FormField label="Name">
-            <Input value={form.tenantName} onChange={(e) => set('tenantName', e.target.value)} />
-          </FormField>
-          <FormField label="Email">
-            <Input
-              type="email"
-              value={form.tenantEmail}
-              onChange={(e) => set('tenantEmail', e.target.value)}
-            />
-          </FormField>
-          <FormField label="Phone">
-            <Input value={form.tenantPhone} onChange={(e) => set('tenantPhone', e.target.value)} />
-          </FormField>
-        </div>
+        <ContactPartyList
+          title="Tenant"
+          asFieldset={false}
+          parties={form.tenants}
+          onChange={(tenants) => setForm((f) => ({ ...f, tenants }))}
+          addLabel="Add another tenant"
+          vacantHint="Leave blank if the property is vacant."
+        />
       </div>
 
       <Button type="button" className="w-full" disabled={submitting} onClick={handleSubmit}>
