@@ -140,3 +140,90 @@ export const DOCUMENT_CATEGORY = {
   LEASE: 'lease',
   VACATING: 'vacating',
 } as const;
+
+/** PropertyType — registry property classification (mirrors `schema.prisma`). */
+export const PROPERTY_TYPE = {
+  APARTMENT: 'APARTMENT',
+  HOUSE: 'HOUSE',
+  TOWNHOUSE: 'TOWNHOUSE',
+  UNIT: 'UNIT',
+  STUDIO: 'STUDIO',
+} as const;
+
+export type PropertyType = (typeof PROPERTY_TYPE)[keyof typeof PROPERTY_TYPE];
+
+export const PROPERTY_TYPE_LABEL: Record<PropertyType, string> = {
+  [PROPERTY_TYPE.APARTMENT]: 'Apartment',
+  [PROPERTY_TYPE.HOUSE]: 'House',
+  [PROPERTY_TYPE.TOWNHOUSE]: 'Townhouse',
+  [PROPERTY_TYPE.UNIT]: 'Unit',
+  [PROPERTY_TYPE.STUDIO]: 'Studio',
+};
+
+export const PROPERTY_TYPE_ORDER: PropertyType[] = [
+  PROPERTY_TYPE.APARTMENT,
+  PROPERTY_TYPE.HOUSE,
+  PROPERTY_TYPE.TOWNHOUSE,
+  PROPERTY_TYPE.UNIT,
+  PROPERTY_TYPE.STUDIO,
+];
+
+/** PropertyStatus — registry occupancy / marketing state. */
+export const PROPERTY_STATUS = {
+  OCCUPIED: 'OCCUPIED',
+  VACANT: 'VACANT',
+  SHOWING: 'SHOWING',
+  MAINTENANCE: 'MAINTENANCE',
+} as const;
+
+export type PropertyStatus = (typeof PROPERTY_STATUS)[keyof typeof PROPERTY_STATUS];
+
+export const PROPERTY_STATUS_LABEL: Record<PropertyStatus, string> = {
+  [PROPERTY_STATUS.OCCUPIED]: 'Occupied',
+  [PROPERTY_STATUS.VACANT]: 'Vacant',
+  [PROPERTY_STATUS.SHOWING]: 'Showing',
+  [PROPERTY_STATUS.MAINTENANCE]: 'Maintenance',
+};
+
+export const PROPERTY_STATUS_ORDER: PropertyStatus[] = [
+  PROPERTY_STATUS.OCCUPIED,
+  PROPERTY_STATUS.VACANT,
+  PROPERTY_STATUS.SHOWING,
+  PROPERTY_STATUS.MAINTENANCE,
+];
+
+/** Australian states & territories — required on property registry intake. */
+export const AUSTRALIAN_STATE = {
+  NSW: 'NSW',
+  VIC: 'VIC',
+  QLD: 'QLD',
+  SA: 'SA',
+  WA: 'WA',
+  TAS: 'TAS',
+  ACT: 'ACT',
+  NT: 'NT',
+} as const;
+
+export type AustralianStateKey = (typeof AUSTRALIAN_STATE)[keyof typeof AUSTRALIAN_STATE];
+
+export const AUSTRALIAN_STATE_ORDER: AustralianStateKey[] = [
+  AUSTRALIAN_STATE.NSW,
+  AUSTRALIAN_STATE.VIC,
+  AUSTRALIAN_STATE.QLD,
+  AUSTRALIAN_STATE.SA,
+  AUSTRALIAN_STATE.WA,
+  AUSTRALIAN_STATE.TAS,
+  AUSTRALIAN_STATE.ACT,
+  AUSTRALIAN_STATE.NT,
+];
+
+export const AUSTRALIAN_STATE_LABEL: Record<AustralianStateKey, string> = {
+  [AUSTRALIAN_STATE.NSW]: 'New South Wales',
+  [AUSTRALIAN_STATE.VIC]: 'Victoria',
+  [AUSTRALIAN_STATE.QLD]: 'Queensland',
+  [AUSTRALIAN_STATE.SA]: 'South Australia',
+  [AUSTRALIAN_STATE.WA]: 'Western Australia',
+  [AUSTRALIAN_STATE.TAS]: 'Tasmania',
+  [AUSTRALIAN_STATE.ACT]: 'Australian Capital Territory',
+  [AUSTRALIAN_STATE.NT]: 'Northern Territory',
+};

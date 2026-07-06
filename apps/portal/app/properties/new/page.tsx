@@ -8,6 +8,12 @@ import {
   DocumentChecklistUpload,
   type ChecklistUploadState,
 } from '@/components/agent/document-checklist-upload';
+import {
+  mapStatusToLeaseStatus,
+  NewPropertyRegistryForm,
+  parseCount,
+  type NewPropertyRegistryValues,
+} from '@/components/agent/new-property-registry-form';
 import { PropertyImportPanel } from '@/components/agent/property-import-panel';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
@@ -37,7 +43,7 @@ export default function AddPropertyPage() {
   const router = useRouter();
   const { addProperty, uploadDocument, apiConnected } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
-  const [intakeMode, setIntakeMode] = useState<PropertyIntakeMode>('transfer_in');
+  const [intakeMode, setIntakeMode] = useState<PropertyIntakeMode>('new');
   const [uploads, setUploads] = useState<ChecklistUploadState>({});
   const [pmsSource, setPmsSource] = useState<string>('');
   const [form, setForm] = useState({
@@ -143,7 +149,7 @@ export default function AddPropertyPage() {
     .filter((item) => item.required)
     .every((item) => (uploads[item.id]?.length ?? 0) > 0);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmitTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.address.trim() || !form.suburb.trim() || !form.homeOwnerName.trim()) {
       toast.error('Address, suburb, and landlord name are required');
@@ -155,7 +161,7 @@ export default function AddPropertyPage() {
     }
     setSubmitting(true);
     try {
-      const property = addProperty({
+      const property = await addProperty({
         intakeMode,
         address: form.address,
         suburb: form.suburb,
@@ -179,12 +185,50 @@ export default function AddPropertyPage() {
         previousAgentEmail: form.previousAgentEmail || undefined,
         pmsSource: pmsSource || undefined,
       });
-      toast.success(
-        intakeMode === 'transfer_in'
-          ? 'Transfer IN property saved — staff leasing will activate on crossub_web'
-          : 'Property added to your portfolio',
-      );
+      toast.success('Transfer IN property saved — staff leasing will activate on crossub_web');
       router.push(propertyDetail(property.id));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onSubmitNewProperty = async (values: NewPropertyRegistryValues) => {
+    const address = values.address.trim();
+    if (!address) {
+      toast.error('Street address is required');
+      return;
+    }
+    if (!values.state) {
+      toast.error('Select the property state or territory');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const property = await addProperty({
+        intakeMode: 'new',
+        address,
+        suburb: values.suburb.trim(),
+        state: values.state,
+        postcode: values.postcode.trim() || undefined,
+        homeOwnerName: values.landlordName.trim() || 'TBC',
+        homeOwnerEmail: values.landlordEmail.trim() || undefined,
+        homeOwnerPhone: values.landlordPhone.trim() || undefined,
+        tenantName: values.tenantName.trim() || 'Vacant',
+        tenantEmail: values.tenantEmail.trim() || undefined,
+        tenantPhone: values.tenantPhone.trim() || undefined,
+        leaseStatus: mapStatusToLeaseStatus(values.status),
+        rentWeekly: 0,
+        bedrooms: parseCount(values.bedrooms),
+        bathrooms: parseCount(values.bathrooms),
+        carSpaces: parseCount(values.parking),
+        propertyType: values.propertyType,
+        propertyStatus: values.status,
+      });
+      toast.success('Property added — available across leasing, maintenance, and more');
+      router.push(propertyDetail(property.id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not add the property');
     } finally {
       setSubmitting(false);
     }
@@ -192,7 +236,7 @@ export default function AddPropertyPage() {
 
   return (
     <AgentShell title="Add property" backHref={ROUTES.PROPERTIES} backLabel="Properties">
-      <form onSubmit={onSubmit} className="space-y-5">
+      <div className="space-y-5">
         <p className="text-muted-foreground text-sm">
           Property intake aligned with Leasing ops: transfer IN from another agent, new leasing
           setup, document checklist, and PropertyMe / PropertyTree one-click import. Live properties
@@ -202,25 +246,28 @@ export default function AddPropertyPage() {
         <div className="grid grid-cols-2 gap-2">
           <Button
             type="button"
-            variant={intakeMode === 'transfer_in' ? 'default' : 'outline'}
-            onClick={() => setIntakeMode('transfer_in')}
-          >
-            Transfer IN
-          </Button>
-          <Button
-            type="button"
             variant={intakeMode === 'new' ? 'default' : 'outline'}
             onClick={() => setIntakeMode('new')}
           >
             New property
           </Button>
+          <Button
+            type="button"
+            variant={intakeMode === 'transfer_in' ? 'default' : 'outline'}
+            onClick={() => setIntakeMode('transfer_in')}
+          >
+            Transfer IN
+          </Button>
         </div>
 
-        <PropertyImportPanel onImport={applyImport} />
+        {intakeMode === 'new' ? (
+          <NewPropertyRegistryForm onSubmit={onSubmitNewProperty} submitting={submitting} />
+        ) : (
+          <form onSubmit={onSubmitTransfer} className="space-y-5">
+            <PropertyImportPanel onImport={applyImport} />
 
-        {intakeMode === 'transfer_in' && (
-          <fieldset className="space-y-3 rounded-xl border bg-card p-4">
-            <legend className="px-1 text-sm font-semibold">Previous agent</legend>
+            <fieldset className="space-y-3 rounded-xl border bg-card p-4">
+              <legend className="px-1 text-sm font-semibold">Previous agent</legend>
             <div className="space-y-2">
               <Label htmlFor="previousAgentName">Managing agent name</Label>
               <Input
@@ -247,11 +294,10 @@ export default function AddPropertyPage() {
                 onChange={(e) => update('handoverDate', e.target.value)}
               />
             </div>
-          </fieldset>
-        )}
+            </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border bg-card p-4">
-          <legend className="px-1 text-sm font-semibold">Property</legend>
+            <fieldset className="space-y-3 rounded-xl border bg-card p-4">
+              <legend className="px-1 text-sm font-semibold">Property</legend>
           <div className="space-y-2">
             <Label htmlFor="address">Street address</Label>
             <Input
@@ -451,9 +497,11 @@ export default function AddPropertyPage() {
         </fieldset>
 
         <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? 'Saving…' : intakeMode === 'transfer_in' ? 'Save transfer IN' : 'Add property'}
+          {submitting ? 'Saving…' : 'Save transfer IN'}
         </Button>
-      </form>
+          </form>
+        )}
+      </div>
     </AgentShell>
   );
 }

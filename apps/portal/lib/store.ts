@@ -23,8 +23,11 @@ export type PropertyIntakeMode = 'new' | 'transfer_in';
 
 export interface NewPropertyInput {
   intakeMode: PropertyIntakeMode;
+  agencyId?: string;
   address: string;
   suburb: string;
+  state?: string;
+  postcode?: string;
   homeOwnerName: string;
   homeOwnerEmail?: string;
   homeOwnerPhone?: string;
@@ -38,6 +41,7 @@ export interface NewPropertyInput {
   carSpaces?: number;
   bondAmount?: number;
   propertyType?: string;
+  propertyStatus?: string;
   managementRatePercent?: number;
   insuranceProvider?: string;
   handoverDate?: string;
@@ -144,8 +148,11 @@ export const useAgentStore = create<AgentStore>()(
         const property: Property = {
           id: `prop-agent-${Date.now()}`,
           intakeMode: input.intakeMode,
+          agencyId: input.agencyId,
           address: input.address.trim(),
           suburb: input.suburb.trim(),
+          state: input.state?.trim() || undefined,
+          postcode: input.postcode?.trim() || undefined,
           homeOwnerName: input.homeOwnerName.trim(),
           homeOwnerContact: {
             email: input.homeOwnerEmail?.trim() || undefined,

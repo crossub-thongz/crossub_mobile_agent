@@ -48,6 +48,8 @@ export interface Property {
   intakeMode?: 'new' | 'transfer_in';
   address: string;
   suburb: string;
+  state?: string;
+  postcode?: string;
   /** Landlord / home owner this property belongs to */
   homeOwnerName: string;
   homeOwnerContact: PropertyContact;

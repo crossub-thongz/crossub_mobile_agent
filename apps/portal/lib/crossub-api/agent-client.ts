@@ -52,6 +52,34 @@ export async function fetchProperties(): Promise<AgentProperty[]> {
   return data.items;
 }
 
+/** Register a property under the agent's profile agency (`POST /api/v1/agent/properties`). */
+export type CreateAgentPropertyInput = {
+  address: string;
+  suburb?: string;
+  state?: string;
+  postcode?: string;
+  propertyType?: string;
+  status?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  parking?: number;
+  landlordName?: string;
+  landlordEmail?: string;
+  landlordPhone?: string;
+  tenantName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+};
+
+export async function createProperty(
+  body: CreateAgentPropertyInput,
+): Promise<AgentProperty> {
+  return agentFetch<AgentProperty>('/agent/properties', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 /** One property by id (`GET /api/v1/agent/properties/{propertyId}`). */
 export async function fetchProperty(propertyId: string): Promise<AgentProperty> {
   const { data, error } = await crossub.GET('/agent/properties/{propertyId}', {

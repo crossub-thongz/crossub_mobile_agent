@@ -12,6 +12,7 @@ import {
 import { useAuth } from '@/components/providers/auth-provider';
 import {
   approveMaintenance as apiApproveMaintenance,
+  createProperty as apiCreateProperty,
   createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
   fetchAgencies,
@@ -35,6 +36,7 @@ import {
   mapAgentMaintenance,
   mapAgentMessages,
   mapAgentNotifications,
+  mapAgentProperty,
   mapAgentProperties,
   mapAgentRentReviews,
   mapAgentTenantSelections,
@@ -160,6 +162,8 @@ interface AgentDataContextValue {
   maintenanceKpis: { total: number; overdue: number; breachRate: number } | null;
   properties: Property[];
   agencies: Agency[];
+  /** The agent's profile agency — earliest AccountManagerAssignment, not user-selectable. */
+  primaryAgency: Agency | null;
   inspections: Inspection[];
   rentReviews: RentReviewCase[];
   vacating: VacatingCase[];
@@ -192,7 +196,7 @@ interface AgentDataContextValue {
     propertyId: string,
     options?: { category?: MessageCategory; subject?: string; caseId?: string },
   ) => string;
-  addProperty: (input: import('@/lib/store').NewPropertyInput) => Property;
+  addProperty: (input: import('@/lib/store').NewPropertyInput) => Promise<Property>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Inspection;
   approveMaintenanceQuote: (requestId: string) => Promise<void>;
   declineMaintenanceQuote: (requestId: string, reason: string) => Promise<void>;
@@ -382,6 +386,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       .map((a) => ({ ...a, propertyCount: counts.get(a.id) ?? 0 }))
       .sort((x, y) => x.name.localeCompare(y.name));
   }, [apiAgencies, properties]);
+
+  const primaryAgency = useMemo<Agency | null>(() => {
+    if (apiAgencies?.length) {
+      const first = apiAgencies[0];
+      const propertyCount = properties.filter((p) => p.agencyId === first.id).length;
+      return { ...first, propertyCount };
+    }
+    const demo = DEMO_AGENCIES.filter((a) => properties.some((p) => p.agencyId === a.id));
+    return demo[0] ?? agencies[0] ?? null;
+  }, [apiAgencies, properties, agencies]);
 
   const maintenanceAll = useMemo(() => {
     if (portfolio) return mapAgentMaintenance(portfolio.maintenance);
@@ -623,9 +637,34 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addProperty = useCallback(
-    (input: import('@/lib/store').NewPropertyInput) =>
-      storeAddProperty(input, agentPortfolioId),
-    [storeAddProperty, agentPortfolioId],
+    async (input: import('@/lib/store').NewPropertyInput): Promise<Property> => {
+      if (apiConnected && input.intakeMode === 'new') {
+        const created = await apiCreateProperty({
+          address: input.address.trim(),
+          suburb: input.suburb.trim() || undefined,
+          state: input.state,
+          postcode: input.postcode,
+          propertyType: input.propertyType,
+          status: input.propertyStatus,
+          bedrooms: input.bedrooms,
+          bathrooms: input.bathrooms,
+          parking: input.carSpaces,
+          landlordName:
+            input.homeOwnerName.trim() && input.homeOwnerName !== 'TBC'
+              ? input.homeOwnerName.trim()
+              : undefined,
+          landlordEmail: input.homeOwnerEmail,
+          landlordPhone: input.homeOwnerPhone,
+          tenantName: input.tenantName.trim() !== 'Vacant' ? input.tenantName.trim() : undefined,
+          tenantEmail: input.tenantEmail,
+          tenantPhone: input.tenantPhone,
+        });
+        await refresh();
+        return mapAgentProperty(created, agentPortfolioId);
+      }
+      return storeAddProperty(input, agentPortfolioId);
+    },
+    [apiConnected, refresh, storeAddProperty, agentPortfolioId],
   );
 
   const addOpenInspection = useCallback(
@@ -852,6 +891,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     maintenanceKpis,
     properties,
     agencies,
+    primaryAgency,
     inspections,
     rentReviews,
     vacating,
