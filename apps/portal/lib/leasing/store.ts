@@ -18,6 +18,8 @@ import type { AgentKeyCollection } from '@/lib/crossub-api/agent-client';
 type LeasingWorkflowStore = {
   details: Record<string, LeasingPropertyDetail>;
   activeStepByProperty: Record<string, LeasingLifecycleStep>;
+  contractDialogOpen: boolean;
+  setContractDialogOpen: (open: boolean) => void;
   ensureDetail: (propertyId: string, propertyAddress: string, rentWeekly?: number) => LeasingPropertyDetail;
   getDetail: (propertyId: string) => LeasingPropertyDetail | undefined;
   getActiveStep: (propertyId: string) => LeasingLifecycleStep;
@@ -58,6 +60,11 @@ function updateDetail(
 export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) => ({
   details: {},
   activeStepByProperty: {},
+  contractDialogOpen: false,
+
+  setContractDialogOpen(open) {
+    set({ contractDialogOpen: open });
+  },
 
   ensureDetail(propertyId, propertyAddress, rentWeekly) {
     const existing = get().details[propertyId];
@@ -271,7 +278,6 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
             ...p.onboarding.agreement,
             contract: { ...p.onboarding.agreement.contract, confirmed: true },
             status: LEASING_ITEM_STATUS.IN_PROGRESS,
-            signingStatus: 'sent',
           },
         },
       })),
@@ -386,16 +392,27 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
 
   updateContract(id, patch) {
     set((s) => ({
-      details: updateDetail(s.details, id, (p) => ({
-        ...p,
-        onboarding: {
-          ...p.onboarding,
-          agreement: {
-            ...p.onboarding.agreement,
-            contract: { ...p.onboarding.agreement.contract, ...patch },
+      details: updateDetail(s.details, id, (p) => {
+        const agreement = p.onboarding.agreement;
+        const wasConfirmed = agreement.contract.confirmed;
+        const wasOutForSigning =
+          agreement.signingStatus === 'sent' || agreement.signingStatus === 'viewed';
+        return {
+          ...p,
+          onboarding: {
+            ...p.onboarding,
+            agreement: {
+              ...agreement,
+              ...(wasOutForSigning ? { signingStatus: 'not_sent' as const } : {}),
+              contract: {
+                ...agreement.contract,
+                ...patch,
+                ...(wasConfirmed ? { confirmed: false } : {}),
+              },
+            },
           },
-        },
-      })),
+        };
+      }),
     }));
   },
 }));

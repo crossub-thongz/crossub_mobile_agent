@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import { LeasingContractDialog } from '@/components/leasing-workflow/leasing-contract-dialog';
 import { KeyCollectionForm } from '@/components/agent/key-collection-form';
 import { Button } from '@/components/ui/button';
 import { LEASING_ITEM_STATUS, LEASING_KEY_CUSTODY } from '@/lib/leasing/constants';
@@ -104,22 +105,26 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
       <StepCard
         icon={FileSignature}
         title="Agreement"
+        description={
+          o.agreement.signingStatus === 'signed'
+            ? 'Agreement signed — terms are locked.'
+            : 'Edit lease terms and special conditions before sending for signature.'
+        }
         status={o.agreement.status}
         footer={
           <>
-            {!o.agreement.contract.confirmed && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={() => {
-                  store.confirmContract(id);
-                  toast.success('Contract confirmed');
-                }}
-              >
-                Confirm contract
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => store.setContractDialogOpen(true)}
+            >
+              {o.agreement.signingStatus === 'signed'
+                ? 'View agreement'
+                : o.agreement.contract.confirmed
+                  ? 'Edit agreement'
+                  : 'Open agreement'}
+            </Button>
             {o.agreement.signingStatus !== 'signed' && o.agreement.contract.confirmed && (
               <Button
                 size="sm"
@@ -256,6 +261,8 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
           pendingLabel="Awaiting tenant approval"
         />
       </StepCard>
+
+      <LeasingContractDialog detail={detail} />
     </div>
   );
 }
