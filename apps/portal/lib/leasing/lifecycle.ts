@@ -28,6 +28,19 @@ export function getApprovedApplications(detail: LeasingPropertyDetail) {
   );
 }
 
+/** Pending applicants not yet sent can be shortlisted for agent / PM approval. */
+export function canSelectApplicantForApproval(
+  app: LeasingPropertyDetail['applicationsDetail'][number],
+): boolean {
+  return app.agentDecision === LEASING_AGENT_DECISION.PENDING && !app.sentToAgent;
+}
+
+export function countSelectedForApprovalSend(
+  apps: LeasingPropertyDetail['applicationsDetail'],
+): number {
+  return apps.filter((a) => a.selectedForAgent && canSelectApplicantForApproval(a)).length;
+}
+
 export function deriveOnboardingStatus(detail: LeasingPropertyDetail): LeasingItemStatus {
   const o = detail.onboarding;
   const statuses: LeasingItemStatus[] = [

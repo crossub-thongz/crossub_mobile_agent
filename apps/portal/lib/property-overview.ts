@@ -40,14 +40,39 @@ function findDocByKeywords(docs: AgentDocument[], keywords: string[]) {
   );
 }
 
+function viewableDocumentUrl(doc?: AgentDocument): string | undefined {
+  const url = doc?.downloadUrl ?? doc?.href;
+  return url && url !== '#' ? url : undefined;
+}
+
+function inspectionHasReport(inspection: Inspection): boolean {
+  return (
+    Boolean(inspection.reportUrl) ||
+    inspection.reportStatus === 'sent' ||
+    inspection.reportStatus === 'uploaded' ||
+    inspection.reportStatus === 'approved'
+  );
+}
+
+function resolveReportHref(
+  inspection: Inspection | undefined,
+  doc?: AgentDocument,
+): string | undefined {
+  if (inspection?.reportUrl) return inspection.reportUrl;
+  const docUrl = viewableDocumentUrl(doc);
+  if (docUrl) return docUrl;
+  if (inspection && inspectionHasReport(inspection)) {
+    return inspectionDetail(inspection.id);
+  }
+  return undefined;
+}
+
 export function resolveIngoingReportLink(
   inspection: Inspection | undefined,
   documents: AgentDocument[],
 ): PropertyReportLink {
   const doc = findDocByKeywords(documents, ['ingoing', 'entry condition']);
-  const href = inspection
-    ? inspection.reportUrl ?? inspectionDetail(inspection.id)
-    : doc?.href;
+  const href = resolveReportHref(inspection, doc);
   const status = inspection?.reportStatus ?? (doc ? 'On file' : 'Not available');
   return { label: 'Ingoing report', href, status };
 }
@@ -57,9 +82,7 @@ export function resolveRoutineReportLink(
   documents: AgentDocument[],
 ): PropertyReportLink {
   const doc = findDocByKeywords(documents, ['routine']);
-  const href = inspection
-    ? inspection.reportUrl ?? inspectionDetail(inspection.id)
-    : doc?.href;
+  const href = resolveReportHref(inspection, doc);
   const status = inspection?.reportStatus ?? (doc ? 'On file' : 'Not available');
   return { label: 'Routine inspection report', href, status };
 }

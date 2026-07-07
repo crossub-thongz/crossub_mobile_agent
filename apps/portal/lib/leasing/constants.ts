@@ -98,6 +98,8 @@ export const LEASING_PILL_TEXT = {
   violet: 'text-violet-800 dark:text-violet-200',
 } as const;
 
+export const LEASING_APPLICATION_SEND_FOR_APPROVAL_LABEL = 'Send for approval';
+
 export const LEASING_UI = {
   accentIcon: 'text-violet-700 dark:text-violet-300',
   btnSecondary:
@@ -156,7 +158,7 @@ export type LeasingAgentDecision =
   (typeof LEASING_AGENT_DECISION)[keyof typeof LEASING_AGENT_DECISION];
 
 export const LEASING_AGENT_DECISION_LABEL: Record<LeasingAgentDecision, string> = {
-  [LEASING_AGENT_DECISION.PENDING]: 'Pending agent',
+  [LEASING_AGENT_DECISION.PENDING]: 'Pending approval',
   [LEASING_AGENT_DECISION.APPROVED]: 'Approved',
   [LEASING_AGENT_DECISION.REJECTED]: 'Rejected',
 };

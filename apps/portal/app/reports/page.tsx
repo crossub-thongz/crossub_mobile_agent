@@ -68,7 +68,7 @@ export default function ReportsPage() {
             title={viewing.title}
             propertyAddress={viewing.propertyAddress}
             category={viewing.category}
-            downloadUrl={viewing.downloadUrl}
+            downloadUrl={viewing.downloadUrl ?? viewing.href}
             onClose={() => setViewDocId(null)}
           />
         ) : (

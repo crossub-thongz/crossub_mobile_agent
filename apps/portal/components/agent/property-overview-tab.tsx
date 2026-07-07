@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import {
   Building2,
   History,
@@ -10,6 +11,7 @@ import {
   User,
 } from 'lucide-react';
 
+import { DocumentViewer } from '@/components/agent/document-viewer';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { PropertyPhotosButton } from '@/components/agent/property-photos-dialog';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
@@ -36,16 +38,40 @@ import type {
   PropertyNeedAction,
 } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { isViewableDocumentUrl } from '@/lib/document-preview';
 
-function ReportRow({ label, href, status }: { label: string; href?: string; status: string }) {
+function ReportRow({
+  label,
+  href,
+  status,
+  onPreview,
+}: {
+  label: string;
+  href?: string;
+  status: string;
+  onPreview: (report: { label: string; href: string }) => void;
+}) {
+  const opensInline =
+    href && isViewableDocumentUrl(href) && !href.startsWith('/');
+
   return (
     <InfoRow label={label}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground text-sm capitalize">{status}</span>
         {href && href !== '#' ? (
-          <Link href={href} className="text-primary text-sm font-semibold">
-            View
-          </Link>
+          opensInline ? (
+            <button
+              type="button"
+              onClick={() => onPreview({ label, href })}
+              className="text-primary text-sm font-semibold"
+            >
+              View
+            </button>
+          ) : (
+            <Link href={href} className="text-primary text-sm font-semibold">
+              View
+            </Link>
+          )
         ) : null}
       </div>
     </InfoRow>
@@ -116,6 +142,10 @@ export function PropertyOverviewTab({
   tenancyRentReviews: import('@/lib/types').RentReviewCase[];
   onViewHistory: () => void;
 }) {
+  const [reportPreview, setReportPreview] = useState<{ label: string; href: string } | null>(
+    null,
+  );
+  const propertyAddress = `${property.address}, ${property.suburb}`;
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
   const currentRent = resolveCurrentRent(property, currentLease);
   const { start: leaseStart, end: leaseEnd } = resolveLeaseDates(property, currentLease);
@@ -152,6 +182,15 @@ export function PropertyOverviewTab({
 
   return (
     <div className="space-y-4">
+      {reportPreview ? (
+        <DocumentViewer
+          title={reportPreview.label}
+          propertyAddress={propertyAddress}
+          category="inspection"
+          downloadUrl={reportPreview.href}
+          onClose={() => setReportPreview(null)}
+        />
+      ) : null}
       {needActions.length > 0 || maintenance.length > 0 ? (
         <InfoPanel
           title="Tasks"
@@ -204,11 +243,13 @@ export function PropertyOverviewTab({
             label={ingoingReport.label}
             href={ingoingReport.href}
             status={ingoingReport.status}
+            onPreview={setReportPreview}
           />
           <ReportRow
             label={routineReport.label}
             href={routineReport.href}
             status={routineReport.status}
+            onPreview={setReportPreview}
           />
           <InfoRow label="Bond ID" value={bondId} />
         </div>

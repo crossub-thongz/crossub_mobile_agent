@@ -676,15 +676,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         })();
         return;
       }
-      // Offline: device-local optimistic only (the legacy metadata-only mock).
+      // Offline: keep a blob URL so View/Download work on this device.
+      const objectUrl = URL.createObjectURL(file);
       const doc: AgentDocument = {
         id: `upload-${Date.now()}`,
         title: file.name,
         propertyAddress,
         category,
         uploadedAt: new Date().toISOString(),
-        href: '#',
-        downloadUrl: '#',
+        href: objectUrl,
+        downloadUrl: objectUrl,
       };
       addUploadedDocument(doc);
     },

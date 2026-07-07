@@ -9,11 +9,14 @@ import {
   LEASING_AGENT_DECISION,
   LEASING_AGENT_DECISION_LABEL,
   LEASING_AGENT_DECISION_TONE,
+  LEASING_APPLICATION_SEND_FOR_APPROVAL_LABEL,
   LEASING_TONE,
   LEASING_UI,
 } from '@/lib/leasing/constants';
 import {
   getApprovedApplications,
+  canSelectApplicantForApproval,
+  countSelectedForApprovalSend,
   isApplicationApprovalLocked,
 } from '@/lib/leasing/lifecycle';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
@@ -33,7 +36,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
   const readOnly = isApplicationApprovalLocked(detail);
   const apps = readOnly ? getApprovedApplications(detail) : detail.applicationsDetail;
-  const selectedCount = apps.filter((a) => a.selectedForAgent).length;
+  const selectedCount = countSelectedForApprovalSend(apps);
 
   if (detail.applicationsDetail.length === 0) {
     return (
@@ -83,12 +86,12 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
             onClick={() => {
               sendSelected(detail.propertyId);
               toast.success(
-                `${selectedCount} applicant${selectedCount === 1 ? '' : 's'} + AI advice sent to agent`,
+                `${selectedCount} applicant${selectedCount === 1 ? '' : 's'} + AI advice sent for approval`,
               );
             }}
           >
             <Send className="size-3.5" />
-            Send selected to agent
+            {LEASING_APPLICATION_SEND_FOR_APPROVAL_LABEL}
           </Button>
         </div>
       )}
@@ -129,11 +132,12 @@ function ApplicantRow({
   onReject: () => void;
 }) {
   const decisionPending = app.agentDecision === LEASING_AGENT_DECISION.PENDING;
+  const canSelect = canSelectApplicantForApproval(app);
 
   return (
     <li className="rounded-xl border bg-card p-3.5">
       <div className="flex items-start gap-3">
-        {!readOnly && (
+        {!readOnly && canSelect && (
           <input
             type="checkbox"
             checked={app.selectedForAgent}
@@ -142,6 +146,7 @@ function ApplicantRow({
             aria-label={`Select ${app.applicant}`}
           />
         )}
+        {!readOnly && !canSelect && <span className="mt-1 inline-flex size-4 shrink-0" aria-hidden />}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-[13px] font-semibold">{app.applicant}</p>
@@ -160,7 +165,7 @@ function ApplicantRow({
               />
             )}
             {!readOnly && app.sentToAgent && decisionPending && (
-              <LeasingToneBadge tone={LEASING_TONE.INFO} label="Sent to agent" size="xs" />
+              <LeasingToneBadge tone={LEASING_TONE.INFO} label="Sent for approval" size="xs" />
             )}
           </div>
           <p className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
@@ -184,7 +189,7 @@ function ApplicantRow({
             </p>
           )}
         </div>
-        {!readOnly && app.sentToAgent && decisionPending && (
+        {!readOnly && app.agentDecision === LEASING_AGENT_DECISION.PENDING && (
           <div className="flex shrink-0 gap-1">
             <Button
               size="sm"

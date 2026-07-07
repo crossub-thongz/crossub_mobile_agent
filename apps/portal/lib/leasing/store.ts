@@ -185,9 +185,16 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
     set((s) => ({
       details: updateDetail(s.details, id, (p) => ({
         ...p,
-        applicationsDetail: p.applicationsDetail.map((a) =>
-          a.id === applicationId ? { ...a, selectedForAgent: !a.selectedForAgent } : a,
-        ),
+        applicationsDetail: p.applicationsDetail.map((a) => {
+          if (a.id !== applicationId) return a;
+          if (
+            a.agentDecision !== LEASING_AGENT_DECISION.PENDING ||
+            a.sentToAgent
+          ) {
+            return a;
+          }
+          return { ...a, selectedForAgent: !a.selectedForAgent };
+        }),
       })),
     }));
   },
@@ -197,7 +204,11 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
       details: updateDetail(s.details, id, (p) => ({
         ...p,
         applicationsDetail: p.applicationsDetail.map((a) =>
-          a.selectedForAgent ? { ...a, sentToAgent: true, aiAdviceSentToAgent: true } : a,
+          a.selectedForAgent &&
+          a.agentDecision === LEASING_AGENT_DECISION.PENDING &&
+          !a.sentToAgent
+            ? { ...a, sentToAgent: true, aiAdviceSentToAgent: true }
+            : a,
         ),
       })),
     }));
@@ -208,7 +219,9 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
       details: updateDetail(s.details, id, (p) => ({
         ...p,
         applicationsDetail: p.applicationsDetail.map((a) =>
-          a.id === applicationId ? { ...a, agentDecision: decision } : a,
+          a.id === applicationId
+            ? { ...a, agentDecision: decision, selectedForAgent: false }
+            : a,
         ),
       })),
     }));
