@@ -3,9 +3,11 @@
 import { useEffect } from 'react';
 
 import { LeasingLifecycleTabs } from '@/components/leasing-workflow/leasing-lifecycle-tabs';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { fetchKeyCollection } from '@/lib/crossub-api/agent-client';
 import { isUuid } from '@/lib/file-upload';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
+import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 
 export function LeasingPackageWorkspace({
   propertyId,
@@ -20,6 +22,10 @@ export function LeasingPackageWorkspace({
   const resetActiveStepToHint = useLeasingWorkflowStore((s) => s.resetActiveStepToHint);
   const applyKeyCollectionFromApi = useLeasingWorkflowStore((s) => s.applyKeyCollectionFromApi);
   const detail = useLeasingWorkflowStore((s) => s.getDetail(propertyId));
+  const { leasingCycles, apiConnected } = useAgentData();
+  const cycleId = leasingCycles.find((c) => c.propertyId === propertyId)?.id;
+
+  useLeasingCycleLiveSync(propertyId, cycleId, apiConnected);
 
   useEffect(() => {
     const seeded = ensureDetail(propertyId, propertyAddress, rentWeekly);

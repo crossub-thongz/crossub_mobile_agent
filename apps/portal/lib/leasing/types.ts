@@ -27,6 +27,7 @@ export interface LeasingOpenInspection {
   status: LeasingItemStatus;
   inspectorName?: string;
   scheduledTime?: string;
+  viewingSessionId?: string;
   pushedToAgentApp: boolean;
   agentNotifiedToAdvertise: boolean;
   advertising: LeasingAdvertisingStatus;

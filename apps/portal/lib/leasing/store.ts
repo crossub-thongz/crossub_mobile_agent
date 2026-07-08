@@ -11,9 +11,11 @@ import {
   type LeasingLifecycleStep,
 } from '@/lib/leasing/constants';
 import { keyCollectionFromApi } from '@/lib/leasing/key-collection-sync';
+import { patchDetailFromCycleView } from '@/lib/leasing/map-cycle';
 import { getLeasingDetailSeed } from '@/lib/leasing/seed';
 import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { AgentKeyCollection } from '@/lib/crossub-api/agent-client';
+import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
 
 type LeasingWorkflowStore = {
   details: Record<string, LeasingPropertyDetail>;
@@ -41,6 +43,8 @@ type LeasingWorkflowStore = {
   setKeyCollection: (id: string, time: string, location: string) => void;
   /** Overlay key-collection state from `GET /agent/properties/:id/key-collection`. */
   applyKeyCollectionFromApi: (id: string, kc: AgentKeyCollection) => void;
+  /** Merge a live `/leasing/cycles/:id` view into the workflow detail. */
+  applyCycleView: (propertyId: string, view: ServerLeasingCycleView) => void;
   scheduleIngoingInspection: (id: string, scheduledTime: string, assignee: string) => void;
   tenantConfirmIngoing: (id: string) => void;
   tenantApproveIngoingReport: (id: string) => void;
@@ -346,6 +350,17 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
         },
       })),
     }));
+  },
+
+  applyCycleView(propertyId, view) {
+    set((s) => {
+      const current = s.details[propertyId];
+      if (!current) return s;
+      const next = patchDetailFromCycleView(current, view);
+      return {
+        details: { ...s.details, [propertyId]: next },
+      };
+    });
   },
 
   scheduleIngoingInspection(id, scheduledTime, assignee) {

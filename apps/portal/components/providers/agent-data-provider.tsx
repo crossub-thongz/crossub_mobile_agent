@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -96,6 +97,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { maintenanceDetail, tenantSelectionDetail, ROUTES } from '@/constants/routes';
+import { LIVE_POLL_MS } from '@/lib/live-sync';
 
 function messageThreadKey(thread: {
   id: string;
@@ -147,10 +149,12 @@ interface AgentApiMaintenanceRef {
 
 interface AgentDataContextValue {
   loading: boolean;
+  /** True during a background portfolio refresh (does not blank the shell). */
+  refreshing: boolean;
   apiConnected: boolean;
   apiError: string | null;
   agentPortfolioId: AgentPortfolioId;
-  refresh: () => Promise<void>;
+  refresh: (options?: { force?: boolean }) => Promise<void>;
   maintenanceFromApi: AgentApiMaintenanceRef[];
   maintenanceAll: MaintenanceRequest[];
   maintenanceKpis: { total: number; overdue: number; breachRate: number } | null;
@@ -265,19 +269,30 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   // open detail route stays valid) onto its server content, and routes later replies to it.
   const [createdThreadIds, setCreatedThreadIds] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [apiConnected, setApiConnected] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const hasLoadedOnceRef = useRef(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options?: { force?: boolean }) => {
     if (status !== 'authed') {
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setApiError(null);
-    setApiAgencies(null);
-    setApiInspections(null);
+    const isInitialLoad = !hasLoadedOnceRef.current;
+    const force = options?.force === true;
+    const showBlockingLoad = isInitialLoad || force;
+
+    if (showBlockingLoad) {
+      setLoading(true);
+      setApiError(null);
+      setApiAgencies(null);
+      setApiInspections(null);
+    } else {
+      setRefreshing(true);
+    }
+
     try {
       const [props, port] = await Promise.all([
         fetchProperties(),
@@ -287,6 +302,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiProperties(mappedProps);
       setPortfolio(port);
       setApiConnected(true);
+      setApiError(null);
       // Messages + notifications + documents + agencies load after the portfolio; each
       // domain degrades independently (one hiccup never blanks the others).
       const [threadsRes, notifsRes, docsRes, agenciesRes] = await Promise.allSettled([
@@ -322,21 +338,23 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         );
       }
     } catch (err) {
-      setApiConnected(false);
-      setApiProperties(null);
-      setPortfolio(null);
-      setApiMessages(null);
-      setApiNotifications(null);
-      setApiDocuments(null);
-      setApiAgencies(null);
-      setApiInspections(null);
-      setApiError(
-        err instanceof Error
-          ? err.message
-          : 'Unable to reach CROSSUB API',
-      );
+      const message =
+        err instanceof Error ? err.message : 'Unable to reach CROSSUB API';
+      if (showBlockingLoad) {
+        setApiConnected(false);
+        setApiProperties(null);
+        setPortfolio(null);
+        setApiMessages(null);
+        setApiNotifications(null);
+        setApiDocuments(null);
+        setApiAgencies(null);
+        setApiInspections(null);
+      }
+      setApiError(message);
     } finally {
-      setLoading(false);
+      hasLoadedOnceRef.current = true;
+      if (showBlockingLoad) setLoading(false);
+      else setRefreshing(false);
     }
   }, [status, agentPortfolioId]);
 
@@ -366,6 +384,15 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
     void refresh();
   }, [refresh, status]);
+
+  // Background portfolio sync — same 5s cadence as the inspector app roster poll.
+  useEffect(() => {
+    if (status !== 'authed' || !apiConnected) return;
+    const id = window.setInterval(() => {
+      void refresh();
+    }, LIVE_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [status, apiConnected, refresh]);
 
   const properties = useMemo(() => {
     const scoped = (list: Property[]) =>
@@ -919,6 +946,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const value: AgentDataContextValue = {
     loading,
+    refreshing,
     apiConnected,
     apiError,
     agentPortfolioId,

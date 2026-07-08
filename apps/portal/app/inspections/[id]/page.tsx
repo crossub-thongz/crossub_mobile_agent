@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,69 +22,17 @@ import {
   OPEN_LISTING_CONTEXT_LABEL,
   SELF_OPEN_INSPECTION_DISCLAIMER,
 } from '@/lib/open-inspection';
+import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sync';
 import { formatDateTime } from '@/lib/utils';
-import { fetchInspectionDetail } from '@/lib/inspections/fetch';
-import type { InspectionDetail } from '@/lib/inspections-types';
-import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
-import type { Inspection } from '@/lib/types';
-
-function isOpenSession(
-  detail: InspectionDetail | OpenInspectionSession,
-): detail is OpenInspectionSession {
-  return 'sessionStatus' in detail;
-}
 
 export default function InspectionDetailPage() {
   const params = useParams();
   const { inspections, apiConnected } = useAgentData();
   const base = inspections.find((i) => i.id === params.id);
-  const [insp, setInsp] = useState<Inspection | undefined>(base);
+  const insp = useInspectionDetailLiveSync(base, apiConnected);
   const [acknowledged, setAcknowledged] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
-
-  useEffect(() => {
-    setInsp(base);
-  }, [base]);
-
-  useEffect(() => {
-    if (!apiConnected || !base) return;
-    let active = true;
-    void fetchInspectionDetail(base).then((detail) => {
-      if (!active || !detail) return;
-      if (isOpenSession(detail)) {
-        setInsp((prev) =>
-          prev
-            ? {
-                ...prev,
-                scheduledAt: detail.startTime,
-                status: detail.sessionStatus,
-                visitorCount: detail.visitors.length,
-                inspector: detail.agent?.name,
-              }
-            : prev,
-        );
-        return;
-      }
-      setInsp((prev) =>
-        prev
-          ? {
-              ...prev,
-              inspector: detail.inspectorName ?? prev.inspector,
-              scheduledAt: detail.scheduledDate ?? detail.inspectionDate ?? prev.scheduledAt,
-              reportUrl: detail.reportUrl ?? prev.reportUrl,
-              areaOutcomes: detail.areas.map((area) => ({
-                area: area.name ?? 'Area',
-                outcome: area.rating,
-              })),
-            }
-          : prev,
-      );
-    });
-    return () => {
-      active = false;
-    };
-  }, [apiConnected, base]);
 
   if (!insp) notFound();
 

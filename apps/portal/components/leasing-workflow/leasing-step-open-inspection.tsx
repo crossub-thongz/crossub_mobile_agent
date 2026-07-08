@@ -35,7 +35,8 @@ function defaultScheduleTime(): string {
 }
 
 export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyDetail }) {
-  const { leasingCycles, refresh, apiConnected } = useAgentData();
+  const { leasingCycles, apiConnected } = useAgentData();
+  const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const pushToAppLocal = useLeasingWorkflowStore((s) => s.pushInspectionToAgentApp);
   const notifyLocal = useLeasingWorkflowStore((s) => s.notifyAgentToAdvertise);
   const arrangeLocal = useLeasingWorkflowStore((s) => s.arrangeOpenInspection);
@@ -59,8 +60,8 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     setArranging(true);
     try {
       if (apiConnected && cycleId) {
-        await leasingOpsApi.arrangeOpenInspection(cycleId, { scheduledTime });
-        await refresh();
+        const view = await leasingOpsApi.arrangeOpenInspection(cycleId, { scheduledTime });
+        applyCycleView(detail.propertyId, view);
         toast.success('Open inspection arranged');
       } else {
         arrangeLocal(detail.propertyId, 'Pending assignment', scheduledTime);
@@ -76,8 +77,8 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const pushToApp = async () => {
     try {
       if (apiConnected && cycleId) {
-        await leasingOpsApi.pushInspectionToAgentApp(cycleId);
-        await refresh();
+        const view = await leasingOpsApi.pushInspectionToAgentApp(cycleId);
+        applyCycleView(detail.propertyId, view);
       } else {
         pushToAppLocal(detail.propertyId);
       }
@@ -90,8 +91,8 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const notify = async () => {
     try {
       if (apiConnected && cycleId) {
-        await leasingOpsApi.notifyAgentToAdvertise(cycleId);
-        await refresh();
+        const view = await leasingOpsApi.notifyAgentToAdvertise(cycleId);
+        applyCycleView(detail.propertyId, view);
       } else {
         notifyLocal(detail.propertyId);
       }

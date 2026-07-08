@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { DataSourceBadge } from '@/components/agent/data-source-badge';
 
 export function ConnectionBanner() {
-  const { apiConnected, apiError, loading, refresh } = useAgentData();
+  const { apiConnected, apiError, loading, refreshing, refresh } = useAgentData();
 
   const handleRefresh = async () => {
     try {
-      await refresh();
+      await refresh({ force: true });
       toast.success('Data refreshed');
     } catch {
       toast.error('Refresh failed');
@@ -36,10 +36,10 @@ export function ConnectionBanner() {
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs"
-          disabled={loading}
+          disabled={loading || refreshing}
           onClick={() => void handleRefresh()}
         >
-          <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`size-3.5 ${loading || refreshing ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>

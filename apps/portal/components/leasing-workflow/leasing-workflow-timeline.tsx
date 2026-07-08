@@ -3,7 +3,9 @@
 import { useEffect, useRef } from 'react';
 
 import { LeasingLifecycleTabs } from '@/components/leasing-workflow/leasing-lifecycle-tabs';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
+import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 
 export function LeasingWorkflowTimeline({
   propertyId,
@@ -19,7 +21,11 @@ export function LeasingWorkflowTimeline({
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const resetActiveStepToHint = useLeasingWorkflowStore((s) => s.resetActiveStepToHint);
   const detail = useLeasingWorkflowStore((s) => s.getDetail(propertyId));
+  const { leasingCycles, apiConnected } = useAgentData();
+  const cycleId = leasingCycles.find((c) => c.propertyId === propertyId)?.id;
   const initializedIdRef = useRef<string | null>(null);
+
+  useLeasingCycleLiveSync(propertyId, cycleId, apiConnected);
 
   useEffect(() => {
     const seeded = ensureDetail(propertyId, propertyAddress, rentWeekly);
