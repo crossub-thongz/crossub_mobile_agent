@@ -14,12 +14,16 @@ import {
 
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { StatusBadge } from '@/components/agent/status-badge';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import { inspectionsApi } from '@/lib/inspections-api';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import {
+  canViewInspectionReport,
   deriveTenantAckState,
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
@@ -33,7 +37,19 @@ type AgentFieldInspectionSnapshot = {
   progression: OnSiteProgression | null;
   signName: string | null;
   signUrl: string | null;
+  reportUrl: string | null;
+  hasFindings: boolean;
+  leasingTenantApproved: boolean;
 };
+
+function inspectionReportDownloadType(
+  type: Inspection['type'],
+): 'ingoing' | 'outgoing' | 'routine' | 'open' {
+  if (type === 'INGOING') return 'ingoing';
+  if (type === 'OUTGOING') return 'outgoing';
+  if (type === 'OPEN') return 'open';
+  return 'routine';
+}
 
 function formatCustodyTime(iso: string): string {
   return formatDateTime(iso);
@@ -46,14 +62,14 @@ function ProofPhotoGrid({ urls, label }: { urls: string[]; label: string }) {
       <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
         {label}
       </p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {urls.map((url, index) => (
           <a
             key={`${url}-${index}`}
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-secondary/40 block aspect-square overflow-hidden rounded-lg border"
+            className="bg-secondary/40 block size-14 shrink-0 overflow-hidden rounded-md border"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt="" className="size-full object-cover" />
@@ -75,11 +91,19 @@ export function AgentFieldInspectionDetail({
   inspection: Inspection;
   apiConnected: boolean;
 }) {
+  const { leasingCycles } = useAgentData();
+  const propertyLeasingCycle = leasingCycles.find(
+    (cycle) => cycle.propertyId === inspection.propertyId,
+  );
+
   const [snapshot, setSnapshot] = useState<AgentFieldInspectionSnapshot>({
     record: null,
     progression: null,
     signName: null,
     signUrl: null,
+    reportUrl: null,
+    hasFindings: false,
+    leasingTenantApproved: false,
   });
   const [loading, setLoading] = useState(apiConnected);
   const [error, setError] = useState<string | null>(null);
@@ -90,27 +114,58 @@ export function AgentFieldInspectionDetail({
       return;
     }
     try {
-      const [record, progression] = await Promise.all([
+      const [record, progression, detail] = await Promise.all([
         inspectionsApi.get(inspection.id).catch(() => null),
         inspectionsApi.getOnSiteProgression(inspection.id).catch(() => null),
+        inspectionsApi.getDetail(inspection.id).catch(() => null),
       ]);
 
-      let signName: string | null = null;
-      let signUrl: string | null = null;
-      if (record && isReportSubmitted(record, progression)) {
-        const detail = await inspectionsApi.getDetail(inspection.id).catch(() => null);
-        signName = detail?.signName ?? null;
-        signUrl = detail?.signUrl ?? null;
+      let signName: string | null = detail?.signName ?? null;
+      let signUrl: string | null = detail?.signUrl ?? null;
+      let reportUrl: string | null =
+        detail?.reportUrl ?? progression?.reportUrl ?? record?.reportUrl ?? inspection.reportUrl ?? null;
+      let hasFindings = Boolean(
+        record && ((record.areaCount ?? 0) > 0 || (record.photoCount ?? 0) > 0),
+      );
+
+      if (detail) {
+        hasFindings =
+          hasFindings ||
+          Boolean(
+            detail.areas.length > 0 ||
+              detail.inspectionPhotos.length > 0 ||
+              detail.areaCount > 0 ||
+              detail.photoCount > 0,
+          );
       }
 
-      setSnapshot({ record, progression, signName, signUrl });
+      let leasingTenantApproved = false;
+      if (propertyLeasingCycle?.id) {
+        const cycleView = await leasingOpsApi.get(propertyLeasingCycle.id).catch(() => null);
+        const ingoingInspectionId =
+          cycleView?.onboarding?.ingoingInspection?.inspectionId ?? null;
+        if (ingoingInspectionId === inspection.id) {
+          leasingTenantApproved =
+            cycleView?.onboarding?.ingoingReportApproval?.tenantApproved ?? false;
+        }
+      }
+
+      setSnapshot({
+        record,
+        progression,
+        signName,
+        signUrl,
+        reportUrl,
+        hasFindings,
+        leasingTenantApproved,
+      });
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load inspection');
     } finally {
       setLoading(false);
     }
-  }, [apiConnected, inspection.id]);
+  }, [apiConnected, inspection.id, inspection.propertyId, inspection.reportUrl, propertyLeasingCycle?.id]);
 
   useEffect(() => {
     void refresh();
@@ -118,14 +173,19 @@ export function AgentFieldInspectionDetail({
 
   useLivePoll(refresh, apiConnected);
 
-  const { record, progression, signName, signUrl } = snapshot;
+  const { record, progression, signName, signUrl, reportUrl, hasFindings, leasingTenantApproved } =
+    snapshot;
   const custody = progression?.keyCustody;
   const collectPhotos = custody?.collectPhotos ?? [];
   const returnPhotos = custody?.returnPhotos ?? [];
   const keyCollected = custody?.collectComplete ?? collectPhotos.length > 0;
   const keyReturned = custody?.returnComplete ?? returnPhotos.length > 0;
   const reportSubmitted = isReportSubmitted(record, progression);
-  const tenantAck = deriveTenantAckState(record, signName, signUrl);
+  const reportReady = canViewInspectionReport(record, progression, { reportUrl, hasFindings });
+  const tenantAck = deriveTenantAckState(record, signName, signUrl, {
+    tenantReportSigned: record?.tenantReportSigned,
+    leasingTenantApproved,
+  });
 
   const TypeIcon = inspection.type === 'OUTGOING' ? KeyRound : Home;
 
@@ -266,6 +326,17 @@ export function AgentFieldInspectionDetail({
               }
               pendingLabel="Report not yet submitted"
             />
+            {reportReady ? (
+              <div className="mt-3">
+                <InspectionReportDownloadActions
+                  inspectionId={inspection.id}
+                  reportUrl={reportUrl}
+                  propertyLabel={inspection.propertyAddress}
+                  inspectionType={inspectionReportDownloadType(inspection.type)}
+                  canDownload
+                />
+              </div>
+            ) : null}
           </StepCard>
 
           <StepCard

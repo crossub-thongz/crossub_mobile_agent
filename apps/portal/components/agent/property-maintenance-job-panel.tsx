@@ -25,7 +25,7 @@ function MaintenanceJobHeader({ item }: { item: MaintenanceRequest }) {
   return (
     <div className="rounded-xl border bg-card px-4 py-3">
       <p className="text-primary text-[10px] font-semibold uppercase tracking-wide">
-        Maintenance job
+        {item.trackingNumber || 'Maintenance job'}
       </p>
       <p className="mt-0.5 text-base font-semibold leading-tight">{item.title}</p>
       <p className="text-muted-foreground mt-1 text-sm">{item.status}</p>

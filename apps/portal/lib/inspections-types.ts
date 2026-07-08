@@ -19,6 +19,8 @@ export interface InspectionRecord {
   inspectorName: string | null
   assignedInspectorId: string | null
   workflowPhase: string | null
+  /** True when tenant (or ops simulation) signed the ingoing report. */
+  tenantReportSigned?: boolean
   inspectorAssignedAt: string | null
   scheduledDate: string | null
   inspectionDate: string | null

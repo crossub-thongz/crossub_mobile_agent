@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,6 +33,11 @@ import {
   buildMaintenancePrefill,
   buildRentReviewPrefill,
   buildTerminationPrefill,
+  fetchIngoingInspectionPrefill,
+  fetchMaintenancePrefill,
+  fetchRentReviewPrefill,
+  fetchTerminationPrefill,
+  recalcRentReviewLeaseStart,
   LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS,
   minLeasingCycleAvailableFrom,
   recalcLeasingDepositBond,
@@ -51,13 +56,14 @@ import type {
   MaintenanceItem,
   Property,
   RentReviewCase,
+  TenantSelectionCase,
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 import { TERMINATION_NOTICE_GROUND, TERMINATION_NOTICE_GROUND_OPTIONS, type TerminationNoticeGround } from '@/constants/end-leasing';
-import { vacatingDetail } from '@/constants/routes';
+import { vacatingDetail, rentReviewDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 export function PropertyWorkflowPanel({
   tab,
@@ -70,8 +76,10 @@ export function PropertyWorkflowPanel({
   inspections,
   tribunalCases,
   currentLease,
+  tenantSelections,
   emptyTitle = 'No activity yet',
   emptyDescription,
+  actionsOnly = false,
   onCreated,
 }: {
   tab: PropertyWorkflowTab;
@@ -84,8 +92,10 @@ export function PropertyWorkflowPanel({
   inspections: Inspection[];
   tribunalCases: TribunalCase[];
   currentLease?: LeasingRecord;
+  tenantSelections?: TenantSelectionCase[];
   emptyTitle?: string;
   emptyDescription?: string;
+  actionsOnly?: boolean;
   onCreated?: () => void;
 }) {
   const { primaryAgency } = useAgentData();
@@ -135,12 +145,8 @@ export function PropertyWorkflowPanel({
 
   return (
     <>
-      <div className="rounded-xl border border-dashed bg-muted/20 p-4">
-        <p className="text-center text-sm font-medium text-foreground">{emptyTitle}</p>
-        <p className="text-muted-foreground mt-1 text-center text-xs leading-relaxed">
-          {description}
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
+      {actionsOnly ? (
+        <div className="flex flex-wrap gap-2">
           {actions.map((action) => (
             <WorkflowActionButton
               key={action.id}
@@ -157,7 +163,31 @@ export function PropertyWorkflowPanel({
             />
           ))}
         </div>
-      </div>
+      ) : (
+        <div className="rounded-xl border border-dashed bg-muted/20 p-4">
+          <p className="text-center text-sm font-medium text-foreground">{emptyTitle}</p>
+          <p className="text-muted-foreground mt-1 text-center text-xs leading-relaxed">
+            {description}
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {actions.map((action) => (
+              <WorkflowActionButton
+                key={action.id}
+                action={action}
+                onClick={() => {
+                  if (action.id === 'open_tribunal') {
+                    toast.info(
+                      'New tribunal cases are opened from Maintenance or Rent Review triggers.',
+                    );
+                    return;
+                  }
+                  setActiveAction(action.id);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <PropertyWorkflowCreateDialog
         actionId={activeAction}
@@ -171,6 +201,7 @@ export function PropertyWorkflowPanel({
         userName={userName}
         currentLease={currentLease}
         leasingCycle={ctx.leasingCycles[0]}
+        tenantSelections={tenantSelections}
         onSuccess={() => {
           setActiveAction(null);
           onCreated?.();
@@ -202,7 +233,7 @@ function WorkflowActionButton({
   );
 }
 
-function PropertyWorkflowCreateDialog({
+export function PropertyWorkflowCreateDialog({
   actionId,
   open,
   onOpenChange,
@@ -212,6 +243,7 @@ function PropertyWorkflowCreateDialog({
   userName,
   currentLease,
   leasingCycle,
+  tenantSelections,
   onSuccess,
 }: {
   actionId: PropertyWorkflowActionId | null;
@@ -223,32 +255,30 @@ function PropertyWorkflowCreateDialog({
   userName: string;
   currentLease?: LeasingRecord;
   leasingCycle?: LeasingCycle;
+  tenantSelections?: TenantSelectionCase[];
   onSuccess: () => void;
 }) {
   const router = useRouter();
   const { refresh } = useAgentData();
   const agent = buildAgentContactPrefill(agency, userName);
   const [submitting, setSubmitting] = useState(false);
+  const [prefillLoading, setPrefillLoading] = useState(false);
 
-  const leasingPrefill = buildLeasingCyclePrefill(property, currentLease);
-  const minAvailableFrom = useMemo(() => minLeasingCycleAvailableFrom(), [open]);
-  const [rentPerWeek, setRentPerWeek] = useState(leasingPrefill.rentPerWeek);
-  const [availableFrom, setAvailableFrom] = useState(leasingPrefill.availableFrom);
-  const [deposit, setDeposit] = useState(leasingPrefill.deposit);
-  const [bond, setBond] = useState(leasingPrefill.bond);
-  const [keyCustody, setKeyCustody] = useState<'crossub' | 'agent'>(leasingPrefill.keyCustody);
+  const [rentPerWeek, setRentPerWeek] = useState('');
+  const [availableFrom, setAvailableFrom] = useState('');
+  const [deposit, setDeposit] = useState('');
+  const [bond, setBond] = useState('');
+  const [keyCustody, setKeyCustody] = useState<'crossub' | 'agent'>('crossub');
 
-  const rrPrefill = buildRentReviewPrefill(property, agency, currentLease);
-  const [tenantName, setTenantName] = useState(rrPrefill.tenantName);
-  const [tenantId, setTenantId] = useState(rrPrefill.tenantId);
-  const [leaseType, setLeaseType] = useState<'fixed' | 'periodic'>(rrPrefill.leaseType);
-  const [fixedTermWeeks, setFixedTermWeeks] = useState<26 | 52>(rrPrefill.fixedTermWeeks);
-  const [initialLeaseStartDate, setInitialLeaseStartDate] = useState(
-    rrPrefill.initialLeaseStartDate,
-  );
-  const [currentWeeklyRent, setCurrentWeeklyRent] = useState(rrPrefill.currentWeeklyRent);
+  const [tenantName, setTenantName] = useState('');
+  const [leaseType, setLeaseType] = useState<'fixed' | 'periodic'>('fixed');
+  const [fixedTermWeeks, setFixedTermWeeks] = useState<26 | 52>(52);
+  const [initialLeaseStartDate, setInitialLeaseStartDate] = useState('');
+  const [currentWeeklyRent, setCurrentWeeklyRent] = useState('');
+  const [leaseTermAnchor, setLeaseTermAnchor] = useState<string | undefined>();
+  const [preferredLeaseStartHint, setPreferredLeaseStartHint] = useState<string | null>(null);
+  const [tenantNameHint, setTenantNameHint] = useState<string | null>(null);
 
-  const termPrefill = buildTerminationPrefill(property, currentLease);
   const [terminationType, setTerminationType] = useState<'tenant_initiated' | 'termination'>(
     'tenant_initiated',
   );
@@ -259,31 +289,178 @@ function PropertyWorkflowCreateDialog({
   const [proposedTerminationDate, setProposedTerminationDate] = useState('');
   const [breachClause, setBreachClause] = useState('');
   const [breachConduct, setBreachConduct] = useState('');
-  const [bondHeld, setBondHeld] = useState(termPrefill.bondHeld);
+  const [bondHeld, setBondHeld] = useState('');
+  const [bondHeldHint, setBondHeldHint] = useState<string | null>(null);
   const [terminationNotes, setTerminationNotes] = useState('');
 
-  const maintPrefill = buildMaintenancePrefill(property);
   const [issueType, setIssueType] = useState('');
   const [description, setDescription] = useState('');
   const [urgent, setUrgent] = useState(false);
-  const [maintTenantName, setMaintTenantName] = useState(maintPrefill.tenantName);
-  const [maintTenantEmail, setMaintTenantEmail] = useState(maintPrefill.tenantEmail);
-  const [maintTenantPhone, setMaintTenantPhone] = useState(maintPrefill.tenantPhone);
+  const [maintTenantName, setMaintTenantName] = useState('');
+  const [maintTenantEmail, setMaintTenantEmail] = useState('');
+  const [maintTenantPhone, setMaintTenantPhone] = useState('');
 
-  const inspPrefill = buildIngoingInspectionPrefill(property, currentLease, leasingCycle);
-  const [moveInDate, setMoveInDate] = useState(inspPrefill.moveInDate);
-  const [scheduledTime, setScheduledTime] = useState(
-    inspPrefill.scheduledTime ? inspPrefill.scheduledTime.slice(0, 16) : '',
-  );
-  const [inspTenantName, setInspTenantName] = useState(inspPrefill.tenantName);
-  const [inspTenantEmail, setInspTenantEmail] = useState(inspPrefill.tenantEmail);
-  const [inspTenantPhone, setInspTenantPhone] = useState(inspPrefill.tenantPhone);
+  const [moveInDate, setMoveInDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [inspTenantName, setInspTenantName] = useState('');
+  const [inspTenantEmail, setInspTenantEmail] = useState('');
+  const [inspTenantPhone, setInspTenantPhone] = useState('');
   const [accessInstructions, setAccessInstructions] = useState('');
+
+  const rrPrefill = useMemo(
+    () => buildRentReviewPrefill(property, agency, currentLease, { leasingCycle, tenantSelections }),
+    [property, agency, currentLease, leasingCycle, tenantSelections],
+  );
+  const maintPrefill = useMemo(
+    () => buildMaintenancePrefill(property, { currentLease, tenantSelections }),
+    [property, currentLease, tenantSelections],
+  );
+  const inspPrefill = useMemo(
+    () => buildIngoingInspectionPrefill(property, currentLease, leasingCycle, { tenantSelections }),
+    [property, currentLease, leasingCycle, tenantSelections],
+  );
+  const minAvailableFrom = useMemo(() => minLeasingCycleAvailableFrom(), [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const leasingPrefill = buildLeasingCyclePrefill(property, currentLease);
+    setRentPerWeek(leasingPrefill.rentPerWeek);
+    setAvailableFrom(leasingPrefill.availableFrom);
+    setDeposit(leasingPrefill.deposit);
+    setBond(leasingPrefill.bond);
+    setKeyCustody(leasingPrefill.keyCustody);
+
+    const instantRentReview = buildRentReviewPrefill(property, agency, currentLease, {
+      leasingCycle,
+      tenantSelections,
+    });
+    setTenantName(instantRentReview.tenantName);
+    setTenantNameHint(instantRentReview.tenantNameHint ?? null);
+    setLeaseType(instantRentReview.leaseType);
+    setFixedTermWeeks(instantRentReview.fixedTermWeeks);
+    setInitialLeaseStartDate(instantRentReview.initialLeaseStartDate);
+    setPreferredLeaseStartHint(instantRentReview.preferredLeaseStartHint ?? null);
+    setLeaseTermAnchor(instantRentReview.leaseTermAnchor);
+    setCurrentWeeklyRent(instantRentReview.currentWeeklyRent);
+
+    const instantTermination = buildTerminationPrefill(property, currentLease, { leasingCycle });
+    setBondHeld(instantTermination.bondHeld);
+    setBondHeldHint(instantTermination.bondHeldHint ?? null);
+
+    setTerminationType('tenant_initiated');
+    setExpectedVacateDate('');
+    setTerminationGround(TERMINATION_NOTICE_GROUND.LANDLORD_RESIDES);
+    setProposedTerminationDate('');
+    setBreachClause('');
+    setBreachConduct('');
+    setTerminationNotes('');
+
+    const maintenance = buildMaintenancePrefill(property, { currentLease, tenantSelections });
+    setIssueType('');
+    setDescription('');
+    setUrgent(false);
+    setMaintTenantName(maintenance.tenantName);
+    setMaintTenantEmail(maintenance.tenantEmail);
+    setMaintTenantPhone(maintenance.tenantPhone);
+
+    const ingoing = buildIngoingInspectionPrefill(property, currentLease, leasingCycle, {
+      tenantSelections,
+    });
+    setMoveInDate(ingoing.moveInDate);
+    setScheduledTime(ingoing.scheduledTime ? ingoing.scheduledTime.slice(0, 16) : '');
+    setInspTenantName(ingoing.tenantName);
+    setInspTenantEmail(ingoing.tenantEmail);
+    setInspTenantPhone(ingoing.tenantPhone);
+    setAccessInstructions('');
+
+    const needsAsyncPrefill =
+      actionId === 'start_rent_review' ||
+      actionId === 'start_end_leasing' ||
+      actionId === 'start_maintenance' ||
+      actionId === 'schedule_inspection';
+
+    if (!needsAsyncPrefill) return;
+
+    let active = true;
+    setPrefillLoading(true);
+    void (async () => {
+      try {
+        if (actionId === 'start_rent_review') {
+          const rr = await fetchRentReviewPrefill(property, agency, currentLease, {
+            leasingCycle,
+            tenantSelections,
+          });
+          if (!active) return;
+          setTenantName(rr.tenantName);
+          setTenantNameHint(rr.tenantNameHint ?? null);
+          setLeaseType(rr.leaseType);
+          setFixedTermWeeks(rr.fixedTermWeeks);
+          setInitialLeaseStartDate(rr.initialLeaseStartDate);
+          setPreferredLeaseStartHint(rr.preferredLeaseStartHint ?? null);
+          setLeaseTermAnchor(rr.leaseTermAnchor);
+          setCurrentWeeklyRent(rr.currentWeeklyRent);
+        } else if (actionId === 'start_end_leasing') {
+          const term = await fetchTerminationPrefill(property, currentLease, { leasingCycle });
+          if (!active) return;
+          setBondHeld(term.bondHeld);
+          setBondHeldHint(term.bondHeldHint ?? null);
+        } else if (actionId === 'start_maintenance') {
+          const maint = await fetchMaintenancePrefill(property, currentLease, {
+            leasingCycle,
+            tenantSelections,
+          });
+          if (!active) return;
+          setMaintTenantName(maint.tenantName);
+          setMaintTenantEmail(maint.tenantEmail);
+          setMaintTenantPhone(maint.tenantPhone);
+        } else if (actionId === 'schedule_inspection') {
+          const ing = await fetchIngoingInspectionPrefill(
+            property,
+            currentLease,
+            leasingCycle,
+            tenantSelections,
+          );
+          if (!active) return;
+          setMoveInDate(ing.moveInDate);
+          setScheduledTime(ing.scheduledTime ? ing.scheduledTime.slice(0, 16) : '');
+          setInspTenantName(ing.tenantName);
+          setInspTenantEmail(ing.tenantEmail);
+          setInspTenantPhone(ing.tenantPhone);
+        }
+      } finally {
+        if (active) setPrefillLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    open,
+    actionId,
+    property,
+    agency,
+    currentLease,
+    leasingCycle,
+    tenantSelections,
+  ]);
+
+  const handleFixedTermWeeksChange = (weeks: 26 | 52) => {
+    setFixedTermWeeks(weeks);
+    if (!leaseTermAnchor) return;
+    const next = recalcRentReviewLeaseStart(
+      { leaseTermAnchor, initialLeaseStartDate },
+      weeks,
+    );
+    setInitialLeaseStartDate(next.initialLeaseStartDate);
+    setPreferredLeaseStartHint(next.hint);
+  };
 
   const titles: Record<PropertyWorkflowActionId, string> = {
     start_leasing: 'Start new leasing',
-    start_rent_review: 'Start rent review',
-    start_end_leasing: 'Start end leasing',
+    start_rent_review: 'Add rent review',
+    start_end_leasing: 'Add end leasing',
     start_maintenance: 'Log maintenance job',
     schedule_inspection: 'Schedule inspection',
     open_tribunal: 'Open tribunal case',
@@ -329,17 +506,20 @@ function PropertyWorkflowCreateDialog({
         const start = new Date(initialLeaseStartDate);
         const reviewDue = new Date(start);
         reviewDue.setFullYear(reviewDue.getFullYear() + 1);
-        await createAgentRentReview(propertyId, {
+        const result = await createAgentRentReview(propertyId, {
           currentWeeklyRent: rent,
           tenantName: tenantName.trim(),
           rentReviewDate: reviewDue.toISOString().slice(0, 10),
           leaseType,
           fixedTermWeeks: leaseType === 'fixed' ? fixedTermWeeks : undefined,
           initialLeaseStartDate,
-          tenantRef: tenantId.trim() || undefined,
           managingAgentLabel: agent.managingAgentLabel || undefined,
         });
         toast.success('Rent review created');
+        await refresh();
+        onSuccess();
+        router.push(rentReviewDetail(result.id, fromProperty(propertyId, 'Leasing')));
+        return;
       } else if (actionId === 'start_end_leasing') {
         if (terminationType === 'tenant_initiated' && !expectedVacateDate) {
           throw new Error('Expected vacate date is required');
@@ -467,10 +647,17 @@ function PropertyWorkflowCreateDialog({
           <div className="space-y-3">
             <ReadOnlyField label="Property" value={rrPrefill.propertyAddress} />
             <Field label="Tenant name *">
-              <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
-            </Field>
-            <Field label="Tenant ID">
-              <Input value={tenantId} onChange={(e) => setTenantId(e.target.value)} />
+              <Input
+                value={tenantName}
+                onChange={(e) => {
+                  setTenantName(e.target.value);
+                  setTenantNameHint(null);
+                }}
+                disabled={prefillLoading}
+              />
+              {tenantNameHint && !prefillLoading ? (
+                <p className="text-muted-foreground text-[11px]">Auto-filled · {tenantNameHint}</p>
+              ) : null}
             </Field>
             <Field label="Lease type">
               <select
@@ -487,7 +674,9 @@ function PropertyWorkflowCreateDialog({
                 <select
                   className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                   value={fixedTermWeeks}
-                  onChange={(e) => setFixedTermWeeks(Number(e.target.value) as 26 | 52)}
+                  onChange={(e) =>
+                    handleFixedTermWeeksChange(Number(e.target.value) as 26 | 52)
+                  }
                 >
                   <option value={26}>26 weeks</option>
                   <option value={52}>52 weeks</option>
@@ -495,19 +684,45 @@ function PropertyWorkflowCreateDialog({
               </Field>
             ) : null}
             <Field label="Preferred lease start *">
-              <Input
-                type="date"
-                value={initialLeaseStartDate}
-                onChange={(e) => setInitialLeaseStartDate(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={initialLeaseStartDate}
+                  onChange={(e) => {
+                    setInitialLeaseStartDate(e.target.value);
+                    setPreferredLeaseStartHint(null);
+                  }}
+                  disabled={prefillLoading}
+                />
+                {prefillLoading ? (
+                  <Loader2 className="text-muted-foreground absolute top-2.5 right-3 size-4 animate-spin" />
+                ) : null}
+              </div>
+              {preferredLeaseStartHint && !prefillLoading ? (
+                <p className="text-muted-foreground text-[11px]">
+                  Auto-filled · {preferredLeaseStartHint}
+                </p>
+              ) : null}
             </Field>
             <Field label="Current weekly rent *">
-              <Input
-                type="number"
-                min={1}
-                value={currentWeeklyRent}
-                onChange={(e) => setCurrentWeeklyRent(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min={1}
+                  value={currentWeeklyRent}
+                  onChange={(e) => setCurrentWeeklyRent(e.target.value)}
+                  disabled={prefillLoading}
+                  placeholder={prefillLoading ? 'Loading from tenancy…' : undefined}
+                />
+                {prefillLoading ? (
+                  <Loader2 className="text-muted-foreground absolute top-2.5 right-3 size-4 animate-spin" />
+                ) : null}
+              </div>
+              {currentWeeklyRent && !prefillLoading ? (
+                <p className="text-muted-foreground text-[11px]">
+                  Auto-filled from active tenancy or leasing cycle.
+                </p>
+              ) : null}
             </Field>
             <ReadOnlyField label="Managing agent" value={agent.managingAgentLabel} />
           </div>
@@ -579,12 +794,24 @@ function PropertyWorkflowCreateDialog({
               </>
             )}
             <Field label="Bond held">
-              <Input
-                type="number"
-                min={0}
-                value={bondHeld}
-                onChange={(e) => setBondHeld(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min={0}
+                  value={bondHeld}
+                  onChange={(e) => {
+                    setBondHeld(e.target.value);
+                    setBondHeldHint(null);
+                  }}
+                  disabled={prefillLoading}
+                />
+                {prefillLoading ? (
+                  <Loader2 className="text-muted-foreground absolute top-2.5 right-3 size-4 animate-spin" />
+                ) : null}
+              </div>
+              {bondHeldHint && !prefillLoading ? (
+                <p className="text-muted-foreground text-[11px]">Auto-filled · {bondHeldHint}</p>
+              ) : null}
             </Field>
             <Field label="Notes">
               <Textarea

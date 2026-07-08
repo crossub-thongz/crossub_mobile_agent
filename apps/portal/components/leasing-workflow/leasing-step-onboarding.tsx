@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Banknote,
   ClipboardCheck,
@@ -24,6 +24,7 @@ import {
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingAgreementState, LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { LEASING_ONBOARDING_BOND_SECTION_ID } from '@/lib/property-leasing-navigation';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const SIGNING_LABEL: Record<LeasingAgreementState['signingStatus'], string> = {
@@ -55,8 +56,19 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
   const id = detail.propertyId;
   const o = detail.onboarding;
   const store = useLeasingWorkflowStore();
+  const bondHighlightPropertyId = useLeasingWorkflowStore((s) => s.bondHighlightPropertyId);
+  const clearBondSectionHighlight = useLeasingWorkflowStore((s) => s.clearBondSectionHighlight);
   const { leasingCycles, apiConnected } = useAgentData();
   const [recordingSigning, setRecordingSigning] = useState(false);
+  const highlightBond = bondHighlightPropertyId === id;
+
+  useEffect(() => {
+    if (!highlightBond) return;
+    const el = document.getElementById(LEASING_ONBOARDING_BOND_SECTION_ID);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const timer = window.setTimeout(() => clearBondSectionHighlight(), 4000);
+    return () => window.clearTimeout(timer);
+  }, [highlightBond, clearBondSectionHighlight]);
 
   const cycleId = leasingCycles.find((c) => c.propertyId === id)?.id;
   const agreementReady = agreementAvailableFromCrossub(o.agreement);
@@ -97,6 +109,8 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
 
       <StepCard
         icon={Landmark}
+        id={LEASING_ONBOARDING_BOND_SECTION_ID}
+        highlighted={highlightBond}
         title="Bond"
         description="Bond link is sent to the tenant on approval — status updates from CROSSUB."
         status={o.bond.status}

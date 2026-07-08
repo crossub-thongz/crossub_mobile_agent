@@ -1,11 +1,22 @@
 import { addDays, format, startOfDay } from 'date-fns';
 
+import { LEASING_AGENT_DECISION } from '@/lib/leasing/constants';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
 import { defaultRoutineScheduledDate, suggestedOutgoingInspectionIso } from '@/lib/inspections/outgoing-schedule';
+import {
+  derivePreferredLeaseStart,
+  leaseEndFromFixedTermWeeks,
+  parseLeaseTermWeeks,
+  type FixedTermWeeks,
+} from '@/lib/rent-review-lease-helpers';
 import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
 
 import type { Agency } from '@/lib/types';
 import type { Property } from '@/lib/types';
 import type { LeasingRecord } from '@/lib/types';
+import type { LeasingCycle } from '@/lib/types';
+import type { TenantSelectionCase } from '@/lib/types';
 import type { VacatingCase } from '@/lib/types';
 
 export const LEASING_CYCLE_DEPOSIT_RENT_MULTIPLIER = 2;
@@ -25,17 +36,171 @@ function isoDateAddYears(isoDate: string, years: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function isoDateAddDays(isoDate: string, days: number): string {
-  const d = new Date(isoDate.slice(0, 10));
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
 function formatPropertyAddress(property: Property): string {
   const parts = [property.address, property.suburb, property.state, property.postcode].filter(
     Boolean,
   );
   return parts.join(', ');
+}
+
+function isUsableTenantLabel(name: string | null | undefined): name is string {
+  const trimmed = name?.trim();
+  return Boolean(trimmed && trimmed !== '—');
+}
+
+function formatWeeklyRent(weekly: number): string {
+  return String(Math.round(weekly));
+}
+
+function tenantNameFromCycleView(
+  cycleView: ServerLeasingCycleView | null | undefined,
+): { name: string; hint?: string } | null {
+  if (!cycleView) return null;
+  const approved = cycleView.applications.find(
+    (a) =>
+      a.agentDecision === LEASING_AGENT_DECISION.APPROVED &&
+      isUsableTenantLabel(a.applicantName),
+  );
+  if (approved?.applicantName) {
+    return { name: approved.applicantName.trim(), hint: 'From approved leasing applicant' };
+  }
+  const applicant = cycleView.applications.find((a) => isUsableTenantLabel(a.applicantName));
+  if (applicant?.applicantName) {
+    return { name: applicant.applicantName.trim(), hint: 'From leasing applicant' };
+  }
+  const contractTenant = cycleView.onboarding?.agreement?.contractDraft?.jointTenants?.[0]?.name;
+  if (isUsableTenantLabel(contractTenant)) {
+    return { name: contractTenant.trim(), hint: 'From lease agreement draft' };
+  }
+  return null;
+}
+
+function tenantNameFromSelections(
+  propertyId: string,
+  tenantSelections?: TenantSelectionCase[],
+): { name: string; hint?: string } | null {
+  if (!tenantSelections?.length) return null;
+  const forProperty = tenantSelections.filter((t) => t.propertyId === propertyId);
+  const approved = forProperty.find(
+    (t) =>
+      isUsableTenantLabel(t.applicantName) &&
+      (t.status.includes('approved') || t.status.includes('accepted')),
+  );
+  if (approved) {
+    return { name: approved.applicantName.trim(), hint: 'From leasing application' };
+  }
+  const first = forProperty.find((t) => isUsableTenantLabel(t.applicantName));
+  if (first) {
+    return { name: first.applicantName.trim(), hint: 'From leasing application' };
+  }
+  return null;
+}
+
+export interface PropertyTenantContact {
+  name: string;
+  email: string;
+  phone: string;
+  hint?: string;
+}
+
+export function resolvePropertyTenantContact(input: {
+  property: Property;
+  currentLease?: LeasingRecord;
+  cycleView?: ServerLeasingCycleView | null;
+  tenantSelections?: TenantSelectionCase[];
+  recordTenant?: { name?: string; email?: string; phone?: string };
+}): PropertyTenantContact {
+  const nameBlock = resolveRentReviewTenantName({
+    property: input.property,
+    currentLease: input.currentLease,
+    cycleView: input.cycleView,
+    tenantSelections: input.tenantSelections,
+  });
+  const draft = input.cycleView?.onboarding?.agreement?.contractDraft;
+  const joint = draft?.jointTenants?.[0];
+  return {
+    name: nameBlock.name,
+    email:
+      joint?.email?.trim() ||
+      input.recordTenant?.email?.trim() ||
+      input.property.tenantContact?.email?.trim() ||
+      '',
+    phone:
+      joint?.phone?.trim() ||
+      input.recordTenant?.phone?.trim() ||
+      input.property.tenantContact?.phone?.trim() ||
+      '',
+    hint: nameBlock.hint,
+  };
+}
+
+function resolveRentReviewTenantName(input: {
+  property: Property;
+  currentLease?: LeasingRecord;
+  cycleView?: ServerLeasingCycleView | null;
+  tenantSelections?: TenantSelectionCase[];
+}): { name: string; hint?: string } {
+  if (isUsableTenantLabel(input.currentLease?.approvedTenant)) {
+    return { name: input.currentLease.approvedTenant.trim(), hint: 'From active tenancy' };
+  }
+  const cycleTenant = tenantNameFromCycleView(input.cycleView);
+  if (cycleTenant) return cycleTenant;
+  const selectionTenant = tenantNameFromSelections(input.property.id, input.tenantSelections);
+  if (selectionTenant) return selectionTenant;
+  if (isUsableTenantLabel(input.property.tenantName)) {
+    return { name: input.property.tenantName.trim(), hint: 'From property record' };
+  }
+  return { name: '' };
+}
+
+function resolveWeeklyRent(input: {
+  property: Property;
+  currentLease?: LeasingRecord;
+  cycleView?: ServerLeasingCycleView | null;
+  leasingCycle?: LeasingCycle;
+}): number {
+  if (input.currentLease?.rentWeekly && input.currentLease.rentWeekly > 0) {
+    return input.currentLease.rentWeekly;
+  }
+  const draftRent = input.cycleView?.onboarding?.agreement?.contractDraft?.weeklyRent;
+  if (draftRent != null && draftRent > 0) return draftRent;
+  if (input.cycleView?.rental.rentPerWeek != null && input.cycleView.rental.rentPerWeek > 0) {
+    return input.cycleView.rental.rentPerWeek;
+  }
+  if (input.leasingCycle?.rentPerWeek != null && input.leasingCycle.rentPerWeek > 0) {
+    return input.leasingCycle.rentPerWeek;
+  }
+  if (input.property.rentWeekly > 0) return input.property.rentWeekly;
+  return 0;
+}
+
+function resolveBondHeld(input: {
+  property: Property;
+  currentLease?: LeasingRecord;
+  cycleView?: ServerLeasingCycleView | null;
+  leasingCycle?: LeasingCycle;
+}): { amount: number; hint?: string } {
+  if (input.currentLease?.bondAmount != null && input.currentLease.bondAmount > 0) {
+    return { amount: Math.round(input.currentLease.bondAmount), hint: 'From active tenancy' };
+  }
+  if (input.cycleView?.rental.bond != null && input.cycleView.rental.bond > 0) {
+    return { amount: Math.round(input.cycleView.rental.bond), hint: 'From leasing cycle' };
+  }
+  const draftBond = input.cycleView?.onboarding?.agreement?.contractDraft?.bond;
+  if (draftBond != null && draftBond > 0) {
+    return { amount: Math.round(draftBond), hint: 'From lease agreement draft' };
+  }
+  if (input.property.bondAmount != null && input.property.bondAmount > 0) {
+    return { amount: Math.round(input.property.bondAmount), hint: 'From property record' };
+  }
+  const rent = resolveWeeklyRent(input);
+  if (rent > 0) {
+    return {
+      amount: Math.round(rent * LEASING_CYCLE_BOND_RENT_MULTIPLIER),
+      hint: 'Estimated from weekly rent (4 weeks)',
+    };
+  }
+  return { amount: 0 };
 }
 
 export interface AgentContactPrefill {
@@ -107,10 +272,13 @@ export function recalcLeasingDepositBond(rentPerWeek: string): {
 export interface RentReviewPrefill {
   propertyAddress: string;
   tenantName: string;
-  tenantId: string;
+  tenantNameHint?: string;
   leaseType: 'fixed' | 'periodic';
-  fixedTermWeeks: 26 | 52;
+  fixedTermWeeks: FixedTermWeeks;
   initialLeaseStartDate: string;
+  preferredLeaseStartHint?: string;
+  /** Anchor date used to recalculate preferred start when fixed term weeks change. */
+  leaseTermAnchor?: string;
   currentWeeklyRent: string;
   managingAgentLabel: string;
   rentReviewDate: string;
@@ -120,50 +288,150 @@ export function buildRentReviewPrefill(
   property: Property,
   agency: Agency | null | undefined,
   currentLease?: LeasingRecord,
+  options?: {
+    cycleView?: ServerLeasingCycleView | null;
+    tenantSelections?: TenantSelectionCase[];
+    leasingCycle?: LeasingCycle;
+  },
 ): RentReviewPrefill {
   const contact = buildAgentContactPrefill(agency);
-  const tenantName =
-    property.tenantName?.trim() ||
-    currentLease?.approvedTenant?.trim() ||
-    '';
-  const weekly =
-    currentLease?.rentWeekly && currentLease.rentWeekly > 0
-      ? currentLease.rentWeekly
-      : property.rentWeekly > 0
-        ? property.rentWeekly
-        : 0;
-  const initialLeaseStartDate = isoDateAddDays(
-    new Date().toISOString().slice(0, 10),
-    60,
-  );
+  const tenant = resolveRentReviewTenantName({
+    property,
+    currentLease,
+    cycleView: options?.cycleView,
+    tenantSelections: options?.tenantSelections,
+  });
+
+  const weekly = resolveWeeklyRent({
+    property,
+    currentLease,
+    cycleView: options?.cycleView,
+    leasingCycle: options?.leasingCycle,
+  });
+
+  const draft = options?.cycleView?.onboarding?.agreement?.contractDraft;
+  const fixedTermWeeks: FixedTermWeeks =
+    parseLeaseTermWeeks(draft?.leaseTerm) ??
+    parseLeaseTermWeeks(
+      options?.tenantSelections?.find((t) => t.propertyId === property.id)?.leaseTerm,
+    ) ??
+    52;
+
+  const termAnchor =
+    currentLease?.leaseStart?.slice(0, 10) ??
+    draft?.startDate?.slice(0, 10) ??
+    options?.cycleView?.rental.moveInDate?.slice(0, 10) ??
+    options?.cycleView?.rental.availableFrom?.slice(0, 10) ??
+    options?.leasingCycle?.availableFrom?.slice(0, 10) ??
+    null;
+
+  const preferred = derivePreferredLeaseStart({
+    leaseEnd: currentLease?.leaseEnd,
+    agreementEnd: draft?.endDate,
+    termAnchor,
+    fixedTermWeeks,
+  });
+
   return {
     propertyAddress: formatPropertyAddress(property),
-    tenantName,
-    tenantId: `t-${property.id.slice(0, 8)}`,
+    tenantName: tenant.name,
+    tenantNameHint: tenant.hint,
     leaseType: 'fixed',
-    fixedTermWeeks: 52,
-    initialLeaseStartDate,
-    currentWeeklyRent: weekly > 0 ? String(Math.round(weekly)) : '',
+    fixedTermWeeks,
+    initialLeaseStartDate: preferred.date,
+    preferredLeaseStartHint: preferred.hint,
+    leaseTermAnchor: preferred.leaseTermAnchor ?? termAnchor ?? undefined,
+    currentWeeklyRent: weekly > 0 ? formatWeeklyRent(weekly) : '',
     managingAgentLabel: contact.managingAgentLabel,
-    rentReviewDate: isoDateAddYears(initialLeaseStartDate, 1),
+    rentReviewDate: isoDateAddYears(preferred.date, 1),
+  };
+}
+
+/** Load leasing cycle detail for richer rent review prefill. */
+export async function fetchRentReviewPrefill(
+  property: Property,
+  agency: Agency | null | undefined,
+  currentLease?: LeasingRecord,
+  options?: {
+    leasingCycle?: LeasingCycle;
+    tenantSelections?: TenantSelectionCase[];
+  },
+): Promise<RentReviewPrefill> {
+  let cycleView: ServerLeasingCycleView | null = null;
+  if (options?.leasingCycle?.id) {
+    try {
+      cycleView = await leasingOpsApi.get(options.leasingCycle.id);
+    } catch {
+      /* portfolio snapshot may still be enough */
+    }
+  }
+  return buildRentReviewPrefill(property, agency, currentLease, {
+    cycleView,
+    tenantSelections: options?.tenantSelections,
+    leasingCycle: options?.leasingCycle,
+  });
+}
+
+export function recalcRentReviewLeaseStart(
+  prefill: Pick<RentReviewPrefill, 'leaseTermAnchor' | 'initialLeaseStartDate'>,
+  fixedTermWeeks: FixedTermWeeks,
+): { initialLeaseStartDate: string; hint: string } {
+  if (prefill.leaseTermAnchor) {
+    return {
+      initialLeaseStartDate: leaseEndFromFixedTermWeeks(prefill.leaseTermAnchor, fixedTermWeeks),
+      hint: `From ${fixedTermWeeks}-week term ending`,
+    };
+  }
+  return {
+    initialLeaseStartDate: prefill.initialLeaseStartDate,
+    hint: 'Preferred lease start date',
   };
 }
 
 export interface TerminationPrefill {
   bondHeld: string;
+  bondHeldHint?: string;
 }
 
 export function buildTerminationPrefill(
   property: Property,
   currentLease?: LeasingRecord,
+  options?: {
+    cycleView?: ServerLeasingCycleView | null;
+    leasingCycle?: LeasingCycle;
+  },
 ): TerminationPrefill {
-  const bond =
-    property.bondAmount ??
-    currentLease?.bondAmount ??
-    0;
+  const bond = resolveBondHeld({
+    property,
+    currentLease,
+    cycleView: options?.cycleView,
+    leasingCycle: options?.leasingCycle,
+  });
   return {
-    bondHeld: bond > 0 ? String(Math.round(bond)) : '',
+    bondHeld: bond.amount > 0 ? String(bond.amount) : '',
+    bondHeldHint: bond.hint,
   };
+}
+
+export async function fetchTerminationPrefill(
+  property: Property,
+  currentLease?: LeasingRecord,
+  options?: {
+    leasingCycle?: LeasingCycle;
+  },
+): Promise<TerminationPrefill> {
+  let cycleView: ServerLeasingCycleView | null = null;
+  if (options?.leasingCycle?.id) {
+    try {
+      cycleView = await leasingOpsApi.get(options.leasingCycle.id);
+    } catch {
+      /* fall through */
+    }
+  }
+  return buildTerminationPrefill(property, currentLease, {
+    cycleView,
+    leasingCycle: options?.leasingCycle,
+  });
 }
 
 export interface MaintenancePrefill {
@@ -173,13 +441,57 @@ export interface MaintenancePrefill {
   tenantPhone: string;
 }
 
-export function buildMaintenancePrefill(property: Property): MaintenancePrefill {
+export function buildMaintenancePrefill(
+  property: Property,
+  options?: {
+    currentLease?: LeasingRecord;
+    cycleView?: ServerLeasingCycleView | null;
+    tenantSelections?: TenantSelectionCase[];
+    recordTenant?: { name?: string; email?: string; phone?: string };
+  },
+): MaintenancePrefill {
+  const tenant = resolvePropertyTenantContact({
+    property,
+    currentLease: options?.currentLease,
+    cycleView: options?.cycleView,
+    tenantSelections: options?.tenantSelections,
+    recordTenant: options?.recordTenant,
+  });
   return {
     address: formatPropertyAddress(property),
-    tenantName: property.tenantName?.trim() ?? '',
-    tenantEmail: property.tenantContact?.email?.trim() ?? '',
-    tenantPhone: property.tenantContact?.phone?.trim() ?? '',
+    tenantName: tenant.name,
+    tenantEmail: tenant.email,
+    tenantPhone: tenant.phone,
   };
+}
+
+export async function fetchMaintenancePrefill(
+  property: Property,
+  currentLease?: LeasingRecord,
+  options?: {
+    leasingCycle?: LeasingCycle;
+    tenantSelections?: TenantSelectionCase[];
+    recordTenant?: { name?: string; email?: string; phone?: string };
+  },
+): Promise<MaintenancePrefill> {
+  const instant = buildMaintenancePrefill(property, {
+    currentLease,
+    tenantSelections: options?.tenantSelections,
+    recordTenant: options?.recordTenant,
+  });
+  if (!options?.leasingCycle?.id) return instant;
+
+  try {
+    const cycleView = await leasingOpsApi.get(options.leasingCycle.id);
+    return buildMaintenancePrefill(property, {
+      currentLease,
+      cycleView,
+      tenantSelections: options?.tenantSelections,
+      recordTenant: options?.recordTenant,
+    });
+  } catch {
+    return instant;
+  }
 }
 
 export interface IngoingInspectionPrefill {
@@ -228,30 +540,84 @@ export function buildIngoingInspectionPrefill(
   property: Property,
   currentLease?: LeasingRecord,
   leasingCycle?: { id?: string; availableFrom?: string; tenancyAgreementId?: string | null },
+  options?: {
+    cycleView?: ServerLeasingCycleView | null;
+    tenantSelections?: TenantSelectionCase[];
+    recordTenant?: { name?: string; email?: string; phone?: string };
+  },
 ): IngoingInspectionPrefill {
   const moveInDate =
     currentLease?.moveInDate?.slice(0, 10) ??
+    options?.cycleView?.onboarding?.agreement?.contractDraft?.startDate?.slice(0, 10) ??
+    options?.cycleView?.rental?.moveInDate?.slice(0, 10) ??
     leasingCycle?.availableFrom?.slice(0, 10) ??
     format(addDays(new Date(), 14), 'yyyy-MM-dd');
+  const tenant = resolvePropertyTenantContact({
+    property,
+    currentLease,
+    cycleView: options?.cycleView,
+    tenantSelections: options?.tenantSelections,
+    recordTenant: options?.recordTenant,
+  });
   return {
     address: formatPropertyAddress(property),
     propertyType: property.propertyType ?? 'House',
-    tenantName: property.tenantName?.trim() || currentLease?.approvedTenant?.trim() || '',
-    tenantEmail: property.tenantContact?.email?.trim() ?? '',
-    tenantPhone: property.tenantContact?.phone?.trim() ?? '',
+    tenantName: tenant.name,
+    tenantEmail: tenant.email,
+    tenantPhone: tenant.phone,
     moveInDate,
     scheduledTime: suggestIngoingScheduledTime(moveInDate),
     accessInstructions: '',
-    leaseApprovalRef: leasingCycleApprovalRef(leasingCycle?.id, leasingCycle?.tenancyAgreementId),
+    leaseApprovalRef: leasingCycleApprovalRef(
+      options?.cycleView?.id ?? leasingCycle?.id,
+      options?.cycleView?.onboarding?.agreement?.contractDraft?.paymentReference ??
+        leasingCycle?.tenancyAgreementId,
+    ),
     priority: 'normal',
     notes: '',
   };
 }
 
-export function buildRoutineInspectionPrefill(property: Property): RoutineInspectionPrefill {
+/** Portfolio + live leasing cycle — same depth as property workflow dialogs. */
+export async function fetchIngoingInspectionPrefill(
+  property: Property,
+  currentLease?: LeasingRecord,
+  leasingCycle?: LeasingCycle,
+  tenantSelections?: TenantSelectionCase[],
+): Promise<IngoingInspectionPrefill> {
+  const instant = buildIngoingInspectionPrefill(property, currentLease, leasingCycle, {
+    tenantSelections,
+  });
+  if (!leasingCycle?.id) return instant;
+
+  try {
+    const cycleView = await leasingOpsApi.get(leasingCycle.id);
+    return buildIngoingInspectionPrefill(property, currentLease, leasingCycle, {
+      cycleView,
+      tenantSelections,
+    });
+  } catch {
+    return instant;
+  }
+}
+
+export function buildRoutineInspectionPrefill(
+  property: Property,
+  options?: {
+    currentLease?: LeasingRecord;
+    cycleView?: ServerLeasingCycleView | null;
+    tenantSelections?: TenantSelectionCase[];
+  },
+): RoutineInspectionPrefill {
+  const tenant = resolvePropertyTenantContact({
+    property,
+    currentLease: options?.currentLease,
+    cycleView: options?.cycleView,
+    tenantSelections: options?.tenantSelections,
+  });
   return {
-    tenantName: property.tenantName?.trim() ?? '',
-    tenantEmail: property.tenantContact?.email?.trim() ?? '',
+    tenantName: tenant.name,
+    tenantEmail: tenant.email,
     scheduledDate: defaultRoutineScheduledDate(),
     frequency: 2,
     flow: 'self',

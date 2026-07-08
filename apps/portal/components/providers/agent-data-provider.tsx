@@ -204,6 +204,7 @@ interface AgentDataContextValue {
   ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Promise<Property>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
+  registerInspection: (inspection: Inspection) => void;
   approveMaintenanceQuote: (requestId: string) => Promise<void>;
   declineMaintenanceQuote: (requestId: string, reason: string) => Promise<void>;
 }
@@ -242,6 +243,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const customMessageThreads = useAgentStore((s) => s.customMessageThreads);
   const storeAddProperty = useAgentStore((s) => s.addProperty);
   const storeAddOpenInspection = useAgentStore((s) => s.addOpenInspection);
+  const registerInspection = useAgentStore((s) => s.registerInspection);
   const storeEnsureMessageThread = useAgentStore((s) => s.ensureMessageThread);
   const uploadedDocuments = useAgentStore((s) => s.uploadedDocuments);
   const addUploadedDocument = useAgentStore((s) => s.addUploadedDocument);
@@ -493,12 +495,22 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [portfolio]);
 
   const inspections = useMemo(() => {
-    if (apiConnected && apiInspections) {
-      return filterByPropertyIds(apiInspections, propertyIds);
-    }
-    const base = portfolio ? mapAgentInspections(portfolio.inspections) : [];
     const added = filterByPropertyIds(addedInspections, propertyIds);
-    return [...added, ...base];
+    const live =
+      apiConnected && apiInspections
+        ? filterByPropertyIds(apiInspections, propertyIds)
+        : portfolio
+          ? mapAgentInspections(portfolio.inspections)
+          : [];
+    const byId = new Map<string, Inspection>();
+    for (const row of [...added, ...live]) {
+      byId.set(row.id, row);
+    }
+    return [...byId.values()].sort((a, b) => {
+      const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+      const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+      return bt - at;
+    });
   }, [apiConnected, apiInspections, portfolio, propertyIds, addedInspections]);
 
   const rentReviews = useMemo(
@@ -996,6 +1008,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     ensureMessageThread,
     addProperty,
     addOpenInspection,
+    registerInspection,
     uploadDocument,
     approveMaintenanceQuote,
     declineMaintenanceQuote,

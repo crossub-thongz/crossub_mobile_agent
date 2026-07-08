@@ -91,14 +91,14 @@ export function tabActionsFor(
       if (!hasRentReview(ctx)) {
         actions.push({
           id: 'start_rent_review',
-          label: 'Start rent review',
+          label: 'Add rent review',
           description: 'Open a rent review for this property',
         });
       }
       if (!hasActiveEndLeasing(ctx)) {
         actions.push({
           id: 'start_end_leasing',
-          label: 'Start end leasing',
+          label: 'Add end leasing',
           description: 'Open a vacating or termination case',
         });
       }

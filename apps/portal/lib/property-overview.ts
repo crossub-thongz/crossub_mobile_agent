@@ -1,4 +1,5 @@
 import type { AgentDocument, Inspection, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
+import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import { inspectionDetail } from '@/constants/routes';
 
 export interface PropertyReportLink {
@@ -87,25 +88,61 @@ export function resolveRoutineReportLink(
   return { label: 'Routine inspection report', href, status };
 }
 
+export function formatCarSpaces(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return '—';
+  return String(value);
+}
+
+export interface BondReference {
+  label: string;
+  /** In-app navigation to new leasing step 4 bond section. */
+  showLodgementNav?: boolean;
+}
+
+/** Bond lodgement from leasing step 4 — label from cycle bond block. */
+export function resolveBondReference(
+  property: Property,
+  bond?: PropertyBondSnapshot | null,
+  documents: AgentDocument[] = [],
+  lease?: LeasingRecord,
+): BondReference {
+  const link = bond?.agentLink?.trim();
+  if (link) {
+    const idMatch = link.match(/\b\d{6,}\b/);
+    return {
+      label: idMatch?.[0] ?? 'View bond lodgement',
+      showLodgementNav: true,
+    };
+  }
+  if (bond?.ledgerEntryId) {
+    return { label: bond.ledgerEntryId, showLodgementNav: true };
+  }
+  if (property.bondId?.trim()) {
+    return { label: property.bondId.trim() };
+  }
+  const bondDoc = findDocByKeywords(documents, ['bond', 'rbo', 'lodgement']);
+  if (bondDoc) {
+    const match = bondDoc.title.match(/\b\d{6,}\b/);
+    if (match) return { label: match[0] };
+    return { label: bondDoc.title };
+  }
+  const amount = bond?.amount ?? lease?.bondAmount ?? property.bondAmount;
+  if (amount != null && amount > 0) {
+    return {
+      label: `Pending lodgement · $${Math.round(amount)}`,
+      showLodgementNav: Boolean(bond),
+    };
+  }
+  return { label: '—' };
+}
+
+/** @deprecated Use resolveBondReference for link support. */
 export function resolveBondId(
   property: Property,
   documents: AgentDocument[],
   lease?: LeasingRecord,
 ): string {
-  if (property.bondId?.trim()) return property.bondId.trim();
-  const bondDoc = findDocByKeywords(documents, ['bond', 'rbo', 'lodgement']);
-  if (bondDoc) {
-    const match = bondDoc.title.match(/\b\d{6,}\b/);
-    if (match) return match[0];
-    return bondDoc.title;
-  }
-  if (lease?.bondAmount != null) {
-    return `Pending lodgement · ${lease.bondAmount}`;
-  }
-  if (property.bondAmount != null) {
-    return `Pending lodgement · ${property.bondAmount}`;
-  }
-  return '—';
+  return resolveBondReference(property, null, documents, lease).label;
 }
 
 export function resolvePendingRentChange(

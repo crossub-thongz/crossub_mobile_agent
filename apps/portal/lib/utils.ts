@@ -39,6 +39,18 @@ export function formatDate(iso: string): string {
   });
 }
 
+export function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-AU', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export function formatScheduledAt(iso?: string | null): string {
+  if (!iso) return 'TBC';
+  return `${formatDate(iso)} · ${formatTime(iso)}`;
+}
+
 export function formatRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const hours = Math.floor(diff / 3_600_000);

@@ -2,8 +2,14 @@ import type { MappedMaintenance } from '@/lib/data/map-maintenance';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
+import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
 import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceStatus } from './types';
+
+function caseRefFor(id: string, orderNumber?: string | null): string {
+  if (orderNumber?.trim()) return orderNumber.trim();
+  return workflowCaseReferenceLabel(id, 'maintenance');
+}
 
 const REQUEST_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   'under review': 'under_review',
@@ -68,6 +74,7 @@ export function buildWorkspaceCaseFromApi(
   const req = mapped.apiRequest;
   return {
     id: req.id,
+    caseRef: caseRefFor(req.id, mapped.trackingNumber),
     issueType: req.issueType,
     description: req.description,
     address: req.address,
@@ -120,6 +127,7 @@ export function buildWorkspaceCaseFromRequest(
 
   return {
     id: item.id,
+    caseRef: caseRefFor(item.id, item.trackingNumber),
     issueType: item.title,
     description: item.description,
     address: item.propertyAddress,

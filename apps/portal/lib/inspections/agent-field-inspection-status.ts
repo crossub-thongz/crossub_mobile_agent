@@ -34,23 +34,63 @@ export function isReportSubmitted(
   );
 }
 
+function hasInspectionFindings(record: InspectionRecord | null): boolean {
+  if (!record) return false;
+  return (record.areaCount ?? 0) > 0 || (record.photoCount ?? 0) > 0;
+}
+
+/** Mirrors crossub_web `InspectionReportPanel` — PDF URL or synced findings. */
+export function canViewInspectionReport(
+  record: InspectionRecord | null,
+  progression: OnSiteProgression | null,
+  options?: {
+    reportUrl?: string | null;
+    hasFindings?: boolean;
+  },
+): boolean {
+  if (!isReportSubmitted(record, progression)) return false;
+  const reportUrl = options?.reportUrl ?? progression?.reportUrl ?? record?.reportUrl;
+  if (reportUrl) return true;
+  if (options?.hasFindings) return true;
+  return hasInspectionFindings(record);
+}
+
 export function deriveTenantAckState(
   record: InspectionRecord | null,
   signName: string | null | undefined,
   signUrl: string | null | undefined,
+  options?: {
+    tenantReportSigned?: boolean;
+    leasingTenantApproved?: boolean;
+    leasingSignerName?: string | null;
+  },
 ): { state: AgentTenantAckState; label: string } {
   if (!record) {
     return { state: 'not_available', label: '—' };
   }
 
   const phase = record.workflowPhase;
+  const tenantReportSigned =
+    options?.tenantReportSigned ??
+    record.tenantReportSigned ??
+    false;
+  const leasingApproved = options?.leasingTenantApproved ?? false;
   const signed = Boolean(signUrl?.trim() || signName?.trim());
   const reportReady = isReportSubmitted(record, null);
+  const signerLabel =
+    signName?.trim() ||
+    options?.leasingSignerName?.trim() ||
+    undefined;
 
-  if (signed || phase === FIELD_INSPECTION_PHASE.REPORT_SIGNED) {
+  if (
+    signed ||
+    tenantReportSigned ||
+    leasingApproved ||
+    phase === FIELD_INSPECTION_PHASE.REPORT_SIGNED
+  ) {
     return {
       state: 'confirmed',
-      label: signName?.trim() ? `Signed by ${signName.trim()}` : 'Tenant acknowledged',
+      label: signerLabel ? `Signed by ${signerLabel}` : 'Tenant acknowledged',
     };
   }
 

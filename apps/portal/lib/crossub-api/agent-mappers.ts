@@ -41,6 +41,7 @@ import {
   TRIBUNAL_CASE_STATUS,
   VACATING_STATUS,
 } from '@/constants/api-enums';
+import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import type {
   Agency,
   AgentDocument,
@@ -94,7 +95,7 @@ export function mapAgentProperty(
     bondAmount: dto.bondAmount ?? undefined,
     bedrooms: dto.bedrooms ?? undefined,
     bathrooms: dto.bathrooms ?? undefined,
-    carSpaces: dto.parking ?? undefined,
+    carSpaces: dto.parking != null ? dto.parking : undefined,
     leaseStart: dto.leaseStart ?? undefined,
     leaseEnd: dto.leaseEnd ?? undefined,
     openTasks: 0,
@@ -229,7 +230,7 @@ export function mapAgentMaintenance(
     const priority: Priority = m.urgent ? 'urgent' : 'normal';
     return {
       id: m.id,
-      trackingNumber: m.orderNumber ?? m.id.slice(0, 8).toUpperCase(),
+      trackingNumber: m.orderNumber ?? workflowCaseReferenceLabel(m.id, 'maintenance'),
       propertyId: m.propertyId ?? '',
       propertyAddress: m.propertyAddress,
       title: m.categoryName ?? m.description ?? 'Maintenance request',

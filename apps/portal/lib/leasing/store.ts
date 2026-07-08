@@ -21,7 +21,10 @@ type LeasingWorkflowStore = {
   details: Record<string, LeasingPropertyDetail>;
   activeStepByProperty: Record<string, LeasingLifecycleStep>;
   contractDialogOpen: boolean;
+  bondHighlightPropertyId: string | null;
   setContractDialogOpen: (open: boolean) => void;
+  requestBondSectionHighlight: (propertyId: string) => void;
+  clearBondSectionHighlight: () => void;
   ensureDetail: (propertyId: string, propertyAddress: string, rentWeekly?: number) => LeasingPropertyDetail;
   getDetail: (propertyId: string) => LeasingPropertyDetail | undefined;
   getActiveStep: (propertyId: string) => LeasingLifecycleStep;
@@ -65,9 +68,18 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
   details: {},
   activeStepByProperty: {},
   contractDialogOpen: false,
+  bondHighlightPropertyId: null,
 
   setContractDialogOpen(open) {
     set({ contractDialogOpen: open });
+  },
+
+  requestBondSectionHighlight(propertyId) {
+    set({ bondHighlightPropertyId: propertyId });
+  },
+
+  clearBondSectionHighlight() {
+    set({ bondHighlightPropertyId: null });
   },
 
   ensureDetail(propertyId, propertyAddress, rentWeekly) {

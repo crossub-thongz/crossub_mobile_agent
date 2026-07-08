@@ -48,6 +48,10 @@ export function MaintenanceWorkspace({
   recommendation,
   quoteDocumentUrl,
   requiresApproval,
+  liveSyncing,
+  syncing,
+  remindersSent = 0,
+  reminderEta,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   backHref: string;
@@ -60,6 +64,10 @@ export function MaintenanceWorkspace({
   recommendation?: string;
   quoteDocumentUrl?: string;
   requiresApproval?: boolean;
+  liveSyncing?: boolean;
+  syncing?: boolean;
+  remindersSent?: number;
+  reminderEta?: string | null;
 }) {
   const [bottomNavTab, setBottomNavTab] = useState<'details' | 'chat'>('details');
   const [caseFlagged, setCaseFlagged] = useState(false);
@@ -250,6 +258,8 @@ export function MaintenanceWorkspace({
         caseFlagged={caseFlagged}
         backHref={backHref}
         backLabel={backLabel}
+        liveSyncing={liveSyncing}
+        syncing={syncing}
         onOpenChat={() => setBottomNavTab('chat')}
         onToggleFlag={toggleFlag}
       />
@@ -548,15 +558,34 @@ export function MaintenanceWorkspace({
                     )}
 
                     {uiStatusForUI === 'pending_quotation' && (
-                      <p className="text-muted-foreground text-sm">
-                        Awaiting contractor quotation
-                        {contractorName ? ` from ${contractorName}` : ''}.
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                            Contractor response
+                          </p>
+                          <p className="mt-2 text-sm font-semibold">
+                            {contractorName ?? 'Awaiting contractor assignment'}
+                          </p>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            {remindersSent > 0 ? (
+                              <>
+                                {remindersSent} reminder{remindersSent === 1 ? '' : 's'} sent.
+                                {reminderEta ? ` Next reminder ${reminderEta}.` : ' '}
+                                Reminders every 24 hours.
+                              </>
+                            ) : reminderEta ? (
+                              <>Reminder will be sent {reminderEta}. Reminders every 24 hours.</>
+                            ) : (
+                              <>Awaiting contractor quote submission.</>
+                            )}
+                          </p>
+                        </div>
                         {quoteAmount != null && (
-                          <span className="mt-1 block font-medium text-foreground">
+                          <p className="text-sm font-medium text-foreground">
                             Latest quote: {formatCurrency(quoteAmount)}
-                          </span>
+                          </p>
                         )}
-                      </p>
+                      </div>
                     )}
 
                     {uiStatusForUI === 'in_progress' && (

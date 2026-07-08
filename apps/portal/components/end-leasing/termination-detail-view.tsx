@@ -18,9 +18,11 @@ import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 export function TerminationDetailView({
   caseId,
   apiConnected,
+  hideHeader = false,
 }: {
   caseId: string;
   apiConnected: boolean;
+  hideHeader?: boolean;
 }) {
   const loadCase = useEndLeasingStore((s) => s.loadCase);
   const caseData = useEndLeasingStore((s) => s.getCase(caseId));
@@ -56,6 +58,7 @@ export function TerminationDetailView({
       caseData={caseData}
       activeStage={activeStage}
       onStageChange={(stage) => setActiveStage(caseId, stage)}
+      hideHeader={hideHeader}
     />
   );
 }
@@ -64,38 +67,44 @@ function TerminationDetailContent({
   caseData,
   activeStage,
   onStageChange,
+  hideHeader = false,
 }: {
   caseData: TerminationCaseDetail;
   activeStage: TerminationCaseDetail['currentStage'];
   onStageChange: (stage: TerminationCaseDetail['currentStage']) => void;
+  hideHeader?: boolean;
 }) {
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border bg-card p-4">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-          Case ref {workflowCaseReferenceLabel(caseData.id, 'end_leasing')}
-        </p>
-        <h1 className="mt-1 text-base font-semibold">{caseData.property.address}</h1>
-        <p className="text-muted-foreground mt-1 text-xs">
-          {caseData.tenant.name}
-          {caseData.vacateDate ? ` · Vacate ${formatDate(caseData.vacateDate)}` : ''}
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <p className="text-muted-foreground">Bond held</p>
-            <p className="font-medium tabular-nums">{formatCurrency(caseData.bondHeld)}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Refund</p>
-            <p className="font-medium tabular-nums">{formatCurrency(caseData.refundAmount)}</p>
-          </div>
-        </div>
-        <p className="text-muted-foreground mt-3 text-xs">{caseData.nextAction}</p>
-      </section>
+      {!hideHeader ? (
+        <>
+          <section className="rounded-2xl border bg-card p-4">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Case ref {workflowCaseReferenceLabel(caseData.id, 'end_leasing')}
+            </p>
+            <h1 className="mt-1 text-base font-semibold">{caseData.property.address}</h1>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {caseData.tenant.name}
+              {caseData.vacateDate ? ` · Vacate ${formatDate(caseData.vacateDate)}` : ''}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <p className="text-muted-foreground">Bond held</p>
+                <p className="font-medium tabular-nums">{formatCurrency(caseData.bondHeld)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Refund</p>
+                <p className="font-medium tabular-nums">{formatCurrency(caseData.refundAmount)}</p>
+              </div>
+            </div>
+            <p className="text-muted-foreground mt-3 text-xs">{caseData.nextAction}</p>
+          </section>
 
-      {caseData.propertyId && (
-        <CaseContactActions propertyId={caseData.propertyId} caseLabel="End leasing" />
-      )}
+          {caseData.propertyId ? (
+            <CaseContactActions propertyId={caseData.propertyId} caseLabel="End leasing" />
+          ) : null}
+        </>
+      ) : null}
 
       <TerminationPhaseTabs
         caseData={caseData}

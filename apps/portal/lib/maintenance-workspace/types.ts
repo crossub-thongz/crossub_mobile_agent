@@ -17,6 +17,8 @@ export interface MaintenanceWorkspaceParty {
 
 export interface MaintenanceWorkspaceCase {
   id: string;
+  /** Compact case ref (e.g. M-59034714) — shown in the workspace header. */
+  caseRef: string;
   issueType: string;
   description: string;
   address: string;

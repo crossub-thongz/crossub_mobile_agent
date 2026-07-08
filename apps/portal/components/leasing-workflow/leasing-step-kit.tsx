@@ -13,6 +13,8 @@ export function StepCard({
   children,
   footer,
   accent = LEASING_UI.stepAccent,
+  id,
+  highlighted = false,
 }: {
   icon: LucideIcon;
   title: string;
@@ -21,9 +23,17 @@ export function StepCard({
   children?: React.ReactNode;
   footer?: React.ReactNode;
   accent?: string;
+  id?: string;
+  highlighted?: boolean;
 }) {
   return (
-    <section className="rounded-xl border bg-card">
+    <section
+      id={id}
+      className={cn(
+        'rounded-xl border bg-card transition-shadow',
+        highlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+      )}
+    >
       <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', accent)}>

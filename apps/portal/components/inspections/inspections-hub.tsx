@@ -1,17 +1,23 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ClipboardList, DoorOpen, Plus } from 'lucide-react';
 
+import { CreateInspectionWizard } from '@/components/inspections/create-inspection-wizard';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { InspectionGroupSection, InspectionJobCard } from '@/components/inspections/inspection-job-card';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { inspectionNew } from '@/constants/routes';
 import {
   groupInspection,
   INSPECTION_GROUP_LABEL,
@@ -65,6 +71,7 @@ export function InspectionsHub({
   );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
 
   const counts = useMemo(() => inspectionSummaryCounts(inspections), [inspections]);
 
@@ -110,12 +117,31 @@ export function InspectionsHub({
         <SummaryTile label="Completed" value={counts.done} />
       </div>
 
-      <Button asChild size="lg" className="h-11 w-full rounded-xl">
-        <Link href={inspectionNew(propertyFilterId ?? undefined)}>
-          <Plus className="size-4" />
-          Add inspection
-        </Link>
+      <Button
+        type="button"
+        size="lg"
+        className="h-11 w-full rounded-xl"
+        onClick={() => setCreateOpen(true)}
+      >
+        <Plus className="size-4" />
+        Add inspection
       </Button>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add inspection</DialogTitle>
+            <DialogDescription>
+              Choose a type and property — fields autofill from your portfolio like property workflow
+              cases.
+            </DialogDescription>
+          </DialogHeader>
+          <CreateInspectionWizard
+            preselectedPropertyId={propertyFilterId}
+            onCreated={() => setCreateOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {propertyLabel && (
         <p className="text-muted-foreground text-xs">
@@ -145,8 +171,8 @@ export function InspectionsHub({
           }
           action={
             statusFilter === 'active' ? (
-              <Button asChild variant="outline" size="sm">
-                <Link href={inspectionNew(propertyFilterId ?? undefined)}>Add inspection</Link>
+              <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+                Add inspection
               </Button>
             ) : undefined
           }

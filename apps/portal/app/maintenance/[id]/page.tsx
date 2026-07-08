@@ -5,31 +5,30 @@ import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
-import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { AgentShell } from '@/components/layout/agent-shell';
-import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
 import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
-import { maintenanceWorkflowProgress } from '@/lib/case-workflows';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
-import { buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
+import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync';
+
+function formatReminderEta(iso: string | null): string | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return 'due soon';
+  const hours = Math.floor(ms / 3_600_000);
+  const mins = Math.floor((ms % 3_600_000) / 60_000);
+  if (hours > 0) return `in ${hours}h ${mins}m`;
+  return `in ${mins}m`;
+}
 
 export default function MaintenanceDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { user } = useAuth();
-  const {
-    maintenanceAll,
-    maintenanceFromApi,
-    properties,
-    approveMaintenanceQuote,
-    declineMaintenanceQuote,
-    refresh,
-  } = useAgentData();
+  const { maintenanceAll, properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote } =
+    useAgentData();
 
   const item = maintenanceAll.find((m) => m.id === id);
-  const apiItem = maintenanceFromApi.find((m) => m.id === id);
   const back = useBackNavigation(ROUTES.MAINTENANCE, 'Maintenance');
 
   const property = useMemo(
@@ -37,36 +36,37 @@ export default function MaintenanceDetailPage() {
     [properties, item?.propertyId],
   );
 
-  const workspaceCase = useMemo(() => {
-    if (!item) return null;
-    return buildWorkspaceCaseFromRequest(item, property, user);
-  }, [item, property, user]);
+  const { workspaceCase, liveMapped, remindersSent, nextReminderDueAt, syncing } =
+    useMaintenanceCaseLiveSync(item, property, apiConnected);
 
   if (!item || !workspaceCase) notFound();
 
+  const displayItem = liveMapped ?? item;
+  const reminderEta = formatReminderEta(nextReminderDueAt);
+
   const handleApprove = async () => {
-    if (!apiItem?.submittedQuotationId) {
+    const quotationId = liveMapped?.submittedQuotationId;
+    if (!quotationId) {
       toast.error('No submitted quotation on the API.');
       return;
     }
     try {
-      await approveMaintenanceQuote(apiItem.submittedQuotationId);
-      toast.success('Quote approved via crossub_web API');
-      await refresh();
+      await approveMaintenanceQuote(quotationId);
+      toast.success('Quote approved');
     } catch {
       toast.error('Approval failed — check API connection');
     }
   };
 
   const handleDecline = async (reason: string) => {
-    if (!apiItem?.submittedQuotationId) {
+    const quotationId = liveMapped?.submittedQuotationId;
+    if (!quotationId) {
       toast.error('Connect to the API to decline this quote.');
       return;
     }
     try {
-      await declineMaintenanceQuote(apiItem.submittedQuotationId, reason);
+      await declineMaintenanceQuote(quotationId, reason);
       toast.success('Quote declined — requote workflow started');
-      await refresh();
     } catch {
       toast.error('Decline failed');
     }
@@ -81,22 +81,23 @@ export default function MaintenanceDetailPage() {
       hideGlobalFabs
       hideNeedAction
     >
-      <div className="space-y-4">
-        <CaseWorkflowProgressCard progress={maintenanceWorkflowProgress(item)} />
-        <MaintenanceWorkspace
-          workspaceCase={workspaceCase}
-          backHref={back.href}
-          backLabel={back.label}
-          onApproveQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleApprove : undefined}
-          onDeclineQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleDecline : undefined}
-          quoteAmount={item.quoteAmount}
-          contractorName={item.contractorName}
-          quoteExpiry={item.quoteExpiry}
-          recommendation={item.recommendation}
-          quoteDocumentUrl={item.quoteDocumentUrl}
-          requiresApproval={AGENT_CASE_INTERACTIONS_ENABLED && item.requiresApproval}
-        />
-      </div>
+      <MaintenanceWorkspace
+        workspaceCase={workspaceCase}
+        backHref={back.href}
+        backLabel={back.label}
+        liveSyncing={apiConnected}
+        syncing={syncing}
+        remindersSent={remindersSent}
+        reminderEta={reminderEta}
+        onApproveQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleApprove : undefined}
+        onDeclineQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleDecline : undefined}
+        quoteAmount={displayItem.quoteAmount}
+        contractorName={displayItem.contractorName}
+        quoteExpiry={displayItem.quoteExpiry}
+        recommendation={displayItem.recommendation}
+        quoteDocumentUrl={displayItem.quoteDocumentUrl}
+        requiresApproval={AGENT_CASE_INTERACTIONS_ENABLED && displayItem.requiresApproval}
+      />
     </AgentShell>
   );
 }

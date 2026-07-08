@@ -116,6 +116,7 @@ interface AgentStore {
   resetQuickActions: () => void;
   addedInspections: Inspection[];
   addOpenInspection: (input: NewOpenInspectionInput) => Inspection;
+  registerInspection: (inspection: Inspection) => void;
   provisionedTenants: ProvisionedTenantRecord[];
   addProvisionedTenant: (record: ProvisionedTenantRecord) => void;
 }
@@ -341,6 +342,13 @@ export const useAgentStore = create<AgentStore>()(
         set((s) => ({ addedInspections: [inspection, ...s.addedInspections] }));
         return inspection;
       },
+      registerInspection: (inspection) =>
+        set((s) => ({
+          addedInspections: [
+            inspection,
+            ...s.addedInspections.filter((row) => row.id !== inspection.id),
+          ],
+        })),
       provisionedTenants: [],
       addProvisionedTenant: (record) =>
         set((s) => {

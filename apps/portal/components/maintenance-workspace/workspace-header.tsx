@@ -35,6 +35,8 @@ export function WorkspaceHeader({
   caseFlagged,
   backHref,
   backLabel,
+  liveSyncing,
+  syncing,
   onOpenChat,
   onToggleFlag,
 }: {
@@ -42,6 +44,8 @@ export function WorkspaceHeader({
   caseFlagged: boolean;
   backHref: string;
   backLabel: string;
+  liveSyncing?: boolean;
+  syncing?: boolean;
   onOpenChat: () => void;
   onToggleFlag: () => void;
 }) {
@@ -73,11 +77,30 @@ export function WorkspaceHeader({
             <span>
               Case ref{' '}
               <kbd className="border-border bg-muted text-foreground rounded border px-1.5 py-0.5 tabular-nums tracking-tight">
-                {workspaceCase.id}
+                {workspaceCase.caseRef}
               </kbd>
             </span>
             <span className="bg-border hidden h-4 w-px sm:inline-block" aria-hidden />
             <span className="tabular-nums">Opened {formatDateTime(workspaceCase.createdAt)}</span>
+            {liveSyncing ? (
+              <>
+                <span className="bg-border hidden h-4 w-px sm:inline-block" aria-hidden />
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 text-[11px] font-medium',
+                    syncing ? 'text-primary' : 'text-emerald-700 dark:text-emerald-400',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'size-1.5 rounded-full',
+                      syncing ? 'bg-primary animate-pulse' : 'bg-emerald-600 dark:bg-emerald-400',
+                    )}
+                  />
+                  {syncing ? 'Syncing…' : 'Live'}
+                </span>
+              </>
+            ) : null}
             <span className="bg-border hidden h-4 w-px sm:inline-block" aria-hidden />
             <span>Case = workflow · Chat = comms transcript</span>
           </div>

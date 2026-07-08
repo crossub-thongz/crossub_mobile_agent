@@ -7,6 +7,7 @@ import type {
 } from '@/lib/crossub-api/types';
 import type { MaintenanceRequest, Priority, TimelineEntry } from '@/lib/types';
 import { maintenanceDetail } from '@/constants/routes';
+import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
 const STATUS_LABEL: Record<string, string> = {
   under_review: 'Under review',
@@ -86,7 +87,7 @@ export function mapApiMaintenanceRequest(
 
   return {
     id: req.id,
-    trackingNumber: req.id,
+    trackingNumber: workflowCaseReferenceLabel(req.id, 'maintenance'),
     propertyId: req.id,
     propertyAddress: req.address,
     title: req.issueType,
