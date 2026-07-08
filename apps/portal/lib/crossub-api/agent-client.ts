@@ -372,7 +372,7 @@ async function parseApiError(res: Response): Promise<string> {
   return `Request failed: ${res.status}`;
 }
 
-async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     credentials: 'include',

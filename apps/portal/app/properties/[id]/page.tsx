@@ -17,9 +17,10 @@ import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dia
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceJobPanel } from '@/components/agent/property-maintenance-job-panel';
 import { PropertyOverviewTab } from '@/components/agent/property-overview-tab';
+import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyDocumentsTab } from '@/components/agent/property-documents-tab';
-import { PropertyTabBar } from '@/components/agent/property-tab-bar';
+import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { RentIncomeHistoryList } from '@/components/agent/rent-income-history-list';
 import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
@@ -90,7 +91,10 @@ export default function PropertyDetailPage() {
     accounting,
     tenantSelections,
     vacating,
+    leasingCycles,
+    tribunalCases,
     getPropertyActions,
+    refresh,
   } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
   const property = properties.find((p) => p.id === id);
@@ -155,11 +159,14 @@ export default function PropertyDetailPage() {
     currentLease,
     activeOpenInspection,
   });
+  const propertyLeasingCycles = leasingCycles.filter((c) => c.propertyId === id);
+  const hasActiveLeasingCycle = propertyLeasingCycles.length > 0;
   const activeLeasingJob = useMemo(
     () =>
       resolvePropertyLeasingJob({
         isVacant,
         inOpenInspectionPhase,
+        hasActiveLeasingCycle,
         tenantSelections: propertyLeasingCases,
         vacatingCases: propertyVacatingCases,
         rentReviews: tenancyRentReviews,
@@ -169,6 +176,7 @@ export default function PropertyDetailPage() {
     [
       isVacant,
       inOpenInspectionPhase,
+      hasActiveLeasingCycle,
       propertyLeasingCases,
       propertyVacatingCases,
       tenancyRentReviews,
@@ -314,9 +322,14 @@ export default function PropertyDetailPage() {
             rentReviews={tenancyRentReviews}
             rentReviewDecisions={decisions}
             currentLease={currentLease}
+            leasingCycles={propertyLeasingCycles}
+            maintenance={tasks.maintenance}
+            inspections={tasks.inspections}
+            tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
             nextRentReviewDate={nextRentReviewDate}
             nextRentReviewCase={nextRentReviewCase}
             onViewRentReview={setSelectedRentReviewId}
+            onWorkflowCreated={() => void refresh()}
           />
         )}
 
@@ -332,7 +345,20 @@ export default function PropertyDetailPage() {
             />
             {maintView === 'current' ? (
               activeMaintenance.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No active maintenance.</p>
+                <PropertyWorkflowPanel
+                  tab="maintenance"
+                  property={property}
+                  propertyId={id}
+                  leasingCycles={propertyLeasingCycles}
+                  rentReviews={tenancyRentReviews}
+                  vacatingCases={propertyVacatingCases}
+                  maintenance={tasks.maintenance}
+                  inspections={tasks.inspections}
+                  tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
+                  currentLease={currentLease}
+                  emptyTitle="No active maintenance"
+                  onCreated={() => void refresh()}
+                />
               ) : selectedMaintenance ? (
                 <div className="space-y-4">
                   {activeMaintenance.length > 1 ? (
@@ -370,19 +396,21 @@ export default function PropertyDetailPage() {
         {tab === 'Inspection' && (
           <div className="space-y-4">
             {isVacant ? (
-              <div className="space-y-3">
-                <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm leading-relaxed">
-                  {VACANT_TENANCY_INSPECTIONS_HINT}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setTab('Leasing')}
-                >
-                  Go to Leasing
-                </Button>
-              </div>
+              <PropertyWorkflowPanel
+                tab="leasing"
+                property={property}
+                propertyId={id}
+                leasingCycles={propertyLeasingCycles}
+                rentReviews={tenancyRentReviews}
+                vacatingCases={propertyVacatingCases}
+                maintenance={tasks.maintenance}
+                inspections={tasks.inspections}
+                tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
+                currentLease={currentLease}
+                emptyTitle="Inspections follow leasing"
+                emptyDescription={VACANT_TENANCY_INSPECTIONS_HINT}
+                onCreated={() => void refresh()}
+              />
             ) : (
               <>
             <FilterChips
@@ -399,9 +427,20 @@ export default function PropertyDetailPage() {
               onChange={(v) => setInspType(v as InspTypeFilter)}
             />
             {filteredInspections.length === 0 ? (
-              <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
-                No {inspView} inspections. Open inspections are managed under Leasing.
-              </p>
+              <PropertyWorkflowPanel
+                tab="inspection"
+                property={property}
+                propertyId={id}
+                leasingCycles={propertyLeasingCycles}
+                rentReviews={tenancyRentReviews}
+                vacatingCases={propertyVacatingCases}
+                maintenance={tasks.maintenance}
+                inspections={tasks.inspections}
+                tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
+                currentLease={currentLease}
+                emptyTitle={`No ${inspView} inspections`}
+                onCreated={() => void refresh()}
+              />
             ) : (
               filteredInspections.map((i) => (
                 <div key={i.id} className="rounded-xl border bg-card p-4">

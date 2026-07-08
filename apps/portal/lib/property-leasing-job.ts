@@ -22,6 +22,7 @@ export interface PropertyLeasingJob {
 export function resolvePropertyLeasingJob(input: {
   isVacant: boolean;
   inOpenInspectionPhase: boolean;
+  hasActiveLeasingCycle: boolean;
   tenantSelections: TenantSelectionCase[];
   vacatingCases: VacatingCase[];
   rentReviews: RentReviewCase[];
@@ -31,6 +32,7 @@ export function resolvePropertyLeasingJob(input: {
   const {
     isVacant,
     inOpenInspectionPhase,
+    hasActiveLeasingCycle,
     tenantSelections,
     vacatingCases,
     rentReviews,
@@ -38,7 +40,11 @@ export function resolvePropertyLeasingJob(input: {
     currentLease,
   } = input;
 
-  if (isVacant || inOpenInspectionPhase || tenantSelections.length > 0) {
+  if (
+    tenantSelections.length > 0 ||
+    hasActiveLeasingCycle ||
+    (inOpenInspectionPhase && isVacant)
+  ) {
     const pending = tenantSelections.find((t) => t.requiresApproval);
     const primary = pending ?? tenantSelections[0];
     return {
@@ -46,6 +52,10 @@ export function resolvePropertyLeasingJob(input: {
       title: primary ? 'Tenant Selection' : 'New Leasing',
       subtitle: primary?.applicantName,
     };
+  }
+
+  if (isVacant && !hasActiveLeasingCycle) {
+    return { kind: 'none', title: 'Leasing' };
   }
 
   if (vacatingCases.length > 0) {

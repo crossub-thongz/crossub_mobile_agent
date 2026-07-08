@@ -11,12 +11,16 @@ import { fromProperty } from '@/lib/detail-navigation';
 import type { PropertyLeasingJob } from '@/lib/property-leasing-job';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
 import { isRentReviewPendingApproval, type RentReviewDecision } from '@/lib/rent-review';
+import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import type {
   Inspection,
+  LeasingCycle,
   LeasingRecord,
+  MaintenanceItem,
   Property,
   RentReviewCase,
   TenantSelectionCase,
+  TribunalCase,
   VacatingCase,
 } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
@@ -61,9 +65,14 @@ export function PropertyLeasingJobPanel({
   rentReviews,
   rentReviewDecisions,
   currentLease,
+  leasingCycles,
+  maintenance,
+  inspections,
+  tribunalCases,
   nextRentReviewDate,
   nextRentReviewCase,
   onViewRentReview,
+  onWorkflowCreated,
 }: {
   property: Property;
   job: PropertyLeasingJob;
@@ -74,9 +83,14 @@ export function PropertyLeasingJobPanel({
   rentReviews: RentReviewCase[];
   rentReviewDecisions: Record<string, RentReviewDecision | null | undefined>;
   currentLease?: LeasingRecord;
+  leasingCycles: LeasingCycle[];
+  maintenance: MaintenanceItem[];
+  inspections: Inspection[];
+  tribunalCases: TribunalCase[];
   nextRentReviewDate?: string | null;
   nextRentReviewCase?: RentReviewCase | null;
   onViewRentReview?: (reviewId: string) => void;
+  onWorkflowCreated?: () => void;
 }) {
   const rentWeekly = workflowRentWeekly({
     propertyRentWeekly: property.rentWeekly,
@@ -209,9 +223,25 @@ export function PropertyLeasingJobPanel({
 
   return (
     <div className="space-y-4">
+      <PropertyWorkflowPanel
+        tab="leasing"
+        property={property}
+        propertyId={propertyId}
+        leasingCycles={leasingCycles}
+        rentReviews={rentReviews}
+        vacatingCases={vacatingCases}
+        maintenance={maintenance}
+        inspections={inspections}
+        tribunalCases={tribunalCases}
+        currentLease={currentLease}
+        emptyTitle="No leasing activity yet"
+        onCreated={onWorkflowCreated}
+      />
       <div className="flex items-stretch gap-2">
         <div className="min-w-0 flex-1 rounded-xl border border-dashed px-4 py-3">
-          <p className="text-muted-foreground text-center text-sm">No active leasing job on this property.</p>
+          <p className="text-muted-foreground text-center text-sm">
+            Use the actions above to start a workflow, or open quick actions.
+          </p>
         </div>
         <div className="w-[20%] min-w-[3.25rem] shrink-0">
           <LeasingQuickActions
