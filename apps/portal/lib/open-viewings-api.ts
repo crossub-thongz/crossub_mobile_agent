@@ -1,0 +1,103 @@
+import type {
+  InterestLevel,
+  OpenInspectionSession,
+  SessionCycle,
+} from "@/constants/open-inspection-ops"
+
+import { api } from "./api"
+
+const BASE = "/open-viewings"
+
+/** Mutations echo back the full session view, already in the FE OpenInspectionSession shape. */
+const unwrap = async (
+  p: Promise<{ session: OpenInspectionSession }>,
+): Promise<OpenInspectionSession> => (await p).session
+
+export interface ViewingDecisionInput {
+  decision: "approved" | "rejected"
+  rejectReason?: string
+}
+
+export interface CreateWalkInInput {
+  name?: string
+  email?: string
+  phone?: string
+  interestLevel?: InterestLevel
+  personId?: string
+  viewingRequestId?: string
+}
+
+export interface CreateViewingSessionInput {
+  propertyId: string
+  startTime: string
+  endTime?: string
+  cycle?: SessionCycle
+  shortNote?: string
+  agentId?: string
+  agentName?: string
+  agentRole?: "leasing_agent" | "property_manager" | "ops_coordinator"
+  agentPhone?: string
+}
+
+export interface ViewingKpiSummary {
+  sessions: number
+  visitors: number
+  attended: number
+  applications: number
+  pendingReview: number
+  qrPreRegistered: number
+}
+
+/**
+ * Typed client over the Open Viewings backend (`/api/open-viewings`). The server
+ * view IS the FE OpenInspectionSession shape, so reads/mutations drop straight into
+ * the dashboard with no extra mapping. Mutations echo back the full session.
+ */
+export const openViewingsApi = {
+  async list(): Promise<OpenInspectionSession[]> {
+    const r = await api.get<{ sessions: OpenInspectionSession[]; total: number }>(
+      `${BASE}/sessions?pageSize=100`,
+    )
+    return r.sessions
+  },
+
+  async summary(): Promise<ViewingKpiSummary> {
+    const r = await api.get<{ summary: ViewingKpiSummary }>(`${BASE}/summary`)
+    return r.summary
+  },
+
+  get: (id: string) =>
+    unwrap(api.get<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}`)),
+
+  // Session lifecycle
+  create: (input: CreateViewingSessionInput) =>
+    unwrap(api.post<{ session: OpenInspectionSession }>(`${BASE}/sessions`, input)),
+  enRoute: (id: string) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/en-route`, {})),
+  open: (id: string) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/open`, {})),
+  close: (id: string) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/close`, {})),
+  cancel: (id: string) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/cancel`, {})),
+
+  // Attendance
+  addWalkIn: (sessionId: string, input: CreateWalkInInput) =>
+    unwrap(api.post<{ session: OpenInspectionSession }>(`${BASE}/sessions/${sessionId}/attendees`, input)),
+  setAttendance: (attendeeId: string, status: "attended" | "no_show") =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/attendance`, { status })),
+  setInterest: (attendeeId: string, interestLevel: InterestLevel) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/interest`, { interestLevel })),
+
+  // Follow-up
+  advanceFollowUp: (attendeeId: string) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/advance-follow-up`, {})),
+  setFollowUpNote: (attendeeId: string, note: string) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/follow-up-note`, { note })),
+
+  // Application (link an existing leasing Application, then decide)
+  linkApplication: (attendeeId: string, applicationId: string) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/link-application`, { applicationId })),
+  decide: (attendeeId: string, input: ViewingDecisionInput) =>
+    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/decision`, input)),
+}

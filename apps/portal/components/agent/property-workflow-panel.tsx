@@ -19,12 +19,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
-  createAgentIngoingInspection,
   createAgentLeasingCycle,
   createAgentMaintenanceRequest,
   createAgentRentReview,
   createAgentTerminationCase,
 } from '@/lib/crossub-api/agent-workflow-client';
+import { inspectionsApi } from '@/lib/inspections-api';
 import {
   buildAgentContactPrefill,
   buildIngoingInspectionPrefill,
@@ -32,6 +32,8 @@ import {
   buildMaintenancePrefill,
   buildRentReviewPrefill,
   buildTerminationPrefill,
+  LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS,
+  minLeasingCycleAvailableFrom,
   recalcLeasingDepositBond,
 } from '@/lib/property-form-prefill';
 import {
@@ -231,6 +233,7 @@ function PropertyWorkflowCreateDialog({
   const [submitting, setSubmitting] = useState(false);
 
   const leasingPrefill = buildLeasingCyclePrefill(property, currentLease);
+  const minAvailableFrom = useMemo(() => minLeasingCycleAvailableFrom(), [open]);
   const [rentPerWeek, setRentPerWeek] = useState(leasingPrefill.rentPerWeek);
   const [availableFrom, setAvailableFrom] = useState(leasingPrefill.availableFrom);
   const [deposit, setDeposit] = useState(leasingPrefill.deposit);
@@ -299,6 +302,11 @@ function PropertyWorkflowCreateDialog({
         const rent = Number(rentPerWeek);
         if (!rent || rent <= 0) throw new Error('Weekly rent is required');
         if (!availableFrom) throw new Error('Available from date is required');
+        if (availableFrom < minAvailableFrom) {
+          throw new Error(
+            `Available from must be at least ${LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today`,
+          );
+        }
         await createAgentLeasingCycle(propertyId, {
           agentName: agent.agentName || undefined,
           agentCompany: agent.agentCompany || undefined,
@@ -364,7 +372,8 @@ function PropertyWorkflowCreateDialog({
       } else if (actionId === 'schedule_inspection') {
         if (!inspTenantName.trim()) throw new Error('Tenant name is required');
         if (!moveInDate) throw new Error('Move-in date is required');
-        await createAgentIngoingInspection(propertyId, {
+        await inspectionsApi.createIngoing({
+          propertyId,
           moveInDate,
           scheduledTime: scheduledTime
             ? new Date(scheduledTime).toISOString()
@@ -410,9 +419,14 @@ function PropertyWorkflowCreateDialog({
             <Field label="Available from *">
               <Input
                 type="date"
+                min={minAvailableFrom}
                 value={availableFrom}
                 onChange={(e) => setAvailableFrom(e.target.value)}
               />
+              <p className="text-muted-foreground text-[11px]">
+                Must be at least {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
+                {minAvailableFrom}).
+              </p>
             </Field>
             <Field label="Deposit (auto)">
               <Input type="number" readOnly value={deposit} className="bg-muted/50" />

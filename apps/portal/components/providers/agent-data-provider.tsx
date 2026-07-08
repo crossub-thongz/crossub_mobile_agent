@@ -62,6 +62,8 @@ import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-actions';
 import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
+import { fetchAgentInspections } from '@/lib/inspections/fetch';
+import { openViewingsApi } from '@/lib/open-viewings-api';
 import { useAgentStore } from '@/lib/store';
 import { displayName } from '@/lib/utils';
 import {
@@ -195,7 +197,7 @@ interface AgentDataContextValue {
     options?: { category?: MessageCategory; subject?: string; caseId?: string },
   ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Promise<Property>;
-  addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Inspection;
+  addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   approveMaintenanceQuote: (requestId: string) => Promise<void>;
   declineMaintenanceQuote: (requestId: string, reason: string) => Promise<void>;
 }
@@ -257,6 +259,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const [apiDocuments, setApiDocuments] = useState<AgentDocument[] | null>(null);
   // Live client agencies (mapped). null = not loaded / failed → empty list.
   const [apiAgencies, setApiAgencies] = useState<Agency[] | null>(null);
+  const [apiInspections, setApiInspections] = useState<Inspection[] | null>(null);
   // localThreadId → server thread id, populated when an optimistic thread is persisted via
   // createThread. Lets the messages memo promote the local thread (keeping its id so the
   // open detail route stays valid) onto its server content, and routes later replies to it.
@@ -274,6 +277,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setApiError(null);
     setApiAgencies(null);
+    setApiInspections(null);
     try {
       const [props, port] = await Promise.all([
         fetchProperties(),
@@ -309,6 +313,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           ? mapAgentAgencies(agenciesRes.value)
           : null,
       );
+      try {
+        const liveInspections = await fetchAgentInspections(mappedProps);
+        setApiInspections(liveInspections);
+      } catch {
+        setApiInspections(
+          port.inspections?.length ? mapAgentInspections(port.inspections) : [],
+        );
+      }
     } catch (err) {
       setApiConnected(false);
       setApiProperties(null);
@@ -317,6 +329,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiNotifications(null);
       setApiDocuments(null);
       setApiAgencies(null);
+      setApiInspections(null);
       setApiError(
         err instanceof Error
           ? err.message
@@ -347,6 +360,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiNotifications(null);
       setApiDocuments(null);
       setApiAgencies(null);
+      setApiInspections(null);
       setApiError(null);
       return;
     }
@@ -450,10 +464,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [portfolio]);
 
   const inspections = useMemo(() => {
+    if (apiConnected && apiInspections) {
+      return filterByPropertyIds(apiInspections, propertyIds);
+    }
     const base = portfolio ? mapAgentInspections(portfolio.inspections) : [];
     const added = filterByPropertyIds(addedInspections, propertyIds);
     return [...added, ...base];
-  }, [portfolio, propertyIds, addedInspections]);
+  }, [apiConnected, apiInspections, portfolio, propertyIds, addedInspections]);
 
   const rentReviews = useMemo(
     () => (portfolio ? mapAgentRentReviews(portfolio.rentReviews) : []),
@@ -672,9 +689,37 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addOpenInspection = useCallback(
-    (input: import('@/lib/store').NewOpenInspectionInput) =>
-      storeAddOpenInspection(input),
-    [storeAddOpenInspection],
+    async (input: import('@/lib/store').NewOpenInspectionInput) => {
+      if (apiConnected) {
+        const start = input.scheduledAt ?? new Date().toISOString();
+        const end = new Date(new Date(start).getTime() + 60 * 60_000).toISOString();
+        const session = await openViewingsApi.create({
+          propertyId: input.property.id,
+          startTime: start,
+          endTime: end,
+          shortNote: input.preferredNotes,
+        });
+        await refresh();
+        return {
+          id: session.id,
+          trackingNumber: session.id.slice(0, 8).toUpperCase(),
+          type: 'OPEN' as const,
+          propertyId: input.property.id,
+          propertyAddress: input.property.address,
+          scheduledAt: session.startTime,
+          status: session.sessionStatus,
+          apiStatus: session.sessionStatus,
+          reportStatus: 'pending' as const,
+          openConductedBy: input.openConductedBy,
+          openListingContext: input.openListingContext,
+          agentTenantNotifiedConfirmed: input.agentTenantNotifiedConfirmed,
+          timeline: [],
+          source: 'open_viewing' as const,
+        };
+      }
+      return storeAddOpenInspection(input);
+    },
+    [apiConnected, refresh, storeAddOpenInspection],
   );
 
   const uploadDocument = useCallback(

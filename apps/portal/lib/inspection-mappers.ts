@@ -1,0 +1,114 @@
+import {
+  INSPECTION_RECORD_STATUS,
+  INSPECTION_RECORD_TYPE,
+  type InspectionRecordStatus,
+} from '@/constants/inspection-records';
+import {
+  SESSION_STATUS_LABEL,
+  type OpenInspectionSession,
+  type SessionStatus,
+} from '@/constants/open-inspection-ops';
+import type { InspectionRecord } from '@/lib/inspections-types';
+import type { Inspection } from '@/lib/types';
+
+const RECORD_TYPE_VIEW: Record<string, Inspection['type']> = {
+  INGOING: 'INGOING',
+  OUTGOING: 'OUTGOING',
+  ROUTINE: 'ROUTINE',
+  OPEN: 'OPEN',
+};
+
+const STATUS_LABEL: Record<InspectionRecordStatus, string> = {
+  [INSPECTION_RECORD_STATUS.DRAFT]: 'Draft',
+  [INSPECTION_RECORD_STATUS.IN_PROGRESS]: 'In Progress',
+  [INSPECTION_RECORD_STATUS.FIRST_REVIEW]: 'First Review',
+  [INSPECTION_RECORD_STATUS.SECOND_REVIEW]: 'Second Review',
+  [INSPECTION_RECORD_STATUS.COMPLETED]: 'Completed',
+  [INSPECTION_RECORD_STATUS.PUBLISHED]: 'Published',
+  [INSPECTION_RECORD_STATUS.CANCELLED]: 'Cancelled',
+};
+
+function reportStatusFromRecord(
+  status: InspectionRecordStatus,
+  reportUrl: string | null,
+): Inspection['reportStatus'] {
+  if (status === INSPECTION_RECORD_STATUS.PUBLISHED) return 'sent';
+  if (status === INSPECTION_RECORD_STATUS.COMPLETED) return 'approved';
+  if (reportUrl) return 'uploaded';
+  return 'pending';
+}
+
+export function mapInspectionRecordToView(record: InspectionRecord): Inspection {
+  return {
+    id: record.id,
+    trackingNumber: record.id.slice(0, 8).toUpperCase(),
+    type: RECORD_TYPE_VIEW[record.type] ?? 'ROUTINE',
+    propertyId: record.propertyId ?? '',
+    propertyAddress: record.propertyAddress ?? '—',
+    inspector: record.inspectorName ?? undefined,
+    scheduledAt: record.scheduledDate ?? record.inspectionDate ?? undefined,
+    status: STATUS_LABEL[record.status] ?? record.status,
+    apiStatus: record.status,
+    reportStatus: reportStatusFromRecord(record.status, record.reportUrl),
+    reportUrl: record.reportUrl ?? undefined,
+    timeline: [],
+    source: 'inspection',
+  };
+}
+
+function openSessionStatusLabel(status: SessionStatus): string {
+  return SESSION_STATUS_LABEL[status] ?? status;
+}
+
+/** Map an open-viewing session into the agent Inspection list row. */
+export function mapOpenSessionToInspection(
+  session: OpenInspectionSession,
+  propertyId?: string,
+): Inspection {
+  const resolvedPropertyId = session.propertyId ?? propertyId ?? '';
+  return {
+    id: session.id,
+    trackingNumber: session.id.slice(0, 8).toUpperCase(),
+    type: 'OPEN',
+    propertyId: resolvedPropertyId,
+    propertyAddress: session.address || session.property,
+    scheduledAt: session.startTime,
+    status: openSessionStatusLabel(session.sessionStatus),
+    apiStatus: session.sessionStatus,
+    reportStatus: 'pending',
+    openConductedBy: session.agent?.role === 'leasing_agent' ? 'agent' : 'crossub',
+    visitorCount: session.visitors?.length ?? 0,
+    timeline: [],
+    source: 'open_viewing',
+  };
+}
+
+export function mergeInspectionRows(
+  records: InspectionRecord[],
+  sessions: OpenInspectionSession[],
+  propertyIdByAddress: Map<string, string>,
+): Inspection[] {
+  const fromRecords = records
+    .filter((r) => r.type !== INSPECTION_RECORD_TYPE.OPEN)
+    .map(mapInspectionRecordToView);
+
+  const openRecordIds = new Set(
+    records.filter((r) => r.type === INSPECTION_RECORD_TYPE.OPEN).map((r) => r.id),
+  );
+
+  const fromSessions = sessions
+    .filter((s) => !openRecordIds.has(s.id))
+    .map((s) => {
+      const propertyId =
+        s.propertyId ?? propertyIdByAddress.get(s.address.toLowerCase().trim());
+      return mapOpenSessionToInspection(s, propertyId);
+    });
+
+  const merged = [...fromSessions, ...fromRecords];
+  merged.sort((a, b) => {
+    const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
+    const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
+    return bt - at;
+  });
+  return merged;
+}

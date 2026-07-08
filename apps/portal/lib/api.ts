@@ -82,8 +82,35 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await parseBody(res)) as T;
 }
 
+async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
+  let res = await doFetch(path, init);
+
+  if (
+    res.status === 401 &&
+    typeof window !== 'undefined' &&
+    !isAuthPath(path)
+  ) {
+    const refreshed = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (refreshed.ok) {
+      res = await doFetch(path, init);
+    } else {
+      await clearSessionAndRedirectToLogin();
+      throw new ApiError(401, await parseBody(refreshed));
+    }
+  }
+
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseBody(res));
+  }
+  return res.blob();
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
+  getBlob: (path: string) => requestBlob(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, {
       method: 'POST',

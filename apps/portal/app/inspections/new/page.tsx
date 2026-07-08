@@ -78,7 +78,7 @@ export default function NewOpenInspectionPage() {
     return true;
   }, [conductedBy, acknowledgedResponsibility, isOccupied, scheduledDate]);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!property || !conductedBy || !listingContext) return;
     if (isSelf && !acknowledgedResponsibility) {
       toast.error('Please acknowledge your responsibility for tenant contact');
@@ -91,7 +91,7 @@ export default function NewOpenInspectionPage() {
 
     setSubmitting(true);
     try {
-      const inspection = addOpenInspection({
+      const inspection = await addOpenInspection({
         property,
         openConductedBy: conductedBy,
         openListingContext: listingContext,
@@ -102,9 +102,11 @@ export default function NewOpenInspectionPage() {
       toast.success(
         conductedBy === 'crossub'
           ? 'Open inspection requested — CROSSUB will arrange'
-          : 'Self open inspection saved',
+          : 'Open inspection scheduled',
       );
       router.push(inspectionDetail(inspection.id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create open inspection');
     } finally {
       setSubmitting(false);
     }

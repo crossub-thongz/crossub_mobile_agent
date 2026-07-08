@@ -1,4 +1,4 @@
-import { addDays, format } from 'date-fns';
+import { addDays, format, startOfDay } from 'date-fns';
 
 import type { Agency } from '@/lib/types';
 import type { Property } from '@/lib/types';
@@ -7,6 +7,13 @@ import type { LeasingRecord } from '@/lib/types';
 export const LEASING_CYCLE_DEPOSIT_RENT_MULTIPLIER = 2;
 export const LEASING_CYCLE_BOND_RENT_MULTIPLIER = 4;
 export const LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS = 7;
+
+export function minLeasingCycleAvailableFrom(): string {
+  return format(
+    addDays(startOfDay(new Date()), LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS),
+    'yyyy-MM-dd',
+  );
+}
 
 function isoDateAddYears(isoDate: string, years: number): string {
   const d = new Date(isoDate.slice(0, 10));
@@ -71,10 +78,7 @@ export function buildLeasingCyclePrefill(
         : 0;
   const rentStr = rent > 0 ? String(Math.round(rent)) : '';
   const rentNum = rent > 0 ? rent : 0;
-  const minAvailable = format(
-    addDays(new Date(), LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS),
-    'yyyy-MM-dd',
-  );
+  const minAvailable = minLeasingCycleAvailableFrom();
   return {
     rentPerWeek: rentStr,
     availableFrom: minAvailable,

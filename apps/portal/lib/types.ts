@@ -360,6 +360,8 @@ export interface Inspection {
     outgoingLabel: string;
     issueNote?: string;
   }[];
+  /** Where this row was loaded from — inspection record vs open-viewing session. */
+  source?: 'inspection' | 'open_viewing';
 }
 
 export type RentReviewWorkflowState =
