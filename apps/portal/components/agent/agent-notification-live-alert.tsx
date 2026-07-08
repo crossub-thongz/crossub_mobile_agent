@@ -1,0 +1,206 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { AlertTriangle, CheckCircle2, FileText, X } from 'lucide-react';
+
+import { useAuth } from '@/components/providers/auth-provider';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/constants/routes';
+import {
+  hasAlertedNotification,
+  markNotificationAlerted,
+} from '@/lib/notification-alert-state';
+import { useAgentStore, type NotificationPrefs } from '@/lib/store';
+import type { AgentNotification } from '@/lib/types';
+import { cn, formatRelative } from '@/lib/utils';
+
+function shouldAlertNotification(
+  notification: AgentNotification,
+  prefs: NotificationPrefs,
+): boolean {
+  if (notification.read) return false;
+  if (notification.type === 'approval') return prefs.approvals;
+  if (notification.type === 'urgent') return prefs.urgent;
+  return prefs.updates;
+}
+
+function alertIcon(type: AgentNotification['type']) {
+  if (type === 'urgent') return AlertTriangle;
+  if (type === 'approval') return CheckCircle2;
+  return FileText;
+}
+
+export function AgentNotificationLiveAlert() {
+  const router = useRouter();
+  const { status } = useAuth();
+  const { notifications, loading, markNotificationRead } = useAgentData();
+  const prefs = useAgentStore((s) => s.notificationPrefs);
+
+  const seededRef = useRef(false);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const [queue, setQueue] = useState<AgentNotification[]>([]);
+  const [visible, setVisible] = useState(false);
+
+  const current = queue[0] ?? null;
+
+  useEffect(() => {
+    if (status !== 'authed' || loading) return;
+
+    const ids = notifications.map((n) => n.id);
+
+    if (!seededRef.current) {
+      seededRef.current = true;
+      for (const id of ids) knownIdsRef.current.add(id);
+      return;
+    }
+
+    const newcomers = notifications.filter(
+      (n) =>
+        !knownIdsRef.current.has(n.id) &&
+        shouldAlertNotification(n, prefs) &&
+        !hasAlertedNotification(n.id),
+    );
+
+    for (const id of ids) knownIdsRef.current.add(id);
+
+    if (newcomers.length > 0) {
+      setQueue((prev) => {
+        const seen = new Set(prev.map((n) => n.id));
+        const merged = [...prev];
+        for (const n of newcomers) {
+          if (seen.has(n.id)) continue;
+          seen.add(n.id);
+          merged.push(n);
+        }
+        return merged;
+      });
+    }
+  }, [status, loading, notifications, prefs]);
+
+  useEffect(() => {
+    if (current) {
+      setVisible(true);
+      return;
+    }
+    setVisible(false);
+  }, [current?.id]);
+
+  const dismissCurrent = () => {
+    if (!current) return;
+    markNotificationAlerted(current.id);
+    setVisible(false);
+    window.setTimeout(() => {
+      setQueue((prev) => prev.filter((n) => n.id !== current.id));
+    }, 200);
+  };
+
+  const openCurrent = () => {
+    if (!current) return;
+    markNotificationAlerted(current.id);
+    markNotificationRead(current.id);
+    setVisible(false);
+    window.setTimeout(() => {
+      setQueue((prev) => prev.filter((n) => n.id !== current.id));
+      router.push(current.href);
+    }, 150);
+  };
+
+  if (status !== 'authed' || !current) return null;
+
+  const Icon = alertIcon(current.type);
+  const tone =
+    current.type === 'urgent'
+      ? 'border-destructive/50 bg-destructive/5'
+      : current.type === 'approval'
+        ? 'border-primary/50 bg-primary/5'
+        : 'border-border bg-card';
+
+  return (
+    <div
+      className={cn(
+        'pointer-events-none fixed inset-x-0 top-0 z-[100] flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]',
+      )}
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        className={cn(
+          'pointer-events-auto w-full max-w-md rounded-2xl border p-4 shadow-2xl transition-all duration-200',
+          tone,
+          visible ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0',
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={cn(
+              'flex size-10 shrink-0 items-center justify-center rounded-full',
+              current.type === 'urgent'
+                ? 'bg-destructive/15 text-destructive'
+                : 'bg-primary/15 text-primary',
+            )}
+          >
+            <Icon className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-primary text-[10px] font-semibold tracking-wider uppercase">
+                  New notification
+                </p>
+                <p className="mt-0.5 text-sm font-semibold leading-snug">{current.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={dismissCurrent}
+                className="text-muted-foreground hover:text-foreground shrink-0 rounded-lg p-1 hover:bg-secondary"
+                aria-label="Dismiss notification"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">
+              {current.body}
+            </p>
+            {current.propertyAddress && (
+              <p className="text-muted-foreground mt-1 truncate text-[11px]">
+                {current.propertyAddress}
+              </p>
+            )}
+            <p className="text-muted-foreground mt-1 text-[10px]">{formatRelative(current.at)}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button size="sm" className="h-8 text-xs" onClick={openCurrent}>
+                Open
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={dismissCurrent}
+              >
+                Dismiss
+              </Button>
+              <Link
+                href={ROUTES.NOTIFICATIONS}
+                onClick={() => {
+                  markNotificationAlerted(current.id);
+                  setQueue((prev) => prev.filter((n) => n.id !== current.id));
+                }}
+                className="text-primary ml-auto text-[11px] font-medium hover:underline"
+              >
+                All notifications
+              </Link>
+            </div>
+          </div>
+        </div>
+        {queue.length > 1 && (
+          <p className="text-muted-foreground mt-3 border-t pt-2 text-center text-[10px]">
+            +{queue.length - 1} more in queue
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}

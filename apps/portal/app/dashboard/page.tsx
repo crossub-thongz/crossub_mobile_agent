@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { DashboardChartHub } from '@/components/agent/dashboard-chart-hub';
 import { ExpandableNeedActionCard } from '@/components/agent/expandable-need-action-card';
@@ -13,27 +11,9 @@ import { Button } from '@/components/ui/button';
 import { propertyNew, ROUTES } from '@/constants/routes';
 
 export default function DashboardPage() {
-  const { dashboardKpis, notifications, needActionGroups, needActionItems, loading, hasFullManagementAccess } =
+  const { dashboardKpis, needActionGroups, needActionItems, hasFullManagementAccess } =
     useAgentData();
   const k = dashboardKpis;
-  const pushShown = useRef(false);
-
-  useEffect(() => {
-    if (pushShown.current || loading) return;
-    const urgent = notifications.filter((n) => !n.read && n.type === 'approval');
-    if (urgent.length > 0) {
-      pushShown.current = true;
-      toast.info(urgent[0].title, {
-        description: urgent[0].actionRequired ?? urgent[0].body,
-        action: {
-          label: 'Open',
-          onClick: () => {
-            window.location.href = urgent[0].href;
-          },
-        },
-      });
-    }
-  }, [loading, notifications]);
 
   return (
     <AgentShell title="Dashboard">

@@ -6,6 +6,7 @@ import { AuthProvider } from '@/components/providers/auth-provider';
 import { SystemAccessAgreementGate } from '@/components/auth/system-access-agreement-gate';
 import { PortalServiceLevelGate } from '@/components/auth/portal-service-level-gate';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
+import { AgentNotificationLiveAlert } from '@/components/agent/agent-notification-live-alert';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
 import { ThemeProvider } from '@/components/theme-provider';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
@@ -51,6 +52,7 @@ export default function RootLayout({
               <SystemAccessAgreementGate>
                 <AgentDataProvider>
                   <PortalServiceLevelGate>
+                    <AgentNotificationLiveAlert />
                     {children}
                     <WelcomeOnboarding />
                   </PortalServiceLevelGate>

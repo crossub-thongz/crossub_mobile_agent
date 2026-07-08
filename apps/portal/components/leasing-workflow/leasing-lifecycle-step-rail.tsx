@@ -26,16 +26,27 @@ export function LeasingLifecycleStepRail({
   href?: string;
   className?: string;
 }) {
+  const currentIndex = LEASING_LIFECYCLE_STEP_ORDER.indexOf(currentStep);
+
   return (
     <WorkflowProgressRail
       steps={LEASING_LIFECYCLE_STEP_ORDER}
       labels={LEASING_LIFECYCLE_STEP_SHORT_LABEL}
       currentStep={currentStep}
       getStepState={(step) => {
-        const isDone = deriveStepStatus(detail, step) === LEASING_ITEM_STATUS.DONE;
+        const stepIndex = LEASING_LIFECYCLE_STEP_ORDER.indexOf(step);
+        const isDone =
+          stepIndex < currentIndex ||
+          deriveStepStatus(detail, step) === LEASING_ITEM_STATUS.DONE;
         return resolveWorkflowStepState(isDone, step === currentStep);
       }}
-      isStepCompleted={(step) => deriveStepStatus(detail, step) === LEASING_ITEM_STATUS.DONE}
+      isStepCompleted={(step) => {
+        const stepIndex = LEASING_LIFECYCLE_STEP_ORDER.indexOf(step);
+        return (
+          stepIndex < currentIndex ||
+          deriveStepStatus(detail, step) === LEASING_ITEM_STATUS.DONE
+        );
+      }}
       onStepClick={onStepClick}
       href={href}
       className={className}

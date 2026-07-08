@@ -1,20 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarClock, Megaphone, Smartphone } from 'lucide-react';
+import { CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { LeasingToneBadge } from '@/components/leasing-workflow/leasing-status-badge';
-import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import { StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import {
-  LEASING_ADVERTISING_STATUS,
-  LEASING_ADVERTISING_STATUS_LABEL,
-  LEASING_TONE,
-  LEASING_UI,
-} from '@/lib/leasing/constants';
+import { LEASING_UI } from '@/lib/leasing/constants';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
@@ -37,8 +31,6 @@ function defaultScheduleTime(): string {
 export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyDetail }) {
   const { leasingCycles, apiConnected } = useAgentData();
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
-  const pushToAppLocal = useLeasingWorkflowStore((s) => s.pushInspectionToAgentApp);
-  const notifyLocal = useLeasingWorkflowStore((s) => s.notifyAgentToAdvertise);
   const arrangeLocal = useLeasingWorkflowStore((s) => s.arrangeOpenInspection);
 
   const [arranging, setArranging] = useState(false);
@@ -48,12 +40,6 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const cycleId = cycle?.id;
 
   const oi = detail.openInspection;
-  const advTone =
-    oi.advertising === LEASING_ADVERTISING_STATUS.PUBLISHED
-      ? LEASING_TONE.SUCCESS
-      : oi.advertising === LEASING_ADVERTISING_STATUS.PENDING_INTEGRATION
-        ? LEASING_TONE.WARNING
-        : LEASING_TONE.MUTED;
 
   const arrange = async () => {
     const scheduledTime = new Date(scheduledLocal).toISOString();
@@ -71,34 +57,6 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
       toast.error(err instanceof Error ? err.message : 'Could not arrange open inspection');
     } finally {
       setArranging(false);
-    }
-  };
-
-  const pushToApp = async () => {
-    try {
-      if (apiConnected && cycleId) {
-        const view = await leasingOpsApi.pushInspectionToAgentApp(cycleId);
-        applyCycleView(detail.propertyId, view);
-      } else {
-        pushToAppLocal(detail.propertyId);
-      }
-      toast.success('Pushed to agent app');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not push to agent app');
-    }
-  };
-
-  const notify = async () => {
-    try {
-      if (apiConnected && cycleId) {
-        const view = await leasingOpsApi.notifyAgentToAdvertise(cycleId);
-        applyCycleView(detail.propertyId, view);
-      } else {
-        notifyLocal(detail.propertyId);
-      }
-      toast.success('Agent notified to advertise');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not notify agent');
     }
   };
 
@@ -139,58 +97,6 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
         ) : (
           <p className="text-muted-foreground text-[12px]">No open inspection arranged yet.</p>
         )}
-      </StepCard>
-
-      <StepCard
-        icon={Smartphone}
-        title="Agent app & advertising"
-        description="Push the arranged time to the agent app and notify the agent to advertise."
-      >
-        <div className="flex flex-col gap-2.5">
-          <div className="flex items-center justify-between gap-3">
-            <BoolStatus
-              done={oi.pushedToAgentApp}
-              doneLabel="Pushed to agent app"
-              pendingLabel="Not yet pushed to agent app"
-            />
-            {!oi.pushedToAgentApp && (
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => void pushToApp()}>
-                Push
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <BoolStatus
-              done={oi.agentNotifiedToAdvertise}
-              doneLabel="Agent notified to advertise"
-              pendingLabel="Agent not yet notified"
-            />
-            {!oi.agentNotifiedToAdvertise && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 gap-1.5 text-xs"
-                onClick={() => void notify()}
-              >
-                <Megaphone className="size-3.5" />
-                Notify
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-lg border bg-secondary/20 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-              Listing portals
-            </p>
-            <LeasingToneBadge
-              tone={advTone}
-              label={LEASING_ADVERTISING_STATUS_LABEL[oi.advertising]}
-              size="xs"
-            />
-          </div>
-        </div>
       </StepCard>
     </div>
   );

@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { FileText, Globe, MessageSquare, Send, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { LeasingViewerInvitePanel } from '@/components/leasing-workflow/leasing-viewer-invite-panel';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   LEASING_APPLY_PATH,
   LEASING_APPLY_PATH_LABEL,
@@ -13,6 +16,7 @@ import {
 } from '@/lib/leasing/constants';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { cn, formatDate } from '@/lib/utils';
 
 const APPLY_PATH_ICON: Record<LeasingApplyPath, typeof Smartphone> = {
@@ -21,9 +25,41 @@ const APPLY_PATH_ICON: Record<LeasingApplyPath, typeof Smartphone> = {
 };
 
 export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetail }) {
-  const sendReport = useLeasingWorkflowStore((s) => s.sendReportToAgent);
-  const sendInvites = useLeasingWorkflowStore((s) => s.sendViewerInvites);
+  const { leasingCycles, apiConnected } = useAgentData();
+  const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
+  const sendReportLocal = useLeasingWorkflowStore((s) => s.sendReportToAgent);
+
+  const [sendingReport, setSendingReport] = useState(false);
+
+  const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
+  const cycleId = cycle?.id;
   const or = detail.openReport;
+
+  const sendReport = async () => {
+    setSendingReport(true);
+    try {
+      if (apiConnected && cycleId) {
+        const view = await leasingOpsApi.sendReportToAgent(cycleId);
+        applyCycleView(detail.propertyId, view);
+      } else {
+        sendReportLocal(detail.propertyId);
+      }
+      toast.success('Open report sent to agent');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not send report');
+    } finally {
+      setSendingReport(false);
+    }
+  };
+
+  const sendInvites = async (recipients: Array<{ email?: string; phone?: string }>) => {
+    if (!apiConnected || !cycleId) {
+      toast.error('Leasing cycle not available — refresh and try again');
+      throw new Error('No cycle');
+    }
+    const view = await leasingOpsApi.sendViewerInvites(cycleId, { recipients });
+    applyCycleView(detail.propertyId, view);
+  };
 
   return (
     <div className="space-y-3">
@@ -39,13 +75,11 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
                 size="sm"
                 className={cn('gap-1.5', LEASING_UI.btnSecondary)}
                 variant="ghost"
-                onClick={() => {
-                  sendReport(detail.propertyId);
-                  toast.success('Open report sent to agent');
-                }}
+                disabled={sendingReport}
+                onClick={() => void sendReport()}
               >
                 <Send className="size-3.5" />
-                Send report to agent
+                {sendingReport ? 'Sending…' : 'Send report to agent'}
               </Button>
             )}
             <Button
@@ -78,30 +112,10 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
         icon={MessageSquare}
         title="Invite viewers to apply"
         description="SMS/email attendees inviting them to apply."
-        footer={
-          !or.viewerInvitesSent ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 text-xs"
-              onClick={() => {
-                sendInvites(detail.propertyId);
-                toast.success('Invites sent to viewers');
-              }}
-            >
-              <Send className="size-3.5" />
-              Send SMS / email invites
-            </Button>
-          ) : undefined
-        }
       >
-        <BoolStatus
-          done={or.viewerInvitesSent}
-          doneLabel={`Invites sent${or.invitedCount ? ` to ${or.invitedCount}` : ''}`}
-          pendingLabel="Invites not yet sent"
-        />
+        <LeasingViewerInvitePanel detail={detail} onSend={sendInvites} />
         <div>
-          <p className="text-muted-foreground mb-1.5 text-[10px] uppercase tracking-wider">
+          <p className="text-muted-foreground mb-1.5 text-[10px] tracking-wider uppercase">
             Ways to apply
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -110,7 +124,7 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
               return (
                 <span
                   key={path}
-                  className="inline-flex items-center gap-1.5 rounded-full border bg-secondary/30 px-2.5 py-1 text-[11px]"
+                  className="bg-secondary/30 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px]"
                 >
                   <Icon className={cn('size-3', LEASING_UI.accentIcon)} />
                   {LEASING_APPLY_PATH_LABEL[path]}

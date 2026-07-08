@@ -34,12 +34,23 @@ export interface LeasingOpenInspection {
   advertisingNote?: string;
 }
 
+export interface LeasingViewerInvite {
+  id: string;
+  email?: string;
+  phone?: string;
+  channel: 'email' | 'sms';
+  body: string;
+  sentAt: string;
+  commConversationId?: string;
+}
+
 export interface LeasingOpenReport {
   status: LeasingItemStatus;
   sentToAgent: boolean;
   sentToAgentAt?: string;
   viewerInvitesSent: boolean;
   invitedCount?: number;
+  viewerInvites?: LeasingViewerInvite[];
   applyPaths: LeasingApplyPath[];
   reportViewable: boolean;
   attendeeCount?: number;

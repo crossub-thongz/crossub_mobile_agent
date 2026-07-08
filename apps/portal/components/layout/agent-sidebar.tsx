@@ -20,10 +20,12 @@ function isActive(pathname: string, href: string): boolean {
 export function AgentSidebar({
   unreadMessages,
   actionCount,
+  unreadNotificationCount,
   onLogout,
 }: {
   unreadMessages: number;
   actionCount: number;
+  unreadNotificationCount: number;
   onLogout: () => void;
 }) {
   const pathname = usePathname();
@@ -112,7 +114,9 @@ export function AgentSidebar({
           More
         </p>
         <ul className="space-y-0.5">
-          {moreNav.map(({ href, label, icon: Icon }) => (
+          {moreNav.map(({ href, label, icon: Icon }) => {
+            const badge = href === ROUTES.NOTIFICATIONS ? unreadNotificationCount : 0;
+            return (
             <li key={href}>
               <Link
                 href={href}
@@ -124,10 +128,16 @@ export function AgentSidebar({
                 )}
               >
                 <Icon className="size-4 shrink-0 opacity-70" />
-                <span className="truncate">{label}</span>
+                <span className="flex-1 truncate">{label}</span>
+                {badge > 0 && (
+                  <span className="bg-primary flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </nav>
 

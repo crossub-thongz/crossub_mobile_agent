@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 import { ConnectionBanner } from '@/components/agent/connection-banner';
+import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { GlobalShellFabs } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
@@ -59,7 +60,8 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { messages, needActionItems, hasFullManagementAccess } = useAgentData();
+  const { messages, needActionItems, hasFullManagementAccess, unreadNotificationCount } =
+    useAgentData();
   const unreadMessages = messages.reduce((s, m) => s + m.unread, 0);
   const actionCount = needActionItems.length;
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
@@ -93,6 +95,7 @@ export function AgentShell({
       <AgentSidebar
         unreadMessages={unreadMessages}
         actionCount={actionCount}
+        unreadNotificationCount={unreadNotificationCount}
         onLogout={() => void logout()}
       />
 
@@ -144,6 +147,7 @@ export function AgentShell({
                   )}
                 </Link>
               )}
+              <AgentNotificationBell unreadCount={unreadNotificationCount} />
               <ThemeToggle />
               <Link
                 href={ROUTES.SEARCH}
@@ -166,7 +170,7 @@ export function AgentShell({
         </header>
 
         {title && !immersive && (
-          <header className="border-border hidden shrink-0 flex-col gap-2 border-b px-6 py-3 lg:flex">
+          <header className="border-border bg-background/95 sticky top-0 z-40 hidden shrink-0 flex-col gap-2 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 {backHref && (
@@ -200,6 +204,7 @@ export function AgentShell({
                   )}
                 </Link>
               )}
+              <AgentNotificationBell unreadCount={unreadNotificationCount} />
               <Link
                 href={ROUTES.SEARCH}
                 className="text-muted-foreground flex size-9 items-center justify-center rounded-lg hover:bg-secondary"

@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Building2,
+  Bell,
   ClipboardList,
   FileText,
   Inbox,
@@ -40,7 +41,7 @@ export const MORE_NAV: NavItem[] = [
   { href: ROUTES.TENANTS, label: 'Tenant accounts', icon: UserPlus, portalAccess: 'full' },
   { href: ROUTES.VACATING, label: 'Vacating', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.REPORTS, label: 'Reports', icon: FileText, portalAccess: 'full' },
-  { href: ROUTES.NOTIFICATIONS, label: 'Alerts', icon: FileText },
+  { href: ROUTES.NOTIFICATIONS, label: 'Alerts', icon: Bell },
   { href: ROUTES.PROFILE, label: 'Profile', icon: FileText },
   { href: ROUTES.SETTINGS, label: 'Settings', icon: FileText },
 ];

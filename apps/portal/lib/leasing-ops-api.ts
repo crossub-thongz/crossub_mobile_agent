@@ -1,5 +1,11 @@
 import { api } from '@/lib/api';
-import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
+import type {
+  CreateManualApplicantInput,
+  SendViewerInvitesInput,
+  ServerLeasingCycleView,
+  SetApplicantDecisionInput,
+  UploadApplicantDocumentInput,
+} from '@/lib/leasing-cycle-types';
 
 const BASE = '/leasing/cycles';
 
@@ -67,6 +73,63 @@ export const leasingOpsApi = {
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(
         `${BASE}/${cycleId}/onboarding/ingoing/schedule`,
+        input,
+      ),
+    ),
+
+  // Step 2
+  sendReportToAgent: (cycleId: string) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/open-report/send-agent`, {}),
+    ),
+
+  sendViewerInvites: (cycleId: string, input: SendViewerInvitesInput) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/open-report/send-invites`,
+        input,
+      ),
+    ),
+
+  // Step 3
+  toggleApplicantSelected: (cycleId: string, applicationId: string) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/applications/${applicationId}/select`,
+        {},
+      ),
+    ),
+
+  sendSelectedToAgent: (cycleId: string) =>
+    unwrap(
+      api.post<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/applications/send-to-agent`),
+    ),
+
+  createManualApplicant: (cycleId: string, input: CreateManualApplicantInput) =>
+    unwrap(
+      api.post<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/applications/manual`, input),
+    ),
+
+  uploadApplicantDocument: (
+    cycleId: string,
+    applicationId: string,
+    input: UploadApplicantDocumentInput,
+  ) =>
+    unwrap(
+      api.post<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/applications/${applicationId}/documents`,
+        input,
+      ),
+    ),
+
+  setApplicantDecision: (
+    cycleId: string,
+    applicationId: string,
+    input: SetApplicantDecisionInput,
+  ) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/applications/${applicationId}/decision`,
         input,
       ),
     ),

@@ -174,6 +174,7 @@ interface AgentDataContextValue {
   messages: MessageThread[];
   documents: AgentDocument[];
   notifications: AgentNotification[];
+  unreadNotificationCount: number;
   dashboardItems: DashboardItem[];
   sectionStatus: SectionStatus[];
   taskStatusList: TaskStatusItem[];
@@ -807,6 +808,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     return base.map((n) => ({ ...n, read: n.read || readIds.has(n.id) }));
   }, [apiNotifications, readIds]);
 
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications],
+  );
+
   const markNotificationRead = useCallback(
     (id: string) => {
       setReadIds((prev) => new Set(prev).add(id)); // optimistic
@@ -967,6 +973,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     messages,
     documents,
     notifications,
+    unreadNotificationCount,
     dashboardItems,
     sectionStatus,
     taskStatusList,
