@@ -91,6 +91,10 @@ export interface Property {
 
 export type AgencyStatus = 'ONBOARDING' | 'ACTIVE' | 'INACTIVE';
 
+export type AgentPortalServiceLevel =
+  | 'LEVEL_1_INSPECTION_ONLY'
+  | 'LEVEL_2_FULL_MANAGEMENT';
+
 /** A client agency (the AM's "client") the signed-in agent is assigned to manage. */
 export interface Agency {
   id: string;
@@ -100,6 +104,8 @@ export interface Agency {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  /** Agent portal service tier — Level 1 is inspection-only; Level 2 is full management. */
+  portalServiceLevel?: AgentPortalServiceLevel;
   /** Properties under this agency in the agent's book — derived from the live `properties`. */
   propertyCount: number;
 }

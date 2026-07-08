@@ -27,7 +27,7 @@ const FILTERS = [
 export default function PropertiesPage() {
   const searchParams = useSearchParams();
   const urlFilter = searchParams.get('filter');
-  const { properties, getPropertyActions, accounting, tribunalCases, maintenanceAll } =
+  const { properties, getPropertyActions, accounting, tribunalCases, hasFullManagementAccess } =
     useAgentData();
   const [filter, setFilter] = useState(
     urlFilter && FILTERS.some((f) => f.id === urlFilter) ? urlFilter : 'all',
@@ -98,12 +98,14 @@ export default function PropertiesPage() {
         </div>
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
-        <Button className="w-full rounded-xl" size="lg" asChild>
-          <Link href={propertyNew()}>
-            <Plus className="size-4" />
-            Add property
-          </Link>
-        </Button>
+        {hasFullManagementAccess && (
+          <Button className="w-full rounded-xl" size="lg" asChild>
+            <Link href={propertyNew()}>
+              <Plus className="size-4" />
+              Add property
+            </Link>
+          </Button>
+        )}
 
         {list.length === 0 ? (
           <EmptyState
@@ -114,7 +116,7 @@ export default function PropertiesPage() {
                 : 'Add a property to start managing landlords and tenants.'
             }
             action={
-              !search && filter === 'all' ? (
+              hasFullManagementAccess && !search && filter === 'all' ? (
                 <Button size="sm" asChild>
                   <Link href={propertyNew()}>Add property</Link>
                 </Button>

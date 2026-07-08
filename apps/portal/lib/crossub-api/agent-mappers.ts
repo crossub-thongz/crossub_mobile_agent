@@ -135,6 +135,10 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     contactName: asString(a.contactName),
     contactEmail: asString(a.contactEmail),
     contactPhone: asString(a.contactPhone),
+    portalServiceLevel:
+      'portalServiceLevel' in a && typeof a.portalServiceLevel === 'string'
+        ? (a.portalServiceLevel as Agency['portalServiceLevel'])
+        : undefined,
     propertyCount: 0,
   }));
 }

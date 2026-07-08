@@ -25,6 +25,7 @@ import {
   BUILTIN_QUICK_ACTIONS,
   resolveQuickActions,
 } from '@/lib/quick-actions';
+import { INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS } from '@/lib/portal-service-level';
 import { useAgentStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
@@ -83,6 +84,7 @@ function dockButtonClass(active: boolean, activeClass: string) {
 export function GlobalShellFabs({ pathname }: { pathname: string }) {
   const propertyId = propertyIdFromPath(pathname);
   const hideCommunication = isActiveChatPath(pathname);
+  const { hasFullManagementAccess } = useAgentData();
   const [activePanel, setActivePanel] = useState<DockPanel>(null);
 
   const togglePanel = (id: DockPanel) => {
@@ -91,9 +93,12 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
 
   const closePanel = () => setActivePanel(null);
 
-  const visibleButtons = hideCommunication
-    ? DOCK_BUTTONS.filter((b) => b.id !== 'communication')
-    : DOCK_BUTTONS;
+  const visibleButtons = DOCK_BUTTONS.filter((button) => {
+    if (button.id === 'communication' && (hideCommunication || !hasFullManagementAccess)) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -251,6 +256,7 @@ function QuickCreateDockSheet({
   const [customLabel, setCustomLabel] = useState('');
   const [customHref, setCustomHref] = useState('');
   const router = useRouter();
+  const { hasFullManagementAccess } = useAgentData();
   const hiddenBuiltinQuickActionIds = useAgentStore((s) => s.hiddenBuiltinQuickActionIds);
   const customQuickActions = useAgentStore((s) => s.customQuickActions);
   const toggleBuiltinQuickAction = useAgentStore((s) => s.toggleBuiltinQuickAction);
@@ -258,10 +264,13 @@ function QuickCreateDockSheet({
   const removeCustomQuickAction = useAgentStore((s) => s.removeCustomQuickAction);
   const resetQuickActions = useAgentStore((s) => s.resetQuickActions);
 
-  const actions = useMemo(
-    () => resolveQuickActions(hiddenBuiltinQuickActionIds, customQuickActions, propertyId),
-    [hiddenBuiltinQuickActionIds, customQuickActions, propertyId],
-  );
+  const actions = useMemo(() => {
+    const hidden = new Set(hiddenBuiltinQuickActionIds);
+    if (!hasFullManagementAccess) {
+      for (const id of INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS) hidden.add(id);
+    }
+    return resolveQuickActions([...hidden], customQuickActions, propertyId);
+  }, [hiddenBuiltinQuickActionIds, customQuickActions, propertyId, hasFullManagementAccess]);
 
   const close = () => {
     setCustomize(false);

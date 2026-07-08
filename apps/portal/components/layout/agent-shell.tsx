@@ -20,6 +20,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
+import { filterNavByAccess } from '@/lib/portal-service-level';
 import { cn, displayName } from '@/lib/utils';
 
 function isActive(pathname: string, href: string): boolean {
@@ -58,9 +59,11 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { messages, needActionItems } = useAgentData();
+  const { messages, needActionItems, hasFullManagementAccess } = useAgentData();
   const unreadMessages = messages.reduce((s, m) => s + m.unread, 0);
   const actionCount = needActionItems.length;
+  const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
+  const moreNav = filterNavByAccess(MORE_NAV, hasFullManagementAccess);
 
   useEffect(() => {
     const el = headerRef.current;
@@ -257,7 +260,7 @@ export function AgentShell({
               </div>
               <div className="max-h-[50vh] overflow-y-auto">
                 <div className="flex flex-col gap-0.5 pb-2">
-                  {MORE_NAV.map(({ href, label }) => (
+                  {moreNav.map(({ href, label }) => (
                     <Link
                       key={href}
                       href={href}
@@ -287,7 +290,7 @@ export function AgentShell({
           )}
         >
           <div className="flex h-16 items-stretch justify-around px-1">
-            {PRIMARY_NAV.map(({ href, label, icon: Icon }) => {
+            {primaryNav.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
               const badge =
                 href === ROUTES.MESSAGES && unreadMessages > 0

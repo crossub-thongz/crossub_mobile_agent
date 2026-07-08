@@ -63,6 +63,10 @@ import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
 import { useAgentStore } from '@/lib/store';
 import { displayName } from '@/lib/utils';
+import {
+  hasFullManagementAccess as computeFullManagementAccess,
+  isInspectionOnlyAgent as computeInspectionOnlyAgent,
+} from '@/lib/portal-service-level';
 import type {
   Agency,
   AgentDocument,
@@ -150,6 +154,10 @@ interface AgentDataContextValue {
   agencies: Agency[];
   /** The agent's profile agency — earliest AccountManagerAssignment, not user-selectable. */
   primaryAgency: Agency | null;
+  /** True when at least one assigned agency has Level 2 (full management) access. */
+  hasFullManagementAccess: boolean;
+  /** True when every assigned agency is Level 1 (inspection-only). */
+  isInspectionOnlyAgent: boolean;
   inspections: Inspection[];
   rentReviews: RentReviewCase[];
   vacating: VacatingCase[];
@@ -392,6 +400,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
     return null;
   }, [apiAgencies, apiConnected, properties]);
+
+  const hasFullManagementAccess = useMemo(
+    () => computeFullManagementAccess(agencies),
+    [agencies],
+  );
+
+  const isInspectionOnlyAgent = useMemo(
+    () => computeInspectionOnlyAgent(agencies),
+    [agencies],
+  );
 
   const maintenanceAll = useMemo(() => {
     if (portfolio) return mapAgentMaintenance(portfolio.maintenance);
@@ -854,6 +872,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     properties,
     agencies,
     primaryAgency,
+    hasFullManagementAccess,
+    isInspectionOnlyAgent,
     inspections,
     rentReviews,
     vacating,

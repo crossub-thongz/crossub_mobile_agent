@@ -4,6 +4,7 @@ import Script from 'next/script';
 
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { SystemAccessAgreementGate } from '@/components/auth/system-access-agreement-gate';
+import { PortalServiceLevelGate } from '@/components/auth/portal-service-level-gate';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -49,8 +50,10 @@ export default function RootLayout({
             <ProviderErrorBoundary>
               <SystemAccessAgreementGate>
                 <AgentDataProvider>
-                  {children}
-                  <WelcomeOnboarding />
+                  <PortalServiceLevelGate>
+                    {children}
+                    <WelcomeOnboarding />
+                  </PortalServiceLevelGate>
                 </AgentDataProvider>
               </SystemAccessAgreementGate>
             </ProviderErrorBoundary>

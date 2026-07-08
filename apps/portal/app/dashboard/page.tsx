@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { propertyNew, ROUTES } from '@/constants/routes';
 
 export default function DashboardPage() {
-  const { dashboardKpis, notifications, needActionGroups, needActionItems, loading } =
+  const { dashboardKpis, notifications, needActionGroups, needActionItems, loading, hasFullManagementAccess } =
     useAgentData();
   const k = dashboardKpis;
   const pushShown = useRef(false);
@@ -38,12 +38,14 @@ export default function DashboardPage() {
   return (
     <AgentShell title="Dashboard">
       <div className="space-y-5">
-        <Button asChild size="lg" className="h-12 w-full rounded-xl text-base font-semibold">
-          <Link href={propertyNew()}>
-            <Plus className="size-5" />
-            Add new property
-          </Link>
-        </Button>
+        {hasFullManagementAccess && (
+          <Button asChild size="lg" className="h-12 w-full rounded-xl text-base font-semibold">
+            <Link href={propertyNew()}>
+              <Plus className="size-5" />
+              Add new property
+            </Link>
+          </Button>
+        )}
 
         <section className="space-y-2">
           <h2 className="text-sm font-semibold lg:text-base">Need action</h2>

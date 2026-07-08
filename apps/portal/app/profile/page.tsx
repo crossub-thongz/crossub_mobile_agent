@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Building2, ChevronRight, History, LogOut, Mail, Phone, Settings, User } from 'lucide-react';
 
 import { AgentShell } from '@/components/layout/agent-shell';
+import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -75,10 +76,17 @@ export default function ProfilePage() {
         </section>
 
         <section className="rounded-xl border bg-card p-4">
-          <h2 className="text-sm font-semibold">Agency details</h2>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Your client agency in crossub_web
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold">Agency details</h2>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Your client agency in crossub_web
+              </p>
+            </div>
+            {primaryAgency && (
+              <PortalServiceLevelBadge level={primaryAgency.portalServiceLevel} size="xs" />
+            )}
+          </div>
           <dl className="mt-3 space-y-2.5 text-sm">
             <ProfileRow label="Agency name" value={agencyName} />
             <ProfileRow label="Company" value={agencyCompany} />

@@ -8,6 +8,8 @@ import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { DESKTOP_NAV, MORE_NAV, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { filterNavByAccess } from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
 function isActive(pathname: string, href: string): boolean {
@@ -25,6 +27,10 @@ export function AgentSidebar({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
+  const { hasFullManagementAccess } = useAgentData();
+  const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
+  const moreNav = filterNavByAccess(MORE_NAV, hasFullManagementAccess);
+  const desktopNav = filterNavByAccess(DESKTOP_NAV, hasFullManagementAccess);
 
   return (
     <aside className="border-border bg-card hidden w-[260px] shrink-0 flex-col border-r lg:flex">
@@ -38,7 +44,7 @@ export function AgentSidebar({
           Main
         </p>
         <ul className="space-y-0.5">
-          {PRIMARY_NAV.map(({ href, label, icon: Icon }) => {
+          {primaryNav.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             const badge =
               href === ROUTES.MESSAGES
@@ -74,7 +80,7 @@ export function AgentSidebar({
           Desktop
         </p>
         <ul className="space-y-0.5">
-          {DESKTOP_NAV.map(({ href, label, icon: Icon, description }) => {
+          {desktopNav.map(({ href, label, icon: Icon, description }) => {
             const active = isActive(pathname, href);
             return (
               <li key={href}>
@@ -106,7 +112,7 @@ export function AgentSidebar({
           More
         </p>
         <ul className="space-y-0.5">
-          {MORE_NAV.map(({ href, label, icon: Icon }) => (
+          {moreNav.map(({ href, label, icon: Icon }) => (
             <li key={href}>
               <Link
                 href={href}

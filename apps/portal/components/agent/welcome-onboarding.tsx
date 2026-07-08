@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { Building2, LayoutDashboard, ListTodo, MessageSquare, X } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES, propertyNew } from '@/constants/routes';
 import { useAgentStore } from '@/lib/store';
 
 export function WelcomeOnboarding() {
   const { user, status } = useAuth();
+  const { hasFullManagementAccess } = useAgentData();
   const dismissed = useAgentStore((s) => s.onboardingDismissed);
   const dismiss = useAgentStore((s) => s.dismissOnboarding);
 
@@ -59,9 +61,11 @@ export function WelcomeOnboarding() {
           </li>
         </ul>
         <div className="mt-5 flex flex-col gap-2">
-          <Button asChild onClick={dismiss}>
-            <Link href={propertyNew()}>Add your first property</Link>
-          </Button>
+          {hasFullManagementAccess && (
+            <Button asChild onClick={dismiss}>
+              <Link href={propertyNew()}>Add your first property</Link>
+            </Button>
+          )}
           <Button variant="outline" asChild onClick={dismiss}>
             <Link href={ROUTES.TASKS}>View need-action queue</Link>
           </Button>

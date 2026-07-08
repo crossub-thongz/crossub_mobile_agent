@@ -4,6 +4,7 @@ import { notFound, useParams } from 'next/navigation';
 import { Building2, Mail, Phone } from 'lucide-react';
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
+import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { PropertyListCard } from '@/components/agent/property-list-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -47,14 +48,17 @@ export default function AgencyDetailPage() {
                 <p className="text-muted-foreground mt-0.5 text-sm">{agency.company}</p>
               )}
             </div>
-            <span
-              className={cn(
-                'inline-block shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold',
-                STATUS_STYLES[agency.status],
-              )}
-            >
-              {STATUS_LABEL[agency.status]}
-            </span>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <span
+                className={cn(
+                  'inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold',
+                  STATUS_STYLES[agency.status],
+                )}
+              >
+                {STATUS_LABEL[agency.status]}
+              </span>
+              <PortalServiceLevelBadge level={agency.portalServiceLevel} size="xs" />
+            </div>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-xl border bg-card/60 p-2">
@@ -76,6 +80,9 @@ export default function AgencyDetailPage() {
           <InfoRow label="Agency" value={agency.name} />
           {agency.company && <InfoRow label="Company" value={agency.company} />}
           <InfoRow label="Status" value={STATUS_LABEL[agency.status] ?? agency.status} />
+          <InfoRow label="Portal access">
+            <PortalServiceLevelBadge level={agency.portalServiceLevel} />
+          </InfoRow>
           {agency.contactName && <InfoRow label="Contact" value={agency.contactName} />}
           {agency.contactEmail && (
             <InfoRow label="Email">

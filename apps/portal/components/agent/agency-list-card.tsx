@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Building2, ChevronRight } from 'lucide-react';
 
 import type { Agency } from '@/lib/types';
+import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { cn } from '@/lib/utils';
 
 const STATUS_STYLES: Record<Agency['status'], string> = {
@@ -36,14 +37,17 @@ export function AgencyListCard({
           <Building2 className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <span
-            className={cn(
-              'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold',
-              STATUS_STYLES[agency.status],
-            )}
-          >
-            {STATUS_LABEL[agency.status]}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={cn(
+                'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                STATUS_STYLES[agency.status],
+              )}
+            >
+              {STATUS_LABEL[agency.status]}
+            </span>
+            <PortalServiceLevelBadge level={agency.portalServiceLevel} size="xs" />
+          </div>
           <p className="mt-1.5 font-semibold leading-snug">{agency.name}</p>
           {agency.company && agency.company !== agency.name && (
             <p className="text-muted-foreground text-xs">{agency.company}</p>

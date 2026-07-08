@@ -49,15 +49,22 @@ import { resolvePropertyRentIncome } from '@/lib/property-rent-income';
 import { resolvePropertyLeasingJob } from '@/lib/property-leasing-job';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import {
+  PROPERTY_DETAIL_TABS,
+  propertyDetailTabsForAgency,
+  type PropertyDetailTab,
+} from '@/lib/portal-service-level';
 
-const TABS = [
-  'Overview',
-  'Leasing',
-  'Maintenance',
-  'Inspection',
-  'Accounting',
-  'Documents',
-] as const;
+type Tab = PropertyDetailTab;
+
+function normalizeTab(raw: string | null, allowedTabs: readonly Tab[]): Tab {
+  if (raw === 'Rent Review' || raw === 'Tenancy' || raw === 'Communication') {
+    if (allowedTabs.includes('Leasing')) return 'Leasing';
+    return allowedTabs[0] ?? 'Overview';
+  }
+  if (allowedTabs.includes(raw as Tab)) return raw as Tab;
+  return allowedTabs[0] ?? 'Overview';
+}
 
 const INSP_TYPE_FILTERS = [
   { id: 'all', label: 'All' },
@@ -68,20 +75,13 @@ const INSP_TYPE_FILTERS = [
 
 type InspTypeFilter = (typeof INSP_TYPE_FILTERS)[number]['id'];
 
-type Tab = (typeof TABS)[number];
-
-function normalizeTab(raw: string | null): Tab {
-  if (raw === 'Rent Review' || raw === 'Tenancy' || raw === 'Communication') return 'Leasing';
-  if (TABS.includes(raw as Tab)) return raw as Tab;
-  return 'Overview';
-}
-
 export default function PropertyDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params.id as string;
   const {
     properties,
+    agencies,
     maintenanceAll,
     inspections,
     rentReviews,
@@ -94,7 +94,14 @@ export default function PropertyDetailPage() {
   } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
   const property = properties.find((p) => p.id === id);
-  const [tab, setTab] = useState<Tab>(normalizeTab(searchParams.get('tab')));
+  const propertyTabs = useMemo(
+    () =>
+      property
+        ? propertyDetailTabsForAgency(agencies, property.agencyId)
+        : [...PROPERTY_DETAIL_TABS],
+    [agencies, property],
+  );
+  const [tab, setTab] = useState<Tab>('Overview');
   const [overviewView, setOverviewView] = useState<'summary' | 'history'>('summary');
   const [maintView, setMaintView] = useState<'current' | 'history'>('current');
   const [selectedMaintenanceId, setSelectedMaintenanceId] = useState<string | null>(null);
@@ -104,6 +111,10 @@ export default function PropertyDetailPage() {
   const [selectedRentReviewId, setSelectedRentReviewId] = useState<string | null>(null);
   const [leasingChatOpen, setLeasingChatOpen] = useState(false);
   const arrearsSectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setTab(normalizeTab(searchParams.get('tab'), propertyTabs));
+  }, [searchParams, propertyTabs]);
 
   useEffect(() => {
     if (searchParams.get('focus') !== 'arrears' || tab !== 'Accounting') return;
@@ -257,7 +268,7 @@ export default function PropertyDetailPage() {
           </div>
         </div>
 
-        <PropertyTabBar tabs={TABS} active={tab} onChange={setTab} />
+        <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />
 
         {tab === 'Overview' && (
           <div className="space-y-4">
