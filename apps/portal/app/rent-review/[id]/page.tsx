@@ -6,20 +6,22 @@ import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { DataSourceBadge } from '@/components/agent/data-source-badge';
 import { InheritedLeaseTermsPanel } from '@/components/agent/inherited-lease-terms';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
-import { WorkflowStageRail } from '@/components/agent/workflow-stage-rail';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
+import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
+import { rentReviewWorkflowProgress } from '@/lib/case-workflows';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
-import { buildRentReviewTimeline, isRentReviewDecided, leaseRenewalStages } from '@/lib/rent-review';
+import { buildRentReviewTimeline, isRentReviewDecided } from '@/lib/rent-review';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAgentStore } from '@/lib/store';
 
@@ -45,10 +47,7 @@ export default function RentReviewDetailPage() {
       <div className="space-y-4">
         <DataSourceBadge source={apiConnected ? 'api' : 'offline'} />
 
-        <WorkflowStageRail
-          title="Lease renewal workflow (7 stages)"
-          stages={leaseRenewalStages(item, decision)}
-        />
+        <CaseWorkflowProgressCard progress={rentReviewWorkflowProgress(item)} />
 
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <StatusBadge label={item.status} variant="approval" />
@@ -82,7 +81,7 @@ export default function RentReviewDetailPage() {
 
         <CaseContactActions propertyId={item.propertyId} caseLabel="Rent review" />
 
-        {!decided ? (
+        {!decided && AGENT_CASE_INTERACTIONS_ENABLED ? (
           <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
             <p className="text-primary text-xs font-semibold uppercase">
               Agent approval (stage 3)

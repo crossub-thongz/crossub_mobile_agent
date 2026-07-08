@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ChevronRight, Mail, MessageSquare, Phone, TrendingDown, TrendingUp } from 'lucide-react';
 
+import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { EmptyState } from '@/components/agent/empty-state';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
+import { accountingArrearsProgress } from '@/lib/case-workflows';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 export default function AccountingPage() {
@@ -135,6 +137,11 @@ export default function AccountingPage() {
                     </dd>
                   </div>
                 </dl>
+                {a.arrearsAmount > 0 ? (
+                  <div className="border-t border-border/80 px-4 py-3">
+                    <CaseWorkflowProgressCard progress={accountingArrearsProgress(a)} />
+                  </div>
+                ) : null}
                 {(a.bills?.length ?? 0) > 0 && (
                   <div className="space-y-2 border-t border-border/80 px-4 py-3">
                     <p className="text-xs font-semibold">Bills</p>

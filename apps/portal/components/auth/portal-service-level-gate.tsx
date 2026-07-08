@@ -8,12 +8,13 @@ import { ROUTES, isPublicRoute } from '@/constants/routes';
 import { isFullManagementRoute } from '@/lib/portal-service-level';
 
 export function PortalServiceLevelGate({ children }: { children: React.ReactNode }) {
-  const { isInspectionOnlyAgent, loading } = useAgentData();
+  const { isInspectionOnlyAgent, loading, portalAccessReady } = useAgentData();
   const pathname = usePathname();
   const router = useRouter();
 
   const blocked =
     !loading &&
+    portalAccessReady &&
     isInspectionOnlyAgent &&
     isFullManagementRoute(pathname) &&
     !isPublicRoute(pathname);

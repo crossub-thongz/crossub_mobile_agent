@@ -5,10 +5,13 @@ import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
+import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
+import { maintenanceWorkflowProgress } from '@/lib/case-workflows';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
 
@@ -78,19 +81,22 @@ export default function MaintenanceDetailPage() {
       hideGlobalFabs
       hideNeedAction
     >
-      <MaintenanceWorkspace
-        workspaceCase={workspaceCase}
-        backHref={back.href}
-        backLabel={back.label}
-        onApproveQuote={handleApprove}
-        onDeclineQuote={handleDecline}
-        quoteAmount={item.quoteAmount}
-        contractorName={item.contractorName}
-        quoteExpiry={item.quoteExpiry}
-        recommendation={item.recommendation}
-        quoteDocumentUrl={item.quoteDocumentUrl}
-        requiresApproval={item.requiresApproval}
-      />
+      <div className="space-y-4">
+        <CaseWorkflowProgressCard progress={maintenanceWorkflowProgress(item)} />
+        <MaintenanceWorkspace
+          workspaceCase={workspaceCase}
+          backHref={back.href}
+          backLabel={back.label}
+          onApproveQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleApprove : undefined}
+          onDeclineQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleDecline : undefined}
+          quoteAmount={item.quoteAmount}
+          contractorName={item.contractorName}
+          quoteExpiry={item.quoteExpiry}
+          recommendation={item.recommendation}
+          quoteDocumentUrl={item.quoteDocumentUrl}
+          requiresApproval={AGENT_CASE_INTERACTIONS_ENABLED && item.requiresApproval}
+        />
+      </div>
     </AgentShell>
   );
 }

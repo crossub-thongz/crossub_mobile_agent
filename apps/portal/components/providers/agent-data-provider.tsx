@@ -34,6 +34,7 @@ import {
   mapAgentDocuments,
   mapAgentInspections,
   mapAgentLeasing,
+  mapAgentLeasingCycles,
   mapAgentMaintenance,
   mapAgentMessages,
   mapAgentNotifications,
@@ -75,6 +76,7 @@ import type {
   DashboardKpis,
   Inspection,
   LeasingRecord,
+  LeasingCycle,
   MaintenanceRequest,
   MessageCategory,
   MessageMention,
@@ -154,6 +156,7 @@ interface AgentDataContextValue {
   agencies: Agency[];
   /** The agent's profile agency — earliest AccountManagerAssignment, not user-selectable. */
   primaryAgency: Agency | null;
+  portalAccessReady: boolean;
   /** True when at least one assigned agency has Level 2 (full management) access. */
   hasFullManagementAccess: boolean;
   /** True when every assigned agency is Level 1 (inspection-only). */
@@ -170,6 +173,7 @@ interface AgentDataContextValue {
   taskStatusList: TaskStatusItem[];
   dashboardKpis: DashboardKpis;
   leasingRecords: LeasingRecord[];
+  leasingCycles: LeasingCycle[];
   accounting: PropertyAccounting[];
   needActionItems: PropertyNeedAction[];
   needActionGroups: NeedActionGroup[];
@@ -269,6 +273,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(true);
     setApiError(null);
+    setApiAgencies(null);
     try {
       const [props, port] = await Promise.all([
         fetchProperties(),
@@ -401,14 +406,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [apiAgencies, apiConnected, properties]);
 
+  const portalAccessReady = apiAgencies !== null;
+
   const hasFullManagementAccess = useMemo(
-    () => computeFullManagementAccess(agencies),
-    [agencies],
+    () => !portalAccessReady || computeFullManagementAccess(agencies),
+    [portalAccessReady, agencies],
   );
 
   const isInspectionOnlyAgent = useMemo(
-    () => computeInspectionOnlyAgent(agencies),
-    [agencies],
+    () => portalAccessReady && computeInspectionOnlyAgent(agencies),
+    [portalAccessReady, agencies],
   );
 
   const maintenanceAll = useMemo(() => {
@@ -471,6 +478,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const leasingRecords = useMemo(
     () => (portfolio ? mapAgentLeasing(portfolio.leasing) : []),
+    [portfolio],
+  );
+
+  const leasingCycles = useMemo(
+    () => (portfolio ? mapAgentLeasingCycles(portfolio.leasingCycles) : []),
     [portfolio],
   );
 
@@ -872,6 +884,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     properties,
     agencies,
     primaryAgency,
+    portalAccessReady,
     hasFullManagementAccess,
     isInspectionOnlyAgent,
     inspections,
@@ -886,6 +899,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     taskStatusList,
     dashboardKpis,
     leasingRecords,
+    leasingCycles,
     accounting,
     needActionItems,
     needActionGroups,

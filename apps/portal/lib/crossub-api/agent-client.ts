@@ -5,7 +5,6 @@ import { crossub } from './client';
 export type AgentAgency = components['schemas']['AgentAgencyResponseDto'];
 export type AgentProperty = components['schemas']['AgentPropertyResponseDto'];
 
-export type AgentPortfolio = components['schemas']['AgentPortfolioResponseDto'];
 export type AgentInspection = components['schemas']['AgentInspectionDto'];
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'];
 export type AgentRentReview = components['schemas']['AgentRentReviewDto'];
@@ -15,6 +14,18 @@ export type AgentTenantSelection =
 export type AgentLeasing = components['schemas']['AgentLeasingDto'];
 export type AgentAccounting = components['schemas']['AgentAccountingDto'];
 export type AgentTribunal = components['schemas']['AgentTribunalDto'];
+export type AgentLeasingCycle = {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  lifecycleStep: string;
+  onboardingStepId?: string | null;
+  rentPerWeek?: number | null;
+  availableFrom?: string | null;
+};
+export type AgentPortfolio = components['schemas']['AgentPortfolioResponseDto'] & {
+  leasingCycles?: AgentLeasingCycle[];
+};
 
 export type AgentMessageThread =
   components['schemas']['AgentMessageThreadResponseDto'];

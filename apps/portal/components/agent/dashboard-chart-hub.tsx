@@ -29,7 +29,7 @@ function DonutChart({
 }) {
   const chartSize = large ? 96 : size;
   const chartStroke = large ? 11 : stroke;
-  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  const total = segments.reduce((s, x) => s + x.value, 0);
   const r = (chartSize - chartStroke) / 2;
   const c = 2 * Math.PI * r;
   let offset = 0;
@@ -44,27 +44,29 @@ function DonutChart({
         stroke="var(--border)"
         strokeWidth={chartStroke}
       />
-      {segments.map((seg) => {
-        if (seg.value <= 0) return null;
-        const dash = (seg.value / total) * c;
-        const el = (
-          <circle
-            key={seg.label}
-            cx={chartSize / 2}
-            cy={chartSize / 2}
-            r={r}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth={chartStroke}
-            strokeDasharray={`${dash} ${c - dash}`}
-            strokeDashoffset={-offset}
-            strokeLinecap="round"
-            transform={`rotate(-90 ${chartSize / 2} ${chartSize / 2})`}
-          />
-        );
-        offset += dash;
-        return el;
-      })}
+      {total > 0
+        ? segments.map((seg) => {
+            if (seg.value <= 0) return null;
+            const dash = (seg.value / total) * c;
+            const el = (
+              <circle
+                key={seg.label}
+                cx={chartSize / 2}
+                cy={chartSize / 2}
+                r={r}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth={chartStroke}
+                strokeDasharray={`${dash} ${c - dash}`}
+                strokeDashoffset={-offset}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${chartSize / 2} ${chartSize / 2})`}
+              />
+            );
+            offset += dash;
+            return el;
+          })
+        : null}
       <text
         x="50%"
         y="50%"
@@ -101,10 +103,7 @@ function ChartCard({
         className,
       )}
     >
-      <DonutChart
-        segments={active.length ? active : [{ label: '—', value: 1, color: 'var(--border)' }]}
-        large
-      />
+      <DonutChart segments={active} large />
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center gap-1.5">
           <Icon className="text-primary size-4 shrink-0" />

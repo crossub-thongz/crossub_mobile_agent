@@ -5,13 +5,13 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeftRight, Building2, ChevronRight, FileText, History, UserCheck, UserPlus } from 'lucide-react';
 
+import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { StatusBadge } from '@/components/agent/status-badge';
-import { WorkflowStageRail } from '@/components/agent/workflow-stage-rail';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,11 @@ import {
   tenantSelectionDetail,
 } from '@/constants/routes';
 import { fromLeasing } from '@/lib/detail-navigation';
-import { NEW_LEASING_STAGES } from '@/lib/leasing-workflows/constants';
+import {
+  leasingLifecycleProgress,
+  leasingOnboardingProgress,
+  rentReviewWorkflowProgress,
+} from '@/lib/case-workflows';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -51,7 +55,7 @@ export default function LeasingPage() {
       : 'new-leasing';
 
   const [tab, setTab] = useState<LeasingTab>(initialTab);
-  const { tenantSelections, rentReviews, leasingRecords, properties } = useAgentData();
+  const { tenantSelections, rentReviews, leasingRecords, leasingCycles, properties } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
 
   const pendingApplications = tenantSelections.filter((t) => t.requiresApproval);
@@ -122,13 +126,33 @@ export default function LeasingPage() {
 
         {tab === 'new-leasing' && (
           <section className="space-y-3">
-            <WorkflowStageRail
-              title="New leasing pipeline (13 stages)"
-              stages={NEW_LEASING_STAGES.map((stage, index) => ({
-                ...stage,
-                status: index === 7 ? ('current' as const) : index < 7 ? ('done' as const) : ('upcoming' as const),
-              }))}
-            />
+            {leasingCycles.length > 0 ? (
+              <div className="space-y-3">
+                <h2 className="text-sm font-semibold">Active leasing cycles</h2>
+                {leasingCycles.map((cycle) => {
+                  const onboarding = leasingOnboardingProgress(cycle);
+                  return (
+                    <div key={cycle.id} className="space-y-3 rounded-2xl border bg-card p-4">
+                      <Link
+                        href={propertyDetail(cycle.propertyId)}
+                        className="block font-semibold hover:text-primary"
+                      >
+                        {cycle.propertyAddress}
+                      </Link>
+                      <CaseWorkflowProgressCard progress={leasingLifecycleProgress(cycle)} />
+                      {onboarding ? <CaseWorkflowProgressCard progress={onboarding} /> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Building2}
+                title="No active leasing cycles"
+                description="When a vacant property enters the leasing pipeline in crossub_web, progress will appear here."
+              />
+            )}
+
             {tenantSelections.length === 0 ? (
               <EmptyState
                 icon={UserCheck}
@@ -191,11 +215,7 @@ export default function LeasingPage() {
                     id: r.id,
                     propertyAddress: r.propertyAddress,
                     taskLabel: `Rent review · due ${formatDate(r.reviewDue)}`,
-                    status: decisions[r.id]
-                      ? decisions[r.id]?.action === 'confirmed'
-                        ? 'Confirmed'
-                        : 'Custom amount submitted'
-                      : r.status,
+                    status: rentReviewWorkflowProgress(r).currentStepLabel,
                     href: rentReviewDetail(r.id, fromLeasing('rent-review')),
                     module: 'Rent review',
                     tone: isRentReviewPendingApproval(r, decisions[r.id])

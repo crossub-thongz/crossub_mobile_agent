@@ -97,6 +97,35 @@ export const VACATING_STATUS = {
   COMPLETED: 'COMPLETED',
 } as const;
 
+/** TerminationStage — end-leasing pipeline position (mirrors Prisma). */
+export const TERMINATION_STAGE = {
+  VACATE: 'VACATE',
+  OUTGOING_INSPECTION: 'OUTGOING_INSPECTION',
+  MAKE_GOOD: 'MAKE_GOOD',
+  SETTLEMENT: 'SETTLEMENT',
+  AGENT_APPROVAL: 'AGENT_APPROVAL',
+  BOND: 'BOND',
+  CLOSURE: 'CLOSURE',
+} as const;
+
+/** LeasingLifecycleStep — active leasing cycle position (mirrors Prisma). */
+export const LEASING_LIFECYCLE_STEP = {
+  OPEN_INSPECTION: 'open_inspection',
+  OPEN_REPORT: 'open_report',
+  APPLICATION_APPROVAL: 'application_approval',
+  ONBOARDING: 'onboarding',
+} as const;
+
+/** Leasing onboarding sub-steps when lifecycle is ONBOARDING. */
+export const LEASING_ONBOARDING_STEP = {
+  DEPOSIT: 'deposit',
+  BOND: 'bond',
+  AGREEMENT: 'agreement',
+  KEY_COLLECTION: 'key_collection',
+  INGOING_INSPECTION: 'ingoing_inspection',
+  INGOING_REPORT_APPROVAL: 'ingoing_report_approval',
+} as const;
+
 /** CommDepartment — the staff queue a message thread is routed to. */
 export const COMM_DEPARTMENT = {
   LEASING: 'LEASING',

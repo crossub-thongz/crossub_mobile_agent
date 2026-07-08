@@ -5,11 +5,14 @@ import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
+import { vacatingWorkflowProgress } from '@/lib/case-workflows';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 export default function VacatingDetailPage() {
@@ -19,9 +22,13 @@ export default function VacatingDetailPage() {
 
   if (!item) notFound();
 
+  const workflow = vacatingWorkflowProgress(item);
+
   return (
     <AgentShell title="Vacating checklist" backHref={ROUTES.VACATING}>
       <div className="space-y-4">
+        <CaseWorkflowProgressCard progress={workflow} />
+
         <div className="rounded-xl border bg-card p-4">
           <p className="font-semibold">{item.propertyAddress}</p>
           <p className="text-muted-foreground mt-1 text-xs">
@@ -37,7 +44,7 @@ export default function VacatingDetailPage() {
 
         <CaseContactActions propertyId={item.propertyId} caseLabel="Vacating" />
 
-        {item.requiresApproval && (
+        {AGENT_CASE_INTERACTIONS_ENABLED && item.requiresApproval && (
           <ApprovalPanel
             title="Bond settlement approval"
             amount={item.bondBreakdown.reduce((s, r) => s + (r.label.includes('held') ? 0 : r.amount), 0)}
@@ -49,20 +56,38 @@ export default function VacatingDetailPage() {
         )}
 
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Checklist</h2>
-          {item.checklist.map((step) => (
+          <h2 className="text-sm font-semibold">Workflow steps</h2>
+          {workflow.steps.map((step) => (
             <div
-              key={step.label}
+              key={step.id}
               className="flex items-center justify-between rounded-lg border bg-card px-3 py-3 text-sm"
             >
               <span>{step.label}</span>
               <StatusBadge
                 label={step.status}
-                variant={step.status === 'done' ? 'success' : 'default'}
+                variant={step.status === 'current' ? 'approval' : 'default'}
               />
             </div>
           ))}
         </section>
+
+        {item.checklist.length > 0 ? (
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold">Checklist</h2>
+            {item.checklist.map((step) => (
+              <div
+                key={step.label}
+                className="flex items-center justify-between rounded-lg border bg-card px-3 py-3 text-sm"
+              >
+                <span>{step.label}</span>
+                <StatusBadge
+                  label={step.status}
+                  variant={step.status === 'done' ? 'success' : 'default'}
+                />
+              </div>
+            ))}
+          </section>
+        ) : null}
 
         <section className="rounded-xl border bg-card p-4">
           <h2 className="text-sm font-semibold">Bond breakdown</h2>

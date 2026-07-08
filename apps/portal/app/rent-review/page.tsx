@@ -12,6 +12,7 @@ import { rentReviewDetail, ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import type { DetailNavContext } from '@/lib/detail-navigation';
 import { isRentReviewDecided, isRentReviewPendingApproval } from '@/lib/rent-review';
+import { rentReviewWorkflowProgress } from '@/lib/case-workflows';
 import { useAgentStore } from '@/lib/store';
 
 const VIEW_FILTERS = [
@@ -75,11 +76,7 @@ export default function RentReviewPage() {
                   id: r.id,
                   propertyAddress: r.propertyAddress,
                   taskLabel: 'Rent review',
-                  status: decisions[r.id]
-                    ? decisions[r.id]?.action === 'confirmed'
-                      ? 'Confirmed'
-                      : 'Custom amount submitted'
-                    : r.status,
+                  status: rentReviewWorkflowProgress(r).currentStepLabel,
                   href: rentReviewDetail(r.id, detailNav),
                   module: 'Rent review',
                   tone: isRentReviewPendingApproval(r, decisions[r.id])

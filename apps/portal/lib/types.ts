@@ -128,6 +128,17 @@ export interface LeasingRecord {
   status: 'current' | 'ended' | 'upcoming';
 }
 
+/** Active in-flight leasing cycle from the agent portfolio API. */
+export interface LeasingCycle {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  lifecycleStep: string;
+  onboardingStepId?: string | null;
+  rentPerWeek?: number;
+  availableFrom?: string;
+}
+
 export interface AccountingBill {
   id: string;
   label: string;
@@ -198,6 +209,11 @@ export interface TribunalCase {
   propertyId: string;
   propertyAddress: string;
   tenantName: string;
+  caseNumber?: string;
+  tribunalType?: string;
+  amountClaimed?: number;
+  /** Raw API status enum for workflow mapping. */
+  apiStatus?: string;
   status: 'active' | 'closed';
   hearingDate?: string;
   inspector?: string;
@@ -292,6 +308,8 @@ export interface MaintenanceRequest {
   title: string;
   description: string;
   status: string;
+  /** Raw MaintenanceStatus from the API — drives workflow step mapping. */
+  apiStatus?: string;
   priority: Priority;
   responsibility: 'landlord' | 'tenant' | 'strata' | 'pending';
   contractorName?: string;
@@ -317,6 +335,8 @@ export interface Inspection {
   inspector?: string;
   scheduledAt?: string;
   status: string;
+  /** Raw InspectionStatus from the API — drives workflow step mapping. */
+  apiStatus?: string;
   reportStatus: 'pending' | 'uploaded' | 'approved' | 'sent';
   keyStatus?: string;
   tenantAck?: 'pending' | 'confirmed' | 'disputed';
@@ -393,6 +413,10 @@ export interface VacatingCase {
   propertyAddress: string;
   vacateDate: string;
   reason: string;
+  /** Raw VacatingStatus from the API. */
+  apiStatus?: string;
+  /** End-leasing pipeline stage from the API. */
+  terminationStage?: string;
   checklistProgress: number;
   bondStatus: string;
   outgoingInspectionStatus: string;

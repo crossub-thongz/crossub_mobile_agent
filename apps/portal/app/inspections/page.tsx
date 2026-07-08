@@ -14,6 +14,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { inspectionDetail, inspectionNew } from '@/constants/routes';
+import { inspectionWorkflowProgress } from '@/lib/case-workflows';
 import { OPEN_CONDUCTED_BY_LABEL } from '@/lib/open-inspection';
 import { formatDateTime } from '@/lib/utils';
 
@@ -56,7 +57,7 @@ export default function InspectionsPage() {
         id: insp.id,
         propertyAddress: insp.propertyAddress,
         taskLabel: `${insp.type} inspection${conductor}${insp.scheduledAt ? ` · ${formatDateTime(insp.scheduledAt)}` : ''}`,
-        status: insp.status,
+        status: inspectionWorkflowProgress(insp).currentStepLabel,
         href: inspectionDetail(insp.id),
         module: 'Inspection',
         tone: ['Scheduled', 'Confirmed', 'In Progress', 'Agent scheduled', 'Requested — CROSSUB scheduling', 'Awaiting tenant notice'].includes(insp.status)

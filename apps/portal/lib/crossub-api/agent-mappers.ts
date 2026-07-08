@@ -16,6 +16,7 @@ import type {
   AgentDocumentDto,
   AgentInspection,
   AgentLeasing,
+  AgentLeasingCycle,
   AgentMaintenance,
   AgentMessageThread,
   AgentNotificationDto,
@@ -46,6 +47,7 @@ import type {
   AgentNotification,
   Inspection,
   LeasingRecord,
+  LeasingCycle,
   MaintenanceRequest,
   MessageCategory,
   MessageThread,
@@ -136,9 +138,9 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     contactEmail: asString(a.contactEmail),
     contactPhone: asString(a.contactPhone),
     portalServiceLevel:
-      'portalServiceLevel' in a && typeof a.portalServiceLevel === 'string'
+      typeof a.portalServiceLevel === 'string'
         ? (a.portalServiceLevel as Agency['portalServiceLevel'])
-        : undefined,
+        : 'LEVEL_2_FULL_MANAGEMENT',
     propertyCount: 0,
   }));
 }
@@ -185,6 +187,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
     inspector: i.inspectorName ?? undefined,
     scheduledAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
     status: INSPECTION_STATUS_LABEL[i.status] ?? i.status,
+    apiStatus: i.status,
     reportStatus: inspectionReportStatus(i),
     reportUrl: i.reportUrl ?? undefined,
     timeline: [],
@@ -228,6 +231,7 @@ export function mapAgentMaintenance(
       title: m.categoryName ?? m.description ?? 'Maintenance request',
       description: m.description ?? '',
       status: MAINTENANCE_STATUS_LABEL[m.status] ?? m.status,
+      apiStatus: m.status,
       priority,
       responsibility: RESPONSIBILITY_VIEW[m.type] ?? 'pending',
       contractorName: m.contractorName ?? undefined,
@@ -289,21 +293,47 @@ export function mapAgentRentReviews(dtos: AgentRentReview[]): RentReviewCase[] {
 // ---------------------------------------------------------------------------
 
 export function mapAgentVacating(dtos: AgentVacating[]): VacatingCase[] {
-  return dtos.map((v) => ({
-    id: v.id,
-    propertyId: v.propertyId ?? '',
-    propertyAddress: v.propertyAddress,
-    vacateDate: v.vacateDate ?? '',
-    reason: v.responsibility ? `${v.responsibility} vacating` : 'Vacating',
-    checklistProgress: v.status === VACATING_STATUS.COMPLETED ? 100 : 25,
-    bondStatus: v.bondOnHold ? `$${v.bondOnHold} on hold` : 'Pending',
-    outgoingInspectionStatus: 'Pending',
-    requiresApproval: v.status === VACATING_STATUS.OPEN,
-    checklist: [],
-    bondBreakdown:
-      v.total != null ? [{ label: 'Bond total', amount: v.total }] : [],
-    timeline: [],
-  }));
+  const stageOrder = [
+    'VACATE',
+    'OUTGOING_INSPECTION',
+    'MAKE_GOOD',
+    'SETTLEMENT',
+    'AGENT_APPROVAL',
+    'BOND',
+    'CLOSURE',
+  ];
+
+  return dtos.map((v) => {
+    const terminationStage =
+      'terminationStage' in v && typeof v.terminationStage === 'string'
+        ? v.terminationStage
+        : undefined;
+    const stageIndex = terminationStage
+      ? Math.max(0, stageOrder.indexOf(terminationStage))
+      : 0;
+    const checklistProgress =
+      v.status === VACATING_STATUS.COMPLETED
+        ? 100
+        : Math.round(((stageIndex + 1) / stageOrder.length) * 100);
+
+    return {
+      id: v.id,
+      propertyId: v.propertyId ?? '',
+      propertyAddress: v.propertyAddress,
+      vacateDate: v.vacateDate ?? '',
+      reason: v.responsibility ? `${v.responsibility} vacating` : 'Vacating',
+      apiStatus: v.status,
+      terminationStage,
+      checklistProgress,
+      bondStatus: v.bondOnHold ? `$${v.bondOnHold} on hold` : 'Pending',
+      outgoingInspectionStatus: 'Pending',
+      requiresApproval: v.status === VACATING_STATUS.OPEN,
+      checklist: [],
+      bondBreakdown:
+        v.total != null ? [{ label: 'Bond total', amount: v.total }] : [],
+      timeline: [],
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -353,6 +383,20 @@ export function mapAgentLeasing(dtos: AgentLeasing[]): LeasingRecord[] {
   }));
 }
 
+export function mapAgentLeasingCycles(
+  dtos: AgentLeasingCycle[] | undefined,
+): LeasingCycle[] {
+  return (dtos ?? []).map((c) => ({
+    id: c.id,
+    propertyId: c.propertyId,
+    propertyAddress: c.propertyAddress,
+    lifecycleStep: c.lifecycleStep,
+    onboardingStepId: c.onboardingStepId,
+    rentPerWeek: c.rentPerWeek ?? undefined,
+    availableFrom: c.availableFrom ?? undefined,
+  }));
+}
+
 // ---------------------------------------------------------------------------
 // Accounting
 // ---------------------------------------------------------------------------
@@ -389,9 +433,16 @@ export function mapAgentTribunal(dtos: AgentTribunal[]): TribunalCase[] {
       propertyId: t.propertyId,
       propertyAddress: t.propertyAddress,
       tenantName: t.tenantName ?? '—',
+      caseNumber: t.caseNumber,
+      tribunalType: t.tribunalType,
+      amountClaimed: t.amountClaimed ?? undefined,
+      apiStatus: t.status,
       status: closed ? 'closed' : 'active',
       matter: t.matter,
-      requiresAction: !closed,
+      requiresAction:
+        !closed &&
+        (t.status === TRIBUNAL_CASE_STATUS.DRAFT ||
+          t.status === TRIBUNAL_CASE_STATUS.SUBMITTED),
     };
   });
 }

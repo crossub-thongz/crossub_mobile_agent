@@ -14,6 +14,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES, tribunalDetail } from '@/constants/routes';
+import { tribunalWorkflowProgress } from '@/lib/case-workflows';
 import { formatDateTime } from '@/lib/utils';
 
 const FILTERS = [
@@ -83,6 +84,9 @@ export default function TribunalPage() {
                     <p className="text-sm font-semibold">{c.propertyAddress}</p>
                     <p className="text-muted-foreground text-xs">{c.tenantName}</p>
                     <p className="text-sm">{c.matter}</p>
+                    <p className="text-primary text-xs font-medium">
+                      {tribunalWorkflowProgress(c).currentStepLabel}
+                    </p>
                     {c.hearingDate && (
                       <p className="text-muted-foreground text-xs">
                         Hearing {formatDateTime(c.hearingDate)}

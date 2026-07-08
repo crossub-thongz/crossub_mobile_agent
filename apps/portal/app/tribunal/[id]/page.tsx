@@ -5,11 +5,14 @@ import { FileText, Gavel } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
+import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
+import { tribunalWorkflowProgress } from '@/lib/case-workflows';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { formatDateTime } from '@/lib/utils';
 
@@ -25,7 +28,9 @@ export default function TribunalDetailPage() {
   return (
     <AgentShell title="Tribunal case" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
-        {c.requiresAction && c.status === 'active' && (
+        <CaseWorkflowProgressCard progress={tribunalWorkflowProgress(c)} />
+
+        {AGENT_CASE_INTERACTIONS_ENABLED && c.requiresAction && c.status === 'active' && (
           <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
             <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
               CROSSUB recommends a tribunal matter — your review required
@@ -49,6 +54,7 @@ export default function TribunalDetailPage() {
         )}
 
         <InfoPanel title="Case summary" icon={Gavel}>
+          {c.caseNumber ? <InfoRow label="Case number" value={c.caseNumber} /> : null}
           <InfoRow label="Property" value={c.propertyAddress} />
           <InfoRow label="Tenant" value={c.tenantName} />
           <InfoRow label="Matter" value={c.matter} />

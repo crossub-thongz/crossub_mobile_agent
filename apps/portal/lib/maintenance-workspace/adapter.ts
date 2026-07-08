@@ -1,6 +1,7 @@
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
+import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 
 import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceStatus } from './types';
 
@@ -13,16 +14,29 @@ const REQUEST_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   closed: 'closed',
 };
 
+const API_MAINTENANCE_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
+  [MAINTENANCE_STATUS.OPEN]: 'under_review',
+  [MAINTENANCE_STATUS.APPROVED]: 'pending_quotation',
+  [MAINTENANCE_STATUS.QUOTING]: 'pending_approval',
+  [MAINTENANCE_STATUS.SCHEDULED]: 'in_progress',
+  [MAINTENANCE_STATUS.INVOICED]: 'in_progress',
+  [MAINTENANCE_STATUS.COMPLETED]: 'completed',
+  [MAINTENANCE_STATUS.CANCELLED]: 'closed',
+};
+
+function mapRequestStatus(status: string, apiStatus?: string): MaintenanceWorkspaceStatus {
+  if (apiStatus && API_MAINTENANCE_STATUS_MAP[apiStatus]) {
+    return API_MAINTENANCE_STATUS_MAP[apiStatus];
+  }
+  return REQUEST_STATUS_MAP[status.toLowerCase()] ?? 'under_review';
+}
+
 const REQUEST_PRIORITY_MAP: Record<string, MaintenanceWorkspaceCase['priority']> = {
   urgent: 'critical',
   high: 'high',
   normal: 'medium',
   low: 'low',
 };
-
-function mapRequestStatus(status: string): MaintenanceWorkspaceStatus {
-  return REQUEST_STATUS_MAP[status.toLowerCase()] ?? 'under_review';
-}
 
 function mapRequestPriority(priority: string): MaintenanceWorkspaceCase['priority'] {
   return REQUEST_PRIORITY_MAP[priority] ?? 'medium';
@@ -111,7 +125,7 @@ export function buildWorkspaceCaseFromRequest(
     address: item.propertyAddress,
     priority: mapRequestPriority(item.priority),
     responsibility,
-    status: mapRequestStatus(item.status),
+    status: mapRequestStatus(item.status, item.apiStatus),
     createdAt: firstTimeline,
     dueAt: item.quoteExpiry ?? firstTimeline,
     source: 'agent_submission',

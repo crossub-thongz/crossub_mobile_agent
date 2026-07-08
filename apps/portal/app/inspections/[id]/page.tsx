@@ -6,6 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { DocumentViewer } from '@/components/agent/document-viewer';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { StatusBanner } from '@/components/agent/status-banner';
@@ -14,6 +15,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { inspectionWorkflowProgress } from '@/lib/case-workflows';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import {
   OPEN_CONDUCTED_BY_LABEL,
@@ -32,12 +34,15 @@ export default function InspectionDetailPage() {
 
   if (!insp) notFound();
 
+  const workflow = inspectionWorkflowProgress(insp);
   const isSelfOpen = insp.type === 'OPEN' && insp.openConductedBy === 'agent';
   const isCrossubOpen = insp.type === 'OPEN' && insp.openConductedBy === 'crossub';
 
   return (
     <AgentShell title={insp.trackingNumber} backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
+        <CaseWorkflowProgressCard progress={workflow} />
+
         <StatusBanner
           status={insp.status}
           subtitle={`${insp.type} · ${insp.propertyAddress}`}

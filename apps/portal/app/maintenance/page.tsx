@@ -12,6 +12,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import { maintenanceDetail } from '@/constants/routes';
+import { maintenanceWorkflowProgress } from '@/lib/case-workflows';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -61,7 +62,7 @@ export default function MaintenancePage() {
       id: m.id,
       propertyAddress: m.propertyAddress,
       taskLabel: m.title,
-      status: m.status,
+      status: maintenanceWorkflowProgress(m).currentStepLabel,
       href: maintenanceDetail(m.id),
       module: 'Maintenance',
       tone:

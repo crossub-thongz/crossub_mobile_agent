@@ -20,7 +20,7 @@ type ProfileTab = 'history' | 'contacts';
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
-  const { properties, messages, rentReviews, primaryAgency } = useAgentData();
+  const { properties, messages, rentReviews, primaryAgency, portalAccessReady } = useAgentData();
   const sentThreadMessages = useAgentStore((s) => s.sentThreadMessages);
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [tab, setTab] = useState<ProfileTab>('contacts');
@@ -83,7 +83,7 @@ export default function ProfilePage() {
                 Your client agency in crossub_web
               </p>
             </div>
-            {primaryAgency && (
+            {primaryAgency && portalAccessReady && (
               <PortalServiceLevelBadge level={primaryAgency.portalServiceLevel} size="xs" />
             )}
           </div>
