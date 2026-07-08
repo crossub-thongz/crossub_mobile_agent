@@ -1,3 +1,5 @@
+import { addDays, format } from 'date-fns';
+
 import type { Agency } from '@/lib/types';
 import type { Property } from '@/lib/types';
 import type { LeasingRecord } from '@/lib/types';
@@ -16,10 +18,6 @@ function isoDateAddDays(isoDate: string, days: number): string {
   const d = new Date(isoDate.slice(0, 10));
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
-}
-
-function todayPlusDays(days: number): string {
-  return isoDateAddDays(new Date().toISOString().slice(0, 10), days);
 }
 
 function formatPropertyAddress(property: Property): string {
@@ -73,7 +71,10 @@ export function buildLeasingCyclePrefill(
         : 0;
   const rentStr = rent > 0 ? String(Math.round(rent)) : '';
   const rentNum = rent > 0 ? rent : 0;
-  const minAvailable = todayPlusDays(LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS);
+  const minAvailable = format(
+    addDays(new Date(), LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS),
+    'yyyy-MM-dd',
+  );
   return {
     rentPerWeek: rentStr,
     availableFrom: minAvailable,
@@ -186,12 +187,10 @@ export interface IngoingInspectionPrefill {
 export function suggestIngoingScheduledTime(moveInDate: string): string {
   const moveIn = new Date(`${moveInDate.slice(0, 10)}T10:00:00`);
   if (Number.isNaN(moveIn.getTime())) return '';
-  const scheduled = new Date(moveIn);
-  scheduled.setDate(scheduled.getDate() - 7);
+  const scheduled = addDays(moveIn, -7);
   scheduled.setHours(10, 0, 0, 0);
   if (scheduled.getTime() < Date.now()) {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrow = addDays(new Date(), 1);
     tomorrow.setHours(10, 0, 0, 0);
     return tomorrow.toISOString();
   }
@@ -206,7 +205,7 @@ export function buildIngoingInspectionPrefill(
   const moveInDate =
     currentLease?.moveInDate?.slice(0, 10) ??
     leasingCycle?.availableFrom?.slice(0, 10) ??
-    todayPlusDays(14);
+    format(addDays(new Date(), 14), 'yyyy-MM-dd');
   return {
     address: formatPropertyAddress(property),
     propertyType: property.propertyType ?? 'House',
