@@ -48,7 +48,7 @@ export const BUILTIN_QUICK_ACTIONS: BuiltinQuickAction[] = [
   },
   {
     id: 'open-inspection',
-    label: 'Open inspection',
+    label: 'Add inspection',
     icon: ClipboardList,
     resolveHref: (propertyId) => inspectionNew(propertyId),
   },

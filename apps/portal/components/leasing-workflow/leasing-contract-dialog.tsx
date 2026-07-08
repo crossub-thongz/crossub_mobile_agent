@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Plus, X } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -12,202 +12,160 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
-import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { formatCurrency, formatDate } from '@/lib/utils';
 
 function Field({
   label,
-  children,
-  className,
+  value,
 }: {
   label: string;
-  children: React.ReactNode;
-  className?: string;
+  value: string;
 }) {
   return (
-    <div className={className}>
-      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-      <div className="mt-1.5">{children}</div>
+    <div>
+      <Label className="text-muted-foreground text-xs font-medium">{label}</Label>
+      <p className="mt-1.5 text-sm">{value}</p>
     </div>
   );
 }
 
-export function LeasingContractDialog({ detail }: { detail: LeasingPropertyDetail }) {
+export function LeasingContractDialog({
+  detail,
+  readOnly = false,
+  cycleId,
+  apiConnected = false,
+}: {
+  detail: LeasingPropertyDetail;
+  readOnly?: boolean;
+  cycleId?: string;
+  apiConnected?: boolean;
+}) {
   const open = useLeasingWorkflowStore((s) => s.contractDialogOpen);
   const setOpen = useLeasingWorkflowStore((s) => s.setContractDialogOpen);
-  const updateContract = useLeasingWorkflowStore((s) => s.updateContract);
-  const confirmContract = useLeasingWorkflowStore((s) => s.confirmContract);
+  const [downloading, setDownloading] = useState(false);
 
-  const [newCondition, setNewCondition] = useState('');
-  const id = detail.propertyId;
   const contract = detail.onboarding.agreement.contract;
   const signingStatus = detail.onboarding.agreement.signingStatus;
+  const uploadedFileName = detail.onboarding.agreement.uploadedFileName;
   const isSigned = signingStatus === 'signed';
-  const isEditable = !isSigned;
 
-  const applyContractChanges = (patch: Partial<LeasingContract>) => {
-    updateContract(id, patch);
-  };
-
-  const addCondition = (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    applyContractChanges({
-      specialConditions: [
-        ...contract.specialConditions,
-        { id: `sc-${Date.now()}`, text: trimmed },
-      ],
-    });
+  const downloadPdf = async () => {
+    if (!cycleId) {
+      toast.error('Agreement PDF is not available offline');
+      return;
+    }
+    setDownloading(true);
+    try {
+      const blob = await leasingOpsApi.downloadAgreementPdf(cycleId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${contract.contractId || 'agreement'}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success('Agreement downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not download agreement');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-lg">
-        <DialogHeader className="border-b border-border/60 px-6 py-5">
+      <DialogContent className="border-border bg-card max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-border/60 border-b px-6 py-5">
           <DialogTitle className="text-base font-semibold">
             Agreement · {contract.contractId}
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
-            {isSigned
-              ? 'This agreement is signed and locked.'
-              : contract.confirmed
-                ? 'Edit lease terms or special conditions, then re-confirm before sending for signature.'
-                : 'Edit lease terms and special conditions, then confirm when ready.'}
+          <DialogDescription className="text-muted-foreground text-xs">
+            {readOnly
+              ? isSigned
+                ? 'This agreement is signed and locked.'
+                : 'Agreement sent from CROSSUB — review only. Record signing from the onboarding step when complete.'
+              : isSigned
+                ? 'This agreement is signed and locked.'
+                : 'Review lease terms and special conditions.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[calc(90vh-13rem)] space-y-5 overflow-y-auto px-6 py-5">
-          {isSigned ? (
-            <div className="rounded-lg border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
-              Agreement signed — edits are locked.
+          {uploadedFileName && (
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs">
+              Uploaded file: <span className="font-medium">{uploadedFileName}</span>
             </div>
-          ) : contract.confirmed ? (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-xs text-muted-foreground">
-              If the tenant requests changes, edit below and re-confirm to refresh the agreement.
-            </div>
-          ) : null}
+          )}
 
-          <fieldset disabled={!isEditable} className="m-0 min-w-0 space-y-4 border-0 p-0">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Template">
-                <Input
-                  className="h-9"
-                  value={contract.template}
-                  onChange={(e) => applyContractChanges({ template: e.target.value })}
-                />
-              </Field>
-              <Field label="Lease term">
-                <Input
-                  className="h-9"
-                  value={contract.leaseTerm}
-                  onChange={(e) => applyContractChanges({ leaseTerm: e.target.value })}
-                />
-              </Field>
-              <Field label="Weekly rent">
-                <Input
-                  className="h-9 tabular-nums"
-                  type="number"
-                  value={contract.weeklyRent ?? ''}
-                  onChange={(e) =>
-                    applyContractChanges({
-                      weeklyRent: e.target.value ? Number(e.target.value) : undefined,
-                    })
-                  }
-                />
-              </Field>
-              <Field label="Bond">
-                <Input
-                  className="h-9 tabular-nums"
-                  type="number"
-                  value={contract.bond ?? ''}
-                  onChange={(e) =>
-                    applyContractChanges({
-                      bond: e.target.value ? Number(e.target.value) : undefined,
-                    })
-                  }
-                />
-              </Field>
-            </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Template" value={contract.template} />
+            <Field label="Lease term" value={contract.leaseTerm} />
+            <Field
+              label="Weekly rent"
+              value={
+                contract.weeklyRent ? `${formatCurrency(contract.weeklyRent)}/wk` : '—'
+              }
+            />
+            <Field
+              label="Bond"
+              value={contract.bond ? formatCurrency(contract.bond) : '—'}
+            />
+            <Field
+              label="Start"
+              value={
+                contract.startDate
+                  ? formatDate(contract.startDate)
+                  : detail.rental.moveInDate
+                    ? formatDate(detail.rental.moveInDate)
+                    : '—'
+              }
+            />
+            <Field
+              label="End"
+              value={contract.endDate ? formatDate(contract.endDate) : '—'}
+            />
+            <Field label="Signing status" value={signingStatus.replace('_', ' ')} />
+          </div>
 
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Special conditions</Label>
-              <ul className="mt-2 space-y-1.5">
-                {contract.specialConditions.length === 0 && (
-                  <li className="rounded-md border border-dashed border-border px-3 py-2 text-[12px] text-muted-foreground">
-                    No special conditions added.
-                  </li>
-                )}
-                {contract.specialConditions.map((c) => (
+          <div>
+            <Label className="text-muted-foreground text-xs font-medium">Special conditions</Label>
+            <ul className="mt-2 space-y-1.5">
+              {contract.specialConditions.length === 0 ? (
+                <li className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-2 text-[12px]">
+                  No special conditions.
+                </li>
+              ) : (
+                contract.specialConditions.map((c) => (
                   <li
                     key={c.id}
-                    className="flex items-start justify-between gap-2 rounded-md border border-border bg-secondary/20 px-3 py-2"
+                    className="border-border bg-secondary/20 rounded-md border px-3 py-2 text-[12.5px]"
                   >
-                    <span className="min-w-0 text-[12.5px]">{c.text}</span>
-                    <button
-                      type="button"
-                      aria-label="Remove condition"
-                      className="shrink-0 rounded p-0.5 text-muted-foreground"
-                      onClick={() =>
-                        applyContractChanges({
-                          specialConditions: contract.specialConditions.filter((x) => x.id !== c.id),
-                        })
-                      }
-                    >
-                      <X className="size-3.5" />
-                    </button>
+                    {c.text}
                   </li>
-                ))}
-              </ul>
-              <div className="mt-2 flex gap-2">
-                <Input
-                  className="h-9"
-                  placeholder="Add a special condition…"
-                  value={newCondition}
-                  onChange={(e) => setNewCondition(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newCondition.trim()) {
-                      addCondition(newCondition);
-                      setNewCondition('');
-                    }
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 shrink-0 gap-1.5"
-                  disabled={!newCondition.trim()}
-                  onClick={() => {
-                    addCondition(newCondition);
-                    setNewCondition('');
-                  }}
-                >
-                  <Plus className="size-3.5" />
-                  Add
-                </Button>
-              </div>
-            </div>
-          </fieldset>
+                ))
+              )}
+            </ul>
+          </div>
         </div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-border/60 px-6 py-4 sm:flex-row sm:justify-end">
+        <div className="border-border/60 flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end">
+          {apiConnected && cycleId && (
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              disabled={downloading}
+              onClick={() => void downloadPdf()}
+            >
+              <FileDown className="size-4" />
+              {downloading ? 'Downloading…' : 'Download PDF'}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setOpen(false)}>
             Close
           </Button>
-          {!isSigned ? (
-            <Button
-              className="gap-1.5"
-              onClick={() => {
-                confirmContract(id);
-                toast.success(contract.confirmed ? 'Contract re-confirmed' : 'Contract confirmed');
-                setOpen(false);
-              }}
-            >
-              <Check className="size-4" />
-              {contract.confirmed ? 'Re-confirm contract' : 'Confirm contract'}
-            </Button>
-          ) : null}
         </div>
       </DialogContent>
     </Dialog>

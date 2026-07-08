@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 
+import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
 import { Button } from '@/components/ui/button';
@@ -28,7 +30,24 @@ export function InspectionDetailDialog({
   inspection: Inspection | null;
   navContext?: DetailNavContext;
 }) {
+  const { apiConnected } = useAgentData();
   if (!inspection) return null;
+
+  const isFieldInspection =
+    inspection.type === 'INGOING' || inspection.type === 'OUTGOING';
+
+  if (isFieldInspection) {
+    return (
+      <CaseDetailDialog
+        open={open}
+        onClose={onClose}
+        title={inspection.trackingNumber}
+        subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
+      >
+        <AgentFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
+      </CaseDetailDialog>
+    );
+  }
 
   const isSelfOpen = inspection.type === 'OPEN' && inspection.openConductedBy === 'agent';
   const isCrossubOpen = inspection.type === 'OPEN' && inspection.openConductedBy === 'crossub';

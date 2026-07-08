@@ -1,7 +1,7 @@
-import { propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
 
 export type DetailNavContext = {
-  from?: 'property' | 'leasing' | 'tasks' | 'dashboard';
+  from?: 'property' | 'leasing' | 'leasing-workflow' | 'tasks' | 'dashboard';
   propertyId?: string;
   tab?: string;
 };
@@ -23,6 +23,10 @@ export function fromLeasing(tab?: string): DetailNavContext {
   return { from: 'leasing', tab };
 }
 
+export function fromLeasingWorkflow(propertyId: string): DetailNavContext {
+  return { from: 'leasing-workflow', propertyId };
+}
+
 export function resolveBackNavigation(
   searchParams: Pick<URLSearchParams, 'get'>,
   fallback: { href: string; label: string },
@@ -40,6 +44,9 @@ export function resolveBackNavigation(
     const base = ROUTES.LEASING;
     const href = tab ? `${base}?tab=${encodeURIComponent(tab)}` : base;
     return { href, label: 'Leasing' };
+  }
+  if (from === 'leasing-workflow' && propertyId) {
+    return { href: propertyLeasingWorkflow(propertyId), label: 'Leasing workflow' };
   }
   if (from === 'tasks') {
     return { href: ROUTES.TASKS, label: 'Need action' };

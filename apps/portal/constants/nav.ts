@@ -39,7 +39,7 @@ export const MORE_NAV: NavItem[] = [
   { href: ROUTES.RENT_REVIEW, label: 'Rent review', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.TENANT_SELECTION, label: 'Tenant selection', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.TENANTS, label: 'Tenant accounts', icon: UserPlus, portalAccess: 'full' },
-  { href: ROUTES.VACATING, label: 'Vacating', icon: FileText, portalAccess: 'full' },
+  { href: ROUTES.VACATING, label: 'End leasing', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.REPORTS, label: 'Reports', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.NOTIFICATIONS, label: 'Alerts', icon: Bell },
   { href: ROUTES.PROFILE, label: 'Profile', icon: FileText },

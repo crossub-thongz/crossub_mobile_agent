@@ -20,6 +20,7 @@ import {
   tribunalDetail,
   vacatingDetail,
 } from '@/constants/routes';
+import { vacatingWorkflowProgress } from '@/lib/case-workflows';
 
 export type SystemSearchResult = {
   id: string;
@@ -123,9 +124,9 @@ export function searchAgentSystem(query: string, data: SearchData): SystemSearch
     if (v.propertyAddress.toLowerCase().includes(q)) {
       out.push({
         id: `vac-${v.id}`,
-        kind: 'Vacating',
+        kind: 'End leasing',
         label: v.propertyAddress,
-        sub: v.status,
+        sub: vacatingWorkflowProgress(v).currentStepLabel,
         href: vacatingDetail(v.id),
         propertyId: v.propertyId,
       });

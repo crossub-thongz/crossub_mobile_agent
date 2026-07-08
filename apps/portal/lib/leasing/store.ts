@@ -45,7 +45,7 @@ type LeasingWorkflowStore = {
   applyKeyCollectionFromApi: (id: string, kc: AgentKeyCollection) => void;
   /** Merge a live `/leasing/cycles/:id` view into the workflow detail. */
   applyCycleView: (propertyId: string, view: ServerLeasingCycleView) => void;
-  scheduleIngoingInspection: (id: string, scheduledTime: string, assignee: string) => void;
+  scheduleIngoingInspection: (id: string, scheduledTime: string, assignee: string, inspectionId?: string) => void;
   tenantConfirmIngoing: (id: string) => void;
   tenantApproveIngoingReport: (id: string) => void;
   updateContract: (id: string, patch: Partial<LeasingContract>) => void;
@@ -363,7 +363,7 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
     });
   },
 
-  scheduleIngoingInspection(id, scheduledTime, assignee) {
+  scheduleIngoingInspection(id, scheduledTime, assignee, inspectionId) {
     set((s) => ({
       details: updateDetail(s.details, id, (p) => ({
         ...p,
@@ -373,8 +373,9 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
             ...p.onboarding.ingoingInspection,
             scheduledTime,
             assignee,
-            reportAvailable: true,
-            status: LEASING_ITEM_STATUS.WAITING,
+            inspectionId: inspectionId ?? p.onboarding.ingoingInspection.inspectionId,
+            reportAvailable: Boolean(inspectionId ?? p.onboarding.ingoingInspection.inspectionId),
+            status: LEASING_ITEM_STATUS.IN_PROGRESS,
           },
         },
       })),

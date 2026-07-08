@@ -161,10 +161,7 @@ export function PropertyLeasingJobPanel({
           propertyId={propertyId}
           leaseId={currentLease?.id}
         />
-        <VacatingWorkflowTimeline
-          vacatingCase={primaryCase}
-          outgoingInspection={outgoingInspection}
-        />
+        <VacatingWorkflowTimeline vacatingCase={primaryCase} />
       </div>
     );
   }

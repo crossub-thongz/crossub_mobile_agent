@@ -1,4 +1,4 @@
-import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
+import type { ServerContractDraft, ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
 import {
   LEASING_AGENT_DECISION,
   LEASING_ITEM_STATUS,
@@ -9,7 +9,7 @@ import {
   type LeasingKeyCustody,
   type LeasingLifecycleStep,
 } from '@/lib/leasing/constants';
-import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
 
 const u = (v: string | null | undefined): string | undefined => v ?? undefined;
 const n = (v: number | null | undefined): number | undefined =>
@@ -22,6 +22,88 @@ function asItemStatus(status: string): LeasingItemStatus {
     return status as LeasingItemStatus;
   }
   return LEASING_ITEM_STATUS.NOT_STARTED;
+}
+
+function mapContract(
+  draft: ServerContractDraft | null | undefined,
+  view: ServerLeasingCycleView,
+): LeasingContract {
+  const d = draft ?? {};
+  return {
+    contractId: view.tenancyAgreementId ?? `CN-${view.id.slice(0, 8)}`,
+    template: d.template ?? 'Standard Residential Tenancy Agreement',
+    leaseTerm: d.leaseTerm ?? '26 weeks',
+    startDate: u(d.startDate),
+    endDate: u(d.endDate),
+    weeklyRent: d.weeklyRent ?? n(view.rental.rentPerWeek),
+    bond: d.bond ?? n(view.rental.bond),
+    deposit: d.deposit ?? n(view.rental.deposit),
+    paymentReference: u(d.paymentReference),
+    petsAllowed: d.petsAllowed ?? false,
+    waterChargedSeparately: d.waterChargedSeparately ?? false,
+    specialConditions: (d.specialConditions ?? []).map((c, i) => ({
+      id: `sc-${view.id.slice(0, 8)}-${i}`,
+      text: c.text,
+    })),
+    confirmed: d.confirmed ?? false,
+  };
+}
+
+function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onboarding'] {
+  const ob = view.onboarding;
+  return {
+    deposit: {
+      status: asItemStatus(ob?.deposit.status ?? 'not_started'),
+      amount: n(view.rental.deposit),
+      paidAt: u(ob?.deposit.paidAt ?? undefined),
+      proofFileName: u(ob?.deposit.proofFileName ?? undefined),
+    },
+    bond: {
+      status: asItemStatus(ob?.bond.status ?? 'not_started'),
+      amount: n(view.rental.bond),
+      agentLink: u(ob?.bond.agentLink ?? undefined),
+      sentToTenantAt: u(ob?.bond.sentToTenantAt ?? undefined),
+      paidAt: u(ob?.bond.paidAt ?? undefined),
+      proofFileName: u(ob?.bond.proofFileName ?? undefined),
+    },
+    agreement: {
+      status: asItemStatus(ob?.agreement.status ?? 'not_started'),
+      contract: mapContract(ob?.agreement.contractDraft ?? null, view),
+      signingStatus: (ob?.agreement.signingStatus ?? 'not_sent') as
+        | 'not_sent'
+        | 'sent'
+        | 'viewed'
+        | 'signed',
+      signedAt: u(ob?.agreement.signedAt ?? undefined),
+      uploadedFileName: u(ob?.agreement.uploadedFileName ?? undefined),
+    },
+    keyCollection: {
+      status: asItemStatus(ob?.keyCollection.status ?? 'not_started'),
+      custody: (view.agent.keyCustody as LeasingKeyCustody) ?? 'crossub',
+      time: u(ob?.keyCollection.time ?? undefined),
+      location: u(ob?.keyCollection.location ?? undefined),
+    },
+    ingoingInspection: {
+      status: asItemStatus(ob?.ingoingInspection.status ?? 'not_started'),
+      scheduledTime: u(ob?.ingoingInspection.scheduledTime ?? undefined),
+      assignee: u(ob?.ingoingInspection.assignee ?? undefined),
+      inspectionId: ob?.ingoingInspection.inspectionId ?? undefined,
+      reportAvailable: Boolean(ob?.ingoingInspection.inspectionId),
+      tenantConfirmed: ob?.ingoingInspection.tenantConfirmed ?? false,
+      disputes: view.disputes.map((d) => ({
+        id: d.id,
+        area: d.area ?? '',
+        description: d.description ?? '',
+        raisedAt: d.raisedAt,
+        routedToMaintenance: d.routedToMaintenance,
+      })),
+    },
+    ingoingReportApproval: {
+      status: asItemStatus(ob?.ingoingReportApproval.status ?? 'not_started'),
+      tenantApproved: ob?.ingoingReportApproval.tenantApproved ?? false,
+      approvedAt: u(ob?.ingoingReportApproval.approvedAt ?? undefined),
+    },
+  };
 }
 
 /** Merge a server cycle view into the agent leasing workflow detail (crossub_web mapCycle subset). */
@@ -103,5 +185,6 @@ export function patchDetailFromCycleView(
       sentToAgent: r.sentToAgent,
       agentDecision: (r.agentDecision as LeasingAgentDecision) ?? LEASING_AGENT_DECISION.PENDING,
     })),
+    onboarding: mapOnboarding(view),
   };
 }

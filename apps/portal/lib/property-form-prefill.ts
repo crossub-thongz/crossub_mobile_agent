@@ -1,8 +1,12 @@
 import { addDays, format, startOfDay } from 'date-fns';
 
+import { defaultRoutineScheduledDate, suggestedOutgoingInspectionIso } from '@/lib/inspections/outgoing-schedule';
+import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
+
 import type { Agency } from '@/lib/types';
 import type { Property } from '@/lib/types';
 import type { LeasingRecord } from '@/lib/types';
+import type { VacatingCase } from '@/lib/types';
 
 export const LEASING_CYCLE_DEPOSIT_RENT_MULTIPLIER = 2;
 export const LEASING_CYCLE_BOND_RENT_MULTIPLIER = 4;
@@ -186,6 +190,25 @@ export interface IngoingInspectionPrefill {
   tenantPhone: string;
   moveInDate: string;
   scheduledTime: string;
+  accessInstructions: string;
+  leaseApprovalRef: string;
+  priority: 'normal' | 'high' | 'urgent';
+  notes: string;
+}
+
+export interface RoutineInspectionPrefill {
+  tenantName: string;
+  tenantEmail: string;
+  scheduledDate: string;
+  frequency: 2 | 3;
+  flow: 'self' | 'in_person';
+  inspectorName: string;
+}
+
+export interface OutgoingInspectionPrefill {
+  inspector: string;
+  scheduledAt: string;
+  vacatingCaseId: string;
 }
 
 export function suggestIngoingScheduledTime(moveInDate: string): string {
@@ -204,7 +227,7 @@ export function suggestIngoingScheduledTime(moveInDate: string): string {
 export function buildIngoingInspectionPrefill(
   property: Property,
   currentLease?: LeasingRecord,
-  leasingCycle?: { availableFrom?: string },
+  leasingCycle?: { id?: string; availableFrom?: string; tenancyAgreementId?: string | null },
 ): IngoingInspectionPrefill {
   const moveInDate =
     currentLease?.moveInDate?.slice(0, 10) ??
@@ -218,5 +241,30 @@ export function buildIngoingInspectionPrefill(
     tenantPhone: property.tenantContact?.phone?.trim() ?? '',
     moveInDate,
     scheduledTime: suggestIngoingScheduledTime(moveInDate),
+    accessInstructions: '',
+    leaseApprovalRef: leasingCycleApprovalRef(leasingCycle?.id, leasingCycle?.tenancyAgreementId),
+    priority: 'normal',
+    notes: '',
+  };
+}
+
+export function buildRoutineInspectionPrefill(property: Property): RoutineInspectionPrefill {
+  return {
+    tenantName: property.tenantName?.trim() ?? '',
+    tenantEmail: property.tenantContact?.email?.trim() ?? '',
+    scheduledDate: defaultRoutineScheduledDate(),
+    frequency: 2,
+    flow: 'self',
+    inspectorName: '',
+  };
+}
+
+export function buildOutgoingInspectionPrefill(
+  vacatingCase: VacatingCase,
+): OutgoingInspectionPrefill {
+  return {
+    inspector: 'Pending assignment',
+    scheduledAt: suggestedOutgoingInspectionIso(vacatingCase),
+    vacatingCaseId: vacatingCase.id,
   };
 }

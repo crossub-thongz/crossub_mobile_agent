@@ -60,6 +60,7 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
 type AgentPortfolioId = 'agent-1' | 'agent-2';
 
@@ -178,10 +179,12 @@ function inspectionReportStatus(
 }
 
 export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
-  return dtos.map((i) => ({
-    id: i.id,
-    trackingNumber: i.id.slice(0, 8).toUpperCase(),
-    type: INSPECTION_TYPE_VIEW[i.type] ?? 'ROUTINE',
+  return dtos.map((i) => {
+    const type = INSPECTION_TYPE_VIEW[i.type] ?? 'ROUTINE';
+    return {
+      id: i.id,
+      trackingNumber: inspectionReferenceLabel(i.id, type),
+      type,
     propertyId: i.propertyId ?? '',
     propertyAddress: i.propertyAddress,
     inspector: i.inspectorName ?? undefined,
@@ -191,7 +194,8 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
     reportStatus: inspectionReportStatus(i),
     reportUrl: i.reportUrl ?? undefined,
     timeline: [],
-  }));
+  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +331,10 @@ export function mapAgentVacating(dtos: AgentVacating[]): VacatingCase[] {
       checklistProgress,
       bondStatus: v.bondOnHold ? `$${v.bondOnHold} on hold` : 'Pending',
       outgoingInspectionStatus: 'Pending',
-      requiresApproval: v.status === VACATING_STATUS.OPEN,
+      requiresApproval:
+        v.status === VACATING_STATUS.OPEN &&
+        'terminationStage' in v &&
+        v.terminationStage === 'AGENT_APPROVAL',
       checklist: [],
       bondBreakdown:
         v.total != null ? [{ label: 'Bond total', amount: v.total }] : [],

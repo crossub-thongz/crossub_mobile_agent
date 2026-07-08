@@ -100,6 +100,19 @@ export const LEASING_PILL_TEXT = {
 
 export const LEASING_APPLICATION_SEND_FOR_APPROVAL_LABEL = 'Send for approval';
 
+export const LEASING_KEY_CUSTODY = {
+  CROSSUB: 'crossub',
+  AGENT: 'agent',
+} as const;
+
+export type LeasingKeyCustody =
+  (typeof LEASING_KEY_CUSTODY)[keyof typeof LEASING_KEY_CUSTODY];
+
+export const LEASING_KEY_CUSTODY_LABEL: Record<LeasingKeyCustody, string> = {
+  [LEASING_KEY_CUSTODY.CROSSUB]: 'CROSSUB manages keys',
+  [LEASING_KEY_CUSTODY.AGENT]: 'Agent manages keys',
+};
+
 export const LEASING_UI = {
   accentIcon: 'text-violet-700 dark:text-violet-300',
   btnSecondary:
@@ -110,15 +123,14 @@ export const LEASING_UI = {
   link: 'text-violet-800 hover:text-violet-900 dark:text-violet-200',
   btnSuccess: 'bg-emerald-500/10 text-emerald-900 hover:bg-emerald-500/20 dark:text-emerald-200',
   stepAccent: 'bg-violet-500/10 text-violet-800 dark:text-violet-300',
+  ingoingBtn: 'bg-teal-600 text-white hover:bg-teal-700',
+  ingoingTabGlow: 'shadow-sm',
+  sectionLabel: 'text-[10px] font-semibold uppercase tracking-wider text-muted-foreground',
+  iconChip: 'rounded-lg bg-violet-500/10 p-2 text-violet-800 dark:text-violet-300',
+  kpiDefault: 'border-border/80 bg-card',
+  kpiDestructive: 'border-rose-500/30 bg-rose-500/10',
+  agreementActionBtn: 'h-8 text-xs',
 } as const;
-
-export const LEASING_KEY_CUSTODY = {
-  CROSSUB: 'crossub',
-  AGENT: 'agent',
-} as const;
-
-export type LeasingKeyCustody =
-  (typeof LEASING_KEY_CUSTODY)[keyof typeof LEASING_KEY_CUSTODY];
 
 export const LEASING_ADVERTISING_STATUS = {
   NOT_REQUESTED: 'not_requested',

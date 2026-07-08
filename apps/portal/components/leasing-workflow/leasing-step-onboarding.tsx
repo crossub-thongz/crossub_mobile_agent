@@ -1,50 +1,87 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Banknote,
   ClipboardCheck,
   FileSignature,
   KeyRound,
   Landmark,
+  Paperclip,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { LeasingContractDialog } from '@/components/leasing-workflow/leasing-contract-dialog';
-import { KeyCollectionForm } from '@/components/agent/key-collection-form';
+import { LeasingIngoingNextStepPanel } from '@/components/leasing-workflow/leasing-ingoing-next-step';
 import { Button } from '@/components/ui/button';
-import { LEASING_ITEM_STATUS, LEASING_KEY_CUSTODY } from '@/lib/leasing/constants';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import {
+  LEASING_ITEM_STATUS,
+  LEASING_KEY_CUSTODY,
+  LEASING_KEY_CUSTODY_LABEL,
+} from '@/lib/leasing/constants';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
-import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { LeasingAgreementState, LeasingPropertyDetail } from '@/lib/leasing/types';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+
+const SIGNING_LABEL: Record<LeasingAgreementState['signingStatus'], string> = {
+  not_sent: 'Not sent',
+  sent: 'Sent',
+  viewed: 'Viewed',
+  signed: 'Signed',
+};
+
+function agreementAvailableFromCrossub(agreement: LeasingAgreementState): boolean {
+  return (
+    agreement.signingStatus !== 'not_sent' ||
+    Boolean(agreement.uploadedFileName) ||
+    agreement.status !== LEASING_ITEM_STATUS.NOT_STARTED
+  );
+}
+
+function ProofLine({ fileName }: { fileName?: string }) {
+  if (!fileName) return null;
+  return (
+    <span className="border-border bg-secondary/30 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px]">
+      <Paperclip className="text-muted-foreground size-3" />
+      {fileName}
+    </span>
+  );
+}
 
 export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetail }) {
   const id = detail.propertyId;
   const o = detail.onboarding;
   const store = useLeasingWorkflowStore();
+  const { leasingCycles, apiConnected } = useAgentData();
+  const [recordingSigning, setRecordingSigning] = useState(false);
+
+  const cycleId = leasingCycles.find((c) => c.propertyId === id)?.id;
+  const agreementReady = agreementAvailableFromCrossub(o.agreement);
+  const keyByCrossub = detail.agentInfo.keyCustody === LEASING_KEY_CUSTODY.CROSSUB;
+
+  const recordSigning = async () => {
+    setRecordingSigning(true);
+    try {
+      if (apiConnected && cycleId) {
+        const view = await leasingOpsApi.recordSigning(cycleId);
+        store.applyCycleView(id, view);
+      } else {
+        store.recordSigning(id);
+      }
+      toast.success('Signing recorded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not record signing');
+    } finally {
+      setRecordingSigning(false);
+    }
+  };
 
   return (
     <div className="space-y-3">
-      <StepCard
-        icon={Banknote}
-        title="Deposit paid"
-        status={o.deposit.status}
-        footer={
-          o.deposit.status !== LEASING_ITEM_STATUS.DONE ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => {
-                store.markDepositPaid(id);
-                toast.success('Deposit marked paid');
-              }}
-            >
-              Mark deposit paid
-            </Button>
-          ) : undefined
-        }
-      >
+      <StepCard icon={Banknote} title="Deposit paid" status={o.deposit.status}>
         <div className="grid grid-cols-2 gap-3">
           <StepFact
             label="Amount"
@@ -55,51 +92,23 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             value={o.deposit.paidAt ? formatDate(o.deposit.paidAt) : 'Not paid'}
           />
         </div>
+        <ProofLine fileName={o.deposit.proofFileName} />
       </StepCard>
 
       <StepCard
         icon={Landmark}
         title="Bond"
-        description="Bond link sent to the tenant on approval."
+        description="Bond link is sent to the tenant on approval — status updates from CROSSUB."
         status={o.bond.status}
-        footer={
-          <>
-            {!o.bond.agentLink && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={() => {
-                  store.setBondLink(id, `https://rtba.qld.gov.au/bond/${id}`);
-                  toast.success('Bond link sent to tenant');
-                }}
-              >
-                Send bond link
-              </Button>
-            )}
-            {o.bond.agentLink && o.bond.status !== LEASING_ITEM_STATUS.DONE && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={() => {
-                  store.markBondPaid(id);
-                  toast.success('Bond marked paid');
-                }}
-              >
-                Mark bond paid
-              </Button>
-            )}
-          </>
-        }
       >
         <div className="grid grid-cols-2 gap-3">
           <StepFact label="Amount" value={o.bond.amount ? formatCurrency(o.bond.amount) : '—'} />
           <StepFact
-            label="Status"
-            value={o.bond.paidAt ? `Paid ${formatDate(o.bond.paidAt)}` : o.bond.agentLink ? 'Link sent' : 'Pending'}
+            label="Paid"
+            value={o.bond.paidAt ? formatDate(o.bond.paidAt) : 'Not paid'}
           />
         </div>
+        <ProofLine fileName={o.bond.proofFileName} />
       </StepCard>
 
       <StepCard
@@ -108,37 +117,35 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         description={
           o.agreement.signingStatus === 'signed'
             ? 'Agreement signed — terms are locked.'
-            : 'Edit lease terms and special conditions before sending for signature.'
+            : agreementReady
+              ? 'Agreement sent from CROSSUB — review and record signing when complete.'
+              : 'CROSSUB will generate and send the agreement after onboarding items are complete.'
         }
         status={o.agreement.status}
         footer={
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => store.setContractDialogOpen(true)}
-            >
-              {o.agreement.signingStatus === 'signed'
-                ? 'View agreement'
-                : o.agreement.contract.confirmed
-                  ? 'Edit agreement'
-                  : 'Open agreement'}
-            </Button>
-            {o.agreement.signingStatus !== 'signed' && o.agreement.contract.confirmed && (
+          agreementReady ? (
+            <>
               <Button
                 size="sm"
                 variant="outline"
                 className="h-8 text-xs"
-                onClick={() => {
-                  store.recordSigning(id);
-                  toast.success('Agreement signed');
-                }}
+                onClick={() => store.setContractDialogOpen(true)}
               >
-                Record signing
+                {o.agreement.signingStatus === 'signed' ? 'View agreement' : 'View agreement'}
               </Button>
-            )}
-          </>
+              {o.agreement.signingStatus !== 'signed' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={recordingSigning}
+                  onClick={() => void recordSigning()}
+                >
+                  {recordingSigning ? 'Recording…' : 'Record signing'}
+                </Button>
+              )}
+            </>
+          ) : undefined
         }
       >
         <div className="grid grid-cols-2 gap-3">
@@ -152,85 +159,33 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
                 : '—'
             }
           />
-          <StepFact label="Signing" value={o.agreement.signingStatus.replace('_', ' ')} />
+          <StepFact label="Signing" value={SIGNING_LABEL[o.agreement.signingStatus]} />
+        </div>
+        <div className="mt-2">
+          <ProofLine fileName={o.agreement.uploadedFileName} />
         </div>
       </StepCard>
 
       <StepCard
         icon={KeyRound}
         title="Key collection"
+        description={
+          keyByCrossub
+            ? 'CROSSUB manages keys — time and location are confirmed by CROSSUB.'
+            : 'Agent manages keys — time and location are confirmed by the agency.'
+        }
         status={o.keyCollection.status}
-        footer={
-          o.keyCollection.status !== LEASING_ITEM_STATUS.DONE ? (
-            <KeyCollectionForm
-              propertyId={id}
-              onScheduled={(time, location) => {
-                store.setKeyCollection(id, time, location);
-              }}
-              onKeyCollectionUpdated={(kc) => {
-                store.applyKeyCollectionFromApi(id, kc);
-              }}
-            />
-          ) : undefined
-        }
-      >
-        <StepFact
-          label="Custody"
-          value={
-            o.keyCollection.custody === LEASING_KEY_CUSTODY.CROSSUB
-              ? 'CROSSUB manages keys'
-              : 'Agent manages keys'
-          }
-        />
-        {o.keyCollection.time && (
-          <StepFact label="Time" value={formatDateTime(o.keyCollection.time)} className="mt-2" />
-        )}
-        {o.keyCollection.location && (
-          <StepFact label="Location" value={o.keyCollection.location} className="mt-2" />
-        )}
-      </StepCard>
-
-      <StepCard
-        icon={ClipboardCheck}
-        title="Ingoing inspection"
-        status={o.ingoingInspection.status}
-        footer={
-          <>
-            {!o.ingoingInspection.scheduledTime && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={() => {
-                  store.scheduleIngoingInspection(id, new Date().toISOString(), 'Lisa Tran');
-                  toast.success('Ingoing inspection scheduled');
-                }}
-              >
-                Schedule ingoing inspection
-              </Button>
-            )}
-            {o.ingoingInspection.scheduledTime && !o.ingoingInspection.tenantConfirmed && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={() => {
-                  store.tenantConfirmIngoing(id);
-                  toast.success('Tenant confirmed ingoing inspection');
-                }}
-              >
-                Tenant confirmed
-              </Button>
-            )}
-          </>
-        }
       >
         <div className="grid grid-cols-2 gap-3">
-          <StepFact label="Assignee" value={o.ingoingInspection.assignee ?? '—'} />
-          <BoolStatus
-            done={o.ingoingInspection.tenantConfirmed}
-            doneLabel="Tenant confirmed"
-            pendingLabel="Awaiting tenant confirmation"
+          <StepFact
+            label="Time"
+            value={o.keyCollection.time ? formatDateTime(o.keyCollection.time) : 'TBD'}
+          />
+          <StepFact label="Location" value={o.keyCollection.location ?? 'TBD'} />
+          <StepFact
+            label="Custody"
+            value={LEASING_KEY_CUSTODY_LABEL[detail.agentInfo.keyCustody]}
+            className="col-span-2"
           />
         </div>
       </StepCard>
@@ -239,21 +194,6 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         icon={ClipboardCheck}
         title="Ingoing report approval"
         status={o.ingoingReportApproval.status}
-        footer={
-          !o.ingoingReportApproval.tenantApproved ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => {
-                store.tenantApproveIngoingReport(id);
-                toast.success('Ingoing report approved');
-              }}
-            >
-              Record tenant approval
-            </Button>
-          ) : undefined
-        }
       >
         <BoolStatus
           done={o.ingoingReportApproval.tenantApproved}
@@ -262,7 +202,9 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         />
       </StepCard>
 
-      <LeasingContractDialog detail={detail} />
+      <LeasingIngoingNextStepPanel detail={detail} />
+
+      <LeasingContractDialog detail={detail} readOnly cycleId={cycleId} apiConnected={apiConnected} />
     </div>
   );
 }

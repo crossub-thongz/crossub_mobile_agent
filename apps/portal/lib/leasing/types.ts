@@ -138,6 +138,7 @@ export interface LeasingIngoingInspectionState {
   status: LeasingItemStatus;
   scheduledTime?: string;
   assignee?: string;
+  inspectionId?: string;
   reportAvailable: boolean;
   tenantConfirmed: boolean;
   disputes: LeasingIngoingDispute[];

@@ -66,7 +66,7 @@ export function buildSectionStatus(input: {
     },
     {
       id: 'vacating',
-      label: 'Vacating',
+      label: 'End leasing',
       href: ROUTES.VACATING,
       statusLabel:
         vacAction > 0 ? `${vacAction} need approval` : 'No active move-outs',

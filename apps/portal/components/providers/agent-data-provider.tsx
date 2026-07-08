@@ -65,6 +65,7 @@ import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
 import { fetchAgentInspections } from '@/lib/inspections/fetch';
 import { openViewingsApi } from '@/lib/open-viewings-api';
+import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { useAgentStore } from '@/lib/store';
 import { displayName } from '@/lib/utils';
 import {
@@ -726,11 +727,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           startTime: start,
           endTime: end,
           shortNote: input.preferredNotes,
+          agentName: input.property.agentName,
+          agentPhone: input.property.agentPhone,
+          agentRole: 'leasing_agent',
         });
         await refresh();
         return {
           id: session.id,
-          trackingNumber: session.id.slice(0, 8).toUpperCase(),
+          trackingNumber: inspectionReferenceLabel(session.id, 'OPEN'),
           type: 'OPEN' as const,
           propertyId: input.property.id,
           propertyAddress: input.property.address,

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -55,13 +56,9 @@ import type {
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const TERMINATION_GROUNDS = [
-  { value: 'landlord_resides', label: 'Landlord requires residence' },
-  { value: 'sale', label: 'Sale of premises' },
-  { value: 'demolition', label: 'Demolition / redevelopment' },
-  { value: 'breach', label: 'Breach of agreement' },
-] as const;
-
+import { TERMINATION_NOTICE_GROUND, TERMINATION_NOTICE_GROUND_OPTIONS, type TerminationNoticeGround } from '@/constants/end-leasing';
+import { vacatingDetail } from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
 export function PropertyWorkflowPanel({
   tab,
   property,
@@ -228,6 +225,7 @@ function PropertyWorkflowCreateDialog({
   leasingCycle?: LeasingCycle;
   onSuccess: () => void;
 }) {
+  const router = useRouter();
   const { refresh } = useAgentData();
   const agent = buildAgentContactPrefill(agency, userName);
   const [submitting, setSubmitting] = useState(false);
@@ -255,8 +253,12 @@ function PropertyWorkflowCreateDialog({
     'tenant_initiated',
   );
   const [expectedVacateDate, setExpectedVacateDate] = useState('');
-  const [terminationGround, setTerminationGround] = useState('landlord_resides');
+  const [terminationGround, setTerminationGround] = useState<TerminationNoticeGround>(
+    TERMINATION_NOTICE_GROUND.LANDLORD_RESIDES,
+  );
   const [proposedTerminationDate, setProposedTerminationDate] = useState('');
+  const [breachClause, setBreachClause] = useState('');
+  const [breachConduct, setBreachConduct] = useState('');
   const [bondHeld, setBondHeld] = useState(termPrefill.bondHeld);
   const [terminationNotes, setTerminationNotes] = useState('');
 
@@ -342,16 +344,30 @@ function PropertyWorkflowCreateDialog({
         if (terminationType === 'tenant_initiated' && !expectedVacateDate) {
           throw new Error('Expected vacate date is required');
         }
-        await createAgentTerminationCase(propertyId, {
+        const result = await createAgentTerminationCase(propertyId, {
           terminationType,
           expectedVacateDate: expectedVacateDate || undefined,
           terminationGround:
             terminationType === 'termination' ? terminationGround : undefined,
           proposedTerminationDate: proposedTerminationDate || undefined,
+          breachClause:
+            terminationType === 'termination' &&
+            terminationGround === TERMINATION_NOTICE_GROUND.BREACH
+              ? breachClause.trim() || undefined
+              : undefined,
+          breachConduct:
+            terminationType === 'termination' &&
+            terminationGround === TERMINATION_NOTICE_GROUND.BREACH
+              ? breachConduct.trim() || undefined
+              : undefined,
           bondHeld: bondHeld ? Number(bondHeld) : undefined,
           terminationReason: terminationNotes.trim() || undefined,
         });
         toast.success('End leasing case created');
+        await refresh();
+        onSuccess();
+        router.push(vacatingDetail(result.id, fromProperty(propertyId, 'Leasing')));
+        return;
       } else if (actionId === 'start_maintenance') {
         if (!issueType.trim()) throw new Error('Issue type is required');
         if (description.trim().length < 5) throw new Error('Description is required');
@@ -525,9 +541,9 @@ function PropertyWorkflowCreateDialog({
                   <select
                     className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                     value={terminationGround}
-                    onChange={(e) => setTerminationGround(e.target.value)}
+                    onChange={(e) => setTerminationGround(e.target.value as TerminationNoticeGround)}
                   >
-                    {TERMINATION_GROUNDS.map((g) => (
+                    {TERMINATION_NOTICE_GROUND_OPTIONS.map((g) => (
                       <option key={g.value} value={g.value}>
                         {g.label}
                       </option>
@@ -541,6 +557,25 @@ function PropertyWorkflowCreateDialog({
                     onChange={(e) => setProposedTerminationDate(e.target.value)}
                   />
                 </Field>
+                {terminationGround === TERMINATION_NOTICE_GROUND.BREACH ? (
+                  <>
+                    <Field label="Breach clause">
+                      <Input
+                        value={breachClause}
+                        onChange={(e) => setBreachClause(e.target.value)}
+                        placeholder="e.g. Clause 12 — rent arrears"
+                      />
+                    </Field>
+                    <Field label="Breach conduct">
+                      <Textarea
+                        value={breachConduct}
+                        onChange={(e) => setBreachConduct(e.target.value)}
+                        rows={2}
+                        placeholder="Describe the breach"
+                      />
+                    </Field>
+                  </>
+                ) : null}
               </>
             )}
             <Field label="Bond held">

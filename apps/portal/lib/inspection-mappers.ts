@@ -10,6 +10,7 @@ import {
 } from '@/constants/open-inspection-ops';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
+import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
 const RECORD_TYPE_VIEW: Record<string, Inspection['type']> = {
   INGOING: 'INGOING',
@@ -39,10 +40,11 @@ function reportStatusFromRecord(
 }
 
 export function mapInspectionRecordToView(record: InspectionRecord): Inspection {
+  const type = RECORD_TYPE_VIEW[record.type] ?? 'ROUTINE';
   return {
     id: record.id,
-    trackingNumber: record.id.slice(0, 8).toUpperCase(),
-    type: RECORD_TYPE_VIEW[record.type] ?? 'ROUTINE',
+    trackingNumber: inspectionReferenceLabel(record.id, type),
+    type,
     propertyId: record.propertyId ?? '',
     propertyAddress: record.propertyAddress ?? '—',
     inspector: record.inspectorName ?? undefined,
@@ -68,7 +70,7 @@ export function mapOpenSessionToInspection(
   const resolvedPropertyId = session.propertyId ?? propertyId ?? '';
   return {
     id: session.id,
-    trackingNumber: session.id.slice(0, 8).toUpperCase(),
+    trackingNumber: inspectionReferenceLabel(session.id, 'OPEN'),
     type: 'OPEN',
     propertyId: resolvedPropertyId,
     propertyAddress: session.address || session.property,

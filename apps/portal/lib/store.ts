@@ -10,6 +10,7 @@ import type {
   OpenListingContext,
 } from '@/lib/open-inspection';
 import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, PropertyPartyContact, ThreadMessage } from '@/lib/types';
+import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import type { TenantSelectionDecision } from '@/lib/tenant-selection';
 import type { ProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
 
@@ -274,7 +275,7 @@ export const useAgentStore = create<AgentStore>()(
       addOpenInspection: (input) => {
         const now = new Date().toISOString();
         const id = `insp-agent-${Date.now()}`;
-        const trackingNumber = `INS-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+        const trackingNumber = inspectionReferenceLabel(id, 'OPEN');
         const { property, openConductedBy, openListingContext, scheduledAt, preferredNotes } =
           input;
         const isSelf = openConductedBy === 'agent';

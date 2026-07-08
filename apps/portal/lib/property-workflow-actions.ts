@@ -64,7 +64,7 @@ function hasRentReview(ctx: PropertyWorkflowContext): boolean {
 
 function hasActiveEndLeasing(ctx: PropertyWorkflowContext): boolean {
   return ctx.vacatingCases.some(
-    (v) => v.propertyId === ctx.propertyId && isActiveWorkflowStatus(v.status),
+    (v) => v.propertyId === ctx.propertyId && isActiveWorkflowStatus(v.apiStatus),
   );
 }
 
