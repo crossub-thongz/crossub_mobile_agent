@@ -236,7 +236,7 @@ export function NewPropertyRegistryForm({
   submitting: boolean;
 }) {
   const { primaryAgency, loading, apiConnected, uploadDocument } = useAgentData();
-  const agencyLocked = !!primaryAgency;
+  const agencyLocked = !!primaryAgency || apiConnected;
   const [step, setStep] = useState<WizardStep>('property');
   const [form, setForm] = useState<NewPropertyRegistryValues>({
     agencyName: primaryAgency?.name ?? '',
@@ -384,10 +384,16 @@ export function NewPropertyRegistryForm({
     }
     void onSubmit({
       ...form,
-      agencyName: agencyLocked ? (primaryAgency?.name ?? form.agencyName) : form.agencyName,
-      agencyCompany: agencyLocked
+      agencyName: apiConnected
+        ? (primaryAgency?.name ?? form.agencyName)
+        : agencyLocked
+          ? (primaryAgency?.name ?? form.agencyName)
+          : form.agencyName,
+      agencyCompany: apiConnected
         ? (primaryAgency?.company ?? form.agencyCompany)
-        : form.agencyCompany,
+        : agencyLocked
+          ? (primaryAgency?.company ?? form.agencyCompany)
+          : form.agencyCompany,
     });
   };
 

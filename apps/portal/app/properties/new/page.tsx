@@ -21,7 +21,7 @@ import type { Property } from '@/lib/types';
 
 export default function AddPropertyPage() {
   const router = useRouter();
-  const { addProperty } = useAgentData();
+  const { addProperty, primaryAgency, apiConnected } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmitNewProperty = async (values: NewPropertyRegistryValues) => {
@@ -34,7 +34,12 @@ export default function AddPropertyPage() {
       toast.error('Select the property state or territory');
       return;
     }
-    if (!values.agencyName.trim()) {
+
+    const agencyName =
+      values.agencyName.trim() ||
+      primaryAgency?.name?.trim() ||
+      '';
+    if (!apiConnected && !agencyName) {
       toast.error('Agency name is required');
       return;
     }
@@ -47,7 +52,7 @@ export default function AddPropertyPage() {
       const weeklyRent = weeklyRentFromAmount(Number(leasing.rentAmount), leasing.rentPeriod);
       const property = await addProperty({
         intakeMode: 'new',
-        agencyName: values.agencyName.trim(),
+        agencyName: agencyName || undefined,
         agencyCompany: values.agencyCompany.trim() || undefined,
         address,
         suburb: values.suburb.trim(),
