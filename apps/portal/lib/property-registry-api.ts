@@ -30,6 +30,11 @@ export interface PropertyRecord {
   strataContactEmail: string | null;
   strataContactPhone: string | null;
   leaseStartDate: string | null;
+  leaseEndDate: string | null;
+  nextRentReviewAt: string | null;
+  rentWeekly: number | null;
+  bondAmount: number | null;
+  depositAmount: number | null;
   vacateDate: string | null;
   nextInspectionAt: string | null;
   updatedAt: string;
@@ -43,6 +48,8 @@ export interface PropertyContactBlock {
 
 export interface PropertyPortalOverview {
   leaseStartDate?: string;
+  leaseEndDate?: string;
+  nextRentReviewDate?: string;
   vacateDate?: string;
   nextRoutineInspectionDate?: string;
   furnished?: boolean;

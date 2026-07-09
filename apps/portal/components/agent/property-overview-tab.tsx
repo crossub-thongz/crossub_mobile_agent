@@ -84,6 +84,7 @@ function ContactTile({
   name,
   email,
   phone,
+  meta,
   variant = 'filled',
   updatedHint,
   onEdit,
@@ -93,6 +94,7 @@ function ContactTile({
   name?: string;
   email?: string;
   phone?: string;
+  meta?: string;
   variant?: 'filled' | 'add';
   updatedHint?: string | null;
   onEdit?: () => void;
@@ -138,7 +140,8 @@ function ContactTile({
         ) : null}
       </div>
       <p className="mt-0.5 truncate text-xs font-medium">{name?.trim() || '—'}</p>
-      <p className="text-muted-foreground mt-0.5 truncate text-[10px]">{detail || '—'}</p>
+      {meta ? <p className="text-muted-foreground mt-0.5 truncate text-[10px]">{meta}</p> : null}
+      <p className="text-muted-foreground mt-0.5 truncate text-[10px]">{detail || (meta ? '' : '—')}</p>
     </div>
   );
 }
@@ -174,6 +177,16 @@ function StatCell({
 
 function hasContact(block?: PropertyContactBlock | null): boolean {
   return Boolean(block?.name?.trim() || block?.email?.trim() || block?.mobile?.trim());
+}
+
+function formatStrataMeta(
+  buildingName?: string | null,
+  strataPlanNumber?: string | null,
+): string {
+  const parts: string[] = [];
+  if (buildingName?.trim()) parts.push(buildingName.trim());
+  if (strataPlanNumber?.trim()) parts.push(`SP ${strataPlanNumber.trim()}`);
+  return parts.join(' · ');
 }
 
 export function PropertyOverviewTab({
@@ -229,8 +242,21 @@ export function PropertyOverviewTab({
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
   const currentRent = resolveCurrentRent(property, currentLease);
   const financialRent = sync.financial?.currentRentWeekly;
+  const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
   const displayRent =
-    financialRent != null && financialRent > 0 ? financialRent : currentRent;
+    financialRent != null && financialRent > 0
+      ? financialRent
+      : registryRent != null && registryRent > 0
+        ? registryRent
+        : currentRent;
+  const displayBond =
+    sync.financial?.bondAmount ??
+    sync.record?.bondAmount ??
+    property.bondAmount ??
+    sync.bond?.amount ??
+    null;
+  const displayDeposit =
+    sync.financial?.depositAmount ?? sync.record?.depositAmount ?? property.depositAmount ?? null;
   const { start: leaseStart, end: leaseEnd } = resolveLeaseDates(property, currentLease);
   const pendingRent = resolvePendingRentChange(property, tenancyRentReviews, rentReviewDecisions, {
     isVacant,
@@ -281,7 +307,24 @@ export function PropertyOverviewTab({
   const keyDates = [
     {
       label: 'Lease start',
-      value: overview?.leaseStartDate ?? leaseStart,
+      value:
+        overview?.leaseStartDate ??
+        sync.record?.leaseStartDate?.slice(0, 10) ??
+        leaseStart,
+    },
+    {
+      label: 'Lease end',
+      value:
+        overview?.leaseEndDate ??
+        sync.record?.leaseEndDate?.slice(0, 10) ??
+        property.leaseEnd,
+    },
+    {
+      label: 'Next rent review',
+      value:
+        overview?.nextRentReviewDate ??
+        sync.record?.nextRentReviewAt?.slice(0, 10) ??
+        property.nextRentReview,
     },
     {
       label: 'Vacate date',
@@ -330,6 +373,12 @@ export function PropertyOverviewTab({
       managementRateGst: gst,
     };
   }, [overview, property, sync.record]);
+
+  const strataMeta = formatStrataMeta(
+    overview?.buildingName ?? sync.record?.buildingName ?? property.buildingName,
+    overview?.strataPlanNumber ?? sync.record?.strataPlanNumber ?? property.strataPlanNumber,
+  );
+  const showStrataTile = hasContact(strataContact) || Boolean(strataMeta);
 
   const managementGstLabel =
     registry.managementRateGst === 'include'
@@ -410,21 +459,11 @@ export function PropertyOverviewTab({
           />
           <StatCell
             label="Bond"
-            value={
-              sync.financial?.bondAmount != null
-                ? formatCurrency(sync.financial.bondAmount)
-                : sync.bond?.amount != null
-                  ? formatCurrency(sync.bond.amount)
-                  : '—'
-            }
+            value={displayBond != null ? formatCurrency(displayBond) : '—'}
           />
           <StatCell
             label="Deposit"
-            value={
-              sync.financial?.depositAmount != null
-                ? formatCurrency(sync.financial.depositAmount)
-                : '—'
-            }
+            value={displayDeposit != null ? formatCurrency(displayDeposit) : '—'}
           />
           <StatCell
             label="Bond ID"
@@ -490,12 +529,13 @@ export function PropertyOverviewTab({
               onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
             />
           )}
-          {hasContact(strataContact) ? (
+          {showStrataTile ? (
             <ContactTile
               title="Strata"
               name={strataContact?.name}
               email={strataContact?.email}
               phone={strataContact?.mobile}
+              meta={strataMeta || undefined}
               onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
             />
           ) : (
@@ -560,19 +600,11 @@ export function PropertyOverviewTab({
       </section>
 
       <section className="rounded-xl border bg-card p-3">
-        <h3 className="mb-2 text-xs font-semibold">Strata details</h3>
-        <div className="grid grid-cols-2 gap-1.5">
-          <StatCell label="Building name" value={registry.buildingName ?? '—'} />
-          <StatCell label="Strata plan" value={registry.strataPlanNumber ?? '—'} />
-        </div>
-      </section>
-
-      <section className="rounded-xl border bg-card p-3">
         <h3 className="text-xs font-semibold">Key dates</h3>
         <p className="text-muted-foreground mb-2 text-[10px]">
-          Synced from leasing, end-leasing, and routine inspections.
+          From property registry and synced leasing workflows.
         </p>
-        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {keyDates.map((item) => (
             <StatCell
               key={item.label}

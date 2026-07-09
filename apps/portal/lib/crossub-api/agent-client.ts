@@ -84,6 +84,11 @@ export type CreateAgentPropertyInput = {
   latitude?: number;
   longitude?: number;
   leaseStartDate?: string;
+  leaseEndDate?: string;
+  nextRentReviewAt?: string;
+  rentWeekly?: number;
+  bondAmount?: number;
+  depositAmount?: number;
   buildingName?: string;
   strataPlanNumber?: string;
   buildingManagerName?: string;
