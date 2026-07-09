@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
+import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { GlobalShellFabs } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
@@ -22,6 +23,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess } from '@/lib/portal-service-level';
+import { useGiiPanelOpen, useShellDockStore } from '@/lib/shell-dock-store';
 import { cn, displayName } from '@/lib/utils';
 
 function isActive(pathname: string, href: string): boolean {
@@ -66,6 +68,8 @@ export function AgentShell({
   const actionCount = needActionItems.length;
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = filterNavByAccess(MORE_NAV, hasFullManagementAccess);
+  const giiOpen = useGiiPanelOpen();
+  const closeDockPanel = useShellDockStore((s) => s.closePanel);
 
   useEffect(() => {
     const el = headerRef.current;
@@ -93,18 +97,21 @@ export function AgentShell({
   return (
     <div className="flex min-h-screen bg-background">
       <AgentSidebar
+        compact={giiOpen}
         unreadMessages={unreadMessages}
         actionCount={actionCount}
         unreadNotificationCount={unreadNotificationCount}
         onLogout={() => void logout()}
       />
 
-      <div
-        className={cn(
-          'mx-auto flex min-h-screen w-full flex-col',
-          wide ? 'max-w-none' : 'max-w-lg lg:max-w-none lg:flex-1',
-        )}
-      >
+      <div className="flex min-h-screen min-w-0 flex-1">
+        <div
+          className={cn(
+            'mx-auto flex min-h-screen w-full min-w-0 flex-col',
+            wide ? 'max-w-none' : 'max-w-lg lg:max-w-none',
+            giiOpen ? 'lg:flex-[3]' : 'lg:flex-1',
+          )}
+        >
         <header
           ref={headerRef}
           className={cn(
@@ -337,6 +344,13 @@ export function AgentShell({
         </nav>
 
         {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
+        </div>
+
+        {giiOpen ? (
+          <aside className="bg-background hidden min-h-screen w-1/4 min-w-[280px] max-w-[420px] shrink-0 lg:flex">
+            <GiiAssistant open variant="panel" onClose={closeDockPanel} />
+          </aside>
+        ) : null}
       </div>
     </div>
   );

@@ -26,10 +26,9 @@ import {
   resolveQuickActions,
 } from '@/lib/quick-actions';
 import { INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS } from '@/lib/portal-service-level';
+import { useShellDockStore } from '@/lib/shell-dock-store';
 import { useAgentStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-
-type DockPanel = 'communication' | 'phone' | 'quick' | 'gii' | null;
 
 const DOCK_BUTTONS = [
   {
@@ -85,13 +84,10 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
   const propertyId = propertyIdFromPath(pathname);
   const hideCommunication = isActiveChatPath(pathname);
   const { hasFullManagementAccess } = useAgentData();
-  const [activePanel, setActivePanel] = useState<DockPanel>(null);
-
-  const togglePanel = (id: DockPanel) => {
-    setActivePanel((current) => (current === id ? null : id));
-  };
-
-  const closePanel = () => setActivePanel(null);
+  const activePanel = useShellDockStore((s) => s.activePanel);
+  const togglePanel = useShellDockStore((s) => s.togglePanel);
+  const closePanel = useShellDockStore((s) => s.closePanel);
+  const giiPanelOpen = activePanel === 'gii';
 
   const visibleButtons = DOCK_BUTTONS.filter((button) => {
     if (button.id === 'communication' && (hideCommunication || !hasFullManagementAccess)) {
@@ -113,12 +109,17 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         onClose={closePanel}
         propertyId={propertyId}
       />
-      <GiiAssistant open={activePanel === 'gii'} onClose={closePanel} />
+      {activePanel === 'gii' ? (
+        <div className="lg:hidden">
+          <GiiAssistant open variant="modal" onClose={closePanel} />
+        </div>
+      ) : null}
 
       <div
         className={cn(
-          'pointer-events-none fixed right-6 z-50 flex flex-col items-end gap-2',
+          'pointer-events-none fixed z-50 flex flex-col items-end gap-2',
           'bottom-[calc(4.5rem+env(safe-area-inset-bottom))] lg:bottom-6',
+          giiPanelOpen ? 'right-6 lg:right-[calc(25%+1.5rem)]' : 'right-6',
         )}
       >
         {visibleButtons.map((btn) => {

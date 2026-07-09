@@ -42,9 +42,11 @@ function multilingualHint(): string {
 export function GiiAssistant({
   open,
   onClose,
+  variant = 'modal',
 }: {
   open: boolean;
   onClose: () => void;
+  variant?: 'modal' | 'panel';
 }) {
   const router = useRouter();
   const data = useAgentData();
@@ -135,180 +137,198 @@ export function GiiAssistant({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/55 backdrop-blur-sm p-0 sm:p-4">
-      <div className="flex h-[min(92vh,680px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border bg-background shadow-2xl sm:rounded-3xl">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-600 text-primary-foreground shadow-md">
-              <Sparkles className="size-4" />
-            </div>
-            <div>
-              <p className="text-sm font-bold">Gii</p>
-              <p className="text-muted-foreground text-[10px]">Your property assistant · {multilingualHint()}</p>
-            </div>
+  const shell = (
+    <div
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden bg-background',
+        variant === 'panel'
+          ? 'h-full w-full border-l'
+          : 'h-[min(92vh,680px)] w-full max-w-lg rounded-t-3xl border shadow-2xl sm:rounded-3xl',
+      )}
+    >
+      <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-600 text-primary-foreground shadow-md">
+            <Sparkles className="size-4" />
           </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold">Gii</p>
+            <p className="text-muted-foreground truncate text-[10px]">
+              {variant === 'panel' ? 'Property assistant' : `Your property assistant · ${multilingualHint()}`}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
+          aria-label="Close Gii"
+        >
+          <X className="size-5" />
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-2">
+        {lines.length === 0 && inputMode === 'voice' && (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <p className="text-muted-foreground mb-6 max-w-[240px] text-sm">
+              Tap the microphone and ask Gii anything about your portfolio.
+            </p>
+            <button
+              type="button"
+              onClick={listening ? stopVoice : startVoice}
+              className={cn(
+                'relative flex size-24 items-center justify-center rounded-full transition-transform active:scale-95',
+                variant === 'panel' && 'size-20',
+                'bg-gradient-to-br from-primary via-emerald-500 to-teal-600 text-white shadow-xl shadow-primary/30',
+                listening && 'ring-4 ring-primary/40',
+              )}
+              aria-label={listening ? 'Stop listening' : 'Speak to Gii'}
+            >
+              {listening && (
+                <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
+              )}
+              {listening ? <MicOff className="relative size-9" /> : <Mic className="relative size-9" />}
+            </button>
+            <p className="text-muted-foreground mt-4 text-xs font-medium">
+              {listening ? 'Listening…' : 'Tap to speak'}
+            </p>
+          </div>
+        )}
+
+        {lines.map((line) => (
+          <div
+            key={line.id}
+            className={cn(
+              'max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
+              line.role === 'user'
+                ? 'bg-primary text-primary-foreground ml-auto'
+                : 'bg-secondary mr-auto text-foreground',
+            )}
+          >
+            {line.text}
+          </div>
+        ))}
+
+        {latestResults.length > 0 && (
+          <ul className="space-y-2 pt-1 pb-2">
+            {latestResults.map((r) => (
+              <li key={r.id} className="rounded-xl border bg-card p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  {r.kind}
+                </p>
+                <p className="text-sm font-medium">{r.label}</p>
+                <p className="text-muted-foreground text-xs">{r.sub}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                    <Link href={r.href} onClick={onClose}>
+                      Open
+                    </Link>
+                  </Button>
+                  {r.propertyId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => openMessage(r)}
+                    >
+                      <Send className="size-3" />
+                      Message
+                    </Button>
+                  )}
+                  {r.phone && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => callContact(r)}
+                    >
+                      <Phone className="size-3" />
+                      Call
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="shrink-0 space-y-2 border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="flex justify-center gap-2">
           <button
             type="button"
-            onClick={onClose}
-            className="text-muted-foreground flex size-9 items-center justify-center rounded-full hover:bg-secondary"
-            aria-label="Close Gii"
+            onClick={() => setInputMode('voice')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
+              inputMode === 'voice' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
+            )}
           >
-            <X className="size-5" />
+            <Mic className="size-3.5" />
+            Voice
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode('text')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
+              inputMode === 'text' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
+            )}
+          >
+            <Keyboard className="size-3.5" />
+            Type
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-2">
-          {lines.length === 0 && inputMode === 'voice' && (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-muted-foreground mb-6 max-w-[240px] text-sm">
-                Tap the microphone and ask Gii anything about your portfolio.
-              </p>
-              <button
-                type="button"
-                onClick={listening ? stopVoice : startVoice}
-                className={cn(
-                  'relative flex size-28 items-center justify-center rounded-full transition-transform active:scale-95',
-                  'bg-gradient-to-br from-primary via-emerald-500 to-teal-600 text-white shadow-xl shadow-primary/30',
-                  listening && 'ring-4 ring-primary/40',
-                )}
-                aria-label={listening ? 'Stop listening' : 'Speak to Gii'}
-              >
-                {listening && (
-                  <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
-                )}
-                {listening ? <MicOff className="relative size-10" /> : <Mic className="relative size-10" />}
-              </button>
-              <p className="text-muted-foreground mt-4 text-xs font-medium">
-                {listening ? 'Listening…' : 'Tap to speak'}
-              </p>
-            </div>
-          )}
-
-          {lines.map((line) => (
-            <div
-              key={line.id}
-              className={cn(
-                'max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
-                line.role === 'user'
-                  ? 'bg-primary text-primary-foreground ml-auto'
-                  : 'bg-secondary mr-auto text-foreground',
-              )}
-            >
-              {line.text}
-            </div>
-          ))}
-
-          {latestResults.length > 0 && (
-            <ul className="space-y-2 pt-1 pb-2">
-              {latestResults.map((r) => (
-                <li key={r.id} className="rounded-xl border bg-card p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                    {r.kind}
-                  </p>
-                  <p className="text-sm font-medium">{r.label}</p>
-                  <p className="text-muted-foreground text-xs">{r.sub}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button asChild size="sm" variant="outline" className="h-7 text-xs">
-                      <Link href={r.href} onClick={onClose}>
-                        Open
-                      </Link>
-                    </Button>
-                    {r.propertyId && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => openMessage(r)}
-                      >
-                        <Send className="size-3" />
-                        Message
-                      </Button>
-                    )}
-                    {r.phone && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => callContact(r)}
-                      >
-                        <Phone className="size-3" />
-                        Call
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="space-y-2 border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className="flex justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => setInputMode('voice')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
-                inputMode === 'voice' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
-              )}
-            >
-              <Mic className="size-3.5" />
-              Voice
-            </button>
-            <button
-              type="button"
-              onClick={() => setInputMode('text')}
-              className={cn(
-                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
-                inputMode === 'text' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
-              )}
-            >
-              <Keyboard className="size-3.5" />
-              Type
-            </button>
-          </div>
-
-          {inputMode === 'voice' ? (
-            <Button
-              type="button"
-              className="w-full"
-              variant={listening ? 'destructive' : 'default'}
-              onClick={listening ? stopVoice : startVoice}
-            >
-              {listening ? (
-                <>
-                  <MicOff className="size-4" />
-                  Stop listening
-                </>
-              ) : (
-                <>
-                  <Mic className="size-4" />
-                  Speak to Gii
-                </>
-              )}
+        {inputMode === 'voice' ? (
+          <Button
+            type="button"
+            className="w-full"
+            variant={listening ? 'destructive' : 'default'}
+            onClick={listening ? stopVoice : startVoice}
+          >
+            {listening ? (
+              <>
+                <MicOff className="size-4" />
+                Stop listening
+              </>
+            ) : (
+              <>
+                <Mic className="size-4" />
+                Speak to Gii
+              </>
+            )}
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') runQuery(query);
+              }}
+              placeholder="Ask Gii anything…"
+              className="flex-1"
+              autoFocus={variant === 'modal'}
+            />
+            <Button type="button" onClick={() => runQuery(query)} disabled={!query.trim()}>
+              <Send className="size-4" />
             </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') runQuery(query);
-                }}
-                placeholder="Ask Gii anything…"
-                className="flex-1"
-                autoFocus
-              />
-              <Button type="button" onClick={() => runQuery(query)} disabled={!query.trim()}>
-                <Send className="size-4" />
-              </Button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+
+  if (variant === 'panel') {
+    return shell;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:p-4">
+      {shell}
     </div>
   );
 }

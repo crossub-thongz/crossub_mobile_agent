@@ -80,6 +80,8 @@ export type CreateAgentPropertyInput = {
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export async function createProperty(

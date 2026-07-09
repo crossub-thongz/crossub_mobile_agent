@@ -720,6 +720,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           tenantName: input.tenantName.trim() !== 'Vacant' ? input.tenantName.trim() : undefined,
           tenantEmail: input.tenantEmail,
           tenantPhone: input.tenantPhone,
+          latitude: input.latitude,
+          longitude: input.longitude,
         });
         await refresh();
         return mapAgentProperty(created, agentPortfolioId);

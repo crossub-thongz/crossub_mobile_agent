@@ -278,6 +278,8 @@ export default function AddPropertyPage() {
         carSpaces: parseCount(values.parking),
         propertyType: values.propertyType,
         propertyStatus: values.status,
+        latitude: values.latitude,
+        longitude: values.longitude,
       });
       toast.success('Property added — available across leasing, maintenance, and more');
       router.push(propertyDetail(property.id));

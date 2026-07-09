@@ -52,6 +52,8 @@ export interface NewPropertyInput {
   bondAmount?: number;
   propertyType?: string;
   propertyStatus?: string;
+  latitude?: number;
+  longitude?: number;
   managementRatePercent?: number;
   insuranceProvider?: string;
   handoverDate?: string;
