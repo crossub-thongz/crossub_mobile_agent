@@ -1,330 +1,298 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { FileText } from 'lucide-react';
-import Link from 'next/link';
+import { useMemo, useRef, useState } from 'react';
+import { FileText, Loader2, Plus, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { FilterChips } from '@/components/agent/filter-chips';
 import { InfoPanel } from '@/components/agent/info-panel';
-import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
-  CATEGORY_ORDER,
-  DOCUMENT_CATEGORY_LABELS,
-  DOCUMENT_GROUP_LABELS,
-  DOCUMENT_GROUP_ORDER,
-  documentGroup,
-  groupPropertyDocuments,
-} from '@/lib/property-document-categories';
-import {
-  groupPortalDocuments,
-  inspectionReportDisplayName,
-  inspectionReportDownloadType,
-  PORTAL_DOCUMENT_GROUP_ORDER,
-  reportIdLabel,
-} from '@/lib/property-portal-documents';
-import type { PropertyPortalDocument } from '@/lib/property-registry-api';
+  buildDocumentChecklistByGroup,
+  CREATE_PROPERTY_DOCUMENT_GROUP_LABELS,
+  CREATE_PROPERTY_DOCUMENT_GROUP_ORDER,
+  ensureGroupDocumentTitle,
+  EXPECTED_PROPERTY_DOCUMENT_SLOTS,
+  type CreatePropertyDocumentGroup,
+  type DocumentChecklistRow,
+} from '@/lib/property-create-document-groups';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
-import type { AgentDocument, Inspection, Property } from '@/lib/types';
-import { formatDateTime } from '@/lib/utils';
+import type { AgentDocument, Property } from '@/lib/types';
+import { cn, formatDateTime } from '@/lib/utils';
 
-const FILTER_OPTIONS = [
-  { id: 'all', label: 'All' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'documents', label: 'Documents' },
-  { id: 'inspection', label: 'Inspection' },
-  { id: 'rent_review', label: 'Rent review' },
-  { id: 'maintenance', label: 'Maintenance' },
-  { id: 'lease', label: 'Lease' },
-  { id: 'vacating', label: 'Vacating' },
-] as const;
+type DisplayDoc = {
+  id: string;
+  title: string;
+  uploadedAt: string;
+  href?: string | null;
+};
 
-type DocumentFilter = (typeof FILTER_OPTIONS)[number]['id'];
+const selectClass =
+  'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
 
-function LegacyDocumentsView({ documents }: { documents: AgentDocument[] }) {
-  const [filter, setFilter] = useState<DocumentFilter>('all');
-
-  const filtered = useMemo(() => {
-    if (filter === 'all') return documents;
-    if (filter === 'reports' || filter === 'documents') {
-      return documents.filter((d) => documentGroup(d.category) === filter);
-    }
-    return documents.filter((d) => d.category === filter);
-  }, [documents, filter]);
-
-  const grouped = useMemo(() => groupPropertyDocuments(filtered), [filtered]);
-
-  if (documents.length === 0) {
-    return (
-      <InfoPanel title="Document repository" icon={FileText}>
-        <p className="text-muted-foreground text-sm">
-          Lease agreements, inspection reports, bond records, and tribunal documents will
-          appear here — grouped under Documents and Reports.
-        </p>
-        <p className="text-muted-foreground mt-2 text-xs">
-          Upload files from{' '}
-          <Link href="/reports" className="text-primary font-medium underline">
-            Reports &amp; Documents
-          </Link>{' '}
-          or use Transfer OUT to export the full property package.
-        </p>
-      </InfoPanel>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <FilterChips
-        options={[...FILTER_OPTIONS]}
-        value={filter}
-        onChange={(id) => setFilter(id as DocumentFilter)}
-      />
-
-      {filtered.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No documents match this filter.</p>
-      ) : (
-        DOCUMENT_GROUP_ORDER.map((group) => {
-          const categories = CATEGORY_ORDER.filter(
-            (category) => (grouped[group][category]?.length ?? 0) > 0,
-          );
-          if (categories.length === 0) return null;
-
-          const groupCount = categories.reduce(
-            (sum, category) => sum + (grouped[group][category]?.length ?? 0),
-            0,
-          );
-
-          return (
-            <InfoPanel
-              key={group}
-              title={`${DOCUMENT_GROUP_LABELS[group]} (${groupCount})`}
-              icon={FileText}
-            >
-              <div className="space-y-4">
-                {categories.map((category) => {
-                  const items = grouped[group][category] ?? [];
-                  return (
-                    <section key={category} className="space-y-2">
-                      <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
-                        {DOCUMENT_CATEGORY_LABELS[category]}
-                      </p>
-                      <div className="space-y-2">
-                        {items.map((doc) => (
-                          <LegacyDocumentRow key={doc.id} doc={doc} />
-                        ))}
-                      </div>
-                    </section>
-                  );
-                })}
-              </div>
-            </InfoPanel>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
-function LegacyDocumentRow({ doc }: { doc: AgentDocument }) {
-  const downloadUrl = doc.downloadUrl ?? doc.href;
-
-  return (
-    <div className="flex items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-3">
-      <FileText className="text-primary size-4 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{doc.title}</p>
-        <p className="text-muted-foreground text-[11px]">
-          {formatDateTime(doc.uploadedAt)} · {DOCUMENT_CATEGORY_LABELS[doc.category]}
-        </p>
-      </div>
-      {downloadUrl && downloadUrl !== '#' ? (
-        <a
-          href={downloadUrl}
-          download={doc.title}
-          className="text-primary shrink-0 text-xs font-semibold"
-        >
-          Download
-        </a>
-      ) : null}
-    </div>
-  );
-}
-
-function PortalDocumentsView({
-  property,
-  inspections,
-  documents,
+function DocumentTable({
+  group,
+  rows,
+  onUploadForType,
+  uploadingSlotId,
 }: {
-  property: Property;
-  inspections: Inspection[];
-  documents: PropertyPortalDocument[];
+  group: CreatePropertyDocumentGroup;
+  rows: DocumentChecklistRow[];
+  onUploadForType: (title: string, slotId?: string) => void;
+  uploadingSlotId: string | null;
 }) {
-  const grouped = useMemo(() => groupPortalDocuments(documents), [documents]);
-  const inspectionReports = documents.filter((doc) => doc.category === 'inspection_report');
-
-  if (documents.length === 0) {
-    return <p className="text-muted-foreground text-sm">No documents on file yet.</p>;
-  }
+  const uploadedCount = rows.filter((r) => r.uploaded).length;
 
   return (
-    <div className="space-y-6">
-      {inspectionReports.length > 0 ? (
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold">Inspection reports</h3>
-          <ul className="space-y-1">
-            {inspectionReports.map((doc) => (
-              <li
-                key={doc.id}
-                className="flex flex-col gap-3 rounded-md border bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <dl className="min-w-0 space-y-1 text-sm">
-                  <div>
-                    <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                      Report name
-                    </dt>
-                    <dd className="font-medium">
-                      {inspectionReportDisplayName(property, inspections, doc)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                      Report ID
-                    </dt>
-                    <dd className="font-mono text-xs">{reportIdLabel(doc)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                      Uploaded
-                    </dt>
-                    <dd className="text-muted-foreground text-xs tabular-nums">
-                      {doc.uploadedAt.slice(0, 10)}
-                    </dd>
-                  </div>
-                </dl>
-                {doc.inspectionId ? (
-                  <InspectionReportDownloadActions
-                    variant="inline"
-                    inspectionId={doc.inspectionId}
-                    reportUrl={doc.url}
-                    propertyLabel={property.address}
-                    inspectionType={inspectionReportDownloadType(inspections, doc)}
-                  />
-                ) : doc.url ? (
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary text-sm font-medium"
-                  >
-                    Open PDF
-                  </a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {PORTAL_DOCUMENT_GROUP_ORDER.map((group) => {
-        const docs = grouped[group];
-        if (!docs?.length) return null;
-
-        return (
-          <section key={group} className="space-y-2">
-            <h3 className="text-sm font-semibold">{group}</h3>
-            <ul className="space-y-1">
-              {docs.map((doc) => (
-                <li
-                  key={doc.id}
-                  className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-sm"
-                >
-                  {doc.url ? (
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary font-medium"
-                    >
-                      {doc.title}
-                    </a>
-                  ) : (
-                    <span className="font-medium">{doc.title}</span>
-                  )}
-                  <span className="text-muted-foreground text-xs tabular-nums">
-                    {doc.uploadedAt.slice(0, 10)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
-
-      {grouped.Other?.length ? (
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold">Other</h3>
-          <ul className="space-y-1">
-            {grouped.Other.map((doc) => (
-              <li
-                key={doc.id}
-                className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-sm"
-              >
-                {doc.url ? (
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary font-medium"
-                  >
-                    {doc.title}
-                  </a>
-                ) : (
-                  <span className="font-medium">{doc.title}</span>
-                )}
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  {doc.uploadedAt.slice(0, 10)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </div>
+    <InfoPanel
+      title={`${CREATE_PROPERTY_DOCUMENT_GROUP_LABELS[group]} (${uploadedCount}/${rows.length})`}
+      icon={FileText}
+    >
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-[520px] text-left text-sm">
+          <thead className="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wider">
+            <tr>
+              <th className="px-3 py-2 font-semibold">Document type</th>
+              <th className="px-3 py-2 font-semibold">Status</th>
+              <th className="px-3 py-2 font-semibold">Uploaded when</th>
+              <th className="px-3 py-2 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const busy = uploadingSlotId != null && uploadingSlotId === (row.slotId ?? row.id);
+              return (
+                <tr key={row.id} className="border-t">
+                  <td className="px-3 py-2.5 font-medium">{row.title}</td>
+                  <td className="px-3 py-2.5">
+                    {row.uploaded ? (
+                      <span className="text-primary text-xs font-semibold">Uploaded</span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">Not uploaded</span>
+                    )}
+                  </td>
+                  <td className="text-muted-foreground px-3 py-2.5 text-xs tabular-nums">
+                    {row.uploaded && row.uploadedAt ? formatDateTime(row.uploadedAt) : '—'}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {row.href && row.href !== '#' ? (
+                        <a
+                          href={row.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary text-xs font-semibold"
+                        >
+                          Open
+                        </a>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={busy || uploadingSlotId != null}
+                        onClick={() => onUploadForType(row.title, row.slotId)}
+                        className="text-primary text-xs font-semibold disabled:opacity-50"
+                      >
+                        {busy ? 'Uploading…' : row.uploaded ? 'Replace' : 'Upload'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </InfoPanel>
   );
 }
 
 export function PropertyDocumentsTab({
   property,
   propertyId,
-  inspections,
   fallbackDocuments = [],
 }: {
   property: Property;
   propertyId: string;
-  inspections: Inspection[];
   fallbackDocuments?: AgentDocument[];
 }) {
-  const { apiConnected } = useAgentData();
-  const { detail } = usePropertyPortalDetail(propertyId, apiConnected);
+  const { apiConnected, uploadDocument } = useAgentData();
+  const { detail, refresh } = usePropertyPortalDetail(propertyId, apiConnected);
   const portalDocuments = detail?.documents ?? [];
-  const usePortalLayout = apiConnected && portalDocuments.length > 0;
+
+  const [customGroup, setCustomGroup] = useState<CreatePropertyDocumentGroup>('tenancy');
+  const [customTitle, setCustomTitle] = useState('');
+  const [uploadingSlotId, setUploadingSlotId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingUploadRef = useRef<{ title: string; slotId: string } | null>(null);
+
+  const displayDocs = useMemo<DisplayDoc[]>(() => {
+    const byId = new Map<string, DisplayDoc>();
+
+    for (const doc of portalDocuments) {
+      byId.set(doc.id, {
+        id: doc.id,
+        title: doc.title,
+        uploadedAt: doc.uploadedAt,
+        href: doc.url,
+      });
+    }
+
+    for (const doc of fallbackDocuments) {
+      if (byId.has(doc.id)) continue;
+      byId.set(doc.id, {
+        id: doc.id,
+        title: doc.title,
+        uploadedAt: doc.uploadedAt,
+        href: doc.downloadUrl ?? doc.href,
+      });
+    }
+
+    return [...byId.values()];
+  }, [portalDocuments, fallbackDocuments]);
+
+  const checklist = useMemo(
+    () => buildDocumentChecklistByGroup(displayDocs),
+    [displayDocs],
+  );
+
+  const slotOptions = useMemo(
+    () => EXPECTED_PROPERTY_DOCUMENT_SLOTS.filter((s) => s.group === customGroup),
+    [customGroup],
+  );
+
+  const startUpload = (title: string, slotId?: string) => {
+    pendingUploadRef.current = {
+      title: title.trim(),
+      slotId: slotId ?? `custom-${Date.now()}`,
+    };
+    fileInputRef.current?.click();
+  };
+
+  const onUploadForType = (title: string, slotId?: string) => {
+    // For expected slots, always upload with the canonical slot label.
+    const slot = slotId
+      ? EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === slotId)
+      : undefined;
+    startUpload(slot?.label ?? title, slotId);
+  };
+
+  const onPickCustomFile = () => {
+    if (!customTitle.trim()) {
+      toast.error('Enter a document title before uploading');
+      return;
+    }
+    const title = ensureGroupDocumentTitle(customGroup, customTitle.trim());
+    startUpload(title, `custom-${customGroup}`);
+  };
+
+  const onFileSelected = async (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    const pending = pendingUploadRef.current;
+    if (!file || !pending) return;
+
+    setUploadingSlotId(pending.slotId);
+    try {
+      const propertyAddress = `${property.address}, ${property.suburb}`;
+      await uploadDocument(file, 'lease', propertyAddress, {
+        title: pending.title,
+        propertyId,
+      });
+      await refresh();
+      toast.success(`Uploaded ${file.name}`);
+      setCustomTitle('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploadingSlotId(null);
+      pendingUploadRef.current = null;
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {usePortalLayout ? (
-        <>
-          <p className="text-muted-foreground text-sm">
-            Inspection reports (ingoing, outgoing, routine, open) and other property documents.
-          </p>
-          <PortalDocumentsView
-            property={property}
-            inspections={inspections}
-            documents={portalDocuments}
-          />
-        </>
-      ) : (
-        <LegacyDocumentsView documents={fallbackDocuments} />
-      )}
+      <p className="text-muted-foreground text-sm">
+        All related document types for {property.address}. Uploaded files show the date and time;
+        missing types show as not uploaded.
+      </p>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv"
+        onChange={(e) => void onFileSelected(e.target.files)}
+      />
+
+      <InfoPanel title="Add other document" icon={Plus}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Group
+              </Label>
+              <select
+                value={customGroup}
+                onChange={(e) => {
+                  setCustomGroup(e.target.value as CreatePropertyDocumentGroup);
+                  setCustomTitle('');
+                }}
+                className={selectClass}
+                disabled={uploadingSlotId != null}
+              >
+                {CREATE_PROPERTY_DOCUMENT_GROUP_ORDER.map((g) => (
+                  <option key={g} value={g}>
+                    {CREATE_PROPERTY_DOCUMENT_GROUP_LABELS[g]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Document title
+              </Label>
+              <Input
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                list={`doc-titles-${customGroup}`}
+                placeholder="Type or pick a document type"
+                disabled={uploadingSlotId != null}
+              />
+              <datalist id={`doc-titles-${customGroup}`}>
+                {slotOptions.map((s) => (
+                  <option key={s.id} value={s.label} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className={cn('gap-1.5')}
+            disabled={uploadingSlotId != null}
+            onClick={onPickCustomFile}
+          >
+            {uploadingSlotId?.startsWith('custom-') ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Upload className="size-3.5" />
+            )}
+            {uploadingSlotId?.startsWith('custom-') ? 'Uploading…' : 'Upload document'}
+          </Button>
+        </div>
+      </InfoPanel>
+
+      {CREATE_PROPERTY_DOCUMENT_GROUP_ORDER.map((g) => (
+        <DocumentTable
+          key={g}
+          group={g}
+          rows={checklist[g]}
+          onUploadForType={onUploadForType}
+          uploadingSlotId={uploadingSlotId}
+        />
+      ))}
     </div>
   );
 }

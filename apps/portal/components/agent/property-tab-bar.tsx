@@ -5,6 +5,7 @@ import {
   Building2,
   ClipboardList,
   FileText,
+  RefreshCw,
   Wallet,
   Wrench,
 } from 'lucide-react';
@@ -13,11 +14,12 @@ import { cn } from '@/lib/utils';
 
 const TAB_ICONS: Record<string, LucideIcon> = {
   Overview: Building2,
+  Documents: FileText,
+  'Rent Review': RefreshCw,
   Leasing: FileText,
   Maintenance: Wrench,
   Inspection: ClipboardList,
   Accounting: Wallet,
-  Documents: FileText,
 };
 
 export function PropertyTabBar<T extends string>({

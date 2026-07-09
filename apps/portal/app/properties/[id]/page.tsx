@@ -21,13 +21,12 @@ import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyAccountingTab } from '@/components/agent/property-accounting-tab';
 import { PropertyDocumentsTab } from '@/components/agent/property-documents-tab';
+import { PropertyRentReviewTab } from '@/components/agent/property-rent-review-tab';
 import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import {
-  ROUTES,
-} from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import {
   filterTenancyRentReviews,
@@ -54,7 +53,7 @@ import {
 type Tab = PropertyDetailTab;
 
 function normalizeTab(raw: string | null, allowedTabs: readonly Tab[]): Tab {
-  if (raw === 'Rent Review' || raw === 'Tenancy' || raw === 'Communication') {
+  if (raw === 'Tenancy' || raw === 'Communication') {
     if (allowedTabs.includes('Leasing')) return 'Leasing';
     return allowedTabs[0] ?? 'Overview';
   }
@@ -145,7 +144,6 @@ export default function PropertyDetailPage() {
   const acct = accounting.find((a) => a.propertyId === id);
   const propertyLeasingCases = tenantSelections.filter((t) => t.propertyId === id);
   const propertyVacatingCases = vacating.filter((v) => v.propertyId === id);
-  const historyLeasing = leasing.filter((l) => l.status !== 'current');
   const currentTenancy = leasing.filter((l) => l.status === 'current');
   const currentLease = currentTenancy[0];
   const isVacant = isPropertyVacant(property, currentTenancy);
@@ -269,6 +267,23 @@ export default function PropertyDetailPage() {
           </div>
         )}
 
+        {tab === 'Documents' && (
+          <PropertyDocumentsTab
+            property={property}
+            propertyId={id}
+            fallbackDocuments={propertyDocs}
+          />
+        )}
+
+        {tab === 'Rent Review' && (
+          <PropertyRentReviewTab
+            propertyId={id}
+            rentReviews={tenancyRentReviews}
+            rentReviewDecisions={decisions}
+            onViewRentReview={setSelectedRentReviewId}
+          />
+        )}
+
         {tab === 'Leasing' && (
           <PropertyLeasingJobPanel
             property={property}
@@ -336,15 +351,6 @@ export default function PropertyDetailPage() {
             arrearsSectionRef={arrearsSectionRef}
           />
         )}
-
-        {tab === 'Documents' && (
-          <PropertyDocumentsTab
-            property={property}
-            propertyId={id}
-            inspections={tasks.inspections}
-            fallbackDocuments={propertyDocs}
-          />
-        )}
       </div>
 
       <InspectionDetailDialog
@@ -357,7 +363,7 @@ export default function PropertyDetailPage() {
         open={selectedRentReviewId !== null}
         onClose={() => setSelectedRentReviewId(null)}
         review={selectedRentReview}
-        navContext={fromProperty(id, 'Leasing')}
+        navContext={fromProperty(id, 'Rent Review')}
       />
       <PropertyChatDialog
         open={leasingChatOpen}

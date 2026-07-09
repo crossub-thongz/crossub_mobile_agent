@@ -96,6 +96,15 @@ function FormField({
 
 export type FurnishedChoice = '' | 'yes' | 'no';
 
+/** Files staged during create-property; uploaded to the API after the property exists. */
+export interface PendingPropertyDocument {
+  id: string;
+  file: File;
+  title: string;
+  slotId: string;
+  source: 'leasing' | 'management';
+}
+
 export interface NewPropertyRegistryValues {
   agencyName: string;
   agencyCompany: string;
@@ -116,6 +125,7 @@ export interface NewPropertyRegistryValues {
   strata: StrataDetailsValues;
   management: ManagementDetailsValues;
   leasing: LeasingDetailsValues;
+  pendingDocuments: PendingPropertyDocument[];
 }
 
 function mapLeaseStatusToPropertyStatusForApi(
@@ -236,7 +246,7 @@ export function NewPropertyRegistryForm({
   onSubmit: (values: NewPropertyRegistryValues) => void | Promise<void>;
   submitting: boolean;
 }) {
-  const { primaryAgency, loading, apiConnected, uploadDocument } = useAgentData();
+  const { primaryAgency, loading, apiConnected } = useAgentData();
   const agencyLocked = !!primaryAgency || apiConnected;
   const [step, setStep] = useState<WizardStep>('property');
   const [addressFieldsLocked, setAddressFieldsLocked] = useState(true);
@@ -258,6 +268,7 @@ export function NewPropertyRegistryForm({
     strata: { ...EMPTY_STRATA_DETAILS },
     management: { ...EMPTY_MANAGEMENT_DETAILS },
     leasing: { ...EMPTY_LEASING },
+    pendingDocuments: [],
   });
 
   const set = <K extends keyof NewPropertyRegistryValues>(key: K, value: NewPropertyRegistryValues[K]) =>
@@ -275,50 +286,62 @@ export function NewPropertyRegistryForm({
     }));
   }, [primaryAgency]);
 
+  const stageDocument = useCallback(
+    (file: File, slotId: string, source: 'leasing' | 'management', title?: string) => {
+      const displayTitle = title?.trim() || file.name;
+      const pendingId = `${source}-${slotId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setForm((f) => {
+        const nextPending: PendingPropertyDocument[] = [
+          ...f.pendingDocuments,
+          { id: pendingId, file, title: displayTitle, slotId, source },
+        ];
+        if (source === 'leasing') {
+          return {
+            ...f,
+            pendingDocuments: nextPending,
+            leasing: {
+              ...f.leasing,
+              uploads: {
+                ...f.leasing.uploads,
+                [slotId]: [
+                  ...(f.leasing.uploads[slotId] ?? []),
+                  { fileName: file.name, uploadedAt: new Date().toISOString() },
+                ],
+              },
+            },
+          };
+        }
+        return {
+          ...f,
+          pendingDocuments: nextPending,
+          management: {
+            ...f.management,
+            uploads: {
+              ...f.management.uploads,
+              [slotId]: [
+                ...(f.management.uploads[slotId] ?? []),
+                { fileName: file.name, uploadedAt: new Date().toISOString() },
+              ],
+            },
+          },
+        };
+      });
+    },
+    [],
+  );
+
   const handleLeasingUpload = useCallback(
     async (file: File, slotId: string, title?: string) => {
-      const address = form.address.trim()
-        ? `${form.address.trim()}, ${form.suburb.trim()}`
-        : 'Portfolio';
-      uploadDocument(file, 'lease', address, title ? { title } : undefined);
-      setForm((f) => ({
-        ...f,
-        leasing: {
-          ...f.leasing,
-          uploads: {
-            ...f.leasing.uploads,
-            [slotId]: [
-              ...(f.leasing.uploads[slotId] ?? []),
-              { fileName: file.name, uploadedAt: new Date().toISOString() },
-            ],
-          },
-        },
-      }));
+      stageDocument(file, slotId, 'leasing', title);
     },
-    [form.address, form.suburb, uploadDocument],
+    [stageDocument],
   );
 
   const handleManagementUpload = useCallback(
     async (file: File, slotId: string, title?: string) => {
-      const address = form.address.trim()
-        ? `${form.address.trim()}, ${form.suburb.trim()}`
-        : 'Portfolio';
-      uploadDocument(file, 'lease', address, title ? { title } : undefined);
-      setForm((f) => ({
-        ...f,
-        management: {
-          ...f.management,
-          uploads: {
-            ...f.management.uploads,
-            [slotId]: [
-              ...(f.management.uploads[slotId] ?? []),
-              { fileName: file.name, uploadedAt: new Date().toISOString() },
-            ],
-          },
-        },
-      }));
+      stageDocument(file, slotId, 'management', title);
     },
-    [form.address, form.suburb, uploadDocument],
+    [stageDocument],
   );
 
   if (apiConnected && loading && !primaryAgency) {
@@ -335,7 +358,7 @@ export function NewPropertyRegistryForm({
     );
   }
 
-  const handlePlaceSelect = (parsed: ParsedAustralianAddress) => {
+  const handlePlaceSelect = useCallback((parsed: ParsedAustralianAddress) => {
     setForm((f) => ({
       ...f,
       address: parsed.address || f.address,
@@ -345,7 +368,7 @@ export function NewPropertyRegistryForm({
       latitude: parsed.lat,
       longitude: parsed.lng,
     }));
-  };
+  }, []);
 
   const patchLeasing = (patch: Partial<LeasingDetailsValues>) => {
     setForm((f) => ({ ...f, leasing: { ...f.leasing, ...patch } }));

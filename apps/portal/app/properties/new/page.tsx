@@ -21,7 +21,7 @@ import type { Property } from '@/lib/types';
 
 export default function AddPropertyPage() {
   const router = useRouter();
-  const { addProperty, primaryAgency, apiConnected } = useAgentData();
+  const { addProperty, primaryAgency, apiConnected, uploadDocument } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmitNewProperty = async (values: NewPropertyRegistryValues) => {
@@ -48,7 +48,7 @@ export default function AddPropertyPage() {
     try {
       const landlords = splitParties(values.landlords);
       const tenants = splitParties(values.tenants);
-      const { leasing, strata, management } = values;
+      const { leasing, strata, management, pendingDocuments } = values;
       const weeklyRent = weeklyRentFromAmount(Number(leasing.rentAmount), leasing.rentPeriod);
       const property = await addProperty({
         intakeMode: 'new',
@@ -100,8 +100,29 @@ export default function AddPropertyPage() {
             ? management.managementRateGst
             : undefined,
       });
-      toast.success('Property added — available across leasing, maintenance, and more');
-      router.push(propertyDetail(property.id));
+
+      const propertyAddress = `${property.address}, ${property.suburb}`;
+      if (pendingDocuments.length > 0) {
+        const results = await Promise.allSettled(
+          pendingDocuments.map((doc) =>
+            uploadDocument(doc.file, 'lease', propertyAddress, {
+              title: doc.title,
+              propertyId: property.id,
+            }),
+          ),
+        );
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          toast.warning(
+            `Property added, but ${failed} document${failed === 1 ? '' : 's'} failed to upload`,
+          );
+        } else {
+          toast.success('Property added — documents uploaded');
+        }
+      } else {
+        toast.success('Property added — available across leasing, maintenance, and more');
+      }
+      router.push(`${propertyDetail(property.id)}?tab=${encodeURIComponent('Documents')}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not add the property');
     } finally {

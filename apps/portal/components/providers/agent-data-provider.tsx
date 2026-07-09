@@ -196,8 +196,8 @@ interface AgentDataContextValue {
     file: File,
     category: AgentDocument['category'],
     propertyAddress: string,
-    options?: { title?: string },
-  ) => void;
+    options?: { title?: string; propertyId?: string },
+  ) => Promise<void>;
   sendMessage: (
     threadId: string,
     body: string,
@@ -809,39 +809,42 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const uploadDocument = useCallback(
-    (
+    async (
       file: File,
       category: AgentDocument['category'],
       propertyAddress: string,
-      options?: { title?: string },
+      options?: { title?: string; propertyId?: string },
     ) => {
       const displayTitle = options?.title?.trim() || file.name;
       // Connected: read the File as base64 and persist it (→ R2 + PortalDocument), then
-      // refresh() surfaces it. Resolve the chosen address back to a managed property id;
-      // an unmatched address (e.g. 'Portfolio') uploads as a portfolio-level document.
+      // refresh() surfaces it. Prefer an explicit propertyId (create-property / Documents tab);
+      // otherwise resolve from the address string.
       if (apiConnected) {
-        const prop = properties.find(
-          (p) =>
-            `${p.address}, ${p.suburb}` === propertyAddress ||
-            (p.address.length > 0 && propertyAddress.includes(p.address)),
-        );
-        void (async () => {
-          try {
-            const contentBase64 = await fileToBase64(file);
-            await apiUploadDocument({
-              fileName: file.name,
-              mimeType: file.type || 'application/octet-stream',
-              sizeBytes: file.size,
-              contentBase64,
-              category,
-              propertyId: prop?.id,
-              title: displayTitle,
-            } as Parameters<typeof apiUploadDocument>[0]);
-            await refresh();
-          } catch {
-            // Swallow — the screen already toasts; the doc simply won't appear.
-          }
-        })();
+        const prop =
+          (options?.propertyId
+            ? properties.find((p) => p.id === options.propertyId)
+            : undefined) ??
+          properties.find(
+            (p) =>
+              `${p.address}, ${p.suburb}` === propertyAddress ||
+              (p.address.length > 0 && propertyAddress.includes(p.address)),
+          );
+        const propertyId = options?.propertyId ?? prop?.id;
+        try {
+          const contentBase64 = await fileToBase64(file);
+          await apiUploadDocument({
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            sizeBytes: file.size,
+            contentBase64,
+            category,
+            propertyId,
+            title: displayTitle,
+          } as Parameters<typeof apiUploadDocument>[0]);
+          await refresh();
+        } catch (err) {
+          throw err instanceof Error ? err : new Error('Failed to upload document');
+        }
         return;
       }
       // Offline: keep a blob URL so View/Download work on this device.

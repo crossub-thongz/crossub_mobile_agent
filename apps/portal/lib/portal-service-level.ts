@@ -93,16 +93,21 @@ export const INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS: BuiltinQuickActionId[] = [
 
 export const PROPERTY_DETAIL_TABS = [
   'Overview',
+  'Documents',
+  'Rent Review',
   'Leasing',
   'Maintenance',
   'Inspection',
   'Accounting',
-  'Documents',
 ] as const;
 
 export type PropertyDetailTab = (typeof PROPERTY_DETAIL_TABS)[number];
 
-const INSPECTION_ONLY_PROPERTY_TABS: PropertyDetailTab[] = ['Overview', 'Inspection'];
+const INSPECTION_ONLY_PROPERTY_TABS: PropertyDetailTab[] = [
+  'Overview',
+  'Documents',
+  'Inspection',
+];
 
 const FULL_MANAGEMENT_PROPERTY_TABS: PropertyDetailTab[] = [...PROPERTY_DETAIL_TABS];
 

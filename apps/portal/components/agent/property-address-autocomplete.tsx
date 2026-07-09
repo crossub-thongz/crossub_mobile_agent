@@ -49,9 +49,12 @@ export function PropertyAddressAutocomplete({
 }: PropertyAddressAutocompleteProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  /** PlacesService requires a map or HTMLDivElement for attributions — not an <input>. */
+  const placesAttributionRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const onPlaceSelectRef = useRef(onPlaceSelect);
 
   const [mapsReady, setMapsReady] = useState(false);
   const [mapsFailed, setMapsFailed] = useState(false);
@@ -64,19 +67,20 @@ export function PropertyAddressAutocomplete({
     latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null;
 
   useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect;
+  }, [onPlaceSelect]);
+
+  useEffect(() => {
     onMapsStatusChange?.({ ready: mapsReady, failed: mapsFailed, enabled: mapsEnabled });
   }, [mapsReady, mapsFailed, mapsEnabled, onMapsStatusChange]);
 
-  const handlePlaceSelect = useCallback(
-    (parsed: ParsedAustralianAddress) => {
-      onChange(parsed.address);
-      onPlaceSelect(parsed);
-      if (searchInputRef.current) {
-        searchInputRef.current.value = '';
-      }
-    },
-    [onChange, onPlaceSelect],
-  );
+  const applyParsedPlace = useCallback((parsed: ParsedAustralianAddress) => {
+    // Single parent update — avoid a separate onChange that clears lat/lng first.
+    onPlaceSelectRef.current(parsed);
+    if (searchInputRef.current) {
+      searchInputRef.current.value = '';
+    }
+  }, []);
 
   useEffect(() => {
     if (!mapsEnabled || !searchInputRef.current) return;
@@ -85,19 +89,45 @@ export function PropertyAddressAutocomplete({
 
     void loadGoogleMaps()
       .then(() => {
-        if (cancelled || !searchInputRef.current) return;
+        if (cancelled || !searchInputRef.current || autocompleteRef.current) return;
 
         const autocomplete = new google.maps.places.Autocomplete(searchInputRef.current, {
           componentRestrictions: { country: 'au' },
-          fields: ['address_components', 'geometry', 'formatted_address', 'name'],
+          fields: ['address_components', 'geometry', 'formatted_address', 'name', 'place_id'],
           types: ['address'],
         });
 
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
+          const placeId = place.place_id;
+          const attributionEl = placesAttributionRef.current;
+
+          // Prefer getDetails — first pac selection often returns place_id only
+          // (no address_components), so parsePlaceResult(getPlace()) fails until reselect.
+          if (placeId && attributionEl) {
+            const service = new google.maps.places.PlacesService(attributionEl);
+            service.getDetails(
+              {
+                placeId,
+                fields: ['address_components', 'geometry', 'formatted_address', 'name'],
+              },
+              (detail, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
+                  const fromDetails = parsePlaceResult(detail);
+                  if (fromDetails) {
+                    applyParsedPlace(fromDetails);
+                    return;
+                  }
+                }
+                const fallback = parsePlaceResult(place);
+                if (fallback) applyParsedPlace(fallback);
+              },
+            );
+            return;
+          }
+
           const parsed = parsePlaceResult(place);
-          if (!parsed) return;
-          handlePlaceSelect(parsed);
+          if (parsed) applyParsedPlace(parsed);
         });
 
         autocompleteRef.current = autocomplete;
@@ -114,7 +144,7 @@ export function PropertyAddressAutocomplete({
         autocompleteRef.current = null;
       }
     };
-  }, [mapsEnabled, handlePlaceSelect]);
+  }, [mapsEnabled, applyParsedPlace]);
 
   useEffect(() => {
     if (!mapsEnabled || !mapsReady || !mapContainerRef.current) return;
@@ -196,6 +226,7 @@ export function PropertyAddressAutocomplete({
 
   return (
     <div className="space-y-3">
+      <div ref={placesAttributionRef} className="hidden" aria-hidden />
       {mapsEnabled ? (
         <div className="space-y-1.5">
           <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
