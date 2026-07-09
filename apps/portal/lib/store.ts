@@ -22,7 +22,7 @@ export interface NotificationPrefs {
 
 export type PropertyIntakeMode = 'new' | 'transfer_in';
 
-export type RentPeriod = 'weekly' | 'monthly';
+export type RentPeriod = 'weekly' | 'fortnightly' | 'monthly';
 
 export interface NewPropertyInput {
   intakeMode: PropertyIntakeMode;
@@ -49,18 +49,34 @@ export interface NewPropertyInput {
   bedrooms?: number;
   bathrooms?: number;
   carSpaces?: number;
+  furnished?: boolean;
   bondAmount?: number;
+  depositAmount?: number;
+  nextRentReview?: string;
   propertyType?: string;
   propertyStatus?: string;
   latitude?: number;
   longitude?: number;
   managementRatePercent?: number;
+  managementRateGst?: 'include' | 'exclude';
   insuranceProvider?: string;
+  landlordInsuranceExpiry?: string;
+  administrationFee?: number;
+  documentationFee?: number;
+  lettingFee?: number;
   handoverDate?: string;
   previousAgentName?: string;
   previousAgentEmail?: string;
   pmsSource?: string;
   uploadedDocumentIds?: string[];
+  buildingName?: string;
+  strataPlanNumber?: string;
+  buildingManagerName?: string;
+  buildingManagerEmail?: string;
+  buildingManagerPhone?: string;
+  strataContactName?: string;
+  strataContactEmail?: string;
+  strataContactPhone?: string;
 }
 
 export interface NewOpenInspectionInput {
@@ -186,16 +202,26 @@ export const useAgentStore = create<AgentStore>()(
           leaseStart: input.leaseStart,
           leaseEnd: input.leaseEnd,
           bondAmount: input.bondAmount,
+          depositAmount: input.depositAmount,
+          nextRentReview: input.nextRentReview,
           bedrooms: input.bedrooms,
           bathrooms: input.bathrooms,
           carSpaces: input.carSpaces,
+          furnished: input.furnished,
           propertyType: input.propertyType,
           managementRatePercent: input.managementRatePercent,
+          managementRateGst: input.managementRateGst,
+          landlordInsuranceExpiry: input.landlordInsuranceExpiry,
+          administrationFee: input.administrationFee,
+          documentationFee: input.documentationFee,
+          lettingFee: input.lettingFee,
           insuranceProvider: input.insuranceProvider,
           handoverDate: input.handoverDate,
           previousAgentName: input.previousAgentName,
           previousAgentEmail: input.previousAgentEmail,
           pmsSource: input.pmsSource,
+          buildingName: input.buildingName,
+          strataPlanNumber: input.strataPlanNumber,
           openTasks: 0,
           inspectionStatus: 'Not scheduled',
           maintenanceStatus: 'None',

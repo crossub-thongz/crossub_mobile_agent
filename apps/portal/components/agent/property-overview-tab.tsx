@@ -3,9 +3,6 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
-  Bath,
-  BedDouble,
-  Car,
   History,
   ListTodo,
   Plus,
@@ -24,7 +21,6 @@ import { isPropertyVacant } from '@/lib/property-leasing';
 import {
   findIngoingInspection,
   findRoutineInspection,
-  formatCarSpaces,
   resolveBondReference,
   resolveCurrentRent,
   resolveIngoingReportLink,
@@ -241,10 +237,6 @@ export function PropertyOverviewTab({
     currentRent: displayRent,
   });
 
-  const bedrooms = sync.record?.bedrooms ?? property.bedrooms;
-  const bathrooms = sync.record?.bathrooms ?? property.bathrooms;
-  const carSpaces = sync.record?.parking ?? property.carSpaces;
-
   const ingoingInspection = findIngoingInspection(inspections, propertyId, currentLease);
   const routineInspection = findRoutineInspection(inspections, propertyId);
   const ingoingReport = resolveIngoingReportLink(ingoingInspection, propertyDocs);
@@ -354,25 +346,15 @@ export function PropertyOverviewTab({
       ) : null}
 
       <section className="rounded-xl border bg-card p-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span className="inline-flex items-center gap-1 text-sm">
-            <BedDouble className="text-primary size-3.5" />
-            <span className="font-semibold tabular-nums">{bedrooms ?? '—'}</span>
-          </span>
-          <span className="inline-flex items-center gap-1 text-sm">
-            <Bath className="text-primary size-3.5" />
-            <span className="font-semibold tabular-nums">{bathrooms ?? '—'}</span>
-          </span>
-          <span className="inline-flex items-center gap-1 text-sm">
-            <Car className="text-primary size-3.5" />
-            <span className="font-semibold tabular-nums">{formatCarSpaces(carSpaces)}</span>
-          </span>
-          <span className="text-muted-foreground ml-auto text-[10px] capitalize">
-            {property.leaseStatus}
-          </span>
+        <div className="flex items-center justify-end">
+          <span className="text-muted-foreground text-[10px] capitalize">{property.leaseStatus}</span>
         </div>
 
         <div className="mt-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          <StatCell
+            label="Furnished"
+            value={property.furnished ? 'Yes' : 'No'}
+          />
           <StatCell
             label="Current rent"
             value={displayRent > 0 ? `${formatCurrency(displayRent)}/wk` : '—'}

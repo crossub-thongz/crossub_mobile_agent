@@ -711,6 +711,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           bedrooms: input.bedrooms,
           bathrooms: input.bathrooms,
           parking: input.carSpaces,
+          furnished: input.furnished,
           landlordName:
             input.homeOwnerName.trim() && input.homeOwnerName !== 'TBC'
               ? input.homeOwnerName.trim()
@@ -722,9 +723,35 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           tenantPhone: input.tenantPhone,
           latitude: input.latitude,
           longitude: input.longitude,
+          leaseStartDate: input.leaseStart,
+          buildingName: input.buildingName,
+          strataPlanNumber: input.strataPlanNumber,
+          buildingManagerName: input.buildingManagerName,
+          buildingManagerEmail: input.buildingManagerEmail,
+          buildingManagerPhone: input.buildingManagerPhone,
+          strataContactName: input.strataContactName,
+          strataContactEmail: input.strataContactEmail,
+          strataContactPhone: input.strataContactPhone,
+          landlordInsuranceExpiry: input.landlordInsuranceExpiry,
+          administrationFee: input.administrationFee,
+          documentationFee: input.documentationFee,
+          lettingFee: input.lettingFee,
+          managementRatePercent: input.managementRatePercent,
+          managementRateGst: input.managementRateGst,
         });
         await refresh();
-        return mapAgentProperty(created, agentPortfolioId);
+        const mapped = mapAgentProperty(created, agentPortfolioId);
+        return {
+          ...mapped,
+          leaseStatus: input.leaseStatus,
+          leaseStart: input.leaseStart ?? mapped.leaseStart,
+          leaseEnd: input.leaseEnd ?? mapped.leaseEnd,
+          furnished: input.furnished ?? mapped.furnished,
+          rentWeekly: input.rentWeekly || mapped.rentWeekly,
+          bondAmount: input.bondAmount ?? mapped.bondAmount,
+          depositAmount: input.depositAmount ?? mapped.depositAmount,
+          nextRentReview: input.nextRentReview ?? mapped.nextRentReview,
+        };
       }
       return storeAddProperty(input, agentPortfolioId);
     },

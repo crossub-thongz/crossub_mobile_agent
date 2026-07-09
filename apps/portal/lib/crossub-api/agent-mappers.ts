@@ -65,6 +65,11 @@ import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
 type AgentPortfolioId = 'agent-1' | 'agent-2';
 
+function readFurnished(dto: AgentProperty): boolean | undefined {
+  const value = (dto as AgentProperty & { furnished?: boolean | null }).furnished;
+  return typeof value === 'boolean' ? value : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Properties
 // ---------------------------------------------------------------------------
@@ -96,6 +101,7 @@ export function mapAgentProperty(
     bedrooms: dto.bedrooms ?? undefined,
     bathrooms: dto.bathrooms ?? undefined,
     carSpaces: dto.parking != null ? dto.parking : undefined,
+    furnished: readFurnished(dto),
     leaseStart: dto.leaseStart ?? undefined,
     leaseEnd: dto.leaseEnd ?? undefined,
     openTasks: 0,

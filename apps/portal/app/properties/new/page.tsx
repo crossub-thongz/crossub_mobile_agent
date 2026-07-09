@@ -9,11 +9,14 @@ import {
   type ChecklistUploadState,
 } from '@/components/agent/document-checklist-upload';
 import {
-  mapStatusToLeaseStatus,
+  mapLeaseStatusToPropertyStatusForApi,
   NewPropertyRegistryForm,
   parseCount,
+  parseMoney,
+  parsePercent,
   type NewPropertyRegistryValues,
 } from '@/components/agent/new-property-registry-form';
+import { bondFromWeekly, depositFromWeekly, weeklyRentFromAmount } from '@/lib/rent-calculations';
 import { ContactPartyList } from '@/components/agent/contact-party-list';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
@@ -31,32 +34,18 @@ import type { PropertyImportResult } from '@/lib/property-import';
 import { pmsSourceLabel } from '@/lib/property-import';
 import { PropertyImportPanel } from '@/components/agent/property-import-panel';
 import { emptyPartyContact, splitParties } from '@/lib/property-parties';
+import { LEASE_STATUS_FORM_OPTIONS } from '@/lib/lease-status-options';
 import type { AgentDocument, Property } from '@/lib/types';
 import type { PropertyIntakeMode, RentPeriod } from '@/lib/store';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
 
-const LEASE_STATUS_OPTIONS: { value: Property['leaseStatus']; label: string }[] = [
-  { value: 'active', label: 'Fixed term' },
-  { value: 'periodic', label: 'Periodic' },
-  { value: 'vacating', label: 'Vacating' },
-  { value: 'vacant', label: 'Vacant' },
-];
-
-function weeklyRentFromAmount(amount: number, period: RentPeriod): number {
-  if (!amount || amount <= 0) return 0;
-  return period === 'weekly' ? amount : (amount * 12) / 52;
-}
+const LEASE_STATUS_OPTIONS = LEASE_STATUS_FORM_OPTIONS;
 
 function dailyRentFromWeekly(weekly: number): number {
   if (!weekly || weekly <= 0) return 0;
   return Math.round((weekly / 7) * 100) / 100;
-}
-
-function bondFromWeekly(weekly: number): number {
-  if (!weekly || weekly <= 0) return 0;
-  return Math.round(weekly * 4);
 }
 
 export default function AddPropertyPage() {
@@ -255,6 +244,8 @@ export default function AddPropertyPage() {
     try {
       const landlords = splitParties(values.landlords);
       const tenants = splitParties(values.tenants);
+      const { leasing, strata, management } = values;
+      const weeklyRent = weeklyRentFromAmount(Number(leasing.rentAmount), leasing.rentPeriod);
       const property = await addProperty({
         intakeMode: 'new',
         agencyName: values.agencyName.trim(),
@@ -263,7 +254,7 @@ export default function AddPropertyPage() {
         suburb: values.suburb.trim(),
         state: values.state,
         postcode: values.postcode.trim() || undefined,
-        homeOwnerName: landlords.primary ? landlords.label : 'TBC',
+        homeOwnerName: landlords.primary!.name,
         homeOwnerEmail: landlords.primary?.email,
         homeOwnerPhone: landlords.primary?.phone,
         additionalLandlords: landlords.additional.length ? landlords.additional : undefined,
@@ -271,15 +262,41 @@ export default function AddPropertyPage() {
         tenantEmail: tenants.primary?.email,
         tenantPhone: tenants.primary?.phone,
         additionalTenants: tenants.additional.length ? tenants.additional : undefined,
-        leaseStatus: mapStatusToLeaseStatus(values.status),
-        rentWeekly: 0,
+        leaseStatus: values.leaseStatus as Property['leaseStatus'],
+        rentWeekly: weeklyRent,
+        rentPeriod: leasing.rentPeriod || undefined,
+        leaseStart: leasing.agreementStart || undefined,
+        leaseEnd: leasing.agreementEnd || undefined,
+        nextRentReview: leasing.nextRentReview || undefined,
+        bondAmount: bondFromWeekly(weeklyRent) || undefined,
+        depositAmount: depositFromWeekly(weeklyRent) || undefined,
         bedrooms: parseCount(values.bedrooms),
         bathrooms: parseCount(values.bathrooms),
         carSpaces: parseCount(values.parking),
+        furnished: values.furnished === 'yes',
         propertyType: values.propertyType,
-        propertyStatus: values.status,
+        propertyStatus: mapLeaseStatusToPropertyStatusForApi(
+          values.leaseStatus as Property['leaseStatus'],
+        ),
         latitude: values.latitude,
         longitude: values.longitude,
+        buildingName: strata.buildingName.trim() || undefined,
+        strataPlanNumber: strata.strataPlanNumber.trim() || undefined,
+        buildingManagerName: strata.buildingManagerName.trim() || undefined,
+        buildingManagerEmail: strata.buildingManagerEmail.trim() || undefined,
+        buildingManagerPhone: strata.buildingManagerContactNumber.trim() || undefined,
+        strataContactName: strata.strataName.trim() || undefined,
+        strataContactEmail: strata.strataEmail.trim() || undefined,
+        strataContactPhone: strata.strataContactNumber.trim() || undefined,
+        landlordInsuranceExpiry: management.landlordInsuranceExpiry || undefined,
+        administrationFee: parseMoney(management.administrationFee),
+        documentationFee: parseMoney(management.documentationFee),
+        lettingFee: parseMoney(management.lettingFee),
+        managementRatePercent: parsePercent(management.managementRatePercent),
+        managementRateGst:
+          management.managementRateGst === 'include' || management.managementRateGst === 'exclude'
+            ? management.managementRateGst
+            : undefined,
       });
       toast.success('Property added — available across leasing, maintenance, and more');
       router.push(propertyDetail(property.id));
@@ -406,8 +423,8 @@ export default function AddPropertyPage() {
               }
               className={selectClass}
             >
-              {LEASE_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
+              {LEASE_STATUS_OPTIONS.map((option, index) => (
+                <option key={`${option.value}-${option.label}-${index}`} value={option.value}>
                   {option.label}
                 </option>
               ))}
@@ -457,6 +474,7 @@ export default function AddPropertyPage() {
                 className={`${selectClass} min-w-[7.5rem]`}
               >
                 <option value="weekly">Weekly</option>
+                <option value="fortnightly">Fortnightly</option>
                 <option value="monthly">Monthly</option>
               </select>
             </div>

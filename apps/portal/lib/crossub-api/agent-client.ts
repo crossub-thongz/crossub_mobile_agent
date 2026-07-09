@@ -74,6 +74,7 @@ export type CreateAgentPropertyInput = {
   bedrooms?: number;
   bathrooms?: number;
   parking?: number;
+  furnished?: boolean;
   landlordName?: string;
   landlordEmail?: string;
   landlordPhone?: string;
@@ -82,6 +83,21 @@ export type CreateAgentPropertyInput = {
   tenantPhone?: string;
   latitude?: number;
   longitude?: number;
+  leaseStartDate?: string;
+  buildingName?: string;
+  strataPlanNumber?: string;
+  buildingManagerName?: string;
+  buildingManagerEmail?: string;
+  buildingManagerPhone?: string;
+  strataContactName?: string;
+  strataContactEmail?: string;
+  strataContactPhone?: string;
+  landlordInsuranceExpiry?: string;
+  administrationFee?: number;
+  documentationFee?: number;
+  lettingFee?: number;
+  managementRatePercent?: number;
+  managementRateGst?: 'include' | 'exclude';
 };
 
 export async function createProperty(

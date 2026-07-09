@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { notFound, useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Bath,
+  BedDouble,
+  Car,
   History,
   ListTodo,
 } from 'lucide-react';
@@ -41,6 +44,7 @@ import {
 } from '@/lib/property-leasing-navigation';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency } from '@/lib/utils';
+import { formatCarSpaces } from '@/lib/property-overview';
 import {
   PROPERTY_DETAIL_TABS,
   propertyDetailTabsForAgency,
@@ -169,6 +173,9 @@ export default function PropertyDetailPage() {
       ? tenancyRentReviews.find((r) => r.id === selectedRentReviewId) ?? null
       : null;
 
+  const showAmenityIcons =
+    property.bedrooms != null || property.bathrooms != null || property.carSpaces != null;
+
   return (
     <AgentShell title={property.address} backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <div className="space-y-4 pb-8">
@@ -177,6 +184,30 @@ export default function PropertyDetailPage() {
             <div className="min-w-0">
               <p className="text-muted-foreground text-xs">{property.suburb}</p>
               <p className="mt-0.5 text-lg font-semibold leading-tight">{property.address}</p>
+              {showAmenityIcons ? (
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  {property.bedrooms != null ? (
+                    <span className="inline-flex items-center gap-1 text-sm">
+                      <BedDouble className="text-primary size-3.5" aria-hidden />
+                      <span className="font-semibold tabular-nums">{property.bedrooms}</span>
+                    </span>
+                  ) : null}
+                  {property.bathrooms != null ? (
+                    <span className="inline-flex items-center gap-1 text-sm">
+                      <Bath className="text-primary size-3.5" aria-hidden />
+                      <span className="font-semibold tabular-nums">{property.bathrooms}</span>
+                    </span>
+                  ) : null}
+                  {property.carSpaces != null ? (
+                    <span className="inline-flex items-center gap-1 text-sm">
+                      <Car className="text-primary size-3.5" aria-hidden />
+                      <span className="font-semibold tabular-nums">
+                        {formatCarSpaces(property.carSpaces)}
+                      </span>
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               {property.rentWeekly > 0 && (
                 <p className="text-primary mt-1 text-sm font-semibold tabular-nums">
                   {formatCurrency(property.rentWeekly)}

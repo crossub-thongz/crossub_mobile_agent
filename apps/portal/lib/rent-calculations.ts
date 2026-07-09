@@ -1,0 +1,31 @@
+import {
+  LEASING_CYCLE_BOND_RENT_MULTIPLIER,
+  LEASING_CYCLE_DEPOSIT_RENT_MULTIPLIER,
+} from '@/lib/property-form-prefill';
+import type { RentPeriod } from '@/lib/store';
+
+export type RentPeriodChoice = RentPeriod | '';
+
+/** Convert entered rent to a weekly amount for storage and bond/deposit math. */
+export function weeklyRentFromAmount(amount: number, period: RentPeriodChoice): number {
+  if (!amount || amount <= 0 || !period) return 0;
+  if (period === 'weekly') return amount;
+  if (period === 'fortnightly') return amount / 2;
+  return (amount * 12) / 52;
+}
+
+export function bondFromWeekly(weekly: number): number {
+  if (!weekly || weekly <= 0) return 0;
+  return Math.round(weekly * LEASING_CYCLE_BOND_RENT_MULTIPLIER);
+}
+
+export function depositFromWeekly(weekly: number): number {
+  if (!weekly || weekly <= 0) return 0;
+  return Math.round(weekly * LEASING_CYCLE_DEPOSIT_RENT_MULTIPLIER);
+}
+
+export const RENT_PERIOD_OPTIONS: { value: RentPeriod; label: string }[] = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'fortnightly', label: 'Fortnightly' },
+  { value: 'monthly', label: 'Monthly' },
+];
