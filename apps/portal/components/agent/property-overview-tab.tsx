@@ -295,6 +295,49 @@ export function PropertyOverviewTab({
     },
   ];
 
+  const registry = useMemo(() => {
+    const record = sync.record;
+    const gst =
+      overview?.managementRateGst ??
+      (record?.managementRateGst === 'include' || record?.managementRateGst === 'exclude'
+        ? record.managementRateGst
+        : property.managementRateGst);
+    return {
+      propertyType: property.propertyType,
+      state: property.state,
+      postcode: property.postcode,
+      furnished:
+        overview?.furnished ??
+        (typeof record?.furnished === 'boolean' ? record.furnished : property.furnished),
+      buildingName: overview?.buildingName ?? record?.buildingName ?? property.buildingName,
+      strataPlanNumber:
+        overview?.strataPlanNumber ?? record?.strataPlanNumber ?? property.strataPlanNumber,
+      latitude: overview?.latitude ?? record?.latitude ?? property.latitude,
+      longitude: overview?.longitude ?? record?.longitude ?? property.longitude,
+      landlordInsuranceExpiry:
+        overview?.landlordInsuranceExpiry ??
+        record?.landlordInsuranceExpiry?.slice(0, 10) ??
+        property.landlordInsuranceExpiry,
+      administrationFee:
+        overview?.administrationFee ?? record?.administrationFee ?? property.administrationFee,
+      documentationFee:
+        overview?.documentationFee ?? record?.documentationFee ?? property.documentationFee,
+      lettingFee: overview?.lettingFee ?? record?.lettingFee ?? property.lettingFee,
+      managementRatePercent:
+        overview?.managementRatePercent ??
+        record?.managementRatePercent ??
+        property.managementRatePercent,
+      managementRateGst: gst,
+    };
+  }, [overview, property, sync.record]);
+
+  const managementGstLabel =
+    registry.managementRateGst === 'include'
+      ? 'Include GST'
+      : registry.managementRateGst === 'exclude'
+        ? 'Exclude GST'
+        : '—';
+
   const handleSaved = () => {
     onRefresh?.();
   };
@@ -353,8 +396,14 @@ export function PropertyOverviewTab({
         <div className="mt-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           <StatCell
             label="Furnished"
-            value={property.furnished ? 'Yes' : 'No'}
+            value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
           />
+          <StatCell label="Property type" value={registry.propertyType ?? '—'} />
+          <StatCell
+            label="State"
+            value={registry.state ?? '—'}
+          />
+          <StatCell label="Postcode" value={registry.postcode ?? '—'} />
           <StatCell
             label="Current rent"
             value={displayRent > 0 ? `${formatCurrency(displayRent)}/wk` : '—'}
@@ -456,6 +505,65 @@ export function PropertyOverviewTab({
               onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
             />
           )}
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card p-3">
+        <h3 className="mb-2 text-xs font-semibold">Management details</h3>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+          <StatCell
+            label="Insurance expiry"
+            value={
+              registry.landlordInsuranceExpiry
+                ? formatDate(registry.landlordInsuranceExpiry)
+                : '—'
+            }
+          />
+          <StatCell
+            label="Administration fee"
+            value={
+              registry.administrationFee != null
+                ? formatCurrency(registry.administrationFee)
+                : '—'
+            }
+          />
+          <StatCell
+            label="Documentation fee"
+            value={
+              registry.documentationFee != null
+                ? formatCurrency(registry.documentationFee)
+                : '—'
+            }
+          />
+          <StatCell
+            label="Letting fee"
+            value={registry.lettingFee != null ? formatCurrency(registry.lettingFee) : '—'}
+          />
+          <StatCell
+            label="Management rate"
+            value={
+              registry.managementRatePercent != null
+                ? `${registry.managementRatePercent}%`
+                : '—'
+            }
+          />
+          <StatCell label="Management GST" value={managementGstLabel} />
+          <StatCell
+            label="Coordinates"
+            value={
+              registry.latitude != null && registry.longitude != null
+                ? `${registry.latitude.toFixed(5)}, ${registry.longitude.toFixed(5)}`
+                : '—'
+            }
+          />
+        </div>
+      </section>
+
+      <section className="rounded-xl border bg-card p-3">
+        <h3 className="mb-2 text-xs font-semibold">Strata details</h3>
+        <div className="grid grid-cols-2 gap-1.5">
+          <StatCell label="Building name" value={registry.buildingName ?? '—'} />
+          <StatCell label="Strata plan" value={registry.strataPlanNumber ?? '—'} />
         </div>
       </section>
 

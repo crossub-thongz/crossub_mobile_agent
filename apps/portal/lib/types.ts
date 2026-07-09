@@ -77,6 +77,10 @@ export interface Property {
   carSpaces?: number;
   furnished?: boolean;
   propertyType?: string;
+  latitude?: number;
+  longitude?: number;
+  buildingName?: string;
+  strataPlanNumber?: string;
   managementRatePercent?: number;
   managementRateGst?: 'include' | 'exclude';
   insuranceProvider?: string;

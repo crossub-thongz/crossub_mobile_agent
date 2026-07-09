@@ -65,9 +65,34 @@ import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
 type AgentPortfolioId = 'agent-1' | 'agent-2';
 
+type ExtendedAgentProperty = AgentProperty & {
+  state?: string | null;
+  postcode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  buildingName?: string | null;
+  strataPlanNumber?: string | null;
+  landlordInsuranceExpiry?: string | null;
+  administrationFee?: number | null;
+  documentationFee?: number | null;
+  lettingFee?: number | null;
+  managementRatePercent?: number | null;
+  managementRateGst?: 'include' | 'exclude' | null;
+  buildingManagerName?: string | null;
+  buildingManagerEmail?: string | null;
+  buildingManagerPhone?: string | null;
+  strataContactName?: string | null;
+  strataContactEmail?: string | null;
+  strataContactPhone?: string | null;
+};
+
 function readFurnished(dto: AgentProperty): boolean | undefined {
   const value = (dto as AgentProperty & { furnished?: boolean | null }).furnished;
   return typeof value === 'boolean' ? value : undefined;
+}
+
+function readExtended(dto: AgentProperty): ExtendedAgentProperty {
+  return dto as ExtendedAgentProperty;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,11 +104,14 @@ export function mapAgentProperty(
   dto: AgentProperty,
   agentId: AgentPortfolioId,
 ): Property {
+  const ext = readExtended(dto);
   return {
     id: dto.id,
     agencyId: dto.agencyId,
     address: dto.address,
     suburb: dto.suburb ?? '',
+    state: ext.state ?? undefined,
+    postcode: ext.postcode ?? undefined,
     homeOwnerName: dto.landlordName ?? '—',
     homeOwnerContact: {
       email: dto.landlordEmail ?? undefined,
@@ -102,6 +130,20 @@ export function mapAgentProperty(
     bathrooms: dto.bathrooms ?? undefined,
     carSpaces: dto.parking != null ? dto.parking : undefined,
     furnished: readFurnished(dto),
+    propertyType: dto.propertyType,
+    latitude: ext.latitude ?? undefined,
+    longitude: ext.longitude ?? undefined,
+    buildingName: ext.buildingName ?? undefined,
+    strataPlanNumber: ext.strataPlanNumber ?? undefined,
+    landlordInsuranceExpiry: ext.landlordInsuranceExpiry ?? undefined,
+    administrationFee: ext.administrationFee ?? undefined,
+    documentationFee: ext.documentationFee ?? undefined,
+    lettingFee: ext.lettingFee ?? undefined,
+    managementRatePercent: ext.managementRatePercent ?? undefined,
+    managementRateGst:
+      ext.managementRateGst === 'include' || ext.managementRateGst === 'exclude'
+        ? ext.managementRateGst
+        : undefined,
     leaseStart: dto.leaseStart ?? undefined,
     leaseEnd: dto.leaseEnd ?? undefined,
     openTasks: 0,

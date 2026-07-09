@@ -88,7 +88,7 @@ export default function LeasingPage() {
           <Button asChild variant="outline" className="w-full">
             <Link href={propertyTransfer()}>
               <ArrowLeftRight className="size-4" />
-              Transfer
+              Transfer OUT
             </Link>
           </Button>
         </div>
@@ -189,12 +189,11 @@ export default function LeasingPage() {
         {tab === 'transfer' && (
           <section className="space-y-3">
             <p className="text-muted-foreground text-sm">
-              Transfer IN receives management from another agent; Transfer OUT hands documents and
-              keys to the incoming agent. Use one-click PropertyMe / PropertyTree import on the add
-              property screen.
+              Transfer OUT hands a property to another managing agent. Select the property, enter
+              their email, and download a zip with the property summary and all profile documents.
             </p>
             <Button asChild className="w-full">
-              <Link href={propertyTransfer()}>Open property transfer workflow</Link>
+              <Link href={propertyTransfer()}>Transfer OUT</Link>
             </Button>
           </section>
         )}

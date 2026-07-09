@@ -66,7 +66,7 @@ function LegacyDocumentsView({ documents }: { documents: AgentDocument[] }) {
           <Link href="/reports" className="text-primary font-medium underline">
             Reports &amp; Documents
           </Link>{' '}
-          or complete a Transfer IN checklist on this property.
+          or use Transfer OUT to export the full property package.
         </p>
       </InfoPanel>
     );

@@ -6,6 +6,17 @@ export interface PropertyRecord {
   parking: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
+  furnished?: boolean | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  buildingName?: string | null;
+  strataPlanNumber?: string | null;
+  landlordInsuranceExpiry?: string | null;
+  administrationFee?: number | null;
+  documentationFee?: number | null;
+  lettingFee?: number | null;
+  managementRatePercent?: number | null;
+  managementRateGst?: string | null;
   landlordName: string | null;
   landlordEmail: string | null;
   landlordPhone: string | null;
@@ -34,6 +45,17 @@ export interface PropertyPortalOverview {
   leaseStartDate?: string;
   vacateDate?: string;
   nextRoutineInspectionDate?: string;
+  furnished?: boolean;
+  buildingName?: string;
+  strataPlanNumber?: string;
+  latitude?: number;
+  longitude?: number;
+  landlordInsuranceExpiry?: string;
+  administrationFee?: number;
+  documentationFee?: number;
+  lettingFee?: number;
+  managementRatePercent?: number;
+  managementRateGst?: 'include' | 'exclude';
   buildingManager?: PropertyContactBlock;
   strataContact?: PropertyContactBlock;
 }
