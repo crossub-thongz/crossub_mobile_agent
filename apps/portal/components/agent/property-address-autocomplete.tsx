@@ -21,6 +21,8 @@ interface PropertyAddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onPlaceSelect: (parsed: ParsedAustralianAddress) => void;
+  latitude?: number;
+  longitude?: number;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -33,40 +35,46 @@ export function PropertyAddressAutocomplete({
   value,
   onChange,
   onPlaceSelect,
+  latitude,
+  longitude,
   placeholder = '66, Berry Street',
   disabled,
 }: PropertyAddressAutocompleteProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [mapsReady, setMapsReady] = useState(false);
+  const [mapsFailed, setMapsFailed] = useState(false);
   const apiKey = getGoogleMapsApiKey();
   const mapsEnabled = !!apiKey;
 
+  const coords =
+    latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null;
+
   const handlePlaceSelect = useCallback(
     (parsed: ParsedAustralianAddress) => {
+      onChange(parsed.address);
       onPlaceSelect(parsed);
-      if (parsed.lat != null && parsed.lng != null) {
-        setCoords({ lat: parsed.lat, lng: parsed.lng });
+      if (searchInputRef.current) {
+        searchInputRef.current.value = '';
       }
     },
-    [onPlaceSelect],
+    [onChange, onPlaceSelect],
   );
 
   useEffect(() => {
-    if (!mapsEnabled || !inputRef.current) return;
+    if (!mapsEnabled || !searchInputRef.current) return;
 
     let cancelled = false;
 
     void loadGoogleMaps()
       .then(() => {
-        if (cancelled || !inputRef.current) return;
+        if (cancelled || !searchInputRef.current) return;
 
-        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+        const autocomplete = new google.maps.places.Autocomplete(searchInputRef.current, {
           componentRestrictions: { country: 'au' },
           fields: ['address_components', 'geometry', 'formatted_address', 'name'],
           types: ['address'],
@@ -76,7 +84,6 @@ export function PropertyAddressAutocomplete({
           const place = autocomplete.getPlace();
           const parsed = parsePlaceResult(place);
           if (!parsed) return;
-          onChange(parsed.address);
           handlePlaceSelect(parsed);
         });
 
@@ -84,7 +91,7 @@ export function PropertyAddressAutocomplete({
         setMapsReady(true);
       })
       .catch(() => {
-        // Missing/invalid key — fall back to plain text input.
+        if (!cancelled) setMapsFailed(true);
       });
 
     return () => {
@@ -94,7 +101,7 @@ export function PropertyAddressAutocomplete({
         autocompleteRef.current = null;
       }
     };
-  }, [mapsEnabled, handlePlaceSelect, onChange]);
+  }, [mapsEnabled, handlePlaceSelect]);
 
   useEffect(() => {
     if (!mapsEnabled || !mapsReady || !mapContainerRef.current) return;
@@ -133,31 +140,57 @@ export function PropertyAddressAutocomplete({
   }, [mapsEnabled, mapsReady, coords]);
 
   return (
-    <div className="space-y-2">
-      <div className="relative">
-        {mapsEnabled ? (
-          <MapPin
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden
-          />
-        ) : null}
+    <div className="space-y-3">
+      {mapsEnabled ? (
+        <div className="space-y-1.5">
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Search address
+          </Label>
+          <div className="relative">
+            <MapPin
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden
+            />
+            <Input
+              ref={searchInputRef}
+              defaultValue=""
+              placeholder="Search Google Maps — pick a result to auto-fill"
+              disabled={disabled || mapsFailed}
+              autoComplete="off"
+              className="pl-9"
+            />
+          </div>
+          {mapsReady ? (
+            <p className="text-muted-foreground text-xs">
+              Pick a suggestion to fill street address, suburb, state, postcode, and coordinates.
+            </p>
+          ) : mapsFailed ? (
+            <p className="text-amber-700 text-xs dark:text-amber-400">
+              Map search is unavailable — enter the street address manually below.
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-xs">Loading map search…</p>
+          )}
+        </div>
+      ) : null}
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          Street address
+        </Label>
         <Input
-          ref={inputRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          autoComplete="off"
-          className={mapsEnabled ? 'pl-9' : undefined}
+          autoComplete="street-address"
         />
+        {mapsEnabled ? (
+          <p className="text-muted-foreground text-xs">
+            Or type the street address directly if map search is not working.
+          </p>
+        ) : null}
       </div>
-
-      {mapsEnabled && mapsReady ? (
-        <p className="text-muted-foreground text-xs">
-          Search for an Australian address — suggestions appear as you type. Suburb, state,
-          postcode, and coordinates fill in when you pick a result.
-        </p>
-      ) : null}
 
       {mapsEnabled && mapsReady ? (
         <div
@@ -173,13 +206,21 @@ export function PropertyAddressAutocomplete({
             <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
               Latitude
             </Label>
-            <Input readOnly value={formatCoord(coords.lat)} className="bg-muted/40 font-mono text-xs" />
+            <Input
+              readOnly
+              value={formatCoord(coords.lat)}
+              className="bg-muted/40 font-mono text-xs"
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
               Longitude
             </Label>
-            <Input readOnly value={formatCoord(coords.lng)} className="bg-muted/40 font-mono text-xs" />
+            <Input
+              readOnly
+              value={formatCoord(coords.lng)}
+              className="bg-muted/40 font-mono text-xs"
+            />
           </div>
         </div>
       ) : null}

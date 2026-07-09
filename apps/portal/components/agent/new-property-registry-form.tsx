@@ -36,7 +36,6 @@ import {
   PROPERTY_TYPE_ORDER,
   type PropertyType,
 } from '@/constants/api-enums';
-import { getGoogleMapsApiKey } from '@/lib/google-places';
 import type { ParsedAustralianAddress } from '@/lib/google-places';
 import {
   LEASE_STATUS_FORM_OPTIONS,
@@ -188,10 +187,6 @@ function validatePropertyStep(form: NewPropertyRegistryValues): boolean {
   }
   if (!isCountFilled(form.parking)) {
     toast.error('Parking is required');
-    return false;
-  }
-  if (getGoogleMapsApiKey() && (form.latitude == null || form.longitude == null)) {
-    toast.error('Select an address from the map search so coordinates are captured');
     return false;
   }
   return true;
@@ -430,11 +425,20 @@ export function NewPropertyRegistryForm({
         <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
           <p className="text-sm font-semibold">Property details</p>
 
-          <FormField label="Street address" required>
+          <FormField label="Address" required>
             <PropertyAddressAutocomplete
               value={form.address}
-              onChange={(address) => set('address', address)}
+              onChange={(address) =>
+                setForm((f) => ({
+                  ...f,
+                  address,
+                  latitude: undefined,
+                  longitude: undefined,
+                }))
+              }
               onPlaceSelect={handlePlaceSelect}
+              latitude={form.latitude}
+              longitude={form.longitude}
               placeholder="66, Berry Street"
             />
           </FormField>
