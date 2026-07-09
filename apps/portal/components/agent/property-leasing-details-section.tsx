@@ -185,6 +185,7 @@ function DocumentChecklistSection({
 
   const onFile = async (fileList: FileList | null) => {
     if (!fileList?.length || !activeSlot) return;
+    const files = Array.from(fileList);
     setUploading(true);
     try {
       let title: string | undefined;
@@ -195,8 +196,14 @@ function DocumentChecklistSection({
         const row = extraDocuments.find((r) => r.id === activeSlot);
         if (row) title = row.title.trim() || 'Document';
       }
-      await onUploadFile(fileList[0], activeSlot, title);
-      toast.success(`Uploaded ${fileList[0].name}`);
+      for (const file of files) {
+        await onUploadFile(file, activeSlot, title);
+      }
+      toast.success(
+        files.length === 1
+          ? `Uploaded ${files[0].name}`
+          : `Uploaded ${files.length} files`,
+      );
     } catch {
       toast.error('Upload failed');
     } finally {
@@ -248,6 +255,7 @@ function DocumentChecklistSection({
         ref={inputRef}
         type="file"
         className="hidden"
+        multiple
         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv"
         onChange={(e) => void onFile(e.target.files)}
       />
@@ -325,7 +333,7 @@ export function PropertyLeasingDetailsSection({
   return (
     <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
       <div>
-        <p className="text-sm font-semibold">Leasing details (Optional)</p>
+        <p className="text-sm font-semibold">Leasing details</p>
         <p className="text-muted-foreground text-xs">
           Rent, bond, and agreement dates for this tenancy.
         </p>

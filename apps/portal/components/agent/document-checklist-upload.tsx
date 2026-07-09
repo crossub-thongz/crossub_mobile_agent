@@ -40,10 +40,17 @@ export function DocumentChecklistUpload({
 
   const onFile = async (fileList: FileList | null) => {
     if (!fileList?.length || !activeId) return;
+    const files = Array.from(fileList);
     setUploading(true);
     try {
-      await onUpload(fileList[0], activeId, 'lease');
-      toast.success(`Uploaded ${fileList[0].name}`);
+      for (const file of files) {
+        await onUpload(file, activeId, 'lease');
+      }
+      toast.success(
+        files.length === 1
+          ? `Uploaded ${files[0].name}`
+          : `Uploaded ${files.length} files`,
+      );
     } catch {
       toast.error('Upload failed');
     } finally {
@@ -70,6 +77,7 @@ export function DocumentChecklistUpload({
         ref={inputRef}
         type="file"
         className="hidden"
+        multiple
         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv"
         onChange={(e) => void onFile(e.target.files)}
       />

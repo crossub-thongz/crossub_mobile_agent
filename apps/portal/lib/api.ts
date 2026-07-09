@@ -1,4 +1,4 @@
-import { ROUTES, isPublicRoute } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
@@ -13,9 +13,49 @@ export class ApiError extends Error {
 
 const isAuthPath = (path: string): boolean => path.startsWith('/auth/');
 
-const onPublicPage = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  return isPublicRoute(window.location.pathname);
+let refreshInFlight: Promise<boolean> | null = null;
+
+/** One refresh at a time — parallel 401s must not rotate the same refresh token twice. */
+const tryRefreshSession = (): Promise<boolean> => {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+    })
+      .then((res) => res.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+};
+
+/** Clears stale httpOnly cookies so route middleware does not bounce /login away. */
+const clearSessionAndRedirectToLogin = async (): Promise<never> => {
+  if (typeof window === 'undefined') {
+    throw new ApiError(401, 'Session expired');
+  }
+
+  try {
+    await fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    // Best effort — ?session=expired lets middleware allow /login with a stale cookie.
+  }
+
+  const dest = `${ROUTES.LOGIN}?session=expired`;
+  if (
+    window.location.pathname !== ROUTES.LOGIN ||
+    !window.location.search.includes('session=expired')
+  ) {
+    window.location.replace(dest);
+  }
+  throw new ApiError(401, 'Session expired');
 };
 
 const buildHeaders = (init?: RequestInit): HeadersInit => ({
@@ -26,6 +66,7 @@ const buildHeaders = (init?: RequestInit): HeadersInit => ({
 const doFetch = (path: string, init?: RequestInit): Promise<Response> =>
   fetch(`${API_URL}${path}`, {
     credentials: 'include',
+    cache: 'no-store',
     ...init,
     headers: buildHeaders(init),
   });
@@ -41,21 +82,6 @@ const parseBody = async (res: Response): Promise<unknown> => {
   }
 };
 
-const clearSessionAndRedirectToLogin = async (): Promise<void> => {
-  if (typeof window === 'undefined' || onPublicPage()) return;
-
-  try {
-    await fetch(`${API_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-  } catch {
-    // Best-effort — stale cookies are cleared server-side when logout succeeds.
-  }
-
-  window.location.href = ROUTES.LOGIN;
-};
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res = await doFetch(path, init);
 
@@ -64,15 +90,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     typeof window !== 'undefined' &&
     !isAuthPath(path)
   ) {
-    const refreshed = await fetch(`${API_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (refreshed.ok) {
+    if (await tryRefreshSession()) {
       res = await doFetch(path, init);
     } else {
-      await clearSessionAndRedirectToLogin();
-      throw new ApiError(401, await parseBody(refreshed));
+      return clearSessionAndRedirectToLogin();
     }
   }
 
@@ -90,15 +111,10 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
     typeof window !== 'undefined' &&
     !isAuthPath(path)
   ) {
-    const refreshed = await fetch(`${API_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (refreshed.ok) {
+    if (await tryRefreshSession()) {
       res = await doFetch(path, init);
     } else {
-      await clearSessionAndRedirectToLogin();
-      throw new ApiError(401, await parseBody(refreshed));
+      return clearSessionAndRedirectToLogin();
     }
   }
 

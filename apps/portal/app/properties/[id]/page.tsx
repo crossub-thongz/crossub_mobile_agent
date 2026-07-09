@@ -17,6 +17,7 @@ import { PropertyInspectionTab } from '@/components/agent/property-inspection-ta
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-tab';
 import { PropertyOverviewTab } from '@/components/agent/property-overview-tab';
+import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyAccountingTab } from '@/components/agent/property-accounting-tab';
@@ -226,6 +227,19 @@ export default function PropertyDetailPage() {
               )}
             </div>
           </div>
+
+          {tab === 'Overview' ? (
+            <PropertyProfileDetails
+              property={property}
+              propertyId={id}
+              currentLease={currentLease}
+              inspections={tasks.inspections}
+              propertyDocs={propertyDocs}
+              leasingCycles={propertyLeasingCycles}
+              tenantSelections={propertyLeasingCases}
+              onViewBondLodgement={viewBondLodgement}
+            />
+          ) : null}
         </div>
 
         <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />

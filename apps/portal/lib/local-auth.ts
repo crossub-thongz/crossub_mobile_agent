@@ -151,5 +151,6 @@ export function clearLocalSession(): void {
   if (hasLocalAccessCookie()) {
     document.cookie = `${COOKIE_ACCESS}=; path=/; max-age=0`;
   }
+  document.cookie = `${COOKIE_REFRESH}=; path=/api/auth; max-age=0`;
   document.cookie = `${COOKIE_REFRESH}=; path=/; max-age=0`;
 }

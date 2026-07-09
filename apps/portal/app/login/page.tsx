@@ -9,8 +9,7 @@ import {
   Mail,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -41,17 +40,15 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const { refresh, status, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    if (status === 'authed' && user) {
-      router.replace(
-        postAuthDestination(user, ROUTES.DASHBOARD, ROUTES.SYSTEM_ACCESS_AGREEMENT),
-      );
-    }
-  }, [status, user, router]);
+  useLayoutEffect(() => {
+    if (status !== 'authed' || !user) return;
+    window.location.replace(
+      postAuthDestination(user, ROUTES.DASHBOARD, ROUTES.SYSTEM_ACCESS_AGREEMENT),
+    );
+  }, [status, user]);
 
   const {
     register,
@@ -68,7 +65,7 @@ export default function LoginPage() {
     try {
       const result = await api.post<{ user: AuthUser }>('/auth/login', values);
       await refresh();
-      router.replace(
+      window.location.assign(
         postAuthDestination(
           result.user,
           ROUTES.DASHBOARD,
@@ -94,7 +91,7 @@ export default function LoginPage() {
     const localUser = loginLocalAccount(values.email, values.password);
     if (localUser) {
       await refresh();
-      router.replace(ROUTES.DASHBOARD);
+      window.location.assign(ROUTES.DASHBOARD);
       return;
     }
 

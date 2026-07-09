@@ -153,6 +153,14 @@ export type UploadedDocumentLike = {
   href?: string | null;
 };
 
+export type DocumentChecklistFile = {
+  id: string;
+  /** Short label for the file row (not the document type title). */
+  fileName: string;
+  uploadedAt: string;
+  href?: string | null;
+};
+
 export type DocumentChecklistRow = {
   /** Stable row key (slot id or uploaded doc id). */
   id: string;
@@ -163,6 +171,8 @@ export type DocumentChecklistRow = {
   uploaded: boolean;
   uploadedAt?: string;
   href?: string | null;
+  /** All files uploaded for this document type. */
+  files: DocumentChecklistFile[];
   /** Extra uploads beyond the expected checklist. */
   isExtra?: boolean;
 };
@@ -174,12 +184,29 @@ function titlesMatch(slotLabel: string, docTitle: string): boolean {
   if (doc === slot) return true;
   // Prefixed custom titles: "Landlord — Certificate of insurance"
   if (doc.endsWith(`— ${slot}`) || doc.endsWith(`- ${slot}`)) return true;
+  // Older duplicate display titles: "Lease agreement (Lease agreement)"
+  if (doc.startsWith(`${slot} (`)) return true;
   return false;
+}
+
+function fileLabelForIndex(index: number, total: number): string {
+  if (total <= 1) return 'Document';
+  return `File ${index + 1}`;
+}
+
+function toChecklistFiles(docs: UploadedDocumentLike[]): DocumentChecklistFile[] {
+  return docs.map((doc, index) => ({
+    id: doc.id,
+    fileName: fileLabelForIndex(index, docs.length),
+    uploadedAt: doc.uploadedAt,
+    href: doc.href,
+  }));
 }
 
 /**
  * Build checklist rows for each group: every expected document type, plus any
- * extra uploads that don't match a known type. Shows uploaded-at when present.
+ * extra uploads that don't match a known type. Multiple files per type stay
+ * under a single row (no repeated type titles).
  */
 export function buildDocumentChecklistByGroup(
   documents: UploadedDocumentLike[],
@@ -199,51 +226,52 @@ export function buildDocumentChecklistByGroup(
         .sort(
           (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
         );
-      const latest = matches[0];
       for (const m of matches) matchedIds.add(m.id);
+      const files = toChecklistFiles(matches);
+      const latest = files[0];
 
-      if (latest) {
-        result[group].push({
-          id: `${slot.id}:${latest.id}`,
-          title: slot.label,
-          slotId: slot.id,
-          uploaded: true,
-          uploadedAt: latest.uploadedAt,
-          href: latest.href,
-        });
-        // Additional files of the same type
-        for (const extra of matches.slice(1)) {
-          result[group].push({
-            id: `${slot.id}:${extra.id}`,
-            title: `${slot.label} (${extra.title})`,
-            slotId: slot.id,
-            uploaded: true,
-            uploadedAt: extra.uploadedAt,
-            href: extra.href,
-            isExtra: true,
-          });
-        }
-      } else {
-        result[group].push({
-          id: `slot:${slot.id}`,
-          title: slot.label,
-          slotId: slot.id,
-          uploaded: false,
-        });
-      }
+      result[group].push({
+        id: `slot:${slot.id}`,
+        title: slot.label,
+        slotId: slot.id,
+        uploaded: files.length > 0,
+        uploadedAt: latest?.uploadedAt,
+        href: latest?.href,
+        files,
+      });
     }
   }
 
-  // Unmatched / custom uploads still appear under their classified group.
+  // Unmatched / custom uploads — merge by title so duplicates share one row.
+  const extrasByKey = new Map<
+    string,
+    { group: CreatePropertyDocumentGroup; title: string; docs: UploadedDocumentLike[] }
+  >();
   for (const doc of documents) {
     if (matchedIds.has(doc.id)) continue;
     const group = classifyCreatePropertyDocument(doc.title);
-    result[group].push({
-      id: doc.id,
-      title: doc.title,
+    const key = `${group}::${normalizeTitle(doc.title)}`;
+    const existing = extrasByKey.get(key);
+    if (existing) {
+      existing.docs.push(doc);
+    } else {
+      extrasByKey.set(key, { group, title: doc.title, docs: [doc] });
+    }
+  }
+
+  for (const extra of extrasByKey.values()) {
+    const docs = [...extra.docs].sort(
+      (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+    );
+    const files = toChecklistFiles(docs);
+    const latest = files[0];
+    result[extra.group].push({
+      id: `extra:${extra.group}:${normalizeTitle(extra.title)}`,
+      title: extra.title,
       uploaded: true,
-      uploadedAt: doc.uploadedAt,
-      href: doc.href,
+      uploadedAt: latest?.uploadedAt,
+      href: latest?.href,
+      files,
       isExtra: true,
     });
   }

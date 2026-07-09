@@ -14,6 +14,16 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (
+    hasAccess &&
+    (path === ROUTES.LOGIN || path === ROUTES.FORGOT_PASSWORD) &&
+    req.nextUrl.searchParams.get('session') !== 'expired'
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = ROUTES.DASHBOARD;
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 

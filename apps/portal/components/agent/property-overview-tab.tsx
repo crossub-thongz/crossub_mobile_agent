@@ -8,10 +8,9 @@ import {
   Plus,
 } from 'lucide-react';
 
-import { DocumentViewer } from '@/components/agent/document-viewer';
 import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
 import { PropertyLandlordEditDialog } from '@/components/agent/property-landlord-edit-dialog';
-import { PropertyPhotosButton } from '@/components/agent/property-photos-dialog';
+// import { PropertyPhotosButton } from '@/components/agent/property-photos-dialog';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -19,14 +18,9 @@ import { maintenanceDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import {
-  findIngoingInspection,
-  findRoutineInspection,
-  resolveBondReference,
   resolveCurrentRent,
-  resolveIngoingReportLink,
   resolveLeaseDates,
   resolvePendingRentChange,
-  resolveRoutineReportLink,
 } from '@/lib/property-overview';
 import type { PropertyContactBlock } from '@/lib/property-registry-api';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
@@ -40,44 +34,6 @@ import type {
   PropertyNeedAction,
 } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
-import { isViewableDocumentUrl } from '@/lib/document-preview';
-
-function ReportChip({
-  label,
-  href,
-  status,
-  onPreview,
-}: {
-  label: string;
-  href?: string;
-  status: string;
-  onPreview: (report: { label: string; href: string }) => void;
-}) {
-  const opensInline = href && isViewableDocumentUrl(href) && !href.startsWith('/');
-  return (
-    <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/10 px-2.5 py-2">
-      <div className="min-w-0">
-        <p className="truncate text-[11px] font-medium">{label}</p>
-        <p className="text-muted-foreground truncate text-[10px] capitalize">{status}</p>
-      </div>
-      {href && href !== '#' ? (
-        opensInline ? (
-          <button
-            type="button"
-            onClick={() => onPreview({ label, href })}
-            className="text-primary shrink-0 text-[11px] font-semibold"
-          >
-            View
-          </button>
-        ) : (
-          <Link href={href} className="text-primary shrink-0 text-[11px] font-semibold">
-            View
-          </Link>
-        )
-      ) : null}
-    </div>
-  );
-}
 
 function ContactTile({
   title,
@@ -194,8 +150,8 @@ export function PropertyOverviewTab({
   propertyId,
   needActions,
   maintenance,
-  inspections,
-  propertyDocs,
+  inspections: _inspections,
+  propertyDocs: _propertyDocs,
   leasing,
   currentLease,
   rentReviewDecisions,
@@ -204,7 +160,7 @@ export function PropertyOverviewTab({
   tenantSelections,
   onViewHistory,
   onRefresh,
-  onViewBondLodgement,
+  onViewBondLodgement: _onViewBondLodgement,
 }: {
   property: Property;
   propertyId: string;
@@ -232,13 +188,9 @@ export function PropertyOverviewTab({
     currentLease,
   );
 
-  const [reportPreview, setReportPreview] = useState<{ label: string; href: string } | null>(
-    null,
-  );
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
 
-  const propertyAddress = `${property.address}, ${property.suburb}`;
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
   const currentRent = resolveCurrentRent(property, currentLease);
   const financialRent = sync.financial?.currentRentWeekly;
@@ -249,25 +201,11 @@ export function PropertyOverviewTab({
       : registryRent != null && registryRent > 0
         ? registryRent
         : currentRent;
-  const displayBond =
-    sync.financial?.bondAmount ??
-    sync.record?.bondAmount ??
-    property.bondAmount ??
-    sync.bond?.amount ??
-    null;
-  const displayDeposit =
-    sync.financial?.depositAmount ?? sync.record?.depositAmount ?? property.depositAmount ?? null;
   const { start: leaseStart, end: leaseEnd } = resolveLeaseDates(property, currentLease);
   const pendingRent = resolvePendingRentChange(property, tenancyRentReviews, rentReviewDecisions, {
     isVacant,
     currentRent: displayRent,
   });
-
-  const ingoingInspection = findIngoingInspection(inspections, propertyId, currentLease);
-  const routineInspection = findRoutineInspection(inspections, propertyId);
-  const ingoingReport = resolveIngoingReportLink(ingoingInspection, propertyDocs);
-  const routineReport = resolveRoutineReportLink(routineInspection, propertyDocs);
-  const bondRef = resolveBondReference(property, sync.bond, propertyDocs, currentLease);
 
   const overview = sync.overview;
   const buildingManager = overview?.buildingManager;
@@ -346,17 +284,6 @@ export function PropertyOverviewTab({
         ? record.managementRateGst
         : property.managementRateGst);
     return {
-      propertyType: property.propertyType,
-      state: property.state,
-      postcode: property.postcode,
-      furnished:
-        overview?.furnished ??
-        (typeof record?.furnished === 'boolean' ? record.furnished : property.furnished),
-      buildingName: overview?.buildingName ?? record?.buildingName ?? property.buildingName,
-      strataPlanNumber:
-        overview?.strataPlanNumber ?? record?.strataPlanNumber ?? property.strataPlanNumber,
-      latitude: overview?.latitude ?? record?.latitude ?? property.latitude,
-      longitude: overview?.longitude ?? record?.longitude ?? property.longitude,
       landlordInsuranceExpiry:
         overview?.landlordInsuranceExpiry ??
         record?.landlordInsuranceExpiry?.slice(0, 10) ??
@@ -371,6 +298,8 @@ export function PropertyOverviewTab({
         record?.managementRatePercent ??
         property.managementRatePercent,
       managementRateGst: gst,
+      latitude: overview?.latitude ?? record?.latitude ?? property.latitude,
+      longitude: overview?.longitude ?? record?.longitude ?? property.longitude,
     };
   }, [overview, property, sync.record]);
 
@@ -393,16 +322,6 @@ export function PropertyOverviewTab({
 
   return (
     <div className="space-y-3">
-      {reportPreview ? (
-        <DocumentViewer
-          title={reportPreview.label}
-          propertyAddress={propertyAddress}
-          category="inspection"
-          downloadUrl={reportPreview.href}
-          onClose={() => setReportPreview(null)}
-        />
-      ) : null}
-
       {needActions.length > 0 || maintenance.length > 0 ? (
         <section className="rounded-xl border bg-card p-3">
           <div className="mb-2 flex items-center gap-1.5">
@@ -437,64 +356,12 @@ export function PropertyOverviewTab({
         </section>
       ) : null}
 
-      <section className="rounded-xl border bg-card p-3">
-        <div className="flex items-center justify-end">
-          <span className="text-muted-foreground text-[10px] capitalize">{property.leaseStatus}</span>
-        </div>
-
-        <div className="mt-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          <StatCell
-            label="Furnished"
-            value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
-          />
-          <StatCell label="Property type" value={registry.propertyType ?? '—'} />
-          <StatCell
-            label="State"
-            value={registry.state ?? '—'}
-          />
-          <StatCell label="Postcode" value={registry.postcode ?? '—'} />
-          <StatCell
-            label="Current rent"
-            value={displayRent > 0 ? `${formatCurrency(displayRent)}/wk` : '—'}
-          />
-          <StatCell
-            label="Bond"
-            value={displayBond != null ? formatCurrency(displayBond) : '—'}
-          />
-          <StatCell
-            label="Deposit"
-            value={displayDeposit != null ? formatCurrency(displayDeposit) : '—'}
-          />
-          <StatCell
-            label="Bond ID"
-            value={bondRef.label}
-            onClick={
-              bondRef.showLodgementNav && onViewBondLodgement
-                ? onViewBondLodgement
-                : undefined
-            }
-          />
-        </div>
-
-        <div className="mt-2.5 grid gap-1.5 sm:grid-cols-2">
-          <ReportChip
-            label={ingoingReport.label}
-            href={ingoingReport.href}
-            status={ingoingReport.status}
-            onPreview={setReportPreview}
-          />
-          <ReportChip
-            label={routineReport.label}
-            href={routineReport.href}
-            status={routineReport.status}
-            onPreview={setReportPreview}
-          />
-        </div>
-
-        <div className="mt-2.5">
-          <PropertyPhotosButton propertyAddress={propertyAddress} />
-        </div>
-      </section>
+      {/* Property registry / rent / reports strip lives in the profile header card. */}
+      {/* Property photos — temporarily hidden
+      <div className="mt-2.5">
+        <PropertyPhotosButton propertyAddress={`${property.address}, ${property.suburb}`} />
+      </div>
+      */}
 
       <section className="rounded-xl border bg-card p-3">
         <h3 className="mb-2 text-xs font-semibold">Contacts</h3>
