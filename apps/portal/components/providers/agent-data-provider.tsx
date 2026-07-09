@@ -29,6 +29,7 @@ import {
   uploadDocument as apiUploadDocument,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
+import { sanitizeCreatePropertyBody } from '@/lib/sanitize-create-property-body';
 import {
   mapAgentAccounting,
   mapAgentAgencies,
@@ -701,44 +702,46 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           });
           await refresh();
         }
-        const created = await apiCreateProperty({
-          address: input.address.trim(),
-          suburb: input.suburb.trim() || undefined,
-          state: input.state,
-          postcode: input.postcode,
-          propertyType: input.propertyType,
-          status: input.propertyStatus,
-          bedrooms: input.bedrooms,
-          bathrooms: input.bathrooms,
-          parking: input.carSpaces,
-          furnished: input.furnished,
-          landlordName:
-            input.homeOwnerName.trim() && input.homeOwnerName !== 'TBC'
-              ? input.homeOwnerName.trim()
-              : undefined,
-          landlordEmail: input.homeOwnerEmail,
-          landlordPhone: input.homeOwnerPhone,
-          tenantName: input.tenantName.trim() !== 'Vacant' ? input.tenantName.trim() : undefined,
-          tenantEmail: input.tenantEmail,
-          tenantPhone: input.tenantPhone,
-          latitude: input.latitude,
-          longitude: input.longitude,
-          leaseStartDate: input.leaseStart,
-          buildingName: input.buildingName,
-          strataPlanNumber: input.strataPlanNumber,
-          buildingManagerName: input.buildingManagerName,
-          buildingManagerEmail: input.buildingManagerEmail,
-          buildingManagerPhone: input.buildingManagerPhone,
-          strataContactName: input.strataContactName,
-          strataContactEmail: input.strataContactEmail,
-          strataContactPhone: input.strataContactPhone,
-          landlordInsuranceExpiry: input.landlordInsuranceExpiry,
-          administrationFee: input.administrationFee,
-          documentationFee: input.documentationFee,
-          lettingFee: input.lettingFee,
-          managementRatePercent: input.managementRatePercent,
-          managementRateGst: input.managementRateGst,
-        });
+        const created = await apiCreateProperty(
+          sanitizeCreatePropertyBody({
+            address: input.address.trim(),
+            suburb: input.suburb.trim() || undefined,
+            state: input.state,
+            postcode: input.postcode,
+            propertyType: input.propertyType,
+            status: input.propertyStatus,
+            bedrooms: input.bedrooms,
+            bathrooms: input.bathrooms,
+            parking: input.carSpaces,
+            furnished: input.furnished,
+            landlordName:
+              input.homeOwnerName.trim() && input.homeOwnerName !== 'TBC'
+                ? input.homeOwnerName.trim()
+                : undefined,
+            landlordEmail: input.homeOwnerEmail,
+            landlordPhone: input.homeOwnerPhone,
+            tenantName: input.tenantName.trim() !== 'Vacant' ? input.tenantName.trim() : undefined,
+            tenantEmail: input.tenantEmail,
+            tenantPhone: input.tenantPhone,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            leaseStartDate: input.leaseStart,
+            buildingName: input.buildingName,
+            strataPlanNumber: input.strataPlanNumber,
+            buildingManagerName: input.buildingManagerName,
+            buildingManagerEmail: input.buildingManagerEmail,
+            buildingManagerPhone: input.buildingManagerPhone,
+            strataContactName: input.strataContactName,
+            strataContactEmail: input.strataContactEmail,
+            strataContactPhone: input.strataContactPhone,
+            landlordInsuranceExpiry: input.landlordInsuranceExpiry,
+            administrationFee: input.administrationFee,
+            documentationFee: input.documentationFee,
+            lettingFee: input.lettingFee,
+            managementRatePercent: input.managementRatePercent,
+            managementRateGst: input.managementRateGst,
+          }),
+        );
         await refresh();
         const mapped = mapAgentProperty(created, agentPortfolioId);
         return {
