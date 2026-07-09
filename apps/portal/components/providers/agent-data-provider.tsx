@@ -192,7 +192,12 @@ interface AgentDataContextValue {
   getPropertyActions: (propertyId: string) => PropertyNeedAction[];
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
-  uploadDocument: (file: File, category: AgentDocument['category'], propertyAddress: string) => void;
+  uploadDocument: (
+    file: File,
+    category: AgentDocument['category'],
+    propertyAddress: string,
+    options?: { title?: string },
+  ) => void;
   sendMessage: (
     threadId: string,
     body: string,
@@ -804,7 +809,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const uploadDocument = useCallback(
-    (file: File, category: AgentDocument['category'], propertyAddress: string) => {
+    (
+      file: File,
+      category: AgentDocument['category'],
+      propertyAddress: string,
+      options?: { title?: string },
+    ) => {
+      const displayTitle = options?.title?.trim() || file.name;
       // Connected: read the File as base64 and persist it (→ R2 + PortalDocument), then
       // refresh() surfaces it. Resolve the chosen address back to a managed property id;
       // an unmatched address (e.g. 'Portfolio') uploads as a portfolio-level document.
@@ -824,7 +835,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
               contentBase64,
               category,
               propertyId: prop?.id,
-            });
+              title: displayTitle,
+            } as Parameters<typeof apiUploadDocument>[0]);
             await refresh();
           } catch {
             // Swallow — the screen already toasts; the doc simply won't appear.
@@ -836,7 +848,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       const objectUrl = URL.createObjectURL(file);
       const doc: AgentDocument = {
         id: `upload-${Date.now()}`,
-        title: file.name,
+        title: displayTitle,
         propertyAddress,
         category,
         uploadedAt: new Date().toISOString(),

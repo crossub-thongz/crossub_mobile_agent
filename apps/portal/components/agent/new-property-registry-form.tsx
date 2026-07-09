@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ContactPartyList } from '@/components/agent/contact-party-list';
 import {
+  PropertyDocumentsSection,
   PropertyLeasingDetailsSection,
   type ExtraLeasingDocumentRow,
   type LeasingDetailsValues,
@@ -20,6 +22,7 @@ import {
 import {
   EMPTY_MANAGEMENT_DETAILS,
   PropertyManagementDetailsSection,
+  syncManagementFeesToScalars,
   type ManagementDetailsValues,
 } from '@/components/agent/property-management-details-section';
 import { PropertyAddressAutocomplete } from '@/components/agent/property-address-autocomplete';
@@ -48,13 +51,15 @@ import { cn } from '@/lib/utils';
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
 
-const WIZARD_STEPS = ['property', 'tenant', 'landlord'] as const;
+const WIZARD_STEPS = ['property', 'tenant', 'landlord', 'strata', 'documents'] as const;
 type WizardStep = (typeof WIZARD_STEPS)[number];
 
 const WIZARD_STEP_LABEL: Record<WizardStep, string> = {
   property: 'Property',
   tenant: 'Tenant',
   landlord: 'Landlord',
+  strata: 'Strata',
+  documents: 'Documents',
 };
 
 const EMPTY_LEASING: LeasingDetailsValues = {
@@ -62,9 +67,9 @@ const EMPTY_LEASING: LeasingDetailsValues = {
   rentPeriod: '',
   agreementStart: '',
   agreementEnd: '',
-  nextRentReview: '',
   uploads: {},
   extraDocuments: [],
+  extraPropertyDocuments: [],
 };
 
 function FormField({
@@ -212,10 +217,6 @@ function validateTenantStep(form: NewPropertyRegistryValues): boolean {
     toast.error('Agreement end date is required');
     return false;
   }
-  if (!leasing.nextRentReview) {
-    toast.error('Next rent review date is required');
-    return false;
-  }
   return true;
 }
 
@@ -238,6 +239,7 @@ export function NewPropertyRegistryForm({
   const { primaryAgency, loading, apiConnected, uploadDocument } = useAgentData();
   const agencyLocked = !!primaryAgency || apiConnected;
   const [step, setStep] = useState<WizardStep>('property');
+  const [addressFieldsLocked, setAddressFieldsLocked] = useState(true);
   const [form, setForm] = useState<NewPropertyRegistryValues>({
     agencyName: primaryAgency?.name ?? '',
     agencyCompany: primaryAgency?.company ?? '',
@@ -274,11 +276,11 @@ export function NewPropertyRegistryForm({
   }, [primaryAgency]);
 
   const handleLeasingUpload = useCallback(
-    async (file: File, slotId: string) => {
+    async (file: File, slotId: string, title?: string) => {
       const address = form.address.trim()
         ? `${form.address.trim()}, ${form.suburb.trim()}`
         : 'Portfolio';
-      uploadDocument(file, 'lease', address);
+      uploadDocument(file, 'lease', address, title ? { title } : undefined);
       setForm((f) => ({
         ...f,
         leasing: {
@@ -297,11 +299,11 @@ export function NewPropertyRegistryForm({
   );
 
   const handleManagementUpload = useCallback(
-    async (file: File, slotId: string) => {
+    async (file: File, slotId: string, title?: string) => {
       const address = form.address.trim()
         ? `${form.address.trim()}, ${form.suburb.trim()}`
         : 'Portfolio';
-      uploadDocument(file, 'lease', address);
+      uploadDocument(file, 'lease', address, title ? { title } : undefined);
       setForm((f) => ({
         ...f,
         management: {
@@ -360,6 +362,7 @@ export function NewPropertyRegistryForm({
   const goNext = () => {
     if (step === 'property' && !validatePropertyStep(form)) return;
     if (step === 'tenant' && !validateTenantStep(form)) return;
+    if (step === 'landlord' && !validateLandlordStep(form)) return;
     const next = WIZARD_STEPS[stepIndex + 1];
     if (next) setStep(next);
   };
@@ -384,6 +387,10 @@ export function NewPropertyRegistryForm({
     }
     void onSubmit({
       ...form,
+      management: {
+        ...form.management,
+        ...syncManagementFeesToScalars(form.management),
+      },
       agencyName: apiConnected
         ? (primaryAgency?.name ?? form.agencyName)
         : agencyLocked
@@ -422,6 +429,7 @@ export function NewPropertyRegistryForm({
           }
           if (targetIdx > 0 && !validatePropertyStep(form)) return;
           if (targetIdx > 1 && !validateTenantStep(form)) return;
+          if (targetIdx > 2 && !validateLandlordStep(form)) return;
           setStep(s);
         }}
         isStepEnabled={(s) => WIZARD_STEPS.indexOf(s) <= stepIndex}
@@ -446,47 +454,62 @@ export function NewPropertyRegistryForm({
               latitude={form.latitude}
               longitude={form.longitude}
               placeholder="66, Berry Street"
+              onMapsStatusChange={({ enabled, failed }) => {
+                setAddressFieldsLocked(enabled && !failed);
+              }}
+              locationFields={
+                <>
+                  <FormField label="State / territory" required>
+                    <select
+                      value={form.state}
+                      onChange={(e) => set('state', e.target.value as AustralianStateKey)}
+                      className={cn(selectClass, addressFieldsLocked && 'bg-muted/40')}
+                      required
+                      disabled={addressFieldsLocked}
+                    >
+                      <option value="">Select state</option>
+                      {AUSTRALIAN_STATE_ORDER.map((s) => (
+                        <option key={s} value={s}>
+                          {s} — {AUSTRALIAN_STATE_LABEL[s]}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <FormField label="Suburb" required>
+                      <Input
+                        value={form.suburb}
+                        onChange={(e) => set('suburb', e.target.value)}
+                        placeholder="e.g. Bondi Beach"
+                        required
+                        disabled={addressFieldsLocked}
+                        readOnly={addressFieldsLocked}
+                        className={cn(addressFieldsLocked && 'bg-muted/40')}
+                      />
+                    </FormField>
+                    <FormField label="Postcode" required>
+                      <Input
+                        value={form.postcode}
+                        onChange={(e) =>
+                          set('postcode', e.target.value.replace(/\D/g, '').slice(0, 4))
+                        }
+                        placeholder="e.g. 2193"
+                        inputMode="numeric"
+                        required
+                        disabled={addressFieldsLocked}
+                        readOnly={addressFieldsLocked}
+                        className={cn(addressFieldsLocked && 'bg-muted/40')}
+                      />
+                    </FormField>
+                  </div>
+                </>
+              }
             />
           </FormField>
 
-          <FormField label="State / territory" required>
-            <select
-              value={form.state}
-              onChange={(e) => set('state', e.target.value as AustralianStateKey)}
-              className={selectClass}
-              required
-            >
-              <option value="">Select state</option>
-              {AUSTRALIAN_STATE_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {s} — {AUSTRALIAN_STATE_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <FormField label="Suburb" required>
-              <Input
-                value={form.suburb}
-                onChange={(e) => set('suburb', e.target.value)}
-                placeholder="e.g. Bondi Beach"
-                required
-              />
-            </FormField>
-            <FormField label="Postcode" required>
-              <Input
-                value={form.postcode}
-                onChange={(e) => set('postcode', e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="e.g. 2193"
-                inputMode="numeric"
-                required
-              />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <FormField label="Type" className="col-span-2 sm:col-span-1" required>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <FormField label="Type" required>
               <select
                 value={form.propertyType}
                 onChange={(e) => set('propertyType', e.target.value as PropertyType | '')}
@@ -501,7 +524,7 @@ export function NewPropertyRegistryForm({
                 ))}
               </select>
             </FormField>
-            <FormField label="Lease status" className="col-span-2 sm:col-span-1" required>
+            <FormField label="Lease status" required>
               <select
                 value={form.leaseStatus}
                 onChange={(e) =>
@@ -518,6 +541,21 @@ export function NewPropertyRegistryForm({
                 ))}
               </select>
             </FormField>
+            <FormField label="Furnished" required>
+              <select
+                value={form.furnished}
+                onChange={(e) => set('furnished', e.target.value as FurnishedChoice)}
+                className={selectClass}
+                required
+              >
+                <option value="">Select…</option>
+                <option value="no">Unfurnished</option>
+                <option value="yes">Furnished</option>
+              </select>
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
             <FormField label="Beds" required>
               <Input
                 type="number"
@@ -549,34 +587,32 @@ export function NewPropertyRegistryForm({
               />
             </FormField>
           </div>
-
-          <FormField label="Furnished" required>
-            <select
-              value={form.furnished}
-              onChange={(e) => set('furnished', e.target.value as FurnishedChoice)}
-              className={selectClass}
-              required
-            >
-              <option value="">Select…</option>
-              <option value="no">Unfurnished</option>
-              <option value="yes">Furnished</option>
-            </select>
-          </FormField>
         </div>
       ) : null}
 
       {step === 'tenant' ? (
         <div className="space-y-4">
           <div className="rounded-lg border border-border/60 bg-secondary/20 p-4">
-            <p className="mb-2.5 text-sm font-semibold">Tenant details</p>
-            <p className="text-muted-foreground mb-3 text-xs">
-              Tenant contact details are optional when creating a property — add them now or
-              later. For occupied properties you will typically add at least one tenant before
-              leasing is finalised.
-            </p>
+            <div className="mb-2.5 flex items-start justify-between gap-3">
+              <p className="text-sm font-semibold">Tenant details (Optional)</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-primary hover:bg-primary/10 -mt-1 h-8 shrink-0 px-2 text-xs font-medium"
+                onClick={() =>
+                  setForm((f) => ({ ...f, tenants: [...f.tenants, emptyPartyContact()] }))
+                }
+              >
+                <Plus className="size-3.5" />
+                Add another tenant
+              </Button>
+            </div>
+
             <ContactPartyList
               title="Tenant"
               asFieldset={false}
+              hideAddButton
               parties={form.tenants}
               onChange={(tenants) => setForm((f) => ({ ...f, tenants }))}
               addLabel="Add another tenant"
@@ -587,7 +623,6 @@ export function NewPropertyRegistryForm({
           <PropertyLeasingDetailsSection
             values={form.leasing}
             onChange={patchLeasing}
-            onUploadFile={handleLeasingUpload}
             required={requireLeasing}
             disabled={submitting}
           />
@@ -597,15 +632,30 @@ export function NewPropertyRegistryForm({
       {step === 'landlord' ? (
         <div className="space-y-4">
           <div className="rounded-lg border border-border/60 bg-secondary/20 p-4">
-            <p className="mb-2.5 text-sm font-semibold">
-              Landlord details <span className="text-rose-600 dark:text-rose-400">*</span>
-            </p>
-            <p className="text-muted-foreground mb-3 text-xs">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-semibold">
+                Landlord details <span className="text-rose-600 dark:text-rose-400">*</span>
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-primary hover:bg-primary/10 -mt-1 h-8 shrink-0 px-2 text-xs font-medium"
+                onClick={() =>
+                  setForm((f) => ({ ...f, landlords: [...f.landlords, emptyPartyContact()] }))
+                }
+              >
+                <Plus className="size-3.5" />
+                Add another landlord
+              </Button>
+            </div>
+            <p className="text-muted-foreground mb-2 text-xs">
               At least one landlord name is required.
             </p>
             <ContactPartyList
               title="Landlord"
               asFieldset={false}
+              hideAddButton
               parties={form.landlords}
               onChange={(landlords) => setForm((f) => ({ ...f, landlords }))}
               addLabel="Add another landlord"
@@ -615,16 +665,29 @@ export function NewPropertyRegistryForm({
           <PropertyManagementDetailsSection
             values={form.management}
             onChange={patchManagement}
-            onUploadFile={handleManagementUpload}
-            disabled={submitting}
-          />
-
-          <PropertyStrataDetailsSection
-            values={form.strata}
-            onChange={patchStrata}
             disabled={submitting}
           />
         </div>
+      ) : null}
+
+      {step === 'strata' ? (
+        <PropertyStrataDetailsSection
+          values={form.strata}
+          onChange={patchStrata}
+          disabled={submitting}
+        />
+      ) : null}
+
+      {step === 'documents' ? (
+        <PropertyDocumentsSection
+          values={form.leasing}
+          onChange={patchLeasing}
+          management={form.management}
+          onChangeManagement={patchManagement}
+          onUploadFile={handleLeasingUpload}
+          onUploadManagementFile={handleManagementUpload}
+          disabled={submitting}
+        />
       ) : null}
 
       <div className="flex gap-2">
@@ -633,7 +696,7 @@ export function NewPropertyRegistryForm({
             Back
           </Button>
         ) : null}
-        {step !== 'landlord' ? (
+        {step !== 'documents' ? (
           <Button type="button" className="flex-1" onClick={goNext} disabled={submitting}>
             Next
           </Button>
@@ -650,7 +713,6 @@ export function NewPropertyRegistryForm({
 export { parseCount, parseMoney, parsePercent, mapLeaseStatusToPropertyStatusForApi };
 export type {
   ExtraLeasingDocumentRow,
-  FurnishedChoice,
   LeasingDetailsValues,
   ManagementDetailsValues,
   StrataDetailsValues,

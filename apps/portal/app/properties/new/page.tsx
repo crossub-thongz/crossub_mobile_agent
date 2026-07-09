@@ -15,7 +15,7 @@ import {
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
-import { bondFromWeekly, depositFromWeekly, weeklyRentFromAmount } from '@/lib/rent-calculations';
+import { bondFromWeekly, weeklyRentFromAmount } from '@/lib/rent-calculations';
 import { splitParties } from '@/lib/property-parties';
 import type { Property } from '@/lib/types';
 
@@ -71,9 +71,7 @@ export default function AddPropertyPage() {
         rentPeriod: leasing.rentPeriod || undefined,
         leaseStart: leasing.agreementStart || undefined,
         leaseEnd: leasing.agreementEnd || undefined,
-        nextRentReview: leasing.nextRentReview || undefined,
         bondAmount: bondFromWeekly(weeklyRent) || undefined,
-        depositAmount: depositFromWeekly(weeklyRent) || undefined,
         bedrooms: parseCount(values.bedrooms),
         bathrooms: parseCount(values.bathrooms),
         carSpaces: parseCount(values.parking),

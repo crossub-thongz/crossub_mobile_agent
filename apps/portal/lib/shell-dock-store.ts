@@ -19,6 +19,7 @@ export const useShellDockStore = create<ShellDockStore>((set) => ({
   closePanel: () => set({ activePanel: null }),
 }));
 
+/** Desktop shell always shows the Gii panel; mobile uses the dock FAB. */
 export function useGiiPanelOpen(): boolean {
-  return useShellDockStore((s) => s.activePanel === 'gii');
+  return true;
 }

@@ -18,6 +18,8 @@ interface ContactPartyListProps {
   vacantHint?: string;
   /** When false, renders inside an existing section (e.g. registry form). */
   asFieldset?: boolean;
+  /** Hide the built-in add control (e.g. when the parent section header owns it). */
+  hideAddButton?: boolean;
 }
 
 export function ContactPartyList({
@@ -29,6 +31,7 @@ export function ContactPartyList({
   namePlaceholder,
   vacantHint,
   asFieldset = true,
+  hideAddButton = false,
 }: ContactPartyListProps) {
   const updateParty = (index: number, field: keyof PropertyPartyContact, value: string) => {
     onChange(parties.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
@@ -53,31 +56,25 @@ export function ContactPartyList({
         <p className="text-muted-foreground text-xs">{vacantHint}</p>
       ) : null}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {parties.map((party, index) => (
           <div
             key={index}
-            className="space-y-3 rounded-lg border border-border/60 bg-secondary/10 p-3"
+            className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-end"
           >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
-                {title} {index + 1}
-              </p>
-              {parties.length > 1 ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive h-7 px-2"
-                  onClick={() => removeParty(index)}
-                  aria-label={`Remove ${title.toLowerCase()} ${index + 1}`}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${title}-name-${index}`}>Name</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={`${title}-name-${index}`}
+                className="text-muted-foreground text-[11px] uppercase tracking-wider"
+              >
+                Name
+                {parties.length > 1 ? (
+                  <span className="text-muted-foreground/70 font-normal normal-case tracking-normal">
+                    {' '}
+                    · {title} {index + 1}
+                  </span>
+                ) : null}
+              </Label>
               <Input
                 id={`${title}-name-${index}`}
                 value={party.name}
@@ -85,33 +82,63 @@ export function ContactPartyList({
                 placeholder={namePlaceholder}
               />
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor={`${title}-email-${index}`}>Email</Label>
-                <Input
-                  id={`${title}-email-${index}`}
-                  type="email"
-                  value={party.email ?? ''}
-                  onChange={(e) => updateParty(index, 'email', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`${title}-phone-${index}`}>Phone</Label>
-                <Input
-                  id={`${title}-phone-${index}`}
-                  value={party.phone ?? ''}
-                  onChange={(e) => updateParty(index, 'phone', e.target.value)}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={`${title}-email-${index}`}
+                className="text-muted-foreground text-[11px] uppercase tracking-wider"
+              >
+                Email
+              </Label>
+              <Input
+                id={`${title}-email-${index}`}
+                type="email"
+                value={party.email ?? ''}
+                onChange={(e) => updateParty(index, 'email', e.target.value)}
+              />
             </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor={`${title}-phone-${index}`}
+                className="text-muted-foreground text-[11px] uppercase tracking-wider"
+              >
+                Phone
+              </Label>
+              <Input
+                id={`${title}-phone-${index}`}
+                value={party.phone ?? ''}
+                onChange={(e) => updateParty(index, 'phone', e.target.value)}
+              />
+            </div>
+            {parties.length > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive size-9 shrink-0"
+                onClick={() => removeParty(index)}
+                aria-label={`Remove ${title.toLowerCase()} ${index + 1}`}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            ) : null}
           </div>
         ))}
       </div>
 
-      <Button type="button" variant="outline" size="sm" className="w-full" onClick={addParty}>
-        <Plus className="size-3.5" />
-        {addLabel}
-      </Button>
+      {!hideAddButton && !asFieldset ? (
+        <div className="flex justify-end pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-primary hover:bg-primary/10 h-8 px-2 text-xs font-medium"
+            onClick={addParty}
+          >
+            <Plus className="size-3.5" />
+            {addLabel}
+          </Button>
+        </div>
+      ) : null}
     </>
   );
 
@@ -121,7 +148,21 @@ export function ContactPartyList({
 
   return (
     <fieldset className="space-y-3 rounded-xl border bg-card p-4">
-      <legend className="px-1 text-sm font-semibold">{title}</legend>
+      <div className="flex items-start justify-between gap-3">
+        <legend className="px-1 text-sm font-semibold">{title}</legend>
+        {!hideAddButton ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-primary hover:bg-primary/10 h-8 shrink-0 px-2 text-xs font-medium"
+            onClick={addParty}
+          >
+            <Plus className="size-3.5" />
+            {addLabel}
+          </Button>
+        ) : null}
+      </div>
       {body}
     </fieldset>
   );

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Keyboard, Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
+import { Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -18,7 +18,6 @@ import {
 import { cn } from '@/lib/utils';
 
 type ChatLine = { id: string; role: 'user' | 'assistant'; text: string; results?: SystemSearchResult[] };
-type InputMode = 'voice' | 'text';
 
 function resolveSpeechLanguage(): string {
   if (typeof navigator === 'undefined') return 'en-AU';
@@ -36,7 +35,7 @@ function multilingualHint(): string {
   const lang = resolveSpeechLanguage();
   if (lang.startsWith('zh')) return 'Gii 支持中文语音和文字输入。';
   if (lang.startsWith('ms')) return 'Gii menyokong input suara dan teks dalam Bahasa Melayu.';
-  return 'Gii detects your language automatically — speak or type in any supported language.';
+  return 'Type a question, or hold the mic to speak.';
 }
 
 export function GiiAssistant({
@@ -45,16 +44,16 @@ export function GiiAssistant({
   variant = 'modal',
 }: {
   open: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   variant?: 'modal' | 'panel';
 }) {
   const router = useRouter();
   const data = useAgentData();
-  const [inputMode, setInputMode] = useState<InputMode>('voice');
   const [query, setQuery] = useState('');
   const [listening, setListening] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isPanel = variant === 'panel';
 
   const latestResults = useMemo(() => {
     const last = [...lines].reverse().find((l) => l.role === 'assistant' && l.results?.length);
@@ -79,16 +78,15 @@ export function GiiAssistant({
   };
 
   const startVoice = () => {
-    const SpeechRecognition =
+    const SpeechRecognitionCtor =
       typeof window !== 'undefined'
         ? window.SpeechRecognition || window.webkitSpeechRecognition
         : undefined;
-    if (!SpeechRecognition) {
-      toast.error('Voice input is not supported — switch to text');
-      setInputMode('text');
+    if (!SpeechRecognitionCtor) {
+      toast.error('Voice input is not supported in this browser');
       return;
     }
-    const recognition = new SpeechRecognition();
+    const recognition = new SpeechRecognitionCtor();
     recognition.lang = resolveSpeechLanguage();
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -114,7 +112,7 @@ export function GiiAssistant({
   const openMessage = (result: SystemSearchResult) => {
     if (!result.propertyId) {
       router.push(result.href);
-      onClose();
+      onClose?.();
       return;
     }
     const threadId = data.ensureMessageThread(result.propertyId, {
@@ -123,7 +121,7 @@ export function GiiAssistant({
     });
     if (threadId) {
       router.push(messageDetail(threadId));
-      onClose();
+      onClose?.();
     }
   };
 
@@ -141,8 +139,8 @@ export function GiiAssistant({
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden bg-background',
-        variant === 'panel'
-          ? 'h-full w-full border-l'
+        isPanel
+          ? 'h-full max-h-full w-full border-l'
           : 'h-[min(92vh,680px)] w-full max-w-lg rounded-t-3xl border shadow-2xl sm:rounded-3xl',
       )}
     >
@@ -154,47 +152,34 @@ export function GiiAssistant({
           <div className="min-w-0">
             <p className="text-sm font-bold">Gii</p>
             <p className="text-muted-foreground truncate text-[10px]">
-              {variant === 'panel' ? 'Property assistant' : `Your property assistant · ${multilingualHint()}`}
+              {isPanel ? 'Property assistant' : `Your property assistant · ${multilingualHint()}`}
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
-          aria-label="Close Gii"
-        >
-          <X className="size-5" />
-        </button>
+        {!isPanel && onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
+            aria-label="Close Gii"
+          >
+            <X className="size-5" />
+          </button>
+        ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-2">
-        {lines.length === 0 && inputMode === 'voice' && (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <p className="text-muted-foreground mb-6 max-w-[240px] text-sm">
-              Tap the microphone and ask Gii anything about your portfolio.
-            </p>
-            <button
-              type="button"
-              onClick={listening ? stopVoice : startVoice}
-              className={cn(
-                'relative flex size-24 items-center justify-center rounded-full transition-transform active:scale-95',
-                variant === 'panel' && 'size-20',
-                'bg-gradient-to-br from-primary via-emerald-500 to-teal-600 text-white shadow-xl shadow-primary/30',
-                listening && 'ring-4 ring-primary/40',
-              )}
-              aria-label={listening ? 'Stop listening' : 'Speak to Gii'}
-            >
-              {listening && (
-                <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
-              )}
-              {listening ? <MicOff className="relative size-9" /> : <Mic className="relative size-9" />}
-            </button>
-            <p className="text-muted-foreground mt-4 text-xs font-medium">
-              {listening ? 'Listening…' : 'Tap to speak'}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
+        {lines.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-emerald-500/10 text-primary">
+              <Sparkles className="size-6" />
+            </div>
+            <p className="text-sm font-semibold">Ask Gii anything</p>
+            <p className="text-muted-foreground mt-1.5 max-w-[240px] text-xs leading-relaxed">
+              {multilingualHint()}
             </p>
           </div>
-        )}
+        ) : null}
 
         {lines.map((line) => (
           <div
@@ -221,7 +206,7 @@ export function GiiAssistant({
                 <p className="text-muted-foreground text-xs">{r.sub}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button asChild size="sm" variant="outline" className="h-7 text-xs">
-                    <Link href={r.href} onClick={onClose}>
+                    <Link href={r.href} onClick={() => onClose?.()}>
                       Open
                     </Link>
                   </Button>
@@ -256,73 +241,64 @@ export function GiiAssistant({
         )}
       </div>
 
-      <div className="shrink-0 space-y-2 border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setInputMode('voice')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
-              inputMode === 'voice' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
-            )}
-          >
-            <Mic className="size-3.5" />
-            Voice
-          </button>
-          <button
-            type="button"
-            onClick={() => setInputMode('text')}
-            className={cn(
-              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
-              inputMode === 'text' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
-            )}
-          >
-            <Keyboard className="size-3.5" />
-            Type
-          </button>
-        </div>
-
-        {inputMode === 'voice' ? (
-          <Button
-            type="button"
-            className="w-full"
-            variant={listening ? 'destructive' : 'default'}
-            onClick={listening ? stopVoice : startVoice}
-          >
-            {listening ? (
-              <>
-                <MicOff className="size-4" />
-                Stop listening
-              </>
-            ) : (
-              <>
-                <Mic className="size-4" />
-                Speak to Gii
-              </>
-            )}
-          </Button>
-        ) : (
-          <div className="flex gap-2">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') runQuery(query);
-              }}
-              placeholder="Ask Gii anything…"
-              className="flex-1"
-              autoFocus={variant === 'modal'}
-            />
-            <Button type="button" onClick={() => runQuery(query)} disabled={!query.trim()}>
-              <Send className="size-4" />
-            </Button>
+      <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {listening ? (
+          <div className="mb-2 flex items-center justify-center gap-2 text-xs font-medium text-primary">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
+              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+            </span>
+            Listening… release when done
           </div>
-        )}
+        ) : null}
+        <div className="flex items-end gap-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') runQuery(query);
+            }}
+            placeholder="Ask Gii anything…"
+            className="min-h-11 flex-1 rounded-full border-border/80 bg-secondary/40 px-4"
+            autoFocus={isPanel}
+          />
+          {query.trim() ? (
+            <button
+              type="button"
+              onClick={() => runQuery(query)}
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95"
+              aria-label="Send message"
+            >
+              <Send className="size-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                startVoice();
+              }}
+              onPointerUp={stopVoice}
+              onPointerLeave={() => {
+                if (listening) stopVoice();
+              }}
+              onPointerCancel={stopVoice}
+              className={cn(
+                'flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
+                'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                listening && 'ring-4 ring-primary/35 scale-110',
+              )}
+              aria-label={listening ? 'Stop recording' : 'Hold to speak'}
+            >
+              {listening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 
-  if (variant === 'panel') {
+  if (isPanel) {
     return shell;
   }
 

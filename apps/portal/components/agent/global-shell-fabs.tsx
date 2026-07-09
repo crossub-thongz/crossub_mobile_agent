@@ -51,14 +51,15 @@ const DOCK_BUTTONS = [
     activeClass:
       'border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-400',
   },
-  {
-    id: 'gii' as const,
-    label: 'Gii',
-    icon: Sparkles,
-    activeClass:
-      'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  },
 ] as const;
+
+const MOBILE_GII_BUTTON = {
+  id: 'gii' as const,
+  label: 'Gii',
+  icon: Sparkles,
+  activeClass:
+    'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+} as const;
 
 function propertyIdFromPath(pathname: string): string | undefined {
   const match = pathname.match(/^\/properties\/([^/]+)$/);
@@ -87,7 +88,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
   const activePanel = useShellDockStore((s) => s.activePanel);
   const togglePanel = useShellDockStore((s) => s.togglePanel);
   const closePanel = useShellDockStore((s) => s.closePanel);
-  const giiPanelOpen = activePanel === 'gii';
+  const mobileGiiOpen = activePanel === 'gii';
 
   const visibleButtons = DOCK_BUTTONS.filter((button) => {
     if (button.id === 'communication' && (hideCommunication || !hasFullManagementAccess)) {
@@ -109,7 +110,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         onClose={closePanel}
         propertyId={propertyId}
       />
-      {activePanel === 'gii' ? (
+      {mobileGiiOpen ? (
         <div className="lg:hidden">
           <GiiAssistant open variant="modal" onClose={closePanel} />
         </div>
@@ -119,9 +120,20 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         className={cn(
           'pointer-events-none fixed z-50 flex flex-col items-end gap-2',
           'bottom-[calc(4.5rem+env(safe-area-inset-bottom))] lg:bottom-6',
-          giiPanelOpen ? 'right-6 lg:right-[calc(25%+1.5rem)]' : 'right-6',
+          'right-6 lg:right-[calc(25%+1.5rem)]',
         )}
       >
+        {/* Desktop already shows Gii permanently — only expose the FAB on mobile. */}
+        <button
+          type="button"
+          title={MOBILE_GII_BUTTON.label}
+          aria-label={MOBILE_GII_BUTTON.label}
+          aria-pressed={mobileGiiOpen}
+          onClick={() => togglePanel('gii')}
+          className={cn(dockButtonClass(mobileGiiOpen, MOBILE_GII_BUTTON.activeClass), 'lg:hidden')}
+        >
+          <MOBILE_GII_BUTTON.icon className="size-5" />
+        </button>
         {visibleButtons.map((btn) => {
           const Icon = btn.icon;
           const isActive = activePanel === btn.id;

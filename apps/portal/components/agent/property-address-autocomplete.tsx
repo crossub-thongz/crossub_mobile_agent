@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import {
   parsePlaceResult,
   type ParsedAustralianAddress,
 } from '@/lib/google-places';
+import { cn } from '@/lib/utils';
 
 /** Default map centre — Sydney CBD, good starting point for AU address search. */
 const DEFAULT_CENTER = { lat: -33.8688, lng: 151.2093 };
@@ -25,6 +26,10 @@ interface PropertyAddressAutocompleteProps {
   longitude?: number;
   placeholder?: string;
   disabled?: boolean;
+  /** Extra fields shown under street address on the left (state, suburb, postcode). */
+  locationFields?: ReactNode;
+  /** Called when map search is ready / failed so parent can lock address fields. */
+  onMapsStatusChange?: (status: { ready: boolean; failed: boolean; enabled: boolean }) => void;
 }
 
 function formatCoord(value: number): string {
@@ -39,6 +44,8 @@ export function PropertyAddressAutocomplete({
   longitude,
   placeholder = '66, Berry Street',
   disabled,
+  locationFields,
+  onMapsStatusChange,
 }: PropertyAddressAutocompleteProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -50,9 +57,15 @@ export function PropertyAddressAutocomplete({
   const [mapsFailed, setMapsFailed] = useState(false);
   const apiKey = getGoogleMapsApiKey();
   const mapsEnabled = !!apiKey;
+  /** When Maps works, address fields are search-only (locked). Manual edit only if Maps is down. */
+  const addressLocked = mapsEnabled && !mapsFailed;
 
   const coords =
     latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null;
+
+  useEffect(() => {
+    onMapsStatusChange?.({ ready: mapsReady, failed: mapsFailed, enabled: mapsEnabled });
+  }, [mapsReady, mapsFailed, mapsEnabled, onMapsStatusChange]);
 
   const handlePlaceSelect = useCallback(
     (parsed: ParsedAustralianAddress) => {
@@ -125,19 +138,61 @@ export function PropertyAddressAutocomplete({
           position: center,
           visible: !!coords,
         });
-        return;
+      } else {
+        mapRef.current.setCenter(center);
+        mapRef.current.setZoom(zoom);
+        if (coords) {
+          markerRef.current?.setPosition(center);
+          markerRef.current?.setVisible(true);
+        } else {
+          markerRef.current?.setVisible(false);
+        }
       }
 
+      google.maps.event.trigger(mapRef.current, 'resize');
       mapRef.current.setCenter(center);
-      mapRef.current.setZoom(zoom);
-      if (coords) {
-        markerRef.current?.setPosition(center);
-        markerRef.current?.setVisible(true);
-      } else {
-        markerRef.current?.setVisible(false);
-      }
     });
   }, [mapsEnabled, mapsReady, coords]);
+
+  useEffect(() => {
+    if (!mapsReady || !mapContainerRef.current || !mapRef.current) return;
+    const el = mapContainerRef.current;
+    const observer = new ResizeObserver(() => {
+      if (!mapRef.current) return;
+      google.maps.event.trigger(mapRef.current, 'resize');
+      const center = coords ?? DEFAULT_CENTER;
+      mapRef.current.setCenter(center);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [mapsReady, coords]);
+
+  const showMap = mapsEnabled && mapsReady;
+
+  const coordsFields = coords ? (
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          Latitude
+        </Label>
+        <Input
+          readOnly
+          value={formatCoord(coords.lat)}
+          className="bg-muted/40 font-mono text-xs"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+          Longitude
+        </Label>
+        <Input
+          readOnly
+          value={formatCoord(coords.lng)}
+          className="bg-muted/40 font-mono text-xs"
+        />
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-3">
@@ -166,7 +221,7 @@ export function PropertyAddressAutocomplete({
             </p>
           ) : mapsFailed ? (
             <p className="text-amber-700 text-xs dark:text-amber-400">
-              Map search is unavailable — enter the street address manually below.
+              Map search is unavailable — enter the address fields manually below.
             </p>
           ) : (
             <p className="text-muted-foreground text-xs">Loading map search…</p>
@@ -174,56 +229,40 @@ export function PropertyAddressAutocomplete({
         </div>
       ) : null}
 
-      <div className="space-y-1.5">
-        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          Street address
-        </Label>
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          disabled={disabled}
-          autoComplete="street-address"
-        />
-        {mapsEnabled ? (
-          <p className="text-muted-foreground text-xs">
-            Or type the street address directly if map search is not working.
-          </p>
+      <div
+        className={
+          showMap
+            ? 'grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(200px,240px)]'
+            : 'space-y-3'
+        }
+      >
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Street address
+            </Label>
+            <Input
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholder}
+              disabled={disabled || addressLocked}
+              readOnly={addressLocked}
+              autoComplete="street-address"
+              className={cn(addressLocked && 'bg-muted/40')}
+            />
+          </div>
+          {locationFields}
+          {coordsFields}
+        </div>
+
+        {showMap ? (
+          <div
+            ref={mapContainerRef}
+            className="border-border/60 min-h-[220px] w-full overflow-hidden rounded-md border lg:min-h-0 lg:h-full"
+            aria-label="Property location map"
+          />
         ) : null}
       </div>
-
-      {mapsEnabled && mapsReady ? (
-        <div
-          ref={mapContainerRef}
-          className="border-border/60 h-52 w-full overflow-hidden rounded-md border"
-          aria-label="Property location map"
-        />
-      ) : null}
-
-      {coords ? (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Latitude
-            </Label>
-            <Input
-              readOnly
-              value={formatCoord(coords.lat)}
-              className="bg-muted/40 font-mono text-xs"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Longitude
-            </Label>
-            <Input
-              readOnly
-              value={formatCoord(coords.lng)}
-              className="bg-muted/40 font-mono text-xs"
-            />
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -23,7 +23,6 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess } from '@/lib/portal-service-level';
-import { useGiiPanelOpen, useShellDockStore } from '@/lib/shell-dock-store';
 import { cn, displayName } from '@/lib/utils';
 
 function isActive(pathname: string, href: string): boolean {
@@ -68,8 +67,6 @@ export function AgentShell({
   const actionCount = needActionItems.length;
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = filterNavByAccess(MORE_NAV, hasFullManagementAccess);
-  const giiOpen = useGiiPanelOpen();
-  const closeDockPanel = useShellDockStore((s) => s.closePanel);
 
   useEffect(() => {
     const el = headerRef.current;
@@ -95,21 +92,19 @@ export function AgentShell({
   }, [moreOpen]);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background lg:h-dvh lg:overflow-hidden">
       <AgentSidebar
-        compact={giiOpen}
         unreadMessages={unreadMessages}
         actionCount={actionCount}
         unreadNotificationCount={unreadNotificationCount}
         onLogout={() => void logout()}
       />
 
-      <div className="flex min-h-screen min-w-0 flex-1">
+      <div className="flex min-h-screen min-w-0 flex-1 lg:h-full lg:min-h-0 lg:overflow-hidden">
         <div
           className={cn(
-            'mx-auto flex min-h-screen w-full min-w-0 flex-col',
+            'mx-auto flex min-h-screen w-full min-w-0 flex-col lg:h-full lg:min-h-0 lg:flex-[3] lg:overflow-hidden',
             wide ? 'max-w-none' : 'max-w-lg lg:max-w-none',
-            giiOpen ? 'lg:flex-[3]' : 'lg:flex-1',
           )}
         >
         <header
@@ -177,7 +172,7 @@ export function AgentShell({
         </header>
 
         {title && !immersive && (
-          <header className="border-border bg-background/95 sticky top-0 z-40 hidden shrink-0 flex-col gap-2 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
+          <header className="border-border bg-background/95 z-40 hidden shrink-0 flex-col gap-2 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 {backHref && (
@@ -226,7 +221,7 @@ export function AgentShell({
 
         <main
           className={cn(
-            'flex min-h-0 flex-1 flex-col',
+            'flex min-h-0 flex-1 flex-col lg:overflow-y-auto',
             wide ? 'lg:p-0' : 'lg:px-8 lg:pb-8',
             title && !immersive && 'lg:pt-6',
             immersive && 'lg:pt-2 lg:pb-0',
@@ -346,11 +341,9 @@ export function AgentShell({
         {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
         </div>
 
-        {giiOpen ? (
-          <aside className="bg-background hidden min-h-screen w-1/4 min-w-[280px] max-w-[420px] shrink-0 lg:flex">
-            <GiiAssistant open variant="panel" onClose={closeDockPanel} />
-          </aside>
-        ) : null}
+        <aside className="bg-background hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
+          <GiiAssistant open variant="panel" />
+        </aside>
       </div>
     </div>
   );
