@@ -11,7 +11,8 @@ import {
   type FixedTermWeeks,
 } from '@/lib/rent-review-lease-helpers';
 import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
-import { deriveRentPaidTo } from '@/lib/property-overview';
+import { resolveRentPaidTo } from '@/lib/property-overview';
+import { fetchProperty } from '@/lib/crossub-api/agent-client';
 import { propertyRegistryApi } from '@/lib/property-registry-api';
 
 import type { Agency } from '@/lib/types';
@@ -349,6 +350,37 @@ export function buildRentReviewPrefill(
   };
 }
 
+/** Load rent paid-to from the same sources as the property Overview tab. */
+export async function fetchPropertyRentPaidUntil(propertyId: string): Promise<string | undefined> {
+  try {
+    const portal = await propertyRegistryApi.getPortal(propertyId);
+    const fromPortal = resolveRentPaidTo(
+      portal?.overview?.rentPaidUntilDate,
+      portal?.accounting,
+    );
+    if (fromPortal) return fromPortal;
+  } catch {
+    /* portal optional */
+  }
+
+  try {
+    const record = await propertyRegistryApi.get(propertyId);
+    if (record.rentPaidUntil) return record.rentPaidUntil.slice(0, 10);
+  } catch {
+    /* staff property row optional */
+  }
+
+  try {
+    const agentProperty = await fetchProperty(propertyId);
+    const raw = (agentProperty as { rentPaidUntil?: string | null }).rentPaidUntil;
+    if (raw) return raw.slice(0, 10);
+  } catch {
+    /* agent property row optional */
+  }
+
+  return undefined;
+}
+
 /** Load leasing cycle detail for richer rent review prefill. */
 export async function fetchRentReviewPrefill(
   property: Property,
@@ -359,33 +391,12 @@ export async function fetchRentReviewPrefill(
     tenantSelections?: TenantSelectionCase[];
   },
 ): Promise<RentReviewPrefill> {
-  let cycleView: ServerLeasingCycleView | null = null;
-  if (options?.leasingCycle?.id) {
-    try {
-      cycleView = await leasingOpsApi.get(options.leasingCycle.id);
-    } catch {
-      /* portfolio snapshot may still be enough */
-    }
-  }
-
-  let rentPaidUntil: string | undefined;
-  try {
-    const record = await propertyRegistryApi.get(property.id);
-    if (record.rentPaidUntil) {
-      rentPaidUntil = record.rentPaidUntil.slice(0, 10);
-    }
-  } catch {
-    /* optional */
-  }
-  if (!rentPaidUntil) {
-    try {
-      const portal = await propertyRegistryApi.getPortal(property.id);
-      const paidTo = deriveRentPaidTo(portal?.accounting);
-      if (paidTo) rentPaidUntil = paidTo.slice(0, 10);
-    } catch {
-      /* ledger optional */
-    }
-  }
+  const [cycleView, rentPaidUntil] = await Promise.all([
+    options?.leasingCycle?.id
+      ? leasingOpsApi.get(options.leasingCycle.id).catch(() => null)
+      : Promise.resolve(null),
+    fetchPropertyRentPaidUntil(property.id),
+  ]);
 
   const prefill = buildRentReviewPrefill(property, agency, currentLease, {
     cycleView,

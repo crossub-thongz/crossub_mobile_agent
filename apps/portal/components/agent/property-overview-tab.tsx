@@ -471,29 +471,25 @@ export function PropertyOverviewTab({
           phone={landlord.phone}
           updatedHint={landlordUpdatedHint}
         />
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-2">
+        <div className="mt-2 grid grid-cols-2 gap-2">
           <StatCell label="Management rate" value={managementRateDisplay} />
-          {managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href) ? (
-            <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2 sm:col-span-2">
-              <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-                Management agreement
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  openDocPreview(
-                    managementAgreementDoc,
-                    MANAGEMENT_AGREEMENT_DOC_SLOT.label,
-                  )
-                }
-                className="text-primary mt-1 text-sm font-semibold"
-              >
-                View management agreement
-              </button>
-            </div>
-          ) : (
-            <StatCell label="Management agreement" value="Not uploaded" />
-          )}
+          <StatCell
+            label="Management agreement"
+            value={
+              managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
+                ? 'View agreement'
+                : 'Not uploaded'
+            }
+            onPreview={
+              managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
+                ? () =>
+                    openDocPreview(
+                      managementAgreementDoc,
+                      MANAGEMENT_AGREEMENT_DOC_SLOT.label,
+                    )
+                : undefined
+            }
+          />
           {overview?.endOfManagementDate || property.endOfManagementDate ? (
             <StatCell
               label="End of management"
@@ -503,21 +499,15 @@ export function PropertyOverviewTab({
             />
           ) : null}
         </div>
+      </OverviewSection>
 
-        {inProgressJobs.length > 0 ? (
-          <div className="mt-3 border-t border-border/50 pt-3">
-            <div className="mb-2 flex items-center gap-1.5">
-              <ListTodo className="text-primary size-3.5" />
-              <h4 className="text-xs font-semibold">Jobs in progress</h4>
-            </div>
-            <PropertyJobCasesTable
-              rows={inProgressJobs}
-              showViewToggle={false}
-              emptyTitle="No jobs in progress"
-              emptyDescription="Active maintenance, inspections, leasing, and other cases appear here."
-            />
-          </div>
-        ) : null}
+      <OverviewSection title="Jobs in progress">
+        <PropertyJobCasesTable
+          rows={inProgressJobs}
+          showViewToggle={false}
+          emptyTitle="No jobs in progress"
+          emptyDescription="Active maintenance, inspections, leasing, and other cases appear here."
+        />
       </OverviewSection>
 
       <PropertyTenancyEditDialog

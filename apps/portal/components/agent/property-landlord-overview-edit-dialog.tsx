@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,7 @@ export function PropertyLandlordOverviewEditDialog({
 }) {
   const { apiConnected, uploadDocument } = useAgentData();
   const [form, setForm] = useState<LandlordForm>(initial);
+  const [replacingLandlord, setReplacingLandlord] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -64,7 +65,18 @@ export function PropertyLandlordOverviewEditDialog({
   useEffect(() => {
     if (!open) return;
     setForm(initial);
+    setReplacingLandlord(false);
   }, [open, initial]);
+
+  const startNewLandlord = () => {
+    setReplacingLandlord(true);
+    setForm((prev) => ({
+      ...prev,
+      landlordName: '',
+      landlordEmail: '',
+      landlordPhone: '',
+    }));
+  };
 
   const set = <K extends keyof LandlordForm>(key: K, value: LandlordForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -127,9 +139,14 @@ export function PropertyLandlordOverviewEditDialog({
         landlordPhone: form.landlordPhone.trim() || undefined,
         managementRatePercent: rate,
         managementRateGst: form.managementRateGst || undefined,
+        replaceLandlord: replacingLandlord || undefined,
       });
-      toast.success('Management details updated');
-      if (
+      toast.success(
+        replacingLandlord ? 'New landlord saved' : 'Management details updated',
+      );
+      if (replacingLandlord) {
+        toast.message('Previous landlord saved to History → Landlord');
+      } else if (
         initial.landlordName.trim() &&
         (form.landlordName.trim() !== initial.landlordName.trim() ||
           form.landlordEmail.trim() !== initial.landlordEmail.trim() ||
@@ -157,7 +174,28 @@ export function PropertyLandlordOverviewEditDialog({
         </DialogHeader>
         <div className="space-y-4 py-1">
           <div className="space-y-2">
-            <p className="text-xs font-semibold">Landlord</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold">Landlord</p>
+              {initial.landlordName.trim() ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 gap-1 px-2 text-[11px]"
+                  onClick={startNewLandlord}
+                  disabled={replacingLandlord}
+                >
+                  <UserPlus className="size-3.5" />
+                  New landlord
+                </Button>
+              ) : null}
+            </div>
+            {replacingLandlord ? (
+              <p className="text-muted-foreground text-[11px]">
+                Enter the new landlord below. The current landlord will be archived to History
+                when you save.
+              </p>
+            ) : null}
             <div className="grid gap-2">
               <div className="space-y-1.5">
                 <Label htmlFor="landlord-name">Name</Label>

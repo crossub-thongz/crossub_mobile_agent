@@ -139,6 +139,7 @@ export type CreateAgentPropertyInput = {
   lettingFee?: number;
   managementRatePercent?: number;
   managementRateGst?: 'include' | 'exclude';
+  replaceLandlord?: boolean;
   registryIntakeComplete?: boolean;
   registryDraft?: Record<string, unknown> | null;
 };

@@ -1,6 +1,23 @@
 import type { CreatePropertyDocumentGroup } from '@/lib/property-create-document-groups';
 import type { LeasingRecord, Property, VacatingCase } from '@/lib/types';
 
+export interface ArchivedLandlordOverviewSnapshot {
+  tenantName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+  leaseStartDate?: string;
+  leaseEndDate?: string;
+  nextRentReviewDate?: string;
+  rentPaidUntilDate?: string;
+  vacateDate?: string;
+  nextRoutineInspectionDate?: string;
+  currentRentWeekly?: number;
+  bondAmount?: number;
+  depositAmount?: number;
+  managementRatePercent?: number;
+  managementRateGst?: string;
+}
+
 export interface ArchivedLandlordRecord {
   name: string;
   email?: string;
@@ -8,6 +25,9 @@ export interface ArchivedLandlordRecord {
   managementRatePercent?: number;
   managementRateGst?: string;
   archivedAt: string;
+  leaseStartDate?: string;
+  leaseEndDate?: string;
+  overview?: ArchivedLandlordOverviewSnapshot;
 }
 
 export interface TenancyArchiveSnapshot {
@@ -38,6 +58,50 @@ function parseRegistryDraft(registryDraft: unknown): Record<string, unknown> {
   return {};
 }
 
+function parseArchivedLandlordOverview(
+  value: unknown,
+): ArchivedLandlordOverviewSnapshot | undefined {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const item = value as Record<string, unknown>;
+  const overview: ArchivedLandlordOverviewSnapshot = {
+    tenantName: typeof item.tenantName === 'string' ? item.tenantName : undefined,
+    tenantEmail: typeof item.tenantEmail === 'string' ? item.tenantEmail : undefined,
+    tenantPhone: typeof item.tenantPhone === 'string' ? item.tenantPhone : undefined,
+    leaseStartDate: typeof item.leaseStartDate === 'string' ? item.leaseStartDate : undefined,
+    leaseEndDate: typeof item.leaseEndDate === 'string' ? item.leaseEndDate : undefined,
+    nextRentReviewDate:
+      typeof item.nextRentReviewDate === 'string' ? item.nextRentReviewDate : undefined,
+    rentPaidUntilDate:
+      typeof item.rentPaidUntilDate === 'string' ? item.rentPaidUntilDate : undefined,
+    vacateDate: typeof item.vacateDate === 'string' ? item.vacateDate : undefined,
+    nextRoutineInspectionDate:
+      typeof item.nextRoutineInspectionDate === 'string'
+        ? item.nextRoutineInspectionDate
+        : undefined,
+    currentRentWeekly:
+      typeof item.currentRentWeekly === 'number' ? item.currentRentWeekly : undefined,
+    bondAmount: typeof item.bondAmount === 'number' ? item.bondAmount : undefined,
+    depositAmount: typeof item.depositAmount === 'number' ? item.depositAmount : undefined,
+    managementRatePercent:
+      typeof item.managementRatePercent === 'number' ? item.managementRatePercent : undefined,
+    managementRateGst:
+      typeof item.managementRateGst === 'string' ? item.managementRateGst : undefined,
+  };
+  return Object.values(overview).some((v) => v != null) ? overview : undefined;
+}
+
+export function archivedLandlordKey(archivedAt: string): string {
+  return encodeURIComponent(archivedAt);
+}
+
+export function findArchivedLandlord(
+  registryDraft: unknown,
+  archiveKey: string,
+): ArchivedLandlordRecord | undefined {
+  const decoded = decodeURIComponent(archiveKey);
+  return parseArchivedLandlords(registryDraft).find((item) => item.archivedAt === decoded);
+}
+
 export function parseArchivedLandlords(registryDraft: unknown): ArchivedLandlordRecord[] {
   const draft = parseRegistryDraft(registryDraft);
   const raw = draft.archivedLandlords;
@@ -54,6 +118,9 @@ export function parseArchivedLandlords(registryDraft: unknown): ArchivedLandlord
       managementRateGst:
         typeof item.managementRateGst === 'string' ? item.managementRateGst : undefined,
       archivedAt: typeof item.archivedAt === 'string' ? item.archivedAt : '',
+      leaseStartDate: typeof item.leaseStartDate === 'string' ? item.leaseStartDate : undefined,
+      leaseEndDate: typeof item.leaseEndDate === 'string' ? item.leaseEndDate : undefined,
+      overview: parseArchivedLandlordOverview(item.overview),
     }))
     .filter((item) => item.name.length > 0)
     .sort((a, b) => b.archivedAt.localeCompare(a.archivedAt));
@@ -78,7 +145,7 @@ export function parseTenancyArchiveSnapshots(registryDraft: unknown): TenancyArc
       archivedAt: typeof item.archivedAt === 'string' ? item.archivedAt : '',
       source:
         item.source === 'vacate_date' || item.source === 'end_leasing_complete'
-          ? item.source
+          ? (item.source as TenancyArchiveSnapshot['source'])
           : undefined,
     }))
     .filter((item) => item.archivedAt.length > 0)

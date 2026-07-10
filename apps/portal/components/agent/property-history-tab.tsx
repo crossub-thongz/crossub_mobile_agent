@@ -1,10 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Archive } from 'lucide-react';
+import { Archive, ChevronRight } from 'lucide-react';
 
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
+import { propertyArchivedLandlord } from '@/constants/routes';
 import {
+  archivedLandlordKey,
   parseArchivedLandlords,
   parseTenancyArchiveSnapshots,
 } from '@/lib/property-archive';
@@ -46,75 +49,53 @@ function SubTabBar({
 }
 
 function ArchivedLandlordList({
-  property,
+  propertyId,
   archived,
 }: {
-  property: Property;
+  propertyId: string;
   archived: ReturnType<typeof parseArchivedLandlords>;
 }) {
   const gstLabel = (gst?: string) =>
     gst === 'include' ? 'Include GST' : gst === 'exclude' ? 'Exclude GST' : null;
 
-  return (
-    <div className="space-y-3">
-      <section className="rounded-xl border bg-card p-3">
-        <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-          Current landlord
-        </p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-3">
-          <div>
-            <p className="text-muted-foreground text-[10px] uppercase">Name</p>
-            <p className="text-sm font-semibold">{property.homeOwnerName || '—'}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-[10px] uppercase">Email</p>
-            <p className="text-sm">{property.homeOwnerContact.email || '—'}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-[10px] uppercase">Number</p>
-            <p className="text-sm tabular-nums">{property.homeOwnerContact.phone || '—'}</p>
-          </div>
-        </div>
-        {property.managementRatePercent != null ? (
-          <p className="text-muted-foreground mt-2 text-xs">
-            Management rate: {property.managementRatePercent}%
-            {gstLabel(property.managementRateGst)
-              ? ` · ${gstLabel(property.managementRateGst)}`
-              : ''}
-          </p>
-        ) : null}
-      </section>
+  if (archived.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">No previous landlords archived yet.</p>
+    );
+  }
 
-      {archived.length > 0 ? (
-        <div className="space-y-2">
-          <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
-            <Archive className="size-3.5" />
-            Archived landlords
-          </p>
-          {archived.map((landlord, index) => (
-            <div
-              key={`${landlord.archivedAt}-${index}`}
-              className="rounded-xl border border-dashed bg-muted/10 p-3"
-            >
+  return (
+    <div className="space-y-2">
+      <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
+        <Archive className="size-3.5" />
+        Previous landlords
+      </p>
+      {archived.map((landlord, index) => {
+        const leaseStart = landlord.leaseStartDate ?? landlord.overview?.leaseStartDate;
+        const leaseEnd = landlord.leaseEndDate ?? landlord.overview?.leaseEndDate;
+        const leaseLabel =
+          leaseStart || leaseEnd
+            ? `${leaseStart ? formatDate(leaseStart) : '—'} — ${
+                leaseEnd ? formatDate(leaseEnd) : '—'
+              }`
+            : null;
+
+        return (
+          <Link
+            key={`${landlord.archivedAt}-${index}`}
+            href={propertyArchivedLandlord(propertyId, archivedLandlordKey(landlord.archivedAt))}
+            className="flex items-center gap-3 rounded-xl border border-dashed bg-muted/10 p-3 transition hover:border-primary/30"
+          >
+            <div className="min-w-0 flex-1">
               <p className="text-muted-foreground text-[10px]">
                 Archived {landlord.archivedAt ? formatDateTime(landlord.archivedAt) : '—'}
               </p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                <div>
-                  <p className="text-muted-foreground text-[10px] uppercase">Name</p>
-                  <p className="text-sm font-semibold">{landlord.name}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[10px] uppercase">Email</p>
-                  <p className="text-sm">{landlord.email || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[10px] uppercase">Number</p>
-                  <p className="text-sm tabular-nums">{landlord.phone || '—'}</p>
-                </div>
-              </div>
+              <p className="mt-1 text-sm font-semibold">{landlord.name}</p>
+              {leaseLabel ? (
+                <p className="text-muted-foreground mt-1 text-xs">Lease period: {leaseLabel}</p>
+              ) : null}
               {landlord.managementRatePercent != null ? (
-                <p className="text-muted-foreground mt-2 text-xs">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Management rate: {landlord.managementRatePercent}%
                   {gstLabel(landlord.managementRateGst)
                     ? ` · ${gstLabel(landlord.managementRateGst)}`
@@ -122,11 +103,10 @@ function ArchivedLandlordList({
                 </p>
               ) : null}
             </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-sm">No previous landlords archived yet.</p>
-      )}
+            <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -211,7 +191,7 @@ export function PropertyHistoryTab({
           </section>
         </div>
       ) : (
-        <ArchivedLandlordList property={property} archived={archivedLandlords} />
+        <ArchivedLandlordList propertyId={propertyId} archived={archivedLandlords} />
       )}
     </div>
   );

@@ -53,6 +53,8 @@ export const propertyDetail = (id: string) => `/properties/${id}`;
 export const agencyDetail = (id: string) => `/agencies/${id}`;
 export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
   `/properties/${propertyId}/lease/${leaseId}`;
+export const propertyArchivedLandlord = (propertyId: string, archiveKey: string) =>
+  `/properties/${propertyId}/landlord-archive/${archiveKey}`;
 
 export const propertyLeasingWorkflow = (propertyId: string) =>
   `/properties/${propertyId}/leasing-workflow`;

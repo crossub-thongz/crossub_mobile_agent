@@ -154,6 +154,7 @@ export type PropertyRegistryPatch = Partial<{
   landlordInsuranceExpiry: string;
   managementRatePercent: number;
   managementRateGst: 'include' | 'exclude';
+  replaceLandlord?: boolean;
   buildingManagerName: string;
   buildingManagerEmail: string;
   buildingManagerPhone: string;

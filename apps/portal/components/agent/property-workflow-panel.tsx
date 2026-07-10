@@ -37,12 +37,14 @@ import {
   fetchIngoingInspectionPrefill,
   fetchMaintenancePrefill,
   fetchRentReviewPrefill,
+  fetchPropertyRentPaidUntil,
   fetchTerminationPrefill,
   recalcRentReviewLeaseStart,
   LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS,
   minLeasingCycleAvailableFrom,
 } from '@/lib/property-form-prefill';
 import { isPropertyVacant } from '@/lib/property-leasing';
+import { resolveRentPaidTo } from '@/lib/property-overview';
 import {
   buildPropertyWorkflowContext,
   tabActionsFor,
@@ -382,7 +384,7 @@ export function PropertyWorkflowCreateDialog({
     setNewRentValue('');
     setNewRentPeriod('weekly');
     setRentNegotiationChoice(null);
-    setRentPaidUntil('');
+    setRentPaidUntil(resolveRentPaidTo(property.rentPaidUntil) ?? '');
 
     const instantTermination = buildTerminationPrefill(property, currentLease, { leasingCycle });
     setBondHeld(instantTermination.bondHeld);
@@ -424,6 +426,11 @@ export function PropertyWorkflowCreateDialog({
 
     let active = true;
     setPrefillLoading(true);
+    if (actionId === 'start_rent_review') {
+      void fetchPropertyRentPaidUntil(property.id).then((paid) => {
+        if (active && paid) setRentPaidUntil(paid);
+      });
+    }
     void (async () => {
       try {
         if (actionId === 'start_rent_review') {
@@ -440,7 +447,7 @@ export function PropertyWorkflowCreateDialog({
           setPreferredLeaseStartHint(rr.preferredLeaseStartHint ?? null);
           setLeaseTermAnchor(rr.leaseTermAnchor);
           setCurrentWeeklyRent(rr.currentWeeklyRent);
-          setRentPaidUntil(rr.rentPaidUntil ?? '');
+          setRentPaidUntil((prev) => rr.rentPaidUntil ?? prev);
         } else if (actionId === 'start_end_leasing') {
           const term = await fetchTerminationPrefill(property, currentLease, { leasingCycle });
           if (!active) return;
@@ -846,7 +853,7 @@ export function PropertyWorkflowCreateDialog({
                 type="date"
                 value={rentPaidUntil}
                 onChange={(e) => setRentPaidUntil(e.target.value)}
-                disabled={prefillLoading}
+                disabled={prefillLoading && !rentPaidUntil}
               />
               {prefillLoading && !rentPaidUntil ? (
                 <p className="text-muted-foreground text-[11px]">

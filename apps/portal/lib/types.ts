@@ -105,6 +105,7 @@ export interface Property {
   /** Wizard draft + archived landlord/tenancy snapshots from the API. */
   registryDraft?: Record<string, unknown> | null;
   vacateDate?: string;
+  rentPaidUntil?: string;
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;
