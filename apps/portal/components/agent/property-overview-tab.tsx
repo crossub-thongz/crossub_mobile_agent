@@ -424,6 +424,14 @@ export function PropertyOverviewTab({
                 : undefined
             }
           />
+          {overview?.endOfManagementDate || property.endOfManagementDate ? (
+            <StatCell
+              label="End of management"
+              value={formatDate(
+                overview?.endOfManagementDate ?? property.endOfManagementDate ?? '',
+              )}
+            />
+          ) : null}
         </div>
       </OverviewSection>
 

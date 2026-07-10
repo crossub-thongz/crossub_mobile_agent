@@ -95,6 +95,11 @@ export interface Property {
   leaseStart?: string;
   leaseEnd?: string;
   nextRentReview?: string;
+  createdAt?: string;
+  agencyName?: string;
+  propertyManager?: string;
+  propertyManagerId?: string;
+  endOfManagementDate?: string;
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;

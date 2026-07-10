@@ -14,6 +14,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import {
   approveMaintenance as apiApproveMaintenance,
   createProperty as apiCreateProperty,
+  endPropertyManagement as apiEndPropertyManagement,
   createAgency as apiCreateAgency,
   createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
@@ -202,6 +203,7 @@ interface AgentDataContextValue {
     options?: { category?: MessageCategory; subject?: string; caseId?: string },
   ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Promise<Property>;
+  endPropertyManagement: (propertyId: string, endOfManagementDate: string) => Promise<void>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   registerInspection: (inspection: Inspection) => void;
   approveMaintenanceQuote: (requestId: string) => Promise<void>;
@@ -764,6 +766,18 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [apiConnected, apiAgencies, refresh, storeAddProperty, agentPortfolioId],
   );
 
+  const endPropertyManagement = useCallback(
+    async (propertyId: string, endOfManagementDate: string) => {
+      if (!apiConnected) {
+        throw new Error('Connect to the API to end property management');
+      }
+      await apiEndPropertyManagement(propertyId, { endOfManagementDate });
+      setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
+      await refresh();
+    },
+    [apiConnected, refresh],
+  );
+
   const addOpenInspection = useCallback(
     async (input: import('@/lib/store').NewOpenInspectionInput) => {
       if (apiConnected) {
@@ -1060,6 +1074,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     ensureMessageThread,
     addProperty,
+    endPropertyManagement,
     addOpenInspection,
     registerInspection,
     uploadDocument,

@@ -58,8 +58,7 @@ export async function fetchAgency(agencyId: string): Promise<AgentAgency> {
 
 /** Properties across the assigned agencies (`GET /api/v1/agent/properties`). */
 export async function fetchProperties(): Promise<AgentProperty[]> {
-  const { data, error } = await crossub.GET('/agent/properties');
-  if (error || !data) throw new Error('Failed to load properties');
+  const data = await agentFetch<{ items: AgentProperty[] }>('/agent/properties');
   return data.items;
 }
 
@@ -111,6 +110,17 @@ export async function createProperty(
   return agentFetch<AgentProperty>('/agent/properties', {
     method: 'POST',
     body: JSON.stringify(body),
+  });
+}
+
+/** End agency management on a property (`POST /agent/properties/{propertyId}/end-management`). */
+export async function endPropertyManagement(
+  propertyId: string,
+  input: { endOfManagementDate: string },
+): Promise<void> {
+  await agentFetch<void>(`/agent/properties/${propertyId}/end-management`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 

@@ -84,6 +84,11 @@ type ExtendedAgentProperty = AgentProperty & {
   strataContactName?: string | null;
   strataContactEmail?: string | null;
   strataContactPhone?: string | null;
+  createdAt?: string;
+  agencyName?: string | null;
+  propertyManager?: string | null;
+  propertyManagerId?: string | null;
+  endOfManagementDate?: string | null;
 };
 
 function readFurnished(dto: AgentProperty): boolean | undefined {
@@ -99,12 +104,25 @@ function readExtended(dto: AgentProperty): ExtendedAgentProperty {
 // Properties
 // ---------------------------------------------------------------------------
 
+type AgentPropertyListFields = {
+  createdAt?: string | null;
+  agencyName?: string | null;
+  propertyManager?: string | null;
+  propertyManagerId?: string | null;
+  endOfManagementDate?: string | null;
+};
+
+function readListFields(dto: AgentProperty): AgentPropertyListFields {
+  return dto as AgentProperty & AgentPropertyListFields;
+}
+
 /** Map one enriched property card onto the app's rich Property view-model. */
 export function mapAgentProperty(
   dto: AgentProperty,
   agentId: AgentPortfolioId,
 ): Property {
   const ext = readExtended(dto);
+  const list = readListFields(dto);
   return {
     id: dto.id,
     agencyId: dto.agencyId,
@@ -146,6 +164,11 @@ export function mapAgentProperty(
         : undefined,
     leaseStart: dto.leaseStart ?? undefined,
     leaseEnd: dto.leaseEnd ?? undefined,
+    createdAt: list.createdAt ?? ext.createdAt ?? undefined,
+    agencyName: list.agencyName ?? ext.agencyName ?? undefined,
+    propertyManager: list.propertyManager ?? ext.propertyManager ?? undefined,
+    propertyManagerId: list.propertyManagerId ?? ext.propertyManagerId ?? undefined,
+    endOfManagementDate: list.endOfManagementDate ?? ext.endOfManagementDate ?? undefined,
     openTasks: 0,
     inspectionStatus: '—',
     maintenanceStatus: '—',

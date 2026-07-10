@@ -227,6 +227,7 @@ export const useAgentStore = create<AgentStore>()(
           openTasks: 0,
           inspectionStatus: 'Not scheduled',
           maintenanceStatus: 'None',
+          createdAt: new Date().toISOString(),
         };
         set((s) => ({ addedProperties: [property, ...s.addedProperties] }));
         return property;

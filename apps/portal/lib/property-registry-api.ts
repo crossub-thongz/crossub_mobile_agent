@@ -63,6 +63,7 @@ export interface PropertyPortalOverview {
   lettingFee?: number;
   managementRatePercent?: number;
   managementRateGst?: 'include' | 'exclude';
+  endOfManagementDate?: string;
   buildingManager?: PropertyContactBlock;
   strataContact?: PropertyContactBlock;
 }
