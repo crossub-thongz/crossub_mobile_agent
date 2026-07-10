@@ -24,6 +24,7 @@ import { deriveStageStatus } from '@/lib/end-leasing/lifecycle';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { terminationApi } from '@/lib/termination-case-api';
+import { TerminationVacateDateDialog } from '@/components/end-leasing/termination-vacate-date-dialog';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const DONE = LEASING_ITEM_STATUS.DONE;
@@ -83,28 +84,57 @@ function PhaseNotice({ caseData }: { caseData: TerminationCaseDetail }) {
 }
 
 function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
+  const loadCase = useEndLeasingStore((s) => s.loadCase);
+  const [vacateDialogOpen, setVacateDialogOpen] = useState(false);
+  const expectedVacate =
+    caseData.vacate.expectedVacateDate ?? caseData.vacateDate ?? '';
+
   return (
-    <StepCard icon={KeyRound} title="Key return" status={deriveStageStatus(caseData, TERMINATION_STAGE.KEY_RETURN)}>
-      <div className="grid grid-cols-2 gap-3">
-        <StepFact
-          label="Expected vacate"
-          value={caseData.vacate.expectedVacateDate ? formatDate(caseData.vacate.expectedVacateDate) : '—'}
-        />
-        <StepFact
-          label="Possession regained"
-          value={
-            caseData.vacate.possessionRegainedDate
-              ? formatDate(caseData.vacate.possessionRegainedDate)
-              : 'Pending'
-          }
-        />
-        <BoolStatus
-          done={caseData.vacate.keysReturned}
-          doneLabel="Keys returned"
-          pendingLabel="Awaiting key return"
-        />
-      </div>
-    </StepCard>
+    <>
+      <StepCard
+        icon={KeyRound}
+        title="Key return"
+        status={deriveStageStatus(caseData, TERMINATION_STAGE.KEY_RETURN)}
+        footer={
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => setVacateDialogOpen(true)}
+          >
+            Change vacate date
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <StepFact
+            label="Expected vacate"
+            value={expectedVacate ? formatDate(expectedVacate) : '—'}
+          />
+          <StepFact
+            label="Possession regained"
+            value={
+              caseData.vacate.possessionRegainedDate
+                ? formatDate(caseData.vacate.possessionRegainedDate)
+                : 'Pending'
+            }
+          />
+          <BoolStatus
+            done={caseData.vacate.keysReturned}
+            doneLabel="Keys returned"
+            pendingLabel="Awaiting key return"
+          />
+        </div>
+      </StepCard>
+
+      <TerminationVacateDateDialog
+        open={vacateDialogOpen}
+        onOpenChange={setVacateDialogOpen}
+        caseId={caseData.id}
+        initialDate={expectedVacate.slice(0, 10)}
+        onSaved={() => void loadCase(caseData.id)}
+      />
+    </>
   );
 }
 

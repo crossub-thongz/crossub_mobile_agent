@@ -27,6 +27,7 @@ export interface PropertyOverviewSync {
   financial: PropertyPortalFinancial | null;
   accounting: PropertyPortalAccounting | null;
   bond: PropertyBondSnapshot | null;
+  keyFobCount: number | null;
   tenantContact: PropertyTenantContact | null;
   loading: boolean;
 }
@@ -37,6 +38,7 @@ const EMPTY: PropertyOverviewSync = {
   financial: null,
   accounting: null,
   bond: null,
+  keyFobCount: null,
   tenantContact: null,
   loading: false,
 };
@@ -67,6 +69,7 @@ export function usePropertyOverviewSync(
       ]);
 
       const bondBlock = cycleView?.onboarding?.bond;
+      const keyFobCount = cycleView?.onboarding?.keyCollection?.tenantReport?.fobsCount ?? null;
       const tenantContact = resolvePropertyTenantContact({
         property,
         currentLease,
@@ -100,6 +103,7 @@ export function usePropertyOverviewSync(
                 status: null,
               }
             : null,
+        keyFobCount,
         tenantContact: tenantContact.name ? tenantContact : null,
         loading: false,
       });

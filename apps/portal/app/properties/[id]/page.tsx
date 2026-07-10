@@ -7,11 +7,9 @@ import {
   Bath,
   BedDouble,
   Car,
-  History,
   ListTodo,
 } from 'lucide-react';
 
-import { InfoPanel } from '@/components/agent/info-panel';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { PropertyInspectionTab } from '@/components/agent/property-inspection-tab';
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
@@ -22,9 +20,9 @@ import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyAccountingTab } from '@/components/agent/property-accounting-tab';
 import { PropertyDocumentsTab } from '@/components/agent/property-documents-tab';
+import { PropertyHistoryTab } from '@/components/agent/property-history-tab';
 import { PropertyRentReviewTab } from '@/components/agent/property-rent-review-tab';
 import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
-import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyRegistryResume, ROUTES } from '@/constants/routes';
@@ -39,6 +37,7 @@ import {
   isPropertyVacant,
   rentReviewsForProperty,
 } from '@/lib/property-leasing';
+import { archivedDocumentGroups, isTenancyArchived } from '@/lib/property-archive';
 import {
   isPropertyLeasingBondFocus,
   propertyLeasingBondFocusPath,
@@ -94,7 +93,6 @@ export default function PropertyDetailPage() {
     [agencies, property],
   );
   const [tab, setTab] = useState<Tab>('Overview');
-  const [overviewView, setOverviewView] = useState<'summary' | 'history'>('summary');
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
   const [selectedRentReviewId, setSelectedRentReviewId] = useState<string | null>(null);
   const [leasingChatOpen, setLeasingChatOpen] = useState(false);
@@ -149,6 +147,12 @@ export default function PropertyDetailPage() {
   const currentTenancy = leasing.filter((l) => l.status === 'current');
   const currentLease = currentTenancy[0];
   const isVacant = isPropertyVacant(property, currentTenancy);
+  const tenancyArchived = isTenancyArchived({
+    property,
+    vacatingCases: propertyVacatingCases,
+    currentLease,
+  });
+  const readOnlyDocumentGroups = archivedDocumentGroups(tenancyArchived);
   const tenancyRentReviews = filterTenancyRentReviews(tasks.rentReviews, isVacant);
   const activeOpenInspection = getActiveOpenInspection(tasks.inspections, id);
   const activeOutgoingInspection = getActiveOutgoingInspection(tasks.inspections, id);
@@ -260,43 +264,25 @@ export default function PropertyDetailPage() {
         <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />
 
         {tab === 'Overview' && (
-          <div className="space-y-4">
-            {overviewView === 'history' ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setOverviewView('summary')}
-                  className="text-primary text-sm font-medium"
-                >
-                  ← Back to overview
-                </button>
-                <InfoPanel title="Tenancy history" icon={History}>
-                  <TenancyHistorySection propertyId={id} records={leasing} />
-                </InfoPanel>
-              </>
-            ) : (
-              <PropertyOverviewTab
-                property={property}
-                propertyId={id}
-                needActions={needActions}
-                maintenance={tasks.maintenance}
-                inspections={tasks.inspections}
-                propertyDocs={propertyDocs}
-                leasing={leasing}
-                currentLease={currentLease}
-                rentReviewDecisions={decisions}
-                tenancyRentReviews={tenancyRentReviews}
-                leasingCycles={propertyLeasingCycles}
-                tenantSelections={propertyLeasingCases}
-                vacatingCases={propertyVacatingCases}
-                tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
-                accounting={acct}
-                onViewHistory={() => setOverviewView('history')}
-                onRefresh={() => void refresh()}
-                onViewBondLodgement={viewBondLodgement}
-              />
-            )}
-          </div>
+          <PropertyOverviewTab
+            property={property}
+            propertyId={id}
+            needActions={needActions}
+            maintenance={tasks.maintenance}
+            inspections={tasks.inspections}
+            propertyDocs={propertyDocs}
+            leasing={leasing}
+            currentLease={currentLease}
+            rentReviewDecisions={decisions}
+            tenancyRentReviews={tenancyRentReviews}
+            leasingCycles={propertyLeasingCycles}
+            tenantSelections={propertyLeasingCases}
+            vacatingCases={propertyVacatingCases}
+            tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
+            accounting={acct}
+            onRefresh={() => void refresh()}
+            onViewBondLodgement={viewBondLodgement}
+          />
         )}
 
         {tab === 'Documents' && (
@@ -304,6 +290,12 @@ export default function PropertyDetailPage() {
             property={property}
             propertyId={id}
             fallbackDocuments={propertyDocs}
+            readOnlyGroups={readOnlyDocumentGroups}
+            readOnlyHint={
+              tenancyArchived
+                ? 'Tenancy and tenant application documents are archived and cannot be edited.'
+                : undefined
+            }
           />
         )}
 
@@ -392,6 +384,10 @@ export default function PropertyDetailPage() {
             accounting={acct}
             arrearsSectionRef={arrearsSectionRef}
           />
+        )}
+
+        {tab === 'History' && (
+          <PropertyHistoryTab property={property} propertyId={id} leasing={leasing} />
         )}
       </div>
 

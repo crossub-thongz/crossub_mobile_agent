@@ -93,6 +93,7 @@ function DocumentColumn({
   onUploadExtra,
   uploadingKey,
   uploadProgress,
+  readOnly = false,
 }: {
   group: CreatePropertyDocumentGroup;
   fixedRows: DocumentChecklistRow[];
@@ -106,6 +107,7 @@ function DocumentColumn({
   onUploadExtra: (title: string, draftId: string) => void;
   uploadingKey: string | null;
   uploadProgress: number | null;
+  readOnly?: boolean;
 }) {
   const allRows = [...fixedRows, ...extraRows];
   const uploadedFileCount = allRows.reduce((sum, row) => sum + row.files.length, 0);
@@ -118,6 +120,11 @@ function DocumentColumn({
           <div className="min-w-0">
             <p className="text-sm font-semibold leading-tight">
               {CREATE_PROPERTY_DOCUMENT_GROUP_LABELS[group]}
+              {readOnly ? (
+                <span className="text-muted-foreground ml-1.5 text-[10px] font-medium uppercase">
+                  Archived
+                </span>
+              ) : null}
             </p>
             <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
               {uploadedFileCount > 0
@@ -163,13 +170,15 @@ function DocumentColumn({
                   )}
                 </div>
 
-                <SlotUploadButton
-                  busy={busy}
-                  disabled={uploadingKey != null}
-                  hasFiles={row.files.length > 0}
-                  progress={rowProgress}
-                  onClick={() => onUploadSlot(row.title, row.slotId ?? row.id)}
-                />
+                {!readOnly ? (
+                  <SlotUploadButton
+                    busy={busy}
+                    disabled={uploadingKey != null}
+                    hasFiles={row.files.length > 0}
+                    progress={rowProgress}
+                    onClick={() => onUploadSlot(row.title, row.slotId ?? row.id)}
+                  />
+                ) : null}
               </div>
             </li>
           );
@@ -199,19 +208,22 @@ function DocumentColumn({
                   </button>
                 </div>
 
-                <SlotUploadButton
-                  busy={busy}
-                  disabled={uploadingKey != null}
-                  hasFiles={row.files.length > 0}
-                  progress={rowProgress}
-                  onClick={() => onUploadSlot(row.title, row.id)}
-                />
+                {!readOnly ? (
+                  <SlotUploadButton
+                    busy={busy}
+                    disabled={uploadingKey != null}
+                    hasFiles={row.files.length > 0}
+                    progress={rowProgress}
+                    onClick={() => onUploadSlot(row.title, row.id)}
+                  />
+                ) : null}
               </div>
             </li>
           );
         })}
       </ul>
 
+      {!readOnly ? (
       <div className="border-t px-3 py-3 space-y-2">
         {extraDrafts.map((draft) => {
           const busy = uploadingKey === `draft:${draft.id}`;
@@ -271,6 +283,7 @@ function DocumentColumn({
           Add document
         </Button>
       </div>
+      ) : null}
     </div>
   );
 }
@@ -285,10 +298,14 @@ export function PropertyDocumentsTab({
   property,
   propertyId,
   fallbackDocuments = [],
+  readOnlyGroups = [],
+  readOnlyHint,
 }: {
   property: Property;
   propertyId: string;
   fallbackDocuments?: AgentDocument[];
+  readOnlyGroups?: CreatePropertyDocumentGroup[];
+  readOnlyHint?: string;
 }) {
   const { apiConnected, uploadDocument, deleteDocument } = useAgentData();
   const { detail, refresh } = usePropertyPortalDetail(propertyId, apiConnected);
@@ -300,6 +317,7 @@ export function PropertyDocumentsTab({
   const [extraDrafts, setExtraDrafts] =
     useState<Record<CreatePropertyDocumentGroup, ExtraDraftRow[]>>(EMPTY_DRAFTS);
   const [filesRow, setFilesRow] = useState<DocumentChecklistRow | null>(null);
+  const [filesRowGroup, setFilesRowGroup] = useState<CreatePropertyDocumentGroup | null>(null);
   const [preview, setPreview] = useState<{
     title: string;
     uploadedAt?: string;
@@ -504,6 +522,11 @@ export function PropertyDocumentsTab({
 
   return (
     <div className="space-y-4">
+      {readOnlyHint ? (
+        <p className="rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+          {readOnlyHint}
+        </p>
+      ) : null}
       <p className="text-muted-foreground text-sm">
         Document types for {fullAddress}. Upload any file type except videos and GIFs (max{' '}
         {MAX_UPLOAD_LABEL} per file), then click a type to see all uploaded files and preview them.
@@ -534,11 +557,15 @@ export function PropertyDocumentsTab({
               onAddDraft={() => addDraft(g)}
               onUpdateDraft={(id, title) => updateDraft(g, id, title)}
               onRemoveDraft={(id) => removeDraft(g, id)}
-              onOpenFiles={setFilesRow}
+              onOpenFiles={(row) => {
+                setFilesRow(row);
+                setFilesRowGroup(g);
+              }}
               onUploadSlot={(title, slotId) => onUploadSlot(g, title, slotId)}
               onUploadExtra={(title, draftId) => onUploadExtra(g, title, draftId)}
               uploadingKey={uploadingKey}
               uploadProgress={uploadProgress}
+              readOnly={readOnlyGroups.includes(g)}
             />
           );
         })}
@@ -548,9 +575,18 @@ export function PropertyDocumentsTab({
         row={filesRow}
         propertyAddress={fullAddress}
         open={filesRow != null}
-        onClose={() => setFilesRow(null)}
+        onClose={() => {
+          setFilesRow(null);
+          setFilesRowGroup(null);
+        }}
         onPreview={onPreview}
-        onDelete={apiConnected ? onDeleteFile : undefined}
+        onDelete={
+          apiConnected &&
+          filesRowGroup != null &&
+          !readOnlyGroups.includes(filesRowGroup)
+            ? onDeleteFile
+            : undefined
+        }
         deletingId={deletingId}
       />
 

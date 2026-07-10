@@ -95,6 +95,8 @@ type ExtendedAgentProperty = AgentProperty & {
   propertyManagerId?: string | null;
   endOfManagementDate?: string | null;
   registryIntakeComplete?: boolean | null;
+  registryDraft?: Record<string, unknown> | null;
+  vacateDate?: string | null;
 };
 
 function readFurnished(dto: AgentProperty): boolean | undefined {
@@ -118,6 +120,7 @@ type AgentPropertyListFields = {
   endOfManagementDate?: string | null;
   registryIntakeComplete?: boolean | null;
   registryDraft?: Record<string, unknown> | null;
+  vacateDate?: string | null;
 };
 
 function readListFields(dto: AgentProperty): AgentPropertyListFields {
@@ -179,6 +182,12 @@ export function mapAgentProperty(
     endOfManagementDate: list.endOfManagementDate ?? ext.endOfManagementDate ?? undefined,
     registryIntakeComplete:
       list.registryIntakeComplete ?? ext.registryIntakeComplete ?? true,
+    registryDraft: list.registryDraft ?? ext.registryDraft ?? null,
+    vacateDate:
+      (dto as AgentProperty & { vacateDate?: string | null }).vacateDate ??
+      list.vacateDate ??
+      ext.vacateDate ??
+      undefined,
     openTasks: 0,
     inspectionStatus: '—',
     maintenanceStatus: '—',

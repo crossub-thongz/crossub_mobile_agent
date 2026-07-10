@@ -102,6 +102,9 @@ export interface Property {
   endOfManagementDate?: string;
   /** False while the create-property wizard is still in progress. */
   registryIntakeComplete?: boolean;
+  /** Wizard draft + archived landlord/tenancy snapshots from the API. */
+  registryDraft?: Record<string, unknown> | null;
+  vacateDate?: string;
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;

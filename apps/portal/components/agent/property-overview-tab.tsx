@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { History, ListTodo } from 'lucide-react';
+import { Archive, ListTodo } from 'lucide-react';
 
 import { ContactTile } from '@/components/agent/property-contact-tile';
+import { PropertyBondEditDialog } from '@/components/agent/property-bond-edit-dialog';
 import {
   PropertyDocumentPreviewDialog,
   type DocumentPreviewItem,
@@ -20,12 +21,15 @@ import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workfl
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import {
   derivePaymentCycle,
+  formatBondDisplay,
+  resolveBondReference,
+  resolveBondReferenceRaw,
   resolveRentPaidTo,
   resolveCurrentRent,
   resolveLeaseDates,
 } from '@/lib/property-overview';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
+import { isTenancyArchived } from '@/lib/property-archive';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
   AgentDocument,
@@ -70,26 +74,39 @@ function StatCell({
   label,
   value,
   onPreview,
+  onEdit,
 }: {
   label: string;
   value: string;
   onPreview?: () => void;
+  onEdit?: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-border/50 bg-muted/10 px-2 py-1.5">
-      <p className="text-muted-foreground text-[9px] font-medium uppercase tracking-wide">
-        {label}
-      </p>
+    <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
+      <div className="flex items-center justify-between gap-1">
+        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+          {label}
+        </p>
+        {onEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-primary shrink-0 text-[10px] font-medium"
+          >
+            Edit
+          </button>
+        ) : null}
+      </div>
       {onPreview ? (
         <button
           type="button"
           onClick={onPreview}
-          className="text-primary mt-0.5 text-left text-xs font-semibold"
+          className="text-primary mt-0.5 text-left text-sm font-semibold"
         >
           {value}
         </button>
       ) : (
-        <p className="mt-0.5 text-xs font-semibold tabular-nums">{value}</p>
+        <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
       )}
     </div>
   );
@@ -115,9 +132,8 @@ export function PropertyOverviewTab({
   vacatingCases = [],
   tribunalCases = [],
   accounting,
-  onViewHistory,
   onRefresh,
-  onViewBondLodgement: _onViewBondLodgement,
+  onViewBondLodgement,
 }: {
   property: Property;
   propertyId: string;
@@ -134,7 +150,6 @@ export function PropertyOverviewTab({
   vacatingCases?: import('@/lib/types').VacatingCase[];
   tribunalCases?: import('@/lib/types').TribunalCase[];
   accounting?: import('@/lib/types').PropertyAccounting | null;
-  onViewHistory: () => void;
   onRefresh?: () => void;
   onViewBondLodgement?: () => void;
 }) {
@@ -150,11 +165,18 @@ export function PropertyOverviewTab({
 
   const [tenancyDialogOpen, setTenancyDialogOpen] = useState(false);
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
+  const [bondDialogOpen, setBondDialogOpen] = useState(false);
   const [docPreview, setDocPreview] = useState<DocumentPreviewItem | null>(null);
 
   const fullAddress = formatPropertyFullAddress(property);
 
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
+  const tenancyArchived = isTenancyArchived({
+    property,
+    vacatingCases,
+    currentLease,
+  });
+  const canEditTenancy = apiConnected && !tenancyArchived;
   const currentRent = resolveCurrentRent(property, currentLease);
   const financialRent = sync.financial?.currentRentWeekly;
   const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
@@ -224,6 +246,16 @@ export function PropertyOverviewTab({
   );
   const paymentCycle = derivePaymentCycle(displayRent);
 
+  const displayBond =
+    sync.financial?.bondAmount ??
+    sync.record?.bondAmount ??
+    property.bondAmount ??
+    sync.bond?.amount ??
+    null;
+  const bondRef = resolveBondReference(property, sync.bond, propertyDocs, currentLease);
+  const bondDisplay = formatBondDisplay(displayBond, bondRef);
+  const bondReferenceRaw = resolveBondReferenceRaw(property, sync.bond);
+
   const registry = useMemo(() => {
     const record = sync.record;
     const gst =
@@ -273,15 +305,15 @@ export function PropertyOverviewTab({
       tenantName: tenant.name === 'Vacant' ? '' : tenant.name,
       tenantEmail: tenant.email ?? '',
       tenantPhone: tenant.phone ?? '',
-      rentWeekly: displayRent > 0 ? String(Math.round(displayRent)) : '',
       leaseStartDate: tenancyDates.leaseStart ?? '',
       leaseEndDate: tenancyDates.leaseEnd ?? '',
       nextRentReviewAt: tenancyDates.nextRentReview ?? '',
       rentPaidUntil: rentPaidTo ?? '',
       vacateDate: tenancyDates.vacateDate ?? '',
+      vacateDateChangeReason: '',
       nextInspectionAt: tenancyDates.nextRoutine ?? '',
     }),
-    [tenant, displayRent, tenancyDates, rentPaidTo],
+    [tenant, tenancyDates, rentPaidTo],
   );
 
   const landlordInitial = useMemo(
@@ -372,38 +404,38 @@ export function PropertyOverviewTab({
         </section>
       ) : null}
 
-      {inProgressJobs.length > 0 ? (
-        <section className="rounded-xl border bg-card p-3">
-          <div className="mb-3 flex items-center gap-1.5">
-            <ListTodo className="text-primary size-3.5" />
-            <h3 className="text-xs font-semibold">Jobs in progress</h3>
-          </div>
-          <PropertyJobCasesTable
-            rows={inProgressJobs}
-            showViewToggle={false}
-            emptyTitle="No jobs in progress"
-            emptyDescription="Active maintenance, inspections, leasing, and other cases appear here."
-          />
-        </section>
-      ) : null}
-
       <OverviewSection
         title="Tenancy"
-        onEdit={apiConnected ? () => setTenancyDialogOpen(true) : undefined}
+        onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
       >
+        {tenancyArchived ? (
+          <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
+            <Archive className="size-3.5 shrink-0" />
+            Archived — vacate date reached. Tenancy details and tenancy documents are read-only.
+          </p>
+        ) : null}
         <ContactTile
           title="Tenant"
+          layout="row"
           name={tenant.name}
           email={tenant.email}
           phone={tenant.phone}
           updatedHint={tenant.hint}
         />
-        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <StatCell
             label="Rent paid to"
             value={rentPaidTo ? formatDate(rentPaidTo) : '—'}
           />
           <StatCell label="Payment cycle" value={paymentCycle} />
+          <StatCell
+            label="Bond"
+            value={bondDisplay}
+            onPreview={
+              bondRef.showLodgementNav && onViewBondLodgement ? onViewBondLodgement : undefined
+            }
+            onEdit={canEditTenancy ? () => setBondDialogOpen(true) : undefined}
+          />
           <StatCell
             label="Next rent review"
             value={tenancyDates.nextRentReview ? formatDate(tenancyDates.nextRentReview) : '—'}
@@ -433,27 +465,35 @@ export function PropertyOverviewTab({
       >
         <ContactTile
           title="Landlord"
+          layout="row"
           name={landlord.name}
           email={landlord.email}
           phone={landlord.phone}
           updatedHint={landlordUpdatedHint}
         />
-        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-2">
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-2">
           <StatCell label="Management rate" value={managementRateDisplay} />
-          <StatCell
-            label="Management agreement"
-            value={managementAgreementDoc ? 'Uploaded' : 'Not uploaded'}
-            onPreview={
-              managementAgreementDoc?.href &&
-              isViewableDocumentUrl(managementAgreementDoc.href)
-                ? () =>
-                    openDocPreview(
-                      managementAgreementDoc,
-                      MANAGEMENT_AGREEMENT_DOC_SLOT.label,
-                    )
-                : undefined
-            }
-          />
+          {managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href) ? (
+            <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2 sm:col-span-2">
+              <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                Management agreement
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  openDocPreview(
+                    managementAgreementDoc,
+                    MANAGEMENT_AGREEMENT_DOC_SLOT.label,
+                  )
+                }
+                className="text-primary mt-1 text-sm font-semibold"
+              >
+                View management agreement
+              </button>
+            </div>
+          ) : (
+            <StatCell label="Management agreement" value="Not uploaded" />
+          )}
           {overview?.endOfManagementDate || property.endOfManagementDate ? (
             <StatCell
               label="End of management"
@@ -463,20 +503,22 @@ export function PropertyOverviewTab({
             />
           ) : null}
         </div>
-      </OverviewSection>
 
-      <section className="rounded-xl border bg-card p-3">
-        <div className="mb-2 flex items-center gap-1.5">
-          <History className="text-primary size-3.5" />
-          <h3 className="text-xs font-semibold">History</h3>
-        </div>
-        <TenancyHistorySection
-          propertyId={propertyId}
-          records={leasing}
-          compact
-          onViewAll={onViewHistory}
-        />
-      </section>
+        {inProgressJobs.length > 0 ? (
+          <div className="mt-3 border-t border-border/50 pt-3">
+            <div className="mb-2 flex items-center gap-1.5">
+              <ListTodo className="text-primary size-3.5" />
+              <h4 className="text-xs font-semibold">Jobs in progress</h4>
+            </div>
+            <PropertyJobCasesTable
+              rows={inProgressJobs}
+              showViewToggle={false}
+              emptyTitle="No jobs in progress"
+              emptyDescription="Active maintenance, inspections, leasing, and other cases appear here."
+            />
+          </div>
+        ) : null}
+      </OverviewSection>
 
       <PropertyTenancyEditDialog
         open={tenancyDialogOpen}
@@ -492,6 +534,16 @@ export function PropertyOverviewTab({
         propertyId={propertyId}
         property={property}
         initial={landlordInitial}
+        onSaved={handleSaved}
+      />
+
+      <PropertyBondEditDialog
+        open={bondDialogOpen}
+        onOpenChange={setBondDialogOpen}
+        propertyId={propertyId}
+        leasingCycleId={activeCycle?.id}
+        initialAmount={displayBond}
+        initialReference={bondReferenceRaw}
         onSaved={handleSaved}
       />
 

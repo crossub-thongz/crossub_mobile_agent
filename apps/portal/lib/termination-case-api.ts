@@ -377,10 +377,11 @@ export const terminationApi = {
       }),
     ),
 
-  updateVacateDate: (id: string, date: string): Promise<TerminationCaseDetail> =>
+  updateVacateDate: (id: string, date: string, reason: string): Promise<TerminationCaseDetail> =>
     unwrap(
       api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/date`, {
         date: new Date(date).toISOString(),
+        reason: reason.trim(),
       }),
     ),
 }

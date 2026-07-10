@@ -15,18 +15,23 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { propertyRegistryApi } from '@/lib/property-registry-api';
+import {
+  dateOnly,
+  PropertyVacateDateField,
+  vacateDateChangeInvalid,
+} from '@/components/agent/property-vacate-date-field';
+import { propertyRegistryApi, type PropertyRegistryPatch } from '@/lib/property-registry-api';
 
 type TenancyForm = {
   tenantName: string;
   tenantEmail: string;
   tenantPhone: string;
-  rentWeekly: string;
   leaseStartDate: string;
   leaseEndDate: string;
   nextRentReviewAt: string;
   rentPaidUntil: string;
   vacateDate: string;
+  vacateDateChangeReason: string;
   nextInspectionAt: string;
 };
 
@@ -54,27 +59,75 @@ export function PropertyTenancyEditDialog({
   const set = <K extends keyof TenancyForm>(key: K, value: TenancyForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  const buildPatch = (): PropertyRegistryPatch => {
+    const patch: PropertyRegistryPatch = {};
+    const setIfChanged = <K extends keyof PropertyRegistryPatch>(
+      key: K,
+      next: PropertyRegistryPatch[K] | undefined,
+      prev: PropertyRegistryPatch[K] | undefined,
+    ) => {
+      const normalizedNext = next ?? undefined;
+      const normalizedPrev = prev ?? undefined;
+      if (normalizedNext !== normalizedPrev) {
+        patch[key] = next as PropertyRegistryPatch[K];
+      }
+    };
+
+    setIfChanged(
+      'tenantName',
+      form.tenantName.trim() || undefined,
+      initial.tenantName.trim() || undefined,
+    );
+    setIfChanged(
+      'tenantEmail',
+      form.tenantEmail.trim() || undefined,
+      initial.tenantEmail.trim() || undefined,
+    );
+    setIfChanged(
+      'tenantPhone',
+      form.tenantPhone.trim() || undefined,
+      initial.tenantPhone.trim() || undefined,
+    );
+
+    setIfChanged('leaseStartDate', dateOnly(form.leaseStartDate), dateOnly(initial.leaseStartDate));
+    setIfChanged('leaseEndDate', dateOnly(form.leaseEndDate), dateOnly(initial.leaseEndDate));
+    setIfChanged(
+      'nextRentReviewAt',
+      dateOnly(form.nextRentReviewAt),
+      dateOnly(initial.nextRentReviewAt),
+    );
+    setIfChanged('rentPaidUntil', dateOnly(form.rentPaidUntil), dateOnly(initial.rentPaidUntil));
+    setIfChanged('vacateDate', dateOnly(form.vacateDate), dateOnly(initial.vacateDate));
+    if (patch.vacateDate !== undefined) {
+      patch.vacateDateChangeReason = form.vacateDateChangeReason.trim();
+    }
+    setIfChanged(
+      'nextInspectionAt',
+      dateOnly(form.nextInspectionAt),
+      dateOnly(initial.nextInspectionAt),
+    );
+
+    return patch;
+  };
+
   const submit = async () => {
-    const rent = form.rentWeekly.trim() ? Number(form.rentWeekly.replace(/,/g, '')) : undefined;
-    if (rent != null && (Number.isNaN(rent) || rent < 0)) {
-      toast.error('Enter a valid rent amount');
+    if (
+      vacateDateChangeInvalid(form.vacateDate, initial.vacateDate, form.vacateDateChangeReason)
+    ) {
+      toast.error('Provide a reason when changing the vacate date');
+      return;
+    }
+
+    const patch = buildPatch();
+    if (Object.keys(patch).length === 0) {
+      toast.message('No changes to save');
+      onOpenChange(false);
       return;
     }
 
     setSaving(true);
     try {
-      await propertyRegistryApi.update(propertyId, {
-        tenantName: form.tenantName.trim() || undefined,
-        tenantEmail: form.tenantEmail.trim() || undefined,
-        tenantPhone: form.tenantPhone.trim() || undefined,
-        rentWeekly: rent,
-        leaseStartDate: form.leaseStartDate || undefined,
-        leaseEndDate: form.leaseEndDate || undefined,
-        nextRentReviewAt: form.nextRentReviewAt || undefined,
-        rentPaidUntil: form.rentPaidUntil || undefined,
-        vacateDate: form.vacateDate || undefined,
-        nextInspectionAt: form.nextInspectionAt || undefined,
-      });
+      await propertyRegistryApi.update(propertyId, patch);
       toast.success('Tenancy details updated');
       onOpenChange(false);
       onSaved?.();
@@ -90,7 +143,7 @@ export function PropertyTenancyEditDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit tenancy</DialogTitle>
-          <DialogDescription>Tenant contact, rent, and key tenancy dates.</DialogDescription>
+          <DialogDescription>Tenant contact and key tenancy dates.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
           <div className="space-y-2">
@@ -122,16 +175,6 @@ export function PropertyTenancyEditDialog({
                 />
               </div>
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="rent-weekly">Rent ($/week)</Label>
-            <Input
-              id="rent-weekly"
-              inputMode="decimal"
-              value={form.rentWeekly}
-              onChange={(e) => set('rentWeekly', e.target.value)}
-            />
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
@@ -171,15 +214,13 @@ export function PropertyTenancyEditDialog({
                 onChange={(e) => set('nextRentReviewAt', e.target.value)}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="vacate-date">Vacate date</Label>
-              <Input
-                id="vacate-date"
-                type="date"
-                value={form.vacateDate}
-                onChange={(e) => set('vacateDate', e.target.value)}
-              />
-            </div>
+            <PropertyVacateDateField
+              date={form.vacateDate}
+              initialDate={initial.vacateDate}
+              reason={form.vacateDateChangeReason}
+              onDateChange={(value) => set('vacateDate', value)}
+              onReasonChange={(value) => set('vacateDateChangeReason', value)}
+            />
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="next-routine">Next routine inspection</Label>
               <Input

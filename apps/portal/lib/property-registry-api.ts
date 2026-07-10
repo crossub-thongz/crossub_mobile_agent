@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { updateProperty } from '@/lib/crossub-api/agent-client';
 
 /** Full property row from `GET /properties/{id}` — includes building contacts + parking. */
 export interface PropertyRecord {
@@ -147,6 +148,7 @@ export type PropertyRegistryPatch = Partial<{
   nextRentReviewAt: string;
   rentPaidUntil: string;
   vacateDate: string;
+  vacateDateChangeReason?: string;
   nextInspectionAt: string;
   bondAmount: number;
   landlordInsuranceExpiry: string;
@@ -174,8 +176,13 @@ export const propertyRegistryApi = {
       .get<{ portal: PropertyPortalDetail }>(`/properties/${propertyId}/portal`)
       .then((r) => r.portal),
 
-  update: (propertyId: string, patch: PropertyRegistryPatch): Promise<PropertyRecord> =>
-    api
-      .patch<{ property: PropertyRecord }>(`/properties/${propertyId}`, patch)
-      .then((r) => r.property),
+  update: async (
+    propertyId: string,
+    patch: PropertyRegistryPatch,
+  ): Promise<PropertyRecord> => {
+    await updateProperty(propertyId, patch);
+    return api
+      .get<{ property: PropertyRecord }>(`/properties/${propertyId}`)
+      .then((r) => r.property);
+  },
 };

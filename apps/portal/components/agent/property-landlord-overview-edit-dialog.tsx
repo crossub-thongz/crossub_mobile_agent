@@ -129,6 +129,14 @@ export function PropertyLandlordOverviewEditDialog({
         managementRateGst: form.managementRateGst || undefined,
       });
       toast.success('Management details updated');
+      if (
+        initial.landlordName.trim() &&
+        (form.landlordName.trim() !== initial.landlordName.trim() ||
+          form.landlordEmail.trim() !== initial.landlordEmail.trim() ||
+          form.landlordPhone.trim() !== initial.landlordPhone.trim())
+      ) {
+        toast.message('Previous landlord saved to History → Landlord');
+      }
       onOpenChange(false);
       onSaved?.();
     } catch (err) {

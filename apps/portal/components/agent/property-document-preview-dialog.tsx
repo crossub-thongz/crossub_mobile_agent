@@ -47,12 +47,12 @@ export function PropertyDocumentPreviewDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent
-        className="flex h-[92vh] max-h-[92vh] w-[min(96vw,56rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-4xl"
+        className="flex h-[96vh] max-h-[96vh] w-[min(98vw,72rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-[72rem]"
         aria-describedby={undefined}
       >
         <DialogHeader className="shrink-0 pr-6">
-          <DialogTitle className="truncate text-base">{doc?.title ?? 'Document preview'}</DialogTitle>
-          <DialogDescription className="truncate text-xs">
+          <DialogTitle className="truncate text-lg">{doc?.title ?? 'Document preview'}</DialogTitle>
+          <DialogDescription className="truncate text-sm">
             {propertyAddress}
             {doc?.uploadedAt ? ` · Uploaded ${formatDateTime(doc.uploadedAt)}` : ''}
           </DialogDescription>
