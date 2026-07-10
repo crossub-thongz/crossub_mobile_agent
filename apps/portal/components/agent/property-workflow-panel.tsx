@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -340,9 +340,19 @@ export function PropertyWorkflowCreateDialog({
     [property, currentLease, leasingCycle, tenantSelections],
   );
   const minAvailableFrom = useMemo(() => minLeasingCycleAvailableFrom(), [open]);
+  /** Avoid re-prefilling while the dialog is open (portfolio live-poll updates `property`). */
+  const formPrefillSessionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      formPrefillSessionRef.current = null;
+      return;
+    }
+    if (!actionId) return;
+
+    const session = actionId;
+    if (formPrefillSessionRef.current === session) return;
+    formPrefillSessionRef.current = session;
 
     const leasingPrefill = buildLeasingCyclePrefill(property, currentLease);
     setRentPerWeek(leasingPrefill.rentPerWeek);
