@@ -26,7 +26,7 @@ import type {
   AgentThreadMessage,
   AgentTribunal,
   AgentVacating,
-  type AgentArchive,
+  AgentArchive,
 } from './agent-client';
 import {
   AGENT_NOTIFICATION_TYPE,
