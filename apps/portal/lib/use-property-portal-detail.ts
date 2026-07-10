@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import {
   propertyRegistryApi,
@@ -11,27 +11,34 @@ import { useLivePoll } from '@/lib/use-live-poll';
 export function usePropertyPortalDetail(propertyId: string, apiConnected: boolean) {
   const [detail, setDetail] = useState<PropertyPortalDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const detailRef = useRef<PropertyPortalDetail | null>(null);
+  const requestIdRef = useRef(0);
+
+  detailRef.current = detail;
 
   const sync = useCallback(async () => {
     if (!apiConnected) {
       setDetail(null);
+      detailRef.current = null;
       setLoading(false);
       return;
     }
-    setLoading((prev) => prev || detail == null);
+
+    const isFirstLoad = detailRef.current === null;
+    if (isFirstLoad) setLoading(true);
+
+    const requestId = ++requestIdRef.current;
     try {
       const next = await propertyRegistryApi.getPortalDetail(propertyId);
+      if (requestId !== requestIdRef.current) return;
       setDetail(next);
     } catch {
-      setDetail(null);
+      // Keep the last good payload on background refresh errors so the UI doesn't flicker.
+      if (detailRef.current === null) setDetail(null);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [apiConnected, detail, propertyId]);
-
-  useEffect(() => {
-    void sync();
-  }, [sync]);
+  }, [apiConnected, propertyId]);
 
   useLivePoll(sync, apiConnected);
 

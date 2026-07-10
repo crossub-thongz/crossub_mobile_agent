@@ -1,39 +1,33 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { Download, Eye, FileText, Loader2, Plus, Upload } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronRight, FileText, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { InfoPanel } from '@/components/agent/info-panel';
+import { DocumentUploadProgress } from '@/components/agent/document-upload-progress';
+import { PropertyDocumentFilesDialog } from '@/components/agent/property-document-files-dialog';
+import { PropertyDocumentPreviewDialog } from '@/components/agent/property-document-preview-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   buildDocumentChecklistByGroup,
   CREATE_PROPERTY_DOCUMENT_GROUP_LABELS,
-  CREATE_PROPERTY_DOCUMENT_GROUP_ORDER,
   ensureGroupDocumentTitle,
-  EXPECTED_PROPERTY_DOCUMENT_SLOTS,
+  PROPERTY_DETAIL_DOCUMENT_GROUP_ORDER,
   type CreatePropertyDocumentGroup,
   type DocumentChecklistFile,
   type DocumentChecklistRow,
 } from '@/lib/property-create-document-groups';
 import {
-  documentPreviewKind,
-  isViewableDocumentUrl,
-} from '@/lib/document-preview';
+  filterUploadableFiles,
+  MAX_UPLOAD_LABEL,
+} from '@/lib/file-upload';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
+import { propertyRegistryApi } from '@/lib/property-registry-api';
 import type { AgentDocument, Property } from '@/lib/types';
-import { cn, formatDateTime } from '@/lib/utils';
+import { formatDate, formatPropertyFullAddress } from '@/lib/utils';
 
 type DisplayDoc = {
   id: string;
@@ -42,115 +36,130 @@ type DisplayDoc = {
   href?: string | null;
 };
 
-type PreviewDoc = {
+type ExtraDraftRow = {
+  id: string;
   title: string;
-  uploadedAt?: string;
-  href: string;
 };
 
-const selectClass =
-  'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
+type PendingUpload =
+  | { kind: 'slot'; title: string; slotId: string }
+  | { kind: 'extra'; title: string; draftId: string };
 
-/** Hide Chrome/Edge PDF sidebar thumbnails; keep scrollable page content. */
-function pdfPreviewSrc(url: string): string {
-  const base = url.split('#')[0] ?? url;
-  return `${base}#navpanes=0&scrollbar=1&view=FitH`;
+function LandlordInsuranceExpiryField({
+  value,
+  displayValue,
+  editable,
+  saving,
+  onChange,
+  onSave,
+}: {
+  value: string;
+  displayValue: string;
+  editable: boolean;
+  saving: boolean;
+  onChange: (value: string) => void;
+  onSave: () => void;
+}) {
+  return (
+    <li className="border-b px-3 py-2.5">
+      <p className="text-sm font-medium leading-snug">Landlord insurance expiry</p>
+      {!editable ? (
+        <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{displayValue}</p>
+      ) : (
+        <div className="mt-1.5 flex items-center gap-2">
+          <Label htmlFor="landlord-insurance-expiry" className="sr-only">
+            Landlord insurance expiry date
+          </Label>
+          <Input
+            id="landlord-insurance-expiry"
+            type="date"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onBlur={() => void onSave()}
+            disabled={saving}
+            className="h-8 max-w-[11rem] text-xs"
+          />
+          {saving ? <Loader2 className="text-muted-foreground size-3.5 animate-spin" /> : null}
+        </div>
+      )}
+    </li>
+  );
 }
 
-function DocumentPreviewDialog({
-  doc,
-  propertyAddress,
-  open,
-  onClose,
+function SlotUploadButton({
+  busy,
+  disabled,
+  hasFiles,
+  progress,
+  onClick,
 }: {
-  doc: PreviewDoc | null;
-  propertyAddress: string;
-  open: boolean;
-  onClose: () => void;
+  busy: boolean;
+  disabled?: boolean;
+  hasFiles: boolean;
+  progress?: number | null;
+  onClick: () => void;
 }) {
-  const url = doc && isViewableDocumentUrl(doc.href) ? doc.href : undefined;
-  const previewKind = url ? documentPreviewKind(url) : 'none';
+  if (busy && progress != null) {
+    return (
+      <div className="w-[6.5rem] shrink-0">
+        <DocumentUploadProgress percent={progress} label="Uploading" />
+      </div>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent
-        className="flex h-[92vh] max-h-[92vh] w-[min(96vw,56rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-4xl"
-        aria-describedby={undefined}
-      >
-        <DialogHeader className="shrink-0 pr-6">
-          <DialogTitle className="truncate text-base">{doc?.title ?? 'Document preview'}</DialogTitle>
-          <DialogDescription className="truncate text-xs">
-            {propertyAddress}
-            {doc?.uploadedAt ? ` · Uploaded ${formatDateTime(doc.uploadedAt)}` : ''}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="bg-secondary/40 min-h-0 flex-1 overflow-hidden rounded-lg border">
-          {!url ? (
-            <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
-              <FileText className="text-muted-foreground mb-2 size-10" />
-              <p className="text-muted-foreground text-sm">No preview available</p>
-            </div>
-          ) : previewKind === 'image' ? (
-            <div className="flex h-full items-start justify-center overflow-auto bg-black/5 p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt={doc?.title ?? 'Document'}
-                className="h-auto w-full max-w-full object-contain"
-              />
-            </div>
-          ) : previewKind === 'pdf' ? (
-            <iframe
-              title={doc?.title ?? 'Document'}
-              src={pdfPreviewSrc(url)}
-              className="h-full min-h-0 w-full border-0 bg-background"
-            />
-          ) : (
-            <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
-              <FileText className="text-muted-foreground mb-2 size-10" />
-              <p className="text-muted-foreground text-sm">
-                Preview not supported for this file type
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">Use Download below.</p>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="shrink-0 gap-2 sm:justify-between">
-          {url ? (
-            <Button asChild className="gap-1.5">
-              <a href={url} download={doc?.title ?? 'document'} target="_blank" rel="noopener noreferrer">
-                <Download className="size-3.5" />
-                Download
-              </a>
-            </Button>
-          ) : (
-            <span />
-          )}
-          <Button type="button" variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Button
+      type="button"
+      size="sm"
+      variant={hasFiles ? 'outline' : 'default'}
+      className="h-7 shrink-0 px-2 text-[11px]"
+      disabled={disabled || busy}
+      onClick={onClick}
+    >
+      {busy ? <Loader2 className="size-3 animate-spin" /> : <Upload className="size-3" />}
+      <span className="ml-1">{busy ? 'Uploading…' : hasFiles ? 'Add' : 'Upload'}</span>
+    </Button>
   );
 }
 
 function DocumentColumn({
   group,
-  rows,
-  onPreview,
-  onAddNew,
-  uploadingSlotId,
+  fixedRows,
+  extraRows,
+  extraDrafts,
+  onAddDraft,
+  onUpdateDraft,
+  onRemoveDraft,
+  onOpenFiles,
+  onUploadSlot,
+  onUploadExtra,
+  uploadingKey,
+  uploadProgress,
+  insuranceExpiry,
 }: {
   group: CreatePropertyDocumentGroup;
-  rows: DocumentChecklistRow[];
-  onPreview: (file: DocumentChecklistFile, typeTitle: string) => void;
-  onAddNew: (title: string, slotId?: string) => void;
-  uploadingSlotId: string | null;
+  fixedRows: DocumentChecklistRow[];
+  extraRows: DocumentChecklistRow[];
+  extraDrafts: ExtraDraftRow[];
+  onAddDraft: () => void;
+  onUpdateDraft: (id: string, title: string) => void;
+  onRemoveDraft: (id: string) => void;
+  onOpenFiles: (row: DocumentChecklistRow) => void;
+  onUploadSlot: (title: string, slotId: string) => void;
+  onUploadExtra: (title: string, draftId: string) => void;
+  uploadingKey: string | null;
+  uploadProgress: number | null;
+  insuranceExpiry?: {
+    value: string;
+    displayValue: string;
+    editable: boolean;
+    saving: boolean;
+    onChange: (value: string) => void;
+    onSave: () => void;
+  };
 }) {
-  const uploadedCount = rows.filter((r) => r.uploaded).length;
+  const allRows = [...fixedRows, ...extraRows];
+  const uploadedFileCount = allRows.reduce((sum, row) => sum + row.files.length, 0);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-xl border bg-card shadow-sm">
@@ -162,119 +171,176 @@ function DocumentColumn({
               {CREATE_PROPERTY_DOCUMENT_GROUP_LABELS[group]}
             </p>
             <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
-              {uploadedCount}/{rows.length} types uploaded
+              {uploadedFileCount > 0
+                ? `${uploadedFileCount} document${uploadedFileCount === 1 ? '' : 's'} uploaded`
+                : `${allRows.filter((r) => r.uploaded).length}/${fixedRows.length} types uploaded`}
             </p>
           </div>
         </div>
       </div>
 
       <ul className="divide-border/70 max-h-[min(70vh,640px)] flex-1 divide-y overflow-y-auto">
-        {rows.map((row) => {
-          const busy = uploadingSlotId != null && uploadingSlotId === (row.slotId ?? row.id);
-          const single = row.files.length === 1 ? row.files[0] : null;
-          const singlePreview = single && isViewableDocumentUrl(single.href);
+        {fixedRows.map((row) => {
+          const busy = uploadingKey === `slot:${row.slotId ?? row.id}`;
+          const rowProgress = busy ? uploadProgress : null;
+          const showInsuranceExpiryAfter =
+            group === 'landlord' &&
+            row.slotId === 'management_agreement' &&
+            insuranceExpiry != null;
 
+          return (
+            <div key={row.id}>
+              <li className="px-3 py-2.5">
+                <div className="flex w-full items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    {row.uploaded ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenFiles(row)}
+                        className="group flex w-full items-start gap-1 text-left"
+                      >
+                        <ChevronRight className="text-primary mt-0.5 size-3.5 shrink-0 opacity-70 group-hover:opacity-100" />
+                        <span className="min-w-0 flex-1">
+                          <span className="text-foreground group-hover:text-primary block text-sm font-medium leading-snug">
+                            {row.title}
+                          </span>
+                          <span className="text-primary mt-1 block text-[11px] font-semibold">
+                            {row.files.length} document{row.files.length === 1 ? '' : 's'} uploaded
+                          </span>
+                        </span>
+                      </button>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium leading-snug">{row.title}</p>
+                        <span className="text-muted-foreground mt-1 block text-[11px]">
+                          Not uploaded
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <SlotUploadButton
+                    busy={busy}
+                    disabled={uploadingKey != null}
+                    hasFiles={row.files.length > 0}
+                    progress={rowProgress}
+                    onClick={() => onUploadSlot(row.title, row.slotId ?? row.id)}
+                  />
+                </div>
+              </li>
+
+              {showInsuranceExpiryAfter ? (
+                <LandlordInsuranceExpiryField {...insuranceExpiry} />
+              ) : null}
+            </div>
+          );
+        })}
+
+        {extraRows.map((row) => {
+          const busy = uploadingKey === `slot:${row.id}`;
+          const rowProgress = busy ? uploadProgress : null;
           return (
             <li key={row.id} className="px-3 py-2.5">
               <div className="flex w-full items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  {singlePreview ? (
-                    <button
-                      type="button"
-                      onClick={() => onPreview(single, row.title)}
-                      className="group flex w-full items-start gap-1.5 text-left"
-                    >
-                      <Eye className="text-primary mt-0.5 size-3.5 shrink-0 opacity-80 group-hover:opacity-100" />
-                      <span className="text-foreground group-hover:text-primary text-sm font-medium leading-snug">
+                  <button
+                    type="button"
+                    onClick={() => onOpenFiles(row)}
+                    className="group flex w-full items-start gap-1 text-left"
+                  >
+                    <ChevronRight className="text-primary mt-0.5 size-3.5 shrink-0 opacity-70 group-hover:opacity-100" />
+                    <span className="min-w-0 flex-1">
+                      <span className="text-foreground group-hover:text-primary block text-sm font-medium leading-snug">
                         {row.title}
                       </span>
-                    </button>
-                  ) : (
-                    <p className="text-sm font-medium leading-snug">{row.title}</p>
-                  )}
-
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    {!row.uploaded ? (
-                      <span className="text-muted-foreground text-[11px]">Not uploaded</span>
-                    ) : row.files.length > 1 ? (
-                      <span className="text-primary text-[11px] font-semibold">
-                        {row.files.length} files uploaded
+                      <span className="text-primary mt-1 block text-[11px] font-semibold">
+                        {row.files.length} document{row.files.length === 1 ? '' : 's'} uploaded
                       </span>
-                    ) : (
-                      <>
-                        <span className="text-primary text-[11px] font-semibold">Uploaded</span>
-                        {single?.uploadedAt ? (
-                          <span className="text-muted-foreground text-[11px] tabular-nums">
-                            {formatDateTime(single.uploadedAt)}
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
+                    </span>
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={busy || uploadingSlotId != null}
-                  onClick={() => onAddNew(row.title, row.slotId)}
-                  className="text-primary hover:bg-primary/10 inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-semibold disabled:opacity-50"
-                >
-                  {busy ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : (
-                    <Plus className="size-3" />
-                  )}
-                  {busy ? 'Uploading…' : 'Add new'}
-                </button>
+                <SlotUploadButton
+                  busy={busy}
+                  disabled={uploadingKey != null}
+                  hasFiles={row.files.length > 0}
+                  progress={rowProgress}
+                  onClick={() => onUploadSlot(row.title, row.id)}
+                />
               </div>
-
-              {row.files.length > 1 ? (
-                <ul className="mt-2 w-full space-y-1">
-                  {row.files.map((file, index) => {
-                    const canPreview = isViewableDocumentUrl(file.href);
-                    return (
-                      <li key={file.id} className="w-full">
-                        {canPreview ? (
-                          <button
-                            type="button"
-                            onClick={() => onPreview(file, row.title)}
-                            className="group hover:bg-muted/50 flex w-full items-center gap-2 rounded-md px-0 py-1.5 text-left"
-                          >
-                            <Eye className="text-primary size-3.5 shrink-0 opacity-80 group-hover:opacity-100" />
-                            <span className="text-muted-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
-                              {file.fileName}
-                              {index === 0 ? (
-                                <span className="text-primary ml-1.5 text-[10px] font-semibold">
-                                  Latest
-                                </span>
-                              ) : null}
-                            </span>
-                            <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
-                              {formatDateTime(file.uploadedAt)}
-                            </span>
-                          </button>
-                        ) : (
-                          <div className="flex w-full items-center gap-2 py-1.5">
-                            <span className="text-muted-foreground min-w-0 flex-1 truncate text-[11px] font-medium">
-                              {file.fileName}
-                            </span>
-                            <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
-                              {formatDateTime(file.uploadedAt)}
-                            </span>
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
             </li>
           );
         })}
       </ul>
+
+      <div className="border-t px-3 py-3 space-y-2">
+        {extraDrafts.map((draft) => {
+          const busy = uploadingKey === `draft:${draft.id}`;
+          const rowProgress = busy ? uploadProgress : null;
+          return (
+            <div
+              key={draft.id}
+              className="space-y-2 rounded-lg border border-primary/15 bg-primary/[0.02] px-3 py-2"
+            >
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Document title <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    value={draft.title}
+                    onChange={(e) => onUpdateDraft(draft.id, e.target.value)}
+                    placeholder="e.g. Special condition addendum"
+                    className="h-8 text-xs"
+                    disabled={busy || uploadingKey != null}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive mt-5 size-8 shrink-0"
+                  disabled={busy || uploadingKey != null}
+                  onClick={() => onRemoveDraft(draft.id)}
+                  aria-label="Remove document"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <SlotUploadButton
+                  busy={busy}
+                  disabled={uploadingKey != null}
+                  hasFiles={false}
+                  progress={rowProgress}
+                  onClick={() => onUploadExtra(draft.title, draft.id)}
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-primary hover:bg-primary/10 h-8 w-full text-xs font-medium"
+          disabled={uploadingKey != null}
+          onClick={onAddDraft}
+        >
+          <Plus className="size-3.5" />
+          Add document
+        </Button>
+      </div>
     </div>
   );
 }
+
+const EMPTY_DRAFTS: Record<CreatePropertyDocumentGroup, ExtraDraftRow[]> = {
+  tenancy: [],
+  landlord: [],
+  tenant_application: [],
+};
 
 export function PropertyDocumentsTab({
   property,
@@ -289,12 +355,58 @@ export function PropertyDocumentsTab({
   const { detail, refresh } = usePropertyPortalDetail(propertyId, apiConnected);
   const portalDocuments = detail?.documents ?? [];
 
-  const [customGroup, setCustomGroup] = useState<CreatePropertyDocumentGroup>('tenancy');
-  const [customTitle, setCustomTitle] = useState('');
-  const [uploadingSlotId, setUploadingSlotId] = useState<string | null>(null);
-  const [preview, setPreview] = useState<PreviewDoc | null>(null);
+  const [insuranceExpiry, setInsuranceExpiry] = useState(
+    property.landlordInsuranceExpiry?.slice(0, 10) ?? '',
+  );
+  const [savingInsuranceExpiry, setSavingInsuranceExpiry] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [extraDrafts, setExtraDrafts] =
+    useState<Record<CreatePropertyDocumentGroup, ExtraDraftRow[]>>(EMPTY_DRAFTS);
+  const [filesRow, setFilesRow] = useState<DocumentChecklistRow | null>(null);
+  const [preview, setPreview] = useState<{
+    title: string;
+    uploadedAt?: string;
+    href: string;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const pendingUploadRef = useRef<{ title: string; slotId: string } | null>(null);
+  const pendingUploadRef = useRef<{
+    upload: PendingUpload;
+    group: CreatePropertyDocumentGroup;
+  } | null>(null);
+
+  const fullAddress = formatPropertyFullAddress(property);
+
+  useEffect(() => {
+    if (!apiConnected) return;
+    void propertyRegistryApi
+      .get(propertyId)
+      .then((record) => {
+        setInsuranceExpiry(record.landlordInsuranceExpiry?.slice(0, 10) ?? '');
+      })
+      .catch(() => {
+        setInsuranceExpiry(property.landlordInsuranceExpiry?.slice(0, 10) ?? '');
+      });
+  }, [apiConnected, propertyId, property.landlordInsuranceExpiry, detail?.overview?.landlordInsuranceExpiry]);
+
+  const insuranceExpiryDisplay =
+    insuranceExpiry.trim().length > 0 ? formatDate(insuranceExpiry) : 'Not set';
+
+  const saveInsuranceExpiry = async () => {
+    if (!apiConnected) return;
+    setSavingInsuranceExpiry(true);
+    try {
+      await propertyRegistryApi.update(propertyId, {
+        landlordInsuranceExpiry: insuranceExpiry || undefined,
+      });
+      toast.success('Insurance expiry updated');
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update insurance expiry');
+    } finally {
+      setSavingInsuranceExpiry(false);
+    }
+  };
 
   const displayDocs = useMemo<DisplayDoc[]>(() => {
     const byId = new Map<string, DisplayDoc>();
@@ -326,79 +438,134 @@ export function PropertyDocumentsTab({
     [displayDocs],
   );
 
-  const slotOptions = useMemo(
-    () => EXPECTED_PROPERTY_DOCUMENT_SLOTS.filter((s) => s.group === customGroup),
-    [customGroup],
-  );
-
-  const startUpload = (title: string, slotId?: string) => {
-    pendingUploadRef.current = {
-      title: title.trim(),
-      slotId: slotId ?? `custom-${Date.now()}`,
-    };
+  const startUpload = (
+    group: CreatePropertyDocumentGroup,
+    upload: PendingUpload,
+  ) => {
+    if (upload.kind === 'extra' && !upload.title.trim()) {
+      toast.error('Enter a document title before uploading');
+      return;
+    }
+    pendingUploadRef.current = { upload, group };
     fileInputRef.current?.click();
   };
 
-  const onAddNew = (title: string, slotId?: string) => {
-    const slot = slotId
-      ? EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === slotId)
-      : undefined;
-    startUpload(slot?.label ?? title, slotId);
+  const onUploadSlot = (group: CreatePropertyDocumentGroup, title: string, slotId: string) => {
+    startUpload(group, { kind: 'slot', title: title.trim(), slotId });
+  };
+
+  const onUploadExtra = (group: CreatePropertyDocumentGroup, title: string, draftId: string) => {
+    startUpload(group, { kind: 'extra', title: title.trim(), draftId });
+  };
+
+  const addDraft = (group: CreatePropertyDocumentGroup) => {
+    setExtraDrafts((prev) => ({
+      ...prev,
+      [group]: [...prev[group], { id: `draft-${Date.now()}`, title: '' }],
+    }));
+  };
+
+  const updateDraft = (group: CreatePropertyDocumentGroup, id: string, title: string) => {
+    setExtraDrafts((prev) => ({
+      ...prev,
+      [group]: prev[group].map((row) => (row.id === id ? { ...row, title } : row)),
+    }));
+  };
+
+  const removeDraft = (group: CreatePropertyDocumentGroup, id: string) => {
+    setExtraDrafts((prev) => ({
+      ...prev,
+      [group]: prev[group].filter((row) => row.id !== id),
+    }));
   };
 
   const onPreview = (file: DocumentChecklistFile, typeTitle: string) => {
-    if (!isViewableDocumentUrl(file.href)) return;
-    const isGenericLabel =
-      file.fileName === 'Document' || /^File \d+$/.test(file.fileName);
+    if (!file.href) return;
     setPreview({
-      title: isGenericLabel ? typeTitle : file.fileName || typeTitle,
+      title: file.fileName || typeTitle,
       uploadedAt: file.uploadedAt,
       href: file.href,
     });
   };
 
-  const onPickCustomFile = () => {
-    if (!customTitle.trim()) {
-      toast.error('Enter a document title before uploading');
-      return;
-    }
-    const title = ensureGroupDocumentTitle(customGroup, customTitle.trim());
-    startUpload(title, `custom-${customGroup}`);
-  };
-
   const onFileSelected = async (fileList: FileList | null) => {
     const pending = pendingUploadRef.current;
     if (!fileList?.length || !pending) return;
-    const files = Array.from(fileList);
 
-    setUploadingSlotId(pending.slotId);
-    try {
-      const propertyAddress = `${property.address}, ${property.suburb}`;
-      const results = await Promise.allSettled(
-        files.map((file) =>
-          uploadDocument(file, 'lease', propertyAddress, {
-            title: pending.title,
-            propertyId,
-          }),
-        ),
+    const { ok, oversized, blocked } = filterUploadableFiles(Array.from(fileList));
+    if (blocked.length > 0) {
+      toast.error(
+        blocked.length === 1
+          ? `${blocked[0].name} is not supported (videos and GIFs are not allowed)`
+          : `${blocked.length} files are not supported (videos and GIFs are not allowed)`,
       );
+    }
+    if (oversized.length > 0) {
+      toast.error(
+        oversized.length === 1
+          ? `${oversized[0].name} exceeds the ${MAX_UPLOAD_LABEL} limit`
+          : `${oversized.length} files exceed the ${MAX_UPLOAD_LABEL} limit`,
+      );
+    }
+    if (ok.length === 0) {
+      pendingUploadRef.current = null;
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const { upload, group } = pending;
+    const uploadKey =
+      upload.kind === 'slot'
+        ? `slot:${upload.slotId}`
+        : `draft:${upload.draftId}`;
+
+    setUploadingKey(uploadKey);
+    setUploadProgress(0);
+    try {
+      const baseTitle =
+        upload.kind === 'extra'
+          ? ensureGroupDocumentTitle(group, upload.title)
+          : upload.title;
+
+      let succeeded = 0;
+      let failed = 0;
+
+      for (let i = 0; i < ok.length; i++) {
+        const file = ok[i]!;
+        try {
+          await uploadDocument(file, 'lease', fullAddress, {
+            title: `${baseTitle} — ${file.name}`,
+            propertyId,
+            onProgress: (pct) => {
+              const overall = Math.round(((i + pct / 100) / ok.length) * 100);
+              setUploadProgress(overall);
+            },
+          });
+          succeeded += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
       await refresh();
-      const failed = results.filter((r) => r.status === 'rejected').length;
-      const ok = results.length - failed;
-      if (failed > 0 && ok === 0) {
+
+      if (failed > 0 && succeeded === 0) {
         toast.error('Upload failed');
       } else if (failed > 0) {
-        toast.warning(`Uploaded ${ok} file${ok === 1 ? '' : 's'}, ${failed} failed`);
+        toast.warning(`Uploaded ${succeeded} file${succeeded === 1 ? '' : 's'}, ${failed} failed`);
       } else {
         toast.success(
-          ok === 1 ? `Uploaded ${files[0].name}` : `Uploaded ${ok} files`,
+          succeeded === 1 ? `Uploaded ${ok[0]!.name}` : `Uploaded ${succeeded} files`,
         );
+        if (upload.kind === 'extra') {
+          removeDraft(group, upload.draftId);
+        }
       }
-      setCustomTitle('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload failed');
     } finally {
-      setUploadingSlotId(null);
+      setUploadingKey(null);
+      setUploadProgress(null);
       pendingUploadRef.current = null;
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -407,95 +574,68 @@ export function PropertyDocumentsTab({
   return (
     <div className="space-y-4">
       <p className="text-muted-foreground text-sm">
-        Document types for {property.address}. You can upload multiple files per type. Click a file
-        to preview and download.
+        Document types for {fullAddress}. Upload any file type except videos and GIFs (max{' '}
+        {MAX_UPLOAD_LABEL} per file), then click a type to see all uploaded files and preview them.
+        Use Add document at the bottom of each section for other documents.
       </p>
-
-            <InfoPanel title="Add other document" icon={Plus}>
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Group
-              </Label>
-              <select
-                value={customGroup}
-                onChange={(e) => {
-                  setCustomGroup(e.target.value as CreatePropertyDocumentGroup);
-                  setCustomTitle('');
-                }}
-                className={selectClass}
-                disabled={uploadingSlotId != null}
-              >
-                {CREATE_PROPERTY_DOCUMENT_GROUP_ORDER.map((g) => (
-                  <option key={g} value={g}>
-                    {CREATE_PROPERTY_DOCUMENT_GROUP_LABELS[g]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Document title
-              </Label>
-              <Input
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
-                list={`doc-titles-${customGroup}`}
-                placeholder="Type or pick a document type"
-                disabled={uploadingSlotId != null}
-              />
-              <datalist id={`doc-titles-${customGroup}`}>
-                {slotOptions.map((s) => (
-                  <option key={s.id} value={s.label} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            className={cn('gap-1.5')}
-            disabled={uploadingSlotId != null}
-            onClick={onPickCustomFile}
-          >
-            {uploadingSlotId?.startsWith('custom-') ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Upload className="size-3.5" />
-            )}
-            {uploadingSlotId?.startsWith('custom-') ? 'Uploading…' : 'Upload document'}
-          </Button>
-        </div>
-      </InfoPanel>
 
       <input
         ref={fileInputRef}
         type="file"
         className="hidden"
         multiple
-        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv"
         onChange={(e) => void onFileSelected(e.target.files)}
       />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-start">
-        {CREATE_PROPERTY_DOCUMENT_GROUP_ORDER.map((g) => (
-          <DocumentColumn
-            key={g}
-            group={g}
-            rows={checklist[g]}
-            onPreview={onPreview}
-            onAddNew={onAddNew}
-            uploadingSlotId={uploadingSlotId}
-          />
-        ))}
+        {PROPERTY_DETAIL_DOCUMENT_GROUP_ORDER.map((g) => {
+          const rows = checklist[g];
+          const fixedRows = rows.filter((row) => !row.isExtra);
+          const extraRows = rows.filter((row) => row.isExtra);
+
+          return (
+            <DocumentColumn
+              key={g}
+              group={g}
+              fixedRows={fixedRows}
+              extraRows={extraRows}
+              extraDrafts={extraDrafts[g]}
+              onAddDraft={() => addDraft(g)}
+              onUpdateDraft={(id, title) => updateDraft(g, id, title)}
+              onRemoveDraft={(id) => removeDraft(g, id)}
+              onOpenFiles={setFilesRow}
+              onUploadSlot={(title, slotId) => onUploadSlot(g, title, slotId)}
+              onUploadExtra={(title, draftId) => onUploadExtra(g, title, draftId)}
+              uploadingKey={uploadingKey}
+              uploadProgress={uploadProgress}
+              insuranceExpiry={
+                g === 'landlord'
+                  ? {
+                      value: insuranceExpiry,
+                      displayValue: insuranceExpiryDisplay,
+                      editable: apiConnected,
+                      saving: savingInsuranceExpiry,
+                      onChange: setInsuranceExpiry,
+                      onSave: saveInsuranceExpiry,
+                    }
+                  : undefined
+              }
+            />
+          );
+        })}
       </div>
 
+      <PropertyDocumentFilesDialog
+        row={filesRow}
+        propertyAddress={fullAddress}
+        open={filesRow != null}
+        onClose={() => setFilesRow(null)}
+        onPreview={onPreview}
+      />
 
-
-      <DocumentPreviewDialog
+      <PropertyDocumentPreviewDialog
         doc={preview}
-        propertyAddress={property.address}
+        propertyAddress={fullAddress}
         open={preview != null}
         onClose={() => setPreview(null)}
       />

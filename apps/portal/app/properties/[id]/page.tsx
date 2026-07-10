@@ -43,7 +43,7 @@ import {
   propertyLeasingBondFocusPath,
 } from '@/lib/property-leasing-navigation';
 import { useAgentStore } from '@/lib/store';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
 import { formatCarSpaces } from '@/lib/property-overview';
 import {
   PROPERTY_DETAIL_TABS,
@@ -174,15 +174,15 @@ export default function PropertyDetailPage() {
 
   const showAmenityIcons =
     property.bedrooms != null || property.bathrooms != null || property.carSpaces != null;
+  const fullAddress = formatPropertyFullAddress(property);
 
   return (
-    <AgentShell title={property.address} backHref={ROUTES.PROPERTIES} backLabel="Properties">
+    <AgentShell title={fullAddress} backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <div className="space-y-4 pb-8">
         <div className="rounded-2xl border bg-gradient-to-br from-card to-secondary/30 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-muted-foreground text-xs">{property.suburb}</p>
-              <p className="mt-0.5 text-lg font-semibold leading-tight">{property.address}</p>
+              <p className="text-lg font-semibold leading-snug">{fullAddress}</p>
               {showAmenityIcons ? (
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                   {property.bedrooms != null ? (
@@ -238,6 +238,7 @@ export default function PropertyDetailPage() {
               leasingCycles={propertyLeasingCycles}
               tenantSelections={propertyLeasingCases}
               onViewBondLodgement={viewBondLodgement}
+              onRefresh={() => void refresh()}
             />
           ) : null}
         </div>
@@ -383,7 +384,7 @@ export default function PropertyDetailPage() {
         open={leasingChatOpen}
         onClose={() => setLeasingChatOpen(false)}
         propertyId={id}
-        propertyAddress={property.address}
+        propertyAddress={fullAddress}
         category="Leasing"
         title="Leasing messages"
       />

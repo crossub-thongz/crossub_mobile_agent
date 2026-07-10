@@ -27,9 +27,11 @@ import {
   markNotificationRead as apiMarkNotificationRead,
   replyToThread as apiReplyToThread,
   uploadDocument as apiUploadDocument,
+  uploadDocumentWithProgress as apiUploadDocumentWithProgress,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
 import { sanitizeCreatePropertyBody } from '@/lib/sanitize-create-property-body';
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, fileToBase64WithProgress, mapNetworkUploadProgress } from '@/lib/file-upload';
 import {
   mapAgentAccounting,
   mapAgentAgencies,
@@ -117,17 +119,8 @@ function messageThreadKey(thread: {
 }
 
 /** Read a File as base64 (no `data:` URI prefix) for the base64-through-API upload. */
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      const comma = result.indexOf(',');
-      resolve(comma >= 0 ? result.slice(comma + 1) : result);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+function fileToBase64(file: File, onProgress?: (percent: number) => void): Promise<string> {
+  return fileToBase64WithProgress(file, onProgress);
 }
 
 function normalizeSentMessages(value: unknown): ThreadMessage[] {
@@ -196,7 +189,7 @@ interface AgentDataContextValue {
     file: File,
     category: AgentDocument['category'],
     propertyAddress: string,
-    options?: { title?: string; propertyId?: string },
+    options?: { title?: string; propertyId?: string; onProgress?: (percent: number) => void },
   ) => Promise<void>;
   sendMessage: (
     threadId: string,
@@ -813,9 +806,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       file: File,
       category: AgentDocument['category'],
       propertyAddress: string,
-      options?: { title?: string; propertyId?: string },
+      options?: { title?: string; propertyId?: string; onProgress?: (percent: number) => void },
     ) => {
       const displayTitle = options?.title?.trim() || file.name;
+      const onProgress = options?.onProgress;
+      if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error(`File exceeds the ${MAX_UPLOAD_LABEL} limit`);
+      }
       // Connected: read the File as base64 and persist it (→ R2 + PortalDocument), then
       // refresh() surfaces it. Prefer an explicit propertyId (create-property / Documents tab);
       // otherwise resolve from the address string.
@@ -831,16 +828,20 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           );
         const propertyId = options?.propertyId ?? prop?.id;
         try {
-          const contentBase64 = await fileToBase64(file);
-          await apiUploadDocument({
-            fileName: file.name,
-            mimeType: file.type || 'application/octet-stream',
-            sizeBytes: file.size,
-            contentBase64,
-            category,
-            propertyId,
-            title: displayTitle,
-          } as Parameters<typeof apiUploadDocument>[0]);
+          const contentBase64 = await fileToBase64(file, onProgress);
+          await apiUploadDocumentWithProgress(
+            {
+              fileName: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              sizeBytes: file.size,
+              contentBase64,
+              category,
+              propertyId,
+              title: displayTitle,
+            } as Parameters<typeof apiUploadDocumentWithProgress>[0],
+            (networkPct) => onProgress?.(mapNetworkUploadProgress(networkPct)),
+          );
+          onProgress?.(100);
           await refresh();
         } catch (err) {
           throw err instanceof Error ? err : new Error('Failed to upload document');

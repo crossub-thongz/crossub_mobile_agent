@@ -7,11 +7,20 @@ import { cn } from '@/lib/utils';
 
 export type WorkflowStepVisualState = 'completed' | 'current' | 'upcoming';
 
-function StepMarker({ state }: { state: WorkflowStepVisualState }) {
+function StepMarker({
+  state,
+  hasError,
+}: {
+  state: WorkflowStepVisualState;
+  hasError?: boolean;
+}) {
   if (state === 'upcoming') {
     return (
       <span
-        className="border-border bg-background flex size-6 items-center justify-center rounded-full border-2"
+        className={cn(
+          'border-border bg-background flex size-6 items-center justify-center rounded-full border-2',
+          hasError && 'border-rose-500',
+        )}
         aria-hidden
       />
     );
@@ -19,13 +28,24 @@ function StepMarker({ state }: { state: WorkflowStepVisualState }) {
 
   return (
     <span
-      className="bg-primary flex size-6 items-center justify-center rounded-full"
+      className={cn(
+        'flex size-6 items-center justify-center rounded-full',
+        hasError ? 'bg-rose-500' : 'bg-primary',
+      )}
       aria-hidden
     >
       {state === 'completed' ? (
-        <Check className="text-primary-foreground size-3.5" strokeWidth={3} />
+        <Check
+          className={cn('size-3.5', hasError ? 'text-white' : 'text-primary-foreground')}
+          strokeWidth={3}
+        />
       ) : (
-        <span className="bg-primary-foreground size-1.5 rounded-full" />
+        <span
+          className={cn(
+            'size-1.5 rounded-full',
+            hasError ? 'bg-white' : 'bg-primary-foreground',
+          )}
+        />
       )}
     </span>
   );
@@ -39,6 +59,7 @@ export function WorkflowProgressRail<T extends string>({
   isStepCompleted,
   onStepClick,
   isStepEnabled,
+  stepHasError,
   href,
   className,
 }: {
@@ -49,6 +70,7 @@ export function WorkflowProgressRail<T extends string>({
   isStepCompleted: (step: T) => boolean;
   onStepClick?: (step: T) => void;
   isStepEnabled?: (step: T) => boolean;
+  stepHasError?: (step: T) => boolean;
   href?: string;
   className?: string;
 }) {
@@ -89,14 +111,19 @@ export function WorkflowProgressRail<T extends string>({
           const label = labels[step];
           const isViewing = step === currentStep;
           const enabled = isStepEnabled?.(step) ?? true;
+          const hasError = stepHasError?.(step) ?? false;
 
           const column = (
             <>
-              <StepMarker state={state} />
+              <StepMarker state={state} hasError={hasError} />
               <span
                 className={cn(
                   'mt-2 max-w-[4.25rem] text-center text-[9px] font-semibold uppercase leading-tight tracking-wide sm:max-w-[5rem] sm:text-[10px]',
-                  state === 'upcoming' ? 'text-muted-foreground/70' : 'text-primary',
+                  hasError
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : state === 'upcoming'
+                      ? 'text-muted-foreground/70'
+                      : 'text-primary',
                 )}
               >
                 {label}

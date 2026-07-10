@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -9,47 +9,34 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ChecklistUploadState } from '@/components/agent/document-checklist-upload';
 import {
-  MANAGEMENT_DOC_SLOTS,
+  PropertyManagementInsuranceAndFeesSection,
   type ManagementDetailsValues,
 } from '@/components/agent/property-management-details-section';
 import {
-  bondFromWeekly,
+  CREATE_PROPERTY_DOCUMENT_GROUP_LABELS,
+  documentSlotsForGroup,
+} from '@/lib/property-create-document-groups';
+import { OTHER_LEASING_DOCUMENT_OPTIONS } from '@/lib/property-document-slots';
+import {
+  // bondFromWeekly,
   RENT_PERIOD_OPTIONS,
-  weeklyRentFromAmount,
+  // weeklyRentFromAmount,
 } from '@/lib/rent-calculations';
 import type { RentPeriodChoice } from '@/lib/rent-calculations';
+import {
+  filterUploadableFiles,
+  MAX_UPLOAD_LABEL,
+} from '@/lib/file-upload';
 import { cn } from '@/lib/utils';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
 
-export const LEASING_FIXED_DOC_SLOTS = [
-  { id: 'lease_agreement', label: 'Lease agreement' },
-  { id: 'lease_extension', label: 'Lease extension agreement' },
-  { id: 'application_form', label: 'Application Form' },
-  { id: 'photo_id', label: 'Photo ID' },
-  { id: 'bank_statement', label: 'Bank Statement' },
-  { id: 'tenancy_ledger', label: 'Tenancy Ledger' },
-  { id: 'visa', label: 'Visa' },
-  { id: 'payslip', label: 'Payslip' },
-] as const;
-
-export const PROPERTY_FIXED_DOC_SLOTS = [
-  { id: 'council_rate', label: 'Council rate' },
-  { id: 'strata_levy', label: 'Strata levy' },
-  { id: 'water_bill', label: 'Water bill' },
-  { id: 'property_landlord_insurance', label: 'Landlord insurance' },
-  { id: 'water_efficiency_certificate', label: 'Water Efficiency Certificate' },
-  { id: 'smoke_alarm_compliance', label: 'Smoke alarm compliance' },
-] as const;
-
-export const OTHER_LEASING_DOCUMENT_OPTIONS = [
-  { id: 'application_documents', label: 'Application documents' },
-  { id: 'bond_lodgement', label: 'Bond lodgement' },
-  { id: 'ingoing_report', label: 'Ingoing inspection report' },
-  { id: 'rent_ledger', label: 'Rent ledger' },
-  { id: 'other', label: 'Other' },
-] as const;
+export {
+  LEASING_FIXED_DOC_SLOTS,
+  OTHER_LEASING_DOCUMENT_OPTIONS,
+  PROPERTY_FIXED_DOC_SLOTS,
+} from '@/lib/property-document-slots';
 
 export interface ExtraLeasingDocumentRow {
   id: string;
@@ -185,7 +172,26 @@ function DocumentChecklistSection({
 
   const onFile = async (fileList: FileList | null) => {
     if (!fileList?.length || !activeSlot) return;
-    const files = Array.from(fileList);
+    const { ok, oversized, blocked } = filterUploadableFiles(Array.from(fileList));
+    if (blocked.length > 0) {
+      toast.error(
+        blocked.length === 1
+          ? `${blocked[0].name} is not supported (videos and GIFs are not allowed)`
+          : `${blocked.length} files are not supported (videos and GIFs are not allowed)`,
+      );
+    }
+    if (oversized.length > 0) {
+      toast.error(
+        oversized.length === 1
+          ? `${oversized[0].name} exceeds the ${MAX_UPLOAD_LABEL} limit`
+          : `${oversized.length} files exceed the ${MAX_UPLOAD_LABEL} limit`,
+      );
+    }
+    if (ok.length === 0) {
+      setActiveSlot(null);
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     setUploading(true);
     try {
       let title: string | undefined;
@@ -196,13 +202,13 @@ function DocumentChecklistSection({
         const row = extraDocuments.find((r) => r.id === activeSlot);
         if (row) title = row.title.trim() || 'Document';
       }
-      for (const file of files) {
+      for (const file of ok) {
         await onUploadFile(file, activeSlot, title);
       }
       toast.success(
-        files.length === 1
-          ? `Uploaded ${files[0].name}`
-          : `Uploaded ${files.length} files`,
+        ok.length === 1
+          ? `Uploaded ${ok[0].name}`
+          : `Uploaded ${ok.length} files`,
       );
     } catch {
       toast.error('Upload failed');
@@ -256,7 +262,6 @@ function DocumentChecklistSection({
         type="file"
         className="hidden"
         multiple
-        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv"
         onChange={(e) => void onFile(e.target.files)}
       />
 
@@ -324,22 +329,23 @@ export function PropertyLeasingDetailsSection({
   required?: boolean;
   disabled?: boolean;
 }) {
-  const weeklyRent = useMemo(
-    () => weeklyRentFromAmount(Number(values.rentAmount), values.rentPeriod),
-    [values.rentAmount, values.rentPeriod],
-  );
-  const bondAmount = useMemo(() => bondFromWeekly(weeklyRent), [weeklyRent]);
+  // Bond auto-calc — restore with Bond ($) field below
+  // const weeklyRent = useMemo(
+  //   () => weeklyRentFromAmount(Number(values.rentAmount), values.rentPeriod),
+  //   [values.rentAmount, values.rentPeriod],
+  // );
+  // const bondAmount = useMemo(() => bondFromWeekly(weeklyRent), [weeklyRent]);
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
       <div>
         <p className="text-sm font-semibold">Leasing details</p>
         <p className="text-muted-foreground text-xs">
-          Rent, bond, and agreement dates for this tenancy.
+          Rent and agreement dates for this tenancy.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Rent ($)" required={required}>
           <Input
             type="number"
@@ -363,7 +369,7 @@ export function PropertyLeasingDetailsSection({
           <select
             value={values.rentPeriod}
             onChange={(e) => onChange({ rentPeriod: e.target.value as RentPeriodChoice })}
-            className={cn(selectClass, 'min-w-[7.5rem]')}
+            className={selectClass}
             disabled={disabled}
           >
             <option value="">Select period</option>
@@ -374,6 +380,7 @@ export function PropertyLeasingDetailsSection({
             ))}
           </select>
         </FormField>
+        {/* Bond — temporarily hidden on tenant step
         <FormField label="Bond ($)">
           <Input
             readOnly
@@ -382,6 +389,7 @@ export function PropertyLeasingDetailsSection({
             className="bg-muted/40"
           />
         </FormField>
+        */}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -425,25 +433,31 @@ export function PropertyDocumentsSection({
 }) {
   return (
     <div className="space-y-4">
-      <DocumentChecklistSection
-        title="Tenant's Application Documents (Optional)"
-        description="Lease agreements and supporting tenancy application documents."
-        addLabel="Add document"
-        fixedSlots={LEASING_FIXED_DOC_SLOTS}
-        extraDocuments={values.extraDocuments}
-        uploads={values.uploads}
-        onChangeExtras={(extraDocuments) => onChange({ extraDocuments })}
-        onChangeUploads={(uploads) => onChange({ uploads })}
-        onUploadFile={onUploadFile}
+      <PropertyManagementInsuranceAndFeesSection
+        values={management}
+        onChange={onChangeManagement}
         disabled={disabled}
-        extraIdPrefix="extra-tenant-"
       />
 
       <DocumentChecklistSection
-        title="Landlord's Documents (Optional)"
-        description="Insurance and management agreement documents for the landlord."
+        title={`${CREATE_PROPERTY_DOCUMENT_GROUP_LABELS.tenancy} (Optional)`}
+        description="Lease agreement, lease extension, rates, compliance, and other tenancy records."
         addLabel="Add document"
-        fixedSlots={MANAGEMENT_DOC_SLOTS}
+        fixedSlots={documentSlotsForGroup('tenancy')}
+        extraDocuments={values.extraPropertyDocuments}
+        uploads={values.uploads}
+        onChangeExtras={(extraPropertyDocuments) => onChange({ extraPropertyDocuments })}
+        onChangeUploads={(uploads) => onChange({ uploads })}
+        onUploadFile={onUploadFile}
+        disabled={disabled}
+        extraIdPrefix="extra-tenancy-"
+      />
+
+      <DocumentChecklistSection
+        title={`${CREATE_PROPERTY_DOCUMENT_GROUP_LABELS.landlord} (Optional)`}
+        description="Property management agreement. If you uploaded this on the Landlord step, it will show here as uploaded."
+        addLabel="Add document"
+        fixedSlots={documentSlotsForGroup('landlord')}
         extraDocuments={management.extraDocuments}
         uploads={management.uploads}
         onChangeExtras={(extraDocuments) => onChangeManagement({ extraDocuments })}
@@ -454,17 +468,17 @@ export function PropertyDocumentsSection({
       />
 
       <DocumentChecklistSection
-        title="Property Documents (Optional)"
-        description="Rates, utilities, insurance, and compliance certificates for this property."
+        title={`${CREATE_PROPERTY_DOCUMENT_GROUP_LABELS.tenant_application} (Optional)`}
+        description="Application form, ID, payslips, and supporting tenant application documents."
         addLabel="Add document"
-        fixedSlots={PROPERTY_FIXED_DOC_SLOTS}
-        extraDocuments={values.extraPropertyDocuments}
+        fixedSlots={documentSlotsForGroup('tenant_application')}
+        extraDocuments={values.extraDocuments}
         uploads={values.uploads}
-        onChangeExtras={(extraPropertyDocuments) => onChange({ extraPropertyDocuments })}
+        onChangeExtras={(extraDocuments) => onChange({ extraDocuments })}
         onChangeUploads={(uploads) => onChange({ uploads })}
         onUploadFile={onUploadFile}
         disabled={disabled}
-        extraIdPrefix="extra-property-"
+        extraIdPrefix="extra-tenant-"
       />
     </div>
   );

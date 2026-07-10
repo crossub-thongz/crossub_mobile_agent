@@ -2,27 +2,31 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import {
-  History,
-  ListTodo,
-  Plus,
-} from 'lucide-react';
+import { History, ListTodo } from 'lucide-react';
 
-import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
-import { PropertyLandlordEditDialog } from '@/components/agent/property-landlord-edit-dialog';
-// import { PropertyPhotosButton } from '@/components/agent/property-photos-dialog';
+import { ContactTile } from '@/components/agent/property-contact-tile';
+import {
+  PropertyDocumentPreviewDialog,
+  type DocumentPreviewItem,
+} from '@/components/agent/property-document-preview-dialog';
+import { PropertyLandlordOverviewEditDialog } from '@/components/agent/property-landlord-overview-edit-dialog';
+import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-edit-dialog';
+import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { maintenanceDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { isViewableDocumentUrl } from '@/lib/document-preview';
 import { isPropertyVacant } from '@/lib/property-leasing';
+import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import {
+  derivePaymentCycle,
+  deriveRentPaidTo,
   resolveCurrentRent,
   resolveLeaseDates,
-  resolvePendingRentChange,
 } from '@/lib/property-overview';
-import type { PropertyContactBlock } from '@/lib/property-registry-api';
+import { dailyRentFromWeekly } from '@/lib/rent-calculations';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
   AgentDocument,
@@ -33,93 +37,54 @@ import type {
   Property,
   PropertyNeedAction,
 } from '@/lib/types';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
 
-function ContactTile({
+function OverviewSection({
   title,
-  name,
-  email,
-  phone,
-  meta,
-  variant = 'filled',
-  updatedHint,
   onEdit,
-  onAdd,
+  children,
 }: {
   title: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  meta?: string;
-  variant?: 'filled' | 'add';
-  updatedHint?: string | null;
   onEdit?: () => void;
-  onAdd?: () => void;
+  children: React.ReactNode;
 }) {
-  if (variant === 'add' && onAdd) {
-    return (
-      <button
-        type="button"
-        onClick={onAdd}
-        className="flex min-h-[4.25rem] flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-border/80 bg-muted/5 px-2 py-2 text-center"
-      >
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-          {title}
-        </p>
-        <span className="text-primary inline-flex items-center gap-0.5 text-[11px] font-medium">
-          <Plus className="size-3" />
-          Add
-        </span>
-      </button>
-    );
-  }
-
-  const detail = [phone, email].filter(Boolean).join(' · ');
-
   return (
-    <div
-      className="min-h-[4.25rem] rounded-lg border border-border/60 bg-muted/10 px-2.5 py-2"
-      title={updatedHint ?? undefined}
-    >
-      <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-          {title}
-        </p>
+    <section className="rounded-xl border bg-card p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold">{title}</h3>
         {onEdit ? (
           <button
             type="button"
             onClick={onEdit}
-            className="text-primary shrink-0 text-[10px] font-medium"
+            className="text-primary text-[10px] font-medium"
           >
             Edit
           </button>
         ) : null}
       </div>
-      <p className="mt-0.5 truncate text-xs font-medium">{name?.trim() || '—'}</p>
-      {meta ? <p className="text-muted-foreground mt-0.5 truncate text-[10px]">{meta}</p> : null}
-      <p className="text-muted-foreground mt-0.5 truncate text-[10px]">{detail || (meta ? '' : '—')}</p>
-    </div>
+      {children}
+    </section>
   );
 }
 
 function StatCell({
   label,
   value,
-  onClick,
+  onPreview,
 }: {
   label: string;
   value: string;
-  onClick?: () => void;
+  onPreview?: () => void;
 }) {
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2 py-1.5">
       <p className="text-muted-foreground text-[9px] font-medium uppercase tracking-wide">
         {label}
       </p>
-      {onClick ? (
+      {onPreview ? (
         <button
           type="button"
-          onClick={onClick}
+          onClick={onPreview}
           className="text-primary mt-0.5 text-left text-xs font-semibold"
         >
           {value}
@@ -131,18 +96,8 @@ function StatCell({
   );
 }
 
-function hasContact(block?: PropertyContactBlock | null): boolean {
-  return Boolean(block?.name?.trim() || block?.email?.trim() || block?.mobile?.trim());
-}
-
-function formatStrataMeta(
-  buildingName?: string | null,
-  strataPlanNumber?: string | null,
-): string {
-  const parts: string[] = [];
-  if (buildingName?.trim()) parts.push(buildingName.trim());
-  if (strataPlanNumber?.trim()) parts.push(`SP ${strataPlanNumber.trim()}`);
-  return parts.join(' · ');
+function sliceDate(value?: string | null): string {
+  return value?.slice(0, 10) ?? '';
 }
 
 export function PropertyOverviewTab({
@@ -151,11 +106,11 @@ export function PropertyOverviewTab({
   needActions,
   maintenance,
   inspections: _inspections,
-  propertyDocs: _propertyDocs,
+  propertyDocs,
   leasing,
   currentLease,
-  rentReviewDecisions,
-  tenancyRentReviews,
+  rentReviewDecisions: _rentReviewDecisions,
+  tenancyRentReviews: _tenancyRentReviews,
   leasingCycles,
   tenantSelections,
   onViewHistory,
@@ -188,8 +143,11 @@ export function PropertyOverviewTab({
     currentLease,
   );
 
+  const [tenancyDialogOpen, setTenancyDialogOpen] = useState(false);
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
-  const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
+  const [docPreview, setDocPreview] = useState<DocumentPreviewItem | null>(null);
+
+  const fullAddress = formatPropertyFullAddress(property);
 
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
   const currentRent = resolveCurrentRent(property, currentLease);
@@ -201,15 +159,9 @@ export function PropertyOverviewTab({
       : registryRent != null && registryRent > 0
         ? registryRent
         : currentRent;
-  const { start: leaseStart, end: leaseEnd } = resolveLeaseDates(property, currentLease);
-  const pendingRent = resolvePendingRentChange(property, tenancyRentReviews, rentReviewDecisions, {
-    isVacant,
-    currentRent: displayRent,
-  });
 
   const overview = sync.overview;
-  const buildingManager = overview?.buildingManager;
-  const strataContact = overview?.strataContact;
+  const { start: leaseStart, end: leaseEnd } = resolveLeaseDates(property, currentLease);
 
   const landlord = useMemo(
     () => ({
@@ -242,39 +194,28 @@ export function PropertyOverviewTab({
       ? `Updated ${formatDateTime(sync.record.updatedAt)}`
       : null;
 
-  const keyDates = [
-    {
-      label: 'Lease start',
-      value:
+  const tenancyDates = useMemo(
+    () => ({
+      leaseStart:
         overview?.leaseStartDate ??
-        sync.record?.leaseStartDate?.slice(0, 10) ??
+        sliceDate(sync.record?.leaseStartDate) ??
         leaseStart,
-    },
-    {
-      label: 'Lease end',
-      value:
-        overview?.leaseEndDate ??
-        sync.record?.leaseEndDate?.slice(0, 10) ??
-        property.leaseEnd,
-    },
-    {
-      label: 'Next rent review',
-      value:
+      leaseEnd:
+        overview?.leaseEndDate ?? sliceDate(sync.record?.leaseEndDate) ?? property.leaseEnd,
+      nextRentReview:
         overview?.nextRentReviewDate ??
-        sync.record?.nextRentReviewAt?.slice(0, 10) ??
+        sliceDate(sync.record?.nextRentReviewAt) ??
         property.nextRentReview,
-    },
-    {
-      label: 'Vacate date',
-      value: overview?.vacateDate ?? sync.record?.vacateDate?.slice(0, 10),
-    },
-    {
-      label: 'Next routine inspection',
-      value:
-        overview?.nextRoutineInspectionDate ??
-        sync.record?.nextInspectionAt?.slice(0, 10),
-    },
-  ];
+      vacateDate: overview?.vacateDate ?? sliceDate(sync.record?.vacateDate),
+      nextRoutine:
+        overview?.nextRoutineInspectionDate ?? sliceDate(sync.record?.nextInspectionAt),
+    }),
+    [overview, sync.record, property, leaseStart, leaseEnd],
+  );
+
+  const rentPaidTo = deriveRentPaidTo(sync.accounting);
+  const paymentCycle = derivePaymentCycle(displayRent);
+  const displayDailyRent = dailyRentFromWeekly(displayRent);
 
   const registry = useMemo(() => {
     const record = sync.record;
@@ -284,40 +225,85 @@ export function PropertyOverviewTab({
         ? record.managementRateGst
         : property.managementRateGst);
     return {
-      landlordInsuranceExpiry:
-        overview?.landlordInsuranceExpiry ??
-        record?.landlordInsuranceExpiry?.slice(0, 10) ??
-        property.landlordInsuranceExpiry,
-      administrationFee:
-        overview?.administrationFee ?? record?.administrationFee ?? property.administrationFee,
-      documentationFee:
-        overview?.documentationFee ?? record?.documentationFee ?? property.documentationFee,
-      lettingFee: overview?.lettingFee ?? record?.lettingFee ?? property.lettingFee,
       managementRatePercent:
         overview?.managementRatePercent ??
         record?.managementRatePercent ??
         property.managementRatePercent,
       managementRateGst: gst,
-      latitude: overview?.latitude ?? record?.latitude ?? property.latitude,
-      longitude: overview?.longitude ?? record?.longitude ?? property.longitude,
     };
   }, [overview, property, sync.record]);
-
-  const strataMeta = formatStrataMeta(
-    overview?.buildingName ?? sync.record?.buildingName ?? property.buildingName,
-    overview?.strataPlanNumber ?? sync.record?.strataPlanNumber ?? property.strataPlanNumber,
-  );
-  const showStrataTile = hasContact(strataContact) || Boolean(strataMeta);
 
   const managementGstLabel =
     registry.managementRateGst === 'include'
       ? 'Include GST'
       : registry.managementRateGst === 'exclude'
         ? 'Exclude GST'
-        : '—';
+        : '';
+
+  const managementRateDisplay =
+    registry.managementRatePercent != null
+      ? `${registry.managementRatePercent}%${managementGstLabel ? ` · ${managementGstLabel}` : ''}`
+      : '—';
+
+  const displayDocs = useMemo(
+    () =>
+      propertyDocs.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        uploadedAt: doc.uploadedAt,
+        href: doc.downloadUrl ?? doc.href,
+      })),
+    [propertyDocs],
+  );
+
+  const managementAgreementDoc = findPropertyDocument(
+    displayDocs,
+    MANAGEMENT_AGREEMENT_DOC_SLOT.label,
+  );
+
+  const tenancyInitial = useMemo(
+    () => ({
+      tenantName: tenant.name === 'Vacant' ? '' : tenant.name,
+      tenantEmail: tenant.email ?? '',
+      tenantPhone: tenant.phone ?? '',
+      rentWeekly: displayRent > 0 ? String(Math.round(displayRent)) : '',
+      leaseStartDate: tenancyDates.leaseStart ?? '',
+      leaseEndDate: tenancyDates.leaseEnd ?? '',
+      nextRentReviewAt: tenancyDates.nextRentReview ?? '',
+      vacateDate: tenancyDates.vacateDate ?? '',
+      nextInspectionAt: tenancyDates.nextRoutine ?? '',
+    }),
+    [tenant, displayRent, tenancyDates],
+  );
+
+  const landlordInitial = useMemo(
+    () => ({
+      landlordName: landlord.name === '—' ? '' : landlord.name,
+      landlordEmail: landlord.email ?? '',
+      landlordPhone: landlord.phone ?? '',
+      managementRatePercent:
+        registry.managementRatePercent != null
+          ? String(registry.managementRatePercent)
+          : '',
+      managementRateGst: (registry.managementRateGst ?? '') as '' | 'include' | 'exclude',
+    }),
+    [landlord, registry],
+  );
 
   const handleSaved = () => {
     onRefresh?.();
+  };
+
+  const openDocPreview = (
+    doc: { title: string; uploadedAt: string; href?: string | null } | undefined,
+    fallbackTitle: string,
+  ) => {
+    if (!doc?.href || !isViewableDocumentUrl(doc.href)) return;
+    setDocPreview({
+      title: fallbackTitle,
+      uploadedAt: doc.uploadedAt,
+      href: doc.href,
+    });
   };
 
   return (
@@ -356,158 +342,90 @@ export function PropertyOverviewTab({
         </section>
       ) : null}
 
-      {/* Property registry / rent / reports strip lives in the profile header card. */}
-      {/* Property photos — temporarily hidden
-      <div className="mt-2.5">
-        <PropertyPhotosButton propertyAddress={`${property.address}, ${property.suburb}`} />
-      </div>
-      */}
-
-      <section className="rounded-xl border bg-card p-3">
-        <h3 className="mb-2 text-xs font-semibold">Contacts</h3>
-        <div className="grid grid-cols-2 gap-1.5">
-          <ContactTile
-            title="Landlord"
-            name={landlord.name}
-            email={landlord.email}
-            phone={landlord.phone}
-            updatedHint={landlordUpdatedHint}
-            onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
+      <OverviewSection
+        title="Tenancy"
+        onEdit={apiConnected ? () => setTenancyDialogOpen(true) : undefined}
+      >
+        <ContactTile
+          title="Tenant"
+          name={tenant.name}
+          email={tenant.email}
+          phone={tenant.phone}
+          updatedHint={tenant.hint}
+        />
+        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          <StatCell
+            label="Rent"
+            value={displayRent > 0 ? `${formatCurrency(displayRent)}/wk` : '—'}
           />
-          <ContactTile
-            title="Tenant"
-            name={tenant.name}
-            email={tenant.email}
-            phone={tenant.phone}
-            updatedHint={tenant.hint}
+          <StatCell
+            label="Daily rent"
+            value={
+              displayDailyRent > 0
+                ? `$${displayDailyRent.toLocaleString('en-AU', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}/day`
+                : '—'
+            }
           />
-          {hasContact(buildingManager) ? (
-            <ContactTile
-              title="Building manager"
-              name={buildingManager?.name}
-              email={buildingManager?.email}
-              phone={buildingManager?.mobile}
-              onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          ) : (
-            <ContactTile
-              title="Building manager"
-              variant="add"
-              onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          )}
-          {showStrataTile ? (
-            <ContactTile
-              title="Strata"
-              name={strataContact?.name}
-              email={strataContact?.email}
-              phone={strataContact?.mobile}
-              meta={strataMeta || undefined}
-              onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          ) : (
-            <ContactTile
-              title="Strata"
-              variant="add"
-              onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          )}
+          <StatCell
+            label="Rent paid to"
+            value={rentPaidTo ? formatDate(rentPaidTo) : '—'}
+          />
+          <StatCell label="Payment cycle" value={paymentCycle} />
+          <StatCell
+            label="Next rent review"
+            value={tenancyDates.nextRentReview ? formatDate(tenancyDates.nextRentReview) : '—'}
+          />
+          <StatCell
+            label="Lease start"
+            value={tenancyDates.leaseStart ? formatDate(tenancyDates.leaseStart) : '—'}
+          />
+          <StatCell
+            label="Lease end"
+            value={tenancyDates.leaseEnd ? formatDate(tenancyDates.leaseEnd) : '—'}
+          />
+          <StatCell
+            label="Vacate date"
+            value={tenancyDates.vacateDate ? formatDate(tenancyDates.vacateDate) : '—'}
+          />
+          <StatCell
+            label="Next routine"
+            value={tenancyDates.nextRoutine ? formatDate(tenancyDates.nextRoutine) : '—'}
+          />
         </div>
-      </section>
+      </OverviewSection>
 
-      <section className="rounded-xl border bg-card p-3">
-        <h3 className="mb-2 text-xs font-semibold">Management details</h3>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+      <OverviewSection
+        title="Management details"
+        onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
+      >
+        <ContactTile
+          title="Landlord"
+          name={landlord.name}
+          email={landlord.email}
+          phone={landlord.phone}
+          updatedHint={landlordUpdatedHint}
+        />
+        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-2">
+          <StatCell label="Management rate" value={managementRateDisplay} />
           <StatCell
-            label="Insurance expiry"
-            value={
-              registry.landlordInsuranceExpiry
-                ? formatDate(registry.landlordInsuranceExpiry)
-                : '—'
-            }
-          />
-          <StatCell
-            label="Administration fee"
-            value={
-              registry.administrationFee != null
-                ? formatCurrency(registry.administrationFee)
-                : '—'
-            }
-          />
-          <StatCell
-            label="Documentation fee"
-            value={
-              registry.documentationFee != null
-                ? formatCurrency(registry.documentationFee)
-                : '—'
-            }
-          />
-          <StatCell
-            label="Letting fee"
-            value={registry.lettingFee != null ? formatCurrency(registry.lettingFee) : '—'}
-          />
-          <StatCell
-            label="Management rate"
-            value={
-              registry.managementRatePercent != null
-                ? `${registry.managementRatePercent}%`
-                : '—'
-            }
-          />
-          <StatCell label="Management GST" value={managementGstLabel} />
-          <StatCell
-            label="Coordinates"
-            value={
-              registry.latitude != null && registry.longitude != null
-                ? `${registry.latitude.toFixed(5)}, ${registry.longitude.toFixed(5)}`
-                : '—'
+            label="Management agreement"
+            value={managementAgreementDoc ? 'Uploaded' : 'Not uploaded'}
+            onPreview={
+              managementAgreementDoc?.href &&
+              isViewableDocumentUrl(managementAgreementDoc.href)
+                ? () =>
+                    openDocPreview(
+                      managementAgreementDoc,
+                      MANAGEMENT_AGREEMENT_DOC_SLOT.label,
+                    )
+                : undefined
             }
           />
         </div>
-      </section>
-
-      <section className="rounded-xl border bg-card p-3">
-        <h3 className="text-xs font-semibold">Key dates</h3>
-        <p className="text-muted-foreground mb-2 text-[10px]">
-          From property registry and synced leasing workflows.
-        </p>
-        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-          {keyDates.map((item) => (
-            <StatCell
-              key={item.label}
-              label={item.label}
-              value={item.value ? formatDate(item.value) : '—'}
-            />
-          ))}
-        </div>
-      </section>
-
-      {!isVacant ? (
-        <section className="rounded-xl border bg-card p-3">
-          <h3 className="mb-2 text-xs font-semibold">Tenancy</h3>
-          <div className="grid grid-cols-2 gap-1.5">
-            <StatCell
-              label="Lease start"
-              value={leaseStart ? formatDate(leaseStart) : '—'}
-            />
-            <StatCell label="Lease end" value={leaseEnd ? formatDate(leaseEnd) : '—'} />
-          </div>
-          {pendingRent ? (
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              <StatCell
-                label="New rent"
-                value={`${formatCurrency(pendingRent.newRent)}/wk`}
-              />
-              <StatCell
-                label="New rent from"
-                value={formatDate(pendingRent.startDate)}
-              />
-            </div>
-          ) : tenancyRentReviews.length === 0 ? (
-            <p className="text-muted-foreground mt-2 text-[10px]">No pending rent review.</p>
-          ) : null}
-        </section>
-      ) : null}
+      </OverviewSection>
 
       <section className="rounded-xl border bg-card p-3">
         <div className="mb-2 flex items-center gap-1.5">
@@ -522,23 +440,28 @@ export function PropertyOverviewTab({
         />
       </section>
 
-      <PropertyLandlordEditDialog
-        open={landlordDialogOpen}
-        onOpenChange={setLandlordDialogOpen}
+      <PropertyTenancyEditDialog
+        open={tenancyDialogOpen}
+        onOpenChange={setTenancyDialogOpen}
         propertyId={propertyId}
-        initial={{
-          name: landlord.name === '—' ? '' : landlord.name,
-          email: landlord.email ?? '',
-          phone: landlord.phone ?? '',
-        }}
+        initial={tenancyInitial}
         onSaved={handleSaved}
       />
 
-      <PropertyBuildingContactsDialog
-        open={buildingDialogOpen}
-        onOpenChange={setBuildingDialogOpen}
+      <PropertyLandlordOverviewEditDialog
+        open={landlordDialogOpen}
+        onOpenChange={setLandlordDialogOpen}
         propertyId={propertyId}
+        property={property}
+        initial={landlordInitial}
         onSaved={handleSaved}
+      />
+
+      <PropertyDocumentPreviewDialog
+        doc={docPreview}
+        propertyAddress={fullAddress}
+        open={docPreview != null}
+        onClose={() => setDocPreview(null)}
       />
     </div>
   );

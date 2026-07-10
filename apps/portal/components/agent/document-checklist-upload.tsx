@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import type { DocumentChecklistItem } from '@/lib/leasing-workflows/constants';
+import {
+  filterUploadableFiles,
+  MAX_UPLOAD_LABEL,
+} from '@/lib/file-upload';
 import type { AgentDocument } from '@/lib/types';
 
 export interface ChecklistUploadState {
@@ -40,16 +44,35 @@ export function DocumentChecklistUpload({
 
   const onFile = async (fileList: FileList | null) => {
     if (!fileList?.length || !activeId) return;
-    const files = Array.from(fileList);
+    const { ok, oversized, blocked } = filterUploadableFiles(Array.from(fileList));
+    if (blocked.length > 0) {
+      toast.error(
+        blocked.length === 1
+          ? `${blocked[0].name} is not supported (videos and GIFs are not allowed)`
+          : `${blocked.length} files are not supported (videos and GIFs are not allowed)`,
+      );
+    }
+    if (oversized.length > 0) {
+      toast.error(
+        oversized.length === 1
+          ? `${oversized[0].name} exceeds the ${MAX_UPLOAD_LABEL} limit`
+          : `${oversized.length} files exceed the ${MAX_UPLOAD_LABEL} limit`,
+      );
+    }
+    if (ok.length === 0) {
+      setActiveId(null);
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     setUploading(true);
     try {
-      for (const file of files) {
+      for (const file of ok) {
         await onUpload(file, activeId, 'lease');
       }
       toast.success(
-        files.length === 1
-          ? `Uploaded ${files[0].name}`
-          : `Uploaded ${files.length} files`,
+        ok.length === 1
+          ? `Uploaded ${ok[0].name}`
+          : `Uploaded ${ok.length} files`,
       );
     } catch {
       toast.error('Upload failed');
@@ -78,7 +101,6 @@ export function DocumentChecklistUpload({
         type="file"
         className="hidden"
         multiple
-        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.csv"
         onChange={(e) => void onFile(e.target.files)}
       />
       <ul className="space-y-2">

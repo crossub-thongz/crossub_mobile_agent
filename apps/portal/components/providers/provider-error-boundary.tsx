@@ -1,21 +1,26 @@
 'use client';
 
-import { Component, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 
-export class ProviderErrorBoundary extends Component<
-  { children: ReactNode },
-  { error: Error | null }
-> {
-  state = { error: null as Error | null };
+type Props = { children: ReactNode };
+type State = { error: Error | null };
 
-  static getDerivedStateFromError(error: Error) {
+/** Inner class boundary — kept separate so the named export stays a stable function wrapper. */
+class ProviderErrorBoundaryInner extends Component<Props, State> {
+  state: State = { error: null };
+
+  static getDerivedStateFromError(error: Error): State {
     return { error };
   }
 
-  componentDidCatch(error: Error) {
-    console.error('[Agent portal] provider crash', error);
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(
+      '[Agent portal] provider crash',
+      error?.message ?? error,
+      info?.componentStack,
+    );
   }
 
   private clearLocalState = () => {
@@ -34,6 +39,9 @@ export class ProviderErrorBoundary extends Component<
           <p className="text-muted-foreground mt-2 max-w-sm text-sm">
             The app hit an unexpected error while loading. Clearing saved data on
             this device often fixes it after an update.
+          </p>
+          <p className="text-destructive mt-3 max-w-md font-mono text-[11px] break-words">
+            {this.state.error.message}
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button
@@ -57,4 +65,9 @@ export class ProviderErrorBoundary extends Component<
 
     return this.props.children;
   }
+}
+
+/** Function export avoids Turbopack HMR treating the class export as a non-component. */
+export function ProviderErrorBoundary({ children }: Props) {
+  return <ProviderErrorBoundaryInner>{children}</ProviderErrorBoundaryInner>;
 }

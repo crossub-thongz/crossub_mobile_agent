@@ -19,6 +19,12 @@ export function bondFromWeekly(weekly: number): number {
   return Math.round(weekly * LEASING_CYCLE_BOND_RENT_MULTIPLIER);
 }
 
+/** Daily rent from weekly amount (÷ 7, rounded to cents). */
+export function dailyRentFromWeekly(weekly: number): number {
+  if (!weekly || weekly <= 0) return 0;
+  return Math.round((weekly / 7) * 100) / 100;
+}
+
 export function depositFromWeekly(weekly: number): number {
   if (!weekly || weekly <= 0) return 0;
   return Math.round(weekly * LEASING_CYCLE_DEPOSIT_RENT_MULTIPLIER);

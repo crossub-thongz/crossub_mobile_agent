@@ -139,4 +139,12 @@ export const leasingOpsApi = {
         input,
       ),
     ),
+
+  setBondLink: (cycleId: string, input: { link: string }) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/bond-link`,
+        input,
+      ),
+    ),
 };

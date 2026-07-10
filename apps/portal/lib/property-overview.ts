@@ -1,6 +1,8 @@
 import type { AgentDocument, Inspection, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
+import type { PropertyPortalAccounting } from '@/lib/property-registry-api';
 import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import { inspectionDetail } from '@/constants/routes';
+import { formatCurrency } from '@/lib/utils';
 
 export interface PropertyReportLink {
   label: string;
@@ -39,6 +41,30 @@ function findDocByKeywords(docs: AgentDocument[], keywords: string[]) {
   return docs.find((d) =>
     keywords.some((k) => d.title.toLowerCase().includes(k.toLowerCase())),
   );
+}
+
+function findBondLodgementDoc(docs: AgentDocument[]): AgentDocument | undefined {
+  return docs.find((d) => {
+    const title = d.title.trim().toLowerCase();
+    if (!title) return false;
+    // Paper Bond tenancy uploads are not bond-lodgement references.
+    if (/^paper\s*bond\b/.test(title) || title.startsWith('paper bond —') || title.startsWith('paper bond -')) {
+      return false;
+    }
+    if (/bond\s*lodgement|bond\s*receipt|rbo\b/.test(title)) return true;
+    if (/\b\d{6,}\b/.test(title) && /\bbond\b/.test(title)) return true;
+    return false;
+  });
+}
+
+/** Short bond reference for overview — never the full uploaded filename. */
+function bondReferenceLabelFromDocTitle(title: string): string | null {
+  const trimmed = title.trim();
+  if (!trimmed) return null;
+  const idMatch = trimmed.match(/\b\d{6,}\b/);
+  if (idMatch) return idMatch[0];
+  if (/bond\s*lodgement|rbo\b/i.test(trimmed)) return 'Lodged';
+  return null;
 }
 
 function viewableDocumentUrl(doc?: AgentDocument): string | undefined {
@@ -120,20 +146,58 @@ export function resolveBondReference(
   if (property.bondId?.trim()) {
     return { label: property.bondId.trim() };
   }
-  const bondDoc = findDocByKeywords(documents, ['bond', 'rbo', 'lodgement']);
+  const bondDoc = findBondLodgementDoc(documents);
   if (bondDoc) {
-    const match = bondDoc.title.match(/\b\d{6,}\b/);
-    if (match) return { label: match[0] };
-    return { label: bondDoc.title };
+    const docLabel = bondReferenceLabelFromDocTitle(bondDoc.title);
+    if (docLabel) return { label: docLabel };
   }
   const amount = bond?.amount ?? lease?.bondAmount ?? property.bondAmount;
   if (amount != null && amount > 0) {
     return {
-      label: `Pending lodgement · $${Math.round(amount)}`,
+      label: 'Pending lodgement',
       showLodgementNav: Boolean(bond),
     };
   }
   return { label: '—' };
+}
+
+/** Raw bond reference for editing (link, ledger id, or stored id). */
+export function resolveBondReferenceRaw(
+  property: Property,
+  bond?: PropertyBondSnapshot | null,
+): string {
+  if (bond?.ledgerEntryId?.trim()) return bond.ledgerEntryId.trim();
+  if (bond?.agentLink?.trim()) return bond.agentLink.trim();
+  if (property.bondId?.trim()) return property.bondId.trim();
+  return '';
+}
+
+/** Combined bond amount + reference label for display. */
+export function formatBondDisplay(
+  amount: number | null | undefined,
+  bondRef: BondReference,
+): string {
+  const amountPart = amount != null && amount > 0 ? formatCurrency(amount) : null;
+  const refPart = bondRef.label !== '—' ? bondRef.label : null;
+  if (amountPart && refPart) return `${amountPart} · ${refPart}`;
+  if (amountPart) return amountPart;
+  if (refPart) return refPart;
+  return '—';
+}
+
+/** Latest paid rent date from the property accounting ledger. */
+export function deriveRentPaidTo(accounting?: PropertyPortalAccounting | null): string | null {
+  if (!accounting?.ledger.length) return null;
+  const paidDates = accounting.ledger
+    .filter((entry) => entry.paidDate)
+    .map((entry) => entry.paidDate!)
+    .sort((a, b) => b.localeCompare(a));
+  return paidDates[0] ?? null;
+}
+
+/** Payment cycle label — weekly rent is the platform default. */
+export function derivePaymentCycle(rentWeekly?: number | null): string {
+  return rentWeekly != null && rentWeekly > 0 ? 'Weekly' : '—';
 }
 
 /** @deprecated Use resolveBondReference for link support. */

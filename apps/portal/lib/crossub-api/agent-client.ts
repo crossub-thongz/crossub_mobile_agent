@@ -324,6 +324,54 @@ export async function uploadDocument(
   return data;
 }
 
+/** Same as `uploadDocument`, with XMLHttpRequest upload progress (40–100% of caller scale). */
+export async function uploadDocumentWithProgress(
+  input: UploadAgentDocumentInput,
+  onNetworkProgress?: (networkPercent: number) => void,
+): Promise<AgentDocumentDto> {
+  const url = `${API_BASE}/agent/documents`;
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onNetworkProgress) {
+        onNetworkProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onNetworkProgress?.(100);
+        try {
+          resolve(JSON.parse(xhr.responseText) as AgentDocumentDto);
+        } catch {
+          reject(new Error('Failed to upload document'));
+        }
+        return;
+      }
+      try {
+        const body = JSON.parse(xhr.responseText) as { message?: string | string[] };
+        const message =
+          typeof body.message === 'string'
+            ? body.message
+            : Array.isArray(body.message)
+              ? body.message.join(', ')
+              : `Request failed: ${xhr.status}`;
+        reject(new Error(message));
+      } catch {
+        reject(new Error(`Request failed: ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Failed to upload document'));
+    xhr.send(JSON.stringify(input));
+  });
+}
+
 /** Key-collection DTOs — present on backend; awaiting api-contract publish. */
 export interface AgentKeyCollectionReport {
   submittedAt: string | null;

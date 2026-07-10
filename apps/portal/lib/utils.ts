@@ -65,6 +65,22 @@ export function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString('en-AU')}`;
 }
 
+/** Street + suburb + state + postcode for display and document matching. */
+export function formatPropertyFullAddress(property: {
+  address: string;
+  suburb?: string;
+  state?: string;
+  postcode?: string;
+}): string {
+  const parts = [
+    property.address?.trim(),
+    property.suburb?.trim(),
+    property.state?.trim(),
+    property.postcode?.trim(),
+  ].filter(Boolean);
+  return parts.join(', ');
+}
+
 export function formatMonthYear(iso: string): string {
   const d = new Date(iso);
   const mm = String(d.getMonth() + 1).padStart(2, '0');

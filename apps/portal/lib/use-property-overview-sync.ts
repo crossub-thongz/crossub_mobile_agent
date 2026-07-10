@@ -7,6 +7,7 @@ import { resolvePropertyTenantContact, type PropertyTenantContact } from '@/lib/
 import type { LeasingCycle, LeasingRecord, Property, TenantSelectionCase } from '@/lib/types';
 import {
   propertyRegistryApi,
+  type PropertyPortalAccounting,
   type PropertyPortalFinancial,
   type PropertyPortalOverview,
   type PropertyRecord,
@@ -24,6 +25,7 @@ export interface PropertyOverviewSync {
   record: PropertyRecord | null;
   overview: PropertyPortalOverview | null;
   financial: PropertyPortalFinancial | null;
+  accounting: PropertyPortalAccounting | null;
   bond: PropertyBondSnapshot | null;
   tenantContact: PropertyTenantContact | null;
   loading: boolean;
@@ -33,6 +35,7 @@ const EMPTY: PropertyOverviewSync = {
   record: null,
   overview: null,
   financial: null,
+  accounting: null,
   bond: null,
   tenantContact: null,
   loading: false,
@@ -81,6 +84,7 @@ export function usePropertyOverviewSync(
         record,
         overview: portal?.overview ?? null,
         financial: portal?.financial ?? null,
+        accounting: portal?.accounting ?? null,
         bond: cycleView
           ? {
               agentLink: bondBlock?.agentLink ?? null,

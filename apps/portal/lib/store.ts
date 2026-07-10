@@ -209,8 +209,6 @@ export const useAgentStore = create<AgentStore>()(
           carSpaces: input.carSpaces,
           furnished: input.furnished,
           propertyType: input.propertyType,
-          state: input.state,
-          postcode: input.postcode,
           latitude: input.latitude,
           longitude: input.longitude,
           managementRatePercent: input.managementRatePercent,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { messageDetail } from '@/constants/routes';
 import {
   buildGiiReply,
@@ -18,6 +18,10 @@ import {
 import { cn } from '@/lib/utils';
 
 type ChatLine = { id: string; role: 'user' | 'assistant'; text: string; results?: SystemSearchResult[] };
+
+/** Composer grows with typed content so longer questions stay visible. */
+const COMPOSER_MIN_PX = 96;
+const COMPOSER_MAX_PX = 220;
 
 function resolveSpeechLanguage(): string {
   if (typeof navigator === 'undefined') return 'en-AU';
@@ -53,7 +57,16 @@ export function GiiAssistant({
   const [listening, setListening] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const isPanel = variant === 'panel';
+
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = '0px';
+    const next = Math.min(COMPOSER_MAX_PX, Math.max(COMPOSER_MIN_PX, el.scrollHeight));
+    el.style.height = `${next}px`;
+  }, [query, open]);
 
   const latestResults = useMemo(() => {
     const last = [...lines].reverse().find((l) => l.role === 'assistant' && l.results?.length);
@@ -252,21 +265,26 @@ export function GiiAssistant({
           </div>
         ) : null}
         <div className="flex items-end gap-2">
-          <Input
+          <Textarea
+            ref={composerRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') runQuery(query);
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                runQuery(query);
+              }
             }}
             placeholder="Ask Gii anything…"
-            className="min-h-11 flex-1 rounded-full border-border/80 bg-secondary/40 px-4"
+            rows={4}
+            className="min-h-24 max-h-[220px] flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none"
             autoFocus={isPanel}
           />
           {query.trim() ? (
             <button
               type="button"
               onClick={() => runQuery(query)}
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95"
+              className="mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95"
               aria-label="Send message"
             >
               <Send className="size-5" />
@@ -284,7 +302,7 @@ export function GiiAssistant({
               }}
               onPointerCancel={stopVoice}
               className={cn(
-                'flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
+                'mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
                 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
                 listening && 'ring-4 ring-primary/35 scale-110',
               )}
@@ -294,6 +312,9 @@ export function GiiAssistant({
             </button>
           )}
         </div>
+        <p className="text-muted-foreground mt-1.5 text-[10px]">
+          Enter to send · Shift+Enter for a new line
+        </p>
       </div>
     </div>
   );

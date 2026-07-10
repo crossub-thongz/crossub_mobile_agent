@@ -11,7 +11,6 @@ import {
   parsePlaceResult,
   type ParsedAustralianAddress,
 } from '@/lib/google-places';
-import { cn } from '@/lib/utils';
 
 /** Default map centre — Sydney CBD, good starting point for AU address search. */
 const DEFAULT_CENTER = { lat: -33.8688, lng: 151.2093 };
@@ -19,30 +18,20 @@ const DEFAULT_ZOOM = 11;
 const SELECTED_ZOOM = 16;
 
 interface PropertyAddressAutocompleteProps {
-  value: string;
-  onChange: (value: string) => void;
   onPlaceSelect: (parsed: ParsedAustralianAddress) => void;
   latitude?: number;
   longitude?: number;
-  placeholder?: string;
   disabled?: boolean;
-  /** Extra fields shown under street address on the left (state, suburb, postcode). */
+  /** Address fields shown on the left beside the map. */
   locationFields?: ReactNode;
   /** Called when map search is ready / failed so parent can lock address fields. */
   onMapsStatusChange?: (status: { ready: boolean; failed: boolean; enabled: boolean }) => void;
 }
 
-function formatCoord(value: number): string {
-  return value.toFixed(6);
-}
-
 export function PropertyAddressAutocomplete({
-  value,
-  onChange,
   onPlaceSelect,
   latitude,
   longitude,
-  placeholder = '66, Berry Street',
   disabled,
   locationFields,
   onMapsStatusChange,
@@ -60,8 +49,6 @@ export function PropertyAddressAutocomplete({
   const [mapsFailed, setMapsFailed] = useState(false);
   const apiKey = getGoogleMapsApiKey();
   const mapsEnabled = !!apiKey;
-  /** When Maps works, address fields are search-only (locked). Manual edit only if Maps is down. */
-  const addressLocked = mapsEnabled && !mapsFailed;
 
   const coords =
     latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null;
@@ -75,7 +62,6 @@ export function PropertyAddressAutocomplete({
   }, [mapsReady, mapsFailed, mapsEnabled, onMapsStatusChange]);
 
   const applyParsedPlace = useCallback((parsed: ParsedAustralianAddress) => {
-    // Single parent update — avoid a separate onChange that clears lat/lng first.
     onPlaceSelectRef.current(parsed);
     if (searchInputRef.current) {
       searchInputRef.current.value = '';
@@ -199,31 +185,6 @@ export function PropertyAddressAutocomplete({
 
   const showMap = mapsEnabled && mapsReady;
 
-  const coordsFields = coords ? (
-    <div className="grid grid-cols-2 gap-3">
-      <div className="space-y-1.5">
-        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          Latitude
-        </Label>
-        <Input
-          readOnly
-          value={formatCoord(coords.lat)}
-          className="bg-muted/40 font-mono text-xs"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-          Longitude
-        </Label>
-        <Input
-          readOnly
-          value={formatCoord(coords.lng)}
-          className="bg-muted/40 font-mono text-xs"
-        />
-      </div>
-    </div>
-  ) : null;
-
   return (
     <div className="space-y-3">
       <div ref={placesAttributionRef} className="hidden" aria-hidden />
@@ -248,7 +209,8 @@ export function PropertyAddressAutocomplete({
           </div>
           {mapsReady ? (
             <p className="text-muted-foreground text-xs">
-              Pick a suggestion to fill street address, suburb, state, postcode, and coordinates.
+              Pick a suggestion to fill street, suburb, state, postcode, and coordinates. Add a
+              unit manually if needed — most street addresses do not include one.
             </p>
           ) : mapsFailed ? (
             <p className="text-amber-700 text-xs dark:text-amber-400">
@@ -263,35 +225,20 @@ export function PropertyAddressAutocomplete({
       <div
         className={
           showMap
-            ? 'grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(200px,240px)]'
+            ? 'grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]'
             : 'space-y-3'
         }
       >
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Street address
-            </Label>
-            <Input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
-              disabled={disabled || addressLocked}
-              readOnly={addressLocked}
-              autoComplete="street-address"
-              className={cn(addressLocked && 'bg-muted/40')}
-            />
-          </div>
-          {locationFields}
-          {coordsFields}
-        </div>
+        <div className="flex min-w-0 flex-col gap-3">{locationFields}</div>
 
         {showMap ? (
-          <div
-            ref={mapContainerRef}
-            className="border-border/60 min-h-[220px] w-full overflow-hidden rounded-md border lg:min-h-0 lg:h-full"
-            aria-label="Property location map"
-          />
+          <div className="relative min-h-[220px] w-full lg:min-h-0">
+            <div
+              ref={mapContainerRef}
+              className="border-border/60 absolute inset-0 overflow-hidden rounded-md border"
+              aria-label="Property location map"
+            />
+          </div>
         ) : null}
       </div>
     </div>

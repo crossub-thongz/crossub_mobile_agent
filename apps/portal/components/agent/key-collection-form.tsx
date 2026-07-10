@@ -14,7 +14,7 @@ import {
   type AgentKeyCollection,
   type AgentKeyCollectionReport,
 } from '@/lib/crossub-api/agent-client';
-import { fileToBase64, isUuid, MAX_UPLOAD_BYTES } from '@/lib/file-upload';
+import { fileToBase64, isUuid, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from '@/lib/file-upload';
 
 interface KeyCollectionFormProps {
   propertyId: string;
@@ -121,7 +121,7 @@ export function KeyCollectionForm({
       const urls: string[] = [];
       for (const file of Array.from(files)) {
         if (file.size > MAX_UPLOAD_BYTES) {
-          toast.error(`${file.name} is too large`);
+          toast.error(`${file.name} exceeds the ${MAX_UPLOAD_LABEL} limit`);
           continue;
         }
         const contentBase64 = await fileToBase64(file);

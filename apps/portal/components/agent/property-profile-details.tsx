@@ -1,17 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 
-import { DocumentViewer } from '@/components/agent/document-viewer';
+import { PropertyBondEditDialog } from '@/components/agent/property-bond-edit-dialog';
+import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
+import {
+  ContactTile,
+  formatStrataMeta,
+  hasContact,
+} from '@/components/agent/property-contact-tile';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
-  findIngoingInspection,
-  findRoutineInspection,
+  formatBondDisplay,
   resolveBondReference,
-  resolveCurrentRent,
-  resolveIngoingReportLink,
-  resolveRoutineReportLink,
+  resolveBondReferenceRaw,
 } from '@/lib/property-overview';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
@@ -22,23 +24,34 @@ import type {
   Property,
   TenantSelectionCase,
 } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
-import { isViewableDocumentUrl } from '@/lib/document-preview';
 
 function StatCell({
   label,
   value,
   onClick,
+  onEdit,
 }: {
   label: string;
   value: string;
   onClick?: () => void;
+  onEdit?: () => void;
 }) {
   return (
     <div className="rounded-lg border border-border/40 bg-background/60 px-2 py-1.5">
-      <p className="text-muted-foreground text-[9px] font-medium uppercase tracking-wide">
-        {label}
-      </p>
+      <div className="flex items-center justify-between gap-1">
+        <p className="text-muted-foreground text-[9px] font-medium uppercase tracking-wide">
+          {label}
+        </p>
+        {onEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-primary shrink-0 text-[10px] font-medium"
+          >
+            Edit
+          </button>
+        ) : null}
+      </div>
       {onClick ? (
         <button
           type="button"
@@ -54,53 +67,17 @@ function StatCell({
   );
 }
 
-function ReportChip({
-  label,
-  href,
-  status,
-  onPreview,
-}: {
-  label: string;
-  href?: string;
-  status: string;
-  onPreview: (report: { label: string; href: string }) => void;
-}) {
-  const opensInline = href && isViewableDocumentUrl(href) && !href.startsWith('/');
-  return (
-    <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-border/40 bg-background/60 px-2.5 py-2">
-      <div className="min-w-0">
-        <p className="truncate text-[11px] font-medium">{label}</p>
-        <p className="text-muted-foreground truncate text-[10px] capitalize">{status}</p>
-      </div>
-      {href && href !== '#' ? (
-        opensInline ? (
-          <button
-            type="button"
-            onClick={() => onPreview({ label, href })}
-            className="text-primary shrink-0 text-[11px] font-semibold"
-          >
-            View
-          </button>
-        ) : (
-          <Link href={href} className="text-primary shrink-0 text-[11px] font-semibold">
-            View
-          </Link>
-        )
-      ) : null}
-    </div>
-  );
-}
-
-/** Registry / financial strip merged into the property profile header card. */
+/** Registry strip merged into the property profile header card. */
 export function PropertyProfileDetails({
   property,
   propertyId,
   currentLease,
-  inspections,
+  inspections: _inspections,
   propertyDocs,
   leasingCycles,
   tenantSelections,
   onViewBondLodgement,
+  onRefresh,
 }: {
   property: Property;
   propertyId: string;
@@ -110,6 +87,7 @@ export function PropertyProfileDetails({
   leasingCycles?: LeasingCycle[];
   tenantSelections?: TenantSelectionCase[];
   onViewBondLodgement?: () => void;
+  onRefresh?: () => void;
 }) {
   const { apiConnected } = useAgentData();
   const activeCycle = leasingCycles?.[0];
@@ -120,110 +98,120 @@ export function PropertyProfileDetails({
     tenantSelections,
     currentLease,
   );
-  const [reportPreview, setReportPreview] = useState<{ label: string; href: string } | null>(
-    null,
-  );
 
-  const propertyAddress = `${property.address}, ${property.suburb}`;
-  const currentRent = resolveCurrentRent(property, currentLease);
-  const financialRent = sync.financial?.currentRentWeekly;
-  const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
-  const displayRent =
-    financialRent != null && financialRent > 0
-      ? financialRent
-      : registryRent != null && registryRent > 0
-        ? registryRent
-        : currentRent;
+  const [bondDialogOpen, setBondDialogOpen] = useState(false);
+  const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
+
   const displayBond =
     sync.financial?.bondAmount ??
     sync.record?.bondAmount ??
     property.bondAmount ??
     sync.bond?.amount ??
     null;
-  const displayDeposit =
-    sync.financial?.depositAmount ?? sync.record?.depositAmount ?? property.depositAmount ?? null;
 
   const furnished =
     sync.overview?.furnished ??
     (typeof sync.record?.furnished === 'boolean' ? sync.record.furnished : property.furnished);
 
-  const ingoingInspection = findIngoingInspection(inspections, propertyId, currentLease);
-  const routineInspection = findRoutineInspection(inspections, propertyId);
-  const ingoingReport = resolveIngoingReportLink(ingoingInspection, propertyDocs);
-  const routineReport = resolveRoutineReportLink(routineInspection, propertyDocs);
+  const overview = sync.overview;
+  const buildingManager = overview?.buildingManager;
+  const strataContact = overview?.strataContact;
+
   const bondRef = resolveBondReference(property, sync.bond, propertyDocs, currentLease);
+  const bondDisplay = formatBondDisplay(displayBond, bondRef);
+  const bondReferenceRaw = resolveBondReferenceRaw(property, sync.bond);
+
+  const strataMeta = formatStrataMeta(
+    overview?.buildingName ?? sync.record?.buildingName ?? property.buildingName,
+    overview?.strataPlanNumber ?? sync.record?.strataPlanNumber ?? property.strataPlanNumber,
+  );
+  const showStrataTile = hasContact(strataContact) || Boolean(strataMeta);
 
   const registry = useMemo(
     () => ({
       propertyType: property.propertyType,
-      state: property.state,
-      postcode: property.postcode,
       furnished,
     }),
-    [property.propertyType, property.state, property.postcode, furnished],
+    [property.propertyType, furnished],
   );
+
+  const handleSaved = () => {
+    onRefresh?.();
+  };
 
   return (
     <div className="mt-3 border-t border-border/50 pt-3">
-      {reportPreview ? (
-        <div className="mb-3">
-          <DocumentViewer
-            title={reportPreview.label}
-            propertyAddress={propertyAddress}
-            category="inspection"
-            downloadUrl={reportPreview.href}
-            onClose={() => setReportPreview(null)}
-          />
-        </div>
-      ) : null}
-
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold">Property details</h3>
         <span className="text-muted-foreground text-[10px] capitalize">{property.leaseStatus}</span>
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+      <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
         <StatCell
           label="Furnished"
           value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
         />
         <StatCell label="Property type" value={registry.propertyType ?? '—'} />
-        <StatCell label="State" value={registry.state ?? '—'} />
-        <StatCell label="Postcode" value={registry.postcode ?? '—'} />
-        <StatCell
-          label="Current rent"
-          value={displayRent > 0 ? `${formatCurrency(displayRent)}/wk` : '—'}
-        />
         <StatCell
           label="Bond"
-          value={displayBond != null ? formatCurrency(displayBond) : '—'}
-        />
-        <StatCell
-          label="Deposit"
-          value={displayDeposit != null ? formatCurrency(displayDeposit) : '—'}
-        />
-        <StatCell
-          label="Bond ID"
-          value={bondRef.label}
+          value={bondDisplay}
           onClick={
             bondRef.showLodgementNav && onViewBondLodgement ? onViewBondLodgement : undefined
           }
+          onEdit={apiConnected ? () => setBondDialogOpen(true) : undefined}
         />
       </div>
 
-      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-        <ReportChip
-          label={ingoingReport.label}
-          href={ingoingReport.href}
-          status={ingoingReport.status}
-          onPreview={setReportPreview}
-        />
-        <ReportChip
-          label={routineReport.label}
-          href={routineReport.href}
-          status={routineReport.status}
-          onPreview={setReportPreview}
-        />
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        {hasContact(buildingManager) ? (
+          <ContactTile
+            title="Building manager"
+            name={buildingManager?.name}
+            email={buildingManager?.email}
+            phone={buildingManager?.mobile}
+            onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+          />
+        ) : (
+          <ContactTile
+            title="Building manager"
+            variant="add"
+            onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+          />
+        )}
+        {showStrataTile ? (
+          <ContactTile
+            title="Strata"
+            name={strataContact?.name}
+            email={strataContact?.email}
+            phone={strataContact?.mobile}
+            meta={strataMeta || undefined}
+            onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+          />
+        ) : (
+          <ContactTile
+            title="Strata"
+            variant="add"
+            onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+          />
+        )}
       </div>
+
+      <PropertyBondEditDialog
+        open={bondDialogOpen}
+        onOpenChange={setBondDialogOpen}
+        propertyId={propertyId}
+        leasingCycleId={activeCycle?.id}
+        initialAmount={displayBond}
+        initialReference={bondReferenceRaw}
+        onSaved={handleSaved}
+      />
+
+      <PropertyBuildingContactsDialog
+        open={buildingDialogOpen}
+        onOpenChange={setBuildingDialogOpen}
+        propertyId={propertyId}
+        onSaved={handleSaved}
+      />
     </div>
   );
 }

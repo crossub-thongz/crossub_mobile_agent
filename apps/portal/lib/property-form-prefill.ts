@@ -14,6 +14,7 @@ import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
 
 import type { Agency } from '@/lib/types';
 import type { Property } from '@/lib/types';
+import { formatPropertyFullAddress } from '@/lib/utils';
 import type { LeasingRecord } from '@/lib/types';
 import type { LeasingCycle } from '@/lib/types';
 import type { TenantSelectionCase } from '@/lib/types';
@@ -37,10 +38,7 @@ function isoDateAddYears(isoDate: string, years: number): string {
 }
 
 function formatPropertyAddress(property: Property): string {
-  const parts = [property.address, property.suburb, property.state, property.postcode].filter(
-    Boolean,
-  );
-  return parts.join(', ');
+  return formatPropertyFullAddress(property);
 }
 
 function isUsableTenantLabel(name: string | null | undefined): name is string {

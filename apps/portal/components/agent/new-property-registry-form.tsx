@@ -21,7 +21,7 @@ import {
 } from '@/components/agent/property-strata-details-section';
 import {
   EMPTY_MANAGEMENT_DETAILS,
-  PropertyManagementDetailsSection,
+  PropertyManagementAgreementSection,
   syncManagementFeesToScalars,
   type ManagementDetailsValues,
 } from '@/components/agent/property-management-details-section';
@@ -39,7 +39,10 @@ import {
   PROPERTY_TYPE_ORDER,
   type PropertyType,
 } from '@/constants/api-enums';
-import type { ParsedAustralianAddress } from '@/lib/google-places';
+import {
+  composeStreetAddress,
+  type ParsedAustralianAddress,
+} from '@/lib/google-places';
 import {
   LEASE_STATUS_FORM_OPTIONS,
   mapLeaseStatusToPropertyStatus,
@@ -47,6 +50,11 @@ import {
 import { emptyPartyContact, splitParties } from '@/lib/property-parties';
 import type { Property, PropertyPartyContact } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import {
+  isBlockedDocumentFile,
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_LABEL,
+} from '@/lib/file-upload';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
@@ -108,6 +116,10 @@ export interface PendingPropertyDocument {
 export interface NewPropertyRegistryValues {
   agencyName: string;
   agencyCompany: string;
+  unit: string;
+  streetNumber: string;
+  streetName: string;
+  /** Composed from unit / street number / street name for the API. */
   address: string;
   suburb: string;
   state: AustralianStateKey | '';
@@ -163,80 +175,108 @@ function leasingRequired(form: NewPropertyRegistryValues): boolean {
   return form.leaseStatus !== '' && form.leaseStatus !== 'vacant';
 }
 
-function validatePropertyStep(form: NewPropertyRegistryValues): boolean {
-  if (!form.address.trim()) {
-    toast.error('Street address is required');
-    return false;
+type StepValidation = { valid: boolean; errors: string[] };
+
+function validatePropertyStep(form: NewPropertyRegistryValues): StepValidation {
+  const errors: string[] = [];
+  if (!form.streetName.trim() && !form.streetNumber.trim()) {
+    errors.push('Street name or street number is required');
   }
   if (!form.suburb.trim()) {
-    toast.error('Suburb is required');
-    return false;
+    errors.push('City / suburb is required');
   }
   if (!form.state) {
-    toast.error('Select the property state or territory');
-    return false;
+    errors.push('Select the property state or territory');
   }
   if (!form.postcode.trim() || form.postcode.trim().length < 4) {
-    toast.error('A valid 4-digit postcode is required');
-    return false;
+    errors.push('A valid 4-digit postcode is required');
   }
   if (!form.propertyType) {
-    toast.error('Select a property type');
-    return false;
+    errors.push('Select a property type');
   }
   if (!form.leaseStatus) {
-    toast.error('Select a lease status');
-    return false;
+    errors.push('Select a lease status');
   }
   if (!form.furnished) {
-    toast.error('Select furnished or unfurnished');
-    return false;
+    errors.push('Select furnished or unfurnished');
   }
   if (!isCountFilled(form.bedrooms)) {
-    toast.error('Bedrooms is required');
-    return false;
+    errors.push('Bedrooms is required');
   }
   if (!isCountFilled(form.bathrooms)) {
-    toast.error('Bathrooms is required');
-    return false;
+    errors.push('Bathrooms is required');
   }
   if (!isCountFilled(form.parking)) {
-    toast.error('Parking is required');
-    return false;
+    errors.push('Parking is required');
   }
-  return true;
+  return { valid: errors.length === 0, errors };
 }
 
-function validateTenantStep(form: NewPropertyRegistryValues): boolean {
-  if (!leasingRequired(form)) return true;
+function validateTenantStep(form: NewPropertyRegistryValues): StepValidation {
+  if (!leasingRequired(form)) return { valid: true, errors: [] };
 
+  const errors: string[] = [];
   const { leasing } = form;
   if (!leasing.rentAmount.trim() || Number(leasing.rentAmount) <= 0) {
-    toast.error('Rent amount is required');
-    return false;
+    errors.push('Rent amount is required');
   }
   if (!leasing.rentPeriod) {
-    toast.error('Select a rent period');
-    return false;
+    errors.push('Select a rent period');
   }
   if (!leasing.agreementStart) {
-    toast.error('Agreement start date is required');
-    return false;
+    errors.push('Agreement start date is required');
   }
   if (!leasing.agreementEnd) {
-    toast.error('Agreement end date is required');
-    return false;
+    errors.push('Agreement end date is required');
   }
-  return true;
+  return { valid: errors.length === 0, errors };
 }
 
-function validateLandlordStep(form: NewPropertyRegistryValues): boolean {
+function validateLandlordStep(form: NewPropertyRegistryValues): StepValidation {
+  const errors: string[] = [];
   const landlords = splitParties(form.landlords);
   if (!landlords.primary?.name) {
-    toast.error('At least one landlord name is required');
-    return false;
+    errors.push('At least one landlord name is required');
   }
-  return true;
+  return { valid: errors.length === 0, errors };
+}
+
+function runStepValidation(
+  step: WizardStep,
+  form: NewPropertyRegistryValues,
+): StepValidation {
+  switch (step) {
+    case 'property':
+      return validatePropertyStep(form);
+    case 'tenant':
+      return validateTenantStep(form);
+    case 'landlord':
+      return validateLandlordStep(form);
+    case 'strata':
+    case 'documents':
+      return { valid: true, errors: [] };
+    default:
+      return { valid: true, errors: [] };
+  }
+}
+
+function StepErrorsBanner({ errors }: { errors: string[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <div
+      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 dark:border-rose-900/50 dark:bg-rose-950/30"
+      role="alert"
+    >
+      <p className="text-sm font-medium text-rose-800 dark:text-rose-300">
+        Complete the required fields before continuing
+      </p>
+      <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-xs text-rose-700 dark:text-rose-400">
+        {errors.map((error) => (
+          <li key={error}>{error}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export function NewPropertyRegistryForm({
@@ -249,10 +289,15 @@ export function NewPropertyRegistryForm({
   const { primaryAgency, loading, apiConnected } = useAgentData();
   const agencyLocked = !!primaryAgency || apiConnected;
   const [step, setStep] = useState<WizardStep>('property');
+  const [furthestStepIndex, setFurthestStepIndex] = useState(0);
+  const [stepErrors, setStepErrors] = useState<Partial<Record<WizardStep, string[]>>>({});
   const [addressFieldsLocked, setAddressFieldsLocked] = useState(true);
   const [form, setForm] = useState<NewPropertyRegistryValues>({
     agencyName: primaryAgency?.name ?? '',
     agencyCompany: primaryAgency?.company ?? '',
+    unit: '',
+    streetNumber: '',
+    streetName: '',
     address: '',
     suburb: '',
     state: '',
@@ -278,6 +323,18 @@ export function NewPropertyRegistryForm({
   const requireLeasing = leasingRequired(form);
 
   useEffect(() => {
+    setStepErrors((prev) => {
+      const currentErrors = prev[step];
+      if (!currentErrors?.length) return prev;
+      const result = runStepValidation(step, form);
+      if (result.valid) {
+        return { ...prev, [step]: undefined };
+      }
+      return prev;
+    });
+  }, [form, step]);
+
+  useEffect(() => {
     if (!primaryAgency) return;
     setForm((f) => ({
       ...f,
@@ -288,6 +345,14 @@ export function NewPropertyRegistryForm({
 
   const stageDocument = useCallback(
     (file: File, slotId: string, source: 'leasing' | 'management', title?: string) => {
+      if (isBlockedDocumentFile(file)) {
+        toast.error(`${file.name} is not supported (videos and GIFs are not allowed)`);
+        return;
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        toast.error(`${file.name} exceeds the ${MAX_UPLOAD_LABEL} limit`);
+        return;
+      }
       const displayTitle = title?.trim() || file.name;
       const pendingId = `${source}-${slotId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       setForm((f) => {
@@ -361,7 +426,10 @@ export function NewPropertyRegistryForm({
   const handlePlaceSelect = useCallback((parsed: ParsedAustralianAddress) => {
     setForm((f) => ({
       ...f,
-      address: parsed.address || f.address,
+      unit: parsed.unit,
+      streetNumber: parsed.streetNumber,
+      streetName: parsed.streetName,
+      address: parsed.address,
       suburb: parsed.suburb || f.suburb,
       state: parsed.state || f.state,
       postcode: parsed.postcode || f.postcode,
@@ -369,6 +437,24 @@ export function NewPropertyRegistryForm({
       longitude: parsed.lng,
     }));
   }, []);
+
+  const setAddressPart = (
+    key: 'unit' | 'streetNumber' | 'streetName' | 'suburb' | 'state' | 'postcode',
+    value: string,
+  ) => {
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+      if (key === 'unit' || key === 'streetNumber' || key === 'streetName') {
+        next.address = composeStreetAddress(next.unit, next.streetNumber, next.streetName);
+        // Unit is optional — keep map coordinates when only the unit label changes.
+        if (key === 'streetNumber' || key === 'streetName') {
+          next.latitude = undefined;
+          next.longitude = undefined;
+        }
+      }
+      return next;
+    });
+  };
 
   const patchLeasing = (patch: Partial<LeasingDetailsValues>) => {
     setForm((f) => ({ ...f, leasing: { ...f.leasing, ...patch } }));
@@ -382,12 +468,57 @@ export function NewPropertyRegistryForm({
     setForm((f) => ({ ...f, management: { ...f.management, ...patch } }));
   };
 
+  const validateAndRecordStep = useCallback(
+    (targetStep: WizardStep): boolean => {
+      const result = runStepValidation(targetStep, form);
+      setStepErrors((prev) => ({
+        ...prev,
+        [targetStep]: result.errors.length > 0 ? result.errors : undefined,
+      }));
+      return result.valid;
+    },
+    [form],
+  );
+
+  const validateStepsThrough = useCallback(
+    (throughIndex: number): WizardStep | null => {
+      for (let i = 0; i <= throughIndex; i++) {
+        const wizardStep = WIZARD_STEPS[i];
+        if (!validateAndRecordStep(wizardStep)) return wizardStep;
+      }
+      return null;
+    },
+    [validateAndRecordStep],
+  );
+
+  const goToStep = useCallback(
+    (target: WizardStep) => {
+      const targetIdx = WIZARD_STEPS.indexOf(target);
+      if (targetIdx < 0) return;
+
+      if (targetIdx > stepIndex) {
+        for (let i = stepIndex; i < targetIdx; i++) {
+          const wizardStep = WIZARD_STEPS[i];
+          if (!validateAndRecordStep(wizardStep)) {
+            setStep(wizardStep);
+            return;
+          }
+        }
+        setFurthestStepIndex((f) => Math.max(f, targetIdx));
+      }
+
+      setStep(target);
+    },
+    [stepIndex, validateAndRecordStep],
+  );
+
   const goNext = () => {
-    if (step === 'property' && !validatePropertyStep(form)) return;
-    if (step === 'tenant' && !validateTenantStep(form)) return;
-    if (step === 'landlord' && !validateLandlordStep(form)) return;
-    const next = WIZARD_STEPS[stepIndex + 1];
-    if (next) setStep(next);
+    if (!validateAndRecordStep(step)) return;
+    const nextIdx = stepIndex + 1;
+    if (nextIdx < WIZARD_STEPS.length) {
+      setFurthestStepIndex((f) => Math.max(f, nextIdx));
+      setStep(WIZARD_STEPS[nextIdx]);
+    }
   };
 
   const goBack = () => {
@@ -396,20 +527,14 @@ export function NewPropertyRegistryForm({
   };
 
   const handleSubmit = () => {
-    if (!validatePropertyStep(form)) {
-      setStep('property');
-      return;
-    }
-    if (!validateTenantStep(form)) {
-      setStep('tenant');
-      return;
-    }
-    if (!validateLandlordStep(form)) {
-      setStep('landlord');
+    const failingStep = validateStepsThrough(WIZARD_STEPS.indexOf('landlord'));
+    if (failingStep) {
+      setStep(failingStep);
       return;
     }
     void onSubmit({
       ...form,
+      address: composeStreetAddress(form.unit, form.streetNumber, form.streetName),
       management: {
         ...form.management,
         ...syncManagementFeesToScalars(form.management),
@@ -440,70 +565,107 @@ export function NewPropertyRegistryForm({
         currentStep={step}
         getStepState={(s) => {
           const idx = WIZARD_STEPS.indexOf(s);
-          const isDone = idx < stepIndex;
+          const isDone = idx <= furthestStepIndex && s !== step;
           return resolveWorkflowStepState(isDone, s === step);
         }}
-        isStepCompleted={(s) => WIZARD_STEPS.indexOf(s) < stepIndex}
-        onStepClick={(s) => {
-          const targetIdx = WIZARD_STEPS.indexOf(s);
-          if (targetIdx <= stepIndex) {
-            setStep(s);
-            return;
-          }
-          if (targetIdx > 0 && !validatePropertyStep(form)) return;
-          if (targetIdx > 1 && !validateTenantStep(form)) return;
-          if (targetIdx > 2 && !validateLandlordStep(form)) return;
-          setStep(s);
+        isStepCompleted={(s) => {
+          const idx = WIZARD_STEPS.indexOf(s);
+          return idx <= furthestStepIndex && s !== step;
         }}
-        isStepEnabled={(s) => WIZARD_STEPS.indexOf(s) <= stepIndex}
+        onStepClick={goToStep}
+        isStepEnabled={(s) => WIZARD_STEPS.indexOf(s) <= furthestStepIndex}
+        stepHasError={(s: WizardStep) => (stepErrors[s]?.length ?? 0) > 0}
       />
+
+      <p className="text-muted-foreground -mt-1 text-center text-xs">
+        Step {stepIndex + 1} of {WIZARD_STEPS.length} — {WIZARD_STEP_LABEL[step]}
+        {furthestStepIndex > stepIndex ? (
+          <span className="text-primary/80">
+            {' '}
+            · furthest reached: {WIZARD_STEP_LABEL[WIZARD_STEPS[furthestStepIndex]]}
+          </span>
+        ) : null}
+      </p>
+
+      <StepErrorsBanner errors={stepErrors[step] ?? []} />
 
       {step === 'property' ? (
         <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
           <p className="text-sm font-semibold">Property details</p>
 
-          <FormField label="Address" required>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Address
+            </Label>
             <PropertyAddressAutocomplete
-              value={form.address}
-              onChange={(address) =>
-                setForm((f) => ({
-                  ...f,
-                  address,
-                  latitude: undefined,
-                  longitude: undefined,
-                }))
-              }
               onPlaceSelect={handlePlaceSelect}
               latitude={form.latitude}
               longitude={form.longitude}
-              placeholder="66, Berry Street"
               onMapsStatusChange={({ enabled, failed }) => {
                 setAddressFieldsLocked(enabled && !failed);
               }}
               locationFields={
                 <>
-                  <FormField label="State / territory" required>
-                    <select
-                      value={form.state}
-                      onChange={(e) => set('state', e.target.value as AustralianStateKey)}
-                      className={cn(selectClass, addressFieldsLocked && 'bg-muted/40')}
-                      required
-                      disabled={addressFieldsLocked}
-                    >
-                      <option value="">Select state</option>
-                      {AUSTRALIAN_STATE_ORDER.map((s) => (
-                        <option key={s} value={s}>
-                          {s} — {AUSTRALIAN_STATE_LABEL[s]}
-                        </option>
-                      ))}
-                    </select>
-                  </FormField>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Latitude">
+                      <Input
+                        readOnly
+                        value={
+                          form.latitude != null ? form.latitude.toFixed(6) : ''
+                        }
+                        placeholder="—"
+                        className="bg-muted/40 font-mono text-xs"
+                      />
+                    </FormField>
+                    <FormField label="Longitude">
+                      <Input
+                        readOnly
+                        value={
+                          form.longitude != null ? form.longitude.toFixed(6) : ''
+                        }
+                        placeholder="—"
+                        className="bg-muted/40 font-mono text-xs"
+                      />
+                    </FormField>
+                  </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <FormField label="Suburb" required>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Unit">
+                      <Input
+                        value={form.unit}
+                        onChange={(e) => setAddressPart('unit', e.target.value)}
+                        placeholder="e.g. 12 — optional"
+                      />
+                    </FormField>
+                    <FormField label="Street number" required>
+                      <Input
+                        value={form.streetNumber}
+                        onChange={(e) => setAddressPart('streetNumber', e.target.value)}
+                        placeholder="e.g. 66"
+                        required
+                        disabled={addressFieldsLocked}
+                        readOnly={addressFieldsLocked}
+                        className={cn(addressFieldsLocked && 'bg-muted/40')}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Street name" required>
+                      <Input
+                        value={form.streetName}
+                        onChange={(e) => setAddressPart('streetName', e.target.value)}
+                        placeholder="e.g. Berry Street"
+                        required
+                        disabled={addressFieldsLocked}
+                        readOnly={addressFieldsLocked}
+                        className={cn(addressFieldsLocked && 'bg-muted/40')}
+                      />
+                    </FormField>
+                    <FormField label="City / suburb" required>
                       <Input
                         value={form.suburb}
-                        onChange={(e) => set('suburb', e.target.value)}
+                        onChange={(e) => setAddressPart('suburb', e.target.value)}
                         placeholder="e.g. Bondi Beach"
                         required
                         disabled={addressFieldsLocked}
@@ -511,11 +673,35 @@ export function NewPropertyRegistryForm({
                         className={cn(addressFieldsLocked && 'bg-muted/40')}
                       />
                     </FormField>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="State / territory" required>
+                      <select
+                        value={form.state}
+                        onChange={(e) =>
+                          setAddressPart('state', e.target.value as AustralianStateKey)
+                        }
+                        className={cn(selectClass, addressFieldsLocked && 'bg-muted/40')}
+                        required
+                        disabled={addressFieldsLocked}
+                      >
+                        <option value="">Select state</option>
+                        {AUSTRALIAN_STATE_ORDER.map((s) => (
+                          <option key={s} value={s}>
+                            {s} — {AUSTRALIAN_STATE_LABEL[s]}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
                     <FormField label="Postcode" required>
                       <Input
                         value={form.postcode}
                         onChange={(e) =>
-                          set('postcode', e.target.value.replace(/\D/g, '').slice(0, 4))
+                          setAddressPart(
+                            'postcode',
+                            e.target.value.replace(/\D/g, '').slice(0, 4),
+                          )
                         }
                         placeholder="e.g. 2193"
                         inputMode="numeric"
@@ -529,7 +715,7 @@ export function NewPropertyRegistryForm({
                 </>
               }
             />
-          </FormField>
+          </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Type" required>
@@ -685,9 +871,9 @@ export function NewPropertyRegistryForm({
             />
           </div>
 
-          <PropertyManagementDetailsSection
+          <PropertyManagementAgreementSection
             values={form.management}
-            onChange={patchManagement}
+            onUploadFile={handleManagementUpload}
             disabled={submitting}
           />
         </div>

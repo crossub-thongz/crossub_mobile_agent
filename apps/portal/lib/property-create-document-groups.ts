@@ -1,16 +1,23 @@
 import {
-  LEASING_FIXED_DOC_SLOTS,
-  OTHER_LEASING_DOCUMENT_OPTIONS,
-  PROPERTY_FIXED_DOC_SLOTS,
-} from '@/components/agent/property-leasing-details-section';
-import { MANAGEMENT_DOC_SLOTS } from '@/components/agent/property-management-details-section';
+  LANDLORD_DOCUMENT_SLOTS,
+  TENANCY_DOCUMENT_SLOTS,
+  TENANT_APPLICATION_DOCUMENT_SLOTS,
+} from '@/lib/property-document-slots';
 
 export type CreatePropertyDocumentGroup =
   | 'tenant_application'
   | 'landlord'
   | 'tenancy';
 
+/** All groups (wizard Documents step). */
 export const CREATE_PROPERTY_DOCUMENT_GROUP_ORDER: CreatePropertyDocumentGroup[] = [
+  'tenancy',
+  'landlord',
+  'tenant_application',
+];
+
+/** Property detail Documents tab — all three document groups. */
+export const PROPERTY_DETAIL_DOCUMENT_GROUP_ORDER: CreatePropertyDocumentGroup[] = [
   'tenancy',
   'landlord',
   'tenant_application',
@@ -22,74 +29,46 @@ export const CREATE_PROPERTY_DOCUMENT_GROUP_LABELS: Record<CreatePropertyDocumen
   tenant_application: 'Tenant Application Documents',
 };
 
-const TENANT_APPLICATION_SLOT_IDS = new Set([
-  'application_form',
-  'photo_id',
-  'bank_statement',
-  'tenancy_ledger',
-  'visa',
-  'payslip',
-]);
-
-const TENANCY_LEASE_SLOT_IDS = new Set(['lease_agreement', 'lease_extension']);
-
-const TENANCY_OTHER_SLOT_IDS = new Set([
-  'bond_lodgement',
-  'ingoing_report',
-  'rent_ledger',
-]);
-
 export type ExpectedDocumentSlot = {
   id: string;
   label: string;
   group: CreatePropertyDocumentGroup;
 };
 
-/** All document types shown on the property Documents tab (create-property checklist). */
+/** All document types shown on the property Documents tab and create-property wizard. */
 export const EXPECTED_PROPERTY_DOCUMENT_SLOTS: ExpectedDocumentSlot[] = [
-  ...LEASING_FIXED_DOC_SLOTS.filter((s) => TENANCY_LEASE_SLOT_IDS.has(s.id)).map((s) => ({
-    id: s.id,
-    label: s.label,
-    group: 'tenancy' as const,
-  })),
-  // Property docs — skip landlord insurance here; it lives under Landlord Documents.
-  ...PROPERTY_FIXED_DOC_SLOTS.filter((s) => s.id !== 'property_landlord_insurance').map((s) => ({
-    id: s.id,
-    label: s.label,
-    group: 'tenancy' as const,
-  })),
-  ...OTHER_LEASING_DOCUMENT_OPTIONS.filter((s) => TENANCY_OTHER_SLOT_IDS.has(s.id)).map((s) => ({
-    id: s.id,
-    label: s.label,
-    group: 'tenancy' as const,
-  })),
-  ...MANAGEMENT_DOC_SLOTS.map((s) => ({
-    id: s.id,
-    label: s.label,
-    group: 'landlord' as const,
-  })),
-  ...LEASING_FIXED_DOC_SLOTS.filter((s) => TENANT_APPLICATION_SLOT_IDS.has(s.id)).map((s) => ({
-    id: s.id,
-    label: s.label,
+  ...TENANCY_DOCUMENT_SLOTS.map((s) => ({ ...s, group: 'tenancy' as const })),
+  ...LANDLORD_DOCUMENT_SLOTS.map((s) => ({ ...s, group: 'landlord' as const })),
+  ...TENANT_APPLICATION_DOCUMENT_SLOTS.map((s) => ({
+    ...s,
     group: 'tenant_application' as const,
   })),
 ];
 
+/** Fixed checklist slots for a Documents tab / wizard group. */
+export function documentSlotsForGroup(
+  group: CreatePropertyDocumentGroup,
+): { id: string; label: string }[] {
+  return EXPECTED_PROPERTY_DOCUMENT_SLOTS.filter((s) => s.group === group).map(
+    ({ id, label }) => ({ id, label }),
+  );
+}
+
 const TENANT_APPLICATION_LABELS = new Set(
   EXPECTED_PROPERTY_DOCUMENT_SLOTS.filter((s) => s.group === 'tenant_application').map((s) =>
-    s.label.toLowerCase(),
+    normalizeTitle(s.label),
   ),
 );
 
 const LANDLORD_LABELS = new Set(
   EXPECTED_PROPERTY_DOCUMENT_SLOTS.filter((s) => s.group === 'landlord').map((s) =>
-    s.label.toLowerCase(),
+    normalizeTitle(s.label),
   ),
 );
 
 const TENANCY_LABELS = new Set(
   EXPECTED_PROPERTY_DOCUMENT_SLOTS.filter((s) => s.group === 'tenancy').map((s) =>
-    s.label.toLowerCase(),
+    normalizeTitle(s.label),
   ),
 );
 
@@ -110,22 +89,32 @@ export function classifyCreatePropertyDocument(title: string): CreatePropertyDoc
     return 'tenant_application';
   }
 
-  // Prefer landlord for "Landlord insurance" (shared label with property docs).
-  if (LANDLORD_LABELS.has(key) && key === 'landlord insurance') return 'landlord';
+  if (/^lease\s*(agreement|extension)/.test(key) || /lease\s*extension\s*agreement/.test(key)) {
+    return 'tenancy';
+  }
   if (TENANCY_LABELS.has(key)) return 'tenancy';
   if (TENANT_APPLICATION_LABELS.has(key)) return 'tenant_application';
   if (LANDLORD_LABELS.has(key)) return 'landlord';
 
-  // Fuzzy fallbacks for custom "Add document" titles / older uploads.
   if (
-    /photo\s*id|passport|visa|payslip|bank\s*statement|application\s*form|application\s*documents?|tenancy\s*ledger/.test(
+    /photo\s*id|passport|visa|payslip|bank\s*statement|application\s*form|application\s*documents?/.test(
       key,
     )
   ) {
     return 'tenant_application';
   }
-  if (/management\s*agreement|certificate\s*of\s*insurance|property\s*management|landlord\s*insurance/.test(key)) {
+  if (/management\s*agreement|property\s*management\s*agreement/.test(key)) {
     return 'landlord';
+  }
+  if (
+    /certificate\s*of\s*insurance|landlord\s*insurance|council\s*rate|strata|water\s*bill|water\s*efficiency|smoke\s*alarm/.test(
+      key,
+    )
+  ) {
+    return 'landlord';
+  }
+  if (/paper\s*bond|bond\s*lodgement|key\s*handover|ingoing/.test(key)) {
+    return 'tenancy';
   }
   return 'tenancy';
 }
@@ -155,59 +144,97 @@ export type UploadedDocumentLike = {
 
 export type DocumentChecklistFile = {
   id: string;
-  /** Short label for the file row (not the document type title). */
   fileName: string;
   uploadedAt: string;
   href?: string | null;
 };
 
 export type DocumentChecklistRow = {
-  /** Stable row key (slot id or uploaded doc id). */
   id: string;
-  /** Display name / document type. */
   title: string;
-  /** Slot id when this is an expected checklist type. */
   slotId?: string;
   uploaded: boolean;
   uploadedAt?: string;
   href?: string | null;
-  /** All files uploaded for this document type. */
   files: DocumentChecklistFile[];
-  /** Extra uploads beyond the expected checklist. */
   isExtra?: boolean;
 };
+
+export function findPropertyDocument(
+  documents: UploadedDocumentLike[],
+  slotLabel: string,
+): UploadedDocumentLike | undefined {
+  return documents
+    .filter((doc) => titlesMatch(slotLabel, doc.title))
+    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+}
 
 function titlesMatch(slotLabel: string, docTitle: string): boolean {
   const slot = normalizeTitle(slotLabel);
   const doc = normalizeTitle(docTitle);
   if (!slot || !doc) return false;
   if (doc === slot) return true;
-  // Prefixed custom titles: "Landlord — Certificate of insurance"
   if (doc.endsWith(`— ${slot}`) || doc.endsWith(`- ${slot}`)) return true;
-  // Older duplicate display titles: "Lease agreement (Lease agreement)"
+  if (doc.startsWith(`${slot} —`) || doc.startsWith(`${slot} -`)) return true;
   if (doc.startsWith(`${slot} (`)) return true;
+
+  if (slot === 'lease agreement' && /lease\s*agreement/.test(doc) && !/extension/.test(doc)) {
+    return true;
+  }
+  if (slot === 'lease extension agreement' && /lease\s*extension/.test(doc)) return true;
+  if (
+    slot === 'property management agreement' &&
+    /property\s*management\s*agreement|management\s*agreement/.test(doc)
+  ) {
+    return true;
+  }
+  if (slot === 'landlord insurance' && /landlord\s*insurance/.test(doc)) return true;
+  if (slot === 'paper bond' && (/paper\s*bond|bond\s*lodgement/.test(doc))) return true;
+  if (slot === 'key handover form' && /key\s*handover/.test(doc)) return true;
+  if (slot === 'ingoing inspection report' && /ingoing/.test(doc)) return true;
+  if (slot === 'tenancy ledger' && /tenancy\s*ledger|rent\s*ledger/.test(doc)) return true;
+
   return false;
 }
 
-function fileLabelForIndex(index: number, total: number): string {
-  if (total <= 1) return 'Document';
+function fileNameFromDoc(
+  doc: UploadedDocumentLike,
+  slotLabel: string,
+  index: number,
+  total: number,
+): string {
+  const title = doc.title.trim();
+  for (const sep of [' — ', ' - ']) {
+    if (title.includes(sep)) {
+      const [prefix, suffix] = title.split(sep);
+      const normalizedPrefix = normalizeTitle(prefix ?? '');
+      const normalizedSlot = normalizeTitle(slotLabel);
+      if (
+        suffix?.trim() &&
+        (normalizedPrefix === normalizedSlot ||
+          titlesMatch(slotLabel, prefix ?? '') ||
+          normalizeTitle(suffix) !== normalizedSlot)
+      ) {
+        return suffix.trim();
+      }
+    }
+  }
+  if (total <= 1) return title || 'Document';
   return `File ${index + 1}`;
 }
 
-function toChecklistFiles(docs: UploadedDocumentLike[]): DocumentChecklistFile[] {
+function toChecklistFiles(
+  docs: UploadedDocumentLike[],
+  slotLabel: string,
+): DocumentChecklistFile[] {
   return docs.map((doc, index) => ({
     id: doc.id,
-    fileName: fileLabelForIndex(index, docs.length),
+    fileName: fileNameFromDoc(doc, slotLabel, index, docs.length),
     uploadedAt: doc.uploadedAt,
     href: doc.href,
   }));
 }
 
-/**
- * Build checklist rows for each group: every expected document type, plus any
- * extra uploads that don't match a known type. Multiple files per type stay
- * under a single row (no repeated type titles).
- */
 export function buildDocumentChecklistByGroup(
   documents: UploadedDocumentLike[],
 ): Record<CreatePropertyDocumentGroup, DocumentChecklistRow[]> {
@@ -227,7 +254,7 @@ export function buildDocumentChecklistByGroup(
           (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
         );
       for (const m of matches) matchedIds.add(m.id);
-      const files = toChecklistFiles(matches);
+      const files = toChecklistFiles(matches, slot.label);
       const latest = files[0];
 
       result[group].push({
@@ -242,7 +269,6 @@ export function buildDocumentChecklistByGroup(
     }
   }
 
-  // Unmatched / custom uploads — merge by title so duplicates share one row.
   const extrasByKey = new Map<
     string,
     { group: CreatePropertyDocumentGroup; title: string; docs: UploadedDocumentLike[] }
@@ -263,7 +289,7 @@ export function buildDocumentChecklistByGroup(
     const docs = [...extra.docs].sort(
       (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
     );
-    const files = toChecklistFiles(docs);
+    const files = toChecklistFiles(docs, extra.title);
     const latest = files[0];
     result[extra.group].push({
       id: `extra:${extra.group}:${normalizeTitle(extra.title)}`,
