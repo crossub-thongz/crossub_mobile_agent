@@ -72,16 +72,16 @@ export default function MessageDetailPage() {
   };
 
   return (
-    <AgentShell title={thread.subject} backHref={ROUTES.MESSAGES}>
-      <div className="flex min-h-0 flex-col gap-4 pb-4">
+    <AgentShell title={thread.subject} backHref={ROUTES.MESSAGES} hideGlobalFabs>
+      <div className="flex min-h-[calc(100dvh-var(--shell-header-offset)-4rem-env(safe-area-inset-bottom))] flex-col lg:min-h-0">
         {highlightParty && partyLabel && (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+          <div className="mb-4 shrink-0 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
             Messaging <span className="font-semibold">{partyLabel}</span>
             {highlightParty === 'tenant' ? ' (tenant)' : ' (landlord)'}
           </div>
         )}
 
-        <div className="rounded-xl border bg-card p-3 text-xs">
+        <div className="mb-4 shrink-0 rounded-xl border bg-card p-3 text-xs">
           <p className="mb-2 font-medium">{thread.propertyAddress}</p>
           <ContactDetails
             homeOwnerName={thread.homeOwnerName}
@@ -92,7 +92,7 @@ export default function MessageDetailPage() {
           />
         </div>
 
-        <div className="min-h-[200px] flex-1 space-y-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-4">
           {thread.messages.map((msg) => {
             const isAgent = msg.sentByAgent || !msg.from.includes('CROSSUB');
             return (
@@ -123,7 +123,7 @@ export default function MessageDetailPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="sticky bottom-20 z-30 space-y-2 rounded-xl border border-border bg-background p-3 shadow-lg">
+        <div className="border-border bg-background shrink-0 space-y-2 border-t pt-3">
           <MessageCompose
             value={reply}
             onChange={setReply}

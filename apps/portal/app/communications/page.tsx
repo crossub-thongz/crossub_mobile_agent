@@ -5,7 +5,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 
 export default function CommunicationsPage() {
   return (
-    <AgentShell wide hideNeedAction>
+    <AgentShell wide hideNeedAction hideGlobalFabs>
       <CommunicationsLogClient />
     </AgentShell>
   );

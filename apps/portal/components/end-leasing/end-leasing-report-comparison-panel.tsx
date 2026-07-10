@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Camera,
@@ -349,6 +349,7 @@ export function EndLeasingReportComparisonPanel({
     caseData.reportComparison.landlordResponsibility,
   );
   const [busy, setBusy] = useState(false);
+  const seededFromInspectionRef = useRef(false);
 
   const refreshReports = useCallback(async () => {
     if (!apiConnected) return;
@@ -370,25 +371,28 @@ export function EndLeasingReportComparisonPanel({
   }, [refreshReports]);
 
   useEffect(() => {
+    seededFromInspectionRef.current = false;
     setTenantItems(caseData.reportComparison.tenantResponsibility);
     setLandlordItems(caseData.reportComparison.landlordResponsibility);
-  }, [caseData.id, caseData.reportComparison]);
+    // Only reset draft rows when opening a different case — not on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- caseData.reportComparison is read at case switch
+  }, [caseData.id]);
 
   useEffect(() => {
+    if (seededFromInspectionRef.current || !outgoingDetail) return;
     if (
-      tenantItems.length === 0 &&
-      landlordItems.length === 0 &&
-      outgoingDetail &&
-      caseData.reportComparison.tenantResponsibility.length === 0 &&
-      caseData.reportComparison.landlordResponsibility.length === 0
+      caseData.reportComparison.tenantResponsibility.length > 0 ||
+      caseData.reportComparison.landlordResponsibility.length > 0
     ) {
-      const seeded = extractOutgoingRepairCandidates(outgoingDetail);
-      if (seeded.length > 0) setTenantItems(seeded);
+      seededFromInspectionRef.current = true;
+      return;
     }
+    const seeded = extractOutgoingRepairCandidates(outgoingDetail);
+    if (seeded.length > 0) setTenantItems(seeded);
+    seededFromInspectionRef.current = true;
   }, [
     outgoingDetail,
-    tenantItems.length,
-    landlordItems.length,
+    caseData.id,
     caseData.reportComparison.tenantResponsibility.length,
     caseData.reportComparison.landlordResponsibility.length,
   ]);
@@ -398,6 +402,8 @@ export function EndLeasingReportComparisonPanel({
     try {
       const updated = await terminationApi.updateReportComparison(caseData.id, patch);
       applyCase(updated);
+      setTenantItems(updated.reportComparison.tenantResponsibility);
+      setLandlordItems(updated.reportComparison.landlordResponsibility);
       toast.success('Comparison updated');
     } catch (err) {
       toast.error(apiErrorMessage(err));

@@ -155,7 +155,7 @@ function ThreadDetailPanel({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b px-4 py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
@@ -199,7 +199,13 @@ function ThreadDetailPanel({
             </span>
           </div>
         </div>
-        <div className="mt-3 rounded-lg border bg-card p-3 text-xs">
+      </div>
+
+      <div
+        ref={messagesScrollRef}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4"
+      >
+        <div className="rounded-lg border bg-card p-3 text-xs">
           <ContactDetails
             homeOwnerName={thread.homeOwnerName}
             homeOwnerContact={thread.homeOwnerContact}
@@ -207,12 +213,6 @@ function ThreadDetailPanel({
             tenantContact={thread.tenantContact}
           />
         </div>
-      </div>
-
-      <div
-        ref={messagesScrollRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
-      >
         {thread.messages.map((msg) => {
           const isAgent = msg.sentByAgent || !msg.from.includes('CROSSUB');
           return (
@@ -250,7 +250,7 @@ function ThreadDetailPanel({
       </div>
 
       {canReply ? (
-        <div className="shrink-0 border-t p-4">
+        <div className="bg-background shrink-0 border-t p-4 pr-16">
           <MessageCompose
             value={reply}
             onChange={setReply}
@@ -793,7 +793,7 @@ export function CommunicationsLogClient() {
             </div>
           </div>
 
-          <div className="bg-background flex min-w-0 flex-1 flex-col">
+          <div className="bg-background flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden">
             {selected ? (
               <ThreadDetailPanel
                 key={selected.id}
