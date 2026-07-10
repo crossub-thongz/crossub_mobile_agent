@@ -31,8 +31,31 @@ export type AgentLeasingCycle = {
   rentPerWeek?: number | null;
   availableFrom?: string | null;
 };
+export type AgentArchivedLeasingCycle = {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  lifecycleStep: string;
+  rentPerWeek?: number | null;
+  availableFrom?: string | null;
+  cancelReason: string;
+  cancelledAt: string;
+};
+export type AgentArchivedEndLeasing = {
+  id: string;
+  propertyId: string | null;
+  propertyAddress: string;
+  vacateDate?: string | null;
+  cancelReason: string;
+  cancelledAt: string;
+};
+export type AgentArchive = {
+  cancelledLeasingCycles: AgentArchivedLeasingCycle[];
+  cancelledEndLeasing: AgentArchivedEndLeasing[];
+};
 export type AgentPortfolio = components['schemas']['AgentPortfolioResponseDto'] & {
   leasingCycles?: AgentLeasingCycle[];
+  archive?: AgentArchive;
 };
 
 export type AgentMessageThread =

@@ -39,6 +39,7 @@ import {
   mapAgentDocuments,
   mapAgentInspections,
   mapAgentLeasing,
+  mapAgentArchive,
   mapAgentLeasingCycles,
   mapAgentMaintenance,
   mapAgentMessages,
@@ -79,6 +80,7 @@ import {
 } from '@/lib/portal-service-level';
 import type {
   Agency,
+  AgentArchiveView,
   AgentDocument,
   AgentNotification,
   DashboardItem,
@@ -178,6 +180,7 @@ interface AgentDataContextValue {
   dashboardKpis: DashboardKpis;
   leasingRecords: LeasingRecord[];
   leasingCycles: LeasingCycle[];
+  archive: AgentArchiveView;
   accounting: PropertyAccounting[];
   needActionItems: PropertyNeedAction[];
   needActionGroups: NeedActionGroup[];
@@ -570,6 +573,17 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         : [],
     [portfolio, properties],
   );
+
+  const archive = useMemo(() => {
+    const mapped = mapAgentArchive(portfolio?.archive);
+    return {
+      cancelledLeasingCycles: enrichPropertyAddresses(
+        mapped.cancelledLeasingCycles,
+        properties,
+      ),
+      cancelledEndLeasing: enrichPropertyAddresses(mapped.cancelledEndLeasing, properties),
+    };
+  }, [portfolio, properties]);
 
   const accounting = useMemo(
     () =>
@@ -1122,6 +1136,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     dashboardKpis,
     leasingRecords,
     leasingCycles,
+    archive,
     accounting,
     needActionItems,
     needActionGroups,

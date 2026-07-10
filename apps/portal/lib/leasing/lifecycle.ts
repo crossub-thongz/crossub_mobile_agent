@@ -42,10 +42,10 @@ export function countSelectedForApprovalSend(
 }
 
 const READINESS_BY_STEP: Record<LeasingLifecycleStep, number> = {
-  [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 20,
-  [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 45,
-  [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 70,
-  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 90,
+  [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 12,
+  [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 55,
+  [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 72,
+  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 88,
 };
 
 /** True when onboarding procedures (deposit, bond, agreement, keys) are all done. */
@@ -166,6 +166,10 @@ export function deriveStepStatus(
       return detail.openReport.status;
     case LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL:
       return deriveApplicationStatus(detail);
+    case LEASING_LIFECYCLE_STEP.RESULTS:
+      return detail.applicationsDetail.length > 0
+        ? LEASING_ITEM_STATUS.IN_PROGRESS
+        : LEASING_ITEM_STATUS.NOT_STARTED;
     case LEASING_LIFECYCLE_STEP.ONBOARDING:
       return deriveOnboardingProceduresStatus(detail);
     default:

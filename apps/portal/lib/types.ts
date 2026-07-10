@@ -155,6 +155,33 @@ export interface LeasingCycle {
   availableFrom?: string;
 }
 
+/** Cancelled new-letting cycle in the agent archive. */
+export interface ArchivedLeasingCycle {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  lifecycleStep: string;
+  rentPerWeek?: number;
+  availableFrom?: string;
+  cancelReason: string;
+  cancelledAt: string;
+}
+
+/** Cancelled end-leasing case in the agent archive. */
+export interface ArchivedEndLeasingCase {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  vacateDate?: string;
+  cancelReason: string;
+  cancelledAt: string;
+}
+
+export interface AgentArchiveView {
+  cancelledLeasingCycles: ArchivedLeasingCycle[];
+  cancelledEndLeasing: ArchivedEndLeasingCase[];
+}
+
 export interface AccountingBill {
   id: string;
   label: string;

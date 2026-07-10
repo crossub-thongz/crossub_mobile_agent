@@ -69,8 +69,8 @@ export const leasingOpsApi = {
   skipOpenInspection: (cycleId: string) =>
     unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/open-inspection/skip`, {})),
 
-  cancelCycle: (cycleId: string) =>
-    unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/cancel`, {})),
+  cancelCycle: (cycleId: string, input: { reason: string }) =>
+    unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/cancel`, input)),
 
   scheduleIngoingInspection: (cycleId: string, input: ScheduleIngoingInput) =>
     unwrap(
@@ -140,6 +140,30 @@ export const leasingOpsApi = {
       api.patch<{ cycle: ServerLeasingCycleView }>(
         `${BASE}/${cycleId}/applications/${applicationId}/decision`,
         input,
+      ),
+    ),
+
+  setApplicantFeedback: (
+    cycleId: string,
+    applicationId: string,
+    input: { feedback: string },
+  ) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/applications/${applicationId}/feedback`,
+        input,
+      ),
+    ),
+
+  sendApplicantFeedback: (
+    cycleId: string,
+    applicationId: string,
+    input?: { feedback?: string },
+  ) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/applications/${applicationId}/feedback/send`,
+        input ?? {},
       ),
     ),
 

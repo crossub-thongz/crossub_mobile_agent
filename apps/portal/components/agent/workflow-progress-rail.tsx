@@ -62,6 +62,7 @@ export function WorkflowProgressRail<T extends string>({
   stepHasError,
   href,
   className,
+  progressFillIndex,
 }: {
   steps: readonly T[];
   labels: Record<T, string>;
@@ -73,6 +74,8 @@ export function WorkflowProgressRail<T extends string>({
   stepHasError?: (step: T) => boolean;
   href?: string;
   className?: string;
+  /** Override line fill position (fractional step index, e.g. 1.5 = halfway between steps 1 and 2). */
+  progressFillIndex?: number;
 }) {
   const stepCount = steps.length;
   const lineInset = stepCount > 1 ? `${50 / stepCount}%` : '0%';
@@ -81,7 +84,8 @@ export function WorkflowProgressRail<T extends string>({
     (last, step, index) => (isStepCompleted(step) ? index : last),
     -1,
   );
-  const fillIndex = Math.max(viewingIndex, lastCompletedIndex);
+  const fillIndex =
+    progressFillIndex ?? Math.max(viewingIndex, lastCompletedIndex);
   const progressRatio = stepCount > 1 ? fillIndex / (stepCount - 1) : 0;
 
   const content = (
@@ -118,7 +122,7 @@ export function WorkflowProgressRail<T extends string>({
               <StepMarker state={state} hasError={hasError} />
               <span
                 className={cn(
-                  'mt-2 max-w-[4.25rem] text-center text-[9px] font-semibold uppercase leading-tight tracking-wide sm:max-w-[5rem] sm:text-[10px]',
+                  'mt-2 max-w-[3.25rem] text-center text-[8px] font-semibold uppercase leading-tight tracking-wide sm:max-w-[4.75rem] sm:text-[9px]',
                   hasError
                     ? 'text-rose-600 dark:text-rose-400'
                     : state === 'upcoming'

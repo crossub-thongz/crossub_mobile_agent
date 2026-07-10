@@ -76,6 +76,9 @@ export interface LeasingApplicationDetail {
   aiScoreLevel?: 'strong' | 'medium' | 'risk';
   aiAdvice?: string;
   aiAdviceSentToAgent: boolean;
+  /** Agent-authored feedback for the applicant (Results step). */
+  feedback?: string;
+  feedbackSentAt?: string;
   selectedForAgent: boolean;
   sentToAgent: boolean;
   agentDecision: LeasingAgentDecision;

@@ -5,6 +5,7 @@ import { LeasingStepApplicationApproval } from '@/components/leasing-workflow/le
 import { LeasingStepOnboarding } from '@/components/leasing-workflow/leasing-step-onboarding';
 import { LeasingStepOpenInspection } from '@/components/leasing-workflow/leasing-step-open-inspection';
 import { LeasingStepOpenReport } from '@/components/leasing-workflow/leasing-step-open-report';
+import { LeasingStepResults } from '@/components/leasing-workflow/leasing-step-results';
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
@@ -41,6 +42,8 @@ function StepPanel({
       return <LeasingStepOpenReport detail={detail} />;
     case LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL:
       return <LeasingStepApplicationApproval detail={detail} />;
+    case LEASING_LIFECYCLE_STEP.RESULTS:
+      return <LeasingStepResults detail={detail} />;
     case LEASING_LIFECYCLE_STEP.ONBOARDING:
       return <LeasingStepOnboarding detail={detail} />;
     default:

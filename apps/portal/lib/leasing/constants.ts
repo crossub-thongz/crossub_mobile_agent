@@ -2,6 +2,7 @@ export const LEASING_LIFECYCLE_STEP = {
   OPEN_INSPECTION: 'open_inspection',
   OPEN_REPORT: 'open_report',
   APPLICATION_APPROVAL: 'application_approval',
+  RESULTS: 'results',
   ONBOARDING: 'onboarding',
 } as const;
 
@@ -15,19 +16,21 @@ export const LEASING_LIFECYCLE_STEP_ORDER: LeasingLifecycleStep[] = [
   LEASING_LIFECYCLE_STEP.ONBOARDING,
 ];
 
-export const LEASING_LIFECYCLE_STEP_LABEL: Record<LeasingLifecycleStep, string> = {
-  [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 'Open Inspection & Arrangement',
-  [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 'Open Report',
-  [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 'Application + Approval',
-  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboarding Procedures',
+/** Compact labels for legacy four-step references. */
+export const LEASING_LIFECYCLE_STEP_SHORT_LABEL: Record<LeasingLifecycleStep, string> = {
+  [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 'Order Created',
+  [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 'Report Available',
+  [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 'Report Available',
+  [LEASING_LIFECYCLE_STEP.RESULTS]: 'Results',
+  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboard',
 };
 
-/** Compact labels for the horizontal workflow stepper. */
-export const LEASING_LIFECYCLE_STEP_SHORT_LABEL: Record<LeasingLifecycleStep, string> = {
-  [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 'Inspection',
-  [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 'Report',
-  [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 'Approval',
-  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboard',
+export const LEASING_LIFECYCLE_STEP_LABEL: Record<LeasingLifecycleStep, string> = {
+  [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 'Order Created · Scheduling · Scheduled',
+  [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 'Report Available',
+  [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 'Applications',
+  [LEASING_LIFECYCLE_STEP.RESULTS]: 'Applicant results',
+  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboarding',
 };
 
 export const LEASING_ITEM_STATUS = {

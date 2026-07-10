@@ -26,6 +26,7 @@ import type {
   AgentThreadMessage,
   AgentTribunal,
   AgentVacating,
+  type AgentArchive,
 } from './agent-client';
 import {
   AGENT_NOTIFICATION_TYPE,
@@ -44,6 +45,9 @@ import {
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatPropertyFullAddress } from '@/lib/utils';
 import type {
+  AgentArchiveView,
+  ArchivedEndLeasingCase,
+  ArchivedLeasingCycle,
   Agency,
   AgentDocument,
   AgentNotification,
@@ -481,6 +485,35 @@ export function mapAgentLeasingCycles(
     rentPerWeek: c.rentPerWeek ?? undefined,
     availableFrom: c.availableFrom ?? undefined,
   }));
+}
+
+export function mapAgentArchive(
+  archive: AgentArchive | undefined | null,
+): AgentArchiveView {
+  return {
+    cancelledLeasingCycles: (archive?.cancelledLeasingCycles ?? []).map(
+      (c): ArchivedLeasingCycle => ({
+        id: c.id,
+        propertyId: c.propertyId,
+        propertyAddress: c.propertyAddress,
+        lifecycleStep: c.lifecycleStep,
+        rentPerWeek: c.rentPerWeek ?? undefined,
+        availableFrom: c.availableFrom ?? undefined,
+        cancelReason: c.cancelReason,
+        cancelledAt: c.cancelledAt,
+      }),
+    ),
+    cancelledEndLeasing: (archive?.cancelledEndLeasing ?? []).map(
+      (c): ArchivedEndLeasingCase => ({
+        id: c.id,
+        propertyId: c.propertyId ?? '',
+        propertyAddress: c.propertyAddress,
+        vacateDate: c.vacateDate ?? undefined,
+        cancelReason: c.cancelReason,
+        cancelledAt: c.cancelledAt,
+      }),
+    ),
+  };
 }
 
 // ---------------------------------------------------------------------------

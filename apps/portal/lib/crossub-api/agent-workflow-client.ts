@@ -78,9 +78,11 @@ export async function createAgentLeasingCycle(
 export async function cancelAgentLeasingCycle(
   propertyId: string,
   cycleId: string,
+  body: { reason: string },
 ): Promise<AgentWorkflowCreateResult> {
   return agentFetch(`${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/cancel`, {
     method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 

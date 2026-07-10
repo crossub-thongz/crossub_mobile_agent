@@ -40,6 +40,8 @@ export interface ServerLeasingApplicationReview {
   aiScore: number | null
   aiScoreLevel: string | null
   aiAdvice: string | null
+  agentFeedback: string | null
+  feedbackSentAt: string | null
   annualIncome: number | null
   employmentStatus: string | null
   moveInDate: string | null

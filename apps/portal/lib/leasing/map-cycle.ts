@@ -188,6 +188,8 @@ export function patchDetailFromCycleView(
       aiScore: r.aiScore ?? undefined,
       aiScoreLevel: (r.aiScoreLevel as 'strong' | 'medium' | 'risk' | null) ?? undefined,
       aiAdvice: u(r.aiAdvice),
+      feedback: u(r.agentFeedback),
+      feedbackSentAt: u(r.feedbackSentAt),
       annualIncome: r.annualIncome ?? undefined,
       employmentStatus: u(r.employmentStatus),
       moveInDate: u(r.moveInDate),

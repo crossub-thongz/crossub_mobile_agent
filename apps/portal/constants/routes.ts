@@ -29,6 +29,7 @@ export const ROUTES = {
   TENANTS: '/tenants',
   TENANTS_NEW: '/tenants/new',
   PROPERTY_TRANSFER: '/leasing/transfer',
+  ARCHIVE: '/archive',
 } as const;
 
 export const PUBLIC_ROUTE_PATTERNS = [
