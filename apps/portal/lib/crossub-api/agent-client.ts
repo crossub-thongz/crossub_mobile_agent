@@ -243,6 +243,26 @@ export async function fetchPreferredContractors(
   return res.preferredContractors;
 }
 
+export interface AddPreferredContractorInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  serviceTypes?: string[];
+  contractorId?: string;
+}
+
+/** Add a handyman/contractor to the agency preferred list (saved in DB). */
+export async function addPreferredContractor(
+  agencyId: string,
+  input: AddPreferredContractorInput,
+): Promise<PreferredContractor> {
+  const res = await apiV1.post<{ preferredContractor: PreferredContractor }>(
+    `/agencies/${agencyId}/preferred-contractors`,
+    input,
+  );
+  return res.preferredContractor;
+}
+
 /** Approve a contractor's quote (`POST /agent/maintenance/{requestId}/approve`). */
 export async function approveMaintenance(
   requestId: string,

@@ -144,13 +144,25 @@ export function EndLeasingAgentWorkflowPanel({
   const workflow = useMemo(() => buildEndLeasingAgentWorkflow(caseData), [caseData]);
   const [viewingStepId, setViewingStepId] = useState<EndLeasingAgentStep>(workflow.liveStepId);
   const initializedRef = useRef<string | null>(null);
+  const followLiveStepRef = useRef(true);
 
   useEffect(() => {
     if (initializedRef.current !== caseData.id) {
       setViewingStepId(workflow.liveStepId);
       initializedRef.current = caseData.id;
+      followLiveStepRef.current = true;
+      return;
+    }
+
+    if (followLiveStepRef.current) {
+      setViewingStepId(workflow.liveStepId);
     }
   }, [caseData.id, workflow.liveStepId]);
+
+  const handleStepClick = (stepId: EndLeasingAgentStep) => {
+    setViewingStepId(stepId);
+    followLiveStepRef.current = stepId === workflow.liveStepId;
+  };
 
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
@@ -184,7 +196,7 @@ export function EndLeasingAgentWorkflowPanel({
           const step = workflow.steps.find((s) => s.id === stepId);
           return step != null && step.status !== 'upcoming';
         }}
-        onStepClick={setViewingStepId}
+        onStepClick={handleStepClick}
       />
 
       <div className="rounded-xl border bg-card">

@@ -230,12 +230,11 @@ function reportComparisonSubProgress(
 function summaryDistributionSubProgress(
   caseData: TerminationCaseDetail,
 ): EndLeasingSubProgressItem[] {
-  const sentToTenant =
-    caseData.tenantConfirmation.status !== TENANT_SETTLEMENT_CONFIRMATION.PENDING ||
-    Boolean(caseData.tenantConfirmation.dueAt);
-  const sentToAgent =
-    caseData.agentApproval.status !== LEASING_ITEM_STATUS.NOT_STARTED ||
-    caseData.settlement.managerApprovalComplete;
+  const rc = caseData.reportComparison;
+  const sentToTenant = Boolean(
+    rc.tenantRepairQuoteEmail?.sentAt && rc.tenantQuoteResponse === 'accepted',
+  );
+  const sentToAgent = Boolean(rc.landlordRepairQuoteEmail?.sentAt);
 
   return [
     { id: 'tenant', label: 'Summary & quote sent to tenant', done: sentToTenant },
@@ -319,9 +318,14 @@ function stepComplete(
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
       return caseData.inspection.status === DONE;
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
-      return caseData.makeGood.status === DONE;
+      return (
+        subProgress.every((i) => i.done) ||
+        caseData.reportComparison.tenantQuoteResponse === 'accepted' ||
+        caseData.makeGood.status === DONE
+      );
     case END_LEASING_AGENT_STEP.SUMMARY_DISTRIBUTION:
       return (
+        subProgress.every((i) => i.done) ||
         caseData.settlement.status === DONE ||
         caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED
       );

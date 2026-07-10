@@ -13,12 +13,11 @@ import {
   Plus,
   RefreshCw,
   Send,
-  ThumbsDown,
-  ThumbsUp,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AddHandymanDialog } from '@/components/end-leasing/add-handyman-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
@@ -103,9 +102,9 @@ function SummaryEmailPanel({
 }
 
 const TENANT_QUOTE_RESPONSE_LABEL: Record<TenantQuoteResponse, string> = {
-  pending: 'Awaiting tenant reply',
-  accepted: 'Tenant agreed',
-  declined: 'Tenant disagreed',
+  pending: 'Awaiting response',
+  accepted: 'Yes — tenant agrees',
+  declined: 'No — tenant disagrees',
 };
 
 function TenantQuoteResponsePanel({
@@ -130,6 +129,7 @@ function TenantQuoteResponsePanel({
   onDisagree: () => void;
 }) {
   const status = response ?? 'pending';
+  const recorded = status === 'accepted' || status === 'declined';
 
   return (
     <section className="space-y-3 rounded-xl border bg-card p-4">
@@ -137,8 +137,7 @@ function TenantQuoteResponsePanel({
         <div>
           <p className="text-sm font-semibold">Tenant quote response</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Trace agree/disagree from the Message Center thread, or record the tenant&apos;s reply
-            manually.
+            Record whether the tenant agrees with the repair quote — answer on their behalf.
           </p>
         </div>
         {commConversationId ? (
@@ -151,67 +150,100 @@ function TenantQuoteResponsePanel({
         ) : null}
       </div>
 
-      <div
-        className={`rounded-lg border px-3 py-2 text-xs ${
-          status === 'accepted'
-            ? 'border-primary/30 bg-primary/5'
-            : status === 'declined'
-              ? 'border-destructive/30 bg-destructive/5'
-              : 'border-border bg-muted/20'
-        }`}
-      >
-        <p className="font-semibold">{TENANT_QUOTE_RESPONSE_LABEL[status]}</p>
-        {responseAt ? (
-          <p className="text-muted-foreground mt-1">Recorded {formatDateTime(responseAt)}</p>
-        ) : null}
-        {replyExcerpt ? (
-          <p className="text-muted-foreground mt-2 whitespace-pre-wrap">
-            Reply: {replyExcerpt}
-          </p>
-        ) : null}
-        {declineReason ? (
-          <p className="mt-2 whitespace-pre-wrap">{declineReason}</p>
-        ) : null}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 gap-1.5 text-xs"
-          disabled={busy}
-          onClick={onCheckReply}
-        >
-          <RefreshCw className="size-3.5" />
-          Check email for reply
-        </Button>
-        {status !== 'accepted' ? (
+      {!recorded ? (
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             size="sm"
-            className="h-8 gap-1.5 text-xs"
+            className="h-9 min-w-[4.5rem] px-4 text-sm font-semibold"
             disabled={busy}
             onClick={onAgree}
           >
-            <ThumbsUp className="size-3.5" />
-            Tenant agreed
+            Yes
           </Button>
-        ) : null}
-        {status !== 'declined' ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 gap-1.5 text-xs"
+            className="h-9 min-w-[4.5rem] px-4 text-sm font-semibold"
             disabled={busy}
             onClick={onDisagree}
           >
-            <ThumbsDown className="size-3.5" />
-            Tenant disagreed
+            No
           </Button>
-        ) : null}
-      </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground h-9 gap-1.5 text-xs"
+            disabled={busy}
+            onClick={onCheckReply}
+          >
+            <RefreshCw className="size-3.5" />
+            Check email for reply
+          </Button>
+        </div>
+      ) : (
+        <div
+          className={`rounded-lg border px-3 py-2 text-xs ${
+            status === 'accepted'
+              ? 'border-primary/30 bg-primary/5'
+              : 'border-destructive/30 bg-destructive/5'
+          }`}
+        >
+          <p className="font-semibold">{TENANT_QUOTE_RESPONSE_LABEL[status]}</p>
+          {responseAt ? (
+            <p className="text-muted-foreground mt-1">Recorded {formatDateTime(responseAt)}</p>
+          ) : null}
+          {replyExcerpt ? (
+            <p className="text-muted-foreground mt-2 whitespace-pre-wrap">
+              Email reply: {replyExcerpt}
+            </p>
+          ) : null}
+          {declineReason ? (
+            <p className="mt-2 whitespace-pre-wrap">{declineReason}</p>
+          ) : null}
+        </div>
+      )}
+
+      {recorded ? (
+        <div className="flex flex-wrap gap-2">
+          {status !== 'accepted' ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 min-w-[3.5rem] px-3 text-xs font-semibold"
+              disabled={busy}
+              onClick={onAgree}
+            >
+              Yes
+            </Button>
+          ) : null}
+          {status !== 'declined' ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 min-w-[3.5rem] px-3 text-xs font-semibold"
+              disabled={busy}
+              onClick={onDisagree}
+            >
+              No
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-muted-foreground h-8 gap-1.5 text-xs"
+            disabled={busy}
+            onClick={onCheckReply}
+          >
+            <RefreshCw className="size-3.5" />
+            Check email for reply
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -448,30 +480,57 @@ function normalizeRepairItems(items: ReportComparisonRepairItem[]): ReportCompar
   }));
 }
 
+function contractorOptionLabel(contractor: PreferredContractor): string {
+  const parts = [contractor.name];
+  if (contractor.phone?.trim()) parts.push(contractor.phone.trim());
+  else if (contractor.email?.trim()) parts.push(contractor.email.trim());
+  if (contractor.serviceTypes.length > 0) {
+    parts.push(contractor.serviceTypes.slice(0, 2).join(', '));
+  }
+  return parts.join(' · ');
+}
+
 function HandymanField({
   row,
   contractors,
+  agencyId,
+  onContractorsChange,
   onChange,
 }: {
   row: ReportComparisonRepairItem;
   contractors: PreferredContractor[];
+  agencyId: string | null | undefined;
+  onContractorsChange: (contractors: PreferredContractor[]) => void;
   onChange: (patch: Partial<ReportComparisonRepairItem>) => void;
 }) {
-  const selectValue = row.handymanId
-    ? row.handymanId
-    : row.handymanName?.trim()
-      ? '__custom__'
-      : '';
+  const [addOpen, setAddOpen] = useState(false);
+
+  const matchedById = row.handymanId
+    ? contractors.find((c) => c.id === row.handymanId)
+    : null;
+  const matchedByName =
+    !matchedById && row.handymanName?.trim()
+      ? contractors.find(
+          (c) => c.name.trim().toLowerCase() === row.handymanName!.trim().toLowerCase(),
+        )
+      : null;
+  const selectValue = matchedById?.id ?? matchedByName?.id ?? (row.handymanId || '');
+
+  const handleCreated = (contractor: PreferredContractor) => {
+    const exists = contractors.some((c) => c.id === contractor.id);
+    onContractorsChange(exists ? contractors : [...contractors, contractor]);
+    onChange({ handymanId: contractor.id, handymanName: contractor.name });
+  };
 
   return (
-    <div className="space-y-1.5">
+    <>
       <select
-        className="border-input bg-background h-8 w-full min-w-[140px] rounded-md border px-2 text-xs"
+        className="border-input bg-background h-8 w-full min-w-[160px] rounded-md border px-2 text-xs"
         value={selectValue}
         onChange={(e) => {
           const value = e.target.value;
-          if (value === '__custom__') {
-            onChange({ handymanId: null, handymanName: row.handymanName ?? '' });
+          if (value === '__add_new__') {
+            setAddOpen(true);
             return;
           }
           if (!value) {
@@ -488,20 +547,21 @@ function HandymanField({
         <option value="">Select handyman</option>
         {contractors.map((contractor) => (
           <option key={contractor.id} value={contractor.id}>
-            {contractor.name}
+            {contractorOptionLabel(contractor)}
           </option>
         ))}
-        <option value="__custom__">Add new…</option>
+        <option value="__add_new__">Add new handyman…</option>
       </select>
-      {selectValue === '__custom__' ? (
-        <Input
-          className="h-8 text-xs"
-          value={row.handymanName ?? ''}
-          placeholder="Handyman name"
-          onChange={(e) => onChange({ handymanId: null, handymanName: e.target.value })}
-        />
+      {!selectValue && row.handymanName?.trim() ? (
+        <p className="text-muted-foreground text-[10px]">Saved as: {row.handymanName}</p>
       ) : null}
-    </div>
+      <AddHandymanDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        agencyId={agencyId}
+        onCreated={handleCreated}
+      />
+    </>
   );
 }
 
@@ -509,6 +569,8 @@ function RepairItemsTable({
   title,
   items,
   contractors,
+  agencyId,
+  onContractorsChange,
   onChange,
   footerAction,
   readOnly = false,
@@ -517,6 +579,8 @@ function RepairItemsTable({
   title: string;
   items: ReportComparisonRepairItem[];
   contractors: PreferredContractor[];
+  agencyId: string | null | undefined;
+  onContractorsChange: (contractors: PreferredContractor[]) => void;
   onChange: (items: ReportComparisonRepairItem[]) => void;
   footerAction?: React.ReactNode;
   readOnly?: boolean;
@@ -605,6 +669,8 @@ function RepairItemsTable({
                         <HandymanField
                           row={row}
                           contractors={contractors}
+                          agencyId={agencyId}
+                          onContractorsChange={onContractorsChange}
                           onChange={(patch) => updateRow(index, patch)}
                         />
                       </td>
@@ -816,11 +882,11 @@ export function EndLeasingReportComparisonPanel({
       applyUpdatedCase(updated);
       const response = updated.reportComparison.tenantQuoteResponse;
       if (response === 'accepted') {
-        toast.success('Tenant agreed — maintenance quotation and bond summary updated');
+        toast.success('Tenant replied Yes — maintenance quotation and bond summary updated');
       } else if (response === 'declined') {
-        toast.message('Tenant disagreed — tenant items are editable again');
+        toast.message('Tenant replied No — tenant items are editable again');
       } else {
-        toast.message('No agree/disagree reply found in the email thread yet');
+        toast.message('No Yes/No reply found in the email thread yet');
       }
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -834,7 +900,7 @@ export function EndLeasingReportComparisonPanel({
     try {
       const updated = await terminationApi.acceptTenantRepairQuote(caseData.id);
       applyUpdatedCase(updated);
-      toast.success('Tenant agreed — bond settlement summary calculated');
+      toast.success('Recorded Yes — tenant agrees with repair quote');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -847,7 +913,7 @@ export function EndLeasingReportComparisonPanel({
     try {
       const updated = await terminationApi.declineTenantRepairQuote(caseData.id);
       applyUpdatedCase(updated);
-      toast.message('Tenant disagreed — update tenant items and resend the quote');
+      toast.message('Recorded No — tenant items are editable again');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -970,6 +1036,8 @@ export function EndLeasingReportComparisonPanel({
           title="Tenant responsibility"
           items={tenantItems}
           contractors={contractors}
+          agencyId={agencyId}
+          onContractorsChange={setContractors}
           onChange={setTenantItems}
           readOnly={tenantTableLocked}
           lockedHint={
@@ -997,6 +1065,8 @@ export function EndLeasingReportComparisonPanel({
           title="Landlord responsibility"
           items={landlordItems}
           contractors={contractors}
+          agencyId={agencyId}
+          onContractorsChange={setContractors}
           onChange={setLandlordItems}
           footerAction={
             <Button
