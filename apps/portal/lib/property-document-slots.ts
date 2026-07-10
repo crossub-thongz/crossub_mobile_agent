@@ -33,7 +33,7 @@ export const TENANT_APPLICATION_DOCUMENT_SLOTS: DocumentSlot[] = [
   { id: 'application_form', label: 'Application Form' },
   { id: 'photo_id', label: 'Photo ID' },
   { id: 'bank_statement', label: 'Bank Statement' },
-  { id: 'tenancy_ledger', label: 'Tenancy Ledger' },
+  { id: 'tenancy_ledger', label: 'Supporting Documents' },
   { id: 'visa', label: 'Visa' },
   { id: 'payslip', label: 'Payslip' },
 ];

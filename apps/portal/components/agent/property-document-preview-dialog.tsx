@@ -19,6 +19,7 @@ import { formatDateTime } from '@/lib/utils';
 
 export type DocumentPreviewItem = {
   title: string;
+  fileName?: string;
   uploadedAt?: string;
   href: string;
 };
@@ -41,7 +42,7 @@ export function PropertyDocumentPreviewDialog({
   onClose: () => void;
 }) {
   const url = doc && isViewableDocumentUrl(doc.href) ? doc.href : undefined;
-  const previewKind = url ? documentPreviewKind(url) : 'none';
+  const previewKind = url ? documentPreviewKind(url, doc?.fileName) : 'none';
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>

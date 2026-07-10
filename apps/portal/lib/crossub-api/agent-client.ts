@@ -1,5 +1,7 @@
 import type { components } from '@crossub-thongz/api-contract';
 
+import { ApiError, apiV1 } from '@/lib/api';
+
 import { crossub } from './client';
 
 export type AgentAgency = components['schemas']['AgentAgencyResponseDto'];
@@ -138,10 +140,15 @@ export type CreateAgentPropertyInput = {
 export async function createProperty(
   body: CreateAgentPropertyInput,
 ): Promise<AgentProperty> {
-  return agentFetch<AgentProperty>('/agent/properties', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+  try {
+    return await apiV1.post<AgentProperty>('/agent/properties', body);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      const message = formatApiErrorMessage(err);
+      throw new Error(message);
+    }
+    throw err;
+  }
 }
 
 /** End agency management on a property (`POST /agent/properties/{propertyId}/end-management`). */
@@ -473,6 +480,21 @@ interface PaginatedAgentTenants {
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
 
+function formatApiErrorMessage(err: ApiError): string {
+  const body = err.body;
+  if (body && typeof body === 'object' && body !== null && 'message' in body) {
+    const raw = (body as { message?: unknown }).message;
+    if (typeof raw === 'string') return raw;
+    if (Array.isArray(raw)) return raw.join(', ');
+    if (raw && typeof raw === 'object' && 'message' in raw) {
+      const nested = (raw as { message?: unknown }).message;
+      if (typeof nested === 'string') return nested;
+      if (Array.isArray(nested)) return nested.join(', ');
+    }
+  }
+  return `Request failed: ${err.status}`;
+}
+
 async function parseApiError(res: Response): Promise<string> {
   try {
     const body = (await res.json()) as {
@@ -493,17 +515,46 @@ async function parseApiError(res: Response): Promise<string> {
 }
 
 export async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) throw new Error(await parseApiError(res));
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const route = path.startsWith('/') ? path : `/${path}`;
+  try {
+    if (method === 'GET') {
+      return await apiV1.get<T>(route);
+    }
+    if (method === 'POST') {
+      const body =
+        typeof init?.body === 'string'
+          ? (JSON.parse(init.body) as unknown)
+          : init?.body;
+      return await apiV1.post<T>(route, body);
+    }
+    if (method === 'PATCH') {
+      const body =
+        typeof init?.body === 'string'
+          ? (JSON.parse(init.body) as unknown)
+          : init?.body;
+      return await apiV1.patch<T>(route, body);
+    }
+    if (method === 'DELETE') {
+      return await apiV1.delete<T>(route);
+    }
+    const res = await fetch(`${API_BASE}${route}`, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+    });
+    if (!res.ok) throw new Error(await parseApiError(res));
+    if (res.status === 204) return undefined as T;
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new Error(formatApiErrorMessage(err));
+    }
+    throw err;
+  }
 }
 
 /** Key-collection state for a property's active leasing cycle. */

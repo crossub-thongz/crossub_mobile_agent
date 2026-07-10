@@ -9,6 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ChecklistUploadState } from '@/components/agent/document-checklist-upload';
 import {
+  StagedDocumentUploadRow,
+  type StagedUploadFile,
+} from '@/components/agent/staged-document-upload-row';
+import {
   MANAGEMENT_AGREEMENT_DOC_SLOT,
 } from '@/lib/property-document-slots';
 import {
@@ -197,7 +201,7 @@ export function syncManagementFeesToScalars(
   };
 }
 
-export function PropertyManagementInsuranceAndFeesSection({
+export function PropertyManagementFeesSection({
   values,
   onChange,
   disabled,
@@ -206,9 +210,6 @@ export function PropertyManagementInsuranceAndFeesSection({
   onChange: (patch: Partial<ManagementDetailsValues>) => void;
   disabled?: boolean;
 }) {
-  const set = <K extends keyof ManagementDetailsValues>(key: K, value: ManagementDetailsValues[K]) =>
-    onChange({ [key]: value });
-
   const updateFee = (id: string, patch: Partial<ManagementFeeRow>) => {
     onChange({
       fees: values.fees.map((row) => (row.id === id ? { ...row, ...patch } : row)),
@@ -240,22 +241,6 @@ export function PropertyManagementInsuranceAndFeesSection({
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
-      <div>
-        <p className="text-sm font-semibold">Management details</p>
-        <p className="text-muted-foreground text-xs">
-          Landlord insurance expiry and the fee schedule from the management agreement.
-        </p>
-      </div>
-
-      <FormField label="Landlord insurance expiry date">
-        <Input
-          type="date"
-          value={values.landlordInsuranceExpiry}
-          onChange={(e) => set('landlordInsuranceExpiry', e.target.value)}
-          disabled={disabled}
-        />
-      </FormField>
-
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -380,48 +365,48 @@ export function PropertyManagementInsuranceAndFeesSection({
   );
 }
 
+/** @deprecated Use PropertyManagementFeesSection — insurance expiry removed from create property. */
+export function PropertyManagementInsuranceAndFeesSection({
+  values,
+  onChange,
+  disabled,
+}: {
+  values: ManagementDetailsValues;
+  onChange: (patch: Partial<ManagementDetailsValues>) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <PropertyManagementFeesSection values={values} onChange={onChange} disabled={disabled} />
+  );
+}
+
 function AgreementUploadRow({
   label,
   files,
   disabled,
   uploading,
   onUpload,
+  onPreview,
+  onRemove,
 }: {
   label: string;
-  files: { fileName: string; uploadedAt: string }[];
+  files: StagedUploadFile[];
   disabled?: boolean;
   uploading?: boolean;
   onUpload: () => void;
+  onPreview?: (file: StagedUploadFile) => void;
+  onRemove?: (file: StagedUploadFile) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-2 rounded-lg border border-primary/15 bg-primary/[0.02] px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        {files.length > 0 ? (
-          <p className="text-muted-foreground truncate text-xs">
-            {files.map((f) => f.fileName).join(', ')}
-          </p>
-        ) : (
-          <p className="text-muted-foreground text-xs">Not uploaded</p>
-        )}
-      </div>
-      <Button
-        type="button"
-        size="sm"
-        variant={files.length ? 'outline' : 'default'}
-        className={cn(
-          'h-8 shrink-0 text-xs',
-          files.length
-            ? 'border-primary/40 text-primary hover:bg-primary/10'
-            : 'bg-primary text-primary-foreground hover:bg-primary/90',
-        )}
-        disabled={disabled || uploading}
-        onClick={onUpload}
-      >
-        {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-        <span className="ml-1">{files.length ? 'Add' : 'Upload'}</span>
-      </Button>
-    </div>
+    <StagedDocumentUploadRow
+      label={label}
+      files={files}
+      disabled={disabled}
+      uploading={uploading}
+      onUpload={onUpload}
+      onPreview={onPreview}
+      onRemove={onRemove}
+    />
   );
 }
 
@@ -429,10 +414,14 @@ function AgreementUploadRow({
 export function PropertyManagementAgreementSection({
   values,
   onUploadFile,
+  onPreviewFile,
+  onRemoveFile,
   disabled,
 }: {
   values: ManagementDetailsValues;
   onUploadFile: (file: File, slotId: string, title?: string) => Promise<void>;
+  onPreviewFile?: (file: StagedUploadFile) => void;
+  onRemoveFile?: (file: StagedUploadFile, slotId: string) => void;
   disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -479,6 +468,10 @@ export function PropertyManagementAgreementSection({
     }
   };
 
+  const removeUpload = (file: StagedUploadFile) => {
+    onRemoveFile?.(file, slotId);
+  };
+
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
       <div>
@@ -502,6 +495,8 @@ export function PropertyManagementAgreementSection({
         disabled={disabled}
         uploading={uploading}
         onUpload={() => inputRef.current?.click()}
+        onPreview={onPreviewFile}
+        onRemove={removeUpload}
       />
     </div>
   );

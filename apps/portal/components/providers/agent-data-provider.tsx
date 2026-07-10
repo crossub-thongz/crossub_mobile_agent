@@ -752,6 +752,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           await apiCreateAgency({
             name: input.agencyName.trim(),
             company: input.agencyCompany?.trim() || undefined,
+            contactEmail: user?.email,
+            contactName: user
+              ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || undefined
+              : undefined,
+            contactPhone: user?.phone,
           });
           await refresh();
         }
@@ -816,7 +821,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       }
       return storeAddProperty(input, agentPortfolioId);
     },
-    [apiConnected, apiAgencies, refresh, storeAddProperty, agentPortfolioId],
+    [apiConnected, apiAgencies, refresh, storeAddProperty, agentPortfolioId, user],
   );
 
   const endPropertyManagement = useCallback(

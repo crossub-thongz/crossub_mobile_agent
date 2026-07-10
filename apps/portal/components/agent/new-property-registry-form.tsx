@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,10 +22,16 @@ import {
 import {
   EMPTY_MANAGEMENT_DETAILS,
   PropertyManagementAgreementSection,
+  PropertyManagementFeesSection,
   syncManagementFeesToScalars,
   type ManagementDetailsValues,
 } from '@/components/agent/property-management-details-section';
 import { PropertyAddressAutocomplete } from '@/components/agent/property-address-autocomplete';
+import {
+  PropertyDocumentPreviewDialog,
+  type DocumentPreviewItem,
+} from '@/components/agent/property-document-preview-dialog';
+import type { StagedUploadFile } from '@/components/agent/staged-document-upload-row';
 import {
   resolveWorkflowStepState,
   WorkflowProgressRail,
@@ -292,6 +298,8 @@ export function NewPropertyRegistryForm({
   const [furthestStepIndex, setFurthestStepIndex] = useState(0);
   const [stepErrors, setStepErrors] = useState<Partial<Record<WizardStep, string[]>>>({});
   const [addressFieldsLocked, setAddressFieldsLocked] = useState(true);
+  const [previewDoc, setPreviewDoc] = useState<DocumentPreviewItem | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [form, setForm] = useState<NewPropertyRegistryValues>({
     agencyName: primaryAgency?.name ?? '',
     agencyCompany: primaryAgency?.company ?? '',
@@ -343,6 +351,14 @@ export function NewPropertyRegistryForm({
     }));
   }, [primaryAgency]);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
+
   const stageDocument = useCallback(
     (file: File, slotId: string, source: 'leasing' | 'management', title?: string) => {
       if (isBlockedDocumentFile(file)) {
@@ -370,7 +386,7 @@ export function NewPropertyRegistryForm({
                 ...f.leasing.uploads,
                 [slotId]: [
                   ...(f.leasing.uploads[slotId] ?? []),
-                  { fileName: file.name, uploadedAt: new Date().toISOString() },
+                  { id: pendingId, fileName: file.name, uploadedAt: new Date().toISOString() },
                 ],
               },
             },
@@ -385,7 +401,7 @@ export function NewPropertyRegistryForm({
               ...f.management.uploads,
               [slotId]: [
                 ...(f.management.uploads[slotId] ?? []),
-                { fileName: file.name, uploadedAt: new Date().toISOString() },
+                { id: pendingId, fileName: file.name, uploadedAt: new Date().toISOString() },
               ],
             },
           },
@@ -408,6 +424,65 @@ export function NewPropertyRegistryForm({
     },
     [stageDocument],
   );
+
+  const removeStagedDocument = useCallback((file: StagedUploadFile, slotId: string) => {
+    setForm((f) => {
+      const staged = f.pendingDocuments.find((d) => d.id === file.id);
+      if (!staged) return f;
+      const nextPending = f.pendingDocuments.filter((d) => d.id !== file.id);
+      if (staged.source === 'leasing') {
+        return {
+          ...f,
+          pendingDocuments: nextPending,
+          leasing: {
+            ...f.leasing,
+            uploads: {
+              ...f.leasing.uploads,
+              [slotId]: (f.leasing.uploads[slotId] ?? []).filter((entry) => entry.id !== file.id),
+            },
+          },
+        };
+      }
+      return {
+        ...f,
+        pendingDocuments: nextPending,
+        management: {
+          ...f.management,
+          uploads: {
+            ...f.management.uploads,
+            [slotId]: (f.management.uploads[slotId] ?? []).filter((entry) => entry.id !== file.id),
+          },
+        },
+      };
+    });
+  }, []);
+
+  const handlePreviewStagedFile = useCallback(
+    (file: StagedUploadFile) => {
+      const staged = form.pendingDocuments.find((d) => d.id === file.id);
+      if (!staged) return;
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+      const url = URL.createObjectURL(staged.file);
+      previewUrlRef.current = url;
+      setPreviewDoc({
+        title: staged.title || staged.file.name,
+        fileName: staged.file.name,
+        uploadedAt: file.uploadedAt,
+        href: url,
+      });
+    },
+    [form.pendingDocuments],
+  );
+
+  const closePreview = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreviewDoc(null);
+  }, []);
 
   if (apiConnected && loading && !primaryAgency) {
     return (
@@ -874,6 +949,14 @@ export function NewPropertyRegistryForm({
           <PropertyManagementAgreementSection
             values={form.management}
             onUploadFile={handleManagementUpload}
+            onPreviewFile={handlePreviewStagedFile}
+            onRemoveFile={removeStagedDocument}
+            disabled={submitting}
+          />
+
+          <PropertyManagementFeesSection
+            values={form.management}
+            onChange={patchManagement}
             disabled={submitting}
           />
         </div>
@@ -895,6 +978,8 @@ export function NewPropertyRegistryForm({
           onChangeManagement={patchManagement}
           onUploadFile={handleLeasingUpload}
           onUploadManagementFile={handleManagementUpload}
+          onPreviewFile={handlePreviewStagedFile}
+          onRemoveFile={removeStagedDocument}
           disabled={submitting}
         />
       ) : null}
@@ -915,6 +1000,13 @@ export function NewPropertyRegistryForm({
           </Button>
         )}
       </div>
+
+      <PropertyDocumentPreviewDialog
+        doc={previewDoc}
+        propertyAddress={composeStreetAddress(form.unit, form.streetNumber, form.streetName) || 'New property'}
+        open={previewDoc != null}
+        onClose={closePreview}
+      />
     </div>
   );
 }

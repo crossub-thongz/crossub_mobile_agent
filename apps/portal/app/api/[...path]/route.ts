@@ -15,11 +15,20 @@ const buildUpstreamUrl = (req: NextRequest, path: string[]): string => {
   return `${apiBase()}/api/${suffix}${req.nextUrl.search}`;
 };
 
-const rewriteSetCookie = (cookie: string): string =>
-  cookie
+const rewriteSetCookie = (cookie: string, hostname: string): string => {
+  const isLocalhost =
+    hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+  return cookie
     .split(';')
-    .filter((part) => !part.trim().toLowerCase().startsWith('domain='))
+    .filter((part) => {
+      const trimmed = part.trim().toLowerCase();
+      if (trimmed.startsWith('domain=')) return false;
+      // Staging/production APIs set Secure; strip for local HTTP dev so cookies persist.
+      if (isLocalhost && trimmed === 'secure') return false;
+      return true;
+    })
     .join(';');
+};
 
 const proxy = async (
   req: NextRequest,
@@ -58,7 +67,7 @@ const proxy = async (
 
   const cookies = upstream.headers.getSetCookie?.() ?? [];
   for (const cookie of cookies) {
-    response.headers.append('set-cookie', rewriteSetCookie(cookie));
+    response.headers.append('set-cookie', rewriteSetCookie(cookie, req.nextUrl.hostname));
   }
 
   return response;

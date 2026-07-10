@@ -10,7 +10,17 @@ export function isViewableDocumentUrl(url?: string | null): url is string {
   );
 }
 
-export function documentPreviewKind(url: string): DocumentPreviewKind {
+export function documentPreviewKindFromFileName(fileName: string): DocumentPreviewKind {
+  const path = fileName.toLowerCase();
+  if (path.endsWith('.pdf')) return 'pdf';
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(path)) return 'image';
+  return 'none';
+}
+
+export function documentPreviewKind(url: string, fileName?: string): DocumentPreviewKind {
+  if (url.startsWith('blob:') && fileName) {
+    return documentPreviewKindFromFileName(fileName);
+  }
   const path = url.split('?')[0]?.toLowerCase() ?? '';
   if (path.endsWith('.pdf') || url.startsWith('blob:')) return 'pdf';
   if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(path)) return 'image';

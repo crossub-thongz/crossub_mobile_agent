@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ChecklistUploadState } from '@/components/agent/document-checklist-upload';
 import {
-  PropertyManagementInsuranceAndFeesSection,
-  type ManagementDetailsValues,
-} from '@/components/agent/property-management-details-section';
+  StagedDocumentUploadRow,
+  type StagedUploadFile,
+} from '@/components/agent/staged-document-upload-row';
+import type { ManagementDetailsValues } from '@/components/agent/property-management-details-section';
 import {
   CREATE_PROPERTY_DOCUMENT_GROUP_LABELS,
   documentSlotsForGroup,
@@ -84,51 +85,6 @@ function FormField({
   );
 }
 
-function UploadRow({
-  label,
-  files,
-  disabled,
-  uploading,
-  onUpload,
-}: {
-  label: string;
-  files: { fileName: string; uploadedAt: string }[];
-  disabled?: boolean;
-  uploading?: boolean;
-  onUpload: () => void;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-2 rounded-lg border border-primary/15 bg-primary/[0.02] px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-sm font-medium">{label}</p>
-        {files.length > 0 ? (
-          <p className="text-muted-foreground truncate text-xs">
-            {files.map((f) => f.fileName).join(', ')}
-          </p>
-        ) : (
-          <p className="text-muted-foreground text-xs">Not uploaded</p>
-        )}
-      </div>
-      <Button
-        type="button"
-        size="sm"
-        variant={files.length ? 'outline' : 'default'}
-        className={cn(
-          'h-8 shrink-0 text-xs',
-          files.length
-            ? 'border-primary/40 text-primary hover:bg-primary/10'
-            : 'bg-primary text-primary-foreground hover:bg-primary/90',
-        )}
-        disabled={disabled || uploading}
-        onClick={onUpload}
-      >
-        {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-        <span className="ml-1">{files.length ? 'Add' : 'Upload'}</span>
-      </Button>
-    </div>
-  );
-}
-
 function DocumentChecklistSection({
   title,
   description,
@@ -139,6 +95,8 @@ function DocumentChecklistSection({
   onChangeExtras,
   onChangeUploads,
   onUploadFile,
+  onPreviewFile,
+  onRemoveFile,
   disabled,
   extraIdPrefix,
 }: {
@@ -151,6 +109,8 @@ function DocumentChecklistSection({
   onChangeExtras: (rows: ExtraLeasingDocumentRow[]) => void;
   onChangeUploads: (uploads: ChecklistUploadState) => void;
   onUploadFile: (file: File, slotId: string, title?: string) => Promise<void>;
+  onPreviewFile?: (file: StagedUploadFile) => void;
+  onRemoveFile?: (file: StagedUploadFile, slotId: string) => void;
   disabled?: boolean;
   extraIdPrefix: string;
 }) {
@@ -231,10 +191,22 @@ function DocumentChecklistSection({
   };
 
   const removeExtraDocument = (id: string) => {
+    const slotFiles = uploads[id] ?? [];
+    for (const file of slotFiles) {
+      onRemoveFile?.(file, id);
+    }
     const nextUploads = { ...uploads };
     delete nextUploads[id];
     onChangeExtras(extraDocuments.filter((row) => row.id !== id));
     onChangeUploads(nextUploads);
+  };
+
+  const removeUpload = (slotId: string, file: StagedUploadFile) => {
+    onChangeUploads({
+      ...uploads,
+      [slotId]: (uploads[slotId] ?? []).filter((entry) => entry.id !== file.id),
+    });
+    onRemoveFile?.(file, slotId);
   };
 
   return (
@@ -267,13 +239,15 @@ function DocumentChecklistSection({
 
       <div className="space-y-2">
         {fixedSlots.map((slot) => (
-          <UploadRow
+          <StagedDocumentUploadRow
             key={slot.id}
             label={slot.label}
             files={uploads[slot.id] ?? []}
             disabled={disabled}
             uploading={uploading && activeSlot === slot.id}
             onUpload={() => triggerUpload(slot.id)}
+            onPreview={onPreviewFile}
+            onRemove={(file) => removeUpload(slot.id, file)}
           />
         ))}
       </div>
@@ -303,12 +277,14 @@ function DocumentChecklistSection({
                   <Trash2 className="size-4" />
                 </Button>
               </div>
-              <UploadRow
+              <StagedDocumentUploadRow
                 label={row.title.trim() || 'Other document'}
                 files={uploads[row.id] ?? []}
                 disabled={disabled}
                 uploading={uploading && activeSlot === row.id}
                 onUpload={() => triggerUpload(row.id)}
+                onPreview={onPreviewFile}
+                onRemove={(file) => removeUpload(row.id, file)}
               />
             </div>
           ))}
@@ -421,6 +397,8 @@ export function PropertyDocumentsSection({
   onChangeManagement,
   onUploadFile,
   onUploadManagementFile,
+  onPreviewFile,
+  onRemoveFile,
   disabled,
 }: {
   values: LeasingDetailsValues;
@@ -429,16 +407,12 @@ export function PropertyDocumentsSection({
   onChangeManagement: (patch: Partial<ManagementDetailsValues>) => void;
   onUploadFile: (file: File, slotId: string, title?: string) => Promise<void>;
   onUploadManagementFile: (file: File, slotId: string, title?: string) => Promise<void>;
+  onPreviewFile?: (file: StagedUploadFile) => void;
+  onRemoveFile?: (file: StagedUploadFile, slotId: string) => void;
   disabled?: boolean;
 }) {
   return (
     <div className="space-y-4">
-      <PropertyManagementInsuranceAndFeesSection
-        values={management}
-        onChange={onChangeManagement}
-        disabled={disabled}
-      />
-
       <DocumentChecklistSection
         title={`${CREATE_PROPERTY_DOCUMENT_GROUP_LABELS.tenancy} (Optional)`}
         description="Lease agreement, lease extension, rates, compliance, and other tenancy records."
@@ -449,6 +423,8 @@ export function PropertyDocumentsSection({
         onChangeExtras={(extraPropertyDocuments) => onChange({ extraPropertyDocuments })}
         onChangeUploads={(uploads) => onChange({ uploads })}
         onUploadFile={onUploadFile}
+        onPreviewFile={onPreviewFile}
+        onRemoveFile={onRemoveFile}
         disabled={disabled}
         extraIdPrefix="extra-tenancy-"
       />
@@ -463,6 +439,8 @@ export function PropertyDocumentsSection({
         onChangeExtras={(extraDocuments) => onChangeManagement({ extraDocuments })}
         onChangeUploads={(uploads) => onChangeManagement({ uploads })}
         onUploadFile={onUploadManagementFile}
+        onPreviewFile={onPreviewFile}
+        onRemoveFile={onRemoveFile}
         disabled={disabled}
         extraIdPrefix="extra-landlord-"
       />
@@ -477,6 +455,8 @@ export function PropertyDocumentsSection({
         onChangeExtras={(extraDocuments) => onChange({ extraDocuments })}
         onChangeUploads={(uploads) => onChange({ uploads })}
         onUploadFile={onUploadFile}
+        onPreviewFile={onPreviewFile}
+        onRemoveFile={onRemoveFile}
         disabled={disabled}
         extraIdPrefix="extra-tenant-"
       />

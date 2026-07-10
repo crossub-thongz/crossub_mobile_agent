@@ -12,8 +12,12 @@ import {
 } from '@/lib/file-upload';
 import type { AgentDocument } from '@/lib/types';
 
+import type { StagedUploadFile } from '@/components/agent/staged-document-upload-row';
+
+export type { StagedUploadFile };
+
 export interface ChecklistUploadState {
-  [checklistId: string]: { fileName: string; uploadedAt: string }[];
+  [checklistId: string]: StagedUploadFile[];
 }
 
 interface DocumentChecklistUploadProps {
