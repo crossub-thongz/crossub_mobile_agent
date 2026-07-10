@@ -1,19 +1,17 @@
 'use client';
 
 import { useMemo } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, Mail, MessageSquare, Phone, TrendingDown, TrendingUp } from 'lucide-react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 
-import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { EmptyState } from '@/components/agent/empty-state';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
+import { AccountingListTable } from '@/components/agent/portfolio-module-tables';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
-import { accountingArrearsProgress } from '@/lib/case-workflows';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { ROUTES } from '@/constants/routes';
+import { formatCurrency } from '@/lib/utils';
 
 export default function AccountingPage() {
   const { accounting } = useAgentData();
@@ -81,135 +79,7 @@ export default function AccountingPage() {
             }
           />
         ) : (
-          <div className="space-y-3">
-            {list.map((a) => (
-              <article
-                key={a.propertyId}
-                className="overflow-hidden rounded-2xl border bg-card"
-              >
-                <Link
-                  href={`${propertyDetail(a.propertyId)}?tab=Accounting`}
-                  className="flex items-start justify-between gap-2 border-b border-border/80 px-4 py-3.5 transition hover:bg-secondary/30"
-                >
-                  <div>
-                    <p className="text-sm font-semibold">{a.propertyAddress}</p>
-                    <p className="text-muted-foreground text-xs">{a.tenantName}</p>
-                  </div>
-                  <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-                </Link>
-                <dl className="grid grid-cols-2 gap-3 p-4 text-xs">
-                  <div className="rounded-lg bg-secondary/30 p-2.5">
-                    <dt className="text-muted-foreground text-[10px]">Paid YTD</dt>
-                    <dd className="mt-0.5 font-semibold tabular-nums">
-                      {formatCurrency(a.rentPaidYtd)}
-                    </dd>
-                  </div>
-                  <div className="rounded-lg bg-secondary/30 p-2.5">
-                    <dt className="text-muted-foreground text-[10px]">Outstanding</dt>
-                    <dd className="mt-0.5 font-semibold tabular-nums">
-                      {formatCurrency(a.rentOutstanding)}
-                    </dd>
-                  </div>
-                  <div className="rounded-lg bg-secondary/30 p-2.5">
-                    <dt className="text-muted-foreground text-[10px]">Balance</dt>
-                    <dd className="mt-0.5 font-semibold tabular-nums">
-                      {formatCurrency(a.currentBalance)}
-                    </dd>
-                  </div>
-                  <div
-                    className={
-                      a.arrearsAmount > 0
-                        ? 'rounded-lg border border-destructive/25 bg-destructive/5 p-2.5'
-                        : 'rounded-lg bg-secondary/30 p-2.5'
-                    }
-                  >
-                    <dt className="text-muted-foreground text-[10px]">Arrears</dt>
-                    <dd
-                      className={
-                        a.arrearsAmount > 0
-                          ? 'text-destructive mt-0.5 font-semibold tabular-nums'
-                          : 'mt-0.5 font-semibold'
-                      }
-                    >
-                      {a.arrearsAmount > 0
-                        ? `${formatCurrency(a.arrearsAmount)} (${a.daysInArrears}d)`
-                        : 'None'}
-                    </dd>
-                  </div>
-                </dl>
-                {a.arrearsAmount > 0 ? (
-                  <div className="border-t border-border/80 px-4 py-3">
-                    <CaseWorkflowProgressCard progress={accountingArrearsProgress(a)} />
-                  </div>
-                ) : null}
-                {(a.bills?.length ?? 0) > 0 && (
-                  <div className="space-y-2 border-t border-border/80 px-4 py-3">
-                    <p className="text-xs font-semibold">Bills</p>
-                    {a.bills!.map((b) => (
-                      <div
-                        key={b.id}
-                        className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2 text-xs"
-                      >
-                        <span>{b.label}</span>
-                        <span
-                          className={
-                            b.status === 'outstanding' ? 'text-destructive font-medium' : ''
-                          }
-                        >
-                          {formatCurrency(b.amount)} · {b.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {(a.statements?.length ?? 0) > 0 && (
-                  <div className="space-y-2 border-t border-border/80 px-4 py-3">
-                    <p className="text-xs font-semibold">Statements</p>
-                    {a.statements!.map((s) => (
-                      <Link
-                        key={s.id}
-                        href={s.href}
-                        className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2 text-xs hover:bg-secondary/60"
-                      >
-                        <span>{s.period}</span>
-                        <span className="tabular-nums">{formatCurrency(s.amount)}</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-                {a.collectionActivity.length > 0 && (
-                  <div className="space-y-2 border-t border-border/80 px-4 py-3">
-                    <p className="text-xs font-semibold">Collection activity</p>
-                    {a.collectionActivity.map((c) => (
-                      <div
-                        key={c.id}
-                        className="flex items-start gap-2.5 rounded-xl bg-secondary/40 px-3 py-2.5 text-xs"
-                      >
-                        {c.type === 'phone' && (
-                          <Phone className="text-primary mt-0.5 size-3.5 shrink-0" />
-                        )}
-                        {c.type === 'email' && (
-                          <Mail className="text-primary mt-0.5 size-3.5 shrink-0" />
-                        )}
-                        {c.type === 'sms' && (
-                          <MessageSquare className="text-primary mt-0.5 size-3.5 shrink-0" />
-                        )}
-                        <div>
-                          <p className="font-medium">{c.summary}</p>
-                          {c.detail && (
-                            <p className="text-muted-foreground mt-0.5 leading-relaxed">{c.detail}</p>
-                          )}
-                          <p className="text-muted-foreground mt-1 text-[10px]">
-                            {formatDateTime(c.at)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
+          <AccountingListTable items={list} />
         )}
 
         <ModuleCommunications

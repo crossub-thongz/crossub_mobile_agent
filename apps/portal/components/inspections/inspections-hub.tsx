@@ -8,7 +8,7 @@ import { CreateInspectionWizard } from '@/components/inspections/create-inspecti
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
-import { InspectionGroupSection, InspectionJobCard } from '@/components/inspections/inspection-job-card';
+import { InspectionsListTable } from '@/components/agent/portfolio-module-tables';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,8 +19,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
-  groupInspection,
-  INSPECTION_GROUP_LABEL,
   inspectionSummaryCounts,
   isInspectionDone,
 } from '@/lib/inspections/presentation';
@@ -93,21 +91,6 @@ export function InspectionsHub({
     return sortInspections(items);
   }, [inspections, propertyFilterId, typeFilter, statusFilter, search]);
 
-  const grouped = useMemo(() => {
-    const action: Inspection[] = [];
-    const upcoming: Inspection[] = [];
-    const done: Inspection[] = [];
-    for (const item of filtered) {
-      const bucket = groupInspection(item);
-      if (bucket === 'action') action.push(item);
-      else if (bucket === 'done') done.push(item);
-      else upcoming.push(item);
-    }
-    return { action, upcoming, done };
-  }, [filtered]);
-
-  const showGrouped = statusFilter !== 'done';
-
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -177,32 +160,8 @@ export function InspectionsHub({
             ) : undefined
           }
         />
-      ) : showGrouped ? (
-        <div className="space-y-5">
-          <InspectionGroupSection
-            group="action"
-            label={INSPECTION_GROUP_LABEL.action}
-            inspections={grouped.action}
-          />
-          <InspectionGroupSection
-            group="upcoming"
-            label={INSPECTION_GROUP_LABEL.upcoming}
-            inspections={grouped.upcoming}
-          />
-          {statusFilter === 'all' && (
-            <InspectionGroupSection
-              group="done"
-              label={INSPECTION_GROUP_LABEL.done}
-              inspections={grouped.done}
-            />
-          )}
-        </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((inspection) => (
-            <InspectionJobCard key={inspection.id} inspection={inspection} />
-          ))}
-        </div>
+        <InspectionsListTable items={filtered} />
       )}
 
       <ModuleCommunications

@@ -3,36 +3,32 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeftRight, Building2, ChevronRight, FileText, History, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowLeftRight, Building2, FileText, History, UserCheck, UserPlus } from 'lucide-react';
 
-import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
-import { TaskStatusRow } from '@/components/agent/task-status-row';
-import { StatusBadge } from '@/components/agent/status-badge';
+import {
+  LeasingCyclesTable,
+  LeasingHistoryTable,
+  RentReviewListTable,
+  TenantSelectionsTable,
+} from '@/components/agent/portfolio-module-tables';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import {
-  propertyDetail,
   propertyNew,
   propertyTransfer,
   rentReviewDetail,
   ROUTES,
   tenantNew,
-  tenantSelectionDetail,
 } from '@/constants/routes';
 import { fromLeasing } from '@/lib/detail-navigation';
-import {
-  leasingLifecycleProgress,
-  leasingOnboardingProgress,
-  rentReviewWorkflowProgress,
-} from '@/lib/case-workflows';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
-import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 const TABS = [
   { id: 'new-leasing', label: 'New leasing' },
@@ -125,25 +121,11 @@ export default function LeasingPage() {
         />
 
         {tab === 'new-leasing' && (
-          <section className="space-y-3">
+          <section className="space-y-4">
             {leasingCycles.length > 0 ? (
               <div className="space-y-3">
                 <h2 className="text-sm font-semibold">Active leasing cycles</h2>
-                {leasingCycles.map((cycle) => {
-                  const onboarding = leasingOnboardingProgress(cycle);
-                  return (
-                    <div key={cycle.id} className="space-y-3 rounded-2xl border bg-card p-4">
-                      <Link
-                        href={propertyDetail(cycle.propertyId)}
-                        className="block font-semibold hover:text-primary"
-                      >
-                        {cycle.propertyAddress}
-                      </Link>
-                      <CaseWorkflowProgressCard progress={leasingLifecycleProgress(cycle)} />
-                      {onboarding ? <CaseWorkflowProgressCard progress={onboarding} /> : null}
-                    </div>
-                  );
-                })}
+                <LeasingCyclesTable items={leasingCycles} />
               </div>
             ) : (
               <EmptyState
@@ -160,28 +142,10 @@ export default function LeasingPage() {
                 description="When CROSSUB shortlists tenants for your vacant properties, they'll appear here for approval."
               />
             ) : (
-              tenantSelections.map((t) => (
-                <Link
-                  key={t.id}
-                  href={tenantSelectionDetail(t.id)}
-                  className="block rounded-2xl border bg-card p-4 transition hover:border-primary/25 active:scale-[0.99]"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 space-y-1">
-                      {t.requiresApproval && (
-                        <StatusBadge label="Action required" variant="approval" />
-                      )}
-                      <p className="line-clamp-2 text-sm font-semibold">{t.propertyAddress}</p>
-                      <p className="text-sm">{t.applicantName}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {formatCurrency(t.proposedRent)}/wk · {t.leaseTerm}
-                      </p>
-                      <p className="text-primary text-xs font-medium">{t.status}</p>
-                    </div>
-                    <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-                  </div>
-                </Link>
-              ))
+              <div className="space-y-3">
+                <h2 className="text-sm font-semibold">Tenant applications</h2>
+                <TenantSelectionsTable items={tenantSelections} />
+              </div>
             )}
           </section>
         )}
@@ -207,25 +171,10 @@ export default function LeasingPage() {
                 description="Upcoming lease renewals and rent reviews will appear here."
               />
             ) : (
-              rentReviews.map((r) => (
-                <TaskStatusRow
-                  key={r.id}
-                  item={{
-                    id: r.id,
-                    propertyAddress: r.propertyAddress,
-                    taskLabel: `Rent review · due ${formatDate(r.reviewDue)}`,
-                    status: rentReviewWorkflowProgress(r).currentStepLabel,
-                    href: rentReviewDetail(r.id, fromLeasing('rent-review')),
-                    module: 'Rent review',
-                    tone: isRentReviewPendingApproval(r, decisions[r.id])
-                      ? 'warning'
-                      : r.tenantResponse === 'counter'
-                        ? 'neutral'
-                        : 'ok',
-                    requiresApproval: isRentReviewPendingApproval(r, decisions[r.id]),
-                  }}
-                />
-              ))
+              <RentReviewListTable
+                items={rentReviews}
+                detailHref={(id) => rentReviewDetail(id, fromLeasing('rent-review'))}
+              />
             )}
           </section>
         )}
@@ -239,29 +188,7 @@ export default function LeasingPage() {
                 description="Tenancy records appear per property once connected to crossub_web."
               />
             ) : (
-              history.map((l) => (
-                <Link
-                  key={l.id}
-                  href={`${propertyDetail(l.propertyId)}?tab=Leasing`}
-                  className="block rounded-2xl border bg-card p-4 transition hover:border-primary/25"
-                >
-                  <p className="text-sm font-semibold">{l.address}</p>
-                  <p className="text-muted-foreground mt-1 text-xs capitalize">{l.status} tenancy</p>
-                  <p className="mt-2 text-sm">{l.approvedTenant}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {formatDate(l.leaseStart)} — {formatDate(l.leaseEnd)} ·{' '}
-                    {formatCurrency(l.rentWeekly)}/wk
-                  </p>
-                  {l.applicationCount != null && (
-                    <p className="text-primary mt-2 text-[11px] font-medium">
-                      {l.applicationCount} applications · open {formatDate(l.openInspectionDate!)}
-                    </p>
-                  )}
-                  <span className="text-primary mt-2 inline-block text-xs font-medium">
-                    View property →
-                  </span>
-                </Link>
-              ))
+              <LeasingHistoryTable items={history} />
             )}
           </section>
         )}

@@ -6,13 +6,11 @@ import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
+import { MaintenanceListTable } from '@/components/agent/portfolio-module-tables';
 import { StatusBanner } from '@/components/agent/status-banner';
-import { TaskStatusRow } from '@/components/agent/task-status-row';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
-import { maintenanceDetail } from '@/constants/routes';
-import { maintenanceWorkflowProgress } from '@/lib/case-workflows';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -58,21 +56,7 @@ export default function MaintenancePage() {
           m.propertyAddress.toLowerCase().includes(q),
       );
     }
-    return items.map((m) => ({
-      id: m.id,
-      propertyAddress: m.propertyAddress,
-      taskLabel: m.title,
-      status: maintenanceWorkflowProgress(m).currentStepLabel,
-      href: maintenanceDetail(m.id),
-      module: 'Maintenance',
-      tone:
-        m.priority === 'urgent'
-          ? ('urgent' as const)
-          : m.requiresApproval
-            ? ('warning' as const)
-            : ('neutral' as const),
-      requiresApproval: m.requiresApproval,
-    }));
+    return items;
   }, [maintenanceAll, filter, search]);
 
   return (
@@ -106,11 +90,7 @@ export default function MaintenancePage() {
             }
           />
         ) : (
-          <div className="space-y-2">
-            {list.map((item) => (
-              <TaskStatusRow key={item.id} item={item} />
-            ))}
-          </div>
+          <MaintenanceListTable items={list} />
         )}
         <ModuleCommunications
           categories={['Maintenance']}

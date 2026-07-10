@@ -5,14 +5,13 @@ import { useSearchParams } from 'next/navigation';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { TaskStatusRow } from '@/components/agent/task-status-row';
+import { RentReviewListTable } from '@/components/agent/portfolio-module-tables';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { rentReviewDetail, ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import type { DetailNavContext } from '@/lib/detail-navigation';
-import { isRentReviewDecided, isRentReviewPendingApproval } from '@/lib/rent-review';
-import { rentReviewWorkflowProgress } from '@/lib/case-workflows';
+import { isRentReviewDecided } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
 
 const VIEW_FILTERS = [
@@ -68,27 +67,10 @@ export default function RentReviewPage() {
             }
           />
         ) : (
-          <div className="space-y-2">
-            {list.map((r) => (
-              <TaskStatusRow
-                key={r.id}
-                item={{
-                  id: r.id,
-                  propertyAddress: r.propertyAddress,
-                  taskLabel: 'Rent review',
-                  status: rentReviewWorkflowProgress(r).currentStepLabel,
-                  href: rentReviewDetail(r.id, detailNav),
-                  module: 'Rent review',
-                  tone: isRentReviewPendingApproval(r, decisions[r.id])
-                    ? 'warning'
-                    : r.tenantResponse === 'counter'
-                      ? 'neutral'
-                      : 'ok',
-                  requiresApproval: isRentReviewPendingApproval(r, decisions[r.id]),
-                }}
-              />
-            ))}
-          </div>
+          <RentReviewListTable
+            items={list}
+            detailHref={(id) => rentReviewDetail(id, detailNav)}
+          />
         )}
       </div>
     </AgentShell>
