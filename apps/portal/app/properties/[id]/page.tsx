@@ -274,6 +274,9 @@ export default function PropertyDetailPage() {
                 tenancyRentReviews={tenancyRentReviews}
                 leasingCycles={propertyLeasingCycles}
                 tenantSelections={propertyLeasingCases}
+                vacatingCases={propertyVacatingCases}
+                tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
+                accounting={acct}
                 onViewHistory={() => setOverviewView('history')}
                 onRefresh={() => void refresh()}
                 onViewBondLodgement={viewBondLodgement}

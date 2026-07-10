@@ -9,16 +9,14 @@ import {
   PropertyDocumentPreviewDialog,
   type DocumentPreviewItem,
 } from '@/components/agent/property-document-preview-dialog';
+import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyLandlordOverviewEditDialog } from '@/components/agent/property-landlord-overview-edit-dialog';
 import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-edit-dialog';
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
-import { TaskStatusRow } from '@/components/agent/task-status-row';
-import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { maintenanceDetail } from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
 import { isViewableDocumentUrl } from '@/lib/document-preview';
-import { isPropertyVacant } from '@/lib/property-leasing';
+import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
+import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import {
   derivePaymentCycle,
@@ -26,7 +24,9 @@ import {
   resolveCurrentRent,
   resolveLeaseDates,
 } from '@/lib/property-overview';
+import { isPropertyVacant } from '@/lib/property-leasing';
 import { dailyRentFromWeekly } from '@/lib/rent-calculations';
+import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
   AgentDocument,
@@ -105,14 +105,17 @@ export function PropertyOverviewTab({
   propertyId,
   needActions,
   maintenance,
-  inspections: _inspections,
+  inspections,
   propertyDocs,
   leasing,
   currentLease,
-  rentReviewDecisions: _rentReviewDecisions,
-  tenancyRentReviews: _tenancyRentReviews,
+  rentReviewDecisions,
+  tenancyRentReviews,
   leasingCycles,
   tenantSelections,
+  vacatingCases = [],
+  tribunalCases = [],
+  accounting,
   onViewHistory,
   onRefresh,
   onViewBondLodgement: _onViewBondLodgement,
@@ -129,6 +132,9 @@ export function PropertyOverviewTab({
   tenancyRentReviews: import('@/lib/types').RentReviewCase[];
   leasingCycles?: LeasingCycle[];
   tenantSelections?: import('@/lib/types').TenantSelectionCase[];
+  vacatingCases?: import('@/lib/types').VacatingCase[];
+  tribunalCases?: import('@/lib/types').TribunalCase[];
+  accounting?: import('@/lib/types').PropertyAccounting | null;
   onViewHistory: () => void;
   onRefresh?: () => void;
   onViewBondLodgement?: () => void;
@@ -306,13 +312,49 @@ export function PropertyOverviewTab({
     });
   };
 
+  const inProgressJobs = useMemo(() => {
+    const leasingCases = buildPropertyLeasingWorkflowCases({
+      propertyId,
+      leasingCycles: leasingCycles ?? [],
+      tenantSelections: tenantSelections ?? [],
+      vacatingCases,
+      rentReviews: tenancyRentReviews,
+      rentReviewDecisions,
+      currentLease,
+      isVacant,
+    });
+    return buildPropertyOverviewJobRows({
+      maintenance,
+      inspections,
+      rentReviews: tenancyRentReviews,
+      rentReviewDecisions,
+      leasingCases,
+      tribunalCases,
+      vacatingCases,
+      accounting,
+    });
+  }, [
+    propertyId,
+    leasingCycles,
+    tenantSelections,
+    vacatingCases,
+    tribunalCases,
+    accounting,
+    maintenance,
+    inspections,
+    tenancyRentReviews,
+    rentReviewDecisions,
+    currentLease,
+    isVacant,
+  ]);
+
   return (
     <div className="space-y-3">
-      {needActions.length > 0 || maintenance.length > 0 ? (
+      {needActions.length > 0 ? (
         <section className="rounded-xl border bg-card p-3">
           <div className="mb-2 flex items-center gap-1.5">
             <ListTodo className="text-primary size-3.5" />
-            <h3 className="text-xs font-semibold">Tasks</h3>
+            <h3 className="text-xs font-semibold">Action needed</h3>
           </div>
           <div className="space-y-1.5">
             {needActions.map((a) => (
@@ -324,21 +366,22 @@ export function PropertyOverviewTab({
                 {a.label}
               </Link>
             ))}
-            {maintenance.map((m) => (
-              <TaskStatusRow
-                key={m.id}
-                item={{
-                  id: m.id,
-                  propertyAddress: m.propertyAddress,
-                  taskLabel: m.title,
-                  status: m.status,
-                  href: maintenanceDetail(m.id, fromProperty(propertyId, 'Maintenance')),
-                  module: 'Maintenance',
-                  requiresApproval: m.requiresApproval,
-                }}
-              />
-            ))}
           </div>
+        </section>
+      ) : null}
+
+      {inProgressJobs.length > 0 ? (
+        <section className="rounded-xl border bg-card p-3">
+          <div className="mb-3 flex items-center gap-1.5">
+            <ListTodo className="text-primary size-3.5" />
+            <h3 className="text-xs font-semibold">Jobs in progress</h3>
+          </div>
+          <PropertyJobCasesTable
+            rows={inProgressJobs}
+            showViewToggle={false}
+            emptyTitle="No jobs in progress"
+            emptyDescription="Active maintenance, inspections, leasing, and other cases appear here."
+          />
         </section>
       ) : null}
 

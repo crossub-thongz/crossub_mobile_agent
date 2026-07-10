@@ -27,6 +27,8 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { rentReviewJobRows } from '@/lib/property-job-rows';
 import { cn } from '@/lib/utils';
 
 function RentReviewDataTable({
@@ -173,8 +175,22 @@ export function PropertyRentReviewTab({
     currentReview != null &&
     isRentReviewPendingApproval(currentReview, rentReviewDecisions[currentReview.id]);
 
+  const jobRows = useMemo(
+    () => rentReviewJobRows(rentReviews, rentReviewDecisions),
+    [rentReviews, rentReviewDecisions],
+  );
+
   return (
     <div className="space-y-6">
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">Rent review cases</h3>
+        <PropertyJobCasesTable
+          rows={jobRows}
+          emptyTitle="No rent review cases"
+          emptyDescription="Start a rent review when the lease is due for renewal."
+        />
+      </section>
+
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-semibold">New rent review</h3>

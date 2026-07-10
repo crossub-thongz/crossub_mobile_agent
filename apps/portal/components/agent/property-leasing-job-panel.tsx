@@ -2,11 +2,13 @@
 
 import { useMemo } from 'react';
 
+import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyLeasingWorkflowActions } from '@/components/agent/property-leasing-workflow-actions';
 import { LeasingTenancySummary } from '@/components/agent/leasing-tenancy-summary';
 import { PropertyLeasingWorkflowShell } from '@/components/agent/property-leasing-workflow-shell';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
+import { leasingWorkflowJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
@@ -98,6 +100,8 @@ export function PropertyLeasingJobPanel({
     currentLease,
   });
 
+  const jobRows = useMemo(() => leasingWorkflowJobRows(workflowCases), [workflowCases]);
+
   const workflowActions = (
     <PropertyLeasingWorkflowActions
       property={property}
@@ -141,6 +145,8 @@ export function PropertyLeasingJobPanel({
   return (
     <div className="space-y-4">
       {workflowActions}
+
+      <PropertyJobCasesTable rows={jobRows} showViewToggle />
 
       <PropertyLeasingWorkflowShell
         cases={workflowCases}

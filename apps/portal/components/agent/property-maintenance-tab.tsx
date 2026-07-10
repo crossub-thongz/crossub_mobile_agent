@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { FilterChips } from '@/components/agent/filter-chips';
-import { PropertyMaintenanceWorkflowShell } from '@/components/agent/property-maintenance-workflow-shell';
+import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { PropertyMaintenanceJobPanel } from '@/components/agent/property-maintenance-job-panel';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
-import { buildPropertyMaintenanceWorkflowCases } from '@/lib/property-maintenance-workflow-cases';
+import { maintenanceJobRows } from '@/lib/property-job-rows';
+import { pickPrimaryMaintenanceCase } from '@/lib/property-maintenance-workflow-cases';
 import type {
   Inspection,
   LeasingCycle,
@@ -17,11 +18,6 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-
-function isCompletedMaintenance(request: MaintenanceRequest): boolean {
-  const status = request.status.toLowerCase();
-  return status.includes('complete') || status.includes('closed');
-}
 
 export function PropertyMaintenanceTab({
   property,
@@ -48,20 +44,33 @@ export function PropertyMaintenanceTab({
   currentLease?: LeasingRecord;
   onRefresh?: () => void;
 }) {
-  const [view, setView] = useState<'current' | 'history'>('current');
+  const jobRows = useMemo(() => maintenanceJobRows(maintenance), [maintenance]);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
-  const viewMaintenance = useMemo(
-    () =>
-      maintenance.filter((request) =>
-        view === 'current' ? !isCompletedMaintenance(request) : isCompletedMaintenance(request),
-      ),
-    [maintenance, view],
+  const selectedRequest = useMemo(
+    () => maintenance.find((request) => request.id === selectedCaseId) ?? null,
+    [maintenance, selectedCaseId],
   );
 
-  const workflowCases = useMemo(
-    () => buildPropertyMaintenanceWorkflowCases(viewMaintenance),
-    [viewMaintenance],
-  );
+  useEffect(() => {
+    if (maintenance.length === 0) {
+      setSelectedCaseId(null);
+      return;
+    }
+    if (!selectedCaseId || !maintenance.some((request) => request.id === selectedCaseId)) {
+      const primary = pickPrimaryMaintenanceCase(
+        maintenance.map((request) => ({
+          id: request.id,
+          label: request.trackingNumber,
+          title: request.title,
+          status: request.status,
+          currentStep: request.status,
+          request,
+        })),
+      );
+      setSelectedCaseId(primary?.id ?? maintenance[0]?.id ?? null);
+    }
+  }, [maintenance, selectedCaseId]);
 
   const workflowPanelProps = {
     tab: 'maintenance' as const,
@@ -80,33 +89,28 @@ export function PropertyMaintenanceTab({
 
   return (
     <div className="space-y-4">
-      <FilterChips
-        options={[
-          { id: 'current', label: 'Current' },
-          { id: 'history', label: 'History' },
-        ]}
-        value={view}
-        onChange={(value) => setView(value as 'current' | 'history')}
-      />
+      <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
 
-      {workflowCases.length === 0 ? (
-        <PropertyWorkflowPanel
-          {...workflowPanelProps}
-          emptyTitle={view === 'current' ? 'No active maintenance' : 'No completed maintenance cases'}
-          emptyDescription={
-            view === 'current'
-              ? 'Log a maintenance job for this property to begin the workflow.'
-              : 'Completed maintenance cases will appear here.'
-          }
+      {jobRows.length === 0 ? (
+        <PropertyJobCasesTable
+          rows={[]}
+          emptyTitle="No maintenance jobs"
+          emptyDescription="Log a maintenance job for this property to begin the workflow."
         />
       ) : (
         <>
-          <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly={view === 'current'} />
-          <PropertyMaintenanceWorkflowShell
-            cases={workflowCases}
-            property={property}
-            propertyId={propertyId}
+          <PropertyJobCasesTable
+            rows={jobRows}
+            selectedId={selectedCaseId}
+            onRowClick={setSelectedCaseId}
           />
+          {selectedRequest ? (
+            <PropertyMaintenanceJobPanel
+              item={selectedRequest}
+              property={property}
+              propertyId={propertyId}
+            />
+          ) : null}
         </>
       )}
     </div>

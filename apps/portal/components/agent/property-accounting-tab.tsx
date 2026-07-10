@@ -3,8 +3,10 @@
 import { useMemo } from 'react';
 import { Wallet } from 'lucide-react';
 
+import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { InfoPanel } from '@/components/agent/info-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { accountingJobRows } from '@/lib/property-job-rows';
 import {
   buildPropertyAccountingSummary,
   hasPropertyAccountingData,
@@ -136,6 +138,11 @@ export function PropertyAccountingTab({
     })) ??
     [];
 
+  const accountingCases = useMemo(
+    () => accountingJobRows(fallbackAccounting),
+    [fallbackAccounting],
+  );
+
   if (!hasData) {
     return (
       <p className="text-muted-foreground text-sm">
@@ -146,6 +153,13 @@ export function PropertyAccountingTab({
 
   return (
     <div className="space-y-4">
+      {accountingCases.length > 0 ? (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold">Accounting cases</h3>
+          <PropertyJobCasesTable rows={accountingCases} showViewToggle={false} />
+        </section>
+      ) : null}
+
       <InfoPanel title="Accounting" icon={Wallet}>
         <p className="text-muted-foreground text-sm">
           Rent ledger, statements, and arrears for this property.

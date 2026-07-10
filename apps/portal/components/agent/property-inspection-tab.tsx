@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { FilterChips } from '@/components/agent/filter-chips';
 import { PropertyInspectionWorkflowShell } from '@/components/agent/property-inspection-workflow-shell';
+import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
-import { buildPropertyInspectionWorkflowCases } from '@/lib/property-inspection-workflow-cases';
+import { inspectionJobRows } from '@/lib/property-job-rows';
 import { VACANT_TENANCY_INSPECTIONS_HINT } from '@/lib/property-leasing';
 import type {
   Inspection,
@@ -48,25 +48,27 @@ export function PropertyInspectionTab({
   onViewInspection: (inspectionId: string) => void;
   onRefresh?: () => void;
 }) {
-  const [view, setView] = useState<'current' | 'completed'>('current');
+  const jobRows = useMemo(() => inspectionJobRows(inspections), [inspections]);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
-  const viewInspections = useMemo(() => {
-    const completed = (inspection: Inspection) =>
-      inspection.status.toLowerCase().includes('complete');
-    return inspections.filter((inspection) =>
-      view === 'current' ? !completed(inspection) : completed(inspection),
-    );
-  }, [inspections, view]);
-
-  const workflowCases = useMemo(
-    () => buildPropertyInspectionWorkflowCases(viewInspections),
-    [viewInspections],
+  const selectedInspection = useMemo(
+    () => inspections.find((inspection) => inspection.id === selectedCaseId) ?? null,
+    [inspections, selectedCaseId],
   );
 
-  const emptyDescription =
-    isVacant
-      ? VACANT_TENANCY_INSPECTIONS_HINT
-      : 'When an inspection is scheduled, it will appear here.';
+  useEffect(() => {
+    if (inspections.length === 0) {
+      setSelectedCaseId(null);
+      return;
+    }
+    if (!selectedCaseId || !inspections.some((inspection) => inspection.id === selectedCaseId)) {
+      setSelectedCaseId(inspections[0]?.id ?? null);
+    }
+  }, [inspections, selectedCaseId]);
+
+  const emptyDescription = isVacant
+    ? VACANT_TENANCY_INSPECTIONS_HINT
+    : 'When an inspection is scheduled, it will appear here.';
 
   const workflowPanelProps = {
     tab: 'inspection' as const,
@@ -85,28 +87,43 @@ export function PropertyInspectionTab({
 
   return (
     <div className="space-y-4">
-      <FilterChips
-        options={[
-          { id: 'current', label: 'Current' },
-          { id: 'completed', label: 'Completed' },
-        ]}
-        value={view}
-        onChange={(value) => setView(value as 'current' | 'completed')}
-      />
+      <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
 
-      {workflowCases.length === 0 ? (
-        <PropertyWorkflowPanel
-          {...workflowPanelProps}
-          emptyTitle={`No ${view} inspections`}
+      {jobRows.length === 0 ? (
+        <PropertyJobCasesTable
+          rows={[]}
+          emptyTitle="No inspections"
           emptyDescription={emptyDescription}
         />
       ) : (
         <>
-          <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
-          <PropertyInspectionWorkflowShell
-            cases={workflowCases}
-            onViewDetails={onViewInspection}
+          <PropertyJobCasesTable
+            rows={jobRows}
+            selectedId={selectedCaseId}
+            onRowClick={setSelectedCaseId}
           />
+          {selectedInspection ? (
+            <PropertyInspectionWorkflowShell
+              cases={[
+                {
+                  id: selectedInspection.id,
+                  category:
+                    selectedInspection.type === 'OPEN'
+                      ? 'open'
+                      : selectedInspection.type === 'INGOING'
+                        ? 'ingoing'
+                        : selectedInspection.type === 'OUTGOING'
+                          ? 'outgoing'
+                          : 'routine',
+                  label: selectedInspection.trackingNumber,
+                  status: selectedInspection.status,
+                  currentStep: selectedInspection.status,
+                  inspection: selectedInspection,
+                },
+              ]}
+              onViewDetails={onViewInspection}
+            />
+          ) : null}
         </>
       )}
     </div>
