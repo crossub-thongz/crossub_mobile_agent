@@ -1,6 +1,6 @@
 import type { Inspection } from '@/lib/types';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 
 export const OPEN_INSPECTION_PENDING = 'Pending';
 
@@ -35,10 +35,22 @@ export function formatInspectionTimeRange(
   end?: string,
 ): string {
   if (!start) return OPEN_INSPECTION_PENDING;
-  const startLabel = formatDateTime(start);
-  if (!end) return startLabel;
-  const endLabel = formatDateTime(end);
-  return `${startLabel} – ${endLabel}`;
+  const dateLabel = formatDate(start);
+  const startTime = formatTime(start);
+  if (!end) return `${dateLabel} · ${startTime}`;
+  return `${dateLabel} · ${startTime} – ${formatTime(end)}`;
+}
+
+export function canCancelLetting(
+  detail: LeasingPropertyDetail,
+  linkedInspection?: { scheduledAt?: string; inspector?: string },
+): boolean {
+  const oi = detail.openInspection;
+  const timePending = !(oi.scheduledTime ?? linkedInspection?.scheduledAt);
+  const inspectorPending = !isAssignedInspectorName(
+    oi.inspectorName ?? linkedInspection?.inspector,
+  );
+  return timePending && inspectorPending;
 }
 
 export function formatLettingRent(rentPerWeek?: number): string {

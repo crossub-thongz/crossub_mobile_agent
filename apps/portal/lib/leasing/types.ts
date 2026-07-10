@@ -24,6 +24,7 @@ export interface LeasingRentalInfo {
   leaseTerm?: string;
   tenantMovedOut?: boolean;
   tenantMovedOutDate?: string;
+  lettingNotes?: string;
 }
 
 export interface LeasingOpenInspection {

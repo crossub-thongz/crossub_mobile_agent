@@ -116,6 +116,7 @@ export interface ServerContractDraft {
   leaseTerm?: string
   tenantMovedOut?: boolean
   tenantMovedOutDate?: string
+  lettingNotes?: string
   startDate?: string
   endDate?: string
   weeklyRent?: number

@@ -69,6 +69,9 @@ export const leasingOpsApi = {
   skipOpenInspection: (cycleId: string) =>
     unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/open-inspection/skip`, {})),
 
+  cancelCycle: (cycleId: string) =>
+    unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/cancel`, {})),
+
   scheduleIngoingInspection: (cycleId: string, input: ScheduleIngoingInput) =>
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(

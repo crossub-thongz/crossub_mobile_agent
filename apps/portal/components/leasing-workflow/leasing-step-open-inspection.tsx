@@ -1,18 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CalendarClock, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail } from '@/constants/routes';
+import { cancelAgentLeasingCycle } from '@/lib/crossub-api/agent-workflow-client';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import { LEASING_UI } from '@/lib/leasing/constants';
 import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspection-session';
 import {
+  canCancelLetting,
   formatInspectionTimeRange,
   formatLettingRent,
   formatTenantMovedOutDate,
@@ -30,8 +41,12 @@ function pendingOr(value?: string | null): string {
 
 export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyDetail }) {
   const router = useRouter();
-  const { inspections, leasingCycles, apiConnected } = useAgentData();
+  const { inspections, leasingCycles, apiConnected, refresh } = useAgentData();
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
+  const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
+
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = cycle?.id;
@@ -57,6 +72,8 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     oi.scheduledTimeEnd,
   );
 
+  const allowCancel = canCancelLetting(detail, linkedInspection);
+
   const openJobCase = async () => {
     const sessionId = await resolveOpenInspectionSessionId(detail, {
       cycleId: apiConnected ? cycleId : undefined,
@@ -64,6 +81,25 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     });
     if (!sessionId) return;
     router.push(inspectionDetail(sessionId, fromLeasingWorkflow(detail.propertyId)));
+  };
+
+  const handleCancelLetting = async () => {
+    if (!apiConnected || !cycleId) {
+      toast.error('Connect to the API to cancel this letting');
+      return;
+    }
+    setCancelling(true);
+    try {
+      await cancelAgentLeasingCycle(detail.propertyId, cycleId);
+      clearDetail(detail.propertyId);
+      await refresh();
+      setCancelOpen(false);
+      toast.success('Letting cancelled');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not cancel letting');
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const lettingFacts = (
@@ -90,6 +126,14 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   return (
     <div className="space-y-3">
       {lettingFacts}
+      {rental.lettingNotes ? (
+        <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            Notes
+          </p>
+          <p className="mt-1 whitespace-pre-wrap text-sm">{rental.lettingNotes}</p>
+        </div>
+      ) : null}
 
       <StepCard
         icon={CalendarClock}
@@ -97,20 +141,38 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
         description="An inspector will claim this job from the task pool. Details appear here once accepted."
         status={oi.status}
         footer={
-          inspectionHref ? (
-            <Button
-              size="sm"
-              className={cn('h-8 gap-1.5 text-xs', LEASING_UI.btnSecondary)}
-              variant="ghost"
-              onClick={() => void openJobCase()}
-            >
-              <ExternalLink className="size-3.5" />
-              Open job case
-            </Button>
-          ) : null
+          <div className="flex flex-wrap items-center gap-2">
+            {allowCancel ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs text-destructive hover:text-destructive"
+                onClick={() => setCancelOpen(true)}
+              >
+                Cancel letting
+              </Button>
+            ) : null}
+            {inspectionHref ? (
+              <Button
+                size="sm"
+                className={cn('h-8 gap-1.5 text-xs', LEASING_UI.btnSecondary)}
+                variant="ghost"
+                onClick={() => void openJobCase()}
+              >
+                <ExternalLink className="size-3.5" />
+                Open job case
+              </Button>
+            ) : null}
+          </div>
         }
       >
         {inspectorFacts}
+        {!allowCancel && (oi.scheduledTime || isAssignedInspectorName(oi.inspectorName)) ? (
+          <p className="text-muted-foreground text-[11px]">
+            This letting can no longer be cancelled — an inspector or inspection time has been
+            scheduled.
+          </p>
+        ) : null}
         {inspectionHref ? (
           <Link
             href={inspectionHref}
@@ -125,6 +187,31 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
           </p>
         )}
       </StepCard>
+
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel this letting?</DialogTitle>
+            <DialogDescription>
+              This will close the new letting workflow for this property. You can start a new one
+              later if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCancelOpen(false)}>
+              Keep letting
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={cancelling}
+              onClick={() => void handleCancelLetting()}
+            >
+              {cancelling ? 'Cancelling…' : 'Cancel letting'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

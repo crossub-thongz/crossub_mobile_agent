@@ -48,6 +48,8 @@ type LeasingWorkflowStore = {
   applyKeyCollectionFromApi: (id: string, kc: AgentKeyCollection) => void;
   /** Merge a live `/leasing/cycles/:id` view into the workflow detail. */
   applyCycleView: (propertyId: string, view: ServerLeasingCycleView) => void;
+  /** Drop cached workflow state after a letting is cancelled. */
+  clearDetail: (propertyId: string) => void;
   scheduleIngoingInspection: (id: string, scheduledTime: string, assignee: string, inspectionId?: string) => void;
   tenantConfirmIngoing: (id: string) => void;
   tenantApproveIngoingReport: (id: string) => void;
@@ -372,6 +374,14 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
       return {
         details: { ...s.details, [propertyId]: next },
       };
+    });
+  },
+
+  clearDetail(propertyId) {
+    set((s) => {
+      const { [propertyId]: _removed, ...details } = s.details;
+      const { [propertyId]: _step, ...activeStepByProperty } = s.activeStepByProperty;
+      return { details, activeStepByProperty };
     });
   },
 

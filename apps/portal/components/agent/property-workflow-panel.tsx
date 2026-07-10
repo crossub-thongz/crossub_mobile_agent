@@ -280,6 +280,7 @@ export function PropertyWorkflowCreateDialog({
   const [availableFrom, setAvailableFrom] = useState('');
   const [tenantMovedOut, setTenantMovedOut] = useState<boolean | null>(null);
   const [tenantMovedOutDate, setTenantMovedOutDate] = useState('');
+  const [lettingNotes, setLettingNotes] = useState('');
 
   const [tenantName, setTenantName] = useState('');
   const [leaseType, setLeaseType] = useState<'fixed' | 'periodic'>('fixed');
@@ -361,6 +362,7 @@ export function PropertyWorkflowCreateDialog({
       isPropertyVacant(property, currentLease ? [currentLease] : []) ? true : false,
     );
     setTenantMovedOutDate('');
+    setLettingNotes('');
 
     const instantRentReview = buildRentReviewPrefill(property, agency, currentLease, {
       leasingCycle,
@@ -534,6 +536,7 @@ export function PropertyWorkflowCreateDialog({
           fixedTermWeeks,
           tenantMovedOut,
           tenantMovedOutDate: tenantMovedOut ? tenantMovedOutDate : undefined,
+          notes: lettingNotes.trim() || undefined,
         });
         toast.success('Letting cycle created');
         if (apiConnected) {
@@ -785,6 +788,15 @@ export function PropertyWorkflowCreateDialog({
                 Must be at least {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
                 {minAvailableFrom}).
               </p>
+            </Field>
+            <Field label="Notes">
+              <Textarea
+                rows={3}
+                placeholder="Access instructions, landlord requests, or other context for this letting…"
+                value={lettingNotes}
+                onChange={(e) => setLettingNotes(e.target.value)}
+                maxLength={2000}
+              />
             </Field>
           </div>
         ) : null}

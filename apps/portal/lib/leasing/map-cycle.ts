@@ -145,6 +145,7 @@ export function patchDetailFromCycleView(
         view.onboarding?.agreement.contractDraft?.tenantMovedOut ??
         existing.rental.tenantMovedOut,
       tenantMovedOutDate: u(view.onboarding?.agreement.contractDraft?.tenantMovedOutDate),
+      lettingNotes: u(view.onboarding?.agreement.contractDraft?.lettingNotes),
     },
     openInspection: {
       status: asItemStatus(view.openInspection.status),

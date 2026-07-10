@@ -15,6 +15,7 @@ export type CreateAgentLeasingCycleInput = {
   fixedTermWeeks?: number;
   tenantMovedOut?: boolean;
   tenantMovedOutDate?: string;
+  notes?: string;
   skipOpenInspection?: boolean;
 };
 
@@ -71,6 +72,15 @@ export async function createAgentLeasingCycle(
   return agentFetch(`${base(propertyId)}/leasing-cycle`, {
     method: 'POST',
     body: JSON.stringify(body),
+  });
+}
+
+export async function cancelAgentLeasingCycle(
+  propertyId: string,
+  cycleId: string,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(`${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/cancel`, {
+    method: 'POST',
   });
 }
 
