@@ -32,6 +32,7 @@ export interface PropertyRecord {
   leaseStartDate: string | null;
   leaseEndDate: string | null;
   nextRentReviewAt: string | null;
+  rentPaidUntil: string | null;
   rentWeekly: number | null;
   bondAmount: number | null;
   depositAmount: number | null;
@@ -50,6 +51,7 @@ export interface PropertyPortalOverview {
   leaseStartDate?: string;
   leaseEndDate?: string;
   nextRentReviewDate?: string;
+  rentPaidUntilDate?: string;
   vacateDate?: string;
   nextRoutineInspectionDate?: string;
   furnished?: boolean;
@@ -143,6 +145,7 @@ export type PropertyRegistryPatch = Partial<{
   leaseStartDate: string;
   leaseEndDate: string;
   nextRentReviewAt: string;
+  rentPaidUntil: string;
   vacateDate: string;
   nextInspectionAt: string;
   bondAmount: number;

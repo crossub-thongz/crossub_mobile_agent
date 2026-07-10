@@ -575,6 +575,7 @@ export function PropertyWorkflowCreateDialog({
             ...reviewPayload,
             leaseType: 'fixed',
             fixedTermWeeks,
+            rentPaidUntil: rentPaidUntil || undefined,
           });
           toast.success('Rent review submitted to CROSSUB');
           await refresh();
@@ -840,6 +841,24 @@ export function PropertyWorkflowCreateDialog({
               </p>
             </div>
 
+            <Field label="Rent paid to">
+              <Input
+                type="date"
+                value={rentPaidUntil}
+                onChange={(e) => setRentPaidUntil(e.target.value)}
+                disabled={prefillLoading}
+              />
+              {prefillLoading && !rentPaidUntil ? (
+                <p className="text-muted-foreground text-[11px]">
+                  Loading rent paid-to from the property record…
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-[11px]">
+                  Matches the Overview tenancy field — update here or on the property Overview tab.
+                </p>
+              )}
+            </Field>
+
             {rentReviewPath === 'crossub_managed' ? (
               <Field label="Lease term *">
                 <div className="grid grid-cols-3 gap-2">
@@ -1022,15 +1041,6 @@ export function PropertyWorkflowCreateDialog({
                     </p>
                   ) : null}
                 </div>
-                <ReadOnlyField
-                  label="Rent paid until"
-                  value={rentPaidUntil ? formatDate(rentPaidUntil) : '—'}
-                />
-                {prefillLoading && !rentPaidUntil ? (
-                  <p className="text-muted-foreground text-[11px]">
-                    Loading rent paid-to date from the ledger…
-                  </p>
-                ) : null}
               </>
             )}
           </div>

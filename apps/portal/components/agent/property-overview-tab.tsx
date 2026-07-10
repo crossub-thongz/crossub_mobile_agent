@@ -20,7 +20,7 @@ import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workfl
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import {
   derivePaymentCycle,
-  deriveRentPaidTo,
+  resolveRentPaidTo,
   resolveCurrentRent,
   resolveLeaseDates,
 } from '@/lib/property-overview';
@@ -218,7 +218,10 @@ export function PropertyOverviewTab({
     [overview, sync.record, property, leaseStart, leaseEnd],
   );
 
-  const rentPaidTo = deriveRentPaidTo(sync.accounting);
+  const rentPaidTo = resolveRentPaidTo(
+    sync.record?.rentPaidUntil ?? sync.overview?.rentPaidUntilDate,
+    sync.accounting,
+  );
   const paymentCycle = derivePaymentCycle(displayRent);
 
   const registry = useMemo(() => {
@@ -274,10 +277,11 @@ export function PropertyOverviewTab({
       leaseStartDate: tenancyDates.leaseStart ?? '',
       leaseEndDate: tenancyDates.leaseEnd ?? '',
       nextRentReviewAt: tenancyDates.nextRentReview ?? '',
+      rentPaidUntil: rentPaidTo ?? '',
       vacateDate: tenancyDates.vacateDate ?? '',
       nextInspectionAt: tenancyDates.nextRoutine ?? '',
     }),
-    [tenant, displayRent, tenancyDates],
+    [tenant, displayRent, tenancyDates, rentPaidTo],
   );
 
   const landlordInitial = useMemo(

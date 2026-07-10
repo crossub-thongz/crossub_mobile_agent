@@ -370,11 +370,21 @@ export async function fetchRentReviewPrefill(
 
   let rentPaidUntil: string | undefined;
   try {
-    const portal = await propertyRegistryApi.getPortal(property.id);
-    const paidTo = deriveRentPaidTo(portal?.accounting);
-    if (paidTo) rentPaidUntil = paidTo.slice(0, 10);
+    const record = await propertyRegistryApi.get(property.id);
+    if (record.rentPaidUntil) {
+      rentPaidUntil = record.rentPaidUntil.slice(0, 10);
+    }
   } catch {
-    /* ledger optional */
+    /* optional */
+  }
+  if (!rentPaidUntil) {
+    try {
+      const portal = await propertyRegistryApi.getPortal(property.id);
+      const paidTo = deriveRentPaidTo(portal?.accounting);
+      if (paidTo) rentPaidUntil = paidTo.slice(0, 10);
+    } catch {
+      /* ledger optional */
+    }
   }
 
   const prefill = buildRentReviewPrefill(property, agency, currentLease, {

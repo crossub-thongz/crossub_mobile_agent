@@ -195,6 +195,17 @@ export function deriveRentPaidTo(accounting?: PropertyPortalAccounting | null): 
   return paidDates[0] ?? null;
 }
 
+/** Property registry rent paid-to, falling back to the accounting ledger. */
+export function resolveRentPaidTo(
+  stored?: string | null,
+  accounting?: PropertyPortalAccounting | null,
+): string | null {
+  const trimmed = stored?.trim().slice(0, 10);
+  if (trimmed) return trimmed;
+  const fromLedger = deriveRentPaidTo(accounting);
+  return fromLedger?.slice(0, 10) ?? null;
+}
+
 /** Payment cycle label — weekly rent is the platform default. */
 export function derivePaymentCycle(rentWeekly?: number | null): string {
   return rentWeekly != null && rentWeekly > 0 ? 'Weekly' : '—';

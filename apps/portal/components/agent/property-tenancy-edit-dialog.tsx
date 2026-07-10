@@ -25,6 +25,7 @@ type TenancyForm = {
   leaseStartDate: string;
   leaseEndDate: string;
   nextRentReviewAt: string;
+  rentPaidUntil: string;
   vacateDate: string;
   nextInspectionAt: string;
 };
@@ -70,6 +71,7 @@ export function PropertyTenancyEditDialog({
         leaseStartDate: form.leaseStartDate || undefined,
         leaseEndDate: form.leaseEndDate || undefined,
         nextRentReviewAt: form.nextRentReviewAt || undefined,
+        rentPaidUntil: form.rentPaidUntil || undefined,
         vacateDate: form.vacateDate || undefined,
         nextInspectionAt: form.nextInspectionAt || undefined,
       });
@@ -149,6 +151,15 @@ export function PropertyTenancyEditDialog({
                 type="date"
                 value={form.leaseEndDate}
                 onChange={(e) => set('leaseEndDate', e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rent-paid-until">Rent paid to</Label>
+              <Input
+                id="rent-paid-until"
+                type="date"
+                value={form.rentPaidUntil}
+                onChange={(e) => set('rentPaidUntil', e.target.value)}
               />
             </div>
             <div className="space-y-1.5">
