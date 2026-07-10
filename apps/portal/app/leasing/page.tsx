@@ -32,7 +32,7 @@ import {
 } from '@/lib/case-workflows';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
 
 const TABS = [
   { id: 'new-leasing', label: 'New leasing' },
@@ -67,7 +67,7 @@ export default function LeasingPage() {
     return leasingRecords.map((l) => {
       const property = properties.find((p) => p.id === l.propertyId);
       const address = property
-        ? `${property.address}, ${property.suburb}`
+        ? formatPropertyFullAddress(property)
         : l.propertyId;
       return { ...l, address };
     });
@@ -171,7 +171,7 @@ export default function LeasingPage() {
                       {t.requiresApproval && (
                         <StatusBadge label="Action required" variant="approval" />
                       )}
-                      <p className="truncate text-sm font-semibold">{t.propertyAddress}</p>
+                      <p className="line-clamp-2 text-sm font-semibold">{t.propertyAddress}</p>
                       <p className="text-sm">{t.applicantName}</p>
                       <p className="text-muted-foreground text-xs">
                         {formatCurrency(t.proposedRent)}/wk · {t.leaseTerm}

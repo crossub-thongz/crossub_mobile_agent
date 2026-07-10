@@ -11,6 +11,7 @@ import type {
 } from '@/lib/open-inspection';
 import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, PropertyPartyContact, ThreadMessage } from '@/lib/types';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+import { formatPropertyFullAddress } from '@/lib/utils';
 import type { TenantSelectionDecision } from '@/lib/tenant-selection';
 import type { ProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
 
@@ -246,7 +247,7 @@ export const useAgentStore = create<AgentStore>()(
           id: `msg-${property.id}-${Date.now()}`,
           assignedAgentId: agentPortfolioId,
           propertyId: property.id,
-          propertyAddress: `${property.address}, ${property.suburb}`,
+          propertyAddress: formatPropertyFullAddress(property),
           homeOwnerName: property.homeOwnerName,
           homeOwnerContact: property.homeOwnerContact,
           tenantName: property.tenantName,
@@ -356,7 +357,7 @@ export const useAgentStore = create<AgentStore>()(
           trackingNumber,
           type: 'OPEN',
           propertyId: property.id,
-          propertyAddress: `${property.address}, ${property.suburb}`,
+          propertyAddress: formatPropertyFullAddress(property),
           status,
           reportStatus: 'pending',
           openConductedBy,

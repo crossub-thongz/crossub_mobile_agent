@@ -42,6 +42,7 @@ import {
   VACATING_STATUS,
 } from '@/constants/api-enums';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import { formatPropertyFullAddress } from '@/lib/utils';
 import type {
   Agency,
   AgentDocument,
@@ -613,7 +614,7 @@ export function mapAgentMessages(
       assignedAgentId: agentId,
       propertyId: t.propertyId ?? undefined,
       propertyAddress: prop
-        ? `${prop.address}, ${prop.suburb}`
+        ? formatPropertyFullAddress(prop)
         : t.propertyAddress ?? '—',
       homeOwnerName: prop?.homeOwnerName ?? '—',
       homeOwnerContact: prop?.homeOwnerContact ?? {},

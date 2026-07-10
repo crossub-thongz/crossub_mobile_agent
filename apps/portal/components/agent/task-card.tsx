@@ -34,7 +34,7 @@ export function TaskCard({
               </span>
             )}
           </div>
-          <p className="text-muted-foreground truncate text-xs font-medium">
+          <p className="text-muted-foreground line-clamp-2 text-xs font-medium">
             {item.propertyAddress}
           </p>
           <p className="text-sm font-semibold leading-snug">{item.title}</p>

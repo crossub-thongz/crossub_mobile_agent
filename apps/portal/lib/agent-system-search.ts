@@ -21,6 +21,7 @@ import {
   vacatingDetail,
 } from '@/constants/routes';
 import { vacatingWorkflowProgress } from '@/lib/case-workflows';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 export type SystemSearchResult = {
   id: string;
@@ -56,12 +57,13 @@ export function searchAgentSystem(query: string, data: SearchData): SystemSearch
       p.address.toLowerCase().includes(q) ||
       p.tenantName.toLowerCase().includes(q) ||
       p.suburb.toLowerCase().includes(q) ||
-      p.homeOwnerName.toLowerCase().includes(q)
+      p.homeOwnerName.toLowerCase().includes(q) ||
+      formatPropertyFullAddress(p).toLowerCase().includes(q)
     ) {
       out.push({
         id: `prop-${p.id}`,
         kind: 'Property',
-        label: `${p.address}, ${p.suburb}`,
+        label: formatPropertyFullAddress(p),
         sub: p.tenantName,
         href: propertyDetail(p.id),
         propertyId: p.id,

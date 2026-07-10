@@ -72,7 +72,7 @@ export function InspectionJobCard({
           </div>
 
           <div>
-            <p className="truncate text-sm font-semibold leading-snug">{inspection.propertyAddress}</p>
+            <p className="line-clamp-2 text-sm font-semibold leading-snug">{inspection.propertyAddress}</p>
             <p className="text-muted-foreground mt-0.5 text-xs">{inspection.trackingNumber}</p>
           </div>
 

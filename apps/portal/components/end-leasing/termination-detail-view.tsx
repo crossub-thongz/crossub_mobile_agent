@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { Timeline } from '@/components/agent/timeline';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   TerminationPhasePanel,
   TerminationPhaseTabs,
@@ -12,7 +13,8 @@ import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-d
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useLivePoll } from '@/lib/use-live-poll';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { resolvePropertyDisplayAddress } from '@/lib/property-address';
+import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
 export function TerminationDetailView({
@@ -74,6 +76,16 @@ function TerminationDetailContent({
   onStageChange: (stage: TerminationCaseDetail['currentStage']) => void;
   hideHeader?: boolean;
 }) {
+  const { properties } = useAgentData();
+  const displayAddress = resolvePropertyDisplayAddress(
+    properties,
+    caseData.propertyId,
+    formatPropertyFullAddress({
+      address: caseData.property.address,
+      suburb: caseData.property.suburb,
+    }),
+  );
+
   return (
     <div className="space-y-4">
       {!hideHeader ? (
@@ -82,7 +94,7 @@ function TerminationDetailContent({
             <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
               Case ref {workflowCaseReferenceLabel(caseData.id, 'end_leasing')}
             </p>
-            <h1 className="mt-1 text-base font-semibold">{caseData.property.address}</h1>
+            <h1 className="mt-1 text-base font-semibold">{displayAddress}</h1>
             <p className="text-muted-foreground mt-1 text-xs">
               {caseData.tenant.name}
               {caseData.vacateDate ? ` · Vacate ${formatDate(caseData.vacateDate)}` : ''}

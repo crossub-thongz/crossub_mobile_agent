@@ -7,6 +7,7 @@ import {
   tribunalDetail,
 } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { formatPropertyFullAddress } from '@/lib/utils';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { isTenantSelectionPending } from '@/lib/tenant-selection';
@@ -35,7 +36,7 @@ export function getPropertyNeedActions(
   },
 ): PropertyNeedAction[] {
   const actions: PropertyNeedAction[] = [];
-  const addr = `${property.address}, ${property.suburb}`;
+  const addr = formatPropertyFullAddress(property);
   const vacant = isPropertyVacant(property);
 
   for (const m of data.maintenance.filter(

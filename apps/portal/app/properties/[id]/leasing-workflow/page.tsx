@@ -6,6 +6,7 @@ import { LeasingPackageWorkspace } from '@/components/leasing-workflow/leasing-p
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 export default function PropertyLeasingWorkflowPage() {
   const params = useParams();
@@ -24,7 +25,7 @@ export default function PropertyLeasingWorkflowPage() {
       <div className="space-y-4 pb-8">
         <LeasingPackageWorkspace
           propertyId={property.id}
-          propertyAddress={property.address}
+          propertyAddress={formatPropertyFullAddress(property)}
           rentWeekly={property.rentWeekly}
         />
       </div>

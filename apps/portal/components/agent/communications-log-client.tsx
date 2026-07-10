@@ -94,7 +94,7 @@ function ThreadListItem({
           </span>
         )}
       </div>
-      <p className="text-muted-foreground truncate text-xs">{thread.propertyAddress}</p>
+      <p className="text-muted-foreground line-clamp-2 text-xs">{thread.propertyAddress}</p>
       <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">{thread.lastMessage}</p>
       <div className="text-muted-foreground mt-1 flex items-center justify-between text-[10px]">
         <span>{category}</span>

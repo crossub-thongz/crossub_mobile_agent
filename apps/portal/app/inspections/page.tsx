@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { InspectionsHub } from '@/components/inspections/inspections-hub';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 export default function InspectionsPage() {
   const searchParams = useSearchParams();
@@ -21,7 +22,7 @@ export default function InspectionsPage() {
         inspections={inspections}
         propertyFilterId={propertyParam}
         propertyLabel={
-          propertyLabel ? `${propertyLabel.address}, ${propertyLabel.suburb}` : undefined
+          propertyLabel ? formatPropertyFullAddress(propertyLabel) : undefined
         }
       />
     </AgentShell>

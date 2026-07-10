@@ -64,7 +64,7 @@ export function NeedActionTaskCard({ item }: { item: PropertyNeedAction }) {
         >
           {item.category}
         </span>
-        <p className="mt-1.5 truncate text-sm font-semibold">{item.propertyAddress}</p>
+        <p className="mt-1.5 line-clamp-2 text-sm font-semibold">{item.propertyAddress}</p>
         <p className="text-muted-foreground mt-0.5 text-sm leading-snug">{item.label}</p>
       </div>
       {!showInline && (

@@ -110,7 +110,7 @@ export default function MessagesPage() {
                       {formatRelative(thread.lastAt)}
                     </span>
                   </div>
-                  <p className="text-muted-foreground truncate text-xs">{thread.propertyAddress}</p>
+                  <p className="text-muted-foreground line-clamp-2 text-xs">{thread.propertyAddress}</p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1.5">

@@ -53,7 +53,7 @@ export default function TenantSelectionListPage() {
                     {t.requiresApproval && (
                       <StatusBadge label="Action required" variant="approval" />
                     )}
-                    <p className="truncate text-sm font-semibold">{t.propertyAddress}</p>
+                    <p className="line-clamp-2 text-sm font-semibold">{t.propertyAddress}</p>
                     <p className="text-sm">{t.applicantName}</p>
                     <p className="text-muted-foreground text-xs">
                       {t.proposedRent > 0

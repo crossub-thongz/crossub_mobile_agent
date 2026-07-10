@@ -24,7 +24,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { buildLeasePackageData } from '@/lib/lease-package-data';
 import { leaseHistoryLabel } from '@/lib/lease-label';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
 
 export default function LeasePackagePage() {
   const params = useParams();
@@ -68,7 +68,7 @@ export default function LeasePackagePage() {
 
   if (!record || !property || !packageData) notFound();
 
-  const propertyAddress = `${property.address}, ${property.suburb}`;
+  const propertyAddress = formatPropertyFullAddress(property);
 
   return (
     <AgentShell title="Lease record" backHref={propertyDetail(propertyId)} backLabel="Property">

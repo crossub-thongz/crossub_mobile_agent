@@ -24,7 +24,7 @@ export function TaskStatusRow({
         <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
           {item.module}
         </p>
-        <p className="truncate text-sm font-semibold">{item.propertyAddress}</p>
+        <p className="line-clamp-2 text-sm font-semibold">{item.propertyAddress}</p>
         <p className="text-sm leading-snug">{item.taskLabel}</p>
         <p
           className={cn(

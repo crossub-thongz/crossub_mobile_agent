@@ -19,7 +19,7 @@ import {
 } from '@/lib/property-leasing-workflow-cases';
 import { isRentReviewPendingApproval, type RentReviewDecision } from '@/lib/rent-review';
 import type { Property, RentReviewCase, VacatingCase } from '@/lib/types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatPropertyFullAddress } from '@/lib/utils';
 
 function CasePicker({
   cases,
@@ -79,7 +79,7 @@ function LeasingCaseDetail({
     return (
       <LeasingWorkflowTimeline
         propertyId={propertyId}
-        propertyAddress={property.address}
+        propertyAddress={formatPropertyFullAddress(property)}
         rentWeekly={rentWeekly}
         hideSectionLabel
         focusBond={focusBond}

@@ -49,7 +49,7 @@ export function ExpandableNeedActionCard({
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{item.label}</p>
-                  <p className="text-muted-foreground truncate text-xs">{item.propertyAddress}</p>
+                  <p className="text-muted-foreground line-clamp-2 text-xs">{item.propertyAddress}</p>
                 </div>
                 <ChevronRight className="text-muted-foreground size-4 shrink-0" />
               </Link>

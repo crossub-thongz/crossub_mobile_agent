@@ -67,11 +67,12 @@ import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-actions';
 import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
+import { enrichPropertyAddresses, resolvePropertyDisplayAddress } from '@/lib/property-address';
 import { fetchAgentInspections } from '@/lib/inspections/fetch';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { useAgentStore } from '@/lib/store';
-import { displayName } from '@/lib/utils';
+import { displayName, formatPropertyFullAddress } from '@/lib/utils';
 import {
   hasFullManagementAccess as computeFullManagementAccess,
   isInspectionOnlyAgent as computeInspectionOnlyAgent,
@@ -465,9 +466,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const maintenanceAll = useMemo(() => {
-    if (portfolio) return mapAgentMaintenance(portfolio.maintenance);
-    return [];
-  }, [portfolio]);
+    if (!portfolio) return [];
+    return enrichPropertyAddresses(
+      mapAgentMaintenance(portfolio.maintenance),
+      properties,
+    );
+  }, [portfolio, properties]);
 
   const maintenanceFromApi = useMemo<AgentApiMaintenanceRef[]>(
     () =>
@@ -496,13 +500,18 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [portfolio]);
 
   const inspections = useMemo(() => {
-    const added = filterByPropertyIds(addedInspections, propertyIds);
-    const live =
+    const added = enrichPropertyAddresses(
+      filterByPropertyIds(addedInspections, propertyIds),
+      properties,
+    );
+    const live = enrichPropertyAddresses(
       apiConnected && apiInspections
         ? filterByPropertyIds(apiInspections, propertyIds)
         : portfolio
           ? mapAgentInspections(portfolio.inspections)
-          : [];
+          : [],
+      properties,
+    );
     const byId = new Map<string, Inspection>();
     for (const row of [...added, ...live]) {
       byId.set(row.id, row);
@@ -512,20 +521,31 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
       return bt - at;
     });
-  }, [apiConnected, apiInspections, portfolio, propertyIds, addedInspections]);
+  }, [apiConnected, apiInspections, portfolio, propertyIds, addedInspections, properties]);
 
   const rentReviews = useMemo(
-    () => (portfolio ? mapAgentRentReviews(portfolio.rentReviews) : []),
-    [portfolio],
+    () =>
+      portfolio
+        ? enrichPropertyAddresses(mapAgentRentReviews(portfolio.rentReviews), properties)
+        : [],
+    [portfolio, properties],
   );
 
   const vacating = useMemo(
-    () => (portfolio ? mapAgentVacating(portfolio.vacating) : []),
-    [portfolio],
+    () =>
+      portfolio
+        ? enrichPropertyAddresses(mapAgentVacating(portfolio.vacating), properties)
+        : [],
+    [portfolio, properties],
   );
 
   const tenantSelections = useMemo(() => {
-    const base = portfolio ? mapAgentTenantSelections(portfolio.tenantSelections) : [];
+    const base = portfolio
+      ? enrichPropertyAddresses(
+          mapAgentTenantSelections(portfolio.tenantSelections),
+          properties,
+        )
+      : [];
     return base.map((selection) => {
       const key = tenantSelectionDecisionKey(selection.propertyId, selection.id);
       return applyTenantSelectionDecision(
@@ -533,7 +553,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         tenantSelectionDecisions[key],
       );
     });
-  }, [portfolio, tenantSelectionDecisions]);
+  }, [portfolio, properties, tenantSelectionDecisions]);
 
   const leasingRecords = useMemo(
     () => (portfolio ? mapAgentLeasing(portfolio.leasing) : []),
@@ -541,18 +561,30 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const leasingCycles = useMemo(
-    () => (portfolio ? mapAgentLeasingCycles(portfolio.leasingCycles) : []),
-    [portfolio],
+    () =>
+      portfolio
+        ? enrichPropertyAddresses(
+            mapAgentLeasingCycles(portfolio.leasingCycles),
+            properties,
+          )
+        : [],
+    [portfolio, properties],
   );
 
   const accounting = useMemo(
-    () => (portfolio ? mapAgentAccounting(portfolio.accounting) : []),
-    [portfolio],
+    () =>
+      portfolio
+        ? enrichPropertyAddresses(mapAgentAccounting(portfolio.accounting), properties)
+        : [],
+    [portfolio, properties],
   );
 
   const tribunalCases = useMemo(
-    () => (portfolio ? mapAgentTribunal(portfolio.tribunal) : []),
-    [portfolio],
+    () =>
+      portfolio
+        ? enrichPropertyAddresses(mapAgentTribunal(portfolio.tribunal), properties)
+        : [],
+    [portfolio, properties],
   );
 
   const messages = useMemo<MessageThread[]>(() => {
@@ -567,6 +599,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         : properties.find((p) => thread.propertyAddress.includes(p.address));
       return {
         ...thread,
+        propertyAddress: prop
+          ? formatPropertyFullAddress(prop)
+          : resolvePropertyDisplayAddress(
+              properties,
+              thread.propertyId,
+              thread.propertyAddress,
+            ),
         propertyId: prop?.id ?? thread.propertyId,
         homeOwnerName: prop?.homeOwnerName ?? thread.homeOwnerName,
         homeOwnerContact: prop?.homeOwnerContact ?? thread.homeOwnerContact ?? {},
@@ -798,7 +837,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           trackingNumber: inspectionReferenceLabel(session.id, 'OPEN'),
           type: 'OPEN' as const,
           propertyId: input.property.id,
-          propertyAddress: input.property.address,
+          propertyAddress: formatPropertyFullAddress(input.property),
           scheduledAt: session.startTime,
           status: session.sessionStatus,
           apiStatus: session.sessionStatus,
@@ -837,6 +876,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
             : undefined) ??
           properties.find(
             (p) =>
+              formatPropertyFullAddress(p) === propertyAddress ||
               `${p.address}, ${p.suburb}` === propertyAddress ||
               (p.address.length > 0 && propertyAddress.includes(p.address)),
           );
@@ -879,17 +919,36 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const documents = useMemo<AgentDocument[]>(() => {
-    if (apiDocuments) return apiDocuments;
+    const enrichDoc = (d: AgentDocument): AgentDocument =>
+      d.propertyAddress === 'Portfolio'
+        ? d
+        : {
+            ...d,
+            propertyAddress: resolvePropertyDisplayAddress(
+              properties,
+              undefined,
+              d.propertyAddress,
+            ),
+          };
+    if (apiDocuments) return apiDocuments.map(enrichDoc);
     const prefixes = properties.map((p) => p.address.split(',')[0]);
-    return uploadedDocuments.filter((d) =>
-      prefixes.some((a) => d.propertyAddress.includes(a) || d.propertyAddress === 'Portfolio'),
-    );
+    return uploadedDocuments
+      .filter((d) =>
+        prefixes.some((a) => d.propertyAddress.includes(a) || d.propertyAddress === 'Portfolio'),
+      )
+      .map(enrichDoc);
   }, [apiDocuments, properties, uploadedDocuments]);
 
   const notifications = useMemo<AgentNotification[]>(() => {
     const base: AgentNotification[] = apiNotifications ?? [];
-    return base.map((n) => ({ ...n, read: n.read || readIds.has(n.id) }));
-  }, [apiNotifications, readIds]);
+    return base.map((n) => ({
+      ...n,
+      read: n.read || readIds.has(n.id),
+      propertyAddress: n.propertyAddress
+        ? resolvePropertyDisplayAddress(properties, undefined, n.propertyAddress)
+        : n.propertyAddress,
+    }));
+  }, [apiNotifications, readIds, properties]);
 
   const unreadNotificationCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
