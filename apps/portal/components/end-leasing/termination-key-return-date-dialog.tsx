@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { dateOnly } from '@/components/agent/property-vacate-date-field';
 import { terminationApi } from '@/lib/termination-case-api';
+import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 
 export function TerminationKeyReturnDateDialog({
   open,
@@ -31,7 +32,7 @@ export function TerminationKeyReturnDateDialog({
   caseId: string;
   initialDate: string;
   keysReturned: boolean;
-  onSaved?: () => void;
+  onSaved?: (detail?: TerminationCaseDetail) => void;
 }) {
   const [date, setDate] = useState(initialDate);
   const [keysReceived, setKeysReceived] = useState(keysReturned);
@@ -51,13 +52,13 @@ export function TerminationKeyReturnDateDialog({
 
     setSaving(true);
     try {
-      await terminationApi.setKeyReturn(caseId, {
+      const updated = await terminationApi.setKeyReturn(caseId, {
         date: dateOnly(date),
         keysReceived,
       });
       toast.success(keysReceived ? 'Key return recorded' : 'Key return date saved');
       onOpenChange(false);
-      onSaved?.();
+      onSaved?.(updated);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not save key return date');
     } finally {

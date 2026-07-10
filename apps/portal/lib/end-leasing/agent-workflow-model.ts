@@ -62,6 +62,7 @@ export interface TenantNoticeEmailView {
   subject: string;
   receivedAt: string | null;
   body: string;
+  commConversationId?: string;
 }
 
 const DONE = LEASING_ITEM_STATUS.DONE;
@@ -80,6 +81,18 @@ function timelineAt(caseData: TerminationCaseDetail, pattern: RegExp): string | 
 export function buildTenantNoticeEmailView(
   caseData: TerminationCaseDetail,
 ): TenantNoticeEmailView {
+  const stored = caseData.overviewEmail;
+  if (stored?.body) {
+    return {
+      from: stored.from ?? caseData.agentName ?? 'CROSSUB',
+      to: stored.to ?? caseData.tenant.email ?? '—',
+      subject: stored.subject ?? `End leasing — ${caseData.property.address}`,
+      receivedAt: stored.sentAt ?? caseData.createdAt,
+      body: stored.body,
+      commConversationId: stored.commConversationId,
+    };
+  }
+
   const tenantEmail = caseData.tenant.email ?? '—';
   const tenantName = caseData.tenant.name || 'Tenant';
   const vacateDate = caseData.vacate.expectedVacateDate ?? caseData.vacateDate ?? '';
@@ -165,8 +178,8 @@ function outgoingArrangementSubProgress(
 ): EndLeasingSubProgressItem[] {
   const dateCommunicated = Boolean(caseData.inspection.inspectionDate);
   const attendanceConfirmed =
-    caseData.inspection.status !== LEASING_ITEM_STATUS.NOT_STARTED &&
-    Boolean(caseData.inspection.inspectorName || caseData.inspection.inspectionDate);
+    caseData.inspection.tenantAttendance === 'yes' ||
+    caseData.inspection.tenantAttendance === 'no';
 
   return [
     { id: 'inform', label: 'Inform tenant of outgoing inspection date', done: dateCommunicated },
@@ -194,9 +207,15 @@ function outgoingInspectionSubProgress(
 function reportComparisonSubProgress(
   caseData: TerminationCaseDetail,
 ): EndLeasingSubProgressItem[] {
-  const compared = caseData.inspection.reportAvailable || caseData.inspection.status === DONE;
-  const drafted = caseData.makeGood.status !== LEASING_ITEM_STATUS.NOT_STARTED;
-  const quoted = caseData.makeGood.estimatedDeductions > 0 || caseData.settlement.deductions.length > 0;
+  const rc = caseData.reportComparison;
+  const compared =
+    (rc.agentAcknowledged && rc.tenantAcknowledged) ||
+    caseData.inspection.reportAvailable;
+  const drafted = Boolean(rc.draftSummaryEmail?.body);
+  const quoted =
+    rc.tenantResponsibility.length > 0 ||
+    rc.landlordResponsibility.length > 0 ||
+    caseData.makeGood.estimatedDeductions > 0;
 
   return [
     { id: 'compare', label: 'Compare ingoing and outgoing reports', done: compared },

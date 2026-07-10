@@ -50,12 +50,24 @@ export interface VacateStageState {
 }
 
 export type MoveOutServicesChoice = 'pending' | 'booked' | 'declined' | 'own_arrangement'
+export type TenantOutgoingAttendance = 'yes' | 'no'
+export type TenantOutgoingAttendanceStatus = TenantOutgoingAttendance | 'pending'
 
 export interface VacatingPreparationStageState {
   exitCleaningConfirmed: boolean
   exitCleaningConfirmedAt?: string
   exitCleaningConfirmedBy?: 'tenant' | 'agent'
   moveOutServices: MoveOutServicesChoice
+  vacateDateChangeReason?: string
+}
+
+export interface EndLeasingOverviewEmail {
+  commConversationId?: string
+  subject?: string
+  body?: string
+  from?: string
+  to?: string
+  sentAt?: string
 }
 
 export interface InspectionStageState {
@@ -68,6 +80,26 @@ export interface InspectionStageState {
   reportAvailable: boolean
   /** Backend OUTGOING inspection row — opens Outgoing Inspection module. */
   inspectionId?: string | null
+  /** Linked ingoing inspection from the active leasing cycle. */
+  ingoingInspectionId?: string | null
+  ingoingReportUrl?: string | null
+  outgoingReportUrl?: string | null
+  tenantAttendance: TenantOutgoingAttendanceStatus
+}
+
+export interface ReportComparisonRepairItem {
+  area: string
+  description: string
+}
+
+export interface ReportComparisonStageState {
+  agentAcknowledged: boolean
+  agentAcknowledgedAt?: string | null
+  tenantAcknowledged: boolean
+  tenantAcknowledgedAt?: string | null
+  tenantResponsibility: ReportComparisonRepairItem[]
+  landlordResponsibility: ReportComparisonRepairItem[]
+  draftSummaryEmail?: EndLeasingOverviewEmail | null
 }
 
 export interface MakeGoodStageState {
@@ -204,7 +236,9 @@ export interface TerminationCaseDetail {
   // Per-stage summarised data (Termination Created is represented by case meta)
   vacate: VacateStageState
   vacatingPreparation: VacatingPreparationStageState
+  overviewEmail?: EndLeasingOverviewEmail | null
   inspection: InspectionStageState
+  reportComparison: ReportComparisonStageState
   makeGood: MakeGoodStageState
   settlement: SettlementStageState
   agentApproval: AgentApprovalStageState

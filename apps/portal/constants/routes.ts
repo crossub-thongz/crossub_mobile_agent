@@ -79,6 +79,8 @@ export const vacatingDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/vacating/${id}`, ctx);
 export const messagesNew = () => '/messages/new';
 export const messageDetail = (id: string) => `/messages/${id}`;
+export const communicationsThread = (threadId: string) =>
+  `${ROUTES.COMMUNICATIONS}?threadId=${encodeURIComponent(threadId)}`;
 export const messageDetailParty = (id: string, party: 'tenant' | 'owner') =>
   `/messages/${id}?party=${party}`;
 export const tenantSelectionDetail = (id: string, ctx?: DetailNavContext) =>

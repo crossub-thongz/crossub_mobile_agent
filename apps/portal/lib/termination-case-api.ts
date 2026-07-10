@@ -18,9 +18,11 @@ import type {
   ServerTerminationCase,
   TerminationListResult,
   UpdateMakeGoodInput,
+  UpdateReportComparisonInput,
 } from '@/lib/termination-case-types';
 import type {
   BondStageState,
+  InspectionStageState,
   TerminationActivityEvent,
   TerminationCaseDetail,
   VacatingPreparationStageState,
@@ -178,7 +180,18 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
       moveOutServices:
         (s.vacatingPreparation?.moveOutServices as VacatingPreparationStageState['moveOutServices']) ??
         'pending',
+      vacateDateChangeReason: s.vacatingPreparation?.vacateDateChangeReason ?? undefined,
     },
+    overviewEmail: s.overviewEmail?.commConversationId || s.overviewEmail?.body
+      ? {
+          commConversationId: s.overviewEmail.commConversationId ?? undefined,
+          subject: s.overviewEmail.subject ?? undefined,
+          body: s.overviewEmail.body ?? undefined,
+          from: s.overviewEmail.from ?? undefined,
+          to: s.overviewEmail.to ?? undefined,
+          sentAt: undef(s.overviewEmail.sentAt),
+        }
+      : null,
     inspection: {
       status: s.inspection.status,
       inspectorName: undef(s.inspection.inspectorName),
@@ -188,6 +201,31 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
       tenantChargeableItems: s.inspection.tenantChargeableItems,
       reportAvailable: s.inspection.reportAvailable,
       inspectionId: s.inspection.inspectionId ?? undefined,
+      ingoingInspectionId: s.inspection.ingoingInspectionId ?? undefined,
+      ingoingReportUrl: s.inspection.ingoingReportUrl ?? undefined,
+      outgoingReportUrl: s.inspection.outgoingReportUrl ?? undefined,
+      tenantAttendance:
+        (s.inspection.tenantAttendance as InspectionStageState['tenantAttendance']) ?? 'pending',
+    },
+    reportComparison: {
+      agentAcknowledged: s.reportComparison?.agentAcknowledged ?? false,
+      agentAcknowledgedAt: s.reportComparison?.agentAcknowledgedAt ?? undefined,
+      tenantAcknowledged: s.reportComparison?.tenantAcknowledged ?? false,
+      tenantAcknowledgedAt: s.reportComparison?.tenantAcknowledgedAt ?? undefined,
+      tenantResponsibility: s.reportComparison?.tenantResponsibility ?? [],
+      landlordResponsibility: s.reportComparison?.landlordResponsibility ?? [],
+      draftSummaryEmail:
+        s.reportComparison?.draftSummaryEmail?.body || s.reportComparison?.draftSummaryEmail?.subject
+          ? {
+              commConversationId:
+                s.reportComparison.draftSummaryEmail.commConversationId ?? undefined,
+              subject: s.reportComparison.draftSummaryEmail.subject ?? undefined,
+              body: s.reportComparison.draftSummaryEmail.body ?? undefined,
+              from: s.reportComparison.draftSummaryEmail.from ?? undefined,
+              to: s.reportComparison.draftSummaryEmail.to ?? undefined,
+              sentAt: undef(s.reportComparison.draftSummaryEmail.sentAt),
+            }
+          : null,
     },
     makeGood: {
       status: s.makeGood.status,
@@ -335,10 +373,22 @@ export const terminationApi = {
     input: {
       exitCleaningConfirmed?: boolean;
       moveOutServices?: VacatingPreparationStageState['moveOutServices'];
+      tenantOutgoingAttendance?: 'yes' | 'no';
     },
   ): Promise<TerminationCaseDetail> =>
     unwrap(
       api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/preparation`, input),
+    ),
+
+  setTenantOutgoingAttendance: (
+    id: string,
+    attendance: 'yes' | 'no',
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/inspection/tenant-attendance`,
+        { attendance },
+      ),
     ),
 
   scheduleInspection: (
@@ -349,6 +399,17 @@ export const terminationApi = {
 
   completeInspection: (id: string): Promise<TerminationCaseDetail> =>
     unwrap(api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/inspection/complete`, {})),
+
+  updateReportComparison: (
+    id: string,
+    input: UpdateReportComparisonInput,
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison`,
+        input,
+      ),
+    ),
 
   updateMakeGood: (
     id: string,

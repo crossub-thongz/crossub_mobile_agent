@@ -411,6 +411,14 @@ export function CommunicationsLogClient() {
 
   const messages = centerThreads ?? fallbackMessages;
 
+  useEffect(() => {
+    const threadId = searchParams.get('threadId');
+    if (!threadId || messages.length === 0) return;
+    if (messages.some((t) => t.id === threadId)) {
+      setSelectedId(threadId);
+    }
+  }, [searchParams, messages]);
+
   const filtered = useMemo(() => {
     let items = filterThreadsByModule(messages, module);
     if (!search.trim()) return items.sort((a, b) => b.lastAt.localeCompare(a.lastAt));

@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { terminationApi } from '@/lib/termination-case-api';
+import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 
 export function TerminationVacateDateDialog({
   open,
@@ -31,7 +32,7 @@ export function TerminationVacateDateDialog({
   onOpenChange: (open: boolean) => void;
   caseId: string;
   initialDate: string;
-  onSaved?: () => void;
+  onSaved?: (detail?: TerminationCaseDetail) => void;
 }) {
   const [date, setDate] = useState(initialDate);
   const [reason, setReason] = useState('');
@@ -60,10 +61,10 @@ export function TerminationVacateDateDialog({
 
     setSaving(true);
     try {
-      await terminationApi.updateVacateDate(caseId, dateOnly(date), reason.trim());
+      const updated = await terminationApi.updateVacateDate(caseId, dateOnly(date), reason.trim());
       toast.success('Vacate date updated');
       onOpenChange(false);
-      onSaved?.();
+      onSaved?.(updated);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not update vacate date');
     } finally {
@@ -77,7 +78,7 @@ export function TerminationVacateDateDialog({
         <DialogHeader>
           <DialogTitle>Change vacate date</DialogTitle>
           <DialogDescription>
-            Update the expected vacate date for this end-leasing case.
+            Update the expected vacate date. A reason is required for every change.
           </DialogDescription>
         </DialogHeader>
         <div className="py-1">
@@ -88,13 +89,21 @@ export function TerminationVacateDateDialog({
             onDateChange={setDate}
             onReasonChange={setReason}
             idPrefix="termination-vacate"
+            requireReason
           />
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={saving} onClick={() => void submit()}>
+          <Button
+            type="button"
+            disabled={
+              saving ||
+              (dateOnly(date) !== dateOnly(initialDate) && !reason.trim())
+            }
+            onClick={() => void submit()}
+          >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
             Save
           </Button>

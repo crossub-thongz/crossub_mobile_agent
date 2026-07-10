@@ -84,7 +84,16 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     exitCleaningConfirmedAt: string | null
     exitCleaningConfirmedBy: string | null
     moveOutServices: string
+    vacateDateChangeReason: string | null
   }
+  overviewEmail: {
+    commConversationId: string | null
+    subject: string | null
+    body: string | null
+    from: string | null
+    to: string | null
+    sentAt: string | null
+  } | null
   inspection: {
     status: LeasingItemStatus
     inspectorName: string | null
@@ -94,6 +103,26 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     tenantChargeableItems: number
     reportAvailable: boolean
     inspectionId: string | null
+    ingoingInspectionId: string | null
+    ingoingReportUrl: string | null
+    outgoingReportUrl: string | null
+    tenantAttendance: string
+  }
+  reportComparison: {
+    agentAcknowledged: boolean
+    agentAcknowledgedAt: string | null
+    tenantAcknowledged: boolean
+    tenantAcknowledgedAt: string | null
+    tenantResponsibility: { area: string; description: string }[]
+    landlordResponsibility: { area: string; description: string }[]
+    draftSummaryEmail: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
   }
   makeGood: {
     status: LeasingItemStatus
@@ -179,6 +208,13 @@ export interface TerminationListResult {
 export interface ScheduleInspectionInput {
   inspector: string
   date: string
+}
+
+export interface UpdateReportComparisonInput {
+  agentAcknowledged?: boolean
+  tenantAcknowledged?: boolean
+  tenantResponsibility?: { area: string; description: string }[]
+  landlordResponsibility?: { area: string; description: string }[]
 }
 
 export interface UpdateMakeGoodInput {

@@ -33,6 +33,7 @@ import { deriveStageStatus } from '@/lib/end-leasing/lifecycle';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { terminationApi } from '@/lib/termination-case-api';
+import { TerminationCompleteInspectionDialog } from '@/components/end-leasing/termination-complete-inspection-dialog';
 import { TerminationKeyReturnDateDialog } from '@/components/end-leasing/termination-key-return-date-dialog';
 import { TerminationVacateDateDialog } from '@/components/end-leasing/termination-vacate-date-dialog';
 import type { MoveOutServicesChoice } from '@/lib/end-leasing/types';
@@ -46,6 +47,19 @@ const MOVE_OUT_SERVICES_LABEL: Record<MoveOutServicesChoice, string> = {
   declined: 'Declined',
   own_arrangement: 'Tenant arranging own',
 };
+
+function vacateDateChangeReason(caseData: TerminationCaseDetail): string | null {
+  const stored = caseData.vacatingPreparation?.vacateDateChangeReason?.trim();
+  if (stored) return stored;
+
+  const timelineHit = [...caseData.timeline]
+    .reverse()
+    .find((e) => /vacate date changed/i.test(e.label));
+  if (!timelineHit) return null;
+
+  const parts = timelineHit.label.split(' — ');
+  return parts.length > 1 ? parts.slice(1).join(' — ').trim() : null;
+}
 
 function PhaseNotice({ caseData }: { caseData: TerminationCaseDetail }) {
   const notice = caseData.terminationNotice;
@@ -211,7 +225,7 @@ function PhaseVacatingPreparation({ caseData }: { caseData: TerminationCaseDetai
 }
 
 function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
-  const loadCase = useEndLeasingStore((s) => s.loadCase);
+  const applyCase = useEndLeasingStore((s) => s.applyCase);
   const [vacateDialogOpen, setVacateDialogOpen] = useState(false);
   const [keyReturnDialogOpen, setKeyReturnDialogOpen] = useState(false);
   const expectedVacate =
@@ -220,6 +234,8 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
     caseData.vacate.possessionRegainedDate ??
     caseData.vacate.actualVacateDate ??
     '';
+  const keyReturnDateSet = Boolean(keyReturnDate);
+  const vacateChangeReason = vacateDateChangeReason(caseData);
 
   return (
     <>
@@ -233,6 +249,7 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
               size="sm"
               variant="outline"
               className="h-8 text-xs"
+              disabled={keyReturnDateSet}
               onClick={() => setKeyReturnDialogOpen(true)}
             >
               Set key return date
@@ -262,6 +279,22 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
             doneLabel="Keys returned"
             pendingLabel="Awaiting key return"
           />
+          {vacateChangeReason ? (
+            <div className="col-span-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wider">
+                Vacate date change reason
+              </p>
+              <p className="mt-1 text-[12.5px] leading-snug">{vacateChangeReason}</p>
+              {caseData.vacateDateChangedAt ? (
+                <p className="text-muted-foreground mt-1 text-[11px]">
+                  Updated {formatDateTime(caseData.vacateDateChangedAt)}
+                  {caseData.vacateDateChangedBy
+                    ? ` · ${caseData.vacateDateChangedBy === 'tenant' ? 'Tenant' : 'Agent'}`
+                    : ''}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </StepCard>
 
@@ -270,7 +303,9 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
         onOpenChange={setVacateDialogOpen}
         caseId={caseData.id}
         initialDate={expectedVacate.slice(0, 10)}
-        onSaved={() => void loadCase(caseData.id)}
+        onSaved={(updated) => {
+          if (updated) applyCase(updated);
+        }}
       />
 
       <TerminationKeyReturnDateDialog
@@ -279,7 +314,9 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
         caseId={caseData.id}
         initialDate={(keyReturnDate || expectedVacate).slice(0, 10)}
         keysReturned={caseData.vacate.keysReturned}
-        onSaved={() => void loadCase(caseData.id)}
+        onSaved={(updated) => {
+          if (updated) applyCase(updated);
+        }}
       />
     </>
   );
@@ -287,51 +324,116 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
 
 function PhaseOutgoingInspection({ caseData }: { caseData: TerminationCaseDetail }) {
   const router = useRouter();
+  const applyCase = useEndLeasingStore((s) => s.applyCase);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
   const inspection = caseData.inspection;
+  const inspectionDone = inspection.status === DONE;
+  const tenantAttendance = inspection.tenantAttendance ?? 'pending';
+
+  const attendanceLabel =
+    tenantAttendance === 'yes' ? 'Yes' : tenantAttendance === 'no' ? 'No' : 'Pending';
+
+  const setAttendance = async (attendance: 'yes' | 'no') => {
+    if (attendance === tenantAttendance) return;
+    setAttendanceBusy(true);
+    try {
+      const updated = await terminationApi.setTenantOutgoingAttendance(caseData.id, attendance);
+      applyCase(updated);
+      toast.success(`Tenant attendance set to ${attendance === 'yes' ? 'Yes' : 'No'}`);
+    } finally {
+      setAttendanceBusy(false);
+    }
+  };
 
   return (
-    <StepCard
-      icon={ExternalLink}
-      title="Outgoing inspection"
-      status={deriveStageStatus(caseData, TERMINATION_STAGE.OUTGOING_INSPECTION)}
-      footer={
-        inspection.inspectionId ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => {
-              if (!inspection.inspectionId) return;
-              router.push(
-                inspectionDetail(
-                  inspection.inspectionId,
-                  caseData.propertyId
-                    ? fromLeasingWorkflow(caseData.propertyId)
-                    : undefined,
-                ),
-              );
-            }}
-          >
-            <ExternalLink className="size-3.5" />
-            Open job case
-          </Button>
-        ) : undefined
-      }
-    >
-      <div className="grid grid-cols-2 gap-3">
-        <StepFact label="Inspector" value={inspection.inspectorName ?? 'Pending — task pool'} />
-        <StepFact
-          label="Scheduled"
-          value={inspection.inspectionDate ? formatDateTime(inspection.inspectionDate) : 'Not scheduled'}
-        />
-        <StepFact label="Issues found" value={String(inspection.issuesFound)} />
-        <BoolStatus
-          done={inspection.status === DONE}
-          doneLabel="Inspection complete"
-          pendingLabel="In progress"
-        />
-      </div>
-    </StepCard>
+    <>
+      <StepCard
+        icon={ExternalLink}
+        title="Outgoing inspection"
+        status={deriveStageStatus(caseData, TERMINATION_STAGE.OUTGOING_INSPECTION)}
+        footer={
+          <div className="flex flex-wrap gap-2">
+            {inspection.inspectionId ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => {
+                  if (!inspection.inspectionId) return;
+                  router.push(
+                    inspectionDetail(
+                      inspection.inspectionId,
+                      caseData.propertyId
+                        ? fromLeasingWorkflow(caseData.propertyId)
+                        : undefined,
+                    ),
+                  );
+                }}
+              >
+                <ExternalLink className="size-3.5" />
+                Open job case
+              </Button>
+            ) : null}
+            {!inspectionDone ? (
+              <Button
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setCompleteDialogOpen(true)}
+              >
+                Mark as done
+              </Button>
+            ) : null}
+          </div>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <StepFact label="Inspector" value={inspection.inspectorName ?? 'Pending — task pool'} />
+          <StepFact
+            label="Scheduled"
+            value={inspection.inspectionDate ? formatDateTime(inspection.inspectionDate) : 'Not scheduled'}
+          />
+          <StepFact label="Tenant attendance" value={attendanceLabel} />
+          <StepFact label="Issues found" value={String(inspection.issuesFound)} />
+          {!inspectionDone ? (
+            <div className="col-span-2 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={tenantAttendance === 'yes' ? 'default' : 'outline'}
+                className="h-8 text-xs"
+                disabled={attendanceBusy}
+                onClick={() => void setAttendance('yes')}
+              >
+                Tenant attending: Yes
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={tenantAttendance === 'no' ? 'default' : 'outline'}
+                className="h-8 text-xs"
+                disabled={attendanceBusy}
+                onClick={() => void setAttendance('no')}
+              >
+                Tenant attending: No
+              </Button>
+            </div>
+          ) : null}
+          <BoolStatus
+            done={inspectionDone}
+            doneLabel="Inspection complete"
+            pendingLabel="In progress"
+          />
+        </div>
+      </StepCard>
+
+      <TerminationCompleteInspectionDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+        caseData={caseData}
+        onCompleted={applyCase}
+      />
+    </>
   );
 }
 

@@ -11,6 +11,7 @@ export function PropertyVacateDateField({
   onDateChange,
   onReasonChange,
   idPrefix = 'vacate',
+  requireReason = false,
 }: {
   date: string;
   initialDate: string;
@@ -18,8 +19,11 @@ export function PropertyVacateDateField({
   onDateChange: (value: string) => void;
   onReasonChange: (value: string) => void;
   idPrefix?: string;
+  /** Always show and require a reason when the date changes (e.g. end-leasing change vacate). */
+  requireReason?: boolean;
 }) {
   const dateChanged = dateOnly(date) !== dateOnly(initialDate);
+  const showReason = dateChanged || requireReason;
 
   return (
     <div className="space-y-2 sm:col-span-2">
@@ -32,7 +36,7 @@ export function PropertyVacateDateField({
           onChange={(e) => onDateChange(e.target.value)}
         />
       </div>
-      {dateChanged ? (
+      {showReason ? (
         <div className="space-y-1.5">
           <Label htmlFor={`${idPrefix}-reason`}>Reason for vacate date change</Label>
           <Textarea

@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Mail } from 'lucide-react';
+import Link from 'next/link';
+import { ExternalLink, Mail } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { communicationsThread } from '@/constants/routes';
 
 import {
   WorkflowProgressRail,
@@ -9,6 +13,7 @@ import {
 import {
   TerminationPhasePanel,
 } from '@/components/end-leasing/termination-phase-panels';
+import { EndLeasingReportComparisonPanel } from '@/components/end-leasing/end-leasing-report-comparison-panel';
 import {
   END_LEASING_AGENT_STEP,
   END_LEASING_AGENT_STEP_LABEL,
@@ -86,9 +91,19 @@ function OverviewEmailPanel({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Mail className="text-primary size-4" />
-        <p className="text-sm font-semibold">Tenant end-leasing email</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Mail className="text-primary size-4" />
+          <p className="text-sm font-semibold">Tenant end-leasing email</p>
+        </div>
+        {email.commConversationId ? (
+          <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+            <Link href={communicationsThread(email.commConversationId)}>
+              <ExternalLink className="size-3.5" />
+              View in Message Center
+            </Link>
+          </Button>
+        ) : null}
       </div>
       <div className="rounded-xl border bg-muted/20 p-3 text-xs">
         <dl className="grid gap-2 sm:grid-cols-2">
@@ -145,7 +160,8 @@ export function EndLeasingAgentWorkflowPanel({
   const showLegacyPanel =
     legacyStage != null &&
     stageOrder.includes(legacyStage) &&
-    viewingStepId !== END_LEASING_AGENT_STEP.OVERVIEW;
+    viewingStepId !== END_LEASING_AGENT_STEP.OVERVIEW &&
+    viewingStepId !== END_LEASING_AGENT_STEP.REPORT_COMPARISON;
 
   return (
     <div className="space-y-4">
@@ -185,6 +201,11 @@ export function EndLeasingAgentWorkflowPanel({
           <div className="space-y-4 p-4">
             {viewingStepId === END_LEASING_AGENT_STEP.OVERVIEW && workflow.tenantNoticeEmail ? (
               <OverviewEmailPanel email={workflow.tenantNoticeEmail} />
+            ) : viewingStepId === END_LEASING_AGENT_STEP.REPORT_COMPARISON ? (
+              <>
+                <SubProgressList items={viewingStep?.subProgress ?? []} />
+                <EndLeasingReportComparisonPanel caseData={caseData} />
+              </>
             ) : (
               <SubProgressList items={viewingStep?.subProgress ?? []} />
             )}
