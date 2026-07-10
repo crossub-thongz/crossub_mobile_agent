@@ -11,6 +11,7 @@ import type {
 
 export type PropertyWorkflowTab =
   | 'leasing'
+  | 'rent_review'
   | 'maintenance'
   | 'inspection'
   | 'tribunal';
@@ -58,8 +59,16 @@ function hasActiveLeasingCycle(ctx: PropertyWorkflowContext): boolean {
   );
 }
 
-function hasRentReview(ctx: PropertyWorkflowContext): boolean {
-  return ctx.rentReviews.some((r) => r.propertyId === ctx.propertyId);
+function hasActiveRentReview(ctx: PropertyWorkflowContext): boolean {
+  return ctx.rentReviews.some(
+    (r) =>
+      r.propertyId === ctx.propertyId &&
+      r.workflowState !== 'COMPLETED' &&
+      r.workflowState !== 'CANCELLED' &&
+      r.workflowState !== 'POSTPONED' &&
+      !r.status.toLowerCase().includes('completed') &&
+      !r.status.toLowerCase().includes('cancelled'),
+  );
 }
 
 function hasActiveEndLeasing(ctx: PropertyWorkflowContext): boolean {
@@ -88,13 +97,6 @@ export function tabActionsFor(
           primary: true,
         });
       }
-      if (!hasRentReview(ctx)) {
-        actions.push({
-          id: 'start_rent_review',
-          label: 'Add rent review',
-          description: 'Open a rent review for this property',
-        });
-      }
       if (!hasActiveEndLeasing(ctx)) {
         actions.push({
           id: 'start_end_leasing',
@@ -104,6 +106,16 @@ export function tabActionsFor(
       }
       return actions;
     }
+    case 'rent_review':
+      if (hasActiveRentReview(ctx)) return [];
+      return [
+        {
+          id: 'start_rent_review',
+          label: 'Add rent review',
+          description: 'Open a rent review for this property',
+          primary: true,
+        },
+      ];
     case 'maintenance':
       return [
         {

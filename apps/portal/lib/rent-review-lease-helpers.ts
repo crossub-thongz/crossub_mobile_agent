@@ -1,5 +1,21 @@
 export type FixedTermWeeks = 26 | 52;
 
+export type RentReviewLeaseType = 'fixed' | 'periodic';
+
+export function formatRentReviewTermLabel(
+  leaseType?: RentReviewLeaseType | null,
+  fixedTermWeeks?: number | null,
+): string {
+  if (leaseType === 'periodic') return 'Periodic';
+  if (leaseType === 'fixed') {
+    if (fixedTermWeeks != null && fixedTermWeeks > 0) {
+      return `Fixed term · ${fixedTermWeeks} wks`;
+    }
+    return 'Fixed term';
+  }
+  return '—';
+}
+
 export function isoDateAddDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr.slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return dateStr;

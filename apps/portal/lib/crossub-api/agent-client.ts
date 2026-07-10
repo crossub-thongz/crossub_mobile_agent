@@ -7,7 +7,15 @@ export type AgentProperty = components['schemas']['AgentPropertyResponseDto'];
 
 export type AgentInspection = components['schemas']['AgentInspectionDto'];
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'];
-export type AgentRentReview = components['schemas']['AgentRentReviewDto'];
+export type AgentRentReview = components['schemas']['AgentRentReviewDto'] & {
+  leaseStart?: string | null;
+  leaseEnd?: string | null;
+  agreedRent?: number | null;
+  dateStarted?: string | null;
+  createdAt?: string | null;
+  leaseType?: 'fixed' | 'periodic' | null;
+  fixedTermWeeks?: number | null;
+};
 export type AgentVacating = components['schemas']['AgentVacatingDto'];
 export type AgentTenantSelection =
   components['schemas']['AgentTenantSelectionDto'];

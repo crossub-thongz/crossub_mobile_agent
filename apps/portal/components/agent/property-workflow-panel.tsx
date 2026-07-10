@@ -17,7 +17,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   createAgentLeasingCycle,
@@ -27,7 +26,6 @@ import {
 } from '@/lib/crossub-api/agent-workflow-client';
 import { inspectionsApi } from '@/lib/inspections-api';
 import {
-  buildAgentContactPrefill,
   buildIngoingInspectionPrefill,
   buildLeasingCyclePrefill,
   buildMaintenancePrefill,
@@ -65,6 +63,23 @@ import { cn } from '@/lib/utils';
 import { TERMINATION_NOTICE_GROUND, TERMINATION_NOTICE_GROUND_OPTIONS, type TerminationNoticeGround } from '@/constants/end-leasing';
 import { vacatingDetail, rentReviewDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { RENT_PERIOD_OPTIONS } from '@/lib/rent-calculations';
+import type { RentPeriod } from '@/lib/store';
+import { formatDate } from '@/lib/utils';
+
+type RentReviewCreatePath = 'crossub_managed' | 'landlord_agreed';
+type RentReviewNegotiationChoice = 'negotiable' | 'not_negotiable';
+type CrossubLeaseTermChoice = '26' | '52' | 'custom';
+
+function resolveCrossubLeaseTermWeeks(choice: CrossubLeaseTermChoice, customWeeks: string): number {
+  if (choice === '26') return 26;
+  if (choice === '52') return 52;
+  const weeks = Number(customWeeks);
+  if (!Number.isInteger(weeks) || weeks < 1 || weeks > 520) {
+    throw new Error('Enter a valid lease term between 1 and 520 weeks');
+  }
+  return weeks;
+}
 export function PropertyWorkflowPanel({
   tab,
   property,
@@ -99,10 +114,6 @@ export function PropertyWorkflowPanel({
   onCreated?: () => void;
 }) {
   const { primaryAgency } = useAgentData();
-  const { user } = useAuth();
-  const userName = user
-    ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-    : '';
 
   const ctx = useMemo(
     () =>
@@ -198,7 +209,6 @@ export function PropertyWorkflowPanel({
         property={property}
         propertyId={propertyId}
         agency={primaryAgency}
-        userName={userName}
         currentLease={currentLease}
         leasingCycle={ctx.leasingCycles[0]}
         tenantSelections={tenantSelections}
@@ -240,7 +250,6 @@ export function PropertyWorkflowCreateDialog({
   property,
   propertyId,
   agency,
-  userName,
   currentLease,
   leasingCycle,
   tenantSelections,
@@ -252,7 +261,6 @@ export function PropertyWorkflowCreateDialog({
   property: Property;
   propertyId: string;
   agency: ReturnType<typeof useAgentData>['primaryAgency'];
-  userName: string;
   currentLease?: LeasingRecord;
   leasingCycle?: LeasingCycle;
   tenantSelections?: TenantSelectionCase[];
@@ -260,7 +268,6 @@ export function PropertyWorkflowCreateDialog({
 }) {
   const router = useRouter();
   const { refresh } = useAgentData();
-  const agent = buildAgentContactPrefill(agency, userName);
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
 
@@ -278,6 +285,15 @@ export function PropertyWorkflowCreateDialog({
   const [leaseTermAnchor, setLeaseTermAnchor] = useState<string | undefined>();
   const [preferredLeaseStartHint, setPreferredLeaseStartHint] = useState<string | null>(null);
   const [tenantNameHint, setTenantNameHint] = useState<string | null>(null);
+  const [rentReviewPath, setRentReviewPath] = useState<RentReviewCreatePath>('crossub_managed');
+  const [crossubLeaseTermChoice, setCrossubLeaseTermChoice] =
+    useState<CrossubLeaseTermChoice>('52');
+  const [crossubCustomTermWeeks, setCrossubCustomTermWeeks] = useState('');
+  const [newRentValue, setNewRentValue] = useState('');
+  const [newRentPeriod, setNewRentPeriod] = useState<RentPeriod>('weekly');
+  const [rentNegotiationChoice, setRentNegotiationChoice] =
+    useState<RentReviewNegotiationChoice | null>(null);
+  const [rentPaidUntil, setRentPaidUntil] = useState('');
 
   const [terminationType, setTerminationType] = useState<'tenant_initiated' | 'termination'>(
     'tenant_initiated',
@@ -343,6 +359,13 @@ export function PropertyWorkflowCreateDialog({
     setPreferredLeaseStartHint(instantRentReview.preferredLeaseStartHint ?? null);
     setLeaseTermAnchor(instantRentReview.leaseTermAnchor);
     setCurrentWeeklyRent(instantRentReview.currentWeeklyRent);
+    setRentReviewPath('crossub_managed');
+    setCrossubLeaseTermChoice('52');
+    setCrossubCustomTermWeeks('');
+    setNewRentValue('');
+    setNewRentPeriod('weekly');
+    setRentNegotiationChoice(null);
+    setRentPaidUntil('');
 
     const instantTermination = buildTerminationPrefill(property, currentLease, { leasingCycle });
     setBondHeld(instantTermination.bondHeld);
@@ -400,6 +423,7 @@ export function PropertyWorkflowCreateDialog({
           setPreferredLeaseStartHint(rr.preferredLeaseStartHint ?? null);
           setLeaseTermAnchor(rr.leaseTermAnchor);
           setCurrentWeeklyRent(rr.currentWeeklyRent);
+          setRentPaidUntil(rr.rentPaidUntil ?? '');
         } else if (actionId === 'start_end_leasing') {
           const term = await fetchTerminationPrefill(property, currentLease, { leasingCycle });
           if (!active) return;
@@ -487,10 +511,6 @@ export function PropertyWorkflowCreateDialog({
           );
         }
         await createAgentLeasingCycle(propertyId, {
-          agentName: agent.agentName || undefined,
-          agentCompany: agent.agentCompany || undefined,
-          agentEmail: agent.agentEmail || undefined,
-          agentPhone: agent.agentPhone || undefined,
           keyCustody,
           rentPerWeek: rent,
           availableFrom,
@@ -501,19 +521,50 @@ export function PropertyWorkflowCreateDialog({
       } else if (actionId === 'start_rent_review') {
         const rent = Number(currentWeeklyRent);
         if (!rent || rent <= 0) throw new Error('Current weekly rent is required');
-        if (!tenantName.trim()) throw new Error('Tenant name is required');
         if (!initialLeaseStartDate) throw new Error('Preferred lease start date is required');
+
         const start = new Date(initialLeaseStartDate);
         const reviewDue = new Date(start);
         reviewDue.setFullYear(reviewDue.getFullYear() + 1);
-        const result = await createAgentRentReview(propertyId, {
+        const reviewPayload = {
           currentWeeklyRent: rent,
-          tenantName: tenantName.trim(),
+          tenantName: tenantName.trim() || undefined,
           rentReviewDate: reviewDue.toISOString().slice(0, 10),
+          initialLeaseStartDate,
+        };
+
+        if (rentReviewPath === 'crossub_managed') {
+          const fixedTermWeeks = resolveCrossubLeaseTermWeeks(
+            crossubLeaseTermChoice,
+            crossubCustomTermWeeks,
+          );
+          const result = await createAgentRentReview(propertyId, {
+            ...reviewPayload,
+            leaseType: 'fixed',
+            fixedTermWeeks,
+          });
+          toast.success('Rent review submitted to CROSSUB');
+          await refresh();
+          onSuccess();
+          return;
+        }
+
+        if (!tenantName.trim()) throw new Error('Tenant name is required');
+        const proposedRent = Number(newRentValue);
+        if (!proposedRent || proposedRent <= 0) throw new Error('New rent value is required');
+        if (!rentNegotiationChoice) {
+          throw new Error('Select whether the new rent is negotiable');
+        }
+
+        const result = await createAgentRentReview(propertyId, {
+          ...reviewPayload,
+          tenantName: tenantName.trim(),
           leaseType,
           fixedTermWeeks: leaseType === 'fixed' ? fixedTermWeeks : undefined,
-          initialLeaseStartDate,
-          managingAgentLabel: agent.managingAgentLabel || undefined,
+          proposedRent,
+          rentPeriod: newRentPeriod,
+          rentNegotiable: rentNegotiationChoice === 'negotiable',
+          rentPaidUntil: rentPaidUntil || undefined,
         });
         toast.success('Rent review created');
         await refresh();
@@ -600,10 +651,6 @@ export function PropertyWorkflowCreateDialog({
 
         {actionId === 'start_leasing' ? (
           <div className="space-y-3">
-            <ReadOnlyField label="Managing agent" value={agent.agentName} />
-            <ReadOnlyField label="Agent email" value={agent.agentEmail} />
-            <ReadOnlyField label="Agent phone" value={agent.agentPhone} />
-            <ReadOnlyField label="Agency" value={agent.agentCompany} />
             <Field label="Rent / week (AUD) *">
               <Input
                 type="number"
@@ -646,85 +693,235 @@ export function PropertyWorkflowCreateDialog({
         {actionId === 'start_rent_review' ? (
           <div className="space-y-3">
             <ReadOnlyField label="Property" value={rrPrefill.propertyAddress} />
-            <Field label="Tenant name *">
-              <Input
-                value={tenantName}
-                onChange={(e) => {
-                  setTenantName(e.target.value);
-                  setTenantNameHint(null);
-                }}
-                disabled={prefillLoading}
-              />
-              {tenantNameHint && !prefillLoading ? (
-                <p className="text-muted-foreground text-[11px]">Auto-filled · {tenantNameHint}</p>
-              ) : null}
-            </Field>
-            <Field label="Lease type">
-              <select
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                value={leaseType}
-                onChange={(e) => setLeaseType(e.target.value as 'fixed' | 'periodic')}
-              >
-                <option value="fixed">Fixed term</option>
-                <option value="periodic">Periodic (no contract)</option>
-              </select>
-            </Field>
-            {leaseType === 'fixed' ? (
-              <Field label="Fixed term (weeks)">
-                <select
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                  value={fixedTermWeeks}
-                  onChange={(e) =>
-                    handleFixedTermWeeksChange(Number(e.target.value) as 26 | 52)
-                  }
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">How is this review being handled?</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={rentReviewPath === 'crossub_managed' ? 'default' : 'outline'}
+                  className={cn(
+                    'h-auto min-h-9 whitespace-normal px-2 py-2 text-left text-xs leading-snug',
+                    rentReviewPath === 'crossub_managed' && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => setRentReviewPath('crossub_managed')}
                 >
-                  <option value={26}>26 weeks</option>
-                  <option value={52}>52 weeks</option>
-                </select>
+                  Request CROSSUB review
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={rentReviewPath === 'landlord_agreed' ? 'default' : 'outline'}
+                  className={cn(
+                    'h-auto min-h-9 whitespace-normal px-2 py-2 text-left text-xs leading-snug',
+                    rentReviewPath === 'landlord_agreed' && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => setRentReviewPath('landlord_agreed')}
+                >
+                  Landlord pre-agreed
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-[11px]">
+                {rentReviewPath === 'crossub_managed'
+                  ? 'CROSSUB runs the full rent review in the staff portal. You only need to specify the lease term.'
+                  : 'Record terms you have already agreed with the landlord.'}
+              </p>
+            </div>
+
+            {rentReviewPath === 'crossub_managed' ? (
+              <Field label="Lease term *">
+                <div className="grid grid-cols-3 gap-2">
+                  {(['26', '52'] as const).map((weeks) => (
+                    <Button
+                      key={weeks}
+                      type="button"
+                      size="sm"
+                      variant={crossubLeaseTermChoice === weeks ? 'default' : 'outline'}
+                      className={cn(
+                        crossubLeaseTermChoice === weeks &&
+                          'bg-teal-600 text-white hover:bg-teal-700',
+                      )}
+                      onClick={() => setCrossubLeaseTermChoice(weeks)}
+                    >
+                      {weeks} weeks
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={crossubLeaseTermChoice === 'custom' ? 'default' : 'outline'}
+                    className={cn(
+                      crossubLeaseTermChoice === 'custom' &&
+                        'bg-teal-600 text-white hover:bg-teal-700',
+                    )}
+                    onClick={() => setCrossubLeaseTermChoice('custom')}
+                  >
+                    Custom
+                  </Button>
+                </div>
+                {crossubLeaseTermChoice === 'custom' ? (
+                  <Input
+                    type="number"
+                    min={1}
+                    max={520}
+                    className="mt-2"
+                    placeholder="Enter number of weeks"
+                    value={crossubCustomTermWeeks}
+                    onChange={(e) => setCrossubCustomTermWeeks(e.target.value)}
+                  />
+                ) : null}
+                {prefillLoading ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    Loading tenancy details from the property record…
+                  </p>
+                ) : null}
               </Field>
-            ) : null}
-            <Field label="Preferred lease start *">
-              <div className="relative">
-                <Input
-                  type="date"
-                  value={initialLeaseStartDate}
-                  onChange={(e) => {
-                    setInitialLeaseStartDate(e.target.value);
-                    setPreferredLeaseStartHint(null);
-                  }}
-                  disabled={prefillLoading}
-                />
-                {prefillLoading ? (
-                  <Loader2 className="text-muted-foreground absolute top-2.5 right-3 size-4 animate-spin" />
+            ) : (
+              <>
+                <Field label="Tenant name *">
+                  <Input
+                    value={tenantName}
+                    onChange={(e) => {
+                      setTenantName(e.target.value);
+                      setTenantNameHint(null);
+                    }}
+                    disabled={prefillLoading}
+                  />
+                  {tenantNameHint && !prefillLoading ? (
+                    <p className="text-muted-foreground text-[11px]">
+                      Auto-filled · {tenantNameHint}
+                    </p>
+                  ) : null}
+                </Field>
+                <Field label="Lease type">
+                  <select
+                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                    value={leaseType}
+                    onChange={(e) => setLeaseType(e.target.value as 'fixed' | 'periodic')}
+                  >
+                    <option value="fixed">Fixed term</option>
+                    <option value="periodic">Periodic (no contract)</option>
+                  </select>
+                </Field>
+                {leaseType === 'fixed' ? (
+                  <Field label="Fixed term (weeks)">
+                    <select
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      value={fixedTermWeeks}
+                      onChange={(e) =>
+                        handleFixedTermWeeksChange(Number(e.target.value) as 26 | 52)
+                      }
+                    >
+                      <option value={26}>26 weeks</option>
+                      <option value={52}>52 weeks</option>
+                    </select>
+                  </Field>
                 ) : null}
-              </div>
-              {preferredLeaseStartHint && !prefillLoading ? (
-                <p className="text-muted-foreground text-[11px]">
-                  Auto-filled · {preferredLeaseStartHint}
-                </p>
-              ) : null}
-            </Field>
-            <Field label="Current weekly rent *">
-              <div className="relative">
-                <Input
-                  type="number"
-                  min={1}
-                  value={currentWeeklyRent}
-                  onChange={(e) => setCurrentWeeklyRent(e.target.value)}
-                  disabled={prefillLoading}
-                  placeholder={prefillLoading ? 'Loading from tenancy…' : undefined}
+                <Field label="Preferred lease start *">
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      value={initialLeaseStartDate}
+                      onChange={(e) => {
+                        setInitialLeaseStartDate(e.target.value);
+                        setPreferredLeaseStartHint(null);
+                      }}
+                      disabled={prefillLoading}
+                    />
+                    {prefillLoading ? (
+                      <Loader2 className="text-muted-foreground absolute top-2.5 right-3 size-4 animate-spin" />
+                    ) : null}
+                  </div>
+                  {preferredLeaseStartHint && !prefillLoading ? (
+                    <p className="text-muted-foreground text-[11px]">
+                      Auto-filled · {preferredLeaseStartHint}
+                    </p>
+                  ) : null}
+                </Field>
+                <Field label="Current weekly rent">
+                  <Input
+                    type="number"
+                    readOnly
+                    value={currentWeeklyRent}
+                    className="bg-muted/50"
+                    disabled={prefillLoading}
+                  />
+                  {currentWeeklyRent && !prefillLoading ? (
+                    <p className="text-muted-foreground text-[11px]">
+                      From active tenancy or leasing cycle.
+                    </p>
+                  ) : null}
+                </Field>
+                <Field label="New rent value *">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={newRentValue}
+                    onChange={(e) => setNewRentValue(e.target.value)}
+                    placeholder="Enter agreed rent amount"
+                  />
+                </Field>
+                <Field label="Period *">
+                  <select
+                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                    value={newRentPeriod}
+                    onChange={(e) => setNewRentPeriod(e.target.value as RentPeriod)}
+                  >
+                    {RENT_PERIOD_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Rent negotiations *</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={rentNegotiationChoice === 'negotiable' ? 'default' : 'outline'}
+                      className={cn(
+                        'h-auto min-h-9 whitespace-normal px-2 py-2 text-xs leading-snug',
+                        rentNegotiationChoice === 'negotiable' &&
+                          'bg-teal-600 text-white hover:bg-teal-700',
+                      )}
+                      onClick={() => setRentNegotiationChoice('negotiable')}
+                    >
+                      Negotiable
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={rentNegotiationChoice === 'not_negotiable' ? 'default' : 'outline'}
+                      className={cn(
+                        'h-auto min-h-9 whitespace-normal px-2 py-2 text-xs leading-snug',
+                        rentNegotiationChoice === 'not_negotiable' &&
+                          'bg-teal-600 text-white hover:bg-teal-700',
+                      )}
+                      onClick={() => setRentNegotiationChoice('not_negotiable')}
+                    >
+                      Not negotiable
+                    </Button>
+                  </div>
+                  {rentNegotiationChoice === 'negotiable' ? (
+                    <p className="text-amber-700 text-[11px] font-medium dark:text-amber-400">
+                      Discuss the proposed rent with the tenant before it is finalised.
+                    </p>
+                  ) : null}
+                </div>
+                <ReadOnlyField
+                  label="Rent paid until"
+                  value={rentPaidUntil ? formatDate(rentPaidUntil) : '—'}
                 />
-                {prefillLoading ? (
-                  <Loader2 className="text-muted-foreground absolute top-2.5 right-3 size-4 animate-spin" />
+                {prefillLoading && !rentPaidUntil ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    Loading rent paid-to date from the ledger…
+                  </p>
                 ) : null}
-              </div>
-              {currentWeeklyRent && !prefillLoading ? (
-                <p className="text-muted-foreground text-[11px]">
-                  Auto-filled from active tenancy or leasing cycle.
-                </p>
-              ) : null}
-            </Field>
-            <ReadOnlyField label="Managing agent" value={agent.managingAgentLabel} />
+              </>
+            )}
           </div>
         ) : null}
 
@@ -901,8 +1098,18 @@ export function PropertyWorkflowCreateDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={submitting} onClick={() => void handleSubmit()}>
-            {submitting ? <Loader2 className="size-4 animate-spin" /> : 'Create'}
+          <Button
+            type="button"
+            disabled={submitting || (actionId === 'start_rent_review' && prefillLoading)}
+            onClick={() => void handleSubmit()}
+          >
+            {submitting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : actionId === 'start_rent_review' && rentReviewPath === 'crossub_managed' ? (
+              'Submit to CROSSUB'
+            ) : (
+              'Create'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

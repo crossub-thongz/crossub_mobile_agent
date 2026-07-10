@@ -11,6 +11,8 @@ import {
   type FixedTermWeeks,
 } from '@/lib/rent-review-lease-helpers';
 import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
+import { deriveRentPaidTo } from '@/lib/property-overview';
+import { propertyRegistryApi } from '@/lib/property-registry-api';
 
 import type { Agency } from '@/lib/types';
 import type { Property } from '@/lib/types';
@@ -280,6 +282,8 @@ export interface RentReviewPrefill {
   currentWeeklyRent: string;
   managingAgentLabel: string;
   rentReviewDate: string;
+  /** Latest rent paid-to date from the property ledger (YYYY-MM-DD). */
+  rentPaidUntil?: string;
 }
 
 export function buildRentReviewPrefill(
@@ -363,11 +367,26 @@ export async function fetchRentReviewPrefill(
       /* portfolio snapshot may still be enough */
     }
   }
-  return buildRentReviewPrefill(property, agency, currentLease, {
+
+  let rentPaidUntil: string | undefined;
+  try {
+    const portal = await propertyRegistryApi.getPortal(property.id);
+    const paidTo = deriveRentPaidTo(portal?.accounting);
+    if (paidTo) rentPaidUntil = paidTo.slice(0, 10);
+  } catch {
+    /* ledger optional */
+  }
+
+  const prefill = buildRentReviewPrefill(property, agency, currentLease, {
     cycleView,
     tenantSelections: options?.tenantSelections,
     leasingCycle: options?.leasingCycle,
   });
+
+  return {
+    ...prefill,
+    rentPaidUntil,
+  };
 }
 
 export function recalcRentReviewLeaseStart(

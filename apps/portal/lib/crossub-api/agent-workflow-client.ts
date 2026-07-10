@@ -27,6 +27,10 @@ export type CreateAgentRentReviewInput = {
   initialLeaseStartDate?: string;
   tenantRef?: string;
   managingAgentLabel?: string;
+  proposedRent?: number;
+  rentPeriod?: 'weekly' | 'fortnightly' | 'monthly';
+  rentNegotiable?: boolean;
+  rentPaidUntil?: string;
 };
 
 export type CreateAgentTerminationCaseInput = {

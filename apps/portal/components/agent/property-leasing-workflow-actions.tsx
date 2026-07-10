@@ -6,13 +6,13 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
-import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   buildPropertyWorkflowContext,
   tabActionsFor,
   type PropertyWorkflowAction,
   type PropertyWorkflowActionId,
+  type PropertyWorkflowTab,
 } from '@/lib/property-workflow-actions';
 import type {
   Inspection,
@@ -28,13 +28,13 @@ import type {
 import { cn } from '@/lib/utils';
 
 /**
- * Leasing workflow action strip — mirrors crossub_web `PropertyPortalTabActions`.
- * Shown whenever a property has leasing activity so agents can still add rent review
- * or end leasing while a cycle is in progress.
+ * Property workflow action strip — mirrors crossub_web `PropertyPortalTabActions`.
+ * Used on Leasing (new cycle / end leasing) and Rent Review (add rent review) tabs.
  */
 export function PropertyLeasingWorkflowActions({
   property,
   propertyId,
+  tab = 'leasing',
   leasingCycles,
   rentReviews,
   vacatingCases,
@@ -44,9 +44,11 @@ export function PropertyLeasingWorkflowActions({
   tenantSelections,
   currentLease,
   onCreated,
+  inline = false,
 }: {
   property: Property;
   propertyId: string;
+  tab?: PropertyWorkflowTab;
   leasingCycles: LeasingCycle[];
   rentReviews: RentReviewCase[];
   vacatingCases: VacatingCase[];
@@ -56,12 +58,10 @@ export function PropertyLeasingWorkflowActions({
   tenantSelections?: TenantSelectionCase[];
   currentLease?: LeasingRecord;
   onCreated?: () => void;
+  /** When true, only render action buttons + dialog (no Actions card wrapper). */
+  inline?: boolean;
 }) {
   const { primaryAgency } = useAgentData();
-  const { user } = useAuth();
-  const userName = user
-    ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-    : '';
 
   const ctx = useMemo(
     () =>
@@ -87,21 +87,20 @@ export function PropertyLeasingWorkflowActions({
     ],
   );
 
-  const actions = tabActionsFor('leasing', ctx);
+  const actions = tabActionsFor(tab, ctx);
   const [activeAction, setActiveAction] = useState<PropertyWorkflowActionId | null>(null);
 
   if (actions.length === 0) return null;
 
+  const description =
+    tab === 'rent_review'
+      ? 'Open a rent review case for this property.'
+      : 'New leasing cycles and end leasing cases for this property.';
+
   return (
     <>
-      <div className="rounded-xl border border-teal-500/25 bg-gradient-to-br from-teal-500/[0.06] via-card to-card p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
-          Actions
-        </p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          New leasing cycles, rent reviews, and end leasing cases for this property.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+      {inline ? (
+        <div className="flex flex-wrap gap-2">
           {actions.map((action) => (
             <WorkflowActionButton
               key={action.id}
@@ -110,7 +109,23 @@ export function PropertyLeasingWorkflowActions({
             />
           ))}
         </div>
-      </div>
+      ) : (
+        <div className="rounded-xl border border-teal-500/25 bg-gradient-to-br from-teal-500/[0.06] via-card to-card p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+            Actions
+          </p>
+          <p className="text-muted-foreground mt-1 text-xs">{description}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {actions.map((action) => (
+              <WorkflowActionButton
+                key={action.id}
+                action={action}
+                onClick={() => setActiveAction(action.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <PropertyWorkflowCreateDialog
         actionId={activeAction}
@@ -121,7 +136,6 @@ export function PropertyLeasingWorkflowActions({
         property={property}
         propertyId={propertyId}
         agency={primaryAgency}
-        userName={userName}
         currentLease={currentLease}
         leasingCycle={ctx.leasingCycles[0]}
         tenantSelections={tenantSelections}

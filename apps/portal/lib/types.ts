@@ -414,7 +414,13 @@ export interface RentReviewCase {
   leaseEnd: string;
   currentRent: number;
   suggestedRent: number;
+  agreedRent?: number;
   reviewDue: string;
+  completedDate?: string;
+  dateStarted?: string;
+  createdAt?: string;
+  leaseType?: 'fixed' | 'periodic';
+  fixedTermWeeks?: number;
   status: string;
   workflowState?: RentReviewWorkflowState;
   tenantResponse?: 'pending' | 'accepted' | 'rejected' | 'counter' | 'vacating';

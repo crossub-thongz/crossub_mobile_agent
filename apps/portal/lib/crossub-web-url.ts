@@ -8,3 +8,8 @@ export function crossubWebBaseUrl(): string {
 export function crossubWebPropertyUrl(propertyId: string): string {
   return `${crossubWebBaseUrl()}/properties?propertyId=${encodeURIComponent(propertyId)}`;
 }
+
+/** Open a rent review case in the CROSSUB staff web app. */
+export function crossubWebRentReviewUrl(reviewId: string): string {
+  return `${crossubWebBaseUrl()}/rent-review?reviewId=${encodeURIComponent(reviewId)}`;
+}

@@ -52,8 +52,15 @@ export function isRentReviewDecided(
   decision?: RentReviewDecision,
 ): boolean {
   if (decision != null) return true;
-  const status = review.status.toLowerCase();
-  return status.includes('confirm') || status.includes('complete');
+  if (review.workflowState) {
+    return (
+      review.workflowState === 'COMPLETED' ||
+      review.workflowState === 'CANCELLED' ||
+      review.workflowState === 'POSTPONED'
+    );
+  }
+  const status = review.status.toLowerCase().trim();
+  return status === 'completed' || status.includes('cancelled');
 }
 
 export function isRentReviewPendingApproval(

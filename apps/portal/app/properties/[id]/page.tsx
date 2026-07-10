@@ -292,10 +292,20 @@ export default function PropertyDetailPage() {
 
         {tab === 'Rent Review' && (
           <PropertyRentReviewTab
+            property={property}
             propertyId={id}
             rentReviews={tenancyRentReviews}
             rentReviewDecisions={decisions}
+            leasingRecords={leasing}
+            leasingCycles={propertyLeasingCycles}
+            vacatingCases={propertyVacatingCases}
+            maintenance={tasks.maintenance}
+            inspections={tasks.inspections}
+            tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
+            tenantSelections={propertyLeasingCases}
+            currentLease={currentLease}
             onViewRentReview={setSelectedRentReviewId}
+            onWorkflowCreated={() => void refresh()}
           />
         )}
 
