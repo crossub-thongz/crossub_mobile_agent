@@ -21,8 +21,18 @@ import { inspectionReferenceLabel, workflowCaseReferenceLabel } from '@/lib/work
 
 export type PropertyJobPhase = 'in_progress' | 'completed';
 
+export type PropertyJobKind =
+  | 'maintenance'
+  | 'inspection'
+  | 'rent_review'
+  | 'leasing'
+  | 'end_leasing'
+  | 'tribunal'
+  | 'accounting';
+
 export interface PropertyJobRow {
   id: string;
+  kind: PropertyJobKind;
   jobType: string;
   name: string;
   description: string;
@@ -71,6 +81,7 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
     const created = request.timeline[0]?.at;
     return {
       id: request.id,
+      kind: 'maintenance',
       jobType: 'Maintenance',
       name: request.trackingNumber || workflowCaseReferenceLabel(request.id, 'maintenance'),
       description: [
@@ -92,6 +103,7 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
     const progress = inspectionWorkflowProgress(inspection);
     return {
       id: inspection.id,
+      kind: 'inspection',
       jobType: INSPECTION_JOB_TYPE[inspection.type],
       name:
         inspection.trackingNumber || inspectionReferenceLabel(inspection.id, inspection.type),
@@ -123,6 +135,7 @@ export function leasingWorkflowJobRows(cases: PropertyLeasingWorkflowCase[]): Pr
       item.status?.toLowerCase().includes('cancelled');
     return {
       id: item.id,
+      kind: item.category,
       jobType: jobTypeByCategory[item.category],
       name: item.label,
       description: [item.detail, item.status].filter(Boolean).join(' · ') || '—',
@@ -142,6 +155,7 @@ export function rentReviewJobRows(
     const decision = decisions[review.id];
     return {
       id: review.id,
+      kind: 'rent_review',
       jobType: 'Rent review',
       name: workflowCaseReferenceLabel(review.id, 'rent_review'),
       description: [
@@ -166,6 +180,7 @@ export function tribunalJobRows(cases: TribunalCase[]): PropertyJobRow[] {
     const progress = tribunalWorkflowProgress(item);
     return {
       id: item.id,
+      kind: 'tribunal',
       jobType: 'Tribunal',
       name: item.caseNumber ?? workflowCaseReferenceLabel(item.id, 'tribunal'),
       description: [item.tenantName, item.matter].filter(Boolean).join(' · ') || '—',
@@ -182,6 +197,7 @@ export function vacatingJobRows(cases: VacatingCase[]): PropertyJobRow[] {
     const terminal = item.apiStatus?.toLowerCase().includes('completed');
     return {
       id: item.id,
+      kind: 'end_leasing',
       jobType: 'End leasing',
       name: workflowCaseReferenceLabel(item.id, 'end_leasing'),
       description: `${item.reason} · ${item.checklistProgress}% checklist`,
@@ -197,6 +213,7 @@ export function accountingJobRows(accounting?: PropertyAccounting | null): Prope
   return [
     {
       id: `arrears-${accounting.propertyId}`,
+      kind: 'accounting',
       jobType: 'Accounting',
       name: 'Rent arrears',
       description: `${accounting.tenantName} · ${accounting.daysInArrears} days outstanding`,

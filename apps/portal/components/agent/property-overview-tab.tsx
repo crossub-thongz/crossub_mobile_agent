@@ -11,12 +11,13 @@ import {
   type DocumentPreviewItem,
 } from '@/components/agent/property-document-preview-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { PropertyOverviewJobDialog } from '@/components/agent/property-overview-job-dialog';
 import { PropertyLandlordOverviewEditDialog } from '@/components/agent/property-landlord-overview-edit-dialog';
 import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-edit-dialog';
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { isViewableDocumentUrl } from '@/lib/document-preview';
-import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
+import { buildPropertyOverviewJobRows, type PropertyJobRow } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import {
@@ -134,6 +135,7 @@ export function PropertyOverviewTab({
   accounting,
   onRefresh,
   onViewBondLodgement,
+  onViewRentReview,
 }: {
   property: Property;
   propertyId: string;
@@ -152,6 +154,7 @@ export function PropertyOverviewTab({
   accounting?: import('@/lib/types').PropertyAccounting | null;
   onRefresh?: () => void;
   onViewBondLodgement?: () => void;
+  onViewRentReview?: (reviewId: string) => void;
 }) {
   const { apiConnected } = useAgentData();
   const activeCycle = leasingCycles?.[0];
@@ -167,6 +170,7 @@ export function PropertyOverviewTab({
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [bondDialogOpen, setBondDialogOpen] = useState(false);
   const [docPreview, setDocPreview] = useState<DocumentPreviewItem | null>(null);
+  const [selectedJob, setSelectedJob] = useState<PropertyJobRow | null>(null);
 
   const fullAddress = formatPropertyFullAddress(property);
 
@@ -346,41 +350,63 @@ export function PropertyOverviewTab({
     });
   };
 
-  const inProgressJobs = useMemo(() => {
-    const leasingCases = buildPropertyLeasingWorkflowCases({
+  const leasingWorkflowCases = useMemo(
+    () =>
+      buildPropertyLeasingWorkflowCases({
+        propertyId,
+        leasingCycles: leasingCycles ?? [],
+        tenantSelections: tenantSelections ?? [],
+        vacatingCases,
+        rentReviews: tenancyRentReviews,
+        rentReviewDecisions,
+        currentLease,
+        isVacant,
+      }),
+    [
       propertyId,
-      leasingCycles: leasingCycles ?? [],
-      tenantSelections: tenantSelections ?? [],
+      leasingCycles,
+      tenantSelections,
       vacatingCases,
-      rentReviews: tenancyRentReviews,
+      tenancyRentReviews,
       rentReviewDecisions,
       currentLease,
       isVacant,
-    });
-    return buildPropertyOverviewJobRows({
+    ],
+  );
+
+  const leasingOnlyCases = useMemo(
+    () => leasingWorkflowCases.filter((item) => item.category === 'leasing'),
+    [leasingWorkflowCases],
+  );
+
+  const inProgressJobs = useMemo(
+    () =>
+      buildPropertyOverviewJobRows({
+        maintenance,
+        inspections,
+        rentReviews: tenancyRentReviews,
+        rentReviewDecisions,
+        leasingCases: leasingWorkflowCases,
+        tribunalCases,
+        vacatingCases,
+        accounting,
+      }),
+    [
       maintenance,
       inspections,
-      rentReviews: tenancyRentReviews,
+      tenancyRentReviews,
       rentReviewDecisions,
-      leasingCases,
+      leasingWorkflowCases,
       tribunalCases,
       vacatingCases,
       accounting,
-    });
-  }, [
-    propertyId,
-    leasingCycles,
-    tenantSelections,
-    vacatingCases,
-    tribunalCases,
-    accounting,
-    maintenance,
-    inspections,
-    tenancyRentReviews,
-    rentReviewDecisions,
-    currentLease,
-    isVacant,
-  ]);
+    ],
+  );
+
+  const handleJobClick = (id: string) => {
+    const job = inProgressJobs.find((row) => row.id === id) ?? null;
+    setSelectedJob(job);
+  };
 
   return (
     <div className="space-y-3">
@@ -502,9 +528,14 @@ export function PropertyOverviewTab({
       </OverviewSection>
 
       <OverviewSection title="Jobs in progress">
+        <p className="text-muted-foreground mb-2 text-[11px]">
+          Click a job to open the workflow.
+        </p>
         <PropertyJobCasesTable
           rows={inProgressJobs}
           showViewToggle={false}
+          selectedId={selectedJob?.id}
+          onRowClick={handleJobClick}
           emptyTitle="No jobs in progress"
           emptyDescription="Active maintenance, inspections, leasing, and other cases appear here."
         />
@@ -535,6 +566,27 @@ export function PropertyOverviewTab({
         initialAmount={displayBond}
         initialReference={bondReferenceRaw}
         onSaved={handleSaved}
+      />
+
+      <PropertyOverviewJobDialog
+        job={selectedJob}
+        onClose={() => setSelectedJob(null)}
+        property={property}
+        propertyId={propertyId}
+        maintenance={maintenance}
+        inspections={inspections}
+        rentReviews={tenancyRentReviews}
+        rentReviewDecisions={rentReviewDecisions}
+        leasingCases={leasingOnlyCases}
+        vacatingCases={vacatingCases}
+        tribunalCases={tribunalCases}
+        accounting={accounting}
+        tenantSelections={tenantSelections}
+        currentLease={currentLease}
+        onViewRentReview={(reviewId) => {
+          setSelectedJob(null);
+          onViewRentReview?.(reviewId);
+        }}
       />
 
       <PropertyDocumentPreviewDialog

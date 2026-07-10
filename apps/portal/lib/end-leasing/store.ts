@@ -19,6 +19,7 @@ interface EndLeasingStoreState {
   settlementDialogOpen: boolean;
 
   loadCase: (id: string) => Promise<TerminationCaseDetail | null>;
+  applyCase: (detail: TerminationCaseDetail) => void;
   getCase: (id: string) => TerminationCaseDetail | undefined;
   setActiveStage: (id: string, stage: TerminationStage) => void;
   getActiveStage: (id: string, detail?: TerminationCaseDetail) => TerminationStage;
@@ -83,6 +84,10 @@ export const useEndLeasingStore = create<EndLeasingStoreState>((set, get) => {
 
     getCase(id) {
       return get().cases[id];
+    },
+
+    applyCase(detail) {
+      apply(detail);
     },
 
     setActiveStage(id, stage) {

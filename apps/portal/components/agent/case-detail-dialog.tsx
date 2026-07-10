@@ -16,9 +16,16 @@ export function CaseDetailDialog({
   title: string;
   subtitle?: string;
   children: ReactNode;
-  size?: 'default' | 'wide';
+  size?: 'default' | 'wide' | 'xl';
 }) {
   if (!open) return null;
+
+  const sizeClass =
+    size === 'xl'
+      ? 'max-h-[92vh] max-w-[min(96vw,56rem)]'
+      : size === 'wide'
+        ? 'max-h-[88vh] max-w-3xl'
+        : 'max-h-[85vh] max-w-lg';
 
   return (
     <div
@@ -26,9 +33,7 @@ export function CaseDetailDialog({
       onClick={onClose}
     >
       <div
-        className={`bg-background flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl border shadow-2xl ${
-          size === 'wide' ? 'max-w-2xl' : 'max-w-lg'
-        }`}
+        className={`bg-background flex w-full flex-col overflow-hidden rounded-2xl border shadow-2xl ${sizeClass}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

@@ -142,7 +142,7 @@ export function PropertyLeasingCaseWorkflowDialog({
       onClose={onClose}
       title={LEASING_CATEGORY_LABEL[item.category]}
       subtitle={`${item.label} · ${item.currentStep}`}
-      size="wide"
+      size="xl"
     >
       <PropertyLeasingCaseWorkflowContent
         item={item}

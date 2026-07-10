@@ -16,7 +16,7 @@ export function SettlementDeductionDialog({ caseData }: { caseData: TerminationC
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-md">
+      <DialogContent elevated className="max-h-[80vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Settlement deductions</DialogTitle>
         </DialogHeader>

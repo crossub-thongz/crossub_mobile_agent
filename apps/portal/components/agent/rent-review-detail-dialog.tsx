@@ -19,11 +19,13 @@ export function RentReviewDetailDialog({
   onClose,
   review,
   navContext,
+  size = 'default',
 }: {
   open: boolean;
   onClose: () => void;
   review: RentReviewCase | null;
   navContext?: DetailNavContext;
+  size?: 'default' | 'wide' | 'xl';
 }) {
   const decision = useAgentStore((s) =>
     review ? s.rentReviewDecisions[review.id] : undefined,
@@ -43,6 +45,7 @@ export function RentReviewDetailDialog({
       onClose={onClose}
       title="Rent review"
       subtitle={review.propertyAddress}
+      size={size}
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">

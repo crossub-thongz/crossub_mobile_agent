@@ -49,6 +49,15 @@ export interface VacateStageState {
   keysReturned: boolean
 }
 
+export type MoveOutServicesChoice = 'pending' | 'booked' | 'declined' | 'own_arrangement'
+
+export interface VacatingPreparationStageState {
+  exitCleaningConfirmed: boolean
+  exitCleaningConfirmedAt?: string
+  exitCleaningConfirmedBy?: 'tenant' | 'agent'
+  moveOutServices: MoveOutServicesChoice
+}
+
 export interface InspectionStageState {
   status: LeasingItemStatus
   inspectorName?: string
@@ -194,6 +203,7 @@ export interface TerminationCaseDetail {
 
   // Per-stage summarised data (Termination Created is represented by case meta)
   vacate: VacateStageState
+  vacatingPreparation: VacatingPreparationStageState
   inspection: InspectionStageState
   makeGood: MakeGoodStageState
   settlement: SettlementStageState

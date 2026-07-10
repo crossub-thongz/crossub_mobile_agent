@@ -23,6 +23,7 @@ import type {
   BondStageState,
   TerminationActivityEvent,
   TerminationCaseDetail,
+  VacatingPreparationStageState,
 } from '@/lib/end-leasing/types';
 
 /** Build a `?a=b&c=d` query string, skipping undefined / empty values. */
@@ -168,6 +169,16 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
       actualVacateDate: undef(s.vacate.actualVacateDate),
       possessionRegainedDate: undef(s.vacate.possessionRegainedDate),
     },
+    vacatingPreparation: {
+      exitCleaningConfirmed: s.vacatingPreparation?.exitCleaningConfirmed ?? false,
+      exitCleaningConfirmedAt: undef(s.vacatingPreparation?.exitCleaningConfirmedAt),
+      exitCleaningConfirmedBy:
+        (s.vacatingPreparation?.exitCleaningConfirmedBy as 'tenant' | 'agent' | undefined) ??
+        undefined,
+      moveOutServices:
+        (s.vacatingPreparation?.moveOutServices as VacatingPreparationStageState['moveOutServices']) ??
+        'pending',
+    },
     inspection: {
       status: s.inspection.status,
       inspectorName: undef(s.inspection.inspectorName),
@@ -306,8 +317,29 @@ export const terminationApi = {
   get: (id: string): Promise<TerminationCaseDetail> =>
     unwrap(api.get<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}`)),
 
-  confirmKeyReturn: (id: string): Promise<TerminationCaseDetail> =>
-    unwrap(api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/confirm-keys`, {})),
+  confirmKeyReturn: (id: string, input?: { date?: string; keysReceived?: boolean }): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/confirm-keys`, input ?? {}),
+    ),
+
+  setKeyReturn: (
+    id: string,
+    input: { date: string; keysReceived?: boolean },
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/confirm-keys`, input),
+    ),
+
+  updateVacatingPreparation: (
+    id: string,
+    input: {
+      exitCleaningConfirmed?: boolean;
+      moveOutServices?: VacatingPreparationStageState['moveOutServices'];
+    },
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/preparation`, input),
+    ),
 
   scheduleInspection: (
     id: string,

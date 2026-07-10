@@ -931,7 +931,36 @@ export function PropertyWorkflowCreateDialog({
                     </p>
                   ) : null}
                 </Field>
-                <Field label="Lease type">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Current Weekly Rent">
+                    <Input
+                      type="number"
+                      readOnly
+                      value={currentWeeklyRent}
+                      className="bg-muted/50"
+                      disabled={prefillLoading}
+                    />
+                    {currentWeeklyRent && !prefillLoading ? (
+                      <p className="text-muted-foreground text-[11px]">
+                        From active tenancy or leasing cycle.
+                      </p>
+                    ) : null}
+                  </Field>
+                  <Field label="Period *">
+                    <select
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      value={newRentPeriod}
+                      onChange={(e) => setNewRentPeriod(e.target.value as RentPeriod)}
+                    >
+                      {RENT_PERIOD_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+                <Field label="Current Lease Type">
                   <select
                     className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                     value={leaseType}
@@ -942,7 +971,7 @@ export function PropertyWorkflowCreateDialog({
                   </select>
                 </Field>
                 {leaseType === 'fixed' ? (
-                  <Field label="Fixed term (weeks)">
+                  <Field label="Current Lease Term">
                     <select
                       className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                       value={fixedTermWeeks}
@@ -976,20 +1005,6 @@ export function PropertyWorkflowCreateDialog({
                     </p>
                   ) : null}
                 </Field>
-                <Field label="Current weekly rent">
-                  <Input
-                    type="number"
-                    readOnly
-                    value={currentWeeklyRent}
-                    className="bg-muted/50"
-                    disabled={prefillLoading}
-                  />
-                  {currentWeeklyRent && !prefillLoading ? (
-                    <p className="text-muted-foreground text-[11px]">
-                      From active tenancy or leasing cycle.
-                    </p>
-                  ) : null}
-                </Field>
                 <Field label="New rent value *">
                   <Input
                     type="number"
@@ -998,19 +1013,6 @@ export function PropertyWorkflowCreateDialog({
                     onChange={(e) => setNewRentValue(e.target.value)}
                     placeholder="Enter agreed rent amount"
                   />
-                </Field>
-                <Field label="Period *">
-                  <select
-                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                    value={newRentPeriod}
-                    onChange={(e) => setNewRentPeriod(e.target.value as RentPeriod)}
-                  >
-                    {RENT_PERIOD_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
                 </Field>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Rent negotiations *</Label>

@@ -282,6 +282,7 @@ export default function PropertyDetailPage() {
             accounting={acct}
             onRefresh={() => void refresh()}
             onViewBondLodgement={viewBondLodgement}
+            onViewRentReview={setSelectedRentReviewId}
           />
         )}
 

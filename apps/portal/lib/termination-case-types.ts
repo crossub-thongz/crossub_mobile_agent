@@ -79,6 +79,12 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     actualVacateDate: string | null
     possessionRegainedDate: string | null
   }
+  vacatingPreparation: {
+    exitCleaningConfirmed: boolean
+    exitCleaningConfirmedAt: string | null
+    exitCleaningConfirmedBy: string | null
+    moveOutServices: string
+  }
   inspection: {
     status: LeasingItemStatus
     inspectorName: string | null

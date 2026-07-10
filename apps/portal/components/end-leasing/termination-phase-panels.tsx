@@ -1,7 +1,16 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ClipboardCheck, ExternalLink, FileText, KeyRound, Landmark, Receipt, Wrench } from 'lucide-react';
+import {
+  ClipboardCheck,
+  ExternalLink,
+  FileText,
+  KeyRound,
+  Landmark,
+  Receipt,
+  Sparkles,
+  Wrench,
+} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -24,10 +33,19 @@ import { deriveStageStatus } from '@/lib/end-leasing/lifecycle';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { terminationApi } from '@/lib/termination-case-api';
+import { TerminationKeyReturnDateDialog } from '@/components/end-leasing/termination-key-return-date-dialog';
 import { TerminationVacateDateDialog } from '@/components/end-leasing/termination-vacate-date-dialog';
+import type { MoveOutServicesChoice } from '@/lib/end-leasing/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const DONE = LEASING_ITEM_STATUS.DONE;
+
+const MOVE_OUT_SERVICES_LABEL: Record<MoveOutServicesChoice, string> = {
+  pending: 'Pending',
+  booked: 'Booked via CROSSUB',
+  declined: 'Declined',
+  own_arrangement: 'Tenant arranging own',
+};
 
 function PhaseNotice({ caseData }: { caseData: TerminationCaseDetail }) {
   const notice = caseData.terminationNotice;
@@ -83,11 +101,125 @@ function PhaseNotice({ caseData }: { caseData: TerminationCaseDetail }) {
   );
 }
 
+function PhaseExitCleaning({ caseData }: { caseData: TerminationCaseDetail }) {
+  const applyCase = useEndLeasingStore((s) => s.applyCase);
+  const prep = caseData.vacatingPreparation ?? {
+    exitCleaningConfirmed: false,
+    moveOutServices: 'pending' as const,
+  };
+  const confirmed = prep.exitCleaningConfirmed;
+  const [busy, setBusy] = useState(false);
+  const [pendingChoice, setPendingChoice] = useState<MoveOutServicesChoice | null>(null);
+  const services = pendingChoice ?? prep.moveOutServices;
+
+  const saveServices = async (value: MoveOutServicesChoice) => {
+    if (value === prep.moveOutServices) return;
+    setPendingChoice(value);
+    setBusy(true);
+    try {
+      const updated = await terminationApi.updateVacatingPreparation(caseData.id, {
+        moveOutServices: value,
+      });
+      applyCase(updated);
+      setPendingChoice(null);
+      toast.success('Move-out services updated');
+    } catch {
+      setPendingChoice(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmCleaning = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.updateVacatingPreparation(caseData.id, {
+        exitCleaningConfirmed: true,
+        moveOutServices: services === 'pending' ? 'own_arrangement' : services,
+      });
+      applyCase(updated);
+      setPendingChoice(null);
+      toast.success('Exit cleaning confirmed on behalf of tenant');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const exitCleaningStatus = confirmed
+    ? DONE
+    : services !== 'pending'
+      ? LEASING_ITEM_STATUS.IN_PROGRESS
+      : LEASING_ITEM_STATUS.NOT_STARTED;
+
+  return (
+    <StepCard
+      icon={Sparkles}
+      title="Exit cleaning"
+      status={exitCleaningStatus}
+      footer={
+        !confirmed ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={busy}
+            onClick={() => void confirmCleaning()}
+          >
+            Confirm on behalf of tenant
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="space-y-3">
+        <div>
+          <p className="text-muted-foreground text-[10px] uppercase tracking-wider">
+            Move-out services
+          </p>
+          <select
+            className="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-xs"
+            value={services}
+            disabled={busy || confirmed}
+            onChange={(e) => void saveServices(e.target.value as MoveOutServicesChoice)}
+          >
+            {(Object.keys(MOVE_OUT_SERVICES_LABEL) as MoveOutServicesChoice[]).map((key) => (
+              <option key={key} value={key}>
+                {MOVE_OUT_SERVICES_LABEL[key]}
+              </option>
+            ))}
+          </select>
+          <p className="text-muted-foreground mt-1 text-[11px]">
+            Whether the tenant books end-of-lease cleaning through CROSSUB or arranges their own.
+          </p>
+        </div>
+        <BoolStatus
+          done={confirmed}
+          doneLabel="Exit cleaning confirmed"
+          pendingLabel="Awaiting exit cleaning confirmation"
+        />
+      </div>
+    </StepCard>
+  );
+}
+
+function PhaseVacatingPreparation({ caseData }: { caseData: TerminationCaseDetail }) {
+  return (
+    <div className="space-y-3">
+      <PhaseKeyReturn caseData={caseData} />
+      <PhaseExitCleaning caseData={caseData} />
+    </div>
+  );
+}
+
 function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
   const loadCase = useEndLeasingStore((s) => s.loadCase);
   const [vacateDialogOpen, setVacateDialogOpen] = useState(false);
+  const [keyReturnDialogOpen, setKeyReturnDialogOpen] = useState(false);
   const expectedVacate =
     caseData.vacate.expectedVacateDate ?? caseData.vacateDate ?? '';
+  const keyReturnDate =
+    caseData.vacate.possessionRegainedDate ??
+    caseData.vacate.actualVacateDate ??
+    '';
 
   return (
     <>
@@ -96,14 +228,24 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
         title="Key return"
         status={deriveStageStatus(caseData, TERMINATION_STAGE.KEY_RETURN)}
         footer={
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-xs"
-            onClick={() => setVacateDialogOpen(true)}
-          >
-            Change vacate date
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => setKeyReturnDialogOpen(true)}
+            >
+              Set key return date
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => setVacateDialogOpen(true)}
+            >
+              Change vacate date
+            </Button>
+          </div>
         }
       >
         <div className="grid grid-cols-2 gap-3">
@@ -112,12 +254,8 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
             value={expectedVacate ? formatDate(expectedVacate) : '—'}
           />
           <StepFact
-            label="Possession regained"
-            value={
-              caseData.vacate.possessionRegainedDate
-                ? formatDate(caseData.vacate.possessionRegainedDate)
-                : 'Pending'
-            }
+            label="Key return date"
+            value={keyReturnDate ? formatDate(keyReturnDate) : 'Not set'}
           />
           <BoolStatus
             done={caseData.vacate.keysReturned}
@@ -132,6 +270,15 @@ function PhaseKeyReturn({ caseData }: { caseData: TerminationCaseDetail }) {
         onOpenChange={setVacateDialogOpen}
         caseId={caseData.id}
         initialDate={expectedVacate.slice(0, 10)}
+        onSaved={() => void loadCase(caseData.id)}
+      />
+
+      <TerminationKeyReturnDateDialog
+        open={keyReturnDialogOpen}
+        onOpenChange={setKeyReturnDialogOpen}
+        caseId={caseData.id}
+        initialDate={(keyReturnDate || expectedVacate).slice(0, 10)}
+        keysReturned={caseData.vacate.keysReturned}
         onSaved={() => void loadCase(caseData.id)}
       />
     </>
@@ -327,7 +474,7 @@ export function TerminationPhasePanel({
     case TERMINATION_STAGE.TERMINATION_NOTICE:
       return <PhaseNotice caseData={caseData} />;
     case TERMINATION_STAGE.KEY_RETURN:
-      return <PhaseKeyReturn caseData={caseData} />;
+      return <PhaseVacatingPreparation caseData={caseData} />;
     case TERMINATION_STAGE.OUTGOING_INSPECTION:
       return <PhaseOutgoingInspection caseData={caseData} />;
     case TERMINATION_STAGE.MAINTENANCE:

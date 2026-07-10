@@ -3,12 +3,8 @@
 import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
-import { Timeline } from '@/components/agent/timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import {
-  TerminationPhasePanel,
-  TerminationPhaseTabs,
-} from '@/components/end-leasing/termination-phase-panels';
+import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
@@ -30,8 +26,6 @@ export function TerminationDetailView({
   const caseData = useEndLeasingStore((s) => s.getCase(caseId));
   const status = useEndLeasingStore((s) => s.status[caseId] ?? 'idle');
   const error = useEndLeasingStore((s) => s.error[caseId]);
-  const activeStage = useEndLeasingStore((s) => s.getActiveStage(caseId, caseData));
-  const setActiveStage = useEndLeasingStore((s) => s.setActiveStage);
 
   const refresh = useCallback(async () => {
     await loadCase(caseId);
@@ -56,24 +50,15 @@ export function TerminationDetailView({
   }
 
   return (
-    <TerminationDetailContent
-      caseData={caseData}
-      activeStage={activeStage}
-      onStageChange={(stage) => setActiveStage(caseId, stage)}
-      hideHeader={hideHeader}
-    />
+    <TerminationDetailContent caseData={caseData} hideHeader={hideHeader} />
   );
 }
 
 function TerminationDetailContent({
   caseData,
-  activeStage,
-  onStageChange,
   hideHeader = false,
 }: {
   caseData: TerminationCaseDetail;
-  activeStage: TerminationCaseDetail['currentStage'];
-  onStageChange: (stage: TerminationCaseDetail['currentStage']) => void;
   hideHeader?: boolean;
 }) {
   const { properties } = useAgentData();
@@ -118,30 +103,7 @@ function TerminationDetailContent({
         </>
       ) : null}
 
-      <TerminationPhaseTabs
-        caseData={caseData}
-        activeStage={activeStage}
-        onStageChange={onStageChange}
-      />
-
-      <TerminationPhasePanel caseData={caseData} stage={activeStage} />
-
-      {caseData.timeline.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold">Timeline</h2>
-          <Timeline
-            entries={caseData.timeline.map((e) => ({
-              id: e.id,
-              at: e.timestamp,
-              actor: e.actor ?? 'System',
-              actorRole: 'system' as const,
-              source: 'app' as const,
-              title: e.label,
-              detail: e.kind ?? '',
-            }))}
-          />
-        </section>
-      )}
+      <EndLeasingAgentWorkflowPanel caseData={caseData} />
 
       <SettlementDeductionDialog caseData={caseData} />
     </div>

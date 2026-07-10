@@ -24,11 +24,13 @@ export function InspectionDetailDialog({
   onClose,
   inspection,
   navContext,
+  size = 'default',
 }: {
   open: boolean;
   onClose: () => void;
   inspection: Inspection | null;
   navContext?: DetailNavContext;
+  size?: 'default' | 'wide' | 'xl';
 }) {
   const { apiConnected } = useAgentData();
   if (!inspection) return null;
@@ -43,6 +45,7 @@ export function InspectionDetailDialog({
         onClose={onClose}
         title={inspection.trackingNumber}
         subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
+        size={size}
       >
         <AgentFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
       </CaseDetailDialog>
@@ -58,6 +61,7 @@ export function InspectionDetailDialog({
       onClose={onClose}
       title={inspection.trackingNumber}
       subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
+      size={size}
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
