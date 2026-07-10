@@ -64,7 +64,13 @@ export default function LoginPage() {
 
     try {
       const result = await api.post<{ user: AuthUser }>('/auth/login', values);
-      await refresh();
+      const authStatus = await refresh();
+      if (authStatus !== 'authed') {
+        toast.error(
+          'Sign-in succeeded but the session cookie was not saved. Clear site cookies for localhost and try again.',
+        );
+        return;
+      }
       window.location.assign(
         postAuthDestination(
           result.user,

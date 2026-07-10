@@ -15,7 +15,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
-import { propertyDetail, propertyNew } from '@/constants/routes';
+import { propertyDetail, propertyNew, propertyRegistryResume } from '@/constants/routes';
 import type { Property } from '@/lib/types';
 
 const FILTERS = [
@@ -158,7 +158,11 @@ export default function PropertiesPage() {
             properties={list}
             agencies={agencies}
             actionCountFor={(id) => getPropertyActions(id).length}
-            detailHref={propertyDetail}
+            rowHref={(property) =>
+              property.registryIntakeComplete === false
+                ? propertyRegistryResume(property.id)
+                : propertyDetail(property.id)
+            }
             onDelete={setPendingDelete}
             canManage={hasFullManagementAccess && apiConnected}
           />

@@ -25,7 +25,6 @@ import {
   resolveLeaseDates,
 } from '@/lib/property-overview';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import { dailyRentFromWeekly } from '@/lib/rent-calculations';
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
@@ -37,7 +36,7 @@ import type {
   Property,
   PropertyNeedAction,
 } from '@/lib/types';
-import { formatCurrency, formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
+import { formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
 
 function OverviewSection({
   title,
@@ -221,7 +220,6 @@ export function PropertyOverviewTab({
 
   const rentPaidTo = deriveRentPaidTo(sync.accounting);
   const paymentCycle = derivePaymentCycle(displayRent);
-  const displayDailyRent = dailyRentFromWeekly(displayRent);
 
   const registry = useMemo(() => {
     const record = sync.record;
@@ -397,21 +395,6 @@ export function PropertyOverviewTab({
           updatedHint={tenant.hint}
         />
         <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          <StatCell
-            label="Rent"
-            value={displayRent > 0 ? `${formatCurrency(displayRent)}/wk` : '—'}
-          />
-          <StatCell
-            label="Daily rent"
-            value={
-              displayDailyRent > 0
-                ? `$${displayDailyRent.toLocaleString('en-AU', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}/day`
-                : '—'
-            }
-          />
           <StatCell
             label="Rent paid to"
             value={rentPaidTo ? formatDate(rentPaidTo) : '—'}

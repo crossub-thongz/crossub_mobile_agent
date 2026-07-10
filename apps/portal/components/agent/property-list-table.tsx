@@ -30,14 +30,14 @@ export function PropertyListTable({
   properties,
   agencies,
   actionCountFor,
-  detailHref,
+  rowHref,
   onDelete,
   canManage,
 }: {
   properties: Property[];
   agencies: Agency[];
   actionCountFor: (propertyId: string) => number;
-  detailHref: (propertyId: string) => string;
+  rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
   canManage?: boolean;
 }) {
@@ -61,6 +61,7 @@ export function PropertyListTable({
           <tbody className="divide-y">
             {properties.map((property) => {
               const actionCount = actionCountFor(property.id);
+              const isDraft = property.registryIntakeComplete === false;
               const pmName = property.propertyManager?.trim();
               const pmHref =
                 pmName && property.propertyManagerId
@@ -77,11 +78,16 @@ export function PropertyListTable({
                 >
                   <td className="max-w-[16rem] px-3 py-3">
                     <Link
-                      href={detailHref(property.id)}
+                      href={rowHref(property)}
                       className="font-medium leading-snug text-foreground hover:text-primary"
                     >
-                      {formatPropertyFullAddress(property)}
+                      <span className="line-clamp-2">{formatPropertyFullAddress(property)}</span>
                     </Link>
+                    {isDraft ? (
+                      <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                        Draft — resume
+                      </span>
+                    ) : null}
                   </td>
                   <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
                     <span className="line-clamp-2">{property.tenantName || '—'}</span>
@@ -127,7 +133,7 @@ export function PropertyListTable({
                   <td className="px-3 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" className="size-8" asChild>
-                        <Link href={detailHref(property.id)} aria-label={`Edit ${property.address}`}>
+                        <Link href={rowHref(property)} aria-label={`Edit ${property.address}`}>
                           <Pencil className="size-3.5" />
                         </Link>
                       </Button>

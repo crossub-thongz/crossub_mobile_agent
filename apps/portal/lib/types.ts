@@ -100,6 +100,8 @@ export interface Property {
   propertyManager?: string;
   propertyManagerId?: string;
   endOfManagementDate?: string;
+  /** False while the create-property wizard is still in progress. */
+  registryIntakeComplete?: boolean;
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;

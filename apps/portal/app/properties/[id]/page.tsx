@@ -27,7 +27,7 @@ import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-di
 import { TenancyHistorySection } from '@/components/agent/tenancy-history-section';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ROUTES } from '@/constants/routes';
+import { propertyRegistryResume, ROUTES } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import {
   filterTenancyRentReviews,
@@ -180,6 +180,19 @@ export default function PropertyDetailPage() {
   return (
     <AgentShell title={fullAddress} backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <div className="space-y-4 pb-8">
+        {property.registryIntakeComplete === false ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
+            <p className="text-amber-950 dark:text-amber-100">
+              Property registration is incomplete. Resume the wizard to finish intake.
+            </p>
+            <Link
+              href={propertyRegistryResume(property.id)}
+              className="font-semibold text-amber-900 underline underline-offset-2 dark:text-amber-200"
+            >
+              Resume registration
+            </Link>
+          </div>
+        ) : null}
         <div className="rounded-2xl border bg-gradient-to-br from-card to-secondary/30 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

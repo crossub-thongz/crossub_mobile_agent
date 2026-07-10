@@ -74,6 +74,8 @@ export function sanitizeCreatePropertyBody(
       body.managementRateGst === 'include' || body.managementRateGst === 'exclude'
         ? body.managementRateGst
         : undefined,
+    registryIntakeComplete: body.registryIntakeComplete,
+    registryDraft: body.registryDraft,
   };
 
   return Object.fromEntries(

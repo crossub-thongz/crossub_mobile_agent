@@ -147,6 +147,8 @@ export type DocumentChecklistFile = {
   fileName: string;
   uploadedAt: string;
   href?: string | null;
+  /** Agent-uploaded portal rows (`portal:<uuid>`) can be deleted from the Documents tab. */
+  deletable?: boolean;
 };
 
 export type DocumentChecklistRow = {
@@ -232,6 +234,7 @@ function toChecklistFiles(
     fileName: fileNameFromDoc(doc, slotLabel, index, docs.length),
     uploadedAt: doc.uploadedAt,
     href: doc.href,
+    deletable: doc.id.startsWith('portal:'),
   }));
 }
 

@@ -15,6 +15,7 @@ import {
   approveMaintenance as apiApproveMaintenance,
   createProperty as apiCreateProperty,
   endPropertyManagement as apiEndPropertyManagement,
+  updateProperty as apiUpdateProperty,
   createAgency as apiCreateAgency,
   createThread as apiCreateThread,
   declineMaintenance as apiDeclineMaintenance,
@@ -29,9 +30,14 @@ import {
   replyToThread as apiReplyToThread,
   uploadDocument as apiUploadDocument,
   uploadDocumentWithProgress as apiUploadDocumentWithProgress,
+  deleteDocument as apiDeleteDocument,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
 import { sanitizeCreatePropertyBody } from '@/lib/sanitize-create-property-body';
+import {
+  buildRegistryApiBody,
+  type PropertyRegistryAutosaveState,
+} from '@/lib/property-registry-persist';
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, fileToBase64WithProgress, mapNetworkUploadProgress } from '@/lib/file-upload';
 import {
   mapAgentAccounting,
@@ -196,6 +202,7 @@ interface AgentDataContextValue {
     propertyAddress: string,
     options?: { title?: string; propertyId?: string; onProgress?: (percent: number) => void },
   ) => Promise<void>;
+  deleteDocument: (documentId: string) => Promise<void>;
   sendMessage: (
     threadId: string,
     body: string,
@@ -207,6 +214,11 @@ interface AgentDataContextValue {
     options?: { category?: MessageCategory; subject?: string; caseId?: string },
   ) => string;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Promise<Property>;
+  savePropertyRegistryDraft: (
+    propertyId: string | null,
+    state: PropertyRegistryAutosaveState,
+    options?: { complete?: boolean },
+  ) => Promise<Property>;
   endPropertyManagement: (propertyId: string, endOfManagementDate: string) => Promise<void>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   registerInspection: (inspection: Inspection) => void;
@@ -824,6 +836,61 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [apiConnected, apiAgencies, refresh, storeAddProperty, agentPortfolioId, user],
   );
 
+  const savePropertyRegistryDraft = useCallback(
+    async (
+      propertyId: string | null,
+      state: PropertyRegistryAutosaveState,
+      options?: { complete?: boolean },
+    ): Promise<Property> => {
+      if (!apiConnected) {
+        throw new Error('Connect to the API to save properties');
+      }
+
+      const complete = options?.complete ?? false;
+      const body = sanitizeCreatePropertyBody(
+        buildRegistryApiBody(state.form, {
+          complete,
+          step: state.step,
+          furthestStepIndex: state.furthestStepIndex,
+        }),
+      );
+
+      if (!apiAgencies?.length && state.form.agencyName?.trim()) {
+        await apiCreateAgency({
+          name: state.form.agencyName.trim(),
+          company: state.form.agencyCompany?.trim() || undefined,
+          contactEmail: user?.email,
+          contactName: user
+            ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || undefined
+            : undefined,
+          contactPhone: user?.phone,
+        });
+        await refresh();
+      }
+
+      const mapWithFormLease = (dto: Awaited<ReturnType<typeof apiCreateProperty>>) => {
+        const mapped = mapAgentProperty(dto, agentPortfolioId);
+        const leaseStatus = state.form.leaseStatus as Property['leaseStatus'] | '';
+        return {
+          ...mapped,
+          leaseStatus: leaseStatus || mapped.leaseStatus,
+          registryIntakeComplete: complete,
+        };
+      };
+
+      if (propertyId) {
+        const updated = await apiUpdateProperty(propertyId, body);
+        await refresh();
+        return mapWithFormLease(updated);
+      }
+
+      const created = await apiCreateProperty(body);
+      await refresh();
+      return mapWithFormLease(created);
+    },
+    [apiConnected, apiAgencies, refresh, agentPortfolioId, user],
+  );
+
   const endPropertyManagement = useCallback(
     async (propertyId: string, endOfManagementDate: string) => {
       if (!apiConnected) {
@@ -935,6 +1002,17 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       addUploadedDocument(doc);
     },
     [apiConnected, properties, refresh, addUploadedDocument],
+  );
+
+  const deleteDocument = useCallback(
+    async (documentId: string) => {
+      if (!apiConnected) {
+        throw new Error('Connect to the API to delete documents');
+      }
+      await apiDeleteDocument(documentId);
+      await refresh();
+    },
+    [apiConnected, refresh],
   );
 
   const documents = useMemo<AgentDocument[]>(() => {
@@ -1153,10 +1231,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     ensureMessageThread,
     addProperty,
+    savePropertyRegistryDraft,
     endPropertyManagement,
     addOpenInspection,
     registerInspection,
     uploadDocument,
+    deleteDocument,
     approveMaintenanceQuote,
     declineMaintenanceQuote,
   };

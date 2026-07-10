@@ -135,13 +135,33 @@ export type CreateAgentPropertyInput = {
   lettingFee?: number;
   managementRatePercent?: number;
   managementRateGst?: 'include' | 'exclude';
+  registryIntakeComplete?: boolean;
+  registryDraft?: Record<string, unknown> | null;
 };
+
+export type UpdateAgentPropertyInput = CreateAgentPropertyInput;
 
 export async function createProperty(
   body: CreateAgentPropertyInput,
 ): Promise<AgentProperty> {
   try {
     return await apiV1.post<AgentProperty>('/agent/properties', body);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      const message = formatApiErrorMessage(err);
+      throw new Error(message);
+    }
+    throw err;
+  }
+}
+
+/** Update a property registry record (`PATCH /api/v1/agent/properties/{propertyId}`). */
+export async function updateProperty(
+  propertyId: string,
+  body: UpdateAgentPropertyInput,
+): Promise<AgentProperty> {
+  try {
+    return await apiV1.patch<AgentProperty>(`/agent/properties/${propertyId}`, body);
   } catch (err) {
     if (err instanceof ApiError) {
       const message = formatApiErrorMessage(err);
@@ -370,6 +390,22 @@ export async function uploadDocument(
   const { data, error } = await crossub.POST('/agent/documents', { body: input });
   if (error || !data) throw new Error('Failed to upload document');
   return data;
+}
+
+/** Delete an agent-uploaded portal document (`DELETE /agent/documents/:documentId`). */
+export async function deleteDocument(documentId: string): Promise<void> {
+  const rowId = documentId.startsWith('portal:')
+    ? documentId.slice('portal:'.length)
+    : documentId;
+  try {
+    await apiV1.delete<void>(`/agent/documents/${rowId}`);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      const message = formatApiErrorMessage(err);
+      throw new Error(message);
+    }
+    throw err;
+  }
 }
 
 /** Same as `uploadDocument`, with XMLHttpRequest upload progress (40–100% of caller scale). */

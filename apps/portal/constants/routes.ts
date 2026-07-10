@@ -58,6 +58,8 @@ export const propertyLeasingWorkflow = (propertyId: string) =>
   `/properties/${propertyId}/leasing-workflow`;
 export const propertyTransfer = () => ROUTES.PROPERTY_TRANSFER;
 export const propertyNew = () => `/properties/new`;
+export const propertyRegistryResume = (propertyId: string) =>
+  `/properties/new?propertyId=${encodeURIComponent(propertyId)}`;
 export const tenantNew = (query?: Record<string, string>) => {
   if (!query || Object.keys(query).length === 0) return ROUTES.TENANTS_NEW;
   const params = new URLSearchParams(query);

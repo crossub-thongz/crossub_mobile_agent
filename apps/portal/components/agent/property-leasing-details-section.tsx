@@ -162,14 +162,14 @@ function DocumentChecklistSection({
         const row = extraDocuments.find((r) => r.id === activeSlot);
         if (row) title = row.title.trim() || 'Document';
       }
-      for (const file of ok) {
-        await onUploadFile(file, activeSlot, title);
+      await Promise.all(ok.map((file) => onUploadFile(file, activeSlot, title)));
+      if (ok.length > 0) {
+        toast.success(
+          ok.length === 1
+            ? `Uploaded ${ok[0]!.name}`
+            : `Uploaded ${ok.length} files`,
+        );
       }
-      toast.success(
-        ok.length === 1
-          ? `Uploaded ${ok[0].name}`
-          : `Uploaded ${ok.length} files`,
-      );
     } catch {
       toast.error('Upload failed');
     } finally {

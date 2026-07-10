@@ -18,14 +18,28 @@ const buildUpstreamUrl = (req: NextRequest, path: string[]): string => {
 const rewriteSetCookie = (cookie: string, hostname: string): string => {
   const isLocalhost =
     hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
-  return cookie
-    .split(';')
-    .filter((part) => {
+  let strippedSecure = false;
+  const parts = cookie.split(';').filter((part) => {
+    const trimmed = part.trim().toLowerCase();
+    if (trimmed.startsWith('domain=')) return false;
+    // Staging/production APIs set Secure; strip for local HTTP dev so cookies persist.
+    if (isLocalhost && trimmed === 'secure') {
+      strippedSecure = true;
+      return false;
+    }
+    return true;
+  });
+
+  if (!isLocalhost || !strippedSecure) {
+    return parts.join(';');
+  }
+
+  // SameSite=None requires Secure; without it browsers reject the cookie on http://localhost.
+  return parts
+    .map((part) => {
       const trimmed = part.trim().toLowerCase();
-      if (trimmed.startsWith('domain=')) return false;
-      // Staging/production APIs set Secure; strip for local HTTP dev so cookies persist.
-      if (isLocalhost && trimmed === 'secure') return false;
-      return true;
+      if (trimmed === 'samesite=none') return 'SameSite=Lax';
+      return part;
     })
     .join(';');
 };

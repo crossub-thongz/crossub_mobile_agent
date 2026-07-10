@@ -11,6 +11,7 @@ import {
   parsePlaceResult,
   type ParsedAustralianAddress,
 } from '@/lib/google-places';
+import { cn } from '@/lib/utils';
 
 /** Default map centre — Sydney CBD, good starting point for AU address search. */
 const DEFAULT_CENTER = { lat: -33.8688, lng: 151.2093 };
@@ -184,63 +185,74 @@ export function PropertyAddressAutocomplete({
   }, [mapsReady, coords]);
 
   const showMap = mapsEnabled && mapsReady;
+  const showMapColumn = mapsEnabled && !mapsFailed;
+
+  const searchBlock = mapsEnabled ? (
+    <div className="space-y-1.5">
+      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+        Search address
+      </Label>
+      <div className="relative">
+        <MapPin
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          aria-hidden
+        />
+        <Input
+          ref={searchInputRef}
+          defaultValue=""
+          placeholder="Search Google Maps — pick a result to auto-fill"
+          disabled={disabled || mapsFailed}
+          autoComplete="off"
+          className="pl-9"
+        />
+      </div>
+      {mapsReady ? (
+        <p className="text-muted-foreground text-xs">
+          Pick a suggestion to fill street, suburb, state, postcode, and coordinates. Add a
+          unit manually if needed — most street addresses do not include one.
+        </p>
+      ) : mapsFailed ? (
+        <p className="text-amber-700 text-xs dark:text-amber-400">
+          Map search is unavailable — enter the address fields manually below.
+        </p>
+      ) : (
+        <p className="text-muted-foreground text-xs">Loading map search…</p>
+      )}
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-3">
       <div ref={placesAttributionRef} className="hidden" aria-hidden />
-      {mapsEnabled ? (
-        <div className="space-y-1.5">
-          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            Search address
-          </Label>
-          <div className="relative">
-            <MapPin
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden
-            />
-            <Input
-              ref={searchInputRef}
-              defaultValue=""
-              placeholder="Search Google Maps — pick a result to auto-fill"
-              disabled={disabled || mapsFailed}
-              autoComplete="off"
-              className="pl-9"
-            />
+
+      {showMapColumn ? (
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]">
+          <div className="flex min-w-0 flex-col gap-3">
+            {searchBlock}
+            {locationFields}
           </div>
-          {mapsReady ? (
-            <p className="text-muted-foreground text-xs">
-              Pick a suggestion to fill street, suburb, state, postcode, and coordinates. Add a
-              unit manually if needed — most street addresses do not include one.
-            </p>
-          ) : mapsFailed ? (
-            <p className="text-amber-700 text-xs dark:text-amber-400">
-              Map search is unavailable — enter the address fields manually below.
-            </p>
-          ) : (
-            <p className="text-muted-foreground text-xs">Loading map search…</p>
-          )}
-        </div>
-      ) : null}
-
-      <div
-        className={
-          showMap
-            ? 'grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]'
-            : 'space-y-3'
-        }
-      >
-        <div className="flex min-w-0 flex-col gap-3">{locationFields}</div>
-
-        {showMap ? (
-          <div className="relative min-h-[220px] w-full lg:min-h-0">
+          <div className="relative min-h-[280px] w-full lg:min-h-[360px]">
+            {!showMap ? (
+              <div className="border-border/60 text-muted-foreground flex h-full min-h-[280px] items-center justify-center rounded-md border bg-muted/20 text-xs lg:min-h-[360px]">
+                Loading map…
+              </div>
+            ) : null}
             <div
               ref={mapContainerRef}
-              className="border-border/60 absolute inset-0 overflow-hidden rounded-md border"
+              className={cn(
+                'border-border/60 absolute inset-0 overflow-hidden rounded-md border',
+                !showMap && 'invisible',
+              )}
               aria-label="Property location map"
             />
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <>
+          {searchBlock}
+          {locationFields ? <div className="flex flex-col gap-3">{locationFields}</div> : null}
+        </>
+      )}
     </div>
   );
 }

@@ -31,7 +31,7 @@ import {
   PropertyDocumentPreviewDialog,
   type DocumentPreviewItem,
 } from '@/components/agent/property-document-preview-dialog';
-import type { StagedUploadFile } from '@/components/agent/staged-document-upload-row';
+import type { StagedUploadFile, StagedUploadStatus } from '@/components/agent/staged-document-upload-row';
 import {
   resolveWorkflowStepState,
   WorkflowProgressRail,
@@ -56,6 +56,11 @@ import {
 import { emptyPartyContact, splitParties } from '@/lib/property-parties';
 import type { Property, PropertyPartyContact } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import {
+  canAutoSaveRegistry,
+  type PropertyRegistryAutosaveState,
+  type PropertyRegistryWizardStep,
+} from '@/lib/property-registry-persist';
 import {
   isBlockedDocumentFile,
   MAX_UPLOAD_BYTES,
@@ -110,13 +115,14 @@ function FormField({
 
 export type FurnishedChoice = '' | 'yes' | 'no';
 
-/** Files staged during create-property; uploaded to the API after the property exists. */
+/** Files staged during create-property; uploaded as soon as the draft property exists. */
 export interface PendingPropertyDocument {
   id: string;
   file: File;
   title: string;
   slotId: string;
   source: 'leasing' | 'management';
+  uploadStatus?: StagedUploadStatus;
 }
 
 export interface NewPropertyRegistryValues {
@@ -285,22 +291,78 @@ function StepErrorsBanner({ errors }: { errors: string[] }) {
   );
 }
 
+function patchUploadStatusInForm(
+  values: NewPropertyRegistryValues,
+  pendingId: string,
+  uploadStatus: StagedUploadStatus,
+): NewPropertyRegistryValues {
+  const pending = values.pendingDocuments.find((d) => d.id === pendingId);
+  if (!pending) return values;
+
+  const patchFiles = (files: StagedUploadFile[]) =>
+    files.map((file) => (file.id === pendingId ? { ...file, uploadStatus } : file));
+
+  const nextPending = values.pendingDocuments.map((doc) =>
+    doc.id === pendingId ? { ...doc, uploadStatus } : doc,
+  );
+
+  if (pending.source === 'leasing') {
+    return {
+      ...values,
+      pendingDocuments: nextPending,
+      leasing: {
+        ...values.leasing,
+        uploads: {
+          ...values.leasing.uploads,
+          [pending.slotId]: patchFiles(values.leasing.uploads[pending.slotId] ?? []),
+        },
+      },
+    };
+  }
+
+  return {
+    ...values,
+    pendingDocuments: nextPending,
+    management: {
+      ...values.management,
+      uploads: {
+        ...values.management.uploads,
+        [pending.slotId]: patchFiles(values.management.uploads[pending.slotId] ?? []),
+      },
+    },
+  };
+}
+
 export function NewPropertyRegistryForm({
   onSubmit,
   submitting,
+  initialState,
+  onAutosave,
+  autosaveStatus = 'idle',
+  resumeMode,
+  draftPropertyId,
+  onEnsureDraftProperty,
 }: {
   onSubmit: (values: NewPropertyRegistryValues) => void | Promise<void>;
   submitting: boolean;
+  initialState?: PropertyRegistryAutosaveState;
+  onAutosave?: (state: PropertyRegistryAutosaveState) => Promise<void>;
+  autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  resumeMode?: boolean;
+  draftPropertyId?: string | null;
+  onEnsureDraftProperty?: (state: PropertyRegistryAutosaveState) => Promise<string | null>;
 }) {
-  const { primaryAgency, loading, apiConnected } = useAgentData();
+  const { primaryAgency, loading, apiConnected, uploadDocument } = useAgentData();
   const agencyLocked = !!primaryAgency || apiConnected;
-  const [step, setStep] = useState<WizardStep>('property');
-  const [furthestStepIndex, setFurthestStepIndex] = useState(0);
+  const [step, setStep] = useState<PropertyRegistryWizardStep>(initialState?.step ?? 'property');
+  const [furthestStepIndex, setFurthestStepIndex] = useState(initialState?.furthestStepIndex ?? 0);
   const [stepErrors, setStepErrors] = useState<Partial<Record<WizardStep, string[]>>>({});
   const [addressFieldsLocked, setAddressFieldsLocked] = useState(true);
   const [previewDoc, setPreviewDoc] = useState<DocumentPreviewItem | null>(null);
   const previewUrlRef = useRef<string | null>(null);
-  const [form, setForm] = useState<NewPropertyRegistryValues>({
+  const [completing, setCompleting] = useState(false);
+  const [form, setForm] = useState<NewPropertyRegistryValues>(() =>
+    initialState?.form ?? {
     agencyName: primaryAgency?.name ?? '',
     agencyCompany: primaryAgency?.company ?? '',
     unit: '',
@@ -323,6 +385,11 @@ export function NewPropertyRegistryForm({
     leasing: { ...EMPTY_LEASING },
     pendingDocuments: [],
   });
+  const skipAutosaveRef = useRef(true);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formRef = useRef(form);
+  const uploadInFlightRef = useRef(new Map<string, Promise<boolean>>());
+  formRef.current = form;
 
   const set = <K extends keyof NewPropertyRegistryValues>(key: K, value: NewPropertyRegistryValues[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -343,13 +410,36 @@ export function NewPropertyRegistryForm({
   }, [form, step]);
 
   useEffect(() => {
-    if (!primaryAgency) return;
+    if (!primaryAgency || initialState) return;
     setForm((f) => ({
       ...f,
       agencyName: primaryAgency.name,
       agencyCompany: primaryAgency.company ?? '',
     }));
-  }, [primaryAgency]);
+  }, [primaryAgency, initialState]);
+
+  useEffect(() => {
+    if (!onAutosave || !apiConnected || submitting || completing) return;
+    if (!canAutoSaveRegistry(form)) return;
+
+    if (skipAutosaveRef.current) {
+      skipAutosaveRef.current = false;
+      return;
+    }
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+    autosaveTimerRef.current = setTimeout(() => {
+      void onAutosave({ form, step, furthestStepIndex });
+    }, 1500);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [form, step, furthestStepIndex, onAutosave, apiConnected, submitting]);
 
   useEffect(() => {
     return () => {
@@ -360,22 +450,40 @@ export function NewPropertyRegistryForm({
   }, []);
 
   const stageDocument = useCallback(
-    (file: File, slotId: string, source: 'leasing' | 'management', title?: string) => {
+    (
+      file: File,
+      slotId: string,
+      source: 'leasing' | 'management',
+      title?: string,
+    ): PendingPropertyDocument | null => {
       if (isBlockedDocumentFile(file)) {
         toast.error(`${file.name} is not supported (videos and GIFs are not allowed)`);
-        return;
+        return null;
       }
       if (file.size > MAX_UPLOAD_BYTES) {
         toast.error(`${file.name} exceeds the ${MAX_UPLOAD_LABEL} limit`);
-        return;
+        return null;
       }
       const displayTitle = title?.trim() || file.name;
       const pendingId = `${source}-${slotId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const uploadStatus: StagedUploadStatus | undefined = apiConnected ? 'queued' : undefined;
+      const stagedFile: StagedUploadFile = {
+        id: pendingId,
+        fileName: file.name,
+        uploadedAt: new Date().toISOString(),
+        uploadStatus,
+      };
+      const doc: PendingPropertyDocument = {
+        id: pendingId,
+        file,
+        title: displayTitle,
+        slotId,
+        source,
+        uploadStatus,
+      };
+
       setForm((f) => {
-        const nextPending: PendingPropertyDocument[] = [
-          ...f.pendingDocuments,
-          { id: pendingId, file, title: displayTitle, slotId, source },
-        ];
+        const nextPending: PendingPropertyDocument[] = [...f.pendingDocuments, doc];
         if (source === 'leasing') {
           return {
             ...f,
@@ -384,10 +492,7 @@ export function NewPropertyRegistryForm({
               ...f.leasing,
               uploads: {
                 ...f.leasing.uploads,
-                [slotId]: [
-                  ...(f.leasing.uploads[slotId] ?? []),
-                  { id: pendingId, fileName: file.name, uploadedAt: new Date().toISOString() },
-                ],
+                [slotId]: [...(f.leasing.uploads[slotId] ?? []), stagedFile],
               },
             },
           };
@@ -399,30 +504,102 @@ export function NewPropertyRegistryForm({
             ...f.management,
             uploads: {
               ...f.management.uploads,
-              [slotId]: [
-                ...(f.management.uploads[slotId] ?? []),
-                { id: pendingId, fileName: file.name, uploadedAt: new Date().toISOString() },
-              ],
+              [slotId]: [...(f.management.uploads[slotId] ?? []), stagedFile],
             },
           },
         };
       });
+      return doc;
     },
-    [],
+    [apiConnected],
   );
+
+  const tryUploadDocument = useCallback(
+    async (doc: PendingPropertyDocument): Promise<boolean> => {
+      if (!apiConnected) return true;
+      if (doc.uploadStatus === 'uploaded') return true;
+
+      const inFlight = uploadInFlightRef.current.get(doc.id);
+      if (inFlight) return inFlight;
+
+      const run = async (): Promise<boolean> => {
+        setForm((f) => patchUploadStatusInForm(f, doc.id, 'uploading'));
+
+        let propertyId = draftPropertyId ?? null;
+        if (!propertyId && onEnsureDraftProperty) {
+          propertyId = await onEnsureDraftProperty({
+            form: formRef.current,
+            step,
+            furthestStepIndex,
+          });
+        }
+        if (!propertyId) {
+          setForm((f) => patchUploadStatusInForm(f, doc.id, 'queued'));
+          return false;
+        }
+
+        const current = formRef.current;
+        const street = composeStreetAddress(
+          current.unit,
+          current.streetNumber,
+          current.streetName,
+        ).trim();
+        const propertyAddress = current.suburb.trim()
+          ? `${street}, ${current.suburb.trim()}`
+          : street;
+
+        try {
+          await uploadDocument(doc.file, 'lease', propertyAddress, {
+            title: doc.title,
+            propertyId,
+          });
+          setForm((f) => patchUploadStatusInForm(f, doc.id, 'uploaded'));
+          return true;
+        } catch {
+          setForm((f) => patchUploadStatusInForm(f, doc.id, 'failed'));
+          return false;
+        }
+      };
+
+      const promise = run().finally(() => {
+        uploadInFlightRef.current.delete(doc.id);
+      });
+      uploadInFlightRef.current.set(doc.id, promise);
+      return promise;
+    },
+    [
+      apiConnected,
+      draftPropertyId,
+      furthestStepIndex,
+      onEnsureDraftProperty,
+      step,
+      uploadDocument,
+    ],
+  );
+
+  useEffect(() => {
+    if (!draftPropertyId || !apiConnected) return;
+    for (const doc of formRef.current.pendingDocuments) {
+      if (doc.uploadStatus === 'queued' || doc.uploadStatus === 'failed') {
+        void tryUploadDocument(doc);
+      }
+    }
+  }, [draftPropertyId, apiConnected, tryUploadDocument]);
 
   const handleLeasingUpload = useCallback(
     async (file: File, slotId: string, title?: string) => {
-      stageDocument(file, slotId, 'leasing', title);
+      const doc = stageDocument(file, slotId, 'leasing', title);
+      if (doc) await tryUploadDocument(doc);
     },
-    [stageDocument],
+    [stageDocument, tryUploadDocument],
   );
 
   const handleManagementUpload = useCallback(
     async (file: File, slotId: string, title?: string) => {
-      stageDocument(file, slotId, 'management', title);
+      const doc = stageDocument(file, slotId, 'management', title);
+      if (doc) await tryUploadDocument(doc);
     },
-    [stageDocument],
+    [stageDocument, tryUploadDocument],
   );
 
   const removeStagedDocument = useCallback((file: StagedUploadFile, slotId: string) => {
@@ -601,38 +778,82 @@ export function NewPropertyRegistryForm({
     if (prev) setStep(prev);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const failingStep = validateStepsThrough(WIZARD_STEPS.indexOf('landlord'));
     if (failingStep) {
       setStep(failingStep);
       return;
     }
-    void onSubmit({
-      ...form,
-      address: composeStreetAddress(form.unit, form.streetNumber, form.streetName),
-      management: {
-        ...form.management,
-        ...syncManagementFeesToScalars(form.management),
-      },
-      agencyName: apiConnected
-        ? (primaryAgency?.name ?? form.agencyName)
-        : agencyLocked
+
+    setCompleting(true);
+    try {
+      if (apiConnected && formRef.current.pendingDocuments.length > 0) {
+        await Promise.all(
+          formRef.current.pendingDocuments.map((doc) => tryUploadDocument(doc)),
+        );
+        const incomplete = formRef.current.pendingDocuments.some(
+          (doc) => doc.uploadStatus !== 'uploaded',
+        );
+        if (incomplete) {
+          toast.error('Some documents failed to upload. Retry or remove them before completing.');
+          return;
+        }
+      }
+
+      await onSubmit({
+        ...form,
+        address: composeStreetAddress(form.unit, form.streetNumber, form.streetName),
+        management: {
+          ...form.management,
+          ...syncManagementFeesToScalars(form.management),
+        },
+        agencyName: apiConnected
           ? (primaryAgency?.name ?? form.agencyName)
-          : form.agencyName,
-      agencyCompany: apiConnected
-        ? (primaryAgency?.company ?? form.agencyCompany)
-        : agencyLocked
+          : agencyLocked
+            ? (primaryAgency?.name ?? form.agencyName)
+            : form.agencyName,
+        agencyCompany: apiConnected
           ? (primaryAgency?.company ?? form.agencyCompany)
-          : form.agencyCompany,
-    });
+          : agencyLocked
+            ? (primaryAgency?.company ?? form.agencyCompany)
+            : form.agencyCompany,
+      });
+    } finally {
+      setCompleting(false);
+    }
   };
+
+  const formBusy = submitting || completing;
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-xs">
-        Creates a property in the registry. The same record links to leasing, end leasing,
-        maintenance, inspections, and accounting.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs">
+          {resumeMode
+            ? 'Continue registering this property. Your progress is saved automatically.'
+            : 'Creates a property in the registry. The same record links to leasing, end leasing, maintenance, inspections, and accounting.'}
+        </p>
+        {apiConnected && onAutosave ? (
+          <p
+            className={cn(
+              'text-xs tabular-nums',
+              autosaveStatus === 'error'
+                ? 'text-rose-600 dark:text-rose-400'
+                : 'text-muted-foreground',
+            )}
+          >
+            {autosaveStatus === 'saving'
+              ? 'Saving…'
+              : autosaveStatus === 'saved'
+                ? 'Saved'
+                : autosaveStatus === 'error'
+                  ? 'Save failed'
+                  : canAutoSaveRegistry(form)
+                    ? 'Auto-save on'
+                    : null}
+          </p>
+        ) : null}
+      </div>
 
       <WorkflowProgressRail
         steps={WIZARD_STEPS}
@@ -908,7 +1129,7 @@ export function NewPropertyRegistryForm({
             values={form.leasing}
             onChange={patchLeasing}
             required={requireLeasing}
-            disabled={submitting}
+            disabled={formBusy}
           />
         </div>
       ) : null}
@@ -951,13 +1172,13 @@ export function NewPropertyRegistryForm({
             onUploadFile={handleManagementUpload}
             onPreviewFile={handlePreviewStagedFile}
             onRemoveFile={removeStagedDocument}
-            disabled={submitting}
+            disabled={formBusy}
           />
 
           <PropertyManagementFeesSection
             values={form.management}
             onChange={patchManagement}
-            disabled={submitting}
+            disabled={formBusy}
           />
         </div>
       ) : null}
@@ -966,7 +1187,7 @@ export function NewPropertyRegistryForm({
         <PropertyStrataDetailsSection
           values={form.strata}
           onChange={patchStrata}
-          disabled={submitting}
+          disabled={formBusy}
         />
       ) : null}
 
@@ -980,23 +1201,23 @@ export function NewPropertyRegistryForm({
           onUploadManagementFile={handleManagementUpload}
           onPreviewFile={handlePreviewStagedFile}
           onRemoveFile={removeStagedDocument}
-          disabled={submitting}
+          disabled={formBusy}
         />
       ) : null}
 
       <div className="flex gap-2">
         {stepIndex > 0 ? (
-          <Button type="button" variant="outline" className="flex-1" onClick={goBack} disabled={submitting}>
+          <Button type="button" variant="outline" className="flex-1" onClick={goBack} disabled={formBusy}>
             Back
           </Button>
         ) : null}
         {step !== 'documents' ? (
-          <Button type="button" className="flex-1" onClick={goNext} disabled={submitting}>
+          <Button type="button" className="flex-1" onClick={goNext} disabled={formBusy}>
             Next
           </Button>
         ) : (
-          <Button type="button" className="flex-1" disabled={submitting} onClick={handleSubmit}>
-            {submitting ? 'Saving…' : 'Add property'}
+          <Button type="button" className="flex-1" disabled={formBusy} onClick={handleSubmit}>
+            {formBusy ? 'Saving…' : resumeMode ? 'Complete property' : 'Add property'}
           </Button>
         )}
       </div>

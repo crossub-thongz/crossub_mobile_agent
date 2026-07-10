@@ -22,7 +22,7 @@ type AuthStatus = 'loading' | 'authed' | 'guest';
 interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<AuthStatus>;
   logout: () => Promise<void>;
 }
 
@@ -32,25 +32,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<AuthStatus> => {
     clearOrphanLocalAccessCookie();
 
     try {
       const data = await api.get<{ user: AuthUser }>('/auth/me');
       setUser(data.user);
       setStatus('authed');
-      return;
+      return 'authed';
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         const localUser = getLocalSessionUser();
         if (localUser && hasLocalAccessCookie()) {
           setUser(localUser);
           setStatus('authed');
-          return;
+          return 'authed';
         }
         setUser(null);
         setStatus('guest');
-        return;
+        return 'guest';
       }
     }
 
@@ -58,11 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (localUser && hasLocalAccessCookie()) {
       setUser(localUser);
       setStatus('authed');
-      return;
+      return 'authed';
     }
 
     setUser(null);
     setStatus('guest');
+    return 'guest';
   }, []);
 
   const logout = useCallback(async () => {

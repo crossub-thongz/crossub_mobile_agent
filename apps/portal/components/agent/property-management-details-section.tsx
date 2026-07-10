@@ -44,6 +44,7 @@ export interface ExtraManagementDocumentRow {
 export const MANAGEMENT_FEE_OPTIONS = [
   { id: 'management_fee', label: 'Management Fee', unit: 'percent' as const },
   { id: 'letting_fee', label: 'Letting Fee', unit: 'currency' as const },
+  { id: 'advertising_fee', label: 'Advertising Fee', unit: 'currency' as const },
   { id: 'lease_renewal_fee', label: 'Lease Renewal Fee', unit: 'currency' as const },
   { id: 'administration_fee', label: 'Administration Fee', unit: 'currency' as const },
   { id: 'additional_services_fees', label: 'Additional Services Fees', unit: 'currency' as const },
@@ -270,6 +271,8 @@ export function PropertyManagementFeesSection({
           <div className="space-y-2">
             {values.fees.map((row) => {
               const isRate = row.valueMode === 'rate';
+              const isLettingFee = row.feeType === 'letting_fee';
+              const amountLabel = isLettingFee ? 'Week' : 'Rate or amount';
               return (
                 <div
                   key={row.id}
@@ -296,7 +299,7 @@ export function PropertyManagementFeesSection({
                       ))}
                     </select>
                   </FormField>
-                  <FormField label="Rate or amount">
+                  <FormField label={amountLabel}>
                     <div className="flex gap-2">
                       <Input
                         type="number"
@@ -305,27 +308,38 @@ export function PropertyManagementFeesSection({
                         step={isRate ? 0.1 : 0.01}
                         value={row.amount}
                         onChange={(e) => updateFee(row.id, { amount: e.target.value })}
-                        placeholder={isRate ? 'e.g. 5.5' : '0.00'}
+                        placeholder={isRate ? 'e.g. 5.5' : isLettingFee ? 'e.g. 1' : '0.00'}
                         disabled={disabled}
                         className="min-w-0 flex-1"
                       />
-                      <select
-                        value={row.valueMode}
-                        onChange={(e) =>
-                          updateFee(row.id, {
-                            valueMode: e.target.value as ManagementFeeValueMode,
-                          })
-                        }
-                        className={cn(selectClass, 'w-[4.25rem] shrink-0 px-2 text-center')}
-                        disabled={disabled}
-                        aria-label="Rate or amount unit"
-                      >
-                        {VALUE_MODE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                      {isLettingFee ? (
+                        <span
+                          className={cn(
+                            selectClass,
+                            'flex w-[4.25rem] shrink-0 items-center justify-center px-2 text-center text-xs',
+                          )}
+                        >
+                          week
+                        </span>
+                      ) : (
+                        <select
+                          value={row.valueMode}
+                          onChange={(e) =>
+                            updateFee(row.id, {
+                              valueMode: e.target.value as ManagementFeeValueMode,
+                            })
+                          }
+                          className={cn(selectClass, 'w-[4.25rem] shrink-0 px-2 text-center')}
+                          disabled={disabled}
+                          aria-label="Rate or amount unit"
+                        >
+                          {VALUE_MODE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   </FormField>
                   <FormField label="GST">
@@ -406,6 +420,7 @@ function AgreementUploadRow({
       onUpload={onUpload}
       onPreview={onPreview}
       onRemove={onRemove}
+      className="w-full max-w-sm"
     />
   );
 }
@@ -452,12 +467,12 @@ export function PropertyManagementAgreementSection({
     }
     setUploading(true);
     try {
-      for (const file of ok) {
-        await onUploadFile(file, slotId, MANAGEMENT_AGREEMENT_DOC_SLOT.label);
-      }
+      await Promise.all(
+        ok.map((file) => onUploadFile(file, slotId, MANAGEMENT_AGREEMENT_DOC_SLOT.label)),
+      );
       toast.success(
         ok.length === 1
-          ? `Uploaded ${ok[0].name}`
+          ? `Uploaded ${ok[0]!.name}`
           : `Uploaded ${ok.length} files`,
       );
     } catch {

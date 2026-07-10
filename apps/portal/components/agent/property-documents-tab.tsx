@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ChevronRight, FileText, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,9 +25,8 @@ import {
   MAX_UPLOAD_LABEL,
 } from '@/lib/file-upload';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
-import { propertyRegistryApi } from '@/lib/property-registry-api';
 import type { AgentDocument, Property } from '@/lib/types';
-import { formatDate, formatPropertyFullAddress } from '@/lib/utils';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 type DisplayDoc = {
   id: string;
@@ -44,47 +43,6 @@ type ExtraDraftRow = {
 type PendingUpload =
   | { kind: 'slot'; title: string; slotId: string }
   | { kind: 'extra'; title: string; draftId: string };
-
-function LandlordInsuranceExpiryField({
-  value,
-  displayValue,
-  editable,
-  saving,
-  onChange,
-  onSave,
-}: {
-  value: string;
-  displayValue: string;
-  editable: boolean;
-  saving: boolean;
-  onChange: (value: string) => void;
-  onSave: () => void;
-}) {
-  return (
-    <li className="border-b px-3 py-2.5">
-      <p className="text-sm font-medium leading-snug">Landlord insurance expiry</p>
-      {!editable ? (
-        <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{displayValue}</p>
-      ) : (
-        <div className="mt-1.5 flex items-center gap-2">
-          <Label htmlFor="landlord-insurance-expiry" className="sr-only">
-            Landlord insurance expiry date
-          </Label>
-          <Input
-            id="landlord-insurance-expiry"
-            type="date"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onBlur={() => void onSave()}
-            disabled={saving}
-            className="h-8 max-w-[11rem] text-xs"
-          />
-          {saving ? <Loader2 className="text-muted-foreground size-3.5 animate-spin" /> : null}
-        </div>
-      )}
-    </li>
-  );
-}
 
 function SlotUploadButton({
   busy,
@@ -135,7 +93,6 @@ function DocumentColumn({
   onUploadExtra,
   uploadingKey,
   uploadProgress,
-  insuranceExpiry,
 }: {
   group: CreatePropertyDocumentGroup;
   fixedRows: DocumentChecklistRow[];
@@ -149,14 +106,6 @@ function DocumentColumn({
   onUploadExtra: (title: string, draftId: string) => void;
   uploadingKey: string | null;
   uploadProgress: number | null;
-  insuranceExpiry?: {
-    value: string;
-    displayValue: string;
-    editable: boolean;
-    saving: boolean;
-    onChange: (value: string) => void;
-    onSave: () => void;
-  };
 }) {
   const allRows = [...fixedRows, ...extraRows];
   const uploadedFileCount = allRows.reduce((sum, row) => sum + row.files.length, 0);
@@ -183,56 +132,46 @@ function DocumentColumn({
         {fixedRows.map((row) => {
           const busy = uploadingKey === `slot:${row.slotId ?? row.id}`;
           const rowProgress = busy ? uploadProgress : null;
-          const showInsuranceExpiryAfter =
-            group === 'landlord' &&
-            row.slotId === 'management_agreement' &&
-            insuranceExpiry != null;
 
           return (
-            <div key={row.id}>
-              <li className="px-3 py-2.5">
-                <div className="flex w-full items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    {row.uploaded ? (
-                      <button
-                        type="button"
-                        onClick={() => onOpenFiles(row)}
-                        className="group flex w-full items-start gap-1 text-left"
-                      >
-                        <ChevronRight className="text-primary mt-0.5 size-3.5 shrink-0 opacity-70 group-hover:opacity-100" />
-                        <span className="min-w-0 flex-1">
-                          <span className="text-foreground group-hover:text-primary block text-sm font-medium leading-snug">
-                            {row.title}
-                          </span>
-                          <span className="text-primary mt-1 block text-[11px] font-semibold">
-                            {row.files.length} document{row.files.length === 1 ? '' : 's'} uploaded
-                          </span>
+            <li key={row.id} className="px-3 py-2.5">
+              <div className="flex w-full items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  {row.uploaded ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenFiles(row)}
+                      className="group flex w-full items-start gap-1 text-left"
+                    >
+                      <ChevronRight className="text-primary mt-0.5 size-3.5 shrink-0 opacity-70 group-hover:opacity-100" />
+                      <span className="min-w-0 flex-1">
+                        <span className="text-foreground group-hover:text-primary block text-sm font-medium leading-snug">
+                          {row.title}
                         </span>
-                      </button>
-                    ) : (
-                      <>
-                        <p className="text-sm font-medium leading-snug">{row.title}</p>
-                        <span className="text-muted-foreground mt-1 block text-[11px]">
-                          Not uploaded
+                        <span className="text-primary mt-1 block text-[11px] font-semibold">
+                          {row.files.length} document{row.files.length === 1 ? '' : 's'} uploaded
                         </span>
-                      </>
-                    )}
-                  </div>
-
-                  <SlotUploadButton
-                    busy={busy}
-                    disabled={uploadingKey != null}
-                    hasFiles={row.files.length > 0}
-                    progress={rowProgress}
-                    onClick={() => onUploadSlot(row.title, row.slotId ?? row.id)}
-                  />
+                      </span>
+                    </button>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium leading-snug">{row.title}</p>
+                      <span className="text-muted-foreground mt-1 block text-[11px]">
+                        Not uploaded
+                      </span>
+                    </>
+                  )}
                 </div>
-              </li>
 
-              {showInsuranceExpiryAfter ? (
-                <LandlordInsuranceExpiryField {...insuranceExpiry} />
-              ) : null}
-            </div>
+                <SlotUploadButton
+                  busy={busy}
+                  disabled={uploadingKey != null}
+                  hasFiles={row.files.length > 0}
+                  progress={rowProgress}
+                  onClick={() => onUploadSlot(row.title, row.slotId ?? row.id)}
+                />
+              </div>
+            </li>
           );
         })}
 
@@ -351,16 +290,13 @@ export function PropertyDocumentsTab({
   propertyId: string;
   fallbackDocuments?: AgentDocument[];
 }) {
-  const { apiConnected, uploadDocument } = useAgentData();
+  const { apiConnected, uploadDocument, deleteDocument } = useAgentData();
   const { detail, refresh } = usePropertyPortalDetail(propertyId, apiConnected);
   const portalDocuments = detail?.documents ?? [];
 
-  const [insuranceExpiry, setInsuranceExpiry] = useState(
-    property.landlordInsuranceExpiry?.slice(0, 10) ?? '',
-  );
-  const [savingInsuranceExpiry, setSavingInsuranceExpiry] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [extraDrafts, setExtraDrafts] =
     useState<Record<CreatePropertyDocumentGroup, ExtraDraftRow[]>>(EMPTY_DRAFTS);
   const [filesRow, setFilesRow] = useState<DocumentChecklistRow | null>(null);
@@ -376,37 +312,6 @@ export function PropertyDocumentsTab({
   } | null>(null);
 
   const fullAddress = formatPropertyFullAddress(property);
-
-  useEffect(() => {
-    if (!apiConnected) return;
-    void propertyRegistryApi
-      .get(propertyId)
-      .then((record) => {
-        setInsuranceExpiry(record.landlordInsuranceExpiry?.slice(0, 10) ?? '');
-      })
-      .catch(() => {
-        setInsuranceExpiry(property.landlordInsuranceExpiry?.slice(0, 10) ?? '');
-      });
-  }, [apiConnected, propertyId, property.landlordInsuranceExpiry, detail?.overview?.landlordInsuranceExpiry]);
-
-  const insuranceExpiryDisplay =
-    insuranceExpiry.trim().length > 0 ? formatDate(insuranceExpiry) : 'Not set';
-
-  const saveInsuranceExpiry = async () => {
-    if (!apiConnected) return;
-    setSavingInsuranceExpiry(true);
-    try {
-      await propertyRegistryApi.update(propertyId, {
-        landlordInsuranceExpiry: insuranceExpiry || undefined,
-      });
-      toast.success('Insurance expiry updated');
-      await refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update insurance expiry');
-    } finally {
-      setSavingInsuranceExpiry(false);
-    }
-  };
 
   const displayDocs = useMemo<DisplayDoc[]>(() => {
     const byId = new Map<string, DisplayDoc>();
@@ -486,6 +391,32 @@ export function PropertyDocumentsTab({
       uploadedAt: file.uploadedAt,
       href: file.href,
     });
+  };
+
+  const onDeleteFile = async (file: DocumentChecklistFile) => {
+    if (!file.deletable) return;
+    setDeletingId(file.id);
+    try {
+      await deleteDocument(file.id);
+      await refresh();
+      setFilesRow((current) => {
+        if (!current) return null;
+        const files = current.files.filter((f) => f.id !== file.id);
+        if (files.length === 0) return null;
+        return {
+          ...current,
+          files,
+          uploaded: true,
+          uploadedAt: files[0]?.uploadedAt,
+          href: files[0]?.href,
+        };
+      });
+      toast.success('Document deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete document');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const onFileSelected = async (fileList: FileList | null) => {
@@ -608,18 +539,6 @@ export function PropertyDocumentsTab({
               onUploadExtra={(title, draftId) => onUploadExtra(g, title, draftId)}
               uploadingKey={uploadingKey}
               uploadProgress={uploadProgress}
-              insuranceExpiry={
-                g === 'landlord'
-                  ? {
-                      value: insuranceExpiry,
-                      displayValue: insuranceExpiryDisplay,
-                      editable: apiConnected,
-                      saving: savingInsuranceExpiry,
-                      onChange: setInsuranceExpiry,
-                      onSave: saveInsuranceExpiry,
-                    }
-                  : undefined
-              }
             />
           );
         })}
@@ -631,6 +550,8 @@ export function PropertyDocumentsTab({
         open={filesRow != null}
         onClose={() => setFilesRow(null)}
         onPreview={onPreview}
+        onDelete={apiConnected ? onDeleteFile : undefined}
+        deletingId={deletingId}
       />
 
       <PropertyDocumentPreviewDialog

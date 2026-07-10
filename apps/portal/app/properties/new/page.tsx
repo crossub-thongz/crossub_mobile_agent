@@ -1,28 +1,124 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import {
-  mapLeaseStatusToPropertyStatusForApi,
   NewPropertyRegistryForm,
-  parseCount,
-  parseMoney,
-  parsePercent,
   type NewPropertyRegistryValues,
 } from '@/components/agent/new-property-registry-form';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
-import { bondFromWeekly, weeklyRentFromAmount } from '@/lib/rent-calculations';
-import { splitParties } from '@/lib/property-parties';
-import type { Property } from '@/lib/types';
+import { propertyDetail, propertyNew, ROUTES } from '@/constants/routes';
+import { fetchProperty } from '@/lib/crossub-api/agent-client';
+import { mapAgentProperty } from '@/lib/crossub-api/agent-mappers';
+import {
+  canAutoSaveRegistry,
+  hydrateRegistryFormFromProperty,
+  type PropertyRegistryAutosaveState,
+} from '@/lib/property-registry-persist';
 
 export default function AddPropertyPage() {
   const router = useRouter();
-  const { addProperty, primaryAgency, apiConnected, uploadDocument } = useAgentData();
+  const searchParams = useSearchParams();
+  const resumePropertyId = searchParams.get('propertyId');
+  const {
+    primaryAgency,
+    apiConnected,
+    savePropertyRegistryDraft,
+    agentPortfolioId,
+  } = useAgentData();
+  const [draftPropertyId, setDraftPropertyId] = useState<string | null>(resumePropertyId);
+  const [initialState, setInitialState] = useState<PropertyRegistryAutosaveState | null>(null);
+  const [loadingDraft, setLoadingDraft] = useState(Boolean(resumePropertyId && apiConnected));
   const [submitting, setSubmitting] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  useEffect(() => {
+    if (!resumePropertyId || !apiConnected) {
+      setLoadingDraft(false);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const dto = await fetchProperty(resumePropertyId);
+        const property = mapAgentProperty(dto, agentPortfolioId);
+        const registryDraft = (dto as { registryDraft?: unknown }).registryDraft;
+        const intakeComplete = (dto as { registryIntakeComplete?: boolean }).registryIntakeComplete;
+
+        if (intakeComplete !== false) {
+          if (!cancelled) {
+            toast.message('This property is already registered');
+            router.replace(propertyDetail(resumePropertyId));
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setInitialState(
+            hydrateRegistryFormFromProperty(property, registryDraft, {
+              agencyName: primaryAgency?.name ?? '',
+              agencyCompany: primaryAgency?.company,
+            }),
+          );
+          setDraftPropertyId(resumePropertyId);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(err instanceof Error ? err.message : 'Could not load property draft');
+          router.replace(propertyNew());
+        }
+      } finally {
+        if (!cancelled) setLoadingDraft(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resumePropertyId, apiConnected, agentPortfolioId, primaryAgency, router]);
+
+  const handleAutosave = useCallback(
+    async (state: PropertyRegistryAutosaveState) => {
+      if (!apiConnected) return;
+      setAutosaveStatus('saving');
+      try {
+        const property = await savePropertyRegistryDraft(draftPropertyId, state, {
+          complete: false,
+        });
+        setDraftPropertyId(property.id);
+        setAutosaveStatus('saved');
+      } catch (err) {
+        setAutosaveStatus('error');
+        toast.error(err instanceof Error ? err.message : 'Could not save draft');
+      }
+    },
+    [apiConnected, draftPropertyId, resumePropertyId, router, savePropertyRegistryDraft],
+  );
+
+  const ensureDraftProperty = useCallback(
+    async (state: PropertyRegistryAutosaveState): Promise<string | null> => {
+      if (draftPropertyId) return draftPropertyId;
+      if (!canAutoSaveRegistry(state.form)) {
+        toast.error('Enter the property address before uploading documents');
+        return null;
+      }
+      try {
+        const property = await savePropertyRegistryDraft(draftPropertyId, state, {
+          complete: false,
+        });
+        setDraftPropertyId(property.id);
+        return property.id;
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not save property draft');
+        return null;
+      }
+    },
+    [draftPropertyId, savePropertyRegistryDraft],
+  );
 
   const onSubmitNewProperty = async (values: NewPropertyRegistryValues) => {
     const address = values.address.trim();
@@ -35,93 +131,19 @@ export default function AddPropertyPage() {
       return;
     }
 
-    const agencyName =
-      values.agencyName.trim() ||
-      primaryAgency?.name?.trim() ||
-      '';
-    if (!apiConnected && !agencyName) {
-      toast.error('Agency name is required');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const landlords = splitParties(values.landlords);
-      const tenants = splitParties(values.tenants);
-      const { leasing, strata, management, pendingDocuments } = values;
-      const weeklyRent = weeklyRentFromAmount(Number(leasing.rentAmount), leasing.rentPeriod);
-      const property = await addProperty({
-        intakeMode: 'new',
-        agencyName: agencyName || undefined,
-        agencyCompany: values.agencyCompany.trim() || undefined,
-        address,
-        suburb: values.suburb.trim(),
-        state: values.state,
-        postcode: values.postcode.trim() || undefined,
-        homeOwnerName: landlords.primary!.name,
-        homeOwnerEmail: landlords.primary?.email,
-        homeOwnerPhone: landlords.primary?.phone,
-        additionalLandlords: landlords.additional.length ? landlords.additional : undefined,
-        tenantName: tenants.label,
-        tenantEmail: tenants.primary?.email,
-        tenantPhone: tenants.primary?.phone,
-        additionalTenants: tenants.additional.length ? tenants.additional : undefined,
-        leaseStatus: values.leaseStatus as Property['leaseStatus'],
-        rentWeekly: weeklyRent,
-        rentPeriod: leasing.rentPeriod || undefined,
-        leaseStart: leasing.agreementStart || undefined,
-        leaseEnd: leasing.agreementEnd || undefined,
-        bondAmount: bondFromWeekly(weeklyRent) || undefined,
-        bedrooms: parseCount(values.bedrooms),
-        bathrooms: parseCount(values.bathrooms),
-        carSpaces: parseCount(values.parking),
-        furnished: values.furnished === 'yes',
-        propertyType: values.propertyType,
-        propertyStatus: mapLeaseStatusToPropertyStatusForApi(
-          values.leaseStatus as Property['leaseStatus'],
-        ),
-        latitude: values.latitude,
-        longitude: values.longitude,
-        buildingName: strata.buildingName.trim() || undefined,
-        strataPlanNumber: strata.strataPlanNumber.trim() || undefined,
-        buildingManagerName: strata.buildingManagerName.trim() || undefined,
-        buildingManagerEmail: strata.buildingManagerEmail.trim() || undefined,
-        buildingManagerPhone: strata.buildingManagerContactNumber.trim() || undefined,
-        strataContactName: strata.strataName.trim() || undefined,
-        strataContactEmail: strata.strataEmail.trim() || undefined,
-        strataContactPhone: strata.strataContactNumber.trim() || undefined,
-        landlordInsuranceExpiry: management.landlordInsuranceExpiry || undefined,
-        administrationFee: parseMoney(management.administrationFee),
-        documentationFee: parseMoney(management.documentationFee),
-        lettingFee: parseMoney(management.lettingFee),
-        managementRatePercent: parsePercent(management.managementRatePercent),
-        managementRateGst:
-          management.managementRateGst === 'include' || management.managementRateGst === 'exclude'
-            ? management.managementRateGst
-            : undefined,
-      });
+      const property = await savePropertyRegistryDraft(
+        draftPropertyId,
+        {
+          form: values,
+          step: 'documents',
+          furthestStepIndex: 4,
+        },
+        { complete: true },
+      );
 
-      const propertyAddress = `${property.address}, ${property.suburb}`;
-      if (pendingDocuments.length > 0) {
-        const results = await Promise.allSettled(
-          pendingDocuments.map((doc) =>
-            uploadDocument(doc.file, 'lease', propertyAddress, {
-              title: doc.title,
-              propertyId: property.id,
-            }),
-          ),
-        );
-        const failed = results.filter((r) => r.status === 'rejected').length;
-        if (failed > 0) {
-          toast.warning(
-            `Property added, but ${failed} document${failed === 1 ? '' : 's'} failed to upload`,
-          );
-        } else {
-          toast.success('Property added — documents uploaded');
-        }
-      } else {
-        toast.success('Property added — available across leasing, maintenance, and more');
-      }
+      toast.success('Property added — available across leasing, maintenance, and more');
       router.push(`${propertyDetail(property.id)}?tab=${encodeURIComponent('Documents')}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not add the property');
@@ -130,15 +152,35 @@ export default function AddPropertyPage() {
     }
   };
 
+  const resumeMode = Boolean(resumePropertyId || draftPropertyId);
+
   return (
-    <AgentShell title="Add property" backHref={ROUTES.PROPERTIES} backLabel="Properties">
+    <AgentShell
+      title={resumeMode ? 'Resume property' : 'Add property'}
+      backHref={ROUTES.PROPERTIES}
+      backLabel="Properties"
+    >
       <div className="space-y-5">
         <p className="text-muted-foreground text-sm">
-          Register a new property with landlord, tenant, and management details. To hand a property
-          over to another agent, use Leasing → Transfer OUT.
+          {resumeMode
+            ? 'Pick up where you left off. Changes save automatically as you work.'
+            : 'Register a new property with landlord, tenant, and management details. To hand a property over to another agent, use Leasing → Transfer OUT.'}
         </p>
 
-        <NewPropertyRegistryForm onSubmit={onSubmitNewProperty} submitting={submitting} />
+        {loadingDraft ? (
+          <p className="text-muted-foreground text-sm">Loading saved property…</p>
+        ) : resumePropertyId && !initialState ? null : (
+          <NewPropertyRegistryForm
+            onSubmit={onSubmitNewProperty}
+            submitting={submitting}
+            initialState={initialState ?? undefined}
+            onAutosave={apiConnected ? handleAutosave : undefined}
+            autosaveStatus={autosaveStatus}
+            resumeMode={resumeMode}
+            draftPropertyId={draftPropertyId}
+            onEnsureDraftProperty={apiConnected ? ensureDraftProperty : undefined}
+          />
+        )}
       </div>
     </AgentShell>
   );

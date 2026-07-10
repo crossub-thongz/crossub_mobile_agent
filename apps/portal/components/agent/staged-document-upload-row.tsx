@@ -1,14 +1,17 @@
 'use client';
 
-import { Eye, Loader2, Trash2, Upload } from 'lucide-react';
+import { Check, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+export type StagedUploadStatus = 'queued' | 'uploading' | 'uploaded' | 'failed';
 
 export interface StagedUploadFile {
   id: string;
   fileName: string;
   uploadedAt: string;
+  uploadStatus?: StagedUploadStatus;
 }
 
 export function StagedDocumentUploadRow({
@@ -19,6 +22,7 @@ export function StagedDocumentUploadRow({
   onUpload,
   onPreview,
   onRemove,
+  className,
 }: {
   label: string;
   files: StagedUploadFile[];
@@ -27,11 +31,17 @@ export function StagedDocumentUploadRow({
   onUpload: () => void;
   onPreview?: (file: StagedUploadFile) => void;
   onRemove?: (file: StagedUploadFile) => void;
+  className?: string;
 }) {
   const hasFiles = files.length > 0;
 
   return (
-    <div className="space-y-2 rounded-lg border border-primary/15 bg-primary/[0.02] px-3 py-2">
+    <div
+      className={cn(
+        'space-y-2 rounded-lg border border-primary/15 bg-primary/[0.02] px-3 py-2',
+        className,
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium">{label}</p>
         {!hasFiles ? (
@@ -79,6 +89,21 @@ export function StagedDocumentUploadRow({
             >
               <p className="min-w-0 truncate text-xs font-medium">{file.fileName}</p>
               <div className="flex shrink-0 items-center gap-1">
+                {file.uploadStatus === 'uploading' ? (
+                  <span className="text-muted-foreground inline-flex items-center gap-1 px-1 text-[10px]">
+                    <Loader2 className="size-3 animate-spin" />
+                    Uploading
+                  </span>
+                ) : file.uploadStatus === 'queued' ? (
+                  <span className="text-muted-foreground px-1 text-[10px]">Queued</span>
+                ) : file.uploadStatus === 'uploaded' ? (
+                  <span className="inline-flex items-center gap-0.5 px-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                    <Check className="size-3" />
+                    Saved
+                  </span>
+                ) : file.uploadStatus === 'failed' ? (
+                  <span className="text-destructive px-1 text-[10px] font-medium">Failed</span>
+                ) : null}
                 {onPreview ? (
                   <Button
                     type="button"
