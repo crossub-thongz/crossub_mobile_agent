@@ -9,12 +9,14 @@ export function CaseDetailDialog({
   title,
   subtitle,
   children,
+  size = 'default',
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   children: ReactNode;
+  size?: 'default' | 'wide';
 }) {
   if (!open) return null;
 
@@ -24,7 +26,9 @@ export function CaseDetailDialog({
       onClick={onClose}
     >
       <div
-        className="bg-background flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-2xl"
+        className={`bg-background flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl border shadow-2xl ${
+          size === 'wide' ? 'max-w-2xl' : 'max-w-lg'
+        }`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

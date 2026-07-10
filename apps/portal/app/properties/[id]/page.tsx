@@ -37,6 +37,7 @@ import {
   getNextRentReviewDate,
   isInOpenInspectionPhase,
   isPropertyVacant,
+  rentReviewsForProperty,
 } from '@/lib/property-leasing';
 import {
   isPropertyLeasingBondFocus,
@@ -136,7 +137,7 @@ export default function PropertyDetailPage() {
       (m) => m.propertyId === id || m.propertyAddress.includes(property.address),
     ),
     inspections: inspections.filter((i) => i.propertyId === id),
-    rentReviews: rentReviews.filter((r) => r.propertyId === id),
+    rentReviews: rentReviewsForProperty(rentReviews, id, property),
   };
   const propertyDocs = documents.filter((d) =>
     d.propertyAddress.includes(property.address.split(',')[0]),
@@ -169,7 +170,7 @@ export default function PropertyDetailPage() {
       : null;
   const selectedRentReview =
     selectedRentReviewId != null
-      ? tenancyRentReviews.find((r) => r.id === selectedRentReviewId) ?? null
+      ? tasks.rentReviews.find((r) => r.id === selectedRentReviewId) ?? null
       : null;
 
   const showAmenityIcons =
@@ -297,7 +298,7 @@ export default function PropertyDetailPage() {
           <PropertyRentReviewTab
             property={property}
             propertyId={id}
-            rentReviews={tenancyRentReviews}
+            rentReviews={tasks.rentReviews}
             rentReviewDecisions={decisions}
             leasingRecords={leasing}
             leasingCycles={propertyLeasingCycles}

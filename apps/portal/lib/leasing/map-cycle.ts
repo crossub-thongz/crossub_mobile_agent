@@ -138,11 +138,21 @@ export function patchDetailFromCycleView(
       moveInDate: u(view.rental.moveInDate),
       deposit: n(view.rental.deposit),
       bond: n(view.rental.bond),
+      leaseTerm:
+        u(view.onboarding?.agreement.contractDraft?.leaseTerm) ??
+        existing.rental.leaseTerm,
+      tenantMovedOut:
+        view.onboarding?.agreement.contractDraft?.tenantMovedOut ??
+        existing.rental.tenantMovedOut,
+      tenantMovedOutDate: u(view.onboarding?.agreement.contractDraft?.tenantMovedOutDate),
     },
     openInspection: {
       status: asItemStatus(view.openInspection.status),
       inspectorName,
+      inspectorPhone: u(view.openInspection.inspectorPhone ?? undefined),
+      inspectorEmail: u(view.openInspection.inspectorEmail ?? undefined),
       scheduledTime: u(view.openInspection.scheduledTime),
+      scheduledTimeEnd: u(view.openInspection.scheduledTimeEnd ?? undefined),
       viewingSessionId: view.viewingSessionId ?? undefined,
       pushedToAgentApp: view.openInspection.pushedToAgentApp,
       agentNotifiedToAdvertise: view.openInspection.agentNotifiedToAdvertise,

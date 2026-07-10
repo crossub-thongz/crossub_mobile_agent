@@ -1,15 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { PropertyLeasingCaseWorkflowDialog } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { PropertyLeasingWorkflowActions } from '@/components/agent/property-leasing-workflow-actions';
 import { LeasingTenancySummary } from '@/components/agent/leasing-tenancy-summary';
-import { PropertyLeasingWorkflowShell } from '@/components/agent/property-leasing-workflow-shell';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
 import { leasingWorkflowJobRows } from '@/lib/property-job-rows';
-import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import {
+  buildPropertyLeasingWorkflowCases,
+  filterLeasingTabWorkflowCases,
+} from '@/lib/property-leasing-workflow-cases';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
   Inspection,
@@ -22,13 +25,14 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 
 export function PropertyLeasingJobPanel({
   property,
   propertyId,
   tenantSelections,
   vacatingCases,
-  outgoingInspection,
+  outgoingInspection: _outgoingInspection,
   rentReviews,
   rentReviewDecisions,
   currentLease,
@@ -70,17 +74,19 @@ export function PropertyLeasingJobPanel({
 }) {
   const workflowCases = useMemo(
     () =>
-      buildPropertyLeasingWorkflowCases({
-        propertyId,
-        leasingCycles,
-        tenantSelections,
-        vacatingCases,
-        rentReviews,
-        rentReviewDecisions,
-        currentLease,
-        inOpenInspectionPhase,
-        isVacant,
-      }),
+      filterLeasingTabWorkflowCases(
+        buildPropertyLeasingWorkflowCases({
+          propertyId,
+          leasingCycles,
+          tenantSelections,
+          vacatingCases,
+          rentReviews,
+          rentReviewDecisions,
+          currentLease,
+          inOpenInspectionPhase,
+          isVacant,
+        }),
+      ),
     [
       propertyId,
       leasingCycles,
@@ -101,6 +107,15 @@ export function PropertyLeasingJobPanel({
   });
 
   const jobRows = useMemo(() => leasingWorkflowJobRows(workflowCases), [workflowCases]);
+
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [dialogCase, setDialogCase] = useState<PropertyLeasingWorkflowCase | null>(null);
+
+  const handleRowClick = (id: string) => {
+    setSelectedCaseId(id);
+    const item = workflowCases.find((workflowCase) => workflowCase.id === id) ?? null;
+    setDialogCase(item);
+  };
 
   const workflowActions = (
     <PropertyLeasingWorkflowActions
@@ -146,10 +161,23 @@ export function PropertyLeasingJobPanel({
     <div className="space-y-4">
       {workflowActions}
 
-      <PropertyJobCasesTable rows={jobRows} showViewToggle />
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">Letting cases</h3>
+        <p className="text-muted-foreground text-xs">
+          Click a case to open the full letting or end-leasing workflow.
+        </p>
+        <PropertyJobCasesTable
+          rows={jobRows}
+          selectedId={selectedCaseId}
+          onRowClick={handleRowClick}
+          showViewToggle
+        />
+      </section>
 
-      <PropertyLeasingWorkflowShell
-        cases={workflowCases}
+      <PropertyLeasingCaseWorkflowDialog
+        open={dialogCase !== null}
+        onClose={() => setDialogCase(null)}
+        item={dialogCase}
         property={property}
         propertyId={propertyId}
         rentReviews={rentReviews}
@@ -157,8 +185,7 @@ export function PropertyLeasingJobPanel({
         vacatingCases={vacatingCases}
         rentWeekly={rentWeekly}
         onViewRentReview={onViewRentReview}
-        initialCategory={leasingInitialCategory}
-        focusBond={leasingFocusBond}
+        focusBond={leasingFocusBond && dialogCase?.category === 'leasing'}
         onFocusBondHandled={onLeasingFocusBondHandled}
       />
 

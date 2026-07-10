@@ -105,7 +105,10 @@ export function PropertyLeasingWorkflowActions({
             <WorkflowActionButton
               key={action.id}
               action={action}
-              onClick={() => setActiveAction(action.id)}
+              onClick={() => {
+                if (action.disabled) return;
+                setActiveAction(action.id);
+              }}
             />
           ))}
         </div>
@@ -120,7 +123,10 @@ export function PropertyLeasingWorkflowActions({
               <WorkflowActionButton
                 key={action.id}
                 action={action}
-                onClick={() => setActiveAction(action.id)}
+                onClick={() => {
+                if (action.disabled) return;
+                setActiveAction(action.id);
+              }}
               />
             ))}
           </div>
@@ -165,6 +171,7 @@ function WorkflowActionButton({
         action.primary && 'bg-teal-600 text-white hover:bg-teal-700',
       )}
       title={action.description}
+      disabled={action.disabled}
       onClick={onClick}
     >
       <Plus className="size-3.5" />

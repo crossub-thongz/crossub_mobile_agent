@@ -21,12 +21,18 @@ export interface LeasingRentalInfo {
   moveInDate?: string;
   deposit?: number;
   bond?: number;
+  leaseTerm?: string;
+  tenantMovedOut?: boolean;
+  tenantMovedOutDate?: string;
 }
 
 export interface LeasingOpenInspection {
   status: LeasingItemStatus;
   inspectorName?: string;
+  inspectorPhone?: string;
+  inspectorEmail?: string;
   scheduledTime?: string;
+  scheduledTimeEnd?: string;
   viewingSessionId?: string;
   pushedToAgentApp: boolean;
   agentNotifiedToAdvertise: boolean;

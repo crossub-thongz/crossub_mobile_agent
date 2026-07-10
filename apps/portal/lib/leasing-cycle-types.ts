@@ -114,6 +114,8 @@ export interface ServerLeasingOnboarding {
 export interface ServerContractDraft {
   template?: string
   leaseTerm?: string
+  tenantMovedOut?: boolean
+  tenantMovedOutDate?: string
   startDate?: string
   endDate?: string
   weeklyRent?: number
@@ -168,7 +170,10 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
     status: string
     required: boolean
     inspectorName: string | null
+    inspectorPhone?: string | null
+    inspectorEmail?: string | null
     scheduledTime: string | null
+    scheduledTimeEnd?: string | null
     pushedToAgentApp: boolean
     agentNotifiedToAdvertise: boolean
     advertising: string

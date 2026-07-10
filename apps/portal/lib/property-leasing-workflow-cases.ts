@@ -163,3 +163,15 @@ export const LEASING_WORKFLOW_CATEGORIES: PropertyLeasingWorkflowCategory[] = [
   'end_leasing',
   'rent_review',
 ];
+
+/** Leasing tab — new letting and end leasing only (rent review has its own tab). */
+export const LEASING_TAB_WORKFLOW_CATEGORIES: PropertyLeasingWorkflowCategory[] = [
+  'leasing',
+  'end_leasing',
+];
+
+export function filterLeasingTabWorkflowCases(
+  cases: PropertyLeasingWorkflowCase[],
+): PropertyLeasingWorkflowCase[] {
+  return cases.filter((item) => item.category !== 'rent_review');
+}

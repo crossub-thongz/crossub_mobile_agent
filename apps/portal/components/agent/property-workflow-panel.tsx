@@ -25,6 +25,9 @@ import {
   createAgentTerminationCase,
 } from '@/lib/crossub-api/agent-workflow-client';
 import { inspectionsApi } from '@/lib/inspections-api';
+import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
   buildIngoingInspectionPrefill,
   buildLeasingCyclePrefill,
@@ -38,8 +41,8 @@ import {
   recalcRentReviewLeaseStart,
   LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS,
   minLeasingCycleAvailableFrom,
-  recalcLeasingDepositBond,
 } from '@/lib/property-form-prefill';
+import { isPropertyVacant } from '@/lib/property-leasing';
 import {
   buildPropertyWorkflowContext,
   tabActionsFor,
@@ -58,14 +61,13 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, formatDate, formatPropertyFullAddress } from '@/lib/utils';
 
 import { TERMINATION_NOTICE_GROUND, TERMINATION_NOTICE_GROUND_OPTIONS, type TerminationNoticeGround } from '@/constants/end-leasing';
 import { vacatingDetail, rentReviewDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import { RENT_PERIOD_OPTIONS } from '@/lib/rent-calculations';
 import type { RentPeriod } from '@/lib/store';
-import { formatDate } from '@/lib/utils';
 
 type RentReviewCreatePath = 'crossub_managed' | 'landlord_agreed';
 type RentReviewNegotiationChoice = 'negotiable' | 'not_negotiable';
@@ -163,6 +165,7 @@ export function PropertyWorkflowPanel({
               key={action.id}
               action={action}
               onClick={() => {
+                if (action.disabled) return;
                 if (action.id === 'open_tribunal') {
                   toast.info(
                     'New tribunal cases are opened from Maintenance or Rent Review triggers.',
@@ -186,6 +189,7 @@ export function PropertyWorkflowPanel({
                 key={action.id}
                 action={action}
                 onClick={() => {
+                  if (action.disabled) return;
                   if (action.id === 'open_tribunal') {
                     toast.info(
                       'New tribunal cases are opened from Maintenance or Rent Review triggers.',
@@ -235,6 +239,7 @@ function WorkflowActionButton({
       variant={action.primary ? 'default' : 'outline'}
       className={cn(action.primary && 'bg-primary')}
       title={action.description}
+      disabled={action.disabled}
       onClick={onClick}
     >
       <Plus className="size-3.5" />
@@ -267,15 +272,14 @@ export function PropertyWorkflowCreateDialog({
   onSuccess: () => void;
 }) {
   const router = useRouter();
-  const { refresh } = useAgentData();
+  const { refresh, apiConnected } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
 
   const [rentPerWeek, setRentPerWeek] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
-  const [deposit, setDeposit] = useState('');
-  const [bond, setBond] = useState('');
-  const [keyCustody, setKeyCustody] = useState<'crossub' | 'agent'>('crossub');
+  const [tenantMovedOut, setTenantMovedOut] = useState<boolean | null>(null);
+  const [tenantMovedOutDate, setTenantMovedOutDate] = useState('');
 
   const [tenantName, setTenantName] = useState('');
   const [leaseType, setLeaseType] = useState<'fixed' | 'periodic'>('fixed');
@@ -343,9 +347,10 @@ export function PropertyWorkflowCreateDialog({
     const leasingPrefill = buildLeasingCyclePrefill(property, currentLease);
     setRentPerWeek(leasingPrefill.rentPerWeek);
     setAvailableFrom(leasingPrefill.availableFrom);
-    setDeposit(leasingPrefill.deposit);
-    setBond(leasingPrefill.bond);
-    setKeyCustody(leasingPrefill.keyCustody);
+    setTenantMovedOut(
+      isPropertyVacant(property, currentLease ? [currentLease] : []) ? true : false,
+    );
+    setTenantMovedOutDate('');
 
     const instantRentReview = buildRentReviewPrefill(property, agency, currentLease, {
       leasingCycle,
@@ -482,19 +487,12 @@ export function PropertyWorkflowCreateDialog({
   };
 
   const titles: Record<PropertyWorkflowActionId, string> = {
-    start_leasing: 'Start new leasing',
+    start_leasing: 'Start new letting',
     start_rent_review: 'Add rent review',
     start_end_leasing: 'Add end leasing',
     start_maintenance: 'Log maintenance job',
     schedule_inspection: 'Schedule inspection',
     open_tribunal: 'Open tribunal case',
-  };
-
-  const handleRentChange = (value: string) => {
-    setRentPerWeek(value);
-    const calc = recalcLeasingDepositBond(value);
-    setDeposit(calc.deposit);
-    setBond(calc.bond);
   };
 
   const handleSubmit = async () => {
@@ -510,14 +508,36 @@ export function PropertyWorkflowCreateDialog({
             `Available from must be at least ${LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today`,
           );
         }
-        await createAgentLeasingCycle(propertyId, {
-          keyCustody,
+        if (tenantMovedOut === null) {
+          throw new Error('Select whether the tenant has moved out');
+        }
+        if (tenantMovedOut && !tenantMovedOutDate) {
+          throw new Error('Tenant moved out date is required');
+        }
+        const fixedTermWeeks = resolveCrossubLeaseTermWeeks(
+          crossubLeaseTermChoice,
+          crossubCustomTermWeeks,
+        );
+        const result = await createAgentLeasingCycle(propertyId, {
           rentPerWeek: rent,
-          availableFrom,
-          deposit: deposit ? Number(deposit) : undefined,
-          bond: bond ? Number(bond) : undefined,
+          availableFrom: new Date(availableFrom).toISOString(),
+          fixedTermWeeks,
+          tenantMovedOut,
+          tenantMovedOutDate: tenantMovedOut ? tenantMovedOutDate : undefined,
         });
-        toast.success('Leasing cycle created');
+        toast.success('Letting cycle created');
+        if (apiConnected) {
+          try {
+            const view = await leasingOpsApi.get(result.id);
+            const store = useLeasingWorkflowStore.getState();
+            store.ensureDetail(propertyId, formatPropertyFullAddress(property), rent);
+            store.applyCycleView(propertyId, view);
+            store.resetActiveStepToHint(propertyId, LEASING_LIFECYCLE_STEP.OPEN_INSPECTION);
+            store.setActiveStep(propertyId, LEASING_LIFECYCLE_STEP.OPEN_INSPECTION);
+          } catch {
+            /* live sync will catch up when the workflow opens */
+          }
+        }
       } else if (actionId === 'start_rent_review') {
         const rent = Number(currentWeeklyRent);
         if (!rent || rent <= 0) throw new Error('Current weekly rent is required');
@@ -651,12 +671,97 @@ export function PropertyWorkflowCreateDialog({
 
         {actionId === 'start_leasing' ? (
           <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tenant moved out? *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={tenantMovedOut === true ? 'default' : 'outline'}
+                  className={cn(
+                    'h-9',
+                    tenantMovedOut === true && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => setTenantMovedOut(true)}
+                >
+                  Yes
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={tenantMovedOut === false ? 'default' : 'outline'}
+                  className={cn(
+                    'h-9',
+                    tenantMovedOut === false && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => setTenantMovedOut(false)}
+                >
+                  No
+                </Button>
+              </div>
+              {tenantMovedOut === false ? (
+                <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                  Contact current tenant to schedule open inspection.
+                </p>
+              ) : null}
+            </div>
+            {tenantMovedOut === true ? (
+              <Field label="Tenant moved out date *">
+                <Input
+                  type="date"
+                  value={tenantMovedOutDate}
+                  onChange={(e) => setTenantMovedOutDate(e.target.value)}
+                />
+              </Field>
+            ) : null}
+            <Field label="Lease term *">
+              <div className="grid grid-cols-3 gap-2">
+                {(['26', '52'] as const).map((weeks) => (
+                  <Button
+                    key={weeks}
+                    type="button"
+                    size="sm"
+                    variant={crossubLeaseTermChoice === weeks ? 'default' : 'outline'}
+                    className={cn(
+                      crossubLeaseTermChoice === weeks &&
+                        'bg-teal-600 text-white hover:bg-teal-700',
+                    )}
+                    onClick={() => setCrossubLeaseTermChoice(weeks)}
+                  >
+                    {weeks} weeks
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={crossubLeaseTermChoice === 'custom' ? 'default' : 'outline'}
+                  className={cn(
+                    crossubLeaseTermChoice === 'custom' &&
+                      'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => setCrossubLeaseTermChoice('custom')}
+                >
+                  Custom
+                </Button>
+              </div>
+              {crossubLeaseTermChoice === 'custom' ? (
+                <Input
+                  type="number"
+                  min={1}
+                  max={520}
+                  className="mt-2"
+                  placeholder="Enter number of weeks"
+                  value={crossubCustomTermWeeks}
+                  onChange={(e) => setCrossubCustomTermWeeks(e.target.value)}
+                />
+              ) : null}
+            </Field>
             <Field label="Rent / week (AUD) *">
               <Input
                 type="number"
                 min={1}
                 value={rentPerWeek}
-                onChange={(e) => handleRentChange(e.target.value)}
+                onChange={(e) => setRentPerWeek(e.target.value)}
               />
             </Field>
             <Field label="Available from *">
@@ -670,22 +775,6 @@ export function PropertyWorkflowCreateDialog({
                 Must be at least {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
                 {minAvailableFrom}).
               </p>
-            </Field>
-            <Field label="Deposit (auto)">
-              <Input type="number" readOnly value={deposit} className="bg-muted/50" />
-            </Field>
-            <Field label="Bond (auto)">
-              <Input type="number" readOnly value={bond} className="bg-muted/50" />
-            </Field>
-            <Field label="Key custody">
-              <select
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                value={keyCustody}
-                onChange={(e) => setKeyCustody(e.target.value as 'crossub' | 'agent')}
-              >
-                <option value="crossub">CROSSUB</option>
-                <option value="agent">Agent</option>
-              </select>
             </Field>
           </div>
         ) : null}

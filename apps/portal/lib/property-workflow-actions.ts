@@ -29,6 +29,7 @@ export interface PropertyWorkflowAction {
   label: string;
   description?: string;
   primary?: boolean;
+  disabled?: boolean;
 }
 
 export interface PropertyWorkflowContext {
@@ -92,8 +93,8 @@ export function tabActionsFor(
       if (!hasActiveLeasingCycle(ctx)) {
         actions.push({
           id: 'start_leasing',
-          label: 'Start new leasing',
-          description: 'Open a leasing cycle for this property',
+          label: 'Start new letting',
+          description: 'Open a letting cycle for this property',
           primary: true,
         });
       }
@@ -106,16 +107,20 @@ export function tabActionsFor(
       }
       return actions;
     }
-    case 'rent_review':
-      if (hasActiveRentReview(ctx)) return [];
+    case 'rent_review': {
+      const activeReview = hasActiveRentReview(ctx);
       return [
         {
           id: 'start_rent_review',
           label: 'Add rent review',
-          description: 'Open a rent review for this property',
+          description: activeReview
+            ? 'Complete the current rent review before starting another'
+            : 'Open a rent review for this property',
           primary: true,
+          disabled: activeReview,
         },
       ];
+    }
     case 'maintenance':
       return [
         {
@@ -162,7 +167,9 @@ export function buildPropertyWorkflowContext(input: {
   return {
     propertyId: input.propertyId,
     leasingCycles: input.leasingCycles.filter((c) => c.propertyId === input.propertyId),
-    rentReviews: input.rentReviews.filter((r) => r.propertyId === input.propertyId),
+    rentReviews: input.rentReviews.filter(
+      (r) => !r.propertyId || r.propertyId === input.propertyId,
+    ),
     vacatingCases: input.vacatingCases.filter((v) => v.propertyId === input.propertyId),
     maintenance: input.maintenance.filter(
       (m) => m.propertyId === input.propertyId,

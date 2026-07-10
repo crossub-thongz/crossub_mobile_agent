@@ -452,9 +452,17 @@ const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
 
 async function parseApiError(res: Response): Promise<string> {
   try {
-    const body = (await res.json()) as { message?: string | string[] };
-    if (typeof body.message === 'string') return body.message;
-    if (Array.isArray(body.message)) return body.message.join(', ');
+    const body = (await res.json()) as {
+      message?: string | string[] | { message?: string | string[] };
+    };
+    const raw = body.message;
+    if (typeof raw === 'string') return raw;
+    if (Array.isArray(raw)) return raw.join(', ');
+    if (raw && typeof raw === 'object') {
+      const nested = raw.message;
+      if (typeof nested === 'string') return nested;
+      if (Array.isArray(nested)) return nested.join(', ');
+    }
   } catch {
     // ignore non-JSON bodies
   }

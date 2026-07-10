@@ -217,14 +217,26 @@ export function buildPropertyOverviewJobRows(input: {
   vacatingCases: VacatingCase[];
   accounting?: PropertyAccounting | null;
 }): PropertyJobRow[] {
-  const rows = [
+  // Leasing workflow cases also surface rent reviews and end-leasing rows — those are
+  // already represented by rentReviewJobRows / vacatingJobRows below.
+  const leasingOnlyCases = input.leasingCases.filter((item) => item.category === 'leasing');
+  const rows = dedupeJobRowsById([
     ...maintenanceJobRows(input.maintenance),
     ...inspectionJobRows(input.inspections),
     ...rentReviewJobRows(input.rentReviews, input.rentReviewDecisions),
-    ...leasingWorkflowJobRows(input.leasingCases),
+    ...leasingWorkflowJobRows(leasingOnlyCases),
     ...tribunalJobRows(input.tribunalCases),
     ...vacatingJobRows(input.vacatingCases),
     ...accountingJobRows(input.accounting),
-  ];
+  ]);
   return splitPropertyJobRows(rows).inProgress;
+}
+
+function dedupeJobRowsById(rows: PropertyJobRow[]): PropertyJobRow[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  });
 }

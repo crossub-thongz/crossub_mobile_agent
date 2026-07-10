@@ -1,14 +1,40 @@
 import type { Inspection, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 export function isPropertyVacant(
   property: Property,
   currentTenancy: LeasingRecord[] = [],
 ): boolean {
-  return (
-    property.leaseStatus === 'vacant' ||
-    property.tenantName.trim().toLowerCase() === 'vacant' ||
-    currentTenancy.length === 0
-  );
+  if (property.leaseStatus === 'vacant') return true;
+  if (property.tenantName.trim().toLowerCase() === 'vacant') return true;
+  if (
+    property.leaseStatus === 'active' ||
+    property.leaseStatus === 'periodic' ||
+    property.leaseStatus === 'vacating'
+  ) {
+    return false;
+  }
+  return currentTenancy.length === 0;
+}
+
+/** Match portfolio rent reviews to a property by id, with address fallback when id is missing. */
+export function rentReviewsForProperty(
+  reviews: RentReviewCase[],
+  propertyId: string,
+  property?: Pick<Property, 'address' | 'suburb' | 'state' | 'postcode'>,
+): RentReviewCase[] {
+  const fullAddress = property ? formatPropertyFullAddress(property).toLowerCase() : '';
+  return reviews.filter((review) => {
+    if (review.propertyId === propertyId) return true;
+    if (!property || review.propertyId) return false;
+    const reviewAddress = (review.propertyAddress ?? '').toLowerCase();
+    return (
+      reviewAddress.length > 0 &&
+      (reviewAddress === fullAddress ||
+        reviewAddress.includes(fullAddress) ||
+        fullAddress.includes(reviewAddress))
+    );
+  });
 }
 
 export function isTenancyInspection(type: Inspection['type']): boolean {

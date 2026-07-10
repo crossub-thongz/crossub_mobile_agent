@@ -1,21 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
-import { PropertyLeasingWorkflowActions } from '@/components/agent/property-leasing-workflow-actions';
-import { Button } from '@/components/ui/button';
+import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { rentReviewDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
-import {
-  buildCurrentRentReviewRow,
-  buildRentReviewHistoryRows,
-  findCurrentRentReview,
-  type RentReviewSummaryRow,
-} from '@/lib/property-rent-review-history';
-import { isRentReviewPendingApproval, type RentReviewDecision } from '@/lib/rent-review';
+import { buildRentReviewHistoryRows, isActiveRentReview, type RentReviewSummaryRow } from '@/lib/property-rent-review-history';
+import type { RentReviewDecision } from '@/lib/rent-review';
+import { buildPropertyWorkflowContext, tabActionsFor } from '@/lib/property-workflow-actions';
 import type {
   Inspection,
   LeasingCycle,
@@ -27,22 +23,14 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { rentReviewJobRows } from '@/lib/property-job-rows';
-import { cn } from '@/lib/utils';
 
-function RentReviewDataTable({
+function RentReviewHistoryTable({
   rows,
   propertyId,
-  onViewRentReview,
-  showActions = false,
-  pendingReviewId,
 }: {
   rows: RentReviewSummaryRow[];
   propertyId: string;
-  onViewRentReview?: (reviewId: string) => void;
-  showActions?: boolean;
-  pendingReviewId?: string;
 }) {
   if (rows.length === 0) return null;
 
@@ -56,58 +44,26 @@ function RentReviewDataTable({
               <th className="px-3 py-3 font-semibold">Term</th>
               <th className="px-3 py-3 font-semibold">Rent</th>
               <th className="px-3 py-3 font-semibold">Start date</th>
-              {showActions ? (
-                <th className="px-3 py-3 text-right font-semibold">Actions</th>
-              ) : null}
+              <th className="px-3 py-3 text-right font-semibold">Open</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map((row) => {
-              const pending = pendingReviewId === row.id;
-
-              return (
-                <tr key={row.id} className="transition-colors hover:bg-muted/20">
-                  <td className="px-3 py-3">
-                    <p className="font-medium">{row.leasePeriod}</p>
-                    {pending ? (
-                      <p className="text-amber-700 mt-0.5 text-[11px] font-medium dark:text-amber-400">
-                        Needs approval
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-3">{row.termLabel}</td>
-                  <td className="px-3 py-3 tabular-nums">{row.rentLabel}</td>
-                  <td className="px-3 py-3 tabular-nums">{row.startDate}</td>
-                  {showActions ? (
-                    <td className="px-3 py-3">
-                      <div className="flex justify-end flex-wrap gap-2">
-                        {onViewRentReview ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onViewRentReview(row.review.id)}
-                          >
-                            View
-                          </Button>
-                        ) : null}
-                        <Button asChild size="sm" variant="outline" className="gap-1.5">
-                          <Link
-                            href={rentReviewDetail(
-                              row.review.id,
-                              fromProperty(propertyId, 'Rent Review'),
-                            )}
-                          >
-                            <ExternalLink className="size-3.5" />
-                            Open
-                          </Link>
-                        </Button>
-                      </div>
-                    </td>
-                  ) : null}
-                </tr>
-              );
-            })}
+            {rows.map((row) => (
+              <tr key={row.id} className="transition-colors hover:bg-muted/20">
+                <td className="px-3 py-3 font-medium">{row.leasePeriod}</td>
+                <td className="px-3 py-3">{row.termLabel}</td>
+                <td className="px-3 py-3 tabular-nums">{row.rentLabel}</td>
+                <td className="px-3 py-3 tabular-nums">{row.startDate}</td>
+                <td className="px-3 py-3 text-right">
+                  <Link
+                    href={rentReviewDetail(row.review.id, fromProperty(propertyId, 'Rent Review'))}
+                    className="text-primary text-xs font-medium hover:underline"
+                  >
+                    Open
+                  </Link>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -146,6 +102,55 @@ export function PropertyRentReviewTab({
   onViewRentReview?: (reviewId: string) => void;
   onWorkflowCreated?: () => void;
 }) {
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+
+  const workflowPanelProps = {
+    tab: 'rent_review' as const,
+    property,
+    propertyId,
+    leasingCycles,
+    rentReviews,
+    vacatingCases,
+    maintenance,
+    inspections,
+    tribunalCases,
+    tenantSelections,
+    currentLease,
+    onCreated: onWorkflowCreated,
+  };
+
+  const workflowCtx = useMemo(
+    () =>
+      buildPropertyWorkflowContext({
+        propertyId,
+        leasingCycles,
+        rentReviews,
+        vacatingCases,
+        maintenance,
+        inspections,
+        tribunalCases,
+        currentLease,
+      }),
+    [
+      propertyId,
+      leasingCycles,
+      rentReviews,
+      vacatingCases,
+      maintenance,
+      inspections,
+      tribunalCases,
+      currentLease,
+    ],
+  );
+
+  const rentReviewAction = tabActionsFor('rent_review', workflowCtx).find(
+    (action) => action.id === 'start_rent_review',
+  );
+  const canAddRentReview = Boolean(rentReviewAction && !rentReviewAction.disabled);
+  const hasActiveReview = rentReviews.some((review) =>
+    isActiveRentReview(review, rentReviewDecisions[review.id]),
+  );
+
   const rowOptions = useMemo(
     () => ({
       property,
@@ -156,87 +161,45 @@ export function PropertyRentReviewTab({
     [property, leasingRecords, currentLease, rentReviewDecisions],
   );
 
-  const currentReview = useMemo(
-    () => findCurrentRentReview(rentReviews, rentReviewDecisions),
-    [rentReviews, rentReviewDecisions],
-  );
-
-  const currentRow = useMemo(
-    () => (currentReview ? buildCurrentRentReviewRow(currentReview, rowOptions) : null),
-    [currentReview, rowOptions],
-  );
-
   const historyRows = useMemo(
     () => buildRentReviewHistoryRows(rentReviews, rowOptions),
     [rentReviews, rowOptions],
   );
-
-  const currentPending =
-    currentReview != null &&
-    isRentReviewPendingApproval(currentReview, rentReviewDecisions[currentReview.id]);
 
   const jobRows = useMemo(
     () => rentReviewJobRows(rentReviews, rentReviewDecisions),
     [rentReviews, rentReviewDecisions],
   );
 
+  const handleRowClick = (id: string) => {
+    setSelectedCaseId(id);
+    onViewRentReview?.(id);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
+        {!canAddRentReview && hasActiveReview ? (
+          <p className="text-muted-foreground text-xs">
+            A rent review is already in progress for this property. Complete it before starting
+            another.
+          </p>
+        ) : null}
+      </div>
+
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Rent review cases</h3>
+        <p className="text-muted-foreground text-xs">
+          Click a case to open the full rent review workflow.
+        </p>
         <PropertyJobCasesTable
           rows={jobRows}
+          selectedId={selectedCaseId}
+          onRowClick={handleRowClick}
           emptyTitle="No rent review cases"
           emptyDescription="Start a rent review when the lease is due for renewal."
         />
-      </section>
-
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold">New rent review</h3>
-          {currentReview ? (
-            <span className="rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">
-              Current
-            </span>
-          ) : null}
-        </div>
-
-        {currentRow ? (
-          <RentReviewDataTable
-            rows={[currentRow]}
-            propertyId={propertyId}
-            onViewRentReview={onViewRentReview}
-            showActions
-            pendingReviewId={currentPending ? currentReview.id : undefined}
-          />
-        ) : (
-          <div
-            className={cn(
-              'rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 py-5',
-            )}
-          >
-            <p className="text-muted-foreground text-sm">
-              No rent review in progress. Start one when the lease is due for review.
-            </p>
-            <div className="mt-3">
-              <PropertyLeasingWorkflowActions
-                tab="rent_review"
-                inline
-                property={property}
-                propertyId={propertyId}
-                leasingCycles={leasingCycles}
-                rentReviews={rentReviews}
-                vacatingCases={vacatingCases}
-                maintenance={maintenance}
-                inspections={inspections}
-                tribunalCases={tribunalCases}
-                tenantSelections={tenantSelections}
-                currentLease={currentLease}
-                onCreated={onWorkflowCreated}
-              />
-            </div>
-          </div>
-        )}
       </section>
 
       <section className="space-y-3">
@@ -254,7 +217,7 @@ export function PropertyRentReviewTab({
             description="Past rent reviews will appear here once completed."
           />
         ) : (
-          <RentReviewDataTable rows={historyRows} propertyId={propertyId} />
+          <RentReviewHistoryTable rows={historyRows} propertyId={propertyId} />
         )}
       </section>
     </div>

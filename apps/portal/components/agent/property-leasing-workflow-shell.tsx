@@ -1,25 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ExternalLink } from 'lucide-react';
 
-import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
-import { VacatingWorkflowTimeline } from '@/components/vacating-workflow/vacating-workflow-timeline';
-import { TaskStatusRow } from '@/components/agent/task-status-row';
+import { PropertyLeasingCaseWorkflowContent } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { WorkflowCategoryTabs } from '@/components/agent/workflow-category-tabs';
-import { Button } from '@/components/ui/button';
-import { rentReviewDetail } from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
 import {
   LEASING_CATEGORY_LABEL,
   LEASING_WORKFLOW_CATEGORIES,
   type PropertyLeasingWorkflowCase,
   type PropertyLeasingWorkflowCategory,
 } from '@/lib/property-leasing-workflow-cases';
-import { isRentReviewPendingApproval, type RentReviewDecision } from '@/lib/rent-review';
+import type { RentReviewDecision } from '@/lib/rent-review';
 import type { Property, RentReviewCase, VacatingCase } from '@/lib/types';
-import { formatDate, formatPropertyFullAddress } from '@/lib/utils';
 
 function CasePicker({
   cases,
@@ -48,95 +40,6 @@ function CasePicker({
           {item.label}
         </button>
       ))}
-    </div>
-  );
-}
-
-function LeasingCaseDetail({
-  item,
-  property,
-  propertyId,
-  rentReviews,
-  rentReviewDecisions,
-  vacatingCases,
-  rentWeekly,
-  onViewRentReview,
-  focusBond,
-  onFocusBondHandled,
-}: {
-  item: PropertyLeasingWorkflowCase;
-  property: Property;
-  propertyId: string;
-  rentReviews: RentReviewCase[];
-  rentReviewDecisions: Record<string, RentReviewDecision | null | undefined>;
-  vacatingCases: VacatingCase[];
-  rentWeekly?: number;
-  onViewRentReview?: (reviewId: string) => void;
-  focusBond?: boolean;
-  onFocusBondHandled?: () => void;
-}) {
-  if (item.category === 'leasing') {
-    return (
-      <LeasingWorkflowTimeline
-        propertyId={propertyId}
-        propertyAddress={formatPropertyFullAddress(property)}
-        rentWeekly={rentWeekly}
-        hideSectionLabel
-        focusBond={focusBond}
-        onFocusBondHandled={onFocusBondHandled}
-      />
-    );
-  }
-
-  if (item.category === 'end_leasing') {
-    const vacatingCase = vacatingCases.find((v) => v.id === item.id);
-    if (!vacatingCase) return null;
-    return <VacatingWorkflowTimeline vacatingCase={vacatingCase} />;
-  }
-
-  const review = rentReviews.find((r) => r.id === item.id);
-  if (!review) return null;
-
-  return (
-    <div className="space-y-2">
-      <TaskStatusRow
-        asLink={false}
-        item={{
-          id: review.id,
-          propertyAddress: review.propertyAddress,
-          taskLabel: `Rent review · due ${formatDate(review.reviewDue)}`,
-          status: rentReviewDecisions[review.id]
-            ? rentReviewDecisions[review.id]?.action === 'confirmed'
-              ? 'Confirmed'
-              : 'Custom amount submitted'
-            : review.status,
-          href: rentReviewDetail(review.id, fromProperty(propertyId, 'Leasing')),
-          module: 'Rent review',
-          tone: isRentReviewPendingApproval(review, rentReviewDecisions[review.id])
-            ? 'warning'
-            : review.tenantResponse === 'counter'
-              ? 'neutral'
-              : 'ok',
-          requiresApproval: isRentReviewPendingApproval(review, rentReviewDecisions[review.id]),
-        }}
-      />
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="flex-1"
-          onClick={() => onViewRentReview?.(review.id)}
-        >
-          View details
-        </Button>
-        <Button asChild size="sm" variant="outline" className="flex-1 gap-1.5">
-          <Link href={rentReviewDetail(review.id, fromProperty(propertyId, 'Leasing'))}>
-            <ExternalLink className="size-3.5" />
-            Open case
-          </Link>
-        </Button>
-      </div>
     </div>
   );
 }
@@ -271,7 +174,7 @@ export function PropertyLeasingWorkflowShell({
             onSelect={setSelectedCaseId}
           />
 
-          <LeasingCaseDetail
+          <PropertyLeasingCaseWorkflowContent
             item={selectedCase}
             property={property}
             propertyId={propertyId}

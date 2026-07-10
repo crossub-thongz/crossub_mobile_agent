@@ -10,11 +10,11 @@ export type CreateAgentLeasingCycleInput = {
   agentCompany?: string;
   agentEmail?: string;
   agentPhone?: string;
-  keyCustody?: 'crossub' | 'agent';
   rentPerWeek: number;
   availableFrom: string;
-  deposit?: number;
-  bond?: number;
+  fixedTermWeeks?: number;
+  tenantMovedOut?: boolean;
+  tenantMovedOutDate?: string;
   skipOpenInspection?: boolean;
 };
 
