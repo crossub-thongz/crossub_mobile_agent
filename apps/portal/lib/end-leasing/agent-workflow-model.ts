@@ -216,11 +216,14 @@ function reportComparisonSubProgress(
     rc.tenantResponsibility.length > 0 ||
     rc.landlordResponsibility.length > 0 ||
     caseData.makeGood.estimatedDeductions > 0;
+  const tenantResponded =
+    rc.tenantQuoteResponse === 'accepted' || rc.tenantQuoteResponse === 'declined';
 
   return [
     { id: 'compare', label: 'Compare ingoing and outgoing reports', done: compared },
     { id: 'draft', label: 'Draft summary', done: drafted },
     { id: 'quote', label: 'Obtain repair quote', done: quoted },
+    { id: 'tenant-reply', label: 'Tenant quote response', done: tenantResponded },
   ];
 }
 

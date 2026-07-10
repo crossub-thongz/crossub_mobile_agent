@@ -8,8 +8,13 @@ import {
   ExternalLink,
   FileText,
   Loader2,
+  Lock,
   Mail,
   Plus,
+  RefreshCw,
+  Send,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,20 +33,33 @@ import type { InspectionDetail } from '@/lib/inspections-types';
 import type {
   EndLeasingOverviewEmail,
   ReportComparisonRepairItem,
+  ReportComparisonSettlementSummary,
+  TenantQuoteResponse,
   TerminationCaseDetail,
 } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
+import type { ReportComparisonRepairItemInput } from '@/lib/termination-case-types';
 import { terminationApi } from '@/lib/termination-case-api';
-import { formatDateTime } from '@/lib/utils';
+import {
+  fetchPreferredContractors,
+  type PreferredContractor,
+} from '@/lib/crossub-api/agent-client';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
-function SummaryEmailPanel({ email }: { email: EndLeasingOverviewEmail }) {
+function SummaryEmailPanel({
+  email,
+  title,
+}: {
+  email: EndLeasingOverviewEmail;
+  title: string;
+}) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Mail className="text-primary size-4" />
-          <p className="text-sm font-semibold">Draft summary message</p>
+          <p className="text-sm font-semibold">{title}</p>
         </div>
         {email.commConversationId ? (
           <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
@@ -81,6 +99,204 @@ function SummaryEmailPanel({ email }: { email: EndLeasingOverviewEmail }) {
         <pre className="text-xs leading-relaxed whitespace-pre-wrap font-sans">{email.body}</pre>
       </div>
     </div>
+  );
+}
+
+const TENANT_QUOTE_RESPONSE_LABEL: Record<TenantQuoteResponse, string> = {
+  pending: 'Awaiting tenant reply',
+  accepted: 'Tenant agreed',
+  declined: 'Tenant disagreed',
+};
+
+function TenantQuoteResponsePanel({
+  response,
+  responseAt,
+  declineReason,
+  replyExcerpt,
+  commConversationId,
+  busy,
+  onCheckReply,
+  onAgree,
+  onDisagree,
+}: {
+  response: TenantQuoteResponse | null | undefined;
+  responseAt?: string | null;
+  declineReason?: string | null;
+  replyExcerpt?: string | null;
+  commConversationId?: string | null;
+  busy: boolean;
+  onCheckReply: () => void;
+  onAgree: () => void;
+  onDisagree: () => void;
+}) {
+  const status = response ?? 'pending';
+
+  return (
+    <section className="space-y-3 rounded-xl border bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">Tenant quote response</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Trace agree/disagree from the Message Center thread, or record the tenant&apos;s reply
+            manually.
+          </p>
+        </div>
+        {commConversationId ? (
+          <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+            <Link href={communicationsThread(commConversationId)}>
+              <ExternalLink className="size-3.5" />
+              Open email thread
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+
+      <div
+        className={`rounded-lg border px-3 py-2 text-xs ${
+          status === 'accepted'
+            ? 'border-primary/30 bg-primary/5'
+            : status === 'declined'
+              ? 'border-destructive/30 bg-destructive/5'
+              : 'border-border bg-muted/20'
+        }`}
+      >
+        <p className="font-semibold">{TENANT_QUOTE_RESPONSE_LABEL[status]}</p>
+        {responseAt ? (
+          <p className="text-muted-foreground mt-1">Recorded {formatDateTime(responseAt)}</p>
+        ) : null}
+        {replyExcerpt ? (
+          <p className="text-muted-foreground mt-2 whitespace-pre-wrap">
+            Reply: {replyExcerpt}
+          </p>
+        ) : null}
+        {declineReason ? (
+          <p className="mt-2 whitespace-pre-wrap">{declineReason}</p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1.5 text-xs"
+          disabled={busy}
+          onClick={onCheckReply}
+        >
+          <RefreshCw className="size-3.5" />
+          Check email for reply
+        </Button>
+        {status !== 'accepted' ? (
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            disabled={busy}
+            onClick={onAgree}
+          >
+            <ThumbsUp className="size-3.5" />
+            Tenant agreed
+          </Button>
+        ) : null}
+        {status !== 'declined' ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5 text-xs"
+            disabled={busy}
+            onClick={onDisagree}
+          >
+            <ThumbsDown className="size-3.5" />
+            Tenant disagreed
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function SettlementSummaryPanel({ summary }: { summary: ReportComparisonSettlementSummary }) {
+  const totalDeductions =
+    summary.unpaidRent + summary.unpaidBills + summary.maintenanceCost;
+
+  return (
+    <section className="space-y-3 rounded-xl border bg-card p-4">
+      <p className="text-sm font-semibold">Bond settlement summary</p>
+      <p className="text-muted-foreground text-xs">
+        Total bond less unpaid rent, unpaid bills, and tenant maintenance costs.
+      </p>
+      <div className="overflow-hidden rounded-xl border text-xs">
+        <div className="divide-y">
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-muted-foreground">Unpaid rent</span>
+            <span className="font-medium tabular-nums">{formatCurrency(summary.unpaidRent)}</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-muted-foreground">Unpaid bills</span>
+            <span className="font-medium tabular-nums">{formatCurrency(summary.unpaidBills)}</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-muted-foreground">Maintenance (tenant)</span>
+            <span className="font-medium tabular-nums">
+              {formatCurrency(summary.maintenanceCost)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between bg-muted/30 px-3 py-2">
+            <span className="font-semibold">Total bond held</span>
+            <span className="font-semibold tabular-nums">{formatCurrency(summary.bondHeld)}</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-muted-foreground">Less deductions</span>
+            <span className="font-medium tabular-nums text-destructive">
+              −{formatCurrency(totalDeductions)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between bg-primary/5 px-3 py-2">
+            <span className="font-semibold">
+              {summary.debtAmount > 0 ? 'Debt owing' : 'Refund to tenant'}
+            </span>
+            <span className="text-primary font-semibold tabular-nums">
+              {summary.debtAmount > 0
+                ? formatCurrency(summary.debtAmount)
+                : formatCurrency(summary.netRefund)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MaintenanceQuotationPanel({ items }: { items: ReportComparisonRepairItem[] }) {
+  return (
+    <section className="space-y-2 rounded-xl border bg-card p-4">
+      <p className="text-sm font-semibold">Maintenance quotation (tenant agreed)</p>
+      <div className="overflow-x-auto rounded-xl border">
+        <table className="w-full min-w-[640px] text-left text-xs">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 font-semibold">#</th>
+              <th className="px-3 py-2 font-semibold">Area</th>
+              <th className="px-3 py-2 font-semibold">Description</th>
+              <th className="px-3 py-2 font-semibold">Quote</th>
+              <th className="px-3 py-2 font-semibold">Handyman</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((row, index) => (
+              <tr key={`quote-${index}`} className="border-t">
+                <td className="px-3 py-2 tabular-nums">{index + 1}</td>
+                <td className="px-3 py-2">{row.area}</td>
+                <td className="px-3 py-2">{row.description}</td>
+                <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
+                <td className="px-3 py-2">{row.handymanName || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -208,16 +424,103 @@ function ReportEvidenceSection({
   );
 }
 
+function emptyRepairItem(): ReportComparisonRepairItem {
+  return { area: '', description: '', quote: '', handymanId: null, handymanName: '' };
+}
+
+function hasRepairContent(item: ReportComparisonRepairItem): boolean {
+  return Boolean(
+    item.area.trim() ||
+      item.description.trim() ||
+      item.quote?.trim() ||
+      item.handymanName?.trim() ||
+      item.handymanId,
+  );
+}
+
+function normalizeRepairItems(items: ReportComparisonRepairItem[]): ReportComparisonRepairItemInput[] {
+  return items.filter(hasRepairContent).map((item) => ({
+    area: item.area.trim(),
+    description: item.description.trim(),
+    quote: item.quote?.trim() || undefined,
+    handymanId: item.handymanId || undefined,
+    handymanName: item.handymanName?.trim() || undefined,
+  }));
+}
+
+function HandymanField({
+  row,
+  contractors,
+  onChange,
+}: {
+  row: ReportComparisonRepairItem;
+  contractors: PreferredContractor[];
+  onChange: (patch: Partial<ReportComparisonRepairItem>) => void;
+}) {
+  const selectValue = row.handymanId
+    ? row.handymanId
+    : row.handymanName?.trim()
+      ? '__custom__'
+      : '';
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        className="border-input bg-background h-8 w-full min-w-[140px] rounded-md border px-2 text-xs"
+        value={selectValue}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value === '__custom__') {
+            onChange({ handymanId: null, handymanName: row.handymanName ?? '' });
+            return;
+          }
+          if (!value) {
+            onChange({ handymanId: null, handymanName: '' });
+            return;
+          }
+          const contractor = contractors.find((c) => c.id === value);
+          onChange({
+            handymanId: value,
+            handymanName: contractor?.name ?? '',
+          });
+        }}
+      >
+        <option value="">Select handyman</option>
+        {contractors.map((contractor) => (
+          <option key={contractor.id} value={contractor.id}>
+            {contractor.name}
+          </option>
+        ))}
+        <option value="__custom__">Add new…</option>
+      </select>
+      {selectValue === '__custom__' ? (
+        <Input
+          className="h-8 text-xs"
+          value={row.handymanName ?? ''}
+          placeholder="Handyman name"
+          onChange={(e) => onChange({ handymanId: null, handymanName: e.target.value })}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function RepairItemsTable({
   title,
   items,
+  contractors,
   onChange,
-  readOnly,
+  footerAction,
+  readOnly = false,
+  lockedHint,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
+  contractors: PreferredContractor[];
   onChange: (items: ReportComparisonRepairItem[]) => void;
+  footerAction?: React.ReactNode;
   readOnly?: boolean;
+  lockedHint?: string;
 }) {
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -228,86 +531,112 @@ function RepairItemsTable({
   };
 
   const addRow = () => {
-    onChange([...items, { area: '', description: '' }]);
+    onChange([...items, emptyRepairItem()]);
   };
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-semibold">{title}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold">{title}</p>
+        {readOnly && lockedHint ? (
+          <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
+            <Lock className="size-3" />
+            {lockedHint}
+          </span>
+        ) : null}
+      </div>
       <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full min-w-[420px] text-left text-xs">
+        <table className="w-full min-w-[720px] text-left text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
               <th className="px-3 py-2 font-semibold">#</th>
               <th className="px-3 py-2 font-semibold">Area</th>
               <th className="px-3 py-2 font-semibold">Description</th>
+              <th className="px-3 py-2 font-semibold">Quote</th>
+              <th className="px-3 py-2 font-semibold">Handyman</th>
               {!readOnly ? <th className="px-3 py-2" /> : null}
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td
-                  colSpan={readOnly ? 3 : 4}
-                  className="text-muted-foreground px-3 py-4 text-center"
-                >
+                <td colSpan={readOnly ? 5 : 6} className="text-muted-foreground px-3 py-4 text-center">
                   No items yet.
                 </td>
               </tr>
             ) : (
               items.map((row, index) => (
-                <tr key={`${title}-${index}`} className="border-t">
+                <tr key={`${title}-${index}`} className="border-t align-top">
                   <td className="px-3 py-2 tabular-nums">{index + 1}</td>
-                  <td className="px-3 py-2">
-                    {readOnly ? (
-                      row.area || '—'
-                    ) : (
-                      <Input
-                        className="h-8 text-xs"
-                        value={row.area}
-                        placeholder="Area"
-                        onChange={(e) => updateRow(index, { area: e.target.value })}
-                      />
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {readOnly ? (
-                      row.description || '—'
-                    ) : (
-                      <Input
-                        className="h-8 text-xs"
-                        value={row.description}
-                        placeholder="Description"
-                        onChange={(e) => updateRow(index, { description: e.target.value })}
-                      />
-                    )}
-                  </td>
-                  {!readOnly ? (
-                    <td className="px-2 py-2">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="size-8"
-                        onClick={() => removeRow(index)}
-                        aria-label="Remove row"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </td>
-                  ) : null}
+                  {readOnly ? (
+                    <>
+                      <td className="px-3 py-2">{row.area || '—'}</td>
+                      <td className="px-3 py-2">{row.description || '—'}</td>
+                      <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
+                      <td className="px-3 py-2">{row.handymanName || '—'}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-3 py-2">
+                        <Input
+                          className="h-8 text-xs"
+                          value={row.area}
+                          placeholder="Area"
+                          onChange={(e) => updateRow(index, { area: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          className="h-8 text-xs"
+                          value={row.description}
+                          placeholder="Description"
+                          onChange={(e) => updateRow(index, { description: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          className="h-8 text-xs"
+                          value={row.quote ?? ''}
+                          placeholder="$0.00"
+                          onChange={(e) => updateRow(index, { quote: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <HandymanField
+                          row={row}
+                          contractors={contractors}
+                          onChange={(patch) => updateRow(index, patch)}
+                        />
+                      </td>
+                      <td className="px-2 py-2">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="size-8"
+                          onClick={() => removeRow(index)}
+                          aria-label="Remove row"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
-      {!readOnly ? (
-        <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={addRow}>
-          <Plus className="size-3.5" />
-          Add row
-        </Button>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {!readOnly ? (
+          <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={addRow}>
+            <Plus className="size-3.5" />
+            Add row
+          </Button>
+        ) : null}
+        {footerAction}
+      </div>
     </div>
   );
 }
@@ -321,6 +650,9 @@ function extractOutgoingRepairCandidates(detail: InspectionDetail): ReportCompar
       rows.push({
         area: areaName,
         description: item.comment?.trim() || item.name?.trim() || 'Issue noted on outgoing report',
+        quote: '',
+        handymanId: null,
+        handymanName: '',
       });
     }
   }
@@ -332,8 +664,16 @@ export function EndLeasingReportComparisonPanel({
 }: {
   caseData: TerminationCaseDetail;
 }) {
-  const { apiConnected } = useAgentData();
+  const { apiConnected, properties } = useAgentData();
   const applyCase = useEndLeasingStore((s) => s.applyCase);
+
+  const property = useMemo(
+    () => properties.find((p) => p.id === caseData.propertyId) ?? null,
+    [properties, caseData.propertyId],
+  );
+  const agencyId = property?.agencyId;
+
+  const [contractors, setContractors] = useState<PreferredContractor[]>([]);
 
   const outgoingId = caseData.inspection.inspectionId ?? null;
   const ingoingId = caseData.inspection.ingoingInspectionId ?? null;
@@ -371,6 +711,16 @@ export function EndLeasingReportComparisonPanel({
   }, [refreshReports]);
 
   useEffect(() => {
+    if (!apiConnected || !agencyId) {
+      setContractors([]);
+      return;
+    }
+    void fetchPreferredContractors(agencyId)
+      .then(setContractors)
+      .catch(() => setContractors([]));
+  }, [apiConnected, agencyId]);
+
+  useEffect(() => {
     seededFromInspectionRef.current = false;
     setTenantItems(caseData.reportComparison.tenantResponsibility);
     setLandlordItems(caseData.reportComparison.landlordResponsibility);
@@ -397,14 +747,107 @@ export function EndLeasingReportComparisonPanel({
     caseData.reportComparison.landlordResponsibility.length,
   ]);
 
-  const persist = async (patch: Parameters<typeof terminationApi.updateReportComparison>[1]) => {
+  const persist = async (
+    patch: Parameters<typeof terminationApi.updateReportComparison>[1],
+    options?: { silent?: boolean },
+  ) => {
     setBusy(true);
     try {
       const updated = await terminationApi.updateReportComparison(caseData.id, patch);
       applyCase(updated);
       setTenantItems(updated.reportComparison.tenantResponsibility);
       setLandlordItems(updated.reportComparison.landlordResponsibility);
-      toast.success('Comparison updated');
+      if (!options?.silent) toast.success('Comparison updated');
+      return updated;
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+      throw err;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveRepairItems = async (silent = false) => {
+    const rcNow = caseData.reportComparison;
+    const tenantLocked =
+      Boolean(rcNow.tenantRepairQuoteEmail?.sentAt) &&
+      (rcNow.tenantQuoteResponse === 'pending' ||
+        rcNow.tenantQuoteResponse === 'accepted' ||
+        !rcNow.tenantQuoteResponse);
+    const patch: Parameters<typeof terminationApi.updateReportComparison>[1] = {
+      landlordResponsibility: normalizeRepairItems(landlordItems),
+    };
+    if (!tenantLocked) {
+      patch.tenantResponsibility = normalizeRepairItems(tenantItems);
+    }
+    await persist(patch, { silent });
+  };
+
+  const sendQuoteEmail = async (audience: 'tenant' | 'landlord') => {
+    setBusy(true);
+    try {
+      await saveRepairItems(true);
+      const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, audience);
+      applyCase(updated);
+      setTenantItems(updated.reportComparison.tenantResponsibility);
+      setLandlordItems(updated.reportComparison.landlordResponsibility);
+      toast.success(
+        audience === 'tenant'
+          ? 'Repair quote email sent to tenant'
+          : 'Repair quote summary sent to landlord',
+      );
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyUpdatedCase = (updated: TerminationCaseDetail) => {
+    applyCase(updated);
+    setTenantItems(updated.reportComparison.tenantResponsibility);
+    setLandlordItems(updated.reportComparison.landlordResponsibility);
+  };
+
+  const checkTenantReply = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.syncTenantQuoteResponse(caseData.id);
+      applyUpdatedCase(updated);
+      const response = updated.reportComparison.tenantQuoteResponse;
+      if (response === 'accepted') {
+        toast.success('Tenant agreed — maintenance quotation and bond summary updated');
+      } else if (response === 'declined') {
+        toast.message('Tenant disagreed — tenant items are editable again');
+      } else {
+        toast.message('No agree/disagree reply found in the email thread yet');
+      }
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const recordTenantAgree = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.acceptTenantRepairQuote(caseData.id);
+      applyUpdatedCase(updated);
+      toast.success('Tenant agreed — bond settlement summary calculated');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const recordTenantDisagree = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.declineTenantRepairQuote(caseData.id);
+      applyUpdatedCase(updated);
+      toast.message('Tenant disagreed — update tenant items and resend the quote');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -413,6 +856,26 @@ export function EndLeasingReportComparisonPanel({
   };
 
   const rc = caseData.reportComparison;
+  const tenantQuoteEmailSent = Boolean(rc.tenantRepairQuoteEmail?.sentAt);
+  const tenantTableLocked =
+    tenantQuoteEmailSent &&
+    (rc.tenantQuoteResponse === 'pending' ||
+      rc.tenantQuoteResponse === 'accepted' ||
+      !rc.tenantQuoteResponse);
+  const tenantAgreed = rc.tenantQuoteResponse === 'accepted';
+
+  useEffect(() => {
+    if (!apiConnected || !tenantQuoteEmailSent || rc.tenantQuoteResponse !== 'pending') return;
+    void terminationApi
+      .syncTenantQuoteResponse(caseData.id)
+      .then((updated) => {
+        if (updated.reportComparison.tenantQuoteResponse !== 'pending') {
+          applyUpdatedCase(updated);
+        }
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync once when awaiting reply
+  }, [apiConnected, caseData.id, tenantQuoteEmailSent, rc.tenantQuoteResponse]);
 
   return (
     <div className="space-y-4">
@@ -458,26 +921,96 @@ export function EndLeasingReportComparisonPanel({
       </section>
 
       {rc.draftSummaryEmail?.body ? (
-        <SummaryEmailPanel email={rc.draftSummaryEmail} />
+        <SummaryEmailPanel email={rc.draftSummaryEmail} title="Draft summary message" />
+      ) : null}
+
+      {rc.tenantRepairQuoteEmail?.body ? (
+        <SummaryEmailPanel
+          email={rc.tenantRepairQuoteEmail}
+          title="Repair quote sent to tenant"
+        />
+      ) : null}
+
+      {tenantQuoteEmailSent ? (
+        <TenantQuoteResponsePanel
+          response={rc.tenantQuoteResponse}
+          responseAt={rc.tenantQuoteResponseAt}
+          declineReason={rc.tenantQuoteDeclineReason}
+          replyExcerpt={rc.tenantQuoteReplyExcerpt}
+          commConversationId={rc.tenantRepairQuoteEmail?.commConversationId}
+          busy={busy}
+          onCheckReply={() => void checkTenantReply()}
+          onAgree={() => void recordTenantAgree()}
+          onDisagree={() => void recordTenantDisagree()}
+        />
+      ) : null}
+
+      {tenantAgreed ? <MaintenanceQuotationPanel items={tenantItems} /> : null}
+
+      {tenantAgreed && rc.settlementSummary ? (
+        <SettlementSummaryPanel summary={rc.settlementSummary} />
+      ) : null}
+
+      {rc.landlordRepairQuoteEmail?.body ? (
+        <SummaryEmailPanel
+          email={rc.landlordRepairQuoteEmail}
+          title="Repair quote summary sent to landlord"
+        />
       ) : null}
 
       <section className="space-y-4 rounded-xl border bg-card p-4">
         <div>
           <p className="text-sm font-semibold">Obtain repair quote</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            List repair items by responsibility. Saving updates the draft summary message.
+            Add area, description, quote, and handyman for each item. Save before sending emails.
           </p>
         </div>
 
         <RepairItemsTable
           title="Tenant responsibility"
           items={tenantItems}
+          contractors={contractors}
           onChange={setTenantItems}
+          readOnly={tenantTableLocked}
+          lockedHint={
+            tenantTableLocked
+              ? rc.tenantQuoteResponse === 'accepted'
+                ? 'Locked — tenant agreed'
+                : 'Locked — awaiting tenant reply'
+              : undefined
+          }
+          footerAction={
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1.5 text-xs"
+              disabled={busy || tenantTableLocked}
+              onClick={() => void sendQuoteEmail('tenant')}
+            >
+              <Send className="size-3.5" />
+              Email tenant (tenant items only)
+            </Button>
+          }
         />
         <RepairItemsTable
           title="Landlord responsibility"
           items={landlordItems}
+          contractors={contractors}
           onChange={setLandlordItems}
+          footerAction={
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1.5 text-xs"
+              disabled={busy}
+              onClick={() => void sendQuoteEmail('landlord')}
+            >
+              <Send className="size-3.5" />
+              Email landlord (tenant + landlord items)
+            </Button>
+          }
         />
 
         <Button
@@ -485,16 +1018,7 @@ export function EndLeasingReportComparisonPanel({
           size="sm"
           className="h-8 text-xs"
           disabled={busy}
-          onClick={() =>
-            void persist({
-              tenantResponsibility: tenantItems.filter(
-                (r) => r.area.trim() || r.description.trim(),
-              ),
-              landlordResponsibility: landlordItems.filter(
-                (r) => r.area.trim() || r.description.trim(),
-              ),
-            })
-          }
+          onClick={() => void saveRepairItems()}
         >
           Save repair items & draft summary
         </Button>

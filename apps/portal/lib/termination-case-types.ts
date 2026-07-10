@@ -113,8 +113,20 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     agentAcknowledgedAt: string | null
     tenantAcknowledged: boolean
     tenantAcknowledgedAt: string | null
-    tenantResponsibility: { area: string; description: string }[]
-    landlordResponsibility: { area: string; description: string }[]
+    tenantResponsibility: {
+      area: string
+      description: string
+      quote?: string | null
+      handymanId?: string | null
+      handymanName?: string | null
+    }[]
+    landlordResponsibility: {
+      area: string
+      description: string
+      quote?: string | null
+      handymanId?: string | null
+      handymanName?: string | null
+    }[]
     draftSummaryEmail: {
       commConversationId: string | null
       subject: string | null
@@ -122,6 +134,34 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       from: string | null
       to: string | null
       sentAt: string | null
+    } | null
+    tenantRepairQuoteEmail: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    landlordRepairQuoteEmail: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    tenantQuoteResponse: 'pending' | 'accepted' | 'declined' | null
+    tenantQuoteResponseAt: string | null
+    tenantQuoteDeclineReason: string | null
+    tenantQuoteReplyExcerpt: string | null
+    settlementSummary: {
+      unpaidRent: number
+      unpaidBills: number
+      maintenanceCost: number
+      bondHeld: number
+      netRefund: number
+      debtAmount: number
     } | null
   }
   makeGood: {
@@ -213,9 +253,19 @@ export interface ScheduleInspectionInput {
 export interface UpdateReportComparisonInput {
   agentAcknowledged?: boolean
   tenantAcknowledged?: boolean
-  tenantResponsibility?: { area: string; description: string }[]
-  landlordResponsibility?: { area: string; description: string }[]
+  tenantResponsibility?: ReportComparisonRepairItemInput[]
+  landlordResponsibility?: ReportComparisonRepairItemInput[]
 }
+
+export interface ReportComparisonRepairItemInput {
+  area: string
+  description: string
+  quote?: string
+  handymanId?: string
+  handymanName?: string
+}
+
+export type RepairQuoteEmailAudience = 'tenant' | 'landlord'
 
 export interface UpdateMakeGoodInput {
   issueCount?: number

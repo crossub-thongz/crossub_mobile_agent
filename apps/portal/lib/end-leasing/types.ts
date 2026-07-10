@@ -90,6 +90,20 @@ export interface InspectionStageState {
 export interface ReportComparisonRepairItem {
   area: string
   description: string
+  quote?: string
+  handymanId?: string | null
+  handymanName?: string | null
+}
+
+export type TenantQuoteResponse = 'pending' | 'accepted' | 'declined'
+
+export interface ReportComparisonSettlementSummary {
+  unpaidRent: number
+  unpaidBills: number
+  maintenanceCost: number
+  bondHeld: number
+  netRefund: number
+  debtAmount: number
 }
 
 export interface ReportComparisonStageState {
@@ -100,6 +114,13 @@ export interface ReportComparisonStageState {
   tenantResponsibility: ReportComparisonRepairItem[]
   landlordResponsibility: ReportComparisonRepairItem[]
   draftSummaryEmail?: EndLeasingOverviewEmail | null
+  tenantRepairQuoteEmail?: EndLeasingOverviewEmail | null
+  landlordRepairQuoteEmail?: EndLeasingOverviewEmail | null
+  tenantQuoteResponse?: TenantQuoteResponse | null
+  tenantQuoteResponseAt?: string | null
+  tenantQuoteDeclineReason?: string | null
+  tenantQuoteReplyExcerpt?: string | null
+  settlementSummary?: ReportComparisonSettlementSummary | null
 }
 
 export interface MakeGoodStageState {

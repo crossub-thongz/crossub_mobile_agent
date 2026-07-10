@@ -223,6 +223,26 @@ export async function fetchPortfolio(): Promise<AgentPortfolio> {
   return data;
 }
 
+export interface PreferredContractor {
+  id: string;
+  agencyId: string;
+  contractorId: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  serviceTypes: string[];
+}
+
+/** Agency preferred tradies/handymen for repair quote assignment. */
+export async function fetchPreferredContractors(
+  agencyId: string,
+): Promise<PreferredContractor[]> {
+  const res = await apiV1.get<{ preferredContractors: PreferredContractor[] }>(
+    `/agencies/${agencyId}/preferred-contractors`,
+  );
+  return res.preferredContractors;
+}
+
 /** Approve a contractor's quote (`POST /agent/maintenance/{requestId}/approve`). */
 export async function approveMaintenance(
   requestId: string,

@@ -19,10 +19,12 @@ import type {
   TerminationListResult,
   UpdateMakeGoodInput,
   UpdateReportComparisonInput,
+  RepairQuoteEmailAudience,
 } from '@/lib/termination-case-types';
 import type {
   BondStageState,
   InspectionStageState,
+  ReportComparisonRepairItem,
   TerminationActivityEvent,
   TerminationCaseDetail,
   VacatingPreparationStageState,
@@ -71,6 +73,42 @@ function initials(name: string | null): string {
 
 const n0 = (v: number | null): number => v ?? 0
 const undef = (v: string | null): string | undefined => v ?? undefined
+
+function mapOverviewEmail(
+  email:
+    | {
+        commConversationId: string | null
+        subject: string | null
+        body: string | null
+        from: string | null
+        to: string | null
+        sentAt: string | null
+      }
+    | null
+    | undefined,
+) {
+  if (!email?.body && !email?.subject) return null
+  return {
+    commConversationId: email.commConversationId ?? undefined,
+    subject: email.subject ?? undefined,
+    body: email.body ?? undefined,
+    from: email.from ?? undefined,
+    to: email.to ?? undefined,
+    sentAt: undef(email.sentAt),
+  }
+}
+
+function mapRepairItems(
+  items: ServerTerminationCase['reportComparison']['tenantResponsibility'] | undefined,
+): ReportComparisonRepairItem[] {
+  return (items ?? []).map((item) => ({
+    area: item.area,
+    description: item.description,
+    quote: item.quote ?? undefined,
+    handymanId: item.handymanId ?? null,
+    handymanName: item.handymanName ?? undefined,
+  }));
+}
 
 /** Derive the bond readiness checklist the FE renders (not modelled server-side). */
 function bondReadiness(s: ServerTerminationCase): BondStageState["readiness"] {
@@ -212,20 +250,16 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
       agentAcknowledgedAt: s.reportComparison?.agentAcknowledgedAt ?? undefined,
       tenantAcknowledged: s.reportComparison?.tenantAcknowledged ?? false,
       tenantAcknowledgedAt: s.reportComparison?.tenantAcknowledgedAt ?? undefined,
-      tenantResponsibility: s.reportComparison?.tenantResponsibility ?? [],
-      landlordResponsibility: s.reportComparison?.landlordResponsibility ?? [],
-      draftSummaryEmail:
-        s.reportComparison?.draftSummaryEmail?.body || s.reportComparison?.draftSummaryEmail?.subject
-          ? {
-              commConversationId:
-                s.reportComparison.draftSummaryEmail.commConversationId ?? undefined,
-              subject: s.reportComparison.draftSummaryEmail.subject ?? undefined,
-              body: s.reportComparison.draftSummaryEmail.body ?? undefined,
-              from: s.reportComparison.draftSummaryEmail.from ?? undefined,
-              to: s.reportComparison.draftSummaryEmail.to ?? undefined,
-              sentAt: undef(s.reportComparison.draftSummaryEmail.sentAt),
-            }
-          : null,
+      tenantResponsibility: mapRepairItems(s.reportComparison?.tenantResponsibility),
+      landlordResponsibility: mapRepairItems(s.reportComparison?.landlordResponsibility),
+      draftSummaryEmail: mapOverviewEmail(s.reportComparison?.draftSummaryEmail),
+      tenantRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.tenantRepairQuoteEmail),
+      landlordRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.landlordRepairQuoteEmail),
+      tenantQuoteResponse: s.reportComparison?.tenantQuoteResponse ?? null,
+      tenantQuoteResponseAt: s.reportComparison?.tenantQuoteResponseAt ?? undefined,
+      tenantQuoteDeclineReason: s.reportComparison?.tenantQuoteDeclineReason ?? undefined,
+      tenantQuoteReplyExcerpt: s.reportComparison?.tenantQuoteReplyExcerpt ?? undefined,
+      settlementSummary: s.reportComparison?.settlementSummary ?? null,
     },
     makeGood: {
       status: s.makeGood.status,
@@ -408,6 +442,44 @@ export const terminationApi = {
       api.patch<{ case: ServerTerminationCase }>(
         `/end-leasing/cases/${id}/report-comparison`,
         input,
+      ),
+    ),
+
+  sendRepairQuoteEmail: (
+    id: string,
+    audience: RepairQuoteEmailAudience,
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.post<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/send-quote-email`,
+        { audience },
+      ),
+    ),
+
+  acceptTenantRepairQuote: (id: string): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/tenant-quote/accept`,
+        {},
+      ),
+    ),
+
+  declineTenantRepairQuote: (
+    id: string,
+    reason?: string,
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/tenant-quote/decline`,
+        { reason },
+      ),
+    ),
+
+  syncTenantQuoteResponse: (id: string): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.post<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/sync-tenant-quote-response`,
+        {},
       ),
     ),
 

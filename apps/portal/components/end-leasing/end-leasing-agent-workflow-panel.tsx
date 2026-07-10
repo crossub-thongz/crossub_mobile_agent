@@ -21,7 +21,6 @@ import {
   buildEndLeasingAgentWorkflow,
   type EndLeasingAgentStep,
 } from '@/lib/end-leasing/agent-workflow-model';
-import { deriveStageStatus } from '@/lib/end-leasing/lifecycle';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import {
   TERMINATION_STAGE,
@@ -188,45 +187,31 @@ export function EndLeasingAgentWorkflowPanel({
         onStepClick={setViewingStepId}
       />
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="rounded-xl border bg-card">
-          <div className="border-b px-4 py-3">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-              {isLiveStep ? 'Current step' : 'Step detail'}
-            </p>
-            <p className="mt-0.5 text-sm font-semibold">
-              {END_LEASING_AGENT_STEP_LABEL[viewingStepId]}
-            </p>
-          </div>
-          <div className="space-y-4 p-4">
-            {viewingStepId === END_LEASING_AGENT_STEP.OVERVIEW && workflow.tenantNoticeEmail ? (
-              <OverviewEmailPanel email={workflow.tenantNoticeEmail} />
-            ) : viewingStepId === END_LEASING_AGENT_STEP.REPORT_COMPARISON ? (
-              <>
-                <SubProgressList items={viewingStep?.subProgress ?? []} />
-                <EndLeasingReportComparisonPanel caseData={caseData} />
-              </>
-            ) : (
-              <SubProgressList items={viewingStep?.subProgress ?? []} />
-            )}
-
-            {showLegacyPanel && legacyStage ? (
-              <div className="border-t pt-4">
-                <TerminationPhasePanel caseData={caseData} stage={legacyStage} />
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl border bg-card">
+        <div className="border-b px-4 py-3">
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-            Workflow
+            {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
-          <p className="mt-2 text-sm font-semibold leading-snug">{viewingStep?.workflowName}</p>
-          {isLiveStep && legacyStage ? (
-            <p className="text-primary mt-2 text-xs font-medium">
-              Status: {deriveStageStatus(caseData, legacyStage).replaceAll('_', ' ')}
-            </p>
+          <p className="mt-0.5 text-sm font-semibold">
+            {END_LEASING_AGENT_STEP_LABEL[viewingStepId]}
+          </p>
+        </div>
+        <div className="space-y-4 p-4">
+          {viewingStepId === END_LEASING_AGENT_STEP.OVERVIEW && workflow.tenantNoticeEmail ? (
+            <OverviewEmailPanel email={workflow.tenantNoticeEmail} />
+          ) : viewingStepId === END_LEASING_AGENT_STEP.REPORT_COMPARISON ? (
+            <>
+              <SubProgressList items={viewingStep?.subProgress ?? []} />
+              <EndLeasingReportComparisonPanel caseData={caseData} />
+            </>
+          ) : (
+            <SubProgressList items={viewingStep?.subProgress ?? []} />
+          )}
+
+          {showLegacyPanel && legacyStage ? (
+            <div className="border-t pt-4">
+              <TerminationPhasePanel caseData={caseData} stage={legacyStage} />
+            </div>
           ) : null}
         </div>
       </div>
