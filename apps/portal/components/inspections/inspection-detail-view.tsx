@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   AlertTriangle,
   Calendar,
@@ -23,7 +24,6 @@ import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
 import { OpenInspectionRentalFacts } from '@/components/open-inspection/open-inspection-rental-facts';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
-import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { DocumentViewer } from '@/components/agent/document-viewer';
 import { StatusBadge } from '@/components/agent/status-badge';
@@ -90,6 +90,9 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const nextAction = inspectionNextAction(insp);
   const isSelfOpen = insp.type === 'OPEN' && insp.openConductedBy === 'agent';
   const isCrossubOpen = insp.type === 'OPEN' && insp.openConductedBy === 'crossub';
+  const inspectorLabel = isSelfOpen
+    ? OPEN_CONDUCTED_BY_LABEL.agent
+    : insp.inspector ?? 'Unassigned';
   const visitors = openSession?.visitors ?? [];
   const approvedApplicants = visitors.filter(
     (v) => v.application?.agentDecision === LEASING_AGENT_DECISION.APPROVED,
@@ -133,7 +136,7 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
             label="Scheduled"
             value={insp.scheduledAt ? formatDateTime(insp.scheduledAt) : 'Not set'}
           />
-          <FactTile icon={User} label="Inspector" value={insp.inspector ?? 'Unassigned'} />
+          <FactTile icon={User} label="Inspector" value={inspectorLabel} />
           {typeof insp.visitorCount === 'number' && (
             <FactTile
               icon={Users}
@@ -208,18 +211,14 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
         />
       )}
 
-      {(insp.type === 'OPEN' && (insp.openConductedBy || insp.openListingContext)) && (
+      {isCrossubOpen && insp.openListingContext && (
         <InfoSection title="Open inspection details">
-          {insp.openConductedBy && (
-            <InfoRow label="Conducted by" value={OPEN_CONDUCTED_BY_LABEL[insp.openConductedBy]} />
-          )}
-          {insp.openListingContext && (
-            <InfoRow label="Property context" value={OPEN_LISTING_CONTEXT_LABEL[insp.openListingContext]} />
-          )}
+          <InfoRow
+            label="Property context"
+            value={OPEN_LISTING_CONTEXT_LABEL[insp.openListingContext]}
+          />
         </InfoSection>
       )}
-
-      <CaseContactActions propertyId={insp.propertyId} caseLabel={`${insp.type} inspection`} />
 
       {(insp.keyStatus || insp.tenantAck || insp.routineMode || insp.nextDueDate) && (
         <InfoSection title="Job details">

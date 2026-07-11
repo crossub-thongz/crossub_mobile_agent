@@ -71,23 +71,15 @@ export function InspectionDetailDialog({
           </span>
         </div>
 
-        {inspection.type === 'OPEN' && inspection.openConductedBy && (
+        {isCrossubOpen && inspection.openListingContext && (
           <div className="rounded-xl border bg-card p-3 text-xs">
             <dl className="grid gap-2">
               <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Conducted by</dt>
+                <dt className="text-muted-foreground">Property context</dt>
                 <dd className="text-right font-medium">
-                  {OPEN_CONDUCTED_BY_LABEL[inspection.openConductedBy]}
+                  {OPEN_LISTING_CONTEXT_LABEL[inspection.openListingContext]}
                 </dd>
               </div>
-              {inspection.openListingContext && (
-                <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">Property context</dt>
-                  <dd className="text-right font-medium">
-                    {OPEN_LISTING_CONTEXT_LABEL[inspection.openListingContext]}
-                  </dd>
-                </div>
-              )}
             </dl>
           </div>
         )}
@@ -108,10 +100,12 @@ export function InspectionDetailDialog({
 
         <div className="rounded-xl border bg-card p-3 text-xs">
           <dl className="grid gap-2">
-            {inspection.inspector && (
+            {(inspection.inspector || isSelfOpen) && (
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-foreground">Inspector</dt>
-                <dd className="font-medium">{inspection.inspector}</dd>
+                <dd className="font-medium">
+                  {isSelfOpen ? OPEN_CONDUCTED_BY_LABEL.agent : inspection.inspector}
+                </dd>
               </div>
             )}
             {inspection.scheduledAt && (
