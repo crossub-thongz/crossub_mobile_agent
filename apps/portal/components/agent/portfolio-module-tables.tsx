@@ -1,7 +1,10 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import {
   ModuleListTable,
+  ModuleSortableTableHead,
   ModuleTableChevronCell,
   ModuleTableHead,
   ModuleTableLinkCell,
@@ -17,13 +20,27 @@ import {
   tribunalWorkflowProgress,
 } from '@/lib/case-workflows';
 import {
+  applySortDirection,
+  compareNumbers,
+  compareSortTime,
+  compareStrings,
+  useClientTableSort,
+} from '@/lib/client-table-sort';
+import {
   inspectionDetail,
   maintenanceDetail,
   propertyDetail,
-  rentReviewDetail,
   tenantSelectionDetail,
   tribunalDetail,
 } from '@/constants/routes';
+import {
+  inspectionCreatedAtIso,
+  leasingCycleCreatedAtIso,
+  leasingRecordCreatedAtIso,
+  maintenanceCreatedAtIso,
+  rentReviewCreatedAtIso,
+  tenantSelectionCreatedAtIso,
+} from '@/lib/record-created-at';
 import type {
   Inspection,
   LeasingCycle,
@@ -42,9 +59,8 @@ function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function maintenanceCreatedAt(request: MaintenanceRequest): string {
-  const first = request.timeline[0]?.at;
-  return first ? formatDateTime(first) : '—';
+function formatCreatedAt(value?: string): string {
+  return value ? formatDateTime(value) : '—';
 }
 
 function rentReviewLeaseLabel(review: RentReviewCase): string {
@@ -53,14 +69,75 @@ function rentReviewLeaseLabel(review: RentReviewCase): string {
   return 'Fixed';
 }
 
+type MaintenanceSortKey =
+  | 'id'
+  | 'createdAt'
+  | 'subject'
+  | 'address'
+  | 'status'
+  | 'responsibility'
+  | 'priority';
+
 export function MaintenanceListTable({ items }: { items: MaintenanceRequest[] }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<MaintenanceSortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const rows = [...items];
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'id':
+          cmp = compareStrings(a.trackingNumber, b.trackingNumber);
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(
+            maintenanceCreatedAtIso(a),
+            maintenanceCreatedAtIso(b),
+          );
+          break;
+        case 'subject':
+          cmp = compareStrings(a.title, b.title);
+          break;
+        case 'address':
+          cmp = compareStrings(a.propertyAddress, b.propertyAddress);
+          break;
+        case 'status':
+          cmp = compareStrings(maintenanceWorkflowProgress(a).currentStepLabel, maintenanceWorkflowProgress(b).currentStepLabel);
+          break;
+        case 'responsibility':
+          cmp = compareStrings(a.responsibility, b.responsibility);
+          break;
+        case 'priority':
+          cmp = compareStrings(a.priority, b.priority);
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return rows;
+  }, [items, sortDirection, sortKey]);
+
   return (
-    <ModuleListTable minWidth={980}>
-      <ModuleTableHead
-        columns={['ID', 'Created', 'Subject', 'Address', 'Status', 'Responsibility', 'Priority', '']}
+    <ModuleListTable minWidth={1080}>
+      <ModuleSortableTableHead
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        columns={[
+          { kind: 'sortable', label: 'ID', sortKey: 'id' },
+          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Subject', sortKey: 'subject' },
+          { kind: 'sortable', label: 'Address', sortKey: 'address' },
+          { kind: 'sortable', label: 'Status', sortKey: 'status' },
+          { kind: 'sortable', label: 'Responsibility', sortKey: 'responsibility' },
+          { kind: 'sortable', label: 'Priority', sortKey: 'priority' },
+          { kind: 'static', label: '' },
+        ]}
       />
       <tbody className="divide-y">
-        {items.map((m) => {
+        {sorted.map((m) => {
           const href = maintenanceDetail(m.id);
           const progress = maintenanceWorkflowProgress(m);
           return (
@@ -75,7 +152,7 @@ export function MaintenanceListTable({ items }: { items: MaintenanceRequest[] })
                 {m.trackingNumber}
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {maintenanceCreatedAt(m)}
+                {formatCreatedAt(maintenanceCreatedAtIso(m))}
               </td>
               <ModuleTableLinkCell href={href} className="max-w-[12rem]">
                 <span className="line-clamp-2">{m.title}</span>
@@ -104,6 +181,16 @@ export function MaintenanceListTable({ items }: { items: MaintenanceRequest[] })
   );
 }
 
+type RentReviewSortKey =
+  | 'id'
+  | 'property'
+  | 'tenant'
+  | 'lease'
+  | 'createdAt'
+  | 'due'
+  | 'currentRent'
+  | 'stage';
+
 export function RentReviewListTable({
   items,
   detailHref,
@@ -111,13 +198,66 @@ export function RentReviewListTable({
   items: RentReviewCase[];
   detailHref: (id: string) => string;
 }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<RentReviewSortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const rows = [...items];
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'id':
+          cmp = compareStrings(workflowCaseReferenceLabel(a.id, 'rent_review'), workflowCaseReferenceLabel(b.id, 'rent_review'));
+          break;
+        case 'property':
+          cmp = compareStrings(a.propertyAddress, b.propertyAddress);
+          break;
+        case 'tenant':
+          cmp = compareStrings(a.tenantName ?? '', b.tenantName ?? '');
+          break;
+        case 'lease':
+          cmp = compareStrings(rentReviewLeaseLabel(a), rentReviewLeaseLabel(b));
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(rentReviewCreatedAtIso(a), rentReviewCreatedAtIso(b));
+          break;
+        case 'due':
+          cmp = compareSortTime(a.reviewDue, b.reviewDue);
+          break;
+        case 'currentRent':
+          cmp = compareNumbers(a.currentRent, b.currentRent);
+          break;
+        case 'stage':
+          cmp = compareStrings(rentReviewWorkflowProgress(a).currentStepLabel, rentReviewWorkflowProgress(b).currentStepLabel);
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return rows;
+  }, [items, sortDirection, sortKey]);
+
   return (
-    <ModuleListTable minWidth={1040}>
-      <ModuleTableHead
-        columns={['ID', 'Property', 'Tenant', 'Lease', 'Due', 'Current rent', 'Stage', '']}
+    <ModuleListTable minWidth={1160}>
+      <ModuleSortableTableHead
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        columns={[
+          { kind: 'sortable', label: 'ID', sortKey: 'id' },
+          { kind: 'sortable', label: 'Property', sortKey: 'property' },
+          { kind: 'sortable', label: 'Tenant', sortKey: 'tenant' },
+          { kind: 'sortable', label: 'Lease', sortKey: 'lease' },
+          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Due', sortKey: 'due', defaultDirection: 'asc' },
+          { kind: 'sortable', label: 'Current rent', sortKey: 'currentRent' },
+          { kind: 'sortable', label: 'Stage', sortKey: 'stage' },
+          { kind: 'static', label: '' },
+        ]}
       />
       <tbody className="divide-y">
-        {items.map((r) => {
+        {sorted.map((r) => {
           const href = detailHref(r.id);
           const progress = rentReviewWorkflowProgress(r);
           return (
@@ -139,6 +279,9 @@ export function RentReviewListTable({
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
                 {rentReviewLeaseLabel(r)}
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                {formatCreatedAt(rentReviewCreatedAtIso(r))}
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums">
                 {formatDate(r.reviewDue)}
@@ -198,14 +341,72 @@ export function TribunalListTable({ items }: { items: TribunalCase[] }) {
   );
 }
 
+type InspectionSortKey =
+  | 'ref'
+  | 'property'
+  | 'type'
+  | 'inspector'
+  | 'createdAt'
+  | 'scheduled'
+  | 'stage';
+
 export function InspectionsListTable({ items }: { items: Inspection[] }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<InspectionSortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const rows = [...items];
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'ref':
+          cmp = compareStrings(a.trackingNumber, b.trackingNumber);
+          break;
+        case 'property':
+          cmp = compareStrings(a.propertyAddress, b.propertyAddress);
+          break;
+        case 'type':
+          cmp = compareStrings(a.type, b.type);
+          break;
+        case 'inspector':
+          cmp = compareStrings(a.inspector ?? '', b.inspector ?? '');
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(inspectionCreatedAtIso(a), inspectionCreatedAtIso(b));
+          break;
+        case 'scheduled':
+          cmp = compareSortTime(a.scheduledAt, b.scheduledAt);
+          break;
+        case 'stage':
+          cmp = compareStrings(inspectionWorkflowProgress(a).currentStepLabel, inspectionWorkflowProgress(b).currentStepLabel);
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return rows;
+  }, [items, sortDirection, sortKey]);
+
   return (
-    <ModuleListTable minWidth={920}>
-      <ModuleTableHead
-        columns={['Ref', 'Property', 'Type', 'Inspector', 'Scheduled', 'Stage', '']}
+    <ModuleListTable minWidth={1040}>
+      <ModuleSortableTableHead
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        columns={[
+          { kind: 'sortable', label: 'Ref', sortKey: 'ref' },
+          { kind: 'sortable', label: 'Property', sortKey: 'property' },
+          { kind: 'sortable', label: 'Type', sortKey: 'type' },
+          { kind: 'sortable', label: 'Inspector', sortKey: 'inspector' },
+          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Scheduled', sortKey: 'scheduled', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Stage', sortKey: 'stage' },
+          { kind: 'static', label: '' },
+        ]}
       />
       <tbody className="divide-y">
-        {items.map((i) => {
+        {sorted.map((i) => {
           const href = inspectionDetail(i.id);
           const progress = inspectionWorkflowProgress(i);
           return (
@@ -219,6 +420,9 @@ export function InspectionsListTable({ items }: { items: Inspection[] }) {
               <td className="px-3 py-3 text-xs font-medium">{i.type}</td>
               <td className="max-w-[9rem] px-3 py-3 text-xs text-muted-foreground">
                 <span className="line-clamp-2">{i.inspector ?? 'Pending'}</span>
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                {formatCreatedAt(inspectionCreatedAtIso(i))}
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {formatScheduledAt(i.scheduledAt)}
@@ -290,12 +494,67 @@ export function AccountingListTable({ items }: { items: PropertyAccounting[] }) 
   );
 }
 
+type LeasingCycleSortKey =
+  | 'property'
+  | 'lifecycle'
+  | 'onboarding'
+  | 'rent'
+  | 'createdAt'
+  | 'available';
+
 export function LeasingCyclesTable({ items }: { items: LeasingCycle[] }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<LeasingCycleSortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const rows = [...items];
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'property':
+          cmp = compareStrings(a.propertyAddress, b.propertyAddress);
+          break;
+        case 'lifecycle':
+          cmp = compareStrings(leasingLifecycleProgress(a).currentStepLabel, leasingLifecycleProgress(b).currentStepLabel);
+          break;
+        case 'onboarding':
+          cmp = compareStrings(leasingOnboardingProgress(a)?.currentStepLabel ?? '', leasingOnboardingProgress(b)?.currentStepLabel ?? '');
+          break;
+        case 'rent':
+          cmp = compareNumbers(a.rentPerWeek ?? 0, b.rentPerWeek ?? 0);
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(leasingCycleCreatedAtIso(a), leasingCycleCreatedAtIso(b));
+          break;
+        case 'available':
+          cmp = compareSortTime(a.availableFrom, b.availableFrom);
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return rows;
+  }, [items, sortDirection, sortKey]);
+
   return (
-    <ModuleListTable minWidth={880}>
-      <ModuleTableHead columns={['Property', 'Lifecycle stage', 'Onboarding', 'Rent/wk', 'Available', '']} />
+    <ModuleListTable minWidth={980}>
+      <ModuleSortableTableHead
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        columns={[
+          { kind: 'sortable', label: 'Property', sortKey: 'property' },
+          { kind: 'sortable', label: 'Lifecycle stage', sortKey: 'lifecycle' },
+          { kind: 'sortable', label: 'Onboarding', sortKey: 'onboarding' },
+          { kind: 'sortable', label: 'Rent/wk', sortKey: 'rent' },
+          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Available', sortKey: 'available', defaultDirection: 'asc' },
+          { kind: 'static', label: '' },
+        ]}
+      />
       <tbody className="divide-y">
-        {items.map((cycle) => {
+        {sorted.map((cycle) => {
           const href = propertyDetail(cycle.propertyId);
           const lifecycle = leasingLifecycleProgress(cycle);
           const onboarding = leasingOnboardingProgress(cycle);
@@ -314,7 +573,10 @@ export function LeasingCyclesTable({ items }: { items: LeasingCycle[] }) {
                 {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {cycle.availableFrom ? formatDate(cycle.availableFrom) : '—'}
+                {formatCreatedAt(leasingCycleCreatedAtIso(cycle))}
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                {cycle.availableFrom ? formatDateTime(cycle.availableFrom) : '—'}
               </td>
               <ModuleTableChevronCell href={href} />
             </tr>
@@ -325,12 +587,67 @@ export function LeasingCyclesTable({ items }: { items: LeasingCycle[] }) {
   );
 }
 
+type TenantSelectionSortKey =
+  | 'property'
+  | 'applicant'
+  | 'rent'
+  | 'term'
+  | 'createdAt'
+  | 'status';
+
 export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<TenantSelectionSortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const rows = [...items];
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'property':
+          cmp = compareStrings(a.propertyAddress, b.propertyAddress);
+          break;
+        case 'applicant':
+          cmp = compareStrings(a.applicantName, b.applicantName);
+          break;
+        case 'rent':
+          cmp = compareNumbers(a.proposedRent, b.proposedRent);
+          break;
+        case 'term':
+          cmp = compareStrings(a.leaseTerm, b.leaseTerm);
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(tenantSelectionCreatedAtIso(a), tenantSelectionCreatedAtIso(b));
+          break;
+        case 'status':
+          cmp = compareStrings(a.status, b.status);
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return rows;
+  }, [items, sortDirection, sortKey]);
+
   return (
-    <ModuleListTable minWidth={860}>
-      <ModuleTableHead columns={['Property', 'Applicant', 'Rent', 'Term', 'Status', '']} />
+    <ModuleListTable minWidth={980}>
+      <ModuleSortableTableHead
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        columns={[
+          { kind: 'sortable', label: 'Property', sortKey: 'property' },
+          { kind: 'sortable', label: 'Applicant', sortKey: 'applicant' },
+          { kind: 'sortable', label: 'Rent', sortKey: 'rent' },
+          { kind: 'sortable', label: 'Term', sortKey: 'term' },
+          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Status', sortKey: 'status' },
+          { kind: 'static', label: '' },
+        ]}
+      />
       <tbody className="divide-y">
-        {items.map((t) => {
+        {sorted.map((t) => {
           const href = tenantSelectionDetail(t.id);
           return (
             <tr
@@ -350,6 +667,9 @@ export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] 
                 {formatCurrency(t.proposedRent)}/wk
               </td>
               <td className="px-3 py-3 text-xs text-muted-foreground">{t.leaseTerm}</td>
+              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                {formatCreatedAt(tenantSelectionCreatedAtIso(t))}
+              </td>
               <td className="px-3 py-3">
                 {t.requiresApproval ? (
                   <StatusBadge label="Action required" variant="approval" />
@@ -366,16 +686,71 @@ export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] 
   );
 }
 
+type LeasingHistorySortKey =
+  | 'property'
+  | 'tenant'
+  | 'createdAt'
+  | 'leasePeriod'
+  | 'rent'
+  | 'status';
+
 export function LeasingHistoryTable({
   items,
 }: {
   items: (LeasingRecord & { address: string })[];
 }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<LeasingHistorySortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const rows = [...items];
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'property':
+          cmp = compareStrings(a.address, b.address);
+          break;
+        case 'tenant':
+          cmp = compareStrings(a.approvedTenant, b.approvedTenant);
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(leasingRecordCreatedAtIso(a), leasingRecordCreatedAtIso(b));
+          break;
+        case 'leasePeriod':
+          cmp = compareSortTime(a.leaseStart, b.leaseStart);
+          break;
+        case 'rent':
+          cmp = compareNumbers(a.rentWeekly, b.rentWeekly);
+          break;
+        case 'status':
+          cmp = compareStrings(a.status, b.status);
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return rows;
+  }, [items, sortDirection, sortKey]);
+
   return (
-    <ModuleListTable minWidth={900}>
-      <ModuleTableHead columns={['Property', 'Tenant', 'Lease period', 'Rent', 'Status', '']} />
+    <ModuleListTable minWidth={980}>
+      <ModuleSortableTableHead
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={onSort}
+        columns={[
+          { kind: 'sortable', label: 'Property', sortKey: 'property' },
+          { kind: 'sortable', label: 'Tenant', sortKey: 'tenant' },
+          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Lease period', sortKey: 'leasePeriod', defaultDirection: 'desc' },
+          { kind: 'sortable', label: 'Rent', sortKey: 'rent' },
+          { kind: 'sortable', label: 'Status', sortKey: 'status' },
+          { kind: 'static', label: '' },
+        ]}
+      />
       <tbody className="divide-y">
-        {items.map((l) => {
+        {sorted.map((l) => {
           const href = `${propertyDetail(l.propertyId)}?tab=Leasing`;
           return (
             <tr key={l.id} className="transition-colors hover:bg-muted/20">
@@ -384,6 +759,9 @@ export function LeasingHistoryTable({
               </ModuleTableLinkCell>
               <td className="max-w-[10rem] px-3 py-3">
                 <span className="line-clamp-2">{l.approvedTenant}</span>
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                {formatCreatedAt(leasingRecordCreatedAtIso(l))}
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {formatDate(l.leaseStart)} – {formatDate(l.leaseEnd)}

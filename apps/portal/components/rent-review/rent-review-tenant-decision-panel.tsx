@@ -5,12 +5,12 @@ import { ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
 import { ROUTES } from '@/constants/routes';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
+  canRecordTenantResponseOnBehalf,
 } from '@/lib/rent-review/agent-workflow-model';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -29,10 +29,9 @@ export function RentReviewTenantDecisionPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
   const [moveOutDate, setMoveOutDate] = useState(detail.tenantMoveOutDate ?? '');
-  const [counterWeekly, setCounterWeekly] = useState('');
 
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.TENANT_DECISION);
-  const canRecordTenantResponse = detail.workflowState === 'tenant_notified';
+  const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -105,81 +104,18 @@ export function RentReviewTenantDecisionPanel({
               Start End Leasing
             </Button>
           </div>
+        ) : showRecordResponse ? (
+          <p className="text-muted-foreground text-xs">
+            Notice sent — record the tenant&apos;s response below when they reply by phone, email, or
+            in person.
+          </p>
         ) : (
           <p className="text-muted-foreground text-xs">Awaiting tenant response to the notice.</p>
         )}
       </section>
 
-      {canRecordTenantResponse ? (
-        <div className="space-y-3 rounded-xl border border-dashed p-4">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase">
-            Record tenant response (demo / agent proxy)
-          </p>
-          <Button
-            className="w-full"
-            disabled={busy}
-            onClick={() =>
-              void run(
-                () => rentReviewApi.tenantResponse(detail.id, { decision: 'accept' }),
-                'Tenant accepted — rent will be updated',
-              )
-            }
-          >
-            Tenant accepts increase
-          </Button>
-          <div className="space-y-2">
-            <Label htmlFor="move-out">Move-out date (reject path)</Label>
-            <Input
-              id="move-out"
-              type="date"
-              value={moveOutDate}
-              onChange={(e) => setMoveOutDate(e.target.value)}
-            />
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled={busy || !moveOutDate}
-              onClick={() =>
-                void run(
-                  () =>
-                    rentReviewApi.tenantResponse(detail.id, {
-                      decision: 'reject',
-                      moveOutDate,
-                    }),
-                  'Tenant rejected — choose End Leasing or counter',
-                )
-              }
-            >
-              Tenant rejects (vacating)
-            </Button>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="counter">Counter-offer ($/week)</Label>
-            <Input
-              id="counter"
-              type="number"
-              value={counterWeekly}
-              onChange={(e) => setCounterWeekly(e.target.value)}
-            />
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled={busy || !counterWeekly}
-              onClick={() =>
-                void run(
-                  () =>
-                    rentReviewApi.tenantResponse(detail.id, {
-                      decision: 'counter',
-                      counterWeekly: Number(counterWeekly),
-                    }),
-                  'Counter recorded — returned to Agent Confirmed',
-                )
-              }
-            >
-              Tenant counter-offer
-            </Button>
-          </div>
-        </div>
+      {showRecordResponse ? (
+        <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
       ) : null}
 
       {detail.workflowState === 'tenant_accepted' ? (

@@ -20,6 +20,12 @@ import type {
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatScheduledAt } from '@/lib/utils';
 import { inspectionReferenceLabel, workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import {
+  inspectionCreatedAtIso,
+  maintenanceCreatedAtIso,
+  rentReviewCreatedAtIso,
+} from '@/lib/record-created-at';
+import { parseSortTime } from '@/lib/client-table-sort';
 
 export type PropertyJobPhase = 'in_progress' | 'completed';
 
@@ -38,13 +44,72 @@ export interface PropertyJobRow {
   jobType: string;
   name: string;
   description: string;
+  /** Contextual date (due, scheduled, vacate, etc.). */
   date: string;
+  /** Formatted created timestamp for display. */
+  createdAt: string;
+  /** Milliseconds for client-side table sort. */
+  createdAtMs: number;
   status: string;
   phase: PropertyJobPhase;
   /** Maintenance issue type / category (maintenance only). */
   issueType?: string;
   /** Rent review T−90 / T−60 schedule badges (rent review only). */
   rentReviewSchedule?: RentReviewScheduleIndicators;
+}
+
+/** Display order for mixed job tables (overview, etc.). */
+const PROPERTY_JOB_TYPE_ORDER: string[] = [
+  'Leasing',
+  'Open inspection',
+  'Rent review',
+  'End leasing',
+  'Outgoing inspection',
+  'Ingoing inspection',
+  'Routine inspection',
+  'Maintenance',
+  'Tribunal',
+  'Accounting',
+];
+
+function propertyJobTypeRank(jobType: string): number {
+  const index = PROPERTY_JOB_TYPE_ORDER.indexOf(jobType);
+  return index === -1 ? PROPERTY_JOB_TYPE_ORDER.length : index;
+}
+
+function comparePropertyJobRows(a: PropertyJobRow, b: PropertyJobRow): number {
+  const byCategory = propertyJobTypeRank(a.jobType) - propertyJobTypeRank(b.jobType);
+  if (byCategory !== 0) return byCategory;
+  return b.createdAtMs - a.createdAtMs;
+}
+
+function rowCreatedAt(iso?: string): { createdAt: string; createdAtMs: number } {
+  const createdAtMs = parseSortTime(iso);
+  return {
+    createdAt: iso ? formatDateTime(iso) : '—',
+    createdAtMs,
+  };
+}
+
+export function organizePropertyJobRows(rows: PropertyJobRow[]): PropertyJobRow[] {
+  return [...rows].sort(comparePropertyJobRows);
+}
+
+export function groupPropertyJobRows(
+  rows: PropertyJobRow[],
+  preserveOrder = false,
+): { label: string; rows: PropertyJobRow[] }[] {
+  const organized = preserveOrder ? rows : organizePropertyJobRows(rows);
+  const groups: { label: string; rows: PropertyJobRow[] }[] = [];
+  for (const row of organized) {
+    const last = groups[groups.length - 1];
+    if (last?.label === row.jobType) {
+      last.rows.push(row);
+    } else {
+      groups.push({ label: row.jobType, rows: [row] });
+    }
+  }
+  return groups;
 }
 
 export function splitPropertyJobRows(rows: PropertyJobRow[]): {
@@ -57,10 +122,9 @@ export function splitPropertyJobRows(rows: PropertyJobRow[]): {
     if (row.phase === 'completed') completed.push(row);
     else inProgress.push(row);
   }
-  const byDateDesc = (a: PropertyJobRow, b: PropertyJobRow) => b.date.localeCompare(a.date);
   return {
-    inProgress: inProgress.sort(byDateDesc),
-    completed: completed.sort(byDateDesc),
+    inProgress: organizePropertyJobRows(inProgress),
+    completed: organizePropertyJobRows(completed),
   };
 }
 
@@ -112,7 +176,8 @@ function maintenanceDescriptionBody(request: MaintenanceRequest): string {
 export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobRow[] {
   return requests.map((request) => {
     const progress = maintenanceWorkflowProgress(request);
-    const created = request.timeline[0]?.at;
+    const createdIso = maintenanceCreatedAtIso(request);
+    const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
     return {
       id: request.id,
       kind: 'maintenance',
@@ -130,7 +195,9 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
       ]
         .filter(Boolean)
         .join(' · '),
-      date: created ? formatDateTime(created) : '—',
+      date: createdAt,
+      createdAt,
+      createdAtMs,
       status: progress.currentStepLabel,
       phase: isCompletedMaintenance(request) ? 'completed' : 'in_progress',
     };
@@ -140,6 +207,8 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
 export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
   return inspections.map((inspection) => {
     const progress = inspectionWorkflowProgress(inspection);
+    const createdIso = inspectionCreatedAtIso(inspection);
+    const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
     return {
       id: inspection.id,
       kind: 'inspection',
@@ -153,7 +222,9 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
       ]
         .filter(Boolean)
         .join(' · ') || '—',
-      date: inspection.scheduledAt ? formatDate(inspection.scheduledAt) : '—',
+      date: inspection.scheduledAt ? formatScheduledAt(inspection.scheduledAt) : '—',
+      createdAt,
+      createdAtMs,
       status: progress.currentStepLabel,
       phase: isCompletedInspection(inspection) ? 'completed' : 'in_progress',
     };
@@ -172,6 +243,7 @@ export function leasingWorkflowJobRows(cases: PropertyLeasingWorkflowCase[]): Pr
       item.status?.toLowerCase().includes('completed') ||
       item.status?.toLowerCase().includes('closed') ||
       item.status?.toLowerCase().includes('cancelled');
+    const { createdAt, createdAtMs } = rowCreatedAt(item.sortAt);
     return {
       id: item.id,
       kind: item.category,
@@ -179,6 +251,8 @@ export function leasingWorkflowJobRows(cases: PropertyLeasingWorkflowCase[]): Pr
       name: item.label,
       description: [item.detail, item.status].filter(Boolean).join(' · ') || '—',
       date: item.sortAt ? formatDate(item.sortAt) : '—',
+      createdAt,
+      createdAtMs,
       status: item.currentStep,
       phase: terminal ? 'completed' : 'in_progress',
     };
@@ -192,6 +266,8 @@ export function rentReviewJobRows(
   return reviews.map((review) => {
     const progress = rentReviewWorkflowProgress(review);
     const decision = decisions[review.id];
+    const createdIso = rentReviewCreatedAtIso(review);
+    const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
     return {
       id: review.id,
       kind: 'rent_review',
@@ -208,6 +284,8 @@ export function rentReviewJobRows(
         .filter(Boolean)
         .join(' · ') || '—',
       date: formatDate(review.reviewDue),
+      createdAt,
+      createdAtMs,
       status: progress.currentStepLabel,
       phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
       rentReviewSchedule: getRentReviewScheduleIndicators(review) ?? undefined,
@@ -218,6 +296,7 @@ export function rentReviewJobRows(
 export function tribunalJobRows(cases: TribunalCase[]): PropertyJobRow[] {
   return cases.map((item) => {
     const progress = tribunalWorkflowProgress(item);
+    const { createdAt, createdAtMs } = rowCreatedAt(item.hearingDate);
     return {
       id: item.id,
       kind: 'tribunal',
@@ -225,6 +304,8 @@ export function tribunalJobRows(cases: TribunalCase[]): PropertyJobRow[] {
       name: item.caseNumber ?? workflowCaseReferenceLabel(item.id, 'tribunal'),
       description: [item.tenantName, item.matter].filter(Boolean).join(' · ') || '—',
       date: item.hearingDate ? formatDateTime(item.hearingDate) : '—',
+      createdAt,
+      createdAtMs,
       status: progress.currentStepLabel,
       phase: item.status === 'closed' ? 'completed' : 'in_progress',
     };
@@ -235,6 +316,8 @@ export function vacatingJobRows(cases: VacatingCase[]): PropertyJobRow[] {
   return cases.map((item) => {
     const progress = vacatingWorkflowProgress(item);
     const terminal = item.apiStatus?.toLowerCase().includes('completed');
+    const createdIso = item.timeline[0]?.at;
+    const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
     return {
       id: item.id,
       kind: 'end_leasing',
@@ -242,6 +325,8 @@ export function vacatingJobRows(cases: VacatingCase[]): PropertyJobRow[] {
       name: workflowCaseReferenceLabel(item.id, 'end_leasing'),
       description: `${item.reason} · ${item.checklistProgress}% checklist`,
       date: formatDate(item.vacateDate),
+      createdAt,
+      createdAtMs,
       status: progress.currentStepLabel,
       phase: terminal ? 'completed' : 'in_progress',
     };
@@ -258,6 +343,8 @@ export function accountingJobRows(accounting?: PropertyAccounting | null): Prope
       name: 'Rent arrears',
       description: `${accounting.tenantName} · ${accounting.daysInArrears} days outstanding`,
       date: '—',
+      createdAt: '—',
+      createdAtMs: 0,
       status: 'Collection in progress',
       phase: 'in_progress',
     },

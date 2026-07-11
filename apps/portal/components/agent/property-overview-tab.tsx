@@ -561,11 +561,13 @@ export function PropertyOverviewTab({
 
       <OverviewSection title="Jobs in progress">
         <p className="text-muted-foreground mb-2 text-[11px]">
-          Click a job to open the workflow.
+          Jobs are grouped by type. Click a row to open the workflow.
         </p>
         <PropertyJobCasesTable
           rows={inProgressJobs}
           showViewToggle={false}
+          groupByJobType
+          showRentReviewSchedule={false}
           selectedId={selectedJob?.id}
           onRowClick={handleJobClick}
           emptyTitle="No jobs in progress"

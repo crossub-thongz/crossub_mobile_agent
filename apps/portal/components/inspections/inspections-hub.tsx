@@ -42,17 +42,6 @@ const STATUS_FILTERS = [
 type TypeFilter = (typeof TYPE_FILTERS)[number]['id'];
 type StatusFilter = (typeof STATUS_FILTERS)[number]['id'];
 
-function sortInspections(items: Inspection[]): Inspection[] {
-  return [...items].sort((a, b) => {
-    const aTime = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
-    const bTime = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
-    if (aTime && bTime) return bTime - aTime;
-    if (aTime) return -1;
-    if (bTime) return 1;
-    return b.propertyAddress.localeCompare(a.propertyAddress);
-  });
-}
-
 export function InspectionsHub({
   inspections,
   propertyFilterId,
@@ -88,7 +77,7 @@ export function InspectionsHub({
           i.status.toLowerCase().includes(q),
       );
     }
-    return sortInspections(items);
+    return items;
   }, [inspections, propertyFilterId, typeFilter, statusFilter, search]);
 
   return (

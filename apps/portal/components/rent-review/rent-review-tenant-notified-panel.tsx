@@ -8,11 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RentReviewEmailLog } from '@/components/rent-review/rent-review-email-log';
+import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
   buildTenantNoticeEmail,
+  canRecordTenantResponseOnBehalf,
+  canSendTenantNotice,
   emailRecordsFromAudit,
+  hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -40,6 +44,9 @@ export function RentReviewTenantNotifiedPanel({
     (e) => e.kind === 'tenant_response_reminder',
   );
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED);
+  const noticeSent = hasTenantNoticeSent(detail);
+  const showSendNotice = canSendTenantNotice(detail);
+  const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -80,8 +87,9 @@ export function RentReviewTenantNotifiedPanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Tenant notified</p>
         <p className="text-muted-foreground mb-3 text-xs">
-          Formal rent increase notice sent to tenant. If no reply, the system sends a reminder
-          email every 3 days.
+          {noticeSent
+            ? 'Formal rent increase notice sent to tenant. If no reply, the system sends a reminder email every 3 days.'
+            : 'Send the formal notice to advance this step. You can also record the tenant response on behalf of the tenant once the notice is sent.'}
         </p>
         <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
@@ -97,21 +105,13 @@ export function RentReviewTenantNotifiedPanel({
         </dl>
       </section>
 
-      {noticeEmail ? (
-        <RentReviewEmailLog title="Notice email to tenant" emails={[noticeEmail]} />
-      ) : null}
-
-      {reminderEmails.length > 0 ? (
-        <RentReviewEmailLog title="Reminder emails (every 3 days)" emails={reminderEmails} />
-      ) : (
-        <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs">
-          No tenant reply yet — automatic reminders will be sent every 3 days.
-        </p>
-      )}
-
-      {detail.workflowState === 'agent_review' && detail.proposedWeeklyRent != null ? (
+      {showSendNotice ? (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
           <p className="text-primary text-xs font-semibold uppercase">Send tenant notice</p>
+          <p className="text-muted-foreground text-xs">
+            Dispatch the formal increase notice on behalf of the tenant communication channel (email,
+            post, or hand delivery).
+          </p>
           <Label htmlFor="notice-effective">Effective date</Label>
           <Input
             id="notice-effective"
@@ -136,6 +136,22 @@ export function RentReviewTenantNotifiedPanel({
             Send formal notice to tenant
           </Button>
         </div>
+      ) : null}
+
+      {noticeEmail ? (
+        <RentReviewEmailLog title="Notice email to tenant" emails={[noticeEmail]} />
+      ) : null}
+
+      {reminderEmails.length > 0 ? (
+        <RentReviewEmailLog title="Reminder emails (every 3 days)" emails={reminderEmails} />
+      ) : noticeSent ? (
+        <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs">
+          No tenant reply yet — automatic reminders will be sent every 3 days.
+        </p>
+      ) : null}
+
+      {showRecordResponse ? (
+        <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
       ) : null}
 
       <Button variant="outline" className="w-full gap-2" disabled={busy} onClick={() => void downloadNotice()}>

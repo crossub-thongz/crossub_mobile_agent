@@ -80,6 +80,7 @@ export function PropertyMaintenanceTab({
         rows={jobRows}
         selectedId={selectedCaseId}
         onRowClick={handleRowClick}
+        showKeyDateColumn={false}
         emptyTitle="No maintenance jobs"
         emptyDescription="Log a maintenance job for this property to begin the workflow."
       />

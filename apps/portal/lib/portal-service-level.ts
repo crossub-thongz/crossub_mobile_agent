@@ -99,7 +99,7 @@ export const PROPERTY_DETAIL_TABS = [
   'Maintenance',
   'Inspection',
   'Accounting',
-  'History',
+  'Archive',
 ] as const;
 
 export type PropertyDetailTab = (typeof PROPERTY_DETAIL_TABS)[number];

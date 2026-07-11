@@ -7,9 +7,10 @@ import { toast } from 'sonner';
 import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, maintenanceDetail } from '@/constants/routes';
 import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync';
 
 function formatReminderEta(iso: string | null): string | null {
@@ -38,6 +39,14 @@ export default function MaintenanceDetailPage() {
 
   const { workspaceCase, liveMapped, remindersSent, nextReminderDueAt, syncing } =
     useMaintenanceCaseLiveSync(item, property, apiConnected);
+
+  useRecordRecentCaseVisit({
+    id: item?.id,
+    kind: 'maintenance',
+    address: item?.propertyAddress,
+    href: item ? maintenanceDetail(item.id) : '',
+    module: 'maintenance',
+  });
 
   if (!item || !workspaceCase) notFound();
 

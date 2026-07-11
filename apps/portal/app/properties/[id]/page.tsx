@@ -44,6 +44,7 @@ import {
 } from '@/lib/property-leasing-navigation';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
+import { useRecordRecentPropertyVisit } from '@/hooks/use-record-recent-visit';
 import { formatCarSpaces } from '@/lib/property-overview';
 import {
   PROPERTY_DETAIL_TABS,
@@ -58,6 +59,7 @@ function normalizeTab(raw: string | null, allowedTabs: readonly Tab[]): Tab {
     if (allowedTabs.includes('Leasing')) return 'Leasing';
     return allowedTabs[0] ?? 'Overview';
   }
+  if (raw === 'History' && allowedTabs.includes('Archive')) return 'Archive';
   if (allowedTabs.includes(raw as Tab)) return raw as Tab;
   return allowedTabs[0] ?? 'Overview';
 }
@@ -86,6 +88,7 @@ export default function PropertyDetailPage() {
   } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
   const property = properties.find((p) => p.id === id);
+  useRecordRecentPropertyVisit(property);
   const propertyTabs = useMemo(
     () =>
       property
@@ -398,7 +401,7 @@ export default function PropertyDetailPage() {
           />
         )}
 
-        {tab === 'History' && (
+        {tab === 'Archive' && (
           <PropertyHistoryTab property={property} propertyId={id} leasing={leasing} />
         )}
       </div>

@@ -265,15 +265,12 @@ export function MaintenanceWorkspace({
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <aside className="border-border bg-muted/[0.2] shrink-0 overflow-y-auto border-b px-4 py-4 lg:w-[35%] lg:min-w-[240px] lg:max-w-md lg:border-r lg:border-b-0">
+        <aside className="border-border bg-muted/[0.2] shrink-0 overflow-y-auto border-b px-4 py-4 lg:w-[min(100%,240px)] lg:shrink-0 lg:border-r lg:border-b-0">
           <div className="space-y-3">
             <WorkspaceSideInformationPanel
               tenantName={workspaceCase.tenant?.name ?? '—'}
               tenantEmail={workspaceCase.tenant?.email}
               tenantPhone={workspaceCase.tenant?.phone}
-              agentName={workspaceCase.agent?.name ?? '—'}
-              agentEmail={workspaceCase.agent?.email}
-              agentContact={workspaceCase.agent?.phone}
               priority={workspaceCase.priority}
               responsibility={workspaceCase.responsibility ?? null}
               sourceLabel={SOURCE_LABELS[workspaceCase.source]}

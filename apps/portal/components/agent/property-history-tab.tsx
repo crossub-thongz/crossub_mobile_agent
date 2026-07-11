@@ -14,18 +14,18 @@ import {
 import type { LeasingRecord, Property } from '@/lib/types';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
-type HistorySubTab = 'tenant' | 'landlord';
+type ArchiveSubTab = 'tenant' | 'landlord';
 
 function SubTabBar({
   active,
   onChange,
 }: {
-  active: HistorySubTab;
-  onChange: (tab: HistorySubTab) => void;
+  active: ArchiveSubTab;
+  onChange: (tab: ArchiveSubTab) => void;
 }) {
-  const tabs: { id: HistorySubTab; label: string }[] = [
-    { id: 'tenant', label: 'Tenant' },
-    { id: 'landlord', label: 'Landlord' },
+  const tabs: { id: ArchiveSubTab; label: string }[] = [
+    { id: 'tenant', label: 'Tenant archive' },
+    { id: 'landlord', label: 'Landlord archive' },
   ];
 
   return (
@@ -161,7 +161,7 @@ export function PropertyHistoryTab({
   propertyId: string;
   leasing: LeasingRecord[];
 }) {
-  const [subTab, setSubTab] = useState<HistorySubTab>('tenant');
+  const [subTab, setSubTab] = useState<ArchiveSubTab>('tenant');
 
   const archivedLandlords = useMemo(
     () => parseArchivedLandlords(property.registryDraft),
@@ -180,7 +180,7 @@ export function PropertyHistoryTab({
         <div className="space-y-4">
           <ArchivedTenancySnapshots snapshots={tenancySnapshots} />
           <section className="rounded-xl border bg-card p-3">
-            <h3 className="text-sm font-semibold">Tenancy history</h3>
+            <h3 className="text-sm font-semibold">Tenancy archive</h3>
             <p className="text-muted-foreground mt-1 text-xs">
               Past and current tenancies — open a record for maintenance, inspections, rent
               reviews, and communications for that lease.

@@ -10,10 +10,11 @@ import { ModuleCommunications } from '@/components/agent/module-communications';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, tribunalDetail, vacatingDetail } from '@/constants/routes';
 import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { tribunalWorkflowProgress } from '@/lib/case-workflows';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import { formatDateTime } from '@/lib/utils';
 
 export default function TribunalDetailPage() {
@@ -22,6 +23,14 @@ export default function TribunalDetailPage() {
   const { tribunalCases } = useAgentData();
   const c = tribunalCases.find((x) => x.id === id);
   const back = useBackNavigation(ROUTES.TRIBUNAL, 'Tribunal');
+
+  useRecordRecentCaseVisit({
+    id: c?.id,
+    kind: 'tribunal',
+    address: c?.propertyAddress,
+    href: c ? tribunalDetail(c.id) : '',
+    module: 'tribunal',
+  });
 
   if (!c) notFound();
 

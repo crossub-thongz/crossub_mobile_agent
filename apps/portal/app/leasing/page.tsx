@@ -18,6 +18,7 @@ import {
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   propertyNew,
   propertyTransfer,
@@ -51,6 +52,7 @@ export default function LeasingPage() {
       : 'new-leasing';
 
   const [tab, setTab] = useState<LeasingTab>(initialTab);
+  const [search, setSearch] = useState('');
   const { tenantSelections, rentReviews, leasingRecords, leasingCycles, properties } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
 
@@ -68,6 +70,42 @@ export default function LeasingPage() {
       return { ...l, address };
     });
   }, [leasingRecords, properties]);
+
+  const filteredCycles = useMemo(() => {
+    if (!search.trim()) return leasingCycles;
+    const q = search.toLowerCase();
+    return leasingCycles.filter((c) => c.propertyAddress.toLowerCase().includes(q));
+  }, [leasingCycles, search]);
+
+  const filteredApplications = useMemo(() => {
+    if (!search.trim()) return tenantSelections;
+    const q = search.toLowerCase();
+    return tenantSelections.filter(
+      (t) =>
+        t.propertyAddress.toLowerCase().includes(q) ||
+        t.applicantName.toLowerCase().includes(q),
+    );
+  }, [tenantSelections, search]);
+
+  const filteredRentReviews = useMemo(() => {
+    if (!search.trim()) return rentReviews;
+    const q = search.toLowerCase();
+    return rentReviews.filter(
+      (r) =>
+        r.propertyAddress.toLowerCase().includes(q) ||
+        (r.tenantName?.toLowerCase().includes(q) ?? false),
+    );
+  }, [rentReviews, search]);
+
+  const filteredHistory = useMemo(() => {
+    if (!search.trim()) return history;
+    const q = search.toLowerCase();
+    return history.filter(
+      (l) =>
+        l.address.toLowerCase().includes(q) ||
+        l.approvedTenant.toLowerCase().includes(q),
+    );
+  }, [history, search]);
 
   return (
     <AgentShell title="Leasing" backHref={ROUTES.DASHBOARD}>
@@ -120,12 +158,20 @@ export default function LeasingPage() {
           onChange={(id) => setTab(id as LeasingTab)}
         />
 
+        {tab !== 'transfer' ? (
+          <Input
+            placeholder="Search by property, tenant, or applicant…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        ) : null}
+
         {tab === 'new-leasing' && (
           <section className="space-y-4">
-            {leasingCycles.length > 0 ? (
+            {filteredCycles.length > 0 ? (
               <div className="space-y-3">
                 <h2 className="text-sm font-semibold">Active leasing cycles</h2>
-                <LeasingCyclesTable items={leasingCycles} />
+                <LeasingCyclesTable items={filteredCycles} />
               </div>
             ) : (
               <EmptyState
@@ -135,7 +181,7 @@ export default function LeasingPage() {
               />
             )}
 
-            {tenantSelections.length === 0 ? (
+            {filteredApplications.length === 0 ? (
               <EmptyState
                 icon={UserCheck}
                 title="No pending applications"
@@ -144,7 +190,7 @@ export default function LeasingPage() {
             ) : (
               <div className="space-y-3">
                 <h2 className="text-sm font-semibold">Tenant applications</h2>
-                <TenantSelectionsTable items={tenantSelections} />
+                <TenantSelectionsTable items={filteredApplications} />
               </div>
             )}
           </section>
@@ -164,7 +210,7 @@ export default function LeasingPage() {
 
         {tab === 'rent-review' && (
           <section className="space-y-2">
-            {rentReviews.length === 0 ? (
+            {filteredRentReviews.length === 0 ? (
               <EmptyState
                 icon={FileText}
                 title="No rent reviews"
@@ -172,7 +218,7 @@ export default function LeasingPage() {
               />
             ) : (
               <RentReviewListTable
-                items={rentReviews}
+                items={filteredRentReviews}
                 detailHref={(id) => rentReviewDetail(id, fromLeasing('rent-review'))}
               />
             )}
@@ -181,14 +227,14 @@ export default function LeasingPage() {
 
         {tab === 'history' && (
           <section className="space-y-3">
-            {history.length === 0 ? (
+            {filteredHistory.length === 0 ? (
               <EmptyState
                 icon={History}
                 title="No leasing history"
                 description="Tenancy records appear per property once connected to crossub_web."
               />
             ) : (
-              <LeasingHistoryTable items={history} />
+              <LeasingHistoryTable items={filteredHistory} />
             )}
           </section>
         )}

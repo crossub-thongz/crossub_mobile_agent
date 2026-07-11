@@ -31,10 +31,11 @@ import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyDetail, ROUTES, inspectionDetail } from '@/constants/routes';
 import { inspectionWorkflowProgress } from '@/lib/case-workflows';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
+import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import {
   INSPECTION_TYPE_LABEL,
   inspectionNextAction,
@@ -80,6 +81,21 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   }, [syncOpenSession]);
 
   useLivePoll(syncOpenSession, apiConnected && insp?.source === 'open_viewing');
+
+  useRecordRecentCaseVisit({
+    id: base?.id,
+    kind:
+      base?.type === 'OPEN'
+        ? 'open'
+        : base?.type === 'INGOING'
+          ? 'ingoing'
+          : base?.type === 'OUTGOING'
+            ? 'outgoing'
+            : 'routine',
+    address: base?.propertyAddress,
+    href: base ? inspectionDetail(base.id) : '',
+    module: 'inspection',
+  });
 
   if (!insp) notFound();
 

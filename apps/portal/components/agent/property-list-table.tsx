@@ -1,10 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 
+import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { Button } from '@/components/ui/button';
+import {
+  applySortDirection,
+  compareNumbers,
+  compareSortTime,
+  compareStrings,
+  useClientTableSort,
+} from '@/lib/client-table-sort';
 import { crossubWebPropertyUrl } from '@/lib/crossub-web-url';
+import { propertyCreatedAtIso } from '@/lib/record-created-at';
 import type { Agency, Property } from '@/lib/types';
 import { cn, formatCurrency, formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -26,6 +36,16 @@ function resolveAgencyName(property: Property, agencies: Agency[]): string {
   return agency?.name ?? '—';
 }
 
+type PropertySortKey =
+  | 'address'
+  | 'tenant'
+  | 'lease'
+  | 'rent'
+  | 'agency'
+  | 'pm'
+  | 'createdAt'
+  | 'reminder';
+
 export function PropertyListTable({
   properties,
   agencies,
@@ -41,25 +61,116 @@ export function PropertyListTable({
   onDelete: (property: Property) => void;
   canManage?: boolean;
 }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<PropertySortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const rows = [...properties];
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'address':
+          cmp = compareStrings(formatPropertyFullAddress(a), formatPropertyFullAddress(b));
+          break;
+        case 'tenant':
+          cmp = compareStrings(a.tenantName, b.tenantName);
+          break;
+        case 'lease':
+          cmp = compareSortTime(a.leaseStart, b.leaseStart);
+          break;
+        case 'rent':
+          cmp = compareNumbers(a.rentWeekly ?? 0, b.rentWeekly ?? 0);
+          break;
+        case 'agency':
+          cmp = compareStrings(resolveAgencyName(a, agencies), resolveAgencyName(b, agencies));
+          break;
+        case 'pm':
+          cmp = compareStrings(a.propertyManager ?? '', b.propertyManager ?? '');
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(propertyCreatedAtIso(a), propertyCreatedAtIso(b));
+          break;
+        case 'reminder':
+          cmp = compareNumbers(actionCountFor(a.id), actionCountFor(b.id));
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return rows;
+  }, [actionCountFor, agencies, properties, sortDirection, sortKey]);
+
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[1160px] border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-3 font-semibold">Property address</th>
-              <th className="px-3 py-3 font-semibold">Tenant(s)</th>
-              <th className="px-3 py-3 font-semibold">Lease period</th>
-              <th className="px-3 py-3 font-semibold">Rent</th>
-              <th className="px-3 py-3 font-semibold">Agency</th>
-              <th className="px-3 py-3 font-semibold">PM</th>
-              <th className="px-3 py-3 font-semibold">Create date</th>
-              <th className="px-3 py-3 text-center font-semibold">Reminder</th>
-              <th className="px-3 py-3 text-right font-semibold">Actions</th>
+            <tr className="border-b bg-muted/30">
+              <SortableTableHeader
+                label="Property address"
+                sortKey="address"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Tenant(s)"
+                sortKey="tenant"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Lease period"
+                sortKey="lease"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Rent"
+                sortKey="rent"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Agency"
+                sortKey="agency"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="PM"
+                sortKey="pm"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Date created"
+                sortKey="createdAt"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Reminder"
+                sortKey="reminder"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+                align="right"
+              />
+              <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {properties.map((property) => {
+            {sorted.map((property) => {
               const actionCount = actionCountFor(property.id);
               const isDraft = property.registryIntakeComplete === false;
               const pmName = property.propertyManager?.trim();
@@ -67,6 +178,7 @@ export function PropertyListTable({
                 pmName && property.propertyManagerId
                   ? crossubWebPropertyUrl(property.id)
                   : null;
+              const createdIso = propertyCreatedAtIso(property);
 
               return (
                 <tr
@@ -116,8 +228,8 @@ export function PropertyListTable({
                     )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                    {property.createdAt && !Number.isNaN(new Date(property.createdAt).getTime())
-                      ? formatDateTime(property.createdAt)
+                    {createdIso && !Number.isNaN(new Date(createdIso).getTime())
+                      ? formatDateTime(createdIso)
                       : '—'}
                   </td>
                   <td className="px-3 py-3 text-center">

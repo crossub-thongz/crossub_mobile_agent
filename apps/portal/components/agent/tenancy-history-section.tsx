@@ -26,7 +26,7 @@ export function TenancyHistorySection({
 
   if (sorted.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">No tenancy history for this property yet.</p>
+      <p className="text-muted-foreground text-sm">No tenancy records in archive yet.</p>
     );
   }
 

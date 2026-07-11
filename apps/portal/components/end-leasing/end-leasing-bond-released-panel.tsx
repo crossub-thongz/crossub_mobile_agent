@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
+import { TENANT_SETTLEMENT_CONFIRMATION } from '@/constants/end-leasing';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { terminationApi } from '@/lib/termination-case-api';
@@ -59,6 +60,8 @@ export function EndLeasingBondReleasedPanel({
 
   const settlementFinalized = caseData.settlement.status === DONE;
   const agentApproved = caseData.agentApproval.decision === 'approved';
+  const tenantAccepted =
+    caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED;
   const bondReleased = caseData.bond.refundPaid || caseData.bond.status === DONE;
 
   const run = async (action: () => Promise<TerminationCaseDetail>, success: string) => {
@@ -118,7 +121,8 @@ export function EndLeasingBondReleasedPanel({
       <section className="space-y-2 rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Release bond</p>
         <p className="text-muted-foreground text-xs">
-          Finalize settlement, approve deductions, then confirm bond release.
+          Finalize settlement, approve deductions, record tenant acceptance (if replying offline),
+          then confirm bond release.
         </p>
         <div className="flex flex-wrap gap-2 pt-2">
           {!settlementFinalized ? (
@@ -160,7 +164,28 @@ export function EndLeasingBondReleasedPanel({
               <Check className="size-3.5" /> Agent approved
             </span>
           ) : null}
-          {agentApproved && !bondReleased ? (
+          {agentApproved && !tenantAccepted ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  () => terminationApi.tenantAcceptSettlement(caseData.id),
+                  'Tenant acceptance recorded',
+                )
+              }
+            >
+              Record tenant acceptance
+            </Button>
+          ) : tenantAccepted ? (
+            <span className="text-primary flex items-center gap-1 text-xs">
+              <Check className="size-3.5" /> Tenant accepted settlement
+            </span>
+          ) : null}
+          {agentApproved && tenantAccepted && !bondReleased ? (
             <Button
               type="button"
               size="sm"

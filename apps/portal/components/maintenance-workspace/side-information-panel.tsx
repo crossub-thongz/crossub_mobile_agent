@@ -4,13 +4,10 @@ import type { ReactNode } from 'react';
 
 import { PriorityBadge, ResponsibilityBadge } from './badges';
 
-type PeopleProps = {
+type TenantProps = {
   tenantName: string;
   tenantEmail?: string;
   tenantPhone?: string;
-  agentName: string;
-  agentEmail?: string;
-  agentContact?: string;
 };
 
 type MetaProps = {
@@ -21,52 +18,29 @@ type MetaProps = {
   statusBoxContent: ReactNode;
 };
 
-type Props = PeopleProps & MetaProps;
+type Props = TenantProps & MetaProps;
 
 export function WorkspacePeoplePanel({
   tenantName,
   tenantEmail,
   tenantPhone,
-  agentName,
-  agentEmail,
-  agentContact,
-}: PeopleProps) {
+}: TenantProps) {
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className="min-w-0 rounded-lg border border-border bg-background p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Tenant Information
-        </p>
-        <p className="mt-1.5 text-sm font-semibold text-foreground">{tenantName || '—'}</p>
-        <div className="mt-1 space-y-0.5">
-          {tenantEmail ? (
-            <p className="text-[11px] break-words text-muted-foreground">{tenantEmail}</p>
-          ) : null}
-          {tenantPhone ? (
-            <p className="text-[11px] break-words text-muted-foreground">{tenantPhone}</p>
-          ) : null}
-          {!tenantEmail && !tenantPhone ? (
-            <p className="text-[11px] text-muted-foreground">—</p>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="min-w-0 rounded-lg border border-border bg-background p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Agent Information
-        </p>
-        <p className="mt-1.5 text-sm font-semibold text-foreground">{agentName || '—'}</p>
-        <div className="mt-1 space-y-0.5">
-          {agentEmail ? (
-            <p className="text-[11px] break-words text-muted-foreground">{agentEmail}</p>
-          ) : null}
-          {agentContact ? (
-            <p className="text-[11px] break-words text-muted-foreground">{agentContact}</p>
-          ) : null}
-          {!agentEmail && !agentContact ? (
-            <p className="text-[11px] text-muted-foreground">—</p>
-          ) : null}
-        </div>
+    <div className="rounded-lg border border-border bg-background p-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Tenant Information
+      </p>
+      <p className="mt-1.5 text-sm font-semibold text-foreground">{tenantName || '—'}</p>
+      <div className="mt-1 space-y-0.5">
+        {tenantEmail ? (
+          <p className="text-[11px] break-words text-muted-foreground">{tenantEmail}</p>
+        ) : null}
+        {tenantPhone ? (
+          <p className="text-[11px] break-words text-muted-foreground">{tenantPhone}</p>
+        ) : null}
+        {!tenantEmail && !tenantPhone ? (
+          <p className="text-[11px] text-muted-foreground">—</p>
+        ) : null}
       </div>
     </div>
   );
@@ -127,9 +101,6 @@ export function WorkspaceSideInformationPanel(props: Props) {
         tenantName={props.tenantName}
         tenantEmail={props.tenantEmail}
         tenantPhone={props.tenantPhone}
-        agentName={props.agentName}
-        agentEmail={props.agentEmail}
-        agentContact={props.agentContact}
       />
       <WorkspaceMetaPanel
         priority={props.priority}

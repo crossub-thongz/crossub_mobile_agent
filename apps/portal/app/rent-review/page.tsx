@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { RentReviewListTable } from '@/components/agent/portfolio-module-tables';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { rentReviewDetail, ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
@@ -24,6 +25,7 @@ export default function RentReviewPage() {
   const { rentReviews } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
   const [view, setView] = useState('current');
+  const [search, setSearch] = useState('');
 
   const detailNav = useMemo((): DetailNavContext | undefined => {
     const from = searchParams.get('from');
@@ -49,13 +51,27 @@ export default function RentReviewPage() {
     return { current: cur, completed: done };
   }, [rentReviews, decisions]);
 
-  const list = view === 'current' ? current : completed;
+  const list = useMemo(() => {
+    const base = view === 'current' ? current : completed;
+    if (!search.trim()) return base;
+    const q = search.toLowerCase();
+    return base.filter(
+      (r) =>
+        r.propertyAddress.toLowerCase().includes(q) ||
+        (r.tenantName?.toLowerCase().includes(q) ?? false),
+    );
+  }, [view, current, completed, search]);
   const back = useBackNavigation(ROUTES.DASHBOARD, 'Dashboard');
 
   return (
     <AgentShell title="Rent Review" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
         <FilterChips options={VIEW_FILTERS} value={view} onChange={setView} />
+        <Input
+          placeholder="Search by property or tenant…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
 
         {list.length === 0 ? (
           <EmptyState

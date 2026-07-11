@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
+  Archive,
   Building2,
   ClipboardList,
   FileText,
@@ -20,6 +21,7 @@ const TAB_ICONS: Record<string, LucideIcon> = {
   Maintenance: Wrench,
   Inspection: ClipboardList,
   Accounting: Wallet,
+  Archive: Archive,
 };
 
 export function PropertyTabBar<T extends string>({

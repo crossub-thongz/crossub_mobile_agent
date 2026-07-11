@@ -290,6 +290,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
     apiStatus: i.status,
     reportStatus: inspectionReportStatus(i),
     reportUrl: i.reportUrl ?? undefined,
+    createdAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
     timeline: [],
   };
   });
@@ -346,6 +347,7 @@ export function mapAgentMaintenance(
       contractorName: m.contractorName ?? undefined,
       quoteAmount: m.quoteTotal ?? m.ourPrice ?? undefined,
       requiresApproval: m.status === MAINTENANCE_STATUS.QUOTING,
+      createdAt: m.createdAt,
       timeline: [],
       source: 'api',
     };

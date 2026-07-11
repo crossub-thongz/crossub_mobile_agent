@@ -8,9 +8,17 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
+import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { rentReviewDetail } from '@/constants/routes';
+import {
+  applySortDirection,
+  compareSortTime,
+  compareStrings,
+  useClientTableSort,
+} from '@/lib/client-table-sort';
 import { fromProperty } from '@/lib/detail-navigation';
 import { buildRentReviewHistoryRows, isActiveRentReview, type RentReviewSummaryRow } from '@/lib/property-rent-review-history';
+import { rentReviewCreatedAtIso } from '@/lib/record-created-at';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { buildPropertyWorkflowContext, tabActionsFor } from '@/lib/property-workflow-actions';
 import type {
@@ -26,6 +34,9 @@ import type {
 } from '@/lib/types';
 import { rentReviewJobRows } from '@/lib/property-job-rows';
 import { RENT_REVIEW_ADVANCE_ORDER_DAYS, RENT_REVIEW_CONDUCT_WINDOW_DAYS, RENT_REVIEW_STATUTORY_NOTICE_DAYS } from '@/lib/rent-review/scheduling';
+import { formatDateTime } from '@/lib/utils';
+
+type RentReviewHistorySortKey = 'leasePeriod' | 'term' | 'rent' | 'createdAt' | 'startDate';
 
 function RentReviewHistoryTable({
   rows,
@@ -34,27 +45,100 @@ function RentReviewHistoryTable({
   rows: RentReviewSummaryRow[];
   propertyId: string;
 }) {
+  const { sortKey, sortDirection, onSort } = useClientTableSort<RentReviewHistorySortKey>(
+    'createdAt',
+    'desc',
+  );
+
+  const sorted = useMemo(() => {
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'leasePeriod':
+          cmp = compareStrings(a.leasePeriod, b.leasePeriod);
+          break;
+        case 'term':
+          cmp = compareStrings(a.termLabel, b.termLabel);
+          break;
+        case 'rent':
+          cmp = compareStrings(a.rentLabel, b.rentLabel);
+          break;
+        case 'createdAt':
+          cmp = compareSortTime(
+            rentReviewCreatedAtIso(a.review),
+            rentReviewCreatedAtIso(b.review),
+          );
+          break;
+        case 'startDate':
+          cmp = compareSortTime(a.startDateIso, b.startDateIso);
+          break;
+      }
+      return applySortDirection(cmp, sortDirection);
+    });
+    return copy;
+  }, [rows, sortDirection, sortKey]);
+
   if (rows.length === 0) return null;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[860px] border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b bg-muted/30 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <th className="px-3 py-3 font-semibold">Lease period</th>
-              <th className="px-3 py-3 font-semibold">Term</th>
-              <th className="px-3 py-3 font-semibold">Rent</th>
-              <th className="px-3 py-3 font-semibold">Start date</th>
-              <th className="px-3 py-3 text-right font-semibold">Open</th>
+            <tr className="border-b bg-muted/30">
+              <SortableTableHeader
+                label="Lease period"
+                sortKey="leasePeriod"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Term"
+                sortKey="term"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Rent"
+                sortKey="rent"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Date created"
+                sortKey="createdAt"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <SortableTableHeader
+                label="Start date"
+                sortKey="startDate"
+                activeKey={sortKey}
+                direction={sortDirection}
+                onSort={onSort}
+              />
+              <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Open
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map((row) => (
+            {sorted.map((row) => (
               <tr key={row.id} className="transition-colors hover:bg-muted/20">
                 <td className="px-3 py-3 font-medium">{row.leasePeriod}</td>
                 <td className="px-3 py-3">{row.termLabel}</td>
                 <td className="px-3 py-3 tabular-nums">{row.rentLabel}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                  {(() => {
+                    const iso = rentReviewCreatedAtIso(row.review);
+                    return iso ? formatDateTime(iso) : '—';
+                  })()}
+                </td>
                 <td className="px-3 py-3 tabular-nums">{row.startDate}</td>
                 <td className="px-3 py-3 text-right">
                   <Link
@@ -206,6 +290,8 @@ export function PropertyRentReviewTab({
         </p>
         <PropertyJobCasesTable
           rows={jobRows}
+          showRentReviewSchedule
+          dateColumnLabel="Due"
           selectedId={selectedCaseId}
           onRowClick={handleRowClick}
           emptyTitle="No rent review cases"

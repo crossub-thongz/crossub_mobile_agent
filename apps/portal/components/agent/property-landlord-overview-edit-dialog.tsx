@@ -145,14 +145,14 @@ export function PropertyLandlordOverviewEditDialog({
         replacingLandlord ? 'New landlord saved' : 'Management details updated',
       );
       if (replacingLandlord) {
-        toast.message('Previous landlord saved to History → Landlord');
+        toast.message('Previous landlord saved to Archive → Landlord');
       } else if (
         initial.landlordName.trim() &&
         (form.landlordName.trim() !== initial.landlordName.trim() ||
           form.landlordEmail.trim() !== initial.landlordEmail.trim() ||
           form.landlordPhone.trim() !== initial.landlordPhone.trim())
       ) {
-        toast.message('Previous landlord saved to History → Landlord');
+        toast.message('Previous landlord saved to Archive → Landlord');
       }
       onOpenChange(false);
       onSaved?.();
@@ -192,7 +192,7 @@ export function PropertyLandlordOverviewEditDialog({
             </div>
             {replacingLandlord ? (
               <p className="text-muted-foreground text-[11px]">
-                Enter the new landlord below. The current landlord will be archived to History
+                Enter the new landlord below. The current landlord will be archived to Archive
                 when you save.
               </p>
             ) : null}

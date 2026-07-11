@@ -90,8 +90,22 @@ function hasAgentConfirmedRent(detail: RentReviewWorkflowDetail): boolean {
   return hasAgentPricingFinalized(detail);
 }
 
-function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
+/** Formal increase notice has been dispatched to the tenant. */
+export function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
   return auditHas(detail, 'tenant_notices_dispatched');
+}
+
+/** Agent may dispatch the formal increase notice (backend: `agent_review` only). */
+export function canSendTenantNotice(detail: RentReviewWorkflowDetail): boolean {
+  if (hasTenantNoticeSent(detail)) return false;
+  if (!hasAgentPricingFinalized(detail)) return false;
+  if (detail.workflowState !== 'agent_review') return false;
+  return detail.proposedWeeklyRent != null || detail.ai.suggestedWeekly != null;
+}
+
+/** Agent may record accept / reject / counter when the tenant responds offline. */
+export function canRecordTenantResponseOnBehalf(detail: RentReviewWorkflowDetail): boolean {
+  return detail.workflowState === 'tenant_notified';
 }
 
 function hasTenantDecision(detail: RentReviewWorkflowDetail): boolean {

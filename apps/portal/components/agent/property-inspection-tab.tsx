@@ -89,6 +89,7 @@ export function PropertyInspectionTab({
         rows={jobRows}
         selectedId={selectedCaseId}
         onRowClick={handleRowClick}
+        dateColumnLabel="Scheduled"
         emptyTitle="No inspections"
         emptyDescription={emptyDescription}
       />

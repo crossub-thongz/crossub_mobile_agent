@@ -148,6 +148,7 @@ export interface LeasingRecord {
   bondAmount?: number;
   depositAmount?: number;
   status: 'current' | 'ended' | 'upcoming';
+  createdAt?: string;
 }
 
 /** Active in-flight leasing cycle from the agent portfolio API. */
@@ -159,6 +160,7 @@ export interface LeasingCycle {
   onboardingStepId?: string | null;
   rentPerWeek?: number;
   availableFrom?: string;
+  createdAt?: string;
 }
 
 /** Cancelled new-letting cycle in the agent archive. */
@@ -369,6 +371,8 @@ export interface MaintenanceRequest {
   quoteDocumentUrl?: string;
   requiresApproval: boolean;
   timeline: TimelineEntry[];
+  /** API created timestamp when available. */
+  createdAt?: string;
   source?: 'api';
   submittedQuotationId?: string;
   invoiceUploaded?: boolean;
@@ -390,6 +394,8 @@ export interface Inspection {
   keyStatus?: string;
   tenantAck?: 'pending' | 'confirmed' | 'disputed';
   timeline: TimelineEntry[];
+  /** When the inspection job was created (API or first timeline entry). */
+  createdAt?: string;
   areaOutcomes?: { area: string; outcome: string; note?: string }[];
   maintenanceEscalations?: { label: string; severity: Priority }[];
   routineMode?: 'self' | 'in_person';
@@ -554,6 +560,7 @@ export interface TenantSelectionCase {
   requiresApproval: boolean;
   documents: string[];
   timeline: TimelineEntry[];
+  createdAt?: string;
 }
 
 export interface SectionStatus {
