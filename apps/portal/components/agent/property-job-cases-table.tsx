@@ -1,10 +1,11 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { ModuleListTable, ModuleTableHead } from '@/components/agent/module-list-table';
 import { RentReviewConductCountdownBadge } from '@/components/rent-review/rent-review-conduct-countdown-badge';
+import { Button } from '@/components/ui/button';
 import type { PropertyJobPhase, PropertyJobRow } from '@/lib/property-job-rows';
 import { splitPropertyJobRows } from '@/lib/property-job-rows';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,8 @@ export function PropertyJobCasesTable({
   onRowClick,
   defaultView = 'in_progress',
   showViewToggle = true,
+  canDeleteRow,
+  onDeleteRow,
 }: {
   rows: PropertyJobRow[];
   emptyTitle?: string;
@@ -25,6 +28,8 @@ export function PropertyJobCasesTable({
   onRowClick?: (id: string) => void;
   defaultView?: PropertyJobPhase;
   showViewToggle?: boolean;
+  canDeleteRow?: (row: PropertyJobRow) => boolean;
+  onDeleteRow?: (row: PropertyJobRow) => void;
 }) {
   const { inProgress, completed } = useMemo(() => splitPropertyJobRows(rows), [rows]);
   const [view, setView] = useState<PropertyJobPhase>(defaultView);
@@ -42,6 +47,7 @@ export function PropertyJobCasesTable({
 
   const visibleRows = activeView === 'in_progress' ? inProgress : completed;
   const showConductCountdown = visibleRows.some((row) => row.conductCountdown != null);
+  const showDelete = Boolean(onDeleteRow && canDeleteRow);
 
   if (rows.length === 0) {
     return (
@@ -97,12 +103,12 @@ export function PropertyJobCasesTable({
           {activeView === 'completed' ? 'No completed jobs on file yet.' : 'No jobs in progress.'}
         </p>
       ) : (
-        <ModuleListTable minWidth={showConductCountdown ? 980 : 880}>
+        <ModuleListTable minWidth={showConductCountdown ? 980 : showDelete ? 960 : 880}>
           <ModuleTableHead
             columns={
               showConductCountdown
-                ? ['Job type', 'Name', 'Description', 'Date', 'Status', 'Countdown']
-                : ['Job type', 'Name', 'Description', 'Date', 'Status']
+                ? ['Job type', 'Name', 'Description', 'Date', 'Status', 'Countdown', ...(showDelete ? [''] : [])]
+                : ['Job type', 'Name', 'Description', 'Date', 'Status', ...(showDelete ? [''] : [])]
             }
           />
           <tbody className="divide-y">
@@ -202,6 +208,27 @@ export function PropertyJobCasesTable({
                           tone={row.conductCountdown.tone}
                           compact
                         />
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </td>
+                  ) : null}
+                  {showDelete ? (
+                    <td className="px-2 py-3 text-right">
+                      {canDeleteRow?.(row) ? (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive size-8"
+                          aria-label={`Delete ${row.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteRow?.(row);
+                          }}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}

@@ -1,9 +1,12 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
+
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { RentReviewWorkflowTimeline } from '@/components/rent-review/rent-review-workflow-timeline';
 import { VacatingWorkflowTimeline } from '@/components/vacating-workflow/vacating-workflow-timeline';
+import { Button } from '@/components/ui/button';
 import {
   LEASING_CATEGORY_LABEL,
   type PropertyLeasingWorkflowCase,
@@ -73,6 +76,8 @@ export function PropertyLeasingCaseWorkflowDialog({
   onViewRentReview,
   focusBond,
   onFocusBondHandled,
+  onDeleteCase,
+  canDeleteCase,
 }: {
   open: boolean;
   onClose: () => void;
@@ -86,8 +91,12 @@ export function PropertyLeasingCaseWorkflowDialog({
   onViewRentReview?: (reviewId: string) => void;
   focusBond?: boolean;
   onFocusBondHandled?: () => void;
+  onDeleteCase?: (item: PropertyLeasingWorkflowCase) => void;
+  canDeleteCase?: (item: PropertyLeasingWorkflowCase) => boolean;
 }) {
   if (!item) return null;
+
+  const deletable = canDeleteCase?.(item) ?? false;
 
   return (
     <CaseDetailDialog
@@ -96,6 +105,20 @@ export function PropertyLeasingCaseWorkflowDialog({
       title={LEASING_CATEGORY_LABEL[item.category]}
       subtitle={`${item.label} · ${item.currentStep}`}
       size="xl"
+      headerActions={
+        deletable && onDeleteCase ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:text-destructive h-8 gap-1.5 text-xs"
+            onClick={() => onDeleteCase(item)}
+          >
+            <Trash2 className="size-3.5" />
+            Delete
+          </Button>
+        ) : null
+      }
     >
       <PropertyLeasingCaseWorkflowContent
         item={item}

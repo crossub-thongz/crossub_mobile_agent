@@ -10,6 +10,7 @@ export function CaseDetailDialog({
   subtitle,
   children,
   size = 'default',
+  headerActions,
 }: {
   open: boolean;
   onClose: () => void;
@@ -17,6 +18,7 @@ export function CaseDetailDialog({
   subtitle?: string;
   children: ReactNode;
   size?: 'default' | 'wide' | 'xl';
+  headerActions?: ReactNode;
 }) {
   if (!open) return null;
 
@@ -38,14 +40,16 @@ export function CaseDetailDialog({
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold">{title}</h2>
             {subtitle ? (
               <p className="text-muted-foreground truncate text-xs">{subtitle}</p>
             ) : null}
           </div>
-          <button
+          <div className="flex shrink-0 items-center gap-1">
+            {headerActions}
+            <button
             type="button"
             onClick={onClose}
             className="text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg hover:bg-secondary"
@@ -53,6 +57,7 @@ export function CaseDetailDialog({
           >
             <X className="size-5" />
           </button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
       </div>

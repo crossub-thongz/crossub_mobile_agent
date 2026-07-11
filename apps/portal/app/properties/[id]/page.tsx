@@ -80,6 +80,7 @@ export default function PropertyDetailPage() {
     vacating,
     leasingCycles,
     tribunalCases,
+    archive,
     getPropertyActions,
     refresh,
   } = useAgentData();
@@ -162,6 +163,14 @@ export default function PropertyDetailPage() {
     activeOpenInspection,
   });
   const propertyLeasingCycles = leasingCycles.filter((c) => c.propertyId === id);
+  const propertyDeletedLeasingCycles = useMemo(
+    () => archive.cancelledLeasingCycles.filter((c) => c.propertyId === id),
+    [archive.cancelledLeasingCycles, id],
+  );
+  const propertyDeletedEndLeasingCases = useMemo(
+    () => archive.cancelledEndLeasing.filter((c) => c.propertyId === id),
+    [archive.cancelledEndLeasing, id],
+  );
   const nextRentReviewDate = getNextRentReviewDate(property, tenancyRentReviews, {
     isVacant,
   });
@@ -342,6 +351,8 @@ export default function PropertyDetailPage() {
             leasingFocusBond={leasingFocusBond}
             leasingInitialCategory={leasingFocusBond ? 'leasing' : undefined}
             onLeasingFocusBondHandled={clearLeasingBondFocus}
+            deletedLeasingCycles={propertyDeletedLeasingCycles}
+            deletedEndLeasingCases={propertyDeletedEndLeasingCases}
           />
         )}
 
