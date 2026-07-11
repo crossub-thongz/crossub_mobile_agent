@@ -1,6 +1,7 @@
 import { leasingLifecycleProgress } from '@/lib/case-workflows/leasing';
+import { rentReviewWorkflowProgress } from '@/lib/case-workflows/rent-review';
 import { vacatingWorkflowProgress } from '@/lib/case-workflows/vacating';
-import { isRentReviewPendingApproval, type RentReviewDecision } from '@/lib/rent-review';
+import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
   LeasingCycle,
   LeasingRecord,
@@ -117,18 +118,13 @@ export function buildPropertyLeasingWorkflowCases(input: {
 
   for (const review of rentReviews) {
     if (isTerminalWorkflowStatus(review.status)) continue;
+    const progress = rentReviewWorkflowProgress(review);
     cases.push({
       id: review.id,
       category: 'rent_review',
       label: workflowCaseReferenceLabel(review.id, 'rent_review'),
-      status: rentReviewDecisions[review.id]
-        ? rentReviewDecisions[review.id]?.action === 'confirmed'
-          ? 'confirmed'
-          : 'custom amount'
-        : review.status.toLowerCase(),
-      currentStep: isRentReviewPendingApproval(review, rentReviewDecisions[review.id])
-        ? 'Awaiting agent confirmation'
-        : 'Rent review',
+      status: review.status.toLowerCase(),
+      currentStep: progress.currentStepLabel,
       detail: review.propertyAddress,
       sortAt: review.reviewDue,
     });

@@ -1,5 +1,6 @@
-import type { MaintenanceRequest } from '@/lib/types';
+import { maintenanceCurrentStepLabel } from '@/lib/case-workflows/maintenance';
 import { pickPrimaryMaintenance } from '@/lib/property-maintenance-job';
+import type { MaintenanceRequest } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
 export interface PropertyMaintenanceWorkflowCase {
@@ -34,7 +35,7 @@ export function buildPropertyMaintenanceWorkflowCases(
     label: maintenanceCaseLabel(request),
     title: request.title,
     status: request.status,
-    currentStep: request.status,
+    currentStep: maintenanceCurrentStepLabel(request),
     detail: [
       request.title,
       request.contractorName ? `Contractor: ${request.contractorName}` : null,

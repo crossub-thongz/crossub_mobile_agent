@@ -121,6 +121,9 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             label="Paid"
             value={o.bond.paidAt ? formatDate(o.bond.paidAt) : 'Not paid'}
           />
+          {o.bond.ledgerEntryId ? (
+            <StepFact label="Bond ID" value={o.bond.ledgerEntryId} className="col-span-2" />
+          ) : null}
         </div>
         <ProofLine fileName={o.bond.proofFileName} />
       </StepCard>

@@ -225,12 +225,12 @@ export default function PropertyDetailPage() {
                   ) : null}
                 </div>
               ) : null}
-              {property.rentWeekly > 0 && (
+              {/* {property.rentWeekly > 0 && (
                 <p className="text-primary mt-1 text-sm font-semibold tabular-nums">
                   {formatCurrency(property.rentWeekly)}
                   <span className="text-muted-foreground text-xs font-normal">/week</span>
                 </p>
-              )}
+              )} */}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {needActions.length > 0 && (

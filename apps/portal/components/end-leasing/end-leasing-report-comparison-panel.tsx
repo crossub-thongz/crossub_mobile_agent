@@ -45,6 +45,7 @@ import {
 } from '@/lib/crossub-api/agent-client';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 
 function SummaryEmailPanel({
   email,
@@ -575,6 +576,7 @@ function RepairItemsTable({
   footerAction,
   readOnly = false,
   lockedHint,
+  hideQuoteColumns = false,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -585,6 +587,7 @@ function RepairItemsTable({
   footerAction?: React.ReactNode;
   readOnly?: boolean;
   lockedHint?: string;
+  hideQuoteColumns?: boolean;
 }) {
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -616,15 +619,22 @@ function RepairItemsTable({
               <th className="px-3 py-2 font-semibold">#</th>
               <th className="px-3 py-2 font-semibold">Area</th>
               <th className="px-3 py-2 font-semibold">Description</th>
-              <th className="px-3 py-2 font-semibold">Quote</th>
-              <th className="px-3 py-2 font-semibold">Handyman</th>
+              {!hideQuoteColumns ? (
+                <>
+                  <th className="px-3 py-2 font-semibold">Quote</th>
+                  <th className="px-3 py-2 font-semibold">Handyman</th>
+                </>
+              ) : null}
               {!readOnly ? <th className="px-3 py-2" /> : null}
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={readOnly ? 5 : 6} className="text-muted-foreground px-3 py-4 text-center">
+                <td
+                  colSpan={(hideQuoteColumns ? 3 : 5) + (readOnly ? 0 : 1)}
+                  className="text-muted-foreground px-3 py-4 text-center"
+                >
                   No items yet.
                 </td>
               </tr>
@@ -636,8 +646,12 @@ function RepairItemsTable({
                     <>
                       <td className="px-3 py-2">{row.area || '—'}</td>
                       <td className="px-3 py-2">{row.description || '—'}</td>
-                      <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
-                      <td className="px-3 py-2">{row.handymanName || '—'}</td>
+                      {!hideQuoteColumns ? (
+                        <>
+                          <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
+                          <td className="px-3 py-2">{row.handymanName || '—'}</td>
+                        </>
+                      ) : null}
                     </>
                   ) : (
                     <>
@@ -657,23 +671,27 @@ function RepairItemsTable({
                           onChange={(e) => updateRow(index, { description: e.target.value })}
                         />
                       </td>
-                      <td className="px-3 py-2">
-                        <Input
-                          className="h-8 text-xs"
-                          value={row.quote ?? ''}
-                          placeholder="$0.00"
-                          onChange={(e) => updateRow(index, { quote: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <HandymanField
-                          row={row}
-                          contractors={contractors}
-                          agencyId={agencyId}
-                          onContractorsChange={onContractorsChange}
-                          onChange={(patch) => updateRow(index, patch)}
-                        />
-                      </td>
+                      {!hideQuoteColumns ? (
+                        <>
+                          <td className="px-3 py-2">
+                            <Input
+                              className="h-8 text-xs"
+                              value={row.quote ?? ''}
+                              placeholder="$0.00"
+                              onChange={(e) => updateRow(index, { quote: e.target.value })}
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <HandymanField
+                              row={row}
+                              contractors={contractors}
+                              agencyId={agencyId}
+                              onContractorsChange={onContractorsChange}
+                              onChange={(patch) => updateRow(index, patch)}
+                            />
+                          </td>
+                        </>
+                      ) : null}
                       <td className="px-2 py-2">
                         <Button
                           type="button"
@@ -727,8 +745,10 @@ function extractOutgoingRepairCandidates(detail: InspectionDetail): ReportCompar
 
 export function EndLeasingReportComparisonPanel({
   caseData,
+  mode = 'compare',
 }: {
   caseData: TerminationCaseDetail;
+  mode?: 'compare' | 'quote' | 'tenant-response';
 }) {
   const { apiConnected, properties } = useAgentData();
   const applyCase = useEndLeasingStore((s) => s.applyCase);
@@ -849,7 +869,7 @@ export function EndLeasingReportComparisonPanel({
     await persist(patch, { silent });
   };
 
-  const sendQuoteEmail = async (audience: 'tenant' | 'landlord') => {
+  const sendQuoteEmail = async (audience: 'tenant' | 'landlord' | 'agent') => {
     setBusy(true);
     try {
       await saveRepairItems(true);
@@ -859,8 +879,30 @@ export function EndLeasingReportComparisonPanel({
       setLandlordItems(updated.reportComparison.landlordResponsibility);
       toast.success(
         audience === 'tenant'
-          ? 'Repair quote email sent to tenant'
-          : 'Repair quote summary sent to landlord',
+          ? 'Tenant portion sent to tenant'
+          : audience === 'agent'
+            ? 'Repair quotes sent to agent'
+            : 'Repair quote summary sent',
+      );
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendComparisonSummary = async (audience: 'tenant' | 'agent') => {
+    setBusy(true);
+    try {
+      await saveRepairItems(true);
+      const updated = await terminationApi.sendComparisonSummaryEmail(caseData.id, audience);
+      applyCase(updated);
+      setTenantItems(updated.reportComparison.tenantResponsibility);
+      setLandlordItems(updated.reportComparison.landlordResponsibility);
+      toast.success(
+        audience === 'tenant'
+          ? 'Tenant responsibility summary sent'
+          : 'Full comparison summary sent to agent',
       );
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -929,6 +971,9 @@ export function EndLeasingReportComparisonPanel({
       rc.tenantQuoteResponse === 'accepted' ||
       !rc.tenantQuoteResponse);
   const tenantAgreed = rc.tenantQuoteResponse === 'accepted';
+  const showCompare = mode === 'compare';
+  const showQuote = mode === 'quote';
+  const showTenantResponse = mode === 'tenant-response';
 
   useEffect(() => {
     if (!apiConnected || !tenantQuoteEmailSent || rc.tenantQuoteResponse !== 'pending') return;
@@ -943,156 +988,233 @@ export function EndLeasingReportComparisonPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync once when awaiting reply
   }, [apiConnected, caseData.id, tenantQuoteEmailSent, rc.tenantQuoteResponse]);
 
+  if (showTenantResponse) {
+    return (
+      <div className="space-y-4">
+        {tenantQuoteEmailSent ? (
+          <TenantQuoteResponsePanel
+            response={rc.tenantQuoteResponse}
+            responseAt={rc.tenantQuoteResponseAt}
+            declineReason={rc.tenantQuoteDeclineReason}
+            replyExcerpt={rc.tenantQuoteReplyExcerpt}
+            commConversationId={rc.tenantRepairQuoteEmail?.commConversationId}
+            busy={busy}
+            onCheckReply={() => void checkTenantReply()}
+            onAgree={() => void recordTenantAgree()}
+            onDisagree={() => void recordTenantDisagree()}
+          />
+        ) : null}
+        {tenantAgreed ? <MaintenanceQuotationPanel items={tenantItems} /> : null}
+        {tenantAgreed && rc.settlementSummary ? (
+          <SettlementSummaryPanel summary={rc.settlementSummary} />
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <ReportEvidenceSection
-        outgoingDetail={outgoingDetail}
-        ingoingDetail={ingoingDetail}
-        loading={loadingReports}
-      />
-
-      <section className="rounded-xl border bg-card p-4">
-        <p className="mb-3 text-sm font-semibold">Comparison acknowledgement</p>
-        <p className="text-muted-foreground mb-3 text-xs">
-          Agent and tenant both review the ingoing/outgoing comparison before proceeding.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={rc.agentAcknowledged ? 'default' : 'outline'}
-            className="h-8 gap-1.5 text-xs"
-            disabled={busy}
-            onClick={() =>
-              void persist({ agentAcknowledged: !rc.agentAcknowledged })
-            }
-          >
-            <Check className="size-3.5" />
-            Agent reviewed {rc.agentAcknowledged ? '✓' : ''}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={rc.tenantAcknowledged ? 'default' : 'outline'}
-            className="h-8 gap-1.5 text-xs"
-            disabled={busy}
-            onClick={() =>
-              void persist({ tenantAcknowledged: !rc.tenantAcknowledged })
-            }
-          >
-            <Check className="size-3.5" />
-            Tenant reviewed {rc.tenantAcknowledged ? '✓' : ''}
-          </Button>
+      {(showCompare || showQuote) && caseData.inspection.status === LEASING_ITEM_STATUS.DONE ? (
+        <div className="text-muted-foreground rounded-lg border bg-muted/20 px-3 py-2 text-xs">
+          Outgoing inspection completed
+          {caseData.inspection.inspectionDate
+            ? ` · ${caseData.inspection.inspectionDate.slice(0, 10)}`
+            : ''}
         </div>
-      </section>
-
-      {rc.draftSummaryEmail?.body ? (
-        <SummaryEmailPanel email={rc.draftSummaryEmail} title="Draft summary message" />
       ) : null}
 
-      {rc.tenantRepairQuoteEmail?.body ? (
-        <SummaryEmailPanel
-          email={rc.tenantRepairQuoteEmail}
-          title="Repair quote sent to tenant"
+      {showCompare || showQuote ? (
+        <ReportEvidenceSection
+          outgoingDetail={outgoingDetail}
+          ingoingDetail={ingoingDetail}
+          loading={loadingReports}
         />
       ) : null}
 
-      {tenantQuoteEmailSent ? (
-        <TenantQuoteResponsePanel
-          response={rc.tenantQuoteResponse}
-          responseAt={rc.tenantQuoteResponseAt}
-          declineReason={rc.tenantQuoteDeclineReason}
-          replyExcerpt={rc.tenantQuoteReplyExcerpt}
-          commConversationId={rc.tenantRepairQuoteEmail?.commConversationId}
-          busy={busy}
-          onCheckReply={() => void checkTenantReply()}
-          onAgree={() => void recordTenantAgree()}
-          onDisagree={() => void recordTenantDisagree()}
-        />
-      ) : null}
+      {showCompare ? (
+        <>
+          <section className="rounded-xl border bg-card p-4">
+            <p className="mb-3 text-sm font-semibold">Comparison acknowledgement</p>
+            <p className="text-muted-foreground mb-3 text-xs">
+              Agent and tenant both review the ingoing/outgoing comparison before proceeding.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={rc.agentAcknowledged ? 'default' : 'outline'}
+                className="h-8 gap-1.5 text-xs"
+                disabled={busy}
+                onClick={() => void persist({ agentAcknowledged: !rc.agentAcknowledged })}
+              >
+                <Check className="size-3.5" />
+                Agent reviewed {rc.agentAcknowledged ? '✓' : ''}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={rc.tenantAcknowledged ? 'default' : 'outline'}
+                className="h-8 gap-1.5 text-xs"
+                disabled={busy}
+                onClick={() => void persist({ tenantAcknowledged: !rc.tenantAcknowledged })}
+              >
+                <Check className="size-3.5" />
+                Tenant reviewed {rc.tenantAcknowledged ? '✓' : ''}
+              </Button>
+            </div>
+          </section>
 
-      {tenantAgreed ? <MaintenanceQuotationPanel items={tenantItems} /> : null}
+          {rc.tenantComparisonSummaryEmail?.body ? (
+            <SummaryEmailPanel
+              email={rc.tenantComparisonSummaryEmail}
+              title="Tenant responsibility summary (sent to tenant)"
+            />
+          ) : null}
 
-      {tenantAgreed && rc.settlementSummary ? (
-        <SettlementSummaryPanel summary={rc.settlementSummary} />
-      ) : null}
+          {rc.agentComparisonSummaryEmail?.body ? (
+            <SummaryEmailPanel
+              email={rc.agentComparisonSummaryEmail}
+              title="Full summary (sent to agent)"
+            />
+          ) : null}
 
-      {rc.landlordRepairQuoteEmail?.body ? (
-        <SummaryEmailPanel
-          email={rc.landlordRepairQuoteEmail}
-          title="Repair quote summary sent to landlord"
-        />
-      ) : null}
+          <section className="space-y-4 rounded-xl border bg-card p-4">
+            <div>
+              <p className="text-sm font-semibold">Define responsibility</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                List tenant and landlord repair items from the comparison. Save before sending
+                summary emails.
+              </p>
+            </div>
 
-      <section className="space-y-4 rounded-xl border bg-card p-4">
-        <div>
-          <p className="text-sm font-semibold">Obtain repair quote</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Add area, description, quote, and handyman for each item. Save before sending emails.
-          </p>
-        </div>
+            <RepairItemsTable
+              title="Tenant responsibility"
+              items={tenantItems}
+              contractors={contractors}
+              agencyId={agencyId}
+              onContractorsChange={setContractors}
+              onChange={setTenantItems}
+              readOnly={false}
+              hideQuoteColumns
+              footerAction={
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 gap-1.5 text-xs"
+                  disabled={busy}
+                  onClick={() => void sendComparisonSummary('tenant')}
+                >
+                  <Send className="size-3.5" />
+                  Email tenant (tenant items only)
+                </Button>
+              }
+            />
+            <RepairItemsTable
+              title="Landlord responsibility"
+              items={landlordItems}
+              contractors={contractors}
+              agencyId={agencyId}
+              onContractorsChange={setContractors}
+              onChange={setLandlordItems}
+              readOnly={false}
+              hideQuoteColumns
+              footerAction={
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 gap-1.5 text-xs"
+                  disabled={busy}
+                  onClick={() => void sendComparisonSummary('agent')}
+                >
+                  <Send className="size-3.5" />
+                  Email agent (tenant + landlord summary)
+                </Button>
+              }
+            />
 
-        <RepairItemsTable
-          title="Tenant responsibility"
-          items={tenantItems}
-          contractors={contractors}
-          agencyId={agencyId}
-          onContractorsChange={setContractors}
-          onChange={setTenantItems}
-          readOnly={tenantTableLocked}
-          lockedHint={
-            tenantTableLocked
-              ? rc.tenantQuoteResponse === 'accepted'
-                ? 'Locked — tenant agreed'
-                : 'Locked — awaiting tenant reply'
-              : undefined
-          }
-          footerAction={
             <Button
               type="button"
               size="sm"
-              variant="secondary"
-              className="h-8 gap-1.5 text-xs"
-              disabled={busy || tenantTableLocked}
-              onClick={() => void sendQuoteEmail('tenant')}
-            >
-              <Send className="size-3.5" />
-              Email tenant (tenant items only)
-            </Button>
-          }
-        />
-        <RepairItemsTable
-          title="Landlord responsibility"
-          items={landlordItems}
-          contractors={contractors}
-          agencyId={agencyId}
-          onContractorsChange={setContractors}
-          onChange={setLandlordItems}
-          footerAction={
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="h-8 gap-1.5 text-xs"
+              className="h-8 text-xs"
               disabled={busy}
-              onClick={() => void sendQuoteEmail('landlord')}
+              onClick={() => void saveRepairItems()}
             >
-              <Send className="size-3.5" />
-              Email landlord (tenant + landlord items)
+              Save responsibility items
             </Button>
-          }
-        />
+          </section>
+        </>
+      ) : null}
 
-        <Button
-          type="button"
-          size="sm"
-          className="h-8 text-xs"
-          disabled={busy}
-          onClick={() => void saveRepairItems()}
-        >
-          Save repair items & draft summary
-        </Button>
-      </section>
+      {showQuote ? (
+        <>
+          {(rc.agentRepairQuoteEmail ?? rc.landlordRepairQuoteEmail)?.body ? (
+            <SummaryEmailPanel
+              email={(rc.agentRepairQuoteEmail ?? rc.landlordRepairQuoteEmail)!}
+              title="Repair quotes sent to agent"
+            />
+          ) : null}
+
+          <section className="space-y-4 rounded-xl border bg-card p-4">
+            <div>
+              <p className="text-sm font-semibold">Obtain repair quote</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Maintenance enters quote and assigns handyman. Quotes are sent to the agent first
+                for review.
+              </p>
+            </div>
+
+            <RepairItemsTable
+              title="Tenant responsibility"
+              items={tenantItems}
+              contractors={contractors}
+              agencyId={agencyId}
+              onContractorsChange={setContractors}
+              onChange={setTenantItems}
+              readOnly={tenantTableLocked}
+              lockedHint={
+                tenantTableLocked
+                  ? rc.tenantQuoteResponse === 'accepted'
+                    ? 'Locked — tenant agreed'
+                    : 'Locked — awaiting tenant reply'
+                  : undefined
+              }
+            />
+            <RepairItemsTable
+              title="Landlord responsibility"
+              items={landlordItems}
+              contractors={contractors}
+              agencyId={agencyId}
+              onContractorsChange={setContractors}
+              onChange={setLandlordItems}
+              footerAction={
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 gap-1.5 text-xs"
+                  disabled={busy}
+                  onClick={() => void sendQuoteEmail('agent')}
+                >
+                  <Send className="size-3.5" />
+                  Email agent (tenant + landlord quotes)
+                </Button>
+              }
+            />
+
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={busy}
+              onClick={() => void saveRepairItems()}
+            >
+              Save quotes & handyman
+            </Button>
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }

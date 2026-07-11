@@ -8,6 +8,8 @@ import {
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import type { RentReviewDecision } from '@/lib/rent-review';
+import { getRentReviewConductCountdown } from '@/lib/rent-review/conduct-countdown';
+import type { RentReviewConductCountdown } from '@/lib/rent-review/conduct-countdown';
 import type {
   Inspection,
   MaintenanceRequest,
@@ -39,6 +41,8 @@ export interface PropertyJobRow {
   date: string;
   status: string;
   phase: PropertyJobPhase;
+  /** 30-day conduct window countdown (rent review only). */
+  conductCountdown?: RentReviewConductCountdown;
 }
 
 export function splitPropertyJobRows(rows: PropertyJobRow[]): {
@@ -75,6 +79,21 @@ const INSPECTION_JOB_TYPE: Record<Inspection['type'], string> = {
   ROUTINE: 'Routine inspection',
 };
 
+function responsibilityLabelForRow(
+  responsibility: MaintenanceRequest['responsibility'],
+): string {
+  switch (responsibility) {
+    case 'tenant':
+      return 'Tenant';
+    case 'landlord':
+      return 'Landlord';
+    case 'strata':
+      return 'Strata';
+    default:
+      return 'Pending';
+  }
+}
+
 export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobRow[] {
   return requests.map((request) => {
     const progress = maintenanceWorkflowProgress(request);
@@ -86,8 +105,12 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
       name: request.trackingNumber || workflowCaseReferenceLabel(request.id, 'maintenance'),
       description: [
         request.title,
-        request.contractorName ? request.contractorName : null,
-        request.priority !== 'normal' ? request.priority : null,
+        request.responsibility !== 'pending'
+          ? responsibilityLabelForRow(request.responsibility)
+          : null,
+        request.priority === 'urgent' || request.priority === 'high'
+          ? request.priority
+          : null,
       ]
         .filter(Boolean)
         .join(' · '),
@@ -171,6 +194,7 @@ export function rentReviewJobRows(
       date: formatDate(review.reviewDue),
       status: progress.currentStepLabel,
       phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
+      conductCountdown: getRentReviewConductCountdown(review) ?? undefined,
     };
   });
 }

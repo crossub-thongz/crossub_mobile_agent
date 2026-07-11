@@ -66,7 +66,12 @@ import type {
 import { cn, formatDate, formatPropertyFullAddress } from '@/lib/utils';
 
 import { TERMINATION_NOTICE_GROUND, TERMINATION_NOTICE_GROUND_OPTIONS, type TerminationNoticeGround } from '@/constants/end-leasing';
+import {
+  formatMaintenanceIssueType,
+  isMaintenanceIssueTypeValid,
+} from '@/constants/maintenance-issue-types';
 import { vacatingDetail, rentReviewDetail } from '@/constants/routes';
+import { MaintenanceNewJobFormFields, type MaintenanceJobPriority } from '@/components/maintenance/maintenance-new-job-form-fields';
 import { fromProperty } from '@/lib/detail-navigation';
 import { RENT_PERIOD_OPTIONS } from '@/lib/rent-calculations';
 import type { RentPeriod } from '@/lib/store';
@@ -316,9 +321,10 @@ export function PropertyWorkflowCreateDialog({
   const [bondHeldHint, setBondHeldHint] = useState<string | null>(null);
   const [terminationNotes, setTerminationNotes] = useState('');
 
-  const [issueType, setIssueType] = useState('');
+  const [issueTypeSelection, setIssueTypeSelection] = useState('');
+  const [issueTypeOther, setIssueTypeOther] = useState('');
   const [description, setDescription] = useState('');
-  const [urgent, setUrgent] = useState(false);
+  const [maintPriority, setMaintPriority] = useState<MaintenanceJobPriority>('normal');
   const [maintTenantName, setMaintTenantName] = useState('');
   const [maintTenantEmail, setMaintTenantEmail] = useState('');
   const [maintTenantPhone, setMaintTenantPhone] = useState('');
@@ -399,9 +405,10 @@ export function PropertyWorkflowCreateDialog({
     setTerminationNotes('');
 
     const maintenance = buildMaintenancePrefill(property, { currentLease, tenantSelections });
-    setIssueType('');
+    setIssueTypeSelection('');
+    setIssueTypeOther('');
     setDescription('');
-    setUrgent(false);
+    setMaintPriority('normal');
     setMaintTenantName(maintenance.tenantName);
     setMaintTenantEmail(maintenance.tenantEmail);
     setMaintTenantPhone(maintenance.tenantPhone);
@@ -506,9 +513,9 @@ export function PropertyWorkflowCreateDialog({
   };
 
   const titles: Record<PropertyWorkflowActionId, string> = {
-    start_leasing: 'Start new letting',
+    start_leasing: 'Add New Leasing',
     start_rent_review: 'Add rent review',
-    start_end_leasing: 'Add end leasing',
+    start_end_leasing: 'End Leasing',
     start_maintenance: 'Log maintenance job',
     schedule_inspection: 'Schedule inspection',
     open_tribunal: 'Open tribunal case',
@@ -641,13 +648,16 @@ export function PropertyWorkflowCreateDialog({
         router.push(vacatingDetail(result.id, fromProperty(propertyId, 'Leasing')));
         return;
       } else if (actionId === 'start_maintenance') {
-        if (!issueType.trim()) throw new Error('Issue type is required');
+        const resolvedIssueType = formatMaintenanceIssueType(issueTypeSelection, issueTypeOther);
+        if (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther)) {
+          throw new Error('Issue type is required');
+        }
         if (description.trim().length < 5) throw new Error('Description is required');
         await createAgentMaintenanceRequest(propertyId, {
-          issueType: issueType.trim(),
+          issueType: resolvedIssueType,
           description: description.trim(),
           address: maintPrefill.address,
-          urgent,
+          urgent: maintPriority === 'urgent',
           tenant: maintTenantName.trim()
             ? {
                 name: maintTenantName.trim(),
@@ -684,7 +694,12 @@ export function PropertyWorkflowCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={cn(
+          'max-h-[90vh] overflow-y-auto',
+          actionId === 'start_maintenance' && 'sm:max-w-[640px]',
+        )}
+      >
         <DialogHeader>
           <DialogTitle>{actionId ? titles[actionId] : 'Create'}</DialogTitle>
           <DialogDescription>{property.address}</DialogDescription>
@@ -1151,40 +1166,23 @@ export function PropertyWorkflowCreateDialog({
         ) : null}
 
         {actionId === 'start_maintenance' ? (
-          <div className="space-y-3">
-            <ReadOnlyField label="Address" value={maintPrefill.address} />
-            <Field label="Issue type *">
-              <Input value={issueType} onChange={(e) => setIssueType(e.target.value)} />
-            </Field>
-            <Field label="Description *">
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-              />
-            </Field>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={urgent}
-                onChange={(e) => setUrgent(e.target.checked)}
-              />
-              Urgent
-            </label>
-            <Field label="Tenant name">
-              <Input value={maintTenantName} onChange={(e) => setMaintTenantName(e.target.value)} />
-            </Field>
-            <Field label="Tenant email">
-              <Input
-                type="email"
-                value={maintTenantEmail}
-                onChange={(e) => setMaintTenantEmail(e.target.value)}
-              />
-            </Field>
-            <Field label="Tenant phone">
-              <Input value={maintTenantPhone} onChange={(e) => setMaintTenantPhone(e.target.value)} />
-            </Field>
-          </div>
+          <MaintenanceNewJobFormFields
+            address={maintPrefill.address}
+            issueTypeSelection={issueTypeSelection}
+            issueTypeOther={issueTypeOther}
+            onIssueTypeSelectionChange={setIssueTypeSelection}
+            onIssueTypeOtherChange={setIssueTypeOther}
+            description={description}
+            onDescriptionChange={setDescription}
+            priority={maintPriority}
+            onPriorityChange={setMaintPriority}
+            tenantName={maintTenantName}
+            onTenantNameChange={setMaintTenantName}
+            tenantEmail={maintTenantEmail}
+            onTenantEmailChange={setMaintTenantEmail}
+            tenantPhone={maintTenantPhone}
+            onTenantPhoneChange={setMaintTenantPhone}
+          />
         ) : null}
 
         {actionId === 'schedule_inspection' ? (
@@ -1230,7 +1228,13 @@ export function PropertyWorkflowCreateDialog({
           </Button>
           <Button
             type="button"
-            disabled={submitting || (actionId === 'start_rent_review' && prefillLoading)}
+            disabled={
+              submitting ||
+              (actionId === 'start_rent_review' && prefillLoading) ||
+              (actionId === 'start_maintenance' &&
+                (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
+                  !description.trim()))
+            }
             onClick={() => void handleSubmit()}
           >
             {submitting ? (

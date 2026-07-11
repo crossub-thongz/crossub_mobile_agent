@@ -43,23 +43,6 @@ export interface PropertyWorkflowContext {
   currentLease?: LeasingRecord;
 }
 
-function isActiveWorkflowStatus(status: string | undefined): boolean {
-  if (!status) return true;
-  const normalized = status.toLowerCase();
-  return !(
-    normalized.includes('completed') ||
-    normalized.includes('closed') ||
-    normalized.includes('cancelled') ||
-    normalized.includes('signed')
-  );
-}
-
-function hasActiveLeasingCycle(ctx: PropertyWorkflowContext): boolean {
-  return ctx.leasingCycles.some(
-    (c) => c.propertyId === ctx.propertyId,
-  );
-}
-
 function hasActiveRentReview(ctx: PropertyWorkflowContext): boolean {
   return ctx.rentReviews.some(
     (r) =>
@@ -69,12 +52,6 @@ function hasActiveRentReview(ctx: PropertyWorkflowContext): boolean {
       r.workflowState !== 'POSTPONED' &&
       !r.status.toLowerCase().includes('completed') &&
       !r.status.toLowerCase().includes('cancelled'),
-  );
-}
-
-function hasActiveEndLeasing(ctx: PropertyWorkflowContext): boolean {
-  return ctx.vacatingCases.some(
-    (v) => v.propertyId === ctx.propertyId && isActiveWorkflowStatus(v.apiStatus),
   );
 }
 
@@ -88,25 +65,20 @@ export function tabActionsFor(
   ctx: PropertyWorkflowContext,
 ): PropertyWorkflowAction[] {
   switch (tab) {
-    case 'leasing': {
-      const actions: PropertyWorkflowAction[] = [];
-      if (!hasActiveLeasingCycle(ctx)) {
-        actions.push({
+    case 'leasing':
+      return [
+        {
           id: 'start_leasing',
-          label: 'Start new letting',
-          description: 'Open a letting cycle for this property',
+          label: 'Add New Leasing',
+          description: 'Open another new leasing cycle for this property',
           primary: true,
-        });
-      }
-      if (!hasActiveEndLeasing(ctx)) {
-        actions.push({
+        },
+        {
           id: 'start_end_leasing',
-          label: 'Add end leasing',
-          description: 'Open a vacating or termination case',
-        });
-      }
-      return actions;
-    }
+          label: 'End Leasing',
+          description: 'Open another end leasing / vacating case for this property',
+        },
+      ];
     case 'rent_review': {
       const activeReview = hasActiveRentReview(ctx);
       return [

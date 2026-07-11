@@ -19,6 +19,7 @@ export interface PropertyBondSnapshot {
   ledgerEntryId: string | null;
   amount: number | null;
   status: string | null;
+  paidAt: string | null;
 }
 
 export interface PropertyOverviewSync {
@@ -94,6 +95,7 @@ export function usePropertyOverviewSync(
               ledgerEntryId: bondBlock?.ledgerEntryId ?? null,
               amount: cycleView.rental.bond ?? portal?.financial?.bondAmount ?? null,
               status: bondBlock?.status ?? null,
+              paidAt: bondBlock?.paidAt ?? null,
             }
           : portal?.financial?.bondAmount != null
             ? {
@@ -101,6 +103,7 @@ export function usePropertyOverviewSync(
                 ledgerEntryId: null,
                 amount: portal.financial.bondAmount,
                 status: null,
+                paidAt: null,
               }
             : null,
         keyFobCount,

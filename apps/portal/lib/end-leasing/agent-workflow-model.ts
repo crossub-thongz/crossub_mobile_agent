@@ -2,37 +2,35 @@ import { TERMINATION_TYPE, TENANT_SETTLEMENT_CONFIRMATION } from '@/constants/en
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 
+/** Six-stage end-leasing flow (manager spec). */
 export const END_LEASING_AGENT_STEP = {
-  OVERVIEW: 'overview',
-  VACATING_PREPARATION: 'vacating_preparation',
-  OUTGOING_ARRANGEMENT: 'outgoing_arrangement',
+  VACATE_CONFIRMED: 'vacate_confirmed',
   OUTGOING_INSPECTION: 'outgoing_inspection',
   REPORT_COMPARISON: 'report_comparison',
-  SUMMARY_DISTRIBUTION: 'summary_distribution',
-  BOND_SETTLEMENT: 'bond_settlement',
+  GET_QUOTE: 'get_quote',
+  RESULT_CONFIRMED: 'result_confirmed',
+  BOND_RELEASED: 'bond_released',
 } as const;
 
 export type EndLeasingAgentStep =
   (typeof END_LEASING_AGENT_STEP)[keyof typeof END_LEASING_AGENT_STEP];
 
 export const END_LEASING_AGENT_STEP_ORDER: EndLeasingAgentStep[] = [
-  END_LEASING_AGENT_STEP.OVERVIEW,
-  END_LEASING_AGENT_STEP.VACATING_PREPARATION,
-  END_LEASING_AGENT_STEP.OUTGOING_ARRANGEMENT,
+  END_LEASING_AGENT_STEP.VACATE_CONFIRMED,
   END_LEASING_AGENT_STEP.OUTGOING_INSPECTION,
   END_LEASING_AGENT_STEP.REPORT_COMPARISON,
-  END_LEASING_AGENT_STEP.SUMMARY_DISTRIBUTION,
-  END_LEASING_AGENT_STEP.BOND_SETTLEMENT,
+  END_LEASING_AGENT_STEP.GET_QUOTE,
+  END_LEASING_AGENT_STEP.RESULT_CONFIRMED,
+  END_LEASING_AGENT_STEP.BOND_RELEASED,
 ];
 
 export const END_LEASING_AGENT_STEP_LABEL: Record<EndLeasingAgentStep, string> = {
-  [END_LEASING_AGENT_STEP.OVERVIEW]: 'Overview',
-  [END_LEASING_AGENT_STEP.VACATING_PREPARATION]: 'Vacating',
-  [END_LEASING_AGENT_STEP.OUTGOING_ARRANGEMENT]: 'Arrange',
+  [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: 'Vacate',
   [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: 'Outgoing',
   [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: 'Compare',
-  [END_LEASING_AGENT_STEP.SUMMARY_DISTRIBUTION]: 'Summary',
-  [END_LEASING_AGENT_STEP.BOND_SETTLEMENT]: 'Bond',
+  [END_LEASING_AGENT_STEP.GET_QUOTE]: 'Quote',
+  [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: 'Confirm',
+  [END_LEASING_AGENT_STEP.BOND_RELEASED]: 'Bond',
 };
 
 export interface EndLeasingSubProgressItem {
@@ -54,6 +52,7 @@ export interface EndLeasingAgentWorkflowModel {
   liveStepId: EndLeasingAgentStep;
   progressFillIndex: number;
   tenantNoticeEmail: TenantNoticeEmailView | null;
+  vacatingInfoReplyEmail: TenantNoticeEmailView | null;
 }
 
 export interface TenantNoticeEmailView {
@@ -67,32 +66,34 @@ export interface TenantNoticeEmailView {
 
 const DONE = LEASING_ITEM_STATUS.DONE;
 
-function timelineLabel(caseData: TerminationCaseDetail, pattern: RegExp): string | null {
-  const hit = caseData.timeline.find((e) => pattern.test(e.label));
-  return hit?.label ?? null;
-}
-
 function timelineAt(caseData: TerminationCaseDetail, pattern: RegExp): string | null {
   const hit = caseData.timeline.find((e) => pattern.test(e.label));
   return hit?.timestamp ?? null;
 }
 
-/** Build the tenant notice email view from the termination case API payload. */
+function leaseTypeLabel(caseData: TerminationCaseDetail): string {
+  if (!caseData.leaseEndDate) return 'Periodic';
+  const end = new Date(caseData.leaseEndDate);
+  if (Number.isNaN(end.getTime())) return 'Fixed term';
+  return end.getTime() >= Date.now() ? 'Fixed term' : 'Expired fixed term';
+}
+
+function breachStatusLabel(caseData: TerminationCaseDetail): string {
+  if (caseData.terminationType === TERMINATION_TYPE.TENANT_INITIATED) {
+    return 'No breach — tenant initiated vacate';
+  }
+  const notice = caseData.terminationNotice;
+  if (notice?.ground === 'breach' || notice?.ground === 'non_payment') {
+    return notice.groundLabel ?? 'Breach';
+  }
+  if (notice?.breachClause || notice?.breachConduct) return 'Breach noted';
+  return notice?.groundLabel ?? 'No breach recorded';
+}
+
+/** Tenant vacate notice email (inbound). */
 export function buildTenantNoticeEmailView(
   caseData: TerminationCaseDetail,
 ): TenantNoticeEmailView {
-  const stored = caseData.overviewEmail;
-  if (stored?.body) {
-    return {
-      from: stored.from ?? caseData.agentName ?? 'CROSSUB',
-      to: stored.to ?? caseData.tenant.email ?? '—',
-      subject: stored.subject ?? `End leasing — ${caseData.property.address}`,
-      receivedAt: stored.sentAt ?? caseData.createdAt,
-      body: stored.body,
-      commConversationId: stored.commConversationId,
-    };
-  }
-
   const tenantEmail = caseData.tenant.email ?? '—';
   const tenantName = caseData.tenant.name || 'Tenant';
   const vacateDate = caseData.vacate.expectedVacateDate ?? caseData.vacateDate ?? '';
@@ -124,80 +125,79 @@ export function buildTenantNoticeEmailView(
 
   const notice = caseData.terminationNotice;
   return {
-    from: caseData.agentName ?? 'CROSSUB',
-    to: tenantEmail,
-    subject: `Notice to terminate tenancy — ${caseData.property.address}`,
-    receivedAt: notice?.noticeEmailSentAt ?? receivedAt,
+    from: tenantEmail,
+    to: caseData.agentName ? `${caseData.agentName} (agent)` : 'Property manager',
+    subject: `Vacate date advised — ${caseData.property.address}`,
+    receivedAt: notice?.tenantVacateDateProvidedAt ?? receivedAt,
     body: [
-      `Statutory termination notice issued to ${tenantName}.`,
-      notice?.groundLabel ? `Ground: ${notice.groundLabel}` : null,
-      notice?.terminationDate
-        ? `Proposed termination date: ${notice.terminationDate.slice(0, 10)}`
-        : null,
+      `Tenant ${tenantName} advised vacate date.`,
       notice?.tenantVacateDate
-        ? `Tenant advised vacate date: ${notice.tenantVacateDate.slice(0, 10)}`
-        : 'Awaiting tenant vacate date confirmation.',
-    ]
-      .filter(Boolean)
-      .join('\n'),
+        ? `Vacate date: ${notice.tenantVacateDate.slice(0, 10)}`
+        : 'Awaiting vacate date.',
+    ].join('\n'),
   };
 }
 
-function vacatingPreparationSubProgress(
+/** Agent vacating information reply to tenant (outbound). */
+export function buildVacatingInfoReplyEmailView(
   caseData: TerminationCaseDetail,
-): EndLeasingSubProgressItem[] {
-  const noticeSent =
-    caseData.terminationType === TERMINATION_TYPE.TENANT_INITIATED
-      ? Boolean(
-          timelineLabel(caseData, /notice to vacate|vacating notice|acknowledg/i) ||
-            caseData.vacate.noticeEffectiveDate,
-        )
-      : Boolean(caseData.terminationNotice?.emailSent);
-  const vacateDateConfirmed = Boolean(
-    caseData.vacate.expectedVacateDate ?? caseData.vacateDate ?? caseData.terminationNotice?.tenantVacateDate,
-  );
-  const keyDateConfirmed = Boolean(
-    caseData.vacate.actualVacateDate ?? caseData.vacate.possessionRegainedDate,
-  );
-  const cleaningConfirmed =
-    caseData.vacatingPreparation?.exitCleaningConfirmed ||
-    caseData.makeGood.status === DONE ||
-    caseData.makeGood.qaComplete ||
-    timelineLabel(caseData, /clean/i) != null;
-
-  return [
-    { id: 'notice', label: 'Vacating notice sent to tenant', done: noticeSent },
-    { id: 'vacate_date', label: 'Move-out date confirmed', done: vacateDateConfirmed },
-    { id: 'key_date', label: 'Key return date confirmed', done: keyDateConfirmed },
-    { id: 'cleaning', label: 'Exit cleaning confirmed', done: cleaningConfirmed },
-  ];
+): TenantNoticeEmailView | null {
+  const stored = caseData.overviewEmail;
+  if (!stored?.body) return null;
+  return {
+    from: stored.from ?? caseData.agentName ?? 'CROSSUB',
+    to: stored.to ?? caseData.tenant.email ?? '—',
+    subject: stored.subject ?? `Vacating information — ${caseData.property.address}`,
+    receivedAt: stored.sentAt ?? caseData.createdAt,
+    body: stored.body,
+    commConversationId: stored.commConversationId,
+  };
 }
 
-function outgoingArrangementSubProgress(
+function vacateConfirmedSubProgress(
   caseData: TerminationCaseDetail,
 ): EndLeasingSubProgressItem[] {
-  const dateCommunicated = Boolean(caseData.inspection.inspectionDate);
-  const attendanceConfirmed =
-    caseData.inspection.tenantAttendance === 'yes' ||
-    caseData.inspection.tenantAttendance === 'no';
+  const vacateDateConfirmed = Boolean(
+    caseData.vacate.expectedVacateDate ??
+      caseData.vacateDate ??
+      caseData.terminationNotice?.tenantVacateDate,
+  );
+  const tenantNoticeReceived = true;
+  const vacatingReplySent = Boolean(caseData.overviewEmail?.sentAt);
 
   return [
-    { id: 'inform', label: 'Inform tenant of outgoing inspection date', done: dateCommunicated },
-    { id: 'attendance', label: 'Confirm tenant attendance', done: attendanceConfirmed },
+    { id: 'lease', label: 'Lease expiry & bond reviewed', done: Boolean(caseData.bondHeld) },
+    { id: 'vacate_date', label: 'Vacate date confirmed', done: vacateDateConfirmed },
+    { id: 'tenant_notice', label: 'Vacate notice from tenant recorded', done: tenantNoticeReceived },
+    { id: 'vacating_reply', label: 'Vacating information reply sent to tenant', done: vacatingReplySent },
   ];
 }
 
 function outgoingInspectionSubProgress(
   caseData: TerminationCaseDetail,
 ): EndLeasingSubProgressItem[] {
+  const attendanceConfirmed =
+    caseData.inspection.tenantAttendance === 'yes' ||
+    caseData.inspection.tenantAttendance === 'no';
+
   return [
     {
-      id: 'schedule',
-      label: 'Outgoing inspection scheduled',
+      id: 'date',
+      label: 'Outgoing inspection date set',
       done: Boolean(caseData.inspection.inspectionDate),
     },
     {
-      id: 'conduct',
+      id: 'attendance',
+      label: 'Tenant attendance confirmed',
+      done: attendanceConfirmed,
+    },
+    {
+      id: 'inspector',
+      label: 'Inspector assigned',
+      done: Boolean(caseData.inspection.inspectorName),
+    },
+    {
+      id: 'complete',
       label: 'Outgoing inspection completed',
       done: caseData.inspection.status === DONE,
     },
@@ -209,55 +209,65 @@ function reportComparisonSubProgress(
 ): EndLeasingSubProgressItem[] {
   const rc = caseData.reportComparison;
   const compared =
-    (rc.agentAcknowledged && rc.tenantAcknowledged) ||
-    caseData.inspection.reportAvailable;
-  const drafted = Boolean(rc.draftSummaryEmail?.body);
-  const quoted =
-    rc.tenantResponsibility.length > 0 ||
-    rc.landlordResponsibility.length > 0 ||
+    (rc.agentAcknowledged && rc.tenantAcknowledged) || caseData.inspection.reportAvailable;
+  const responsibilitiesDefined =
+    rc.tenantResponsibility.length > 0 || rc.landlordResponsibility.length > 0;
+  const tenantSummarySent = Boolean(rc.tenantComparisonSummaryEmail?.sentAt);
+  const agentSummarySent = Boolean(rc.agentComparisonSummaryEmail?.sentAt);
+
+  return [
+    { id: 'complete', label: 'Outgoing inspection completion date recorded', done: caseData.inspection.status === DONE },
+    { id: 'compare', label: 'Ingoing/outgoing reports compared', done: compared },
+    { id: 'responsibility', label: 'Landlord & tenant responsibility defined', done: responsibilitiesDefined },
+    { id: 'tenant_email', label: 'Tenant responsibility summary sent to tenant', done: tenantSummarySent },
+    { id: 'agent_email', label: 'Full summary sent to agent', done: agentSummarySent },
+  ];
+}
+
+function getQuoteSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
+  const rc = caseData.reportComparison;
+  const quotesEntered =
+    rc.tenantResponsibility.some((i) => i.quote?.trim()) ||
+    rc.landlordResponsibility.some((i) => i.quote?.trim()) ||
     caseData.makeGood.estimatedDeductions > 0;
+  const handymanAssigned =
+    rc.tenantResponsibility.some((i) => i.handymanId || i.handymanName?.trim()) ||
+    rc.landlordResponsibility.some((i) => i.handymanId || i.handymanName?.trim());
+  const sentToAgent = Boolean(rc.agentRepairQuoteEmail?.sentAt ?? rc.landlordRepairQuoteEmail?.sentAt);
+
+  return [
+    { id: 'quotes', label: 'Repair quotes entered', done: quotesEntered },
+    { id: 'handyman', label: 'Handyman assigned', done: handymanAssigned },
+    { id: 'agent', label: 'Landlord & tenant quotes sent to agent', done: sentToAgent },
+  ];
+}
+
+function resultConfirmedSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
+  const rc = caseData.reportComparison;
+  const agentConfirmed = Boolean(rc.agentQuoteConfirmed);
+  const tenantQuoteSent = Boolean(rc.tenantRepairQuoteEmail?.sentAt);
   const tenantResponded =
     rc.tenantQuoteResponse === 'accepted' || rc.tenantQuoteResponse === 'declined';
 
   return [
-    { id: 'compare', label: 'Compare ingoing and outgoing reports', done: compared },
-    { id: 'draft', label: 'Draft summary', done: drafted },
-    { id: 'quote', label: 'Obtain repair quote', done: quoted },
-    { id: 'tenant-reply', label: 'Tenant quote response', done: tenantResponded },
+    { id: 'agent_confirm', label: 'Agent confirmed figures', done: agentConfirmed },
+    { id: 'tenant_quote', label: 'Tenant portion sent to tenant', done: tenantQuoteSent },
+    { id: 'tenant_reply', label: 'Tenant response recorded', done: tenantResponded },
   ];
 }
 
-function summaryDistributionSubProgress(
-  caseData: TerminationCaseDetail,
-): EndLeasingSubProgressItem[] {
-  const rc = caseData.reportComparison;
-  const sentToTenant = Boolean(
-    rc.tenantRepairQuoteEmail?.sentAt && rc.tenantQuoteResponse === 'accepted',
-  );
-  const sentToAgent = Boolean(rc.landlordRepairQuoteEmail?.sentAt);
-
-  return [
-    { id: 'tenant', label: 'Summary & quote sent to tenant', done: sentToTenant },
-    { id: 'agent', label: 'Summary & quote sent to agent', done: sentToAgent },
-  ];
-}
-
-function bondSettlementSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
+function bondReleasedSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
   const rentReviewed = caseData.settlement.deductions.some((d) => /rent/i.test(d.category));
-  const billsChecked = caseData.settlement.deductions.length > 0;
-  const repairsApplied = caseData.makeGood.status === DONE;
-  const bondCalculated =
-    caseData.settlement.status === DONE || caseData.bond.status === DONE;
+  const billsChecked = caseData.settlement.deductions.some((d) => /bill|water|utility/i.test(d.category));
+  const repairsApplied = caseData.settlement.deductions.some((d) => /repair|maintenance|make.?good/i.test(d.category));
+  const bondReleased = caseData.bond.refundPaid || caseData.bond.status === DONE;
 
   return [
-    {
-      id: 'rent_paid',
-      label: 'Rent paid-to reviewed',
-      done: rentReviewed || caseData.settlement.status !== LEASING_ITEM_STATUS.NOT_STARTED,
-    },
-    { id: 'bills', label: 'Outstanding bills checked', done: billsChecked },
-    { id: 'repairs', label: 'Repair costs applied', done: repairsApplied },
-    { id: 'bond', label: 'Bond deduction calculated', done: bondCalculated },
+    { id: 'rent', label: 'Unpaid rent reviewed', done: rentReviewed || caseData.settlement.status !== LEASING_ITEM_STATUS.NOT_STARTED },
+    { id: 'bills', label: 'Unpaid bills reviewed', done: billsChecked || caseData.settlement.deductions.length > 0 },
+    { id: 'repairs', label: 'Tenant repair costs applied', done: repairsApplied || caseData.makeGood.status === DONE },
+    { id: 'total', label: 'Total bond deduction calculated', done: caseData.settlement.status === DONE },
+    { id: 'release', label: 'Agent confirmed bond released', done: bondReleased },
   ];
 }
 
@@ -273,31 +283,24 @@ function workflowNameForStep(
 ): string {
   const next = subProgress.find((i) => !i.done);
   switch (step) {
-    case END_LEASING_AGENT_STEP.OVERVIEW:
-      return caseData.terminationType === TERMINATION_TYPE.TENANT_INITIATED
-        ? 'Tenant move-out notice received'
-        : 'Termination notice issued';
-    case END_LEASING_AGENT_STEP.VACATING_PREPARATION:
-      if (next?.id === 'notice') return 'Send vacating notice to tenant';
-      if (next?.id === 'vacate_date') return 'Confirm move-out date';
-      if (next?.id === 'key_date') return 'Confirm key return date';
-      if (next?.id === 'cleaning') return 'Confirm exit cleaning';
-      return 'Vacating notice sent · outgoing arranged';
-    case END_LEASING_AGENT_STEP.OUTGOING_ARRANGEMENT:
-      if (next?.id === 'inform') return 'Inform tenant of outgoing inspection date';
-      if (next?.id === 'attendance') return 'Confirm tenant will attend outgoing';
-      return 'Calculate bond from rent paid-to, bills & repairs';
+    case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
+      if (next?.id === 'vacate_date') return 'Confirm vacate date';
+      if (next?.id === 'vacating_reply') return 'Send vacating information to tenant';
+      return 'Vacate date confirmed';
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
-      if (caseData.inspection.status === DONE) return 'Claim bond / release bond';
-      return 'Conduct outgoing inspection';
+      if (caseData.inspection.status === DONE) return 'Outgoing inspection complete';
+      if (next?.id === 'attendance') return 'Confirm tenant attendance';
+      return 'Schedule outgoing inspection';
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
-      if (caseData.makeGood.status === DONE) return 'Completed';
-      return 'Compare reports · draft summary · get quote';
-    case END_LEASING_AGENT_STEP.SUMMARY_DISTRIBUTION:
-      return 'Send summary & quote to tenant and agent';
-    case END_LEASING_AGENT_STEP.BOND_SETTLEMENT:
+      return 'Compare ingoing/outgoing & define responsibility';
+    case END_LEASING_AGENT_STEP.GET_QUOTE:
+      return 'Obtain repair quotes & send to agent';
+    case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
+      if (!caseData.reportComparison.agentQuoteConfirmed) return 'Agent confirms figures';
+      return 'Send tenant portion to tenant';
+    case END_LEASING_AGENT_STEP.BOND_RELEASED:
       if (caseData.bond.refundPaid) return 'Bond released';
-      return 'Calculate bond deduction from rent, bills & maintenance';
+      return 'Calculate deductions & release bond';
     default:
       return caseData.nextAction;
   }
@@ -309,28 +312,28 @@ function stepComplete(
   subProgress: EndLeasingSubProgressItem[],
 ): boolean {
   switch (step) {
-    case END_LEASING_AGENT_STEP.OVERVIEW:
-      return true;
-    case END_LEASING_AGENT_STEP.VACATING_PREPARATION:
-      return subProgress.every((i) => i.done) || caseData.inspection.inspectionDate != null;
-    case END_LEASING_AGENT_STEP.OUTGOING_ARRANGEMENT:
-      return subProgress.every((i) => i.done) || caseData.inspection.status === DONE;
+    case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
+      return (
+        subProgress.every((i) => i.done) ||
+        caseData.inspection.inspectionDate != null
+      );
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
       return caseData.inspection.status === DONE;
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
+      return subProgress.every((i) => i.done) || caseData.makeGood.status === DONE;
+    case END_LEASING_AGENT_STEP.GET_QUOTE:
       return (
         subProgress.every((i) => i.done) ||
-        caseData.reportComparison.tenantQuoteResponse === 'accepted' ||
-        caseData.makeGood.status === DONE
+        Boolean(caseData.reportComparison.agentRepairQuoteEmail?.sentAt ?? caseData.reportComparison.landlordRepairQuoteEmail?.sentAt)
       );
-    case END_LEASING_AGENT_STEP.SUMMARY_DISTRIBUTION:
+    case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
       return (
-        subProgress.every((i) => i.done) ||
+        caseData.reportComparison.tenantQuoteResponse === 'accepted' ||
         caseData.settlement.status === DONE ||
         caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED
       );
-    case END_LEASING_AGENT_STEP.BOND_SETTLEMENT:
-      return caseData.bond.status === DONE;
+    case END_LEASING_AGENT_STEP.BOND_RELEASED:
+      return caseData.bond.status === DONE || caseData.bond.refundPaid;
     default:
       return false;
   }
@@ -341,26 +344,19 @@ function resolveLiveStep(steps: EndLeasingAgentStepState[]): EndLeasingAgentStep
   if (active) return active.id;
   const firstUpcoming = steps.find((s) => s.status === 'upcoming');
   if (firstUpcoming) return firstUpcoming.id;
-  return END_LEASING_AGENT_STEP.BOND_SETTLEMENT;
+  return END_LEASING_AGENT_STEP.BOND_RELEASED;
 }
 
 export function buildEndLeasingAgentWorkflow(
   caseData: TerminationCaseDetail,
 ): EndLeasingAgentWorkflowModel {
   const subByStep: Record<EndLeasingAgentStep, EndLeasingSubProgressItem[]> = {
-    [END_LEASING_AGENT_STEP.OVERVIEW]: [
-      {
-        id: 'received',
-        label: 'Tenant move-out notice received',
-        done: true,
-      },
-    ],
-    [END_LEASING_AGENT_STEP.VACATING_PREPARATION]: vacatingPreparationSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.OUTGOING_ARRANGEMENT]: outgoingArrangementSubProgress(caseData),
+    [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: vacateConfirmedSubProgress(caseData),
     [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: outgoingInspectionSubProgress(caseData),
     [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: reportComparisonSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.SUMMARY_DISTRIBUTION]: summaryDistributionSubProgress(caseData),
-    [END_LEASING_AGENT_STEP.BOND_SETTLEMENT]: bondSettlementSubProgress(caseData),
+    [END_LEASING_AGENT_STEP.GET_QUOTE]: getQuoteSubProgress(caseData),
+    [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: resultConfirmedSubProgress(caseData),
+    [END_LEASING_AGENT_STEP.BOND_RELEASED]: bondReleasedSubProgress(caseData),
   };
 
   const rawSteps = END_LEASING_AGENT_STEP_ORDER.map((id) => {
@@ -403,5 +399,8 @@ export function buildEndLeasingAgentWorkflow(
     liveStepId,
     progressFillIndex,
     tenantNoticeEmail: buildTenantNoticeEmailView(caseData),
+    vacatingInfoReplyEmail: buildVacatingInfoReplyEmailView(caseData),
   };
 }
+
+export { leaseTypeLabel, breachStatusLabel };

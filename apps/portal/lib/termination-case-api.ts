@@ -20,6 +20,7 @@ import type {
   UpdateMakeGoodInput,
   UpdateReportComparisonInput,
   RepairQuoteEmailAudience,
+  ComparisonSummaryEmailAudience,
 } from '@/lib/termination-case-types';
 import type {
   BondStageState,
@@ -253,8 +254,13 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
       tenantResponsibility: mapRepairItems(s.reportComparison?.tenantResponsibility),
       landlordResponsibility: mapRepairItems(s.reportComparison?.landlordResponsibility),
       draftSummaryEmail: mapOverviewEmail(s.reportComparison?.draftSummaryEmail),
+      tenantComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.tenantComparisonSummaryEmail),
+      agentComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.agentComparisonSummaryEmail),
       tenantRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.tenantRepairQuoteEmail),
       landlordRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.landlordRepairQuoteEmail),
+      agentRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.agentRepairQuoteEmail),
+      agentQuoteConfirmed: s.reportComparison?.agentQuoteConfirmed ?? false,
+      agentQuoteConfirmedAt: s.reportComparison?.agentQuoteConfirmedAt ?? undefined,
       tenantQuoteResponse: s.reportComparison?.tenantQuoteResponse ?? null,
       tenantQuoteResponseAt: s.reportComparison?.tenantQuoteResponseAt ?? undefined,
       tenantQuoteDeclineReason: s.reportComparison?.tenantQuoteDeclineReason ?? undefined,
@@ -453,6 +459,25 @@ export const terminationApi = {
       api.post<{ case: ServerTerminationCase }>(
         `/end-leasing/cases/${id}/report-comparison/send-quote-email`,
         { audience },
+      ),
+    ),
+
+  sendComparisonSummaryEmail: (
+    id: string,
+    audience: ComparisonSummaryEmailAudience,
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.post<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/send-comparison-summary`,
+        { audience },
+      ),
+    ),
+
+  confirmAgentQuote: (id: string): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/confirm-agent-quote`,
+        {},
       ),
     ),
 

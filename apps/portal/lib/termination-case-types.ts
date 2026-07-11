@@ -135,6 +135,22 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       to: string | null
       sentAt: string | null
     } | null
+    tenantComparisonSummaryEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    agentComparisonSummaryEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
     tenantRepairQuoteEmail: {
       commConversationId: string | null
       subject: string | null
@@ -151,6 +167,16 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       to: string | null
       sentAt: string | null
     } | null
+    agentRepairQuoteEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    agentQuoteConfirmed?: boolean
+    agentQuoteConfirmedAt?: string | null
     tenantQuoteResponse: 'pending' | 'accepted' | 'declined' | null
     tenantQuoteResponseAt: string | null
     tenantQuoteDeclineReason: string | null
@@ -265,7 +291,9 @@ export interface ReportComparisonRepairItemInput {
   handymanName?: string
 }
 
-export type RepairQuoteEmailAudience = 'tenant' | 'landlord'
+export type RepairQuoteEmailAudience = 'tenant' | 'landlord' | 'agent'
+
+export type ComparisonSummaryEmailAudience = 'tenant' | 'agent'
 
 export interface UpdateMakeGoodInput {
   issueCount?: number

@@ -130,7 +130,7 @@ export function RentReviewDetailDialog({
 
         <Button variant="outline" className="w-full" asChild>
           <Link href={rentReviewDetail(review.id, navContext)} onClick={onClose}>
-            Open full rent review
+            Open full workflow
           </Link>
         </Button>
       </div>

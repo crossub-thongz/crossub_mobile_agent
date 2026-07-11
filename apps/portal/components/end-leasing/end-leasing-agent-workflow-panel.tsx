@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { ExternalLink, Mail } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-import { communicationsThread } from '@/constants/routes';
 
 import {
   WorkflowProgressRail,
 } from '@/components/agent/workflow-progress-rail';
+import { EndLeasingBondReleasedPanel } from '@/components/end-leasing/end-leasing-bond-released-panel';
+import { EndLeasingReportComparisonPanel } from '@/components/end-leasing/end-leasing-report-comparison-panel';
+import { EndLeasingResultConfirmedPanel } from '@/components/end-leasing/end-leasing-result-confirmed-panel';
+import { EndLeasingVacateConfirmedPanel } from '@/components/end-leasing/end-leasing-vacate-confirmed-panel';
 import {
   TerminationPhasePanel,
 } from '@/components/end-leasing/termination-phase-panels';
-import { EndLeasingReportComparisonPanel } from '@/components/end-leasing/end-leasing-report-comparison-panel';
 import {
   END_LEASING_AGENT_STEP,
   END_LEASING_AGENT_STEP_LABEL,
@@ -26,24 +24,20 @@ import {
   TERMINATION_STAGE,
   terminationStageOrderForCase,
 } from '@/constants/end-leasing';
-import { formatDateTime } from '@/lib/utils';
 
 function mapAgentStepToTerminationStage(
   step: EndLeasingAgentStep,
-  caseData: TerminationCaseDetail,
 ): (typeof TERMINATION_STAGE)[keyof typeof TERMINATION_STAGE] | null {
   switch (step) {
-    case END_LEASING_AGENT_STEP.OVERVIEW:
-      return TERMINATION_STAGE.TERMINATION_NOTICE;
-    case END_LEASING_AGENT_STEP.VACATING_PREPARATION:
+    case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
       return TERMINATION_STAGE.KEY_RETURN;
-    case END_LEASING_AGENT_STEP.OUTGOING_ARRANGEMENT:
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
       return TERMINATION_STAGE.OUTGOING_INSPECTION;
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
+    case END_LEASING_AGENT_STEP.GET_QUOTE:
       return TERMINATION_STAGE.MAINTENANCE;
-    case END_LEASING_AGENT_STEP.SUMMARY_DISTRIBUTION:
-    case END_LEASING_AGENT_STEP.BOND_SETTLEMENT:
+    case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
+    case END_LEASING_AGENT_STEP.BOND_RELEASED:
       return TERMINATION_STAGE.BOND;
     default:
       return null;
@@ -83,57 +77,29 @@ function SubProgressList({ items }: { items: { id: string; label: string; done: 
   );
 }
 
-function OverviewEmailPanel({
-  email,
+function StepContent({
+  stepId,
+  caseData,
 }: {
-  email: NonNullable<ReturnType<typeof buildEndLeasingAgentWorkflow>['tenantNoticeEmail']>;
+  stepId: EndLeasingAgentStep;
+  caseData: TerminationCaseDetail;
 }) {
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Mail className="text-primary size-4" />
-          <p className="text-sm font-semibold">Tenant end-leasing email</p>
-        </div>
-        {email.commConversationId ? (
-          <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
-            <Link href={communicationsThread(email.commConversationId)}>
-              <ExternalLink className="size-3.5" />
-              View in Message Center
-            </Link>
-          </Button>
-        ) : null}
-      </div>
-      <div className="rounded-xl border bg-muted/20 p-3 text-xs">
-        <dl className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">From</dt>
-            <dd className="font-medium">{email.from}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">To</dt>
-            <dd className="font-medium">{email.to}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Subject</dt>
-            <dd className="font-medium">{email.subject}</dd>
-          </div>
-          {email.receivedAt ? (
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">Received</dt>
-              <dd className="font-medium">{formatDateTime(email.receivedAt)}</dd>
-            </div>
-          ) : null}
-        </dl>
-      </div>
-      <div className="rounded-xl border bg-card p-3">
-        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-          Message
-        </p>
-        <pre className="text-xs leading-relaxed whitespace-pre-wrap font-sans">{email.body}</pre>
-      </div>
-    </div>
-  );
+  switch (stepId) {
+    case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
+      return <EndLeasingVacateConfirmedPanel caseData={caseData} />;
+    case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
+      return null;
+    case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
+      return <EndLeasingReportComparisonPanel caseData={caseData} mode="compare" />;
+    case END_LEASING_AGENT_STEP.GET_QUOTE:
+      return <EndLeasingReportComparisonPanel caseData={caseData} mode="quote" />;
+    case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
+      return <EndLeasingResultConfirmedPanel caseData={caseData} />;
+    case END_LEASING_AGENT_STEP.BOND_RELEASED:
+      return <EndLeasingBondReleasedPanel caseData={caseData} />;
+    default:
+      return null;
+  }
 }
 
 export function EndLeasingAgentWorkflowPanel({
@@ -166,13 +132,22 @@ export function EndLeasingAgentWorkflowPanel({
 
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
-  const legacyStage = mapAgentStepToTerminationStage(viewingStepId, caseData);
+  const legacyStage = mapAgentStepToTerminationStage(viewingStepId);
   const stageOrder = terminationStageOrderForCase(caseData.terminationType);
   const showLegacyPanel =
     legacyStage != null &&
     stageOrder.includes(legacyStage) &&
-    viewingStepId !== END_LEASING_AGENT_STEP.OVERVIEW &&
-    viewingStepId !== END_LEASING_AGENT_STEP.REPORT_COMPARISON;
+    (viewingStepId === END_LEASING_AGENT_STEP.VACATE_CONFIRMED ||
+      viewingStepId === END_LEASING_AGENT_STEP.OUTGOING_INSPECTION);
+
+  const stepTitles: Record<EndLeasingAgentStep, string> = {
+    [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: 'Vacate date confirmed',
+    [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: 'Outgoing inspection',
+    [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: 'Compare in / outgoing',
+    [END_LEASING_AGENT_STEP.GET_QUOTE]: 'Get quote',
+    [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: 'Result confirmed',
+    [END_LEASING_AGENT_STEP.BOND_RELEASED]: 'Bond released',
+  };
 
   return (
     <div className="space-y-4">
@@ -204,21 +179,14 @@ export function EndLeasingAgentWorkflowPanel({
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
             {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
-          <p className="mt-0.5 text-sm font-semibold">
-            {END_LEASING_AGENT_STEP_LABEL[viewingStepId]}
-          </p>
+          <p className="mt-0.5 text-sm font-semibold">{stepTitles[viewingStepId]}</p>
+          {isLiveStep && viewingStep?.workflowName ? (
+            <p className="text-muted-foreground mt-1 text-xs">{viewingStep.workflowName}</p>
+          ) : null}
         </div>
         <div className="space-y-4 p-4">
-          {viewingStepId === END_LEASING_AGENT_STEP.OVERVIEW && workflow.tenantNoticeEmail ? (
-            <OverviewEmailPanel email={workflow.tenantNoticeEmail} />
-          ) : viewingStepId === END_LEASING_AGENT_STEP.REPORT_COMPARISON ? (
-            <>
-              <SubProgressList items={viewingStep?.subProgress ?? []} />
-              <EndLeasingReportComparisonPanel caseData={caseData} />
-            </>
-          ) : (
-            <SubProgressList items={viewingStep?.subProgress ?? []} />
-          )}
+          <SubProgressList items={viewingStep?.subProgress ?? []} />
+          <StepContent stepId={viewingStepId} caseData={caseData} />
 
           {showLegacyPanel && legacyStage ? (
             <div className="border-t pt-4">

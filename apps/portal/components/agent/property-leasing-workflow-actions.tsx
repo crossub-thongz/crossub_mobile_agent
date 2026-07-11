@@ -95,7 +95,7 @@ export function PropertyLeasingWorkflowActions({
   const description =
     tab === 'rent_review'
       ? 'Open a rent review case for this property.'
-      : 'New leasing cycles and end leasing cases for this property.';
+      : 'Add new leasing cycles and end leasing cases for this property.';
 
   return (
     <>

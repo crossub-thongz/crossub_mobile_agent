@@ -24,6 +24,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { rentReviewJobRows } from '@/lib/property-job-rows';
+import { RENT_REVIEW_CONDUCT_WINDOW_DAYS } from '@/lib/rent-review/scheduling';
 
 function RentReviewHistoryTable({
   rows,
@@ -191,7 +192,8 @@ export function PropertyRentReviewTab({
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Rent review cases</h3>
         <p className="text-muted-foreground text-xs">
-          Click a case to open the full rent review workflow.
+          Click a case to open the full rent review workflow. Countdown shows days left in the{' '}
+          {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day review window (order placed 90 days ahead; 60-day tenant notice required).
         </p>
         <PropertyJobCasesTable
           rows={jobRows}

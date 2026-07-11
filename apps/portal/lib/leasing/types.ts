@@ -119,6 +119,8 @@ export interface LeasingBondState {
   sentToTenantAt?: string;
   paidAt?: string;
   proofFileName?: string;
+  /** Ledger entry ID — assigned when bond is marked paid in new leasing. */
+  ledgerEntryId?: string;
 }
 
 export interface LeasingAgreementState {

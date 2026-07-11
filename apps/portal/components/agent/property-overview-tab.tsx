@@ -22,9 +22,7 @@ import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workfl
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import {
   derivePaymentCycle,
-  formatBondDisplay,
-  resolveBondReference,
-  resolveBondReferenceRaw,
+  resolveBondOverviewDisplay,
   resolveRentPaidTo,
   resolveCurrentRent,
   resolveLeaseDates,
@@ -78,10 +76,22 @@ function StatCell({
   onEdit,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   onPreview?: () => void;
   onEdit?: () => void;
 }) {
+  const valueContent = onPreview ? (
+    <button
+      type="button"
+      onClick={onPreview}
+      className="text-primary mt-0.5 w-full min-w-0 text-left"
+    >
+      {value}
+    </button>
+  ) : (
+    <div className="mt-0.5 min-w-0">{value}</div>
+  );
+
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
       <div className="flex items-center justify-between gap-1">
@@ -98,18 +108,31 @@ function StatCell({
           </button>
         ) : null}
       </div>
-      {onPreview ? (
-        <button
-          type="button"
-          onClick={onPreview}
-          className="text-primary mt-0.5 text-left text-sm font-semibold"
-        >
-          {value}
-        </button>
-      ) : (
-        <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
-      )}
+      {valueContent}
     </div>
+  );
+}
+
+function BondStatValue({
+  amountLabel,
+  bondIdLabel,
+}: {
+  amountLabel: string;
+  bondIdLabel: string;
+}) {
+  const showId = bondIdLabel !== '—';
+  if (!showId) {
+    return <p className="text-sm font-semibold tabular-nums">{amountLabel}</p>;
+  }
+
+  return (
+    <p className="flex min-w-0 items-baseline gap-1 whitespace-nowrap text-sm font-semibold leading-tight">
+      <span className="shrink-0 tabular-nums">{amountLabel}</span>
+      <span className="text-muted-foreground shrink-0 text-[10px] font-normal">·</span>
+      <span className="text-primary min-w-0 truncate text-[10px] font-medium leading-none">
+        {bondIdLabel}
+      </span>
+    </p>
   );
 }
 
@@ -256,9 +279,11 @@ export function PropertyOverviewTab({
     property.bondAmount ??
     sync.bond?.amount ??
     null;
-  const bondRef = resolveBondReference(property, sync.bond, propertyDocs, currentLease);
-  const bondDisplay = formatBondDisplay(displayBond, bondRef);
-  const bondReferenceRaw = resolveBondReferenceRaw(property, sync.bond);
+  const bondOverview = resolveBondOverviewDisplay(
+    displayBond,
+    sync.bond,
+    Boolean(activeCycle?.id),
+  );
 
   const registry = useMemo(() => {
     const record = sync.record;
@@ -456,9 +481,16 @@ export function PropertyOverviewTab({
           <StatCell label="Payment cycle" value={paymentCycle} />
           <StatCell
             label="Bond"
-            value={bondDisplay}
+            value={
+              <BondStatValue
+                amountLabel={bondOverview.amountLabel}
+                bondIdLabel={bondOverview.bondIdLabel}
+              />
+            }
             onPreview={
-              bondRef.showLodgementNav && onViewBondLodgement ? onViewBondLodgement : undefined
+              bondOverview.bondIdLinked && onViewBondLodgement
+                ? onViewBondLodgement
+                : undefined
             }
             onEdit={canEditTenancy ? () => setBondDialogOpen(true) : undefined}
           />
@@ -562,9 +594,7 @@ export function PropertyOverviewTab({
         open={bondDialogOpen}
         onOpenChange={setBondDialogOpen}
         propertyId={propertyId}
-        leasingCycleId={activeCycle?.id}
         initialAmount={displayBond}
-        initialReference={bondReferenceRaw}
         onSaved={handleSaved}
       />
 

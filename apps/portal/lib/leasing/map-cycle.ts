@@ -65,6 +65,7 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       sentToTenantAt: u(ob?.bond.sentToTenantAt ?? undefined),
       paidAt: u(ob?.bond.paidAt ?? undefined),
       proofFileName: u(ob?.bond.proofFileName ?? undefined),
+      ledgerEntryId: u(ob?.bond.ledgerEntryId ?? undefined),
     },
     agreement: {
       status: asItemStatus(ob?.agreement.status ?? 'not_started'),

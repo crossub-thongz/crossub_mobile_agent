@@ -7,6 +7,7 @@ import { PropertyMaintenanceJobPanel } from '@/components/agent/property-mainten
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { maintenanceJobRows } from '@/lib/property-job-rows';
 import { pickPrimaryMaintenanceCase } from '@/lib/property-maintenance-workflow-cases';
+import { cn } from '@/lib/utils';
 import type {
   Inspection,
   LeasingCycle,
@@ -105,11 +106,23 @@ export function PropertyMaintenanceTab({
             onRowClick={setSelectedCaseId}
           />
           {selectedRequest ? (
-            <PropertyMaintenanceJobPanel
-              item={selectedRequest}
-              property={property}
-              propertyId={propertyId}
-            />
+            <section
+              key={selectedRequest.id}
+              className={cn(
+                'animate-in fade-in-0 slide-in-from-top-2 duration-300',
+                'space-y-2 rounded-xl border-2 border-primary/30 bg-primary/[0.04] p-3 shadow-sm ring-1 ring-primary/15',
+              )}
+              aria-label="Selected maintenance job"
+            >
+              <p className="text-primary px-1 text-[10px] font-bold uppercase tracking-[0.18em]">
+                Selected job
+              </p>
+              <PropertyMaintenanceJobPanel
+                item={selectedRequest}
+                property={property}
+                propertyId={propertyId}
+              />
+            </section>
           ) : null}
         </>
       )}

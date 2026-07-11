@@ -1,6 +1,7 @@
 import type { AgentDocument, Inspection, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
 import type { PropertyPortalAccounting } from '@/lib/property-registry-api';
 import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
+import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { inspectionDetail } from '@/constants/routes';
 import { formatCurrency } from '@/lib/utils';
 
@@ -123,6 +124,63 @@ export interface BondReference {
   label: string;
   /** In-app navigation to new leasing step 4 bond section. */
   showLodgementNav?: boolean;
+}
+
+export interface BondOverviewDisplay {
+  amountLabel: string;
+  /** Ledger bond ID, "Pending lodgement", or "—". */
+  bondIdLabel: string;
+  /** Combined bond amount + ID for overview display. */
+  displayLabel: string;
+  /** Link to new leasing bond section when paid or awaiting lodgement. */
+  bondIdLinked: boolean;
+}
+
+/** Bond amount for overview (no reference text). */
+export function formatBondAmount(amount: number | null | undefined): string {
+  return amount != null && amount > 0 ? formatCurrency(amount) : '—';
+}
+
+/**
+ * Bond ID from the active leasing cycle — generated when bond is marked paid
+ * during new leasing onboarding (ledger entry).
+ */
+export function resolveBondOverviewDisplay(
+  amount: number | null | undefined,
+  bond: PropertyBondSnapshot | null | undefined,
+  hasActiveLeasingCycle: boolean,
+): BondOverviewDisplay {
+  const amountLabel = formatBondAmount(amount);
+  const ledgerId = bond?.ledgerEntryId?.trim() ?? null;
+  const paid =
+    bond?.status === LEASING_ITEM_STATUS.DONE || Boolean(bond?.paidAt?.trim());
+
+  if (ledgerId && paid) {
+    return buildBondOverview(amountLabel, ledgerId, true);
+  }
+
+  if (hasActiveLeasingCycle && !paid) {
+    return buildBondOverview(amountLabel, 'Pending lodgement', true);
+  }
+
+  return buildBondOverview(amountLabel, '—', false);
+}
+
+function buildBondOverview(
+  amountLabel: string,
+  bondIdLabel: string,
+  bondIdLinked: boolean,
+): BondOverviewDisplay {
+  const showId = bondIdLabel !== '—';
+  const displayLabel =
+    amountLabel !== '—' && showId
+      ? `${amountLabel} · ${bondIdLabel}`
+      : amountLabel !== '—'
+        ? amountLabel
+        : showId
+          ? bondIdLabel
+          : '—';
+  return { amountLabel, bondIdLabel, displayLabel, bondIdLinked };
 }
 
 /** Bond lodgement from leasing step 4 — label from cycle bond block. */

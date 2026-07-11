@@ -16,14 +16,7 @@ export function pickPrimaryMaintenance(
   )[0];
 }
 
-export function maintenanceStepShortLabel(stepId: string, fallback: string): string {
-  const labels: Record<string, string> = {
-    created: 'Created',
-    resp: 'Review',
-    contractor_quote: 'Quote',
-    agent_approval: 'Approve',
-    in_progress: 'Progress',
-    closed: 'Closed',
-  };
-  return labels[stepId] ?? fallback;
-}
+export {
+  maintenanceCurrentStepLabel,
+  maintenanceStepShortLabel,
+} from '@/lib/case-workflows/maintenance';
