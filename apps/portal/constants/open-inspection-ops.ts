@@ -88,6 +88,7 @@ export interface OpenInspectionApplication {
   agentDecision: LeasingAgentDecision;
   decisionAt?: string;
   rejectReason?: string;
+  feedback?: string;
   candidateNotified: boolean;
 }
 

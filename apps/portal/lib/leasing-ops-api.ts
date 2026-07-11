@@ -92,6 +92,14 @@ export const leasingOpsApi = {
       api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/open-report/send-agent`, {}),
     ),
 
+  generateOpenReport: (cycleId: string) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/open-report/generate`, {}),
+    ),
+
+  downloadOpenReportPdf: (cycleId: string): Promise<Blob> =>
+    api.getBlob(`${BASE}/${cycleId}/open-report/report.pdf`),
+
   sendViewerInvites: (cycleId: string, input: SendViewerInvitesInput) =>
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(

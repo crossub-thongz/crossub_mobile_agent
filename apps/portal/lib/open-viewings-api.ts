@@ -16,6 +16,7 @@ const unwrap = async (
 export interface ViewingDecisionInput {
   decision: "approved" | "rejected"
   rejectReason?: string
+  feedback?: string
 }
 
 export interface CreateWalkInInput {
@@ -105,4 +106,9 @@ export const openViewingsApi = {
     api.post<{ ok: true; sent: number }>(`${BASE}/sessions/${sessionId}/send-apply-link`, {
       emails,
     }),
+
+  generateReport: (sessionId: string) =>
+    unwrap(api.post<{ session: OpenInspectionSession }>(`${BASE}/sessions/${sessionId}/generate-report`, {})),
+
+  reportPdfUrl: (sessionId: string) => `${BASE}/sessions/${sessionId}/report.pdf`,
 }

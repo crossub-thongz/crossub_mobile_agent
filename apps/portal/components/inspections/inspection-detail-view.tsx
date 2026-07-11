@@ -19,8 +19,10 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
 import { OpenInspectionRentalFacts } from '@/components/open-inspection/open-inspection-rental-facts';
+import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { DocumentViewer } from '@/components/agent/document-viewer';
@@ -47,12 +49,15 @@ import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sy
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
+import { LEASING_AGENT_DECISION } from '@/lib/leasing/constants';
 
 export function InspectionDetailView({ inspectionId }: { inspectionId: string }) {
   const { inspections, apiConnected } = useAgentData();
   const base = inspections.find((i) => i.id === inspectionId);
   const insp = useInspectionDetailLiveSync(base, apiConnected);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
+  const [reportGenerated, setReportGenerated] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
@@ -86,6 +91,10 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const isSelfOpen = insp.type === 'OPEN' && insp.openConductedBy === 'agent';
   const isCrossubOpen = insp.type === 'OPEN' && insp.openConductedBy === 'crossub';
   const visitors = openSession?.visitors ?? [];
+  const approvedApplicants = visitors.filter(
+    (v) => v.application?.agentDecision === LEASING_AGENT_DECISION.APPROVED,
+  );
+  const canGenerateReport = approvedApplicants.length > 0 && !reportGenerated;
   const hasReport = insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
 
   const TypeIcon =
@@ -231,6 +240,12 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
       )}
 
       {openSession && insp.source === 'open_viewing' ? (
+        <section className="rounded-2xl border bg-card px-2 py-1">
+          <OpenInspectionSessionRail session={openSession} reportGenerated={reportGenerated} />
+        </section>
+      ) : null}
+
+      {openSession && insp.source === 'open_viewing' ? (
         <OpenInspectionRentalFacts rental={openSession.rental} />
       ) : null}
 
@@ -238,16 +253,49 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
         <OpenInspectionApplyShareCard session={openSession} />
       ) : null}
 
-      {openSession?.agent?.name && (
-        <InfoSection title="Managing agent">
-          <InfoRow label="Agent" value={openSession.agent.name} icon={User} />
-          {openSession.agent.phone ? (
-            <InfoRow label="Phone" value={openSession.agent.phone} />
-          ) : null}
+      {openSession && insp.source === 'open_viewing' ? (
+        <InfoSection title={`Applicants (${visitors.filter((v) => v.application).length})`}>
+          <OpenInspectionApplicantPanel
+            session={openSession}
+            onSessionChange={(session) => {
+              setOpenSession(session);
+            }}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              disabled={!canGenerateReport || generatingReport}
+              onClick={async () => {
+                setGeneratingReport(true);
+                try {
+                  await openViewingsApi.generateReport(openSession.id);
+                  setReportGenerated(true);
+                  toast.success('Open report generated — New Leasing open-report step complete');
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Could not generate report');
+                } finally {
+                  setGeneratingReport(false);
+                }
+              }}
+            >
+              <FileText className="size-3.5" />
+              {generatingReport ? 'Generating…' : 'Generate open report'}
+            </Button>
+            {(reportGenerated || approvedApplicants.length > 0) && (
+              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+                <a href={openViewingsApi.reportPdfUrl(openSession.id)} target="_blank" rel="noopener noreferrer">
+                  <FileText className="size-3.5" />
+                  Download PDF
+                </a>
+              </Button>
+            )}
+          </div>
         </InfoSection>
-      )}
+      ) : null}
 
-      {visitors.length > 0 && (
+      {visitors.length > 0 && !(openSession && insp.source === 'open_viewing') && (
         <InfoSection title={`Applicants (${visitors.length})`}>
           <ul className="space-y-2">
             {visitors.map((visitor) => (

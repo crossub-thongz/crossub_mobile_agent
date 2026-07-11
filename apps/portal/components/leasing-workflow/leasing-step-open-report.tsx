@@ -30,6 +30,7 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
   const sendReportLocal = useLeasingWorkflowStore((s) => s.sendReportToAgent);
 
   const [sendingReport, setSendingReport] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = cycle?.id;
@@ -84,13 +85,44 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
             )}
             <Button
               size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 text-xs"
-              disabled={!or.reportViewable}
-              onClick={() => toast('Opening report preview…')}
+              className={cn('gap-1.5', LEASING_UI.btnSecondary)}
+              variant="ghost"
+              disabled={generatingReport || !cycleId}
+              onClick={async () => {
+                if (!cycleId) return;
+                setGeneratingReport(true);
+                try {
+                  const view = await leasingOpsApi.generateOpenReport(cycleId);
+                  applyCycleView(detail.propertyId, view);
+                  toast.success('Open report generated — approved applicants in PDF');
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Could not generate report');
+                } finally {
+                  setGeneratingReport(false);
+                }
+              }}
             >
               <FileText className="size-3.5" />
-              View open report
+              {generatingReport ? 'Generating…' : 'Generate open report'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              disabled={!or.reportViewable && !cycleId}
+              onClick={async () => {
+                if (!cycleId) return;
+                try {
+                  const blob = await leasingOpsApi.downloadOpenReportPdf(cycleId);
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, '_blank');
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Could not open report');
+                }
+              }}
+            >
+              <FileText className="size-3.5" />
+              View / download PDF
             </Button>
           </>
         }
