@@ -100,4 +100,9 @@ export const openViewingsApi = {
     unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/link-application`, { applicationId })),
   decide: (attendeeId: string, input: ViewingDecisionInput) =>
     unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/decision`, input)),
+
+  sendApplyLink: (sessionId: string, emails: string[]) =>
+    api.post<{ ok: true; sent: number }>(`${BASE}/sessions/${sessionId}/send-apply-link`, {
+      emails,
+    }),
 }

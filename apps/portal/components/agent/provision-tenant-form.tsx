@@ -18,8 +18,7 @@ import { generateTenantPassword } from '@/lib/generate-tenant-password';
 import { provisionTenantAccount, type ProvisionedTenant } from '@/lib/tenant-provisioning';
 import type { TenantProvisionPrefill } from '@/lib/tenant-provision-prefill';
 
-const tenantAppUrl =
-  process.env.NEXT_PUBLIC_TENANT_APP_URL?.replace(/\/$/, '') ?? 'http://localhost:3003';
+import { tenantAppBaseUrl } from '@/lib/tenant-app-url';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -236,7 +235,7 @@ export function ProvisionTenantSuccess({
       `Tenant app login`,
       `Email: ${credentials.email}`,
       `Password: ${credentials.password}`,
-      `Sign in: ${tenantAppUrl}/login`,
+      `Sign in: ${tenantAppBaseUrl()}/login`,
     ].join('\n');
     try {
       await navigator.clipboard.writeText(text);
@@ -289,7 +288,7 @@ export function ProvisionTenantSuccess({
       <div className="flex flex-col gap-2">
         <Button onClick={() => void copyAll()}>Copy credentials</Button>
         <Button variant="outline" asChild>
-          <a href={`${tenantAppUrl}/login`} target="_blank" rel="noopener noreferrer">
+          <a href={`${tenantAppBaseUrl()}/login`} target="_blank" rel="noopener noreferrer">
             Open tenant app sign-in
           </a>
         </Button>

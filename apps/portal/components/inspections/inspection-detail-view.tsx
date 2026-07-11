@@ -20,6 +20,7 @@ import {
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
+import { OpenInspectionRentalFacts } from '@/components/open-inspection/open-inspection-rental-facts';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { DocumentViewer } from '@/components/agent/document-viewer';
@@ -228,6 +229,10 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
           )}
         </InfoSection>
       )}
+
+      {openSession && insp.source === 'open_viewing' ? (
+        <OpenInspectionRentalFacts rental={openSession.rental} />
+      ) : null}
 
       {openSession && insp.source === 'open_viewing' ? (
         <OpenInspectionApplyShareCard session={openSession} />

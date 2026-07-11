@@ -7,20 +7,23 @@ import {
   ModuleTableLinkCell,
 } from '@/components/agent/module-list-table';
 import { propertyDetail } from '@/constants/routes';
-import { LEASING_LIFECYCLE_STEP_LABEL } from '@/lib/leasing/constants';
+import { TERMINATION_UI } from '@/constants/end-leasing';
 import type { ArchivedEndLeasingCase, ArchivedLeasingCycle } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
-function lifecycleLabel(step: string): string {
-  const normalized = step.toLowerCase() as keyof typeof LEASING_LIFECYCLE_STEP_LABEL;
-  return LEASING_LIFECYCLE_STEP_LABEL[normalized] ?? step.replaceAll('_', ' ').toLowerCase();
+export const WORKFLOW_CASE_DELETED_STATUS = 'DELETED';
+
+function deletedStatusBadge() {
+  return (
+    <span className={TERMINATION_UI.deletedBadge}>{WORKFLOW_CASE_DELETED_STATUS}</span>
+  );
 }
 
 export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCycle[] }) {
   return (
     <ModuleListTable minWidth={920}>
       <ModuleTableHead
-        columns={['Property', 'Stage when cancelled', 'Rent/wk', 'Cancelled', 'Reason', '']}
+        columns={['Property', 'Status', 'Rent/wk', 'Deleted', 'Reason', '']}
       />
       <tbody className="divide-y">
         {items.map((item) => {
@@ -30,9 +33,7 @@ export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCy
               <ModuleTableLinkCell href={href} className="max-w-[14rem]">
                 <span className="line-clamp-2">{item.propertyAddress}</span>
               </ModuleTableLinkCell>
-              <td className="px-3 py-3 text-xs text-muted-foreground">
-                {lifecycleLabel(item.lifecycleStep)}
-              </td>
+              <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
               <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                 {item.rentPerWeek != null ? `${formatCurrency(item.rentPerWeek)}/wk` : '—'}
               </td>
@@ -54,7 +55,7 @@ export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCy
 export function ArchivedEndLeasingTable({ items }: { items: ArchivedEndLeasingCase[] }) {
   return (
     <ModuleListTable minWidth={880}>
-      <ModuleTableHead columns={['Property', 'Vacate date', 'Cancelled', 'Reason', '']} />
+      <ModuleTableHead columns={['Property', 'Status', 'Vacate date', 'Deleted', 'Reason', '']} />
       <tbody className="divide-y">
         {items.map((item) => {
           const href = item.propertyId ? propertyDetail(item.propertyId) : undefined;
@@ -69,6 +70,7 @@ export function ArchivedEndLeasingTable({ items }: { items: ArchivedEndLeasingCa
                   <span className="line-clamp-2">{item.propertyAddress}</span>
                 </td>
               )}
+              <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
               <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
                 {item.vacateDate ? formatDate(item.vacateDate) : '—'}
               </td>

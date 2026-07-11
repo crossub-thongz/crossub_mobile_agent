@@ -10,8 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ProvisionedTenantRecord } from '@/lib/provisioned-tenant-records';
 
-const tenantAppUrl =
-  process.env.NEXT_PUBLIC_TENANT_APP_URL?.replace(/\/$/, '') ?? 'http://localhost:3003';
+import { tenantAppBaseUrl } from '@/lib/tenant-app-url';
 
 export function ProvisionedTenantCredentialsDialog({
   record,
@@ -42,7 +41,7 @@ export function ProvisionedTenantCredentialsDialog({
       'CROSSUB Tenant App login',
       `Email: ${record.email}`,
       `Password: ${record.password}`,
-      `Sign in: ${tenantAppUrl}/login`,
+      `Sign in: ${tenantAppBaseUrl()}/login`,
     ].join('\n');
     try {
       await navigator.clipboard.writeText(text);
@@ -63,7 +62,7 @@ export function ProvisionedTenantCredentialsDialog({
         <p className="text-muted-foreground text-sm">
           Use these credentials to sign in to the{' '}
           <a
-            href={`${tenantAppUrl}/login`}
+            href={`${tenantAppBaseUrl()}/login`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary font-medium hover:underline"
@@ -119,7 +118,7 @@ export function ProvisionedTenantCredentialsDialog({
             Copy credentials
           </Button>
           <Button type="button" variant="outline" asChild>
-            <a href={`${tenantAppUrl}/login`} target="_blank" rel="noopener noreferrer">
+            <a href={`${tenantAppBaseUrl()}/login`} target="_blank" rel="noopener noreferrer">
               Open tenant app sign-in
             </a>
           </Button>

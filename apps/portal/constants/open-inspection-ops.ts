@@ -111,6 +111,7 @@ export interface OpenInspectionRental {
   deposit?: number;
   availableFrom?: string;
   moveInDate?: string;
+  leaseTerm?: string;
 }
 
 export interface OpenInspectionLandlord {
