@@ -99,7 +99,7 @@ function ChartCard({
     <Link
       href={href}
       className={cn(
-        'flex gap-3 rounded-2xl border bg-card p-3 transition active:scale-[0.98] hover:border-primary/30 hover:shadow-sm lg:gap-4 lg:p-4',
+        'flex h-full gap-3 rounded-2xl border bg-card p-3 transition active:scale-[0.98] hover:border-primary/30 hover:shadow-sm lg:gap-4 lg:p-4',
         className,
       )}
     >
@@ -132,6 +132,116 @@ const CHART_COLORS = {
   red: 'var(--chart-4)',
   violet: 'var(--chart-5)',
 };
+
+export type DashboardKpiWidgetKey =
+  | 'kpi_properties'
+  | 'kpi_maintenance'
+  | 'kpi_inspections'
+  | 'kpi_tribunal'
+  | 'kpi_leasing'
+  | 'kpi_accounting';
+
+export function DashboardKpiWidget({
+  widgetId,
+  k,
+  className,
+}: {
+  widgetId: DashboardKpiWidgetKey;
+  k: DashboardKpis;
+  className?: string;
+}) {
+  switch (widgetId) {
+    case 'kpi_properties':
+      return (
+        <ChartCard
+          title="Properties"
+          icon={Building2}
+          href={k.properties.href}
+          className={className}
+          segments={[
+            { label: 'Occupied', value: k.properties.occupied, color: CHART_COLORS.primary },
+            { label: 'Vacant', value: k.properties.vacant, color: CHART_COLORS.amber },
+          ]}
+        />
+      );
+    case 'kpi_maintenance':
+      return (
+        <ChartCard
+          title="Maintenance"
+          icon={Wrench}
+          href={k.maintenance.href}
+          className={className}
+          segments={[
+            { label: 'Approval', value: k.maintenance.pendingApproval, color: CHART_COLORS.red },
+            { label: 'In progress', value: k.maintenance.inProgress, color: CHART_COLORS.blue },
+            { label: 'Done', value: k.maintenance.completed, color: CHART_COLORS.primary },
+          ]}
+        />
+      );
+    case 'kpi_inspections':
+      return (
+        <ChartCard
+          title="Inspections"
+          icon={ClipboardList}
+          href={k.inspection.href}
+          className={className}
+          segments={[
+            { label: 'Open', value: k.inspection.openPending, color: CHART_COLORS.violet },
+            { label: 'Ingoing', value: k.inspection.ingoingPending, color: CHART_COLORS.blue },
+            { label: 'Outgoing', value: k.inspection.outgoingPending, color: CHART_COLORS.amber },
+            { label: 'Routine', value: k.inspection.routinePending, color: CHART_COLORS.primary },
+          ]}
+        />
+      );
+    case 'kpi_tribunal':
+      return (
+        <ChartCard
+          title="Tribunal"
+          icon={Gavel}
+          href={k.tribunal.href}
+          className={className}
+          segments={[
+            { label: 'Active', value: k.tribunal.active, color: CHART_COLORS.red },
+            { label: 'Action', value: k.tribunal.actionRequired, color: CHART_COLORS.amber },
+            { label: 'Closed', value: k.tribunal.closed, color: CHART_COLORS.primary },
+          ]}
+        />
+      );
+    case 'kpi_leasing':
+      return (
+        <ChartCard
+          title="Leasing"
+          icon={FileText}
+          href={k.leasing.href}
+          className={className}
+          segments={[
+            { label: 'New', value: k.leasing.newLeasing, color: CHART_COLORS.violet },
+            { label: 'Rent review', value: k.leasing.upcomingRentReviews, color: CHART_COLORS.blue },
+            { label: 'Renewals', value: k.leasing.leaseRenewals, color: CHART_COLORS.primary },
+          ]}
+        />
+      );
+    case 'kpi_accounting':
+      return (
+        <ChartCard
+          title="Accounting"
+          icon={Wallet}
+          href={k.accounting.href}
+          className={className}
+          segments={[
+            { label: 'In arrears', value: k.accounting.propertiesInArrears, color: CHART_COLORS.red },
+            {
+              label: 'Paid up',
+              value: Math.max(k.properties.total - k.accounting.propertiesInArrears, 0),
+              color: CHART_COLORS.primary,
+            },
+          ]}
+        />
+      );
+    default:
+      return null;
+  }
+}
 
 export function DashboardChartHub({ k }: { k: DashboardKpis }) {
   return (

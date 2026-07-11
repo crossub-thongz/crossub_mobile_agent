@@ -22,7 +22,14 @@ function isMappable(property: Property): property is MappableProperty {
   );
 }
 
-export function DashboardPropertiesMap({ properties }: { properties: Property[] }) {
+export function DashboardPropertiesMap({
+  properties,
+  embedded = false,
+}: {
+  properties: Property[];
+  /** Fill parent grid cell height instead of fixed viewport height. */
+  embedded?: boolean;
+}) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -152,15 +159,20 @@ export function DashboardPropertiesMap({ properties }: { properties: Property[] 
   }
 
   return (
-    <div className="space-y-2">
+    <div className={embedded ? 'flex h-full min-h-0 flex-col gap-2' : 'space-y-2'}>
       <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <div
           ref={mapContainerRef}
-          className="bg-muted/30 h-[min(52vh,360px)] w-full min-h-[220px]"
+          className={
+            embedded
+              ? 'bg-muted/30 h-full min-h-[180px] w-full'
+              : 'bg-muted/30 h-[min(52vh,360px)] w-full min-h-[220px]'
+          }
           aria-label="Portfolio properties map"
         />
       </div>
-      <p className="text-muted-foreground text-xs">
+      {!embedded ? (
+        <p className="text-muted-foreground text-xs">
         {mappable.length > 0 ? (
           <>
             <span className="text-foreground font-medium tabular-nums">{mappable.length}</span>
@@ -177,6 +189,7 @@ export function DashboardPropertiesMap({ properties }: { properties: Property[] 
           'No properties with map coordinates yet — add locations when registering properties.'
         )}
       </p>
+      ) : null}
     </div>
   );
 }

@@ -1,0 +1,26 @@
+.dashboard-grid .react-grid-item {
+  transition: box-shadow 0.15s ease;
+}
+
+.dashboard-grid.dashboard-grid--editing .react-grid-item {
+  cursor: default;
+}
+
+.dashboard-grid .react-grid-item.react-draggable-dragging {
+  z-index: 20;
+}
+
+.dashboard-grid .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.dashboard-grid.dashboard-grid--editing .react-resizable-handle {
+  opacity: 1;
+}
+
+.dashboard-grid .react-grid-placeholder {
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+  border-radius: 1rem;
+  opacity: 0.85;
+}
