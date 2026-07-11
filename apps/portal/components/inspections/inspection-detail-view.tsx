@@ -94,10 +94,12 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
     ? OPEN_CONDUCTED_BY_LABEL.agent
     : insp.inspector ?? 'Unassigned';
   const visitors = openSession?.visitors ?? [];
-  const approvedApplicants = visitors.filter(
+  const applicantsWithApplications = visitors.filter((v) => v.application);
+  const approvedApplicants = applicantsWithApplications.filter(
     (v) => v.application?.agentDecision === LEASING_AGENT_DECISION.APPROVED,
   );
-  const canGenerateReport = approvedApplicants.length > 0 && !reportGenerated;
+  const canGenerateReport =
+    applicantsWithApplications.length > 0 && !reportGenerated;
   const hasReport = insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
 
   const TypeIcon =
@@ -253,7 +255,7 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
       ) : null}
 
       {openSession && insp.source === 'open_viewing' ? (
-        <InfoSection title={`Applicants (${visitors.filter((v) => v.application).length})`}>
+        <InfoSection title={`Applicants (${applicantsWithApplications.length})`}>
           <OpenInspectionApplicantPanel
             session={openSession}
             onSessionChange={(session) => {
