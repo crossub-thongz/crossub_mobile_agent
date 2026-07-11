@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CalendarClock, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
 import { StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail } from '@/constants/routes';
 import { cancelAgentLeasingCycle } from '@/lib/crossub-api/agent-workflow-client';
+import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import { LEASING_UI } from '@/lib/leasing/constants';
 import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspection-session';
@@ -34,6 +36,8 @@ import {
 } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { openViewingsApi } from '@/lib/open-viewings-api';
 import { cn, formatDate } from '@/lib/utils';
 
 function pendingOr(value?: string | null): string {
@@ -49,6 +53,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = cycle?.id;
@@ -73,6 +78,22 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     oi.scheduledTime ?? linkedInspection?.scheduledAt,
     oi.scheduledTimeEnd,
   );
+
+  const staffOpenInspectionHref =
+    oi.viewingSessionId
+      ? crossubWebOpenInspectionUrl(detail.propertyId, oi.viewingSessionId)
+      : null;
+
+  useEffect(() => {
+    if (!apiConnected || !oi.viewingSessionId) {
+      setOpenSession(null);
+      return;
+    }
+    void openViewingsApi
+      .get(oi.viewingSessionId)
+      .then(setOpenSession)
+      .catch(() => setOpenSession(null));
+  }, [apiConnected, oi.viewingSessionId]);
 
   const allowCancel = canCancelLetting(detail, linkedInspection);
 
@@ -123,11 +144,21 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   );
 
   const inspectorFacts = (
-    <div className="grid grid-cols-2 gap-3">
-      <StepFact label="Inspection time" value={inspectionTime} className="sm:col-span-2" />
-      <StepFact label="Inspector name" value={inspectorName} />
-      <StepFact label="Contact number" value={pendingOr(oi.inspectorPhone)} />
-      <StepFact label="Email" value={pendingOr(oi.inspectorEmail)} className="sm:col-span-2" />
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <StepFact label="Inspection time" value={inspectionTime} className="sm:col-span-2" />
+        <StepFact label="Inspector name" value={inspectorName} />
+        <StepFact label="Contact number" value={pendingOr(oi.inspectorPhone)} />
+        <StepFact label="Email" value={pendingOr(oi.inspectorEmail)} className="sm:col-span-2" />
+      </div>
+      {staffOpenInspectionHref ? (
+        <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+          <a href={staffOpenInspectionHref} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="size-3.5" />
+            Open in CROSSUB staff portal
+          </a>
+        </Button>
+      ) : null}
     </div>
   );
 
@@ -187,6 +218,10 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
           </p>
         ) : null}
       </StepCard>
+
+      {openSession?.applyUrl ? (
+        <OpenInspectionApplyShareCard session={openSession} compact />
+      ) : null}
 
       <Dialog
         open={cancelOpen}

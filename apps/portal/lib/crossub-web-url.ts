@@ -13,3 +13,12 @@ export function crossubWebPropertyUrl(propertyId: string): string {
 export function crossubWebRentReviewUrl(reviewId: string): string {
   return `${crossubWebBaseUrl()}/rent-review?reviewId=${encodeURIComponent(reviewId)}`;
 }
+
+/** Open an open-inspection job case in the CROSSUB staff web property portal. */
+export function crossubWebOpenInspectionUrl(propertyId: string, sessionId: string): string {
+  const params = new URLSearchParams({
+    propertyId,
+    inspectionCaseId: sessionId,
+  });
+  return `${crossubWebBaseUrl()}/properties?${params.toString()}`;
+}

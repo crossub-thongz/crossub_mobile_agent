@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { DocumentViewer } from '@/components/agent/document-viewer';
@@ -35,6 +36,7 @@ import {
   inspectionNextAction,
 } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
+import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import {
   OPEN_CONDUCTED_BY_LABEL,
   OPEN_LISTING_CONTEXT_LABEL,
@@ -227,12 +229,30 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
         </InfoSection>
       )}
 
+      {openSession && insp.source === 'open_viewing' ? (
+        <OpenInspectionApplyShareCard session={openSession} />
+      ) : null}
+
+      {openSession?.agent?.name && (
+        <InfoSection title="Managing agent">
+          <InfoRow label="Agent" value={openSession.agent.name} icon={User} />
+          {openSession.agent.phone ? (
+            <InfoRow label="Phone" value={openSession.agent.phone} />
+          ) : null}
+        </InfoSection>
+      )}
+
       {visitors.length > 0 && (
-        <InfoSection title={`Visitors (${visitors.length})`}>
+        <InfoSection title={`Applicants (${visitors.length})`}>
           <ul className="space-y-2">
             {visitors.map((visitor) => (
               <li key={visitor.id} className="rounded-xl border bg-background px-3 py-2.5 text-xs">
-                <p className="font-medium">{visitor.name}</p>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="font-medium">{visitor.name}</p>
+                  {visitor.application ? (
+                    <StatusBadge label={visitor.application.agentDecision} />
+                  ) : null}
+                </div>
                 <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
                   {visitor.email && (
                     <span className="inline-flex items-center gap-1">
@@ -248,11 +268,24 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
                   )}
                 </div>
                 <p className="text-muted-foreground mt-1 capitalize">
-                  {visitor.attendanceStatus.replace('_', ' ')} · {visitor.interestLevel} interest
+                  {visitor.registrationSource.replace(/_/g, ' ')} ·{' '}
+                  {visitor.attendanceStatus.replace(/_/g, ' ')}
+                  {visitor.application ? ' · application submitted' : ''}
                 </p>
               </li>
             ))}
           </ul>
+          {insp.propertyId ? (
+            <Button asChild size="sm" variant="outline" className="mt-3 h-8 gap-1.5 text-xs">
+              <a
+                href={crossubWebOpenInspectionUrl(insp.propertyId, insp.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Manage in staff portal
+              </a>
+            </Button>
+          ) : null}
         </InfoSection>
       )}
 

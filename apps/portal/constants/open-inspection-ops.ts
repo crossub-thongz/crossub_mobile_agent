@@ -140,6 +140,7 @@ export interface OpenInspectionSession {
   cycle: SessionCycle;
   rental?: OpenInspectionRental;
   shortNote?: string;
+  applyUrl?: string;
   visitors: OpenInspectionVisitor[];
 }
 
