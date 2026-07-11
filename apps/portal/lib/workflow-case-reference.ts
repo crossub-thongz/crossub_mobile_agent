@@ -32,8 +32,8 @@ const WORKFLOW_CASE_REF_PREFIX: Record<WorkflowCaseRefKind, string> = {
   open: 'OP-',
   maintenance: 'M-',
   rent_review: 'RR-',
-  leasing: 'EL-',
-  end_leasing: 'NL-',
+  leasing: 'NL-',
+  end_leasing: 'EL-',
   tribunal: 'T-',
 };
 
