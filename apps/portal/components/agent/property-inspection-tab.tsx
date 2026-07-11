@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { PropertyInspectionWorkflowShell } from '@/components/agent/property-inspection-workflow-shell';
+import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
+import { fromProperty } from '@/lib/detail-navigation';
 import { inspectionJobRows } from '@/lib/property-job-rows';
 import { VACANT_TENANCY_INSPECTIONS_HINT } from '@/lib/property-leasing';
 import type {
@@ -31,7 +32,6 @@ export function PropertyInspectionTab({
   tenantSelections,
   currentLease,
   isVacant,
-  onViewInspection,
   onRefresh,
 }: {
   property: Property;
@@ -45,26 +45,12 @@ export function PropertyInspectionTab({
   tenantSelections: TenantSelectionCase[];
   currentLease?: LeasingRecord;
   isVacant: boolean;
-  onViewInspection: (inspectionId: string) => void;
+  onViewInspection?: (inspectionId: string) => void;
   onRefresh?: () => void;
 }) {
   const jobRows = useMemo(() => inspectionJobRows(inspections), [inspections]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-
-  const selectedInspection = useMemo(
-    () => inspections.find((inspection) => inspection.id === selectedCaseId) ?? null,
-    [inspections, selectedCaseId],
-  );
-
-  useEffect(() => {
-    if (inspections.length === 0) {
-      setSelectedCaseId(null);
-      return;
-    }
-    if (!selectedCaseId || !inspections.some((inspection) => inspection.id === selectedCaseId)) {
-      setSelectedCaseId(inspections[0]?.id ?? null);
-    }
-  }, [inspections, selectedCaseId]);
+  const [dialogInspection, setDialogInspection] = useState<Inspection | null>(null);
 
   const emptyDescription = isVacant
     ? VACANT_TENANCY_INSPECTIONS_HINT
@@ -85,47 +71,35 @@ export function PropertyInspectionTab({
     onCreated: onRefresh,
   };
 
+  const handleRowClick = (id: string) => {
+    setSelectedCaseId(id);
+    setDialogInspection(inspections.find((inspection) => inspection.id === id) ?? null);
+  };
+
+  const handleDialogClose = () => {
+    setDialogInspection(null);
+    setSelectedCaseId(null);
+  };
+
   return (
     <div className="space-y-4">
       <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
 
-      {jobRows.length === 0 ? (
-        <PropertyJobCasesTable
-          rows={[]}
-          emptyTitle="No inspections"
-          emptyDescription={emptyDescription}
-        />
-      ) : (
-        <>
-          <PropertyJobCasesTable
-            rows={jobRows}
-            selectedId={selectedCaseId}
-            onRowClick={setSelectedCaseId}
-          />
-          {selectedInspection ? (
-            <PropertyInspectionWorkflowShell
-              cases={[
-                {
-                  id: selectedInspection.id,
-                  category:
-                    selectedInspection.type === 'OPEN'
-                      ? 'open'
-                      : selectedInspection.type === 'INGOING'
-                        ? 'ingoing'
-                        : selectedInspection.type === 'OUTGOING'
-                          ? 'outgoing'
-                          : 'routine',
-                  label: selectedInspection.trackingNumber,
-                  status: selectedInspection.status,
-                  currentStep: selectedInspection.status,
-                  inspection: selectedInspection,
-                },
-              ]}
-              onViewDetails={onViewInspection}
-            />
-          ) : null}
-        </>
-      )}
+      <PropertyJobCasesTable
+        rows={jobRows}
+        selectedId={selectedCaseId}
+        onRowClick={handleRowClick}
+        emptyTitle="No inspections"
+        emptyDescription={emptyDescription}
+      />
+
+      <InspectionDetailDialog
+        open={dialogInspection !== null}
+        onClose={handleDialogClose}
+        inspection={dialogInspection}
+        navContext={fromProperty(propertyId, 'Inspection')}
+        size="xl"
+      />
     </div>
   );
 }

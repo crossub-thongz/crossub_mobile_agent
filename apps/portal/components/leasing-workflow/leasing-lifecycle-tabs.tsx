@@ -10,7 +10,13 @@ import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
-export function LeasingLifecycleTabs({ detail }: { detail: LeasingPropertyDetail }) {
+export function LeasingLifecycleTabs({
+  detail,
+  onCaseClosed,
+}: {
+  detail: LeasingPropertyDetail;
+  onCaseClosed?: () => void;
+}) {
   const activeStep = useLeasingWorkflowStore((s) => s.getActiveStep(detail.propertyId));
   const setActiveStep = useLeasingWorkflowStore((s) => s.setActiveStep);
   const liveDetail = useLeasingWorkflowStore((s) => s.getDetail(detail.propertyId)) ?? detail;
@@ -23,7 +29,7 @@ export function LeasingLifecycleTabs({ detail }: { detail: LeasingPropertyDetail
         onStepClick={(step) => setActiveStep(detail.propertyId, step)}
       />
 
-      <StepPanel step={activeStep} detail={liveDetail} />
+      <StepPanel step={activeStep} detail={liveDetail} onCaseClosed={onCaseClosed} />
     </div>
   );
 }
@@ -31,9 +37,11 @@ export function LeasingLifecycleTabs({ detail }: { detail: LeasingPropertyDetail
 function StepPanel({
   step,
   detail,
+  onCaseClosed,
 }: {
   step: LeasingLifecycleStep;
   detail: LeasingPropertyDetail;
+  onCaseClosed?: () => void;
 }) {
   switch (step) {
     case LEASING_LIFECYCLE_STEP.OPEN_INSPECTION:
@@ -43,7 +51,7 @@ function StepPanel({
     case LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL:
       return <LeasingStepApplicationApproval detail={detail} />;
     case LEASING_LIFECYCLE_STEP.RESULTS:
-      return <LeasingStepResults detail={detail} />;
+      return <LeasingStepResults detail={detail} onCaseClosed={onCaseClosed} />;
     case LEASING_LIFECYCLE_STEP.ONBOARDING:
       return <LeasingStepOnboarding detail={detail} />;
     default:

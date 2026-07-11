@@ -328,6 +328,7 @@ export function PropertyWorkflowCreateDialog({
   const [maintTenantName, setMaintTenantName] = useState('');
   const [maintTenantEmail, setMaintTenantEmail] = useState('');
   const [maintTenantPhone, setMaintTenantPhone] = useState('');
+  const [maintMediaUrls, setMaintMediaUrls] = useState<string[]>([]);
 
   const [moveInDate, setMoveInDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
@@ -412,6 +413,7 @@ export function PropertyWorkflowCreateDialog({
     setMaintTenantName(maintenance.tenantName);
     setMaintTenantEmail(maintenance.tenantEmail);
     setMaintTenantPhone(maintenance.tenantPhone);
+    setMaintMediaUrls([]);
 
     const ingoing = buildIngoingInspectionPrefill(property, currentLease, leasingCycle, {
       tenantSelections,
@@ -658,6 +660,7 @@ export function PropertyWorkflowCreateDialog({
           description: description.trim(),
           address: maintPrefill.address,
           urgent: maintPriority === 'urgent',
+          ...(maintMediaUrls.length ? { photos: maintMediaUrls } : {}),
           tenant: maintTenantName.trim()
             ? {
                 name: maintTenantName.trim(),
@@ -1168,6 +1171,7 @@ export function PropertyWorkflowCreateDialog({
         {actionId === 'start_maintenance' ? (
           <MaintenanceNewJobFormFields
             address={maintPrefill.address}
+            propertyId={propertyId}
             issueTypeSelection={issueTypeSelection}
             issueTypeOther={issueTypeOther}
             onIssueTypeSelectionChange={setIssueTypeSelection}
@@ -1182,6 +1186,9 @@ export function PropertyWorkflowCreateDialog({
             onTenantEmailChange={setMaintTenantEmail}
             tenantPhone={maintTenantPhone}
             onTenantPhoneChange={setMaintTenantPhone}
+            mediaUrls={maintMediaUrls}
+            onMediaUrlsChange={setMaintMediaUrls}
+            disabled={submitting}
           />
         ) : null}
 

@@ -51,6 +51,7 @@ export type CreateAgentMaintenanceInput = {
   address?: string;
   urgent?: boolean;
   tenant?: { name: string; email?: string; phone?: string };
+  photos?: string[];
 };
 
 export type CreateAgentIngoingInspectionInput = {
@@ -124,6 +125,17 @@ export async function createAgentMaintenanceRequest(
   return agentFetch(`${base(propertyId)}/maintenance`, {
     method: 'POST',
     body: JSON.stringify(body),
+  });
+}
+
+/** Stage maintenance evidence (base64 → R2) before logging the job. */
+export async function uploadMaintenancePhoto(
+  propertyId: string,
+  input: { fileName: string; mimeType: string; sizeBytes: number; contentBase64: string },
+): Promise<{ url: string }> {
+  return agentFetch(`${base(propertyId)}/maintenance/photos/upload`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 

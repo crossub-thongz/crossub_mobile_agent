@@ -18,11 +18,13 @@ function ApplicantFeedbackCell({
   cycleId,
   propertyId,
   apiConnected,
+  onCaseClosed,
 }: {
   app: LeasingApplicationDetail;
   cycleId?: string;
   propertyId: string;
   apiConnected: boolean;
+  onCaseClosed?: () => void;
 }) {
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const [draft, setDraft] = useState(app.feedback ?? '');
@@ -34,11 +36,12 @@ function ApplicantFeedbackCell({
   }, [app.feedback, app.id]);
 
   const trimmed = draft.trim();
-  const canSend = apiConnected && !!cycleId && trimmed.length > 0;
   const sentAt = app.feedbackSentAt;
+  const alreadySent = Boolean(sentAt);
+  const canSend = apiConnected && !!cycleId && trimmed.length > 0 && !alreadySent;
 
   const saveDraft = async () => {
-    if (!apiConnected || !cycleId) {
+    if (!apiConnected || !cycleId || alreadySent) {
       toast.error('Connect to the API to save feedback');
       return;
     }
@@ -68,7 +71,12 @@ function ApplicantFeedbackCell({
         feedback: trimmed,
       });
       applyCycleView(propertyId, view);
-      toast.success(`Feedback sent to ${app.applicant}`);
+      if (!view.isActive) {
+        onCaseClosed?.();
+        toast.success('All applicant results sent — new leasing case closed');
+      } else {
+        toast.success(`Feedback sent to ${app.applicant}`);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not send feedback');
     } finally {
@@ -84,7 +92,7 @@ function ApplicantFeedbackCell({
         placeholder="Write feedback for this applicant…"
         rows={3}
         maxLength={2000}
-        disabled={!apiConnected || saving || sending}
+        disabled={!apiConnected || saving || sending || alreadySent}
         className="min-h-[72px] resize-y text-xs"
       />
       <div className="flex flex-wrap items-center gap-2">
@@ -93,7 +101,7 @@ function ApplicantFeedbackCell({
           size="sm"
           variant="outline"
           onClick={saveDraft}
-          disabled={!apiConnected || !trimmed || saving || sending}
+          disabled={!apiConnected || !trimmed || saving || sending || alreadySent}
         >
           Save draft
         </Button>
@@ -127,7 +135,13 @@ function ApplicantFeedbackCell({
   );
 }
 
-export function LeasingStepResults({ detail }: { detail: LeasingPropertyDetail }) {
+export function LeasingStepResults({
+  detail,
+  onCaseClosed,
+}: {
+  detail: LeasingPropertyDetail;
+  onCaseClosed?: () => void;
+}) {
   const { leasingCycles, apiConnected } = useAgentData();
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = cycle?.id;
@@ -143,8 +157,14 @@ export function LeasingStepResults({ detail }: { detail: LeasingPropertyDetail }
           {applicants.length} applicant{applicants.length === 1 ? '' : 's'} applied
         </p>
         <p className="text-muted-foreground mt-0.5 text-xs">
-          Write feedback for each applicant, then send it back to them by email.
+          Write feedback for each applicant, then send it back to them by email. Each applicant can
+          only be sent feedback once.
         </p>
+        {detail.cycleActive === false ? (
+          <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            This new leasing case is closed — all applicant results were sent.
+          </p>
+        ) : null}
       </div>
 
       {applicants.length === 0 ? (
@@ -181,6 +201,7 @@ export function LeasingStepResults({ detail }: { detail: LeasingPropertyDetail }
                         cycleId={cycleId}
                         propertyId={detail.propertyId}
                         apiConnected={apiConnected}
+                        onCaseClosed={onCaseClosed}
                       />
                     </td>
                   </tr>

@@ -6,7 +6,7 @@ import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { PropertyLeasingCaseWorkflowContent } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { PropertyMaintenanceJobPanel } from '@/components/agent/property-maintenance-job-panel';
-import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
+import { RentReviewWorkflowTimeline } from '@/components/rent-review/rent-review-workflow-timeline';
 import { Button } from '@/components/ui/button';
 import { VacatingWorkflowTimeline } from '@/components/vacating-workflow/vacating-workflow-timeline';
 import { tribunalDetail } from '@/constants/routes';
@@ -69,14 +69,17 @@ export function PropertyOverviewJobDialog({
 
   if (job.kind === 'rent_review') {
     const review = rentReviews.find((item) => item.id === job.id) ?? null;
+    if (!review) return null;
     return (
-      <RentReviewDetailDialog
+      <CaseDetailDialog
         open={open}
         onClose={onClose}
-        review={review}
-        navContext={fromProperty(propertyId, 'Overview')}
+        title="Rent review"
+        subtitle={`${job.name} · ${job.status}`}
         size="xl"
-      />
+      >
+        <RentReviewWorkflowTimeline review={review} />
+      </CaseDetailDialog>
     );
   }
 

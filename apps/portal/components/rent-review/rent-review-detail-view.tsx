@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
-import { ModuleCommunications } from '@/components/agent/module-communications';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
+import { RentReviewEmailLog } from '@/components/rent-review/rent-review-email-log';
+import { emailRecordsFromAudit } from '@/lib/rent-review/agent-workflow-model';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { useLivePoll } from '@/lib/use-live-poll';
@@ -76,6 +77,8 @@ function RentReviewDetailContent({
     onUpdated?.();
   };
 
+  const communicationEmails = useMemo(() => emailRecordsFromAudit(detail), [detail]);
+
   return (
     <div className="space-y-4">
       {!hideHeader ? (
@@ -108,13 +111,9 @@ function RentReviewDetailContent({
 
       <RentReviewAgentWorkflowPanel detail={detail} onUpdated={handleUpdated} />
 
-      {detail.propertyId ? (
-        <ModuleCommunications
-          propertyId={detail.propertyId}
-          categories={['Leasing']}
-          title="Rent review communications"
-        />
-      ) : null}
+      <section className="rounded-xl border bg-card p-4">
+        <RentReviewEmailLog title="Rent review communications" emails={communicationEmails} />
+      </section>
     </div>
   );
 }

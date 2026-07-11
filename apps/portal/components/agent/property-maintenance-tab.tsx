@@ -1,13 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
-import { PropertyMaintenanceJobPanel } from '@/components/agent/property-maintenance-job-panel';
+import { PropertyMaintenanceCaseDialog } from '@/components/agent/property-maintenance-case-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { maintenanceJobRows } from '@/lib/property-job-rows';
-import { pickPrimaryMaintenanceCase } from '@/lib/property-maintenance-workflow-cases';
-import { cn } from '@/lib/utils';
 import type {
   Inspection,
   LeasingCycle,
@@ -47,31 +45,7 @@ export function PropertyMaintenanceTab({
 }) {
   const jobRows = useMemo(() => maintenanceJobRows(maintenance), [maintenance]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-
-  const selectedRequest = useMemo(
-    () => maintenance.find((request) => request.id === selectedCaseId) ?? null,
-    [maintenance, selectedCaseId],
-  );
-
-  useEffect(() => {
-    if (maintenance.length === 0) {
-      setSelectedCaseId(null);
-      return;
-    }
-    if (!selectedCaseId || !maintenance.some((request) => request.id === selectedCaseId)) {
-      const primary = pickPrimaryMaintenanceCase(
-        maintenance.map((request) => ({
-          id: request.id,
-          label: request.trackingNumber,
-          title: request.title,
-          status: request.status,
-          currentStep: request.status,
-          request,
-        })),
-      );
-      setSelectedCaseId(primary?.id ?? maintenance[0]?.id ?? null);
-    }
-  }, [maintenance, selectedCaseId]);
+  const [dialogRequest, setDialogRequest] = useState<MaintenanceRequest | null>(null);
 
   const workflowPanelProps = {
     tab: 'maintenance' as const,
@@ -88,44 +62,35 @@ export function PropertyMaintenanceTab({
     onCreated: onRefresh,
   };
 
+  const handleRowClick = (id: string) => {
+    setSelectedCaseId(id);
+    setDialogRequest(maintenance.find((request) => request.id === id) ?? null);
+  };
+
+  const handleDialogClose = () => {
+    setDialogRequest(null);
+    setSelectedCaseId(null);
+  };
+
   return (
     <div className="space-y-4">
       <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
 
-      {jobRows.length === 0 ? (
-        <PropertyJobCasesTable
-          rows={[]}
-          emptyTitle="No maintenance jobs"
-          emptyDescription="Log a maintenance job for this property to begin the workflow."
-        />
-      ) : (
-        <>
-          <PropertyJobCasesTable
-            rows={jobRows}
-            selectedId={selectedCaseId}
-            onRowClick={setSelectedCaseId}
-          />
-          {selectedRequest ? (
-            <section
-              key={selectedRequest.id}
-              className={cn(
-                'animate-in fade-in-0 slide-in-from-top-2 duration-300',
-                'space-y-2 rounded-xl border-2 border-primary/30 bg-primary/[0.04] p-3 shadow-sm ring-1 ring-primary/15',
-              )}
-              aria-label="Selected maintenance job"
-            >
-              <p className="text-primary px-1 text-[10px] font-bold uppercase tracking-[0.18em]">
-                Selected job
-              </p>
-              <PropertyMaintenanceJobPanel
-                item={selectedRequest}
-                property={property}
-                propertyId={propertyId}
-              />
-            </section>
-          ) : null}
-        </>
-      )}
+      <PropertyJobCasesTable
+        rows={jobRows}
+        selectedId={selectedCaseId}
+        onRowClick={handleRowClick}
+        emptyTitle="No maintenance jobs"
+        emptyDescription="Log a maintenance job for this property to begin the workflow."
+      />
+
+      <PropertyMaintenanceCaseDialog
+        open={dialogRequest !== null}
+        onClose={handleDialogClose}
+        request={dialogRequest}
+        property={property}
+        propertyId={propertyId}
+      />
     </div>
   );
 }

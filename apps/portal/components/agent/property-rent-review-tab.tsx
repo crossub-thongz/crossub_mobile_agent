@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { rentReviewDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
@@ -24,7 +25,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { rentReviewJobRows } from '@/lib/property-job-rows';
-import { RENT_REVIEW_CONDUCT_WINDOW_DAYS } from '@/lib/rent-review/scheduling';
+import { RENT_REVIEW_ADVANCE_ORDER_DAYS, RENT_REVIEW_CONDUCT_WINDOW_DAYS, RENT_REVIEW_STATUTORY_NOTICE_DAYS } from '@/lib/rent-review/scheduling';
 
 function RentReviewHistoryTable({
   rows,
@@ -85,7 +86,6 @@ export function PropertyRentReviewTab({
   tribunalCases,
   tenantSelections,
   currentLease,
-  onViewRentReview,
   onWorkflowCreated,
 }: {
   property: Property;
@@ -104,6 +104,7 @@ export function PropertyRentReviewTab({
   onWorkflowCreated?: () => void;
 }) {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [dialogReview, setDialogReview] = useState<RentReviewCase | null>(null);
 
   const workflowPanelProps = {
     tab: 'rent_review' as const,
@@ -174,7 +175,12 @@ export function PropertyRentReviewTab({
 
   const handleRowClick = (id: string) => {
     setSelectedCaseId(id);
-    onViewRentReview?.(id);
+    setDialogReview(rentReviews.find((review) => review.id === id) ?? null);
+  };
+
+  const handleDialogClose = () => {
+    setDialogReview(null);
+    setSelectedCaseId(null);
   };
 
   return (
@@ -192,8 +198,11 @@ export function PropertyRentReviewTab({
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Rent review cases</h3>
         <p className="text-muted-foreground text-xs">
-          Click a case to open the full rent review workflow. Countdown shows days left in the{' '}
-          {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day review window (order placed 90 days ahead; 60-day tenant notice required).
+          Click a case to open the full rent review workflow. Countdown tracks the agent&apos;s{' '}
+          {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day review window (order placed{' '}
+          {RENT_REVIEW_ADVANCE_ORDER_DAYS} days before lease end). Tenant reminder shows when the
+          system auto-notifies the tenant {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease
+          end.
         </p>
         <PropertyJobCasesTable
           rows={jobRows}
@@ -222,6 +231,12 @@ export function PropertyRentReviewTab({
           <RentReviewHistoryTable rows={historyRows} propertyId={propertyId} />
         )}
       </section>
+
+      <PropertyRentReviewCaseWorkflowDialog
+        open={dialogReview !== null}
+        onClose={handleDialogClose}
+        review={dialogReview}
+      />
     </div>
   );
 }

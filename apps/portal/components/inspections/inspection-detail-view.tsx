@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
 import { OpenInspectionRentalFacts } from '@/components/open-inspection/open-inspection-rental-facts';
@@ -285,12 +286,14 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
               {generatingReport ? 'Generating…' : 'Generate open report'}
             </Button>
             {(reportGenerated || approvedApplicants.length > 0) && (
-              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
-                <a href={openViewingsApi.reportPdfUrl(openSession.id)} target="_blank" rel="noopener noreferrer">
-                  <FileText className="size-3.5" />
-                  Download PDF
-                </a>
-              </Button>
+              <InspectionReportDownloadActions
+                inspectionId={openSession.id}
+                propertyLabel={insp.propertyAddress}
+                inspectionType="open"
+                fetchPdf={openViewingsApi.downloadReportPdf}
+                variant="inline"
+                size="sm"
+              />
             )}
           </div>
         </InfoSection>

@@ -7,6 +7,12 @@ import {
 } from '@/lib/leasing/constants';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
+export function areAllApplicantResultsSent(detail: LeasingPropertyDetail): boolean {
+  const apps = detail.applicationsDetail;
+  if (apps.length === 0) return false;
+  return apps.every((a) => Boolean(a.feedbackSentAt));
+}
+
 export function deriveApplicationStatus(detail: LeasingPropertyDetail): LeasingItemStatus {
   const apps = detail.applicationsDetail;
   if (apps.length === 0) return LEASING_ITEM_STATUS.NOT_STARTED;
@@ -167,9 +173,11 @@ export function deriveStepStatus(
     case LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL:
       return deriveApplicationStatus(detail);
     case LEASING_LIFECYCLE_STEP.RESULTS:
-      return detail.applicationsDetail.length > 0
-        ? LEASING_ITEM_STATUS.IN_PROGRESS
-        : LEASING_ITEM_STATUS.NOT_STARTED;
+      return areAllApplicantResultsSent(detail)
+        ? LEASING_ITEM_STATUS.DONE
+        : detail.applicationsDetail.length > 0
+          ? LEASING_ITEM_STATUS.IN_PROGRESS
+          : LEASING_ITEM_STATUS.NOT_STARTED;
     case LEASING_LIFECYCLE_STEP.ONBOARDING:
       return deriveOnboardingProceduresStatus(detail);
     default:

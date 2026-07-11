@@ -36,7 +36,6 @@ import {
   INSPECTION_STATUS,
   INSPECTION_TYPE,
   LEASE_STATUS,
-  MAINTENANCE_ORDER_TYPE,
   MAINTENANCE_STATUS,
   RENT_REVIEW_WORKFLOW_STATE,
   TRIBUNAL_CASE_STATUS,
@@ -310,32 +309,40 @@ const MAINTENANCE_STATUS_LABEL: Record<AgentMaintenance['status'], string> = {
   [MAINTENANCE_STATUS.CANCELLED]: 'Cancelled',
 };
 
-const RESPONSIBILITY_VIEW: Record<
-  AgentMaintenance['type'],
-  MaintenanceRequest['responsibility']
-> = {
-  [MAINTENANCE_ORDER_TYPE.TENANT_REQUEST]: 'tenant',
-  [MAINTENANCE_ORDER_TYPE.PROPERTY_MAINTENANCE]: 'landlord',
-  [MAINTENANCE_ORDER_TYPE.STRATA]: 'strata',
-  [MAINTENANCE_ORDER_TYPE.UNKNOWN]: 'pending',
-};
+function splitAgentMaintenanceDescription(description: string | null | undefined): {
+  issueType: string;
+  body: string;
+} {
+  const raw = description?.trim() ?? '';
+  const colon = raw.indexOf(':');
+  if (colon > 0) {
+    return {
+      issueType: raw.slice(0, colon).trim(),
+      body: raw.slice(colon + 1).trim(),
+    };
+  }
+  return { issueType: '', body: raw };
+}
 
 export function mapAgentMaintenance(
   dtos: AgentMaintenance[],
 ): MaintenanceRequest[] {
   return dtos.map((m) => {
     const priority: Priority = m.urgent ? 'urgent' : 'normal';
+    const parsed = splitAgentMaintenanceDescription(m.description);
+    const issueType = m.categoryName?.trim() || parsed.issueType || 'General maintenance';
+    const body = m.categoryName ? (m.description ?? '') : parsed.body || (m.description ?? '');
     return {
       id: m.id,
       trackingNumber: m.orderNumber ?? workflowCaseReferenceLabel(m.id, 'maintenance'),
       propertyId: m.propertyId ?? '',
       propertyAddress: m.propertyAddress,
-      title: m.categoryName ?? m.description ?? 'Maintenance request',
-      description: m.description ?? '',
+      title: issueType,
+      description: body,
       status: MAINTENANCE_STATUS_LABEL[m.status] ?? m.status,
       apiStatus: m.status,
       priority,
-      responsibility: RESPONSIBILITY_VIEW[m.type] ?? 'pending',
+      responsibility: 'pending',
       contractorName: m.contractorName ?? undefined,
       quoteAmount: m.quoteTotal ?? m.ourPrice ?? undefined,
       requiresApproval: m.status === MAINTENANCE_STATUS.QUOTING,

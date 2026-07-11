@@ -8,8 +8,8 @@ import {
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import type { RentReviewDecision } from '@/lib/rent-review';
-import { getRentReviewConductCountdown } from '@/lib/rent-review/conduct-countdown';
-import type { RentReviewConductCountdown } from '@/lib/rent-review/conduct-countdown';
+import { getRentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
+import type { RentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
 import type {
   Inspection,
   MaintenanceRequest,
@@ -41,8 +41,10 @@ export interface PropertyJobRow {
   date: string;
   status: string;
   phase: PropertyJobPhase;
-  /** 30-day conduct window countdown (rent review only). */
-  conductCountdown?: RentReviewConductCountdown;
+  /** Maintenance issue type / category (maintenance only). */
+  issueType?: string;
+  /** Rent review T−90 / T−60 schedule badges (rent review only). */
+  rentReviewSchedule?: RentReviewScheduleIndicators;
 }
 
 export function splitPropertyJobRows(rows: PropertyJobRow[]): {
@@ -94,6 +96,19 @@ function responsibilityLabelForRow(
   }
 }
 
+function maintenanceIssueType(request: MaintenanceRequest): string {
+  return request.title?.trim() || '—';
+}
+
+function maintenanceDescriptionBody(request: MaintenanceRequest): string {
+  const description = request.description?.trim() ?? '';
+  const issueType = request.title?.trim() ?? '';
+  if (issueType && description.toLowerCase().startsWith(`${issueType.toLowerCase()}:`)) {
+    return description.slice(issueType.length + 1).trim() || '—';
+  }
+  return description || '—';
+}
+
 export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobRow[] {
   return requests.map((request) => {
     const progress = maintenanceWorkflowProgress(request);
@@ -103,8 +118,9 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
       kind: 'maintenance',
       jobType: 'Maintenance',
       name: request.trackingNumber || workflowCaseReferenceLabel(request.id, 'maintenance'),
+      issueType: maintenanceIssueType(request),
       description: [
-        request.title,
+        maintenanceDescriptionBody(request),
         request.responsibility !== 'pending'
           ? responsibilityLabelForRow(request.responsibility)
           : null,
@@ -194,7 +210,7 @@ export function rentReviewJobRows(
       date: formatDate(review.reviewDue),
       status: progress.currentStepLabel,
       phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
-      conductCountdown: getRentReviewConductCountdown(review) ?? undefined,
+      rentReviewSchedule: getRentReviewScheduleIndicators(review) ?? undefined,
     };
   });
 }

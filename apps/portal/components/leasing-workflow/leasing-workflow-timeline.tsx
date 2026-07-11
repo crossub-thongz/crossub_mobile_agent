@@ -15,6 +15,7 @@ export function LeasingWorkflowTimeline({
   hideSectionLabel = false,
   focusBond = false,
   onFocusBondHandled,
+  onCaseClosed,
 }: {
   propertyId: string;
   propertyAddress: string;
@@ -22,6 +23,7 @@ export function LeasingWorkflowTimeline({
   hideSectionLabel?: boolean;
   focusBond?: boolean;
   onFocusBondHandled?: () => void;
+  onCaseClosed?: () => void;
 }) {
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const resetActiveStepToHint = useLeasingWorkflowStore((s) => s.resetActiveStepToHint);
@@ -64,7 +66,7 @@ export function LeasingWorkflowTimeline({
           Leasing workflow
         </p>
       ) : null}
-      <LeasingLifecycleTabs detail={detail} />
+      <LeasingLifecycleTabs detail={detail} onCaseClosed={onCaseClosed} />
     </div>
   );
 }

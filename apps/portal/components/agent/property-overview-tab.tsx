@@ -488,8 +488,8 @@ export function PropertyOverviewTab({
               />
             }
             onPreview={
-              bondOverview.bondIdLinked && onViewBondLodgement
-                ? onViewBondLodgement
+              canEditTenancy || bondOverview.bondIdLinked
+                ? () => setBondDialogOpen(true)
                 : undefined
             }
             onEdit={canEditTenancy ? () => setBondDialogOpen(true) : undefined}
@@ -595,6 +595,8 @@ export function PropertyOverviewTab({
         onOpenChange={setBondDialogOpen}
         propertyId={propertyId}
         initialAmount={displayBond}
+        bondId={bondOverview.bondIdLabel !== '—' ? bondOverview.bondIdLabel : null}
+        bondLodgementUrl={sync.bond?.agentLink}
         onSaved={handleSaved}
       />
 

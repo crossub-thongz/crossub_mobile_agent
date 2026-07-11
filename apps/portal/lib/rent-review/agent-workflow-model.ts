@@ -21,11 +21,11 @@ export const RENT_REVIEW_AGENT_STEP_ORDER: RentReviewAgentStep[] = [
 ];
 
 export const RENT_REVIEW_AGENT_STEP_LABEL: Record<RentReviewAgentStep, string> = {
-  [RENT_REVIEW_AGENT_STEP.RENT_RESEARCH]: 'Research',
-  [RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED]: 'Agent',
-  [RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED]: 'Notice',
-  [RENT_REVIEW_AGENT_STEP.TENANT_DECISION]: 'Decision',
-  [RENT_REVIEW_AGENT_STEP.COMPLETED]: 'Done',
+  [RENT_REVIEW_AGENT_STEP.RENT_RESEARCH]: 'Rent research',
+  [RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED]: 'Agent confirmed',
+  [RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED]: 'Tenant notified',
+  [RENT_REVIEW_AGENT_STEP.TENANT_DECISION]: 'Tenant decision',
+  [RENT_REVIEW_AGENT_STEP.COMPLETED]: 'Completed',
 };
 
 export const RENT_RESEARCH_PLATFORMS = ['Hartracing', 'RP DATA', 'REA'] as const;
@@ -77,12 +77,17 @@ function hasResearchComplete(detail: RentReviewWorkflowDetail): boolean {
   );
 }
 
-function hasAgentConfirmedRent(detail: RentReviewWorkflowDetail): boolean {
+/** Agent has finalised proposed rent (approve AI, custom amount, or counter resolution). */
+function hasAgentPricingFinalized(detail: RentReviewWorkflowDetail): boolean {
   return (
-    detail.agentConfirmedDate != null ||
-    detail.workflowState !== 'pending_confirmation' ||
-    detail.proposedWeeklyRent != null
+    auditHas(detail, 'pricing_snapshot') ||
+    auditHas(detail, 'agent_accepted_tenant_counter') ||
+    auditHas(detail, 'agent_reproposed_after_counter')
   );
+}
+
+function hasAgentConfirmedRent(detail: RentReviewWorkflowDetail): boolean {
+  return hasAgentPricingFinalized(detail);
 }
 
 function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
@@ -126,23 +131,26 @@ function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPro
 
 function agentConfirmedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
   const hasCounter = detail.tenantCounterWeekly != null;
+  const pricingFinalized = hasAgentPricingFinalized(detail);
   return [
     {
       id: 'agent-confirm',
       label: hasCounter ? 'Review tenant counter-offer' : 'Agent confirmed proposed rent',
-      done: hasAgentConfirmedRent(detail) && !hasCounter,
+      done: pricingFinalized,
     },
     {
       id: 'landlord',
       label: 'Landlord recommendation recorded',
-      done: detail.proposedWeeklyRent != null || detail.ai.suggestedWeekly != null,
+      done: pricingFinalized,
     },
     {
       id: 'counter',
       label: hasCounter
         ? `Tenant counter: $${detail.tenantCounterWeekly}/wk — revise or accept`
-        : 'Awaiting agent confirmation',
-      done: hasCounter ? false : hasAgentConfirmedRent(detail),
+        : pricingFinalized
+          ? 'Ready to notify tenant'
+          : 'Awaiting agent confirmation',
+      done: pricingFinalized,
     },
   ];
 }
@@ -229,7 +237,9 @@ export function resolveRentReviewAgentStep(detail: RentReviewWorkflowDetail): Re
       return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
     case 'agent_review':
     case 'negotiation':
-      return RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
+      return hasAgentPricingFinalized(detail)
+        ? RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED
+        : RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
     case 'tenant_notified':
       return RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED;
     case 'tenant_accepted':

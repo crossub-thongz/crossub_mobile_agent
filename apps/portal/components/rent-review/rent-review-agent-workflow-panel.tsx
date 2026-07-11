@@ -50,14 +50,6 @@ function SubProgressList({ items }: { items: { id: string; label: string; done: 
   );
 }
 
-const STEP_TITLES: Record<RentReviewAgentStep, string> = {
-  [RENT_REVIEW_AGENT_STEP.RENT_RESEARCH]: 'Rent research',
-  [RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED]: 'Agent confirmed',
-  [RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED]: 'Tenant notified',
-  [RENT_REVIEW_AGENT_STEP.TENANT_DECISION]: 'Tenant decision',
-  [RENT_REVIEW_AGENT_STEP.COMPLETED]: 'Completed',
-};
-
 function StepContent({
   stepId,
   detail,
@@ -146,7 +138,7 @@ export function RentReviewAgentWorkflowPanel({
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
             {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
-          <p className="mt-0.5 text-sm font-semibold">{STEP_TITLES[viewingStepId]}</p>
+          <p className="mt-0.5 text-sm font-semibold">{RENT_REVIEW_AGENT_STEP_LABEL[viewingStepId]}</p>
           {isLiveStep && viewingStep?.workflowName ? (
             <p className="text-muted-foreground mt-1 text-xs">{viewingStep.workflowName}</p>
           ) : null}

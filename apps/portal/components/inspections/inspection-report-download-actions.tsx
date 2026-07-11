@@ -18,6 +18,7 @@ interface InspectionReportDownloadActionsProps {
   reportUrl?: string | null;
   propertyLabel: string;
   inspectionType?: 'ingoing' | 'outgoing' | 'routine' | 'open';
+  fetchPdf?: (id: string) => Promise<Blob>;
   canDownload?: boolean;
   size?: 'sm' | 'default';
   variant?: 'card' | 'inline';
@@ -29,6 +30,7 @@ export function InspectionReportDownloadActions({
   reportUrl,
   propertyLabel,
   inspectionType = 'ingoing',
+  fetchPdf = inspectionsApi.downloadReportPdf,
   canDownload = true,
   size = 'sm',
   variant = 'card',
@@ -45,11 +47,7 @@ export function InspectionReportDownloadActions({
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadInspectionReportFromApi(
-        inspectionId,
-        filename,
-        inspectionsApi.downloadReportPdf,
-      );
+      await downloadInspectionReportFromApi(inspectionId, filename, fetchPdf);
     } catch {
       toast.error('Could not download the inspection report PDF');
     } finally {
@@ -135,7 +133,7 @@ export function InspectionReportDownloadActions({
         onOpenChange={setPreviewOpen}
         reportUrl={reportUrl}
         inspectionId={inspectionId}
-        fetchPdf={inspectionsApi.downloadReportPdf}
+        fetchPdf={fetchPdf}
         filename={filename}
         title={title}
       />

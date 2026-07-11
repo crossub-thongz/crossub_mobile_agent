@@ -46,8 +46,29 @@ export function PropertyJobCasesTable({
           : 'completed';
 
   const visibleRows = activeView === 'in_progress' ? inProgress : completed;
-  const showConductCountdown = visibleRows.some((row) => row.conductCountdown != null);
+  const showRentReviewSchedule = visibleRows.some(
+    (row) => row.kind === 'rent_review' || row.rentReviewSchedule != null,
+  );
+  const showIssueType = visibleRows.some(
+    (row) => row.kind === 'maintenance' || Boolean(row.issueType),
+  );
   const showDelete = Boolean(onDeleteRow && canDeleteRow);
+
+  const tableColumns = [
+    'Job type',
+    'Name',
+    ...(showIssueType ? ['Issue type'] : []),
+    'Description',
+    'Date',
+    'Status',
+    ...(showRentReviewSchedule ? ['Countdown', 'Tenant reminder'] : []),
+    ...(showDelete ? [''] : []),
+  ];
+  const tableMinWidth =
+    880 +
+    (showIssueType ? 120 : 0) +
+    (showRentReviewSchedule ? 200 : 0) +
+    (showDelete ? 40 : 0);
 
   if (rows.length === 0) {
     return (
@@ -103,14 +124,8 @@ export function PropertyJobCasesTable({
           {activeView === 'completed' ? 'No completed jobs on file yet.' : 'No jobs in progress.'}
         </p>
       ) : (
-        <ModuleListTable minWidth={showConductCountdown ? 980 : showDelete ? 960 : 880}>
-          <ModuleTableHead
-            columns={
-              showConductCountdown
-                ? ['Job type', 'Name', 'Description', 'Date', 'Status', 'Countdown', ...(showDelete ? [''] : [])]
-                : ['Job type', 'Name', 'Description', 'Date', 'Status', ...(showDelete ? [''] : [])]
-            }
-          />
+        <ModuleListTable minWidth={tableMinWidth}>
+          <ModuleTableHead columns={tableColumns} />
           <tbody className="divide-y">
             {visibleRows.map((row) => {
               const selected = selectedId === row.id;
@@ -169,6 +184,18 @@ export function PropertyJobCasesTable({
                       </span>
                     </div>
                   </td>
+                  {showIssueType ? (
+                    <td className="max-w-[9rem] px-3 py-3 text-xs">
+                      <span
+                        className={cn(
+                          'line-clamp-2 font-medium',
+                          selected ? 'text-foreground' : 'text-muted-foreground',
+                        )}
+                      >
+                        {row.issueType ?? '—'}
+                      </span>
+                    </td>
+                  ) : null}
                   <td className="max-w-[16rem] px-3 py-3 text-xs">
                     <span
                       className={cn(
@@ -199,19 +226,33 @@ export function PropertyJobCasesTable({
                       {row.status}
                     </span>
                   </td>
-                  {showConductCountdown ? (
-                    <td className="px-3 py-3 text-right">
-                      {row.conductCountdown ? (
-                        <RentReviewConductCountdownBadge
-                          label={row.conductCountdown.label}
-                          title={row.conductCountdown.title}
-                          tone={row.conductCountdown.tone}
-                          compact
-                        />
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </td>
+                  {showRentReviewSchedule ? (
+                    <>
+                      <td className="px-3 py-3 text-right">
+                        {row.rentReviewSchedule ? (
+                          <RentReviewConductCountdownBadge
+                            label={row.rentReviewSchedule.orderCountdown.label}
+                            title={row.rentReviewSchedule.orderCountdown.title}
+                            tone={row.rentReviewSchedule.orderCountdown.tone}
+                            compact
+                          />
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        {row.rentReviewSchedule ? (
+                          <RentReviewConductCountdownBadge
+                            label={row.rentReviewSchedule.tenantReminder.label}
+                            title={row.rentReviewSchedule.tenantReminder.title}
+                            tone={row.rentReviewSchedule.tenantReminder.tone}
+                            compact
+                          />
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                    </>
                   ) : null}
                   {showDelete ? (
                     <td className="px-2 py-3 text-right">

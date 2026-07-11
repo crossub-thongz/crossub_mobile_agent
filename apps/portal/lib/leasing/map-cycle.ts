@@ -66,6 +66,7 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       paidAt: u(ob?.bond.paidAt ?? undefined),
       proofFileName: u(ob?.bond.proofFileName ?? undefined),
       ledgerEntryId: u(ob?.bond.ledgerEntryId ?? undefined),
+      lodgementRef: u(ob?.bond.lodgementRef ?? undefined),
     },
     agreement: {
       status: asItemStatus(ob?.agreement.status ?? 'not_started'),
@@ -124,6 +125,7 @@ export function patchDetailFromCycleView(
   return {
     ...existing,
     propertyId: view.propertyId,
+    cycleActive: view.isActive,
     activeStepHint: (view.activeStepHint ?? view.lifecycleStep) as LeasingLifecycleStep,
     agentInfo: {
       ...existing.agentInfo,

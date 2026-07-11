@@ -17,9 +17,11 @@ import { useLivePoll } from '@/lib/use-live-poll';
 export interface PropertyBondSnapshot {
   agentLink: string | null;
   ledgerEntryId: string | null;
+  lodgementRef: string | null;
   amount: number | null;
   status: string | null;
   paidAt: string | null;
+  sentToTenantAt: string | null;
 }
 
 export interface PropertyOverviewSync {
@@ -93,17 +95,21 @@ export function usePropertyOverviewSync(
           ? {
               agentLink: bondBlock?.agentLink ?? null,
               ledgerEntryId: bondBlock?.ledgerEntryId ?? null,
+              lodgementRef: bondBlock?.lodgementRef ?? null,
               amount: cycleView.rental.bond ?? portal?.financial?.bondAmount ?? null,
               status: bondBlock?.status ?? null,
               paidAt: bondBlock?.paidAt ?? null,
+              sentToTenantAt: bondBlock?.sentToTenantAt ?? null,
             }
           : portal?.financial?.bondAmount != null
             ? {
                 agentLink: null,
                 ledgerEntryId: null,
+                lodgementRef: null,
                 amount: portal.financial.bondAmount,
                 status: null,
                 paidAt: null,
+                sentToTenantAt: null,
               }
             : null,
         keyFobCount,

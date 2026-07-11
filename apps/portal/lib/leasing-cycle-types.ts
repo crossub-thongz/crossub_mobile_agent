@@ -72,6 +72,7 @@ export interface ServerLeasingOnboarding {
     paidAt: string | null
     proofFileName: string | null
     ledgerEntryId: string | null
+    lodgementRef: string | null
   }
   agreement: {
     status: string

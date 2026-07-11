@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Globe, MessageSquare, Send, Smartphone } from 'lucide-react';
+import { Eye, FileText, Globe, MessageSquare, Send, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { InspectionReportPdfPreviewDialog } from '@/components/inspections/inspection-report-pdf-preview-dialog';
 import { LeasingViewerInvitePanel } from '@/components/leasing-workflow/leasing-viewer-invite-panel';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import {
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { buildInspectionReportFilename } from '@/lib/inspection-report-pdf';
 import { cn, formatDate } from '@/lib/utils';
 
 const APPLY_PATH_ICON: Record<LeasingApplyPath, typeof Smartphone> = {
@@ -31,6 +33,7 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
 
   const [sendingReport, setSendingReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = cycle?.id;
@@ -110,18 +113,9 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
               variant="outline"
               className="h-8 gap-1.5 text-xs"
               disabled={!or.reportViewable && !cycleId}
-              onClick={async () => {
-                if (!cycleId) return;
-                try {
-                  const blob = await leasingOpsApi.downloadOpenReportPdf(cycleId);
-                  const url = URL.createObjectURL(blob);
-                  window.open(url, '_blank');
-                } catch (err) {
-                  toast.error(err instanceof Error ? err.message : 'Could not open report');
-                }
-              }}
+              onClick={() => setReportPreviewOpen(true)}
             >
-              <FileText className="size-3.5" />
+              <Eye className="size-3.5" />
               View / download PDF
             </Button>
           </>
@@ -139,6 +133,17 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
           {or.sentToAgentAt && <StepFact label="Sent" value={formatDate(or.sentToAgentAt)} />}
         </div>
       </StepCard>
+
+      {cycleId ? (
+        <InspectionReportPdfPreviewDialog
+          open={reportPreviewOpen}
+          onOpenChange={setReportPreviewOpen}
+          inspectionId={cycleId}
+          fetchPdf={leasingOpsApi.downloadOpenReportPdf}
+          filename={buildInspectionReportFilename(detail.propertyAddress, 'open')}
+          title="Open inspection report"
+        />
+      ) : null}
 
       <StepCard
         icon={MessageSquare}

@@ -44,6 +44,40 @@ function findDocByKeywords(docs: AgentDocument[], keywords: string[]) {
   );
 }
 
+export const BOND_LODGEMENT_REF_PATTERN = /^BOND-\d{5}$/;
+const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+
+/** Never surface internal ledger UUIDs as the bond id in the UI. */
+export function formatBondIdForDisplay(
+  lodgementRef?: string | null,
+  linkRef?: string | null,
+): string | null {
+  const ref = lodgementRef?.trim();
+  if (ref && BOND_LODGEMENT_REF_PATTERN.test(ref)) return ref;
+  const link = linkRef?.trim();
+  if (link && BOND_LODGEMENT_REF_PATTERN.test(link)) return link;
+  if (ref && !UUID_LIKE.test(ref)) return ref;
+  return null;
+}
+
+/** Pull the lodgement reference token out of a state bond-portal URL. */
+export function extractBondReferenceFromLink(link: string): string | null {
+  const trimmed = link.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    const ref = url.searchParams.get('ref');
+    if (ref?.trim()) return ref.trim();
+    const segments = url.pathname.split('/').filter(Boolean);
+    const last = segments.at(-1);
+    if (last?.trim()) return decodeURIComponent(last.trim());
+  } catch {
+    // not a URL
+  }
+  const idMatch = trimmed.match(/\b\d{6,}\b/);
+  return idMatch?.[0] ?? null;
+}
+
 function findBondLodgementDoc(docs: AgentDocument[]): AgentDocument | undefined {
   return docs.find((d) => {
     const title = d.title.trim().toLowerCase();
@@ -142,8 +176,8 @@ export function formatBondAmount(amount: number | null | undefined): string {
 }
 
 /**
- * Bond ID from the active leasing cycle — generated when bond is marked paid
- * during new leasing onboarding (ledger entry).
+ * Bond ID from the active leasing cycle — ledger entry when paid, otherwise the
+ * lodgement reference extracted from the bond portal link sent by CROSSUB.
  */
 export function resolveBondOverviewDisplay(
   amount: number | null | undefined,
@@ -151,12 +185,14 @@ export function resolveBondOverviewDisplay(
   hasActiveLeasingCycle: boolean,
 ): BondOverviewDisplay {
   const amountLabel = formatBondAmount(amount);
-  const ledgerId = bond?.ledgerEntryId?.trim() ?? null;
+  const linkRef = bond?.agentLink ? extractBondReferenceFromLink(bond.agentLink) : null;
+  const sent = Boolean(bond?.sentToTenantAt?.trim());
   const paid =
     bond?.status === LEASING_ITEM_STATUS.DONE || Boolean(bond?.paidAt?.trim());
 
-  if (ledgerId && paid) {
-    return buildBondOverview(amountLabel, ledgerId, true);
+  const bondId = formatBondIdForDisplay(bond?.lodgementRef, linkRef);
+  if (bondId && (paid || sent)) {
+    return buildBondOverview(amountLabel, bondId, true);
   }
 
   if (hasActiveLeasingCycle && !paid) {
@@ -192,14 +228,14 @@ export function resolveBondReference(
 ): BondReference {
   const link = bond?.agentLink?.trim();
   if (link) {
-    const idMatch = link.match(/\b\d{6,}\b/);
+    const idMatch = formatBondIdForDisplay(bond?.lodgementRef, extractBondReferenceFromLink(link));
     return {
-      label: idMatch?.[0] ?? 'View bond lodgement',
+      label: idMatch ?? 'View bond lodgement',
       showLodgementNav: true,
     };
   }
-  if (bond?.ledgerEntryId) {
-    return { label: bond.ledgerEntryId, showLodgementNav: true };
+  if (bond?.lodgementRef) {
+    return { label: bond.lodgementRef, showLodgementNav: true };
   }
   if (property.bondId?.trim()) {
     return { label: property.bondId.trim() };
@@ -224,7 +260,7 @@ export function resolveBondReferenceRaw(
   property: Property,
   bond?: PropertyBondSnapshot | null,
 ): string {
-  if (bond?.ledgerEntryId?.trim()) return bond.ledgerEntryId.trim();
+  if (bond?.lodgementRef?.trim()) return bond.lodgementRef.trim();
   if (bond?.agentLink?.trim()) return bond.agentLink.trim();
   if (property.bondId?.trim()) return property.bondId.trim();
   return '';

@@ -329,6 +329,13 @@ export function PropertyLeasingJobPanel({
         onViewRentReview={onViewRentReview}
         focusBond={leasingFocusBond && dialogCase?.category === 'leasing'}
         onFocusBondHandled={onLeasingFocusBondHandled}
+        onCaseClosed={() => {
+          void refresh().then(() => {
+            setDialogCase(null);
+            setSelectedCaseId(null);
+            onWorkflowCreated?.();
+          });
+        }}
         canDeleteCase={canDeleteCase}
         onDeleteCase={(item) => setDeleteTarget(item)}
       />

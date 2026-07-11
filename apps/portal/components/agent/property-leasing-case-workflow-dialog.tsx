@@ -26,6 +26,7 @@ export function PropertyLeasingCaseWorkflowContent({
   onViewRentReview,
   focusBond,
   onFocusBondHandled,
+  onCaseClosed,
 }: {
   item: PropertyLeasingWorkflowCase;
   property: Property;
@@ -37,6 +38,7 @@ export function PropertyLeasingCaseWorkflowContent({
   onViewRentReview?: (reviewId: string) => void;
   focusBond?: boolean;
   onFocusBondHandled?: () => void;
+  onCaseClosed?: () => void;
 }) {
   if (item.category === 'leasing') {
     return (
@@ -47,6 +49,7 @@ export function PropertyLeasingCaseWorkflowContent({
         hideSectionLabel
         focusBond={focusBond}
         onFocusBondHandled={onFocusBondHandled}
+        onCaseClosed={onCaseClosed}
       />
     );
   }
@@ -76,6 +79,7 @@ export function PropertyLeasingCaseWorkflowDialog({
   onViewRentReview,
   focusBond,
   onFocusBondHandled,
+  onCaseClosed,
   onDeleteCase,
   canDeleteCase,
 }: {
@@ -91,6 +95,7 @@ export function PropertyLeasingCaseWorkflowDialog({
   onViewRentReview?: (reviewId: string) => void;
   focusBond?: boolean;
   onFocusBondHandled?: () => void;
+  onCaseClosed?: () => void;
   onDeleteCase?: (item: PropertyLeasingWorkflowCase) => void;
   canDeleteCase?: (item: PropertyLeasingWorkflowCase) => boolean;
 }) {
@@ -131,6 +136,7 @@ export function PropertyLeasingCaseWorkflowDialog({
         onViewRentReview={onViewRentReview}
         focusBond={focusBond}
         onFocusBondHandled={onFocusBondHandled}
+        onCaseClosed={onCaseClosed}
       />
     </CaseDetailDialog>
   );

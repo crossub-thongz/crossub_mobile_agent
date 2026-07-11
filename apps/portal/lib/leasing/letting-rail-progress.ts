@@ -1,4 +1,5 @@
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
+import { areAllApplicantResultsSent } from '@/lib/leasing/lifecycle';
 import { isAssignedInspectorName } from '@/lib/leasing/open-inspection-display';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
@@ -71,6 +72,9 @@ export function isLettingRailStepCompleted(
   detail: LeasingPropertyDetail,
   step: LettingRailStep,
 ): boolean {
+  if (step === LETTING_RAIL_STEP.RESULTS && areAllApplicantResultsSent(detail)) {
+    return true;
+  }
   const { currentRailStep } = deriveLettingRailProgress(detail);
   const stepIndex = LETTING_RAIL_STEP_ORDER.indexOf(step);
   const currentIndex = LETTING_RAIL_STEP_ORDER.indexOf(currentRailStep);

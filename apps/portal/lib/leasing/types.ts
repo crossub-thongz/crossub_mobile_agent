@@ -119,8 +119,8 @@ export interface LeasingBondState {
   sentToTenantAt?: string;
   paidAt?: string;
   proofFileName?: string;
-  /** Ledger entry ID — assigned when bond is marked paid in new leasing. */
-  ledgerEntryId?: string;
+  /** Display bond ID (e.g. BOND-00001) — not the internal ledger row id. */
+  lodgementRef?: string;
 }
 
 export interface LeasingAgreementState {
@@ -174,6 +174,8 @@ export interface LeasingOnboardingState {
 export interface LeasingPropertyDetail {
   propertyId: string;
   propertyAddress: string;
+  /** False when the agent NL case closed after applicant results were sent. */
+  cycleActive?: boolean;
   agentInfo: LeasingAgentInfo;
   rental: LeasingRentalInfo;
   activeStepHint: LeasingLifecycleStep;

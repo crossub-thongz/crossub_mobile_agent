@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { MaintenanceIssueTypeField } from '@/components/maintenance/maintenance-issue-type-field';
+import { MaintenanceMediaUploadField } from '@/components/maintenance/maintenance-media-upload-field';
 import { cn } from '@/lib/utils';
 
 export type MaintenanceJobPriority = 'urgent' | 'normal';
 
 export function MaintenanceNewJobFormFields({
   address,
+  propertyId,
   issueTypeSelection,
   issueTypeOther,
   onIssueTypeSelectionChange,
@@ -26,9 +28,12 @@ export function MaintenanceNewJobFormFields({
   onTenantEmailChange,
   tenantPhone,
   onTenantPhoneChange,
+  mediaUrls,
+  onMediaUrlsChange,
   disabled = false,
 }: {
   address: string;
+  propertyId: string;
   issueTypeSelection: string;
   issueTypeOther: string;
   onIssueTypeSelectionChange: (value: string) => void;
@@ -43,6 +48,8 @@ export function MaintenanceNewJobFormFields({
   onTenantEmailChange: (value: string) => void;
   tenantPhone: string;
   onTenantPhoneChange: (value: string) => void;
+  mediaUrls: string[];
+  onMediaUrlsChange: (urls: string[]) => void;
   disabled?: boolean;
 }) {
   const tenantIncomplete =
@@ -81,6 +88,13 @@ export function MaintenanceNewJobFormFields({
           disabled={disabled}
         />
       </div>
+
+      <MaintenanceMediaUploadField
+        propertyId={propertyId}
+        photos={mediaUrls}
+        onPhotosChange={onMediaUrlsChange}
+        disabled={disabled}
+      />
 
       <div>
         <Label className="text-xs">Urgency</Label>

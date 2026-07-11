@@ -25,6 +25,7 @@ import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingAgreementState, LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { LEASING_ONBOARDING_BOND_SECTION_ID } from '@/lib/property-leasing-navigation';
+import { extractBondReferenceFromLink, formatBondIdForDisplay } from '@/lib/property-overview';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const SIGNING_LABEL: Record<LeasingAgreementState['signingStatus'], string> = {
@@ -73,6 +74,11 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
   const cycleId = leasingCycles.find((c) => c.propertyId === id)?.id;
   const agreementReady = agreementAvailableFromCrossub(o.agreement);
   const keyByCrossub = detail.agentInfo.keyCustody === LEASING_KEY_CUSTODY.CROSSUB;
+  const bondIdLabel =
+    formatBondIdForDisplay(
+      o.bond.lodgementRef,
+      o.bond.agentLink ? extractBondReferenceFromLink(o.bond.agentLink) : null,
+    ) ?? null;
 
   const recordSigning = async () => {
     setRecordingSigning(true);
@@ -121,8 +127,15 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             label="Paid"
             value={o.bond.paidAt ? formatDate(o.bond.paidAt) : 'Not paid'}
           />
-          {o.bond.ledgerEntryId ? (
-            <StepFact label="Bond ID" value={o.bond.ledgerEntryId} className="col-span-2" />
+          {bondIdLabel ? (
+            <StepFact label="Bond ID" value={bondIdLabel} className="col-span-2" />
+          ) : null}
+          {o.bond.sentToTenantAt ? (
+            <StepFact
+              label="Link sent"
+              value={formatDateTime(o.bond.sentToTenantAt)}
+              className="col-span-2"
+            />
           ) : null}
         </div>
         <ProofLine fileName={o.bond.proofFileName} />

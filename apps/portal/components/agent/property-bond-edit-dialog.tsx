@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -22,12 +22,16 @@ export function PropertyBondEditDialog({
   onOpenChange,
   propertyId,
   initialAmount,
+  bondId,
+  bondLodgementUrl,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   propertyId: string;
   initialAmount: number | null;
+  bondId?: string | null;
+  bondLodgementUrl?: string | null;
   onSaved?: () => void;
 }) {
   const [amount, setAmount] = useState('');
@@ -60,17 +64,27 @@ export function PropertyBondEditDialog({
     }
   };
 
+  const lodgementUrl = bondLodgementUrl?.trim() || null;
+  const showLodgement = Boolean(lodgementUrl);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit bond</DialogTitle>
+          <DialogTitle>Bond</DialogTitle>
           <DialogDescription>
-            Bond amount for this property. The bond ID is generated automatically when bond is
-            marked paid in the new leasing workflow.
+            Bond amount and lodgement reference for this property. The bond ID is assigned when
+            CROSSUB sends the bond link in new leasing.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 py-1">
+        <div className="space-y-4 py-1">
+          {bondId ? (
+            <div className="space-y-1.5">
+              <Label>Bond ID</Label>
+              <p className="rounded-md border bg-muted/30 px-3 py-2 font-mono text-sm">{bondId}</p>
+            </div>
+          ) : null}
+
           <div className="space-y-1.5">
             <Label htmlFor="bond-amount">Bond amount</Label>
             <Input
@@ -81,14 +95,39 @@ export function PropertyBondEditDialog({
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
+
+          {showLodgement ? (
+            <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium">Bond lodgement</p>
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" asChild>
+                  <a href={lodgementUrl!} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="size-3.5" />
+                    Open portal
+                  </a>
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Preview the state bond lodgement portal link sent to the tenant.
+              </p>
+              <div className="overflow-hidden rounded-lg border bg-background">
+                <iframe
+                  title="Bond lodgement preview"
+                  src={lodgementUrl!}
+                  className="h-56 w-full bg-white"
+                  sandbox="allow-scripts allow-same-origin allow-popups"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Close
           </Button>
           <Button type="button" disabled={saving} onClick={() => void submit()}>
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-            Save
+            Save amount
           </Button>
         </DialogFooter>
       </DialogContent>

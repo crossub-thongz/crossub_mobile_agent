@@ -110,5 +110,12 @@ export const openViewingsApi = {
   generateReport: (sessionId: string) =>
     unwrap(api.post<{ session: OpenInspectionSession }>(`${BASE}/sessions/${sessionId}/generate-report`, {})),
 
-  reportPdfUrl: (sessionId: string) => `${BASE}/sessions/${sessionId}/report.pdf`,
+  downloadReportPdf: (sessionId: string): Promise<Blob> =>
+    api.getBlob(`${BASE}/sessions/${sessionId}/report.pdf`),
+
+  /** Authenticated PDF URL — must include `/api` so the BFF proxy handles the request. */
+  reportPdfUrl: (sessionId: string) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "/api"
+    return `${apiUrl}${BASE}/sessions/${sessionId}/report.pdf`
+  },
 }
