@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 
+import { DraggableCollapsibleDock } from '@/components/agent/draggable-collapsible-dock';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { PhonePanel } from '@/components/agent/phone-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -116,12 +117,9 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          'pointer-events-none fixed z-50 flex flex-col items-end gap-2',
-          'bottom-[calc(4.5rem+env(safe-area-inset-bottom))] lg:bottom-6',
-          'right-6 lg:right-[calc(25%+1.5rem)]',
-        )}
+      <DraggableCollapsibleDock
+        defaultCorner={{ kind: 'corner', right: 24, bottom: 88 }}
+        launcherLabel="Open quick actions"
       >
         {/* Desktop already shows Gii permanently — only expose the FAB on mobile. */}
         <button
@@ -152,7 +150,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
             </button>
           );
         })}
-      </div>
+      </DraggableCollapsibleDock>
     </>
   );
 }
