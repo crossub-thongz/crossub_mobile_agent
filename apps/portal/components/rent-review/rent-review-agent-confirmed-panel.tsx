@@ -6,11 +6,9 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RentReviewEmailLog } from '@/components/rent-review/rent-review-email-log';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
-  buildResearchEmailToAgent,
 } from '@/lib/rent-review/agent-workflow-model';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -86,8 +84,6 @@ export function RentReviewAgentConfirmedPanel({
           ) : null}
         </dl>
       </section>
-
-      <RentReviewEmailLog title="Agent email records" emails={[buildResearchEmailToAgent(detail)]} />
 
       {detail.workflowState === 'agent_review' || detail.workflowState === 'negotiation' ? (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">

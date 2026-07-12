@@ -1,13 +1,14 @@
 'use client';
 
 import { Check, Trash2 } from 'lucide-react';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import {
   ModuleListTable,
   ModuleSortableTableHead,
   type ModuleTableColumn,
 } from '@/components/agent/module-list-table';
+import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { RentReviewConductCountdownBadge } from '@/components/rent-review/rent-review-conduct-countdown-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,8 +17,13 @@ import {
   compareStrings,
   useClientTableSort,
 } from '@/lib/client-table-sort';
-import type { PropertyJobPhase, PropertyJobRow } from '@/lib/property-job-rows';
-import { groupPropertyJobRows, splitPropertyJobRows } from '@/lib/property-job-rows';
+import type { PropertyJobPhase, PropertyJobRow, PropertyJobTypeFilterId } from '@/lib/property-job-rows';
+import {
+  availablePropertyJobTypeFilters,
+  groupPropertyJobRows,
+  matchesPropertyJobTypeFilter,
+  splitPropertyJobRows,
+} from '@/lib/property-job-rows';
 import { cn } from '@/lib/utils';
 
 type PropertyJobSortKey =
@@ -74,6 +80,7 @@ export function PropertyJobCasesTable({
   defaultView = 'in_progress',
   showViewToggle = true,
   groupByJobType = false,
+  showJobTypeFilter,
   showRentReviewSchedule: showRentReviewScheduleProp,
   dateColumnLabel = 'Key date',
   showKeyDateColumn = true,
@@ -89,6 +96,8 @@ export function PropertyJobCasesTable({
   showViewToggle?: boolean;
   /** Group rows under job-type section headers (overview mixed jobs table). */
   groupByJobType?: boolean;
+  /** Job-type dropdown in the table header (defaults on when grouped). */
+  showJobTypeFilter?: boolean;
   /** Show rent-review countdown columns (Rent Review tab only). */
   showRentReviewSchedule?: boolean;
   /** Label for the contextual date column (due, scheduled, vacate, etc.). */
@@ -100,10 +109,13 @@ export function PropertyJobCasesTable({
 }) {
   const { inProgress, completed } = useMemo(() => splitPropertyJobRows(rows), [rows]);
   const [view, setView] = useState<PropertyJobPhase>(defaultView);
+  const [jobTypeFilter, setJobTypeFilter] = useState<PropertyJobTypeFilterId | 'all'>('all');
   const { sortKey, sortDirection, onSort } = useClientTableSort<PropertyJobSortKey>(
     'createdAt',
     'desc',
   );
+
+  const jobTypeFilterEnabled = showJobTypeFilter ?? groupByJobType;
 
   const hasInProgress = inProgress.length > 0;
   const hasCompleted = completed.length > 0;
@@ -116,17 +128,31 @@ export function PropertyJobCasesTable({
           ? 'in_progress'
           : 'completed';
 
+  useEffect(() => {
+    setJobTypeFilter('all');
+  }, [activeView]);
+
   const visibleRows = activeView === 'in_progress' ? inProgress : completed;
+  const jobTypeFilterOptions = useMemo(
+    () => availablePropertyJobTypeFilters(visibleRows),
+    [visibleRows],
+  );
+  const filteredRows = useMemo(() => {
+    if (!jobTypeFilterEnabled || jobTypeFilter === 'all') return visibleRows;
+    return visibleRows.filter((row) => matchesPropertyJobTypeFilter(row, jobTypeFilter));
+  }, [jobTypeFilter, jobTypeFilterEnabled, visibleRows]);
   const sortedRows = useMemo(
-    () => sortPropertyJobRows(visibleRows, sortKey, sortDirection),
-    [visibleRows, sortDirection, sortKey],
+    () => sortPropertyJobRows(filteredRows, sortKey, sortDirection),
+    [filteredRows, sortDirection, sortKey],
   );
   const rowGroups = useMemo(
     () =>
-      groupByJobType ? groupPropertyJobRows(sortedRows, true) : [{ label: '', rows: sortedRows }],
-    [groupByJobType, sortedRows],
+      groupByJobType
+        ? groupPropertyJobRows(sortedRows, true, jobTypeFilter === 'all')
+        : [{ label: '', rows: sortedRows }],
+    [groupByJobType, jobTypeFilter, sortedRows],
   );
-  const showGroupHeaders = groupByJobType && rowGroups.length > 0;
+  const showGroupHeaders = groupByJobType && jobTypeFilter === 'all' && rowGroups.length > 0;
   const showRentReviewSchedule =
     showRentReviewScheduleProp ??
     visibleRows.some((row) => row.kind === 'rent_review' || row.rentReviewSchedule != null);
@@ -136,7 +162,9 @@ export function PropertyJobCasesTable({
   const showDelete = Boolean(onDeleteRow && canDeleteRow);
 
   const tableColumns: ModuleTableColumn<PropertyJobSortKey>[] = [
-    { kind: 'sortable', label: 'Job type', sortKey: 'jobType' },
+    ...(jobTypeFilterEnabled
+      ? [{ kind: 'static' as const, label: 'Job type' }]
+      : [{ kind: 'sortable' as const, label: 'Job type', sortKey: 'jobType' as const }]),
     { kind: 'sortable', label: 'Name', sortKey: 'name' },
     ...(showIssueType
       ? [{ kind: 'sortable' as const, label: 'Issue type', sortKey: 'issueType' as const }]
@@ -217,15 +245,76 @@ export function PropertyJobCasesTable({
         </p>
       ) : (
         <ModuleListTable minWidth={tableMinWidth}>
-          <ModuleSortableTableHead
-            columns={tableColumns}
-            sortKey={sortKey}
-            sortDirection={sortDirection}
-            onSort={onSort}
-          />
+          {jobTypeFilterEnabled ? (
+            <thead>
+              <tr className="border-b bg-muted/30">
+                <th className="px-3 py-3 text-left">
+                  <select
+                    value={jobTypeFilter}
+                    onChange={(e) =>
+                      setJobTypeFilter(e.target.value as PropertyJobTypeFilterId | 'all')
+                    }
+                    aria-label="Filter by job type"
+                    className="border-input bg-background h-8 w-full min-w-[8.5rem] max-w-[11rem] rounded-md border px-2 text-[11px] font-semibold uppercase tracking-wide outline-none"
+                  >
+                    <option value="all">All job types</option>
+                    {jobTypeFilterOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                {tableColumns.slice(1).map((col) => {
+                  if (col.kind === 'static') {
+                    return (
+                      <th
+                        key={col.label || 'action'}
+                        className={cn(
+                          'px-3 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
+                          col.align === 'right' ? 'text-right' : 'text-left',
+                          col.label === '' && 'w-10',
+                        )}
+                      >
+                        {col.label}
+                      </th>
+                    );
+                  }
+                  return (
+                    <SortableTableHeader
+                      key={col.sortKey}
+                      label={col.label}
+                      sortKey={col.sortKey}
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      onSort={(key) => onSort(key, col.defaultDirection)}
+                      align={col.align}
+                    />
+                  );
+                })}
+              </tr>
+            </thead>
+          ) : (
+            <ModuleSortableTableHead
+              columns={tableColumns}
+              sortKey={sortKey}
+              sortDirection={sortDirection}
+              onSort={onSort}
+            />
+          )}
           <tbody className="divide-y">
-            {rowGroups.map((group) => (
-              <Fragment key={group.label || 'jobs'}>
+            {filteredRows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={tableColumns.length}
+                  className="text-muted-foreground px-3 py-8 text-center text-sm"
+                >
+                  No jobs match this job type.
+                </td>
+              </tr>
+            ) : (
+              rowGroups.map((group, groupIndex) => (
+              <Fragment key={`${group.label || 'jobs'}-${groupIndex}`}>
                 {showGroupHeaders ? (
                   <tr className="bg-muted/40">
                     <td
@@ -401,7 +490,8 @@ export function PropertyJobCasesTable({
                   );
                 })}
               </Fragment>
-            ))}
+            ))
+            )}
           </tbody>
         </ModuleListTable>
       )}

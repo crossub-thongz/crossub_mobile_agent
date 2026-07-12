@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { RentReviewEmailLog } from '@/components/rent-review/rent-review-email-log';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
-  buildCompletionEmail,
 } from '@/lib/rent-review/agent-workflow-model';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -26,7 +24,6 @@ export function RentReviewCompletedPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
 
-  const completionEmail = buildCompletionEmail(detail);
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.COMPLETED);
   const weekly = detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent;
 
@@ -64,14 +61,6 @@ export function RentReviewCompletedPanel({
           </div>
         </dl>
       </section>
-
-      {completionEmail ? (
-        <RentReviewEmailLog title="Confirmation email to tenant" emails={[completionEmail]} />
-      ) : (
-        <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs">
-          Confirmation email will be sent when accounting completes the rent sync.
-        </p>
-      )}
 
       {detail.workflowState === 'accounting' ? (
         <Button

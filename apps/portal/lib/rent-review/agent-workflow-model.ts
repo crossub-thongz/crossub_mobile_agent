@@ -387,6 +387,69 @@ export function buildCompletionEmail(detail: RentReviewWorkflowDetail): RentRevi
   };
 }
 
+function buildTenantReminderEmail(
+  entry: RentReviewAuditEntry,
+  detail: RentReviewWorkflowDetail,
+): RentReviewEmailRecord {
+  return {
+    id: entry.id,
+    subject: 'Reminder — rent increase response',
+    from: 'Managing Agent',
+    to: detail.tenantName,
+    at: entry.at,
+    kind: entry.kind,
+    body:
+      `Dear ${detail.tenantName},\n\n` +
+      `We have not yet received your response to the proposed rent increase. ` +
+      `Please let us know if you have any feedback or questions.\n\n` +
+      `Proposed rent: $${detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly}/week`,
+  };
+}
+
+function tenantNoticeAndReminderEmails(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
+  const records: RentReviewEmailRecord[] = [];
+  const notice = buildTenantNoticeEmail(detail);
+  if (notice) records.push(notice);
+  for (const entry of detail.auditLog) {
+    if (entry.kind === 'tenant_response_reminder') {
+      records.push(buildTenantReminderEmail(entry, detail));
+    }
+  }
+  return records;
+}
+
+/** Email records scoped to a single rent-review workflow stage. */
+export function emailRecordsForStep(
+  detail: RentReviewWorkflowDetail,
+  step: RentReviewAgentStep,
+): RentReviewEmailRecord[] {
+  let records: RentReviewEmailRecord[] = [];
+
+  switch (step) {
+    case RENT_REVIEW_AGENT_STEP.RENT_RESEARCH:
+      records = [buildResearchEmailToAgent(detail)];
+      break;
+    case RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED:
+      records = [];
+      break;
+    case RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED:
+      records = tenantNoticeAndReminderEmails(detail);
+      break;
+    case RENT_REVIEW_AGENT_STEP.TENANT_DECISION:
+      records = tenantNoticeAndReminderEmails(detail);
+      break;
+    case RENT_REVIEW_AGENT_STEP.COMPLETED: {
+      const completion = buildCompletionEmail(detail);
+      records = completion ? [completion] : [];
+      break;
+    }
+    default:
+      records = [];
+  }
+
+  return [...records].sort((a, b) => b.at.localeCompare(a.at));
+}
+
 export function emailRecordsFromAudit(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
   const records: RentReviewEmailRecord[] = [];
   if (detail.workflowState !== 'pending_confirmation' || detail.ai.suggestedWeekly != null) {
@@ -396,19 +459,7 @@ export function emailRecordsFromAudit(detail: RentReviewWorkflowDetail): RentRev
   if (notice) records.push(notice);
   for (const entry of detail.auditLog) {
     if (entry.kind === 'tenant_response_reminder') {
-      records.push({
-        id: entry.id,
-        subject: 'Reminder — rent increase response',
-        from: 'Managing Agent',
-        to: detail.tenantName,
-        at: entry.at,
-        kind: entry.kind,
-        body:
-          `Dear ${detail.tenantName},\n\n` +
-          `We have not yet received your response to the proposed rent increase. ` +
-          `Please let us know if you have any feedback or questions.\n\n` +
-          `Proposed rent: $${detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly}/week`,
-      });
+      records.push(buildTenantReminderEmail(entry, detail));
     }
   }
   const completion = buildCompletionEmail(detail);

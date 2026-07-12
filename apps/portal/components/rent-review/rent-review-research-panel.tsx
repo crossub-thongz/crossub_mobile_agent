@@ -5,11 +5,9 @@ import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { RentReviewEmailLog } from '@/components/rent-review/rent-review-email-log';
 import {
   RENT_RESEARCH_PLATFORMS,
   auditEntriesForStep,
-  buildResearchEmailToAgent,
   RENT_REVIEW_AGENT_STEP,
 } from '@/lib/rent-review/agent-workflow-model';
 import { rentReviewApi } from '@/lib/rent-review-api';
@@ -28,7 +26,6 @@ export function RentReviewResearchPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
 
-  const researchEmail = buildResearchEmailToAgent(detail);
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.RENT_RESEARCH);
   const suggested = detail.ai.suggestedWeekly;
 
@@ -70,8 +67,6 @@ export function RentReviewResearchPanel({
           <p className="text-muted-foreground mt-3 text-xs leading-relaxed">{detail.ai.rationale}</p>
         ) : null}
       </section>
-
-      <RentReviewEmailLog title="Research email to agent" emails={[researchEmail]} />
 
       {detail.workflowState === 'pending_confirmation' ? (
         <div className="space-y-2">

@@ -561,7 +561,8 @@ export function PropertyOverviewTab({
 
       <OverviewSection title="Jobs in progress">
         <p className="text-muted-foreground mb-2 text-[11px]">
-          Jobs are grouped by type. Click a row to open the workflow.
+          Jobs are grouped by type. Use the job type dropdown to filter, or click a row to open
+          the workflow.
         </p>
         <PropertyJobCasesTable
           rows={inProgressJobs}

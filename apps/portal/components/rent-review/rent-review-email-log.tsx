@@ -1,59 +1,176 @@
 'use client';
 
-import Link from 'next/link';
-import { ExternalLink, Mail } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronRight, Mail, Reply } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { communicationsThread } from '@/constants/routes';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { RentReviewEmailRecord } from '@/lib/rent-review/agent-workflow-model';
-import { formatDateTime } from '@/lib/utils';
+import { cn, formatDate, formatDateTime } from '@/lib/utils';
 
-export function RentReviewEmailLog({
-  title,
-  emails,
+function emailDirection(email: RentReviewEmailRecord): 'inbound' | 'outbound' {
+  const from = email.from.toLowerCase();
+  if (from.includes('research@') || from.includes('crossub')) return 'inbound';
+  return 'outbound';
+}
+
+function emailPartyLine(email: RentReviewEmailRecord): string {
+  const direction = emailDirection(email);
+  return direction === 'inbound' ? `From ${email.from}` : `To ${email.to}`;
+}
+
+function EmailListRow({
+  email,
+  selected,
+  onSelect,
 }: {
-  title: string;
-  emails: RentReviewEmailRecord[];
+  email: RentReviewEmailRecord;
+  selected: boolean;
+  onSelect: () => void;
 }) {
-  if (emails.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs">
-        No email records yet for this stage.
-      </p>
-    );
-  }
+  const direction = emailDirection(email);
+  const Icon = direction === 'inbound' ? Reply : Mail;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Mail className="text-primary size-4" />
-        <p className="text-sm font-semibold">{title}</p>
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-start gap-3 px-3 py-3 text-left transition-colors',
+        selected ? 'bg-primary/5' : 'hover:bg-muted/30',
+      )}
+    >
+      <span
+        className={cn(
+          'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
+          direction === 'inbound' ? 'bg-sky-500/15 text-sky-700' : 'bg-amber-500/15 text-amber-700',
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{email.subject}</p>
+        <p className="text-muted-foreground mt-0.5 truncate text-xs">{emailPartyLine(email)}</p>
+        <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{formatDate(email.at)}</p>
       </div>
-      {emails.map((email) => (
-        <div key={email.id} className="rounded-xl border bg-card p-3 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-medium">{email.subject}</p>
-            <span className="text-muted-foreground text-[10px]">{formatDateTime(email.at)}</span>
-          </div>
-          <dl className="grid gap-1 text-[11px] sm:grid-cols-2">
+      <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />
+    </button>
+  );
+}
+
+function EmailDetailDialog({
+  email,
+  open,
+  onOpenChange,
+}: {
+  email: RentReviewEmailRecord | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!email) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-left text-base leading-snug">{email.subject}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <p className="text-muted-foreground text-xs">{formatDateTime(email.at)}</p>
+          <dl className="grid gap-2 text-xs sm:grid-cols-2">
             <div>
               <dt className="text-muted-foreground">From</dt>
-              <dd>{email.from}</dd>
+              <dd className="font-medium">{email.from}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">To</dt>
-              <dd>{email.to}</dd>
+              <dd className="font-medium">{email.to}</dd>
             </div>
           </dl>
-          <pre className="text-muted-foreground max-h-32 overflow-y-auto text-[11px] leading-relaxed whitespace-pre-wrap font-sans">
-            {email.body}
-          </pre>
+          <div className="rounded-xl border bg-muted/20 p-3">
+            <pre className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+              {email.body}
+            </pre>
+          </div>
         </div>
-      ))}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function RentReviewEmailLog({
+  title = 'E-mail',
+  emails,
+}: {
+  title?: string;
+  emails: RentReviewEmailRecord[];
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const sorted = useMemo(
+    () => [...emails].sort((a, b) => b.at.localeCompare(a.at)),
+    [emails],
+  );
+  const selected = sorted.find((email) => email.id === selectedId) ?? null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Mail className="text-primary size-4" />
+          <p className="text-sm font-semibold">{title}</p>
+        </div>
+        <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+          History
+        </span>
+      </div>
+
+      {sorted.length === 0 ? (
+        <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs">
+          No email records yet for this stage.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <ul className="divide-y">
+            {sorted.map((email) => (
+              <li key={email.id}>
+                <EmailListRow
+                  email={email}
+                  selected={selectedId === email.id}
+                  onSelect={() => setSelectedId(email.id)}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <EmailDetailDialog
+        email={selected}
+        open={selectedId != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null);
+        }}
+      />
     </div>
   );
 }
 
+export function RentReviewStageEmailHistory({
+  emails,
+}: {
+  emails: RentReviewEmailRecord[];
+}) {
+  return (
+    <section className="border-t pt-4">
+      <RentReviewEmailLog emails={emails} />
+    </section>
+  );
+}
+
 export function RentReviewEmailRecordPanel({ email }: { email: RentReviewEmailRecord }) {
-  return <RentReviewEmailLog title="Email record" emails={[email]} />;
+  return <RentReviewEmailLog emails={[email]} />;
 }

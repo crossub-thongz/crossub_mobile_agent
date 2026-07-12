@@ -58,9 +58,36 @@ export interface PropertyJobRow {
   rentReviewSchedule?: RentReviewScheduleIndicators;
 }
 
+/** Stable filter keys for the jobs table dropdown (overview, etc.). */
+export type PropertyJobTypeFilterId =
+  | 'new_leasing'
+  | 'end_leasing'
+  | 'open_inspection'
+  | 'routine_inspection'
+  | 'ingoing_inspection'
+  | 'outgoing_inspection'
+  | 'maintenance'
+  | 'rent_review'
+  | 'tribunal';
+
+export const PROPERTY_JOB_TYPE_FILTER_OPTIONS: {
+  id: PropertyJobTypeFilterId;
+  label: string;
+}[] = [
+  { id: 'new_leasing', label: 'New leasing' },
+  { id: 'end_leasing', label: 'End leasing' },
+  { id: 'open_inspection', label: 'Open inspection' },
+  { id: 'routine_inspection', label: 'Routine inspection' },
+  { id: 'ingoing_inspection', label: 'Ingoing inspection' },
+  { id: 'outgoing_inspection', label: 'Outgoing inspection' },
+  { id: 'maintenance', label: 'Maintenance' },
+  { id: 'rent_review', label: 'Rent review' },
+  { id: 'tribunal', label: 'Tribunal' },
+];
+
 /** Display order for mixed job tables (overview, etc.). */
 const PROPERTY_JOB_TYPE_ORDER: string[] = [
-  'Leasing',
+  'New leasing',
   'Open inspection',
   'Rent review',
   'End leasing',
@@ -95,10 +122,80 @@ export function organizePropertyJobRows(rows: PropertyJobRow[]): PropertyJobRow[
   return [...rows].sort(comparePropertyJobRows);
 }
 
+/** Map a row to the canonical filter id used by the jobs table dropdown. */
+export function propertyJobRowFilterId(row: PropertyJobRow): PropertyJobTypeFilterId {
+  switch (row.kind) {
+    case 'maintenance':
+      return 'maintenance';
+    case 'tribunal':
+      return 'tribunal';
+    case 'rent_review':
+      return 'rent_review';
+    case 'end_leasing':
+      return 'end_leasing';
+    case 'leasing':
+      return 'new_leasing';
+    case 'inspection':
+      switch (row.jobType) {
+        case 'Routine inspection':
+          return 'routine_inspection';
+        case 'Ingoing inspection':
+          return 'ingoing_inspection';
+        case 'Outgoing inspection':
+          return 'outgoing_inspection';
+        case 'Open inspection':
+        default:
+          return 'open_inspection';
+      }
+    default:
+      if (row.jobType === 'End leasing') return 'end_leasing';
+      if (row.jobType === 'Rent review') return 'rent_review';
+      if (row.jobType === 'Maintenance') return 'maintenance';
+      if (row.jobType === 'Tribunal') return 'tribunal';
+      if (row.jobType === 'New leasing' || row.jobType === 'Leasing') return 'new_leasing';
+      return 'open_inspection';
+  }
+}
+
+/** Filter dropdown options for rows currently visible in the table. */
+export function availablePropertyJobTypeFilters(
+  rows: PropertyJobRow[],
+): { id: PropertyJobTypeFilterId; label: string }[] {
+  const present = new Set(rows.map(propertyJobRowFilterId));
+  return PROPERTY_JOB_TYPE_FILTER_OPTIONS.filter((option) => present.has(option.id));
+}
+
+export function matchesPropertyJobTypeFilter(
+  row: PropertyJobRow,
+  filterId: PropertyJobTypeFilterId | 'all',
+): boolean {
+  if (filterId === 'all') return true;
+  return propertyJobRowFilterId(row) === filterId;
+}
+
 export function groupPropertyJobRows(
   rows: PropertyJobRow[],
   preserveOrder = false,
+  /** When true, one group per job-type label (for section headers after date/name sort). */
+  mergeByLabel = false,
 ): { label: string; rows: PropertyJobRow[] }[] {
+  if (mergeByLabel) {
+    const groupMap = new Map<string, PropertyJobRow[]>();
+    for (const row of rows) {
+      const bucket = groupMap.get(row.jobType);
+      if (bucket) bucket.push(row);
+      else groupMap.set(row.jobType, [row]);
+    }
+    const orderedLabels = PROPERTY_JOB_TYPE_ORDER.filter((label) => groupMap.has(label));
+    const extraLabels = [...groupMap.keys()]
+      .filter((label) => !PROPERTY_JOB_TYPE_ORDER.includes(label))
+      .sort((a, b) => a.localeCompare(b));
+    return [...orderedLabels, ...extraLabels].map((label) => ({
+      label,
+      rows: groupMap.get(label)!,
+    }));
+  }
+
   const organized = preserveOrder ? rows : organizePropertyJobRows(rows);
   const groups: { label: string; rows: PropertyJobRow[] }[] = [];
   for (const row of organized) {
@@ -233,7 +330,7 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
 
 export function leasingWorkflowJobRows(cases: PropertyLeasingWorkflowCase[]): PropertyJobRow[] {
   const jobTypeByCategory: Record<PropertyLeasingWorkflowCase['category'], string> = {
-    leasing: 'Leasing',
+    leasing: 'New leasing',
     rent_review: 'Rent review',
     end_leasing: 'End leasing',
   };

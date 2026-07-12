@@ -6,6 +6,7 @@ import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail'
 import { RentReviewAgentConfirmedPanel } from '@/components/rent-review/rent-review-agent-confirmed-panel';
 import { RentReviewCompletedPanel } from '@/components/rent-review/rent-review-completed-panel';
 import { RentReviewResearchPanel } from '@/components/rent-review/rent-review-research-panel';
+import { RentReviewStageEmailHistory } from '@/components/rent-review/rent-review-email-log';
 import { RentReviewTenantDecisionPanel } from '@/components/rent-review/rent-review-tenant-decision-panel';
 import { RentReviewTenantNotifiedPanel } from '@/components/rent-review/rent-review-tenant-notified-panel';
 import {
@@ -13,6 +14,7 @@ import {
   RENT_REVIEW_AGENT_STEP_LABEL,
   RENT_REVIEW_AGENT_STEP_ORDER,
   buildRentReviewAgentWorkflow,
+  emailRecordsForStep,
   type RentReviewAgentStep,
 } from '@/lib/rent-review/agent-workflow-model';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
@@ -107,6 +109,10 @@ export function RentReviewAgentWorkflowPanel({
 
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
+  const stageEmails = useMemo(
+    () => emailRecordsForStep(detail, viewingStepId),
+    [detail, viewingStepId],
+  );
 
   return (
     <div className="space-y-4">
@@ -146,6 +152,7 @@ export function RentReviewAgentWorkflowPanel({
         <div className="space-y-4 p-4">
           <SubProgressList items={viewingStep?.subProgress ?? []} />
           <StepContent stepId={viewingStepId} detail={detail} onUpdated={onUpdated} />
+          <RentReviewStageEmailHistory emails={stageEmails} />
         </div>
       </div>
     </div>
