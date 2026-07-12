@@ -50,6 +50,7 @@ export function RentReviewResearchPanel({
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.RENT_RESEARCH);
   const suggested = detail.ai.suggestedWeekly;
   const researchComplete = hasResearchComplete(detail);
+  const landlordEmailed = detail.auditLog.some((e) => e.kind === 'landlord_research_email');
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -111,7 +112,7 @@ export function RentReviewResearchPanel({
         </div>
       ) : null}
 
-      {researchComplete ? (
+      {researchComplete && !landlordEmailed ? (
         <div className="space-y-2">
           <Button
             className="w-full gap-2"

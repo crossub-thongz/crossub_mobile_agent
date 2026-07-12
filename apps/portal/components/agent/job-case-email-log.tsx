@@ -18,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
 import type { WorkflowEmailContact } from '@/lib/job-case-email-recipients';
 import {
+  extractEmailAddress,
+  formatEmailPartyWithRole,
   formatWorkflowEmailContact,
   formatWorkflowEmailContactBlock,
 } from '@/lib/job-case-email-recipients';
@@ -223,16 +225,25 @@ function EmailDetailDialog({
         {mode === 'view' ? (
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground text-xs">{formatDateTime(email.at)}</p>
-            <dl className="grid gap-2 text-xs sm:grid-cols-2">
+            <dl className="grid gap-2 text-xs sm:grid-cols-1">
               <div>
                 <dt className="text-muted-foreground">From</dt>
-                <dd className="font-medium">{email.from}</dd>
+                <dd className="font-medium break-words">
+                  {formatEmailPartyWithRole(email.from, extractEmailAddress(email.from), recipientContacts)}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">To</dt>
-                <dd className="font-medium">{email.to}</dd>
+                <dd className="font-medium break-words">
+                  {formatEmailPartyWithRole(email.to, email.toEmail, recipientContacts)}
+                </dd>
               </div>
             </dl>
+            <div className="rounded-xl border bg-muted/20 p-3">
+              <pre className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                {email.body}
+              </pre>
+            </div>
             {email.attachments && email.attachments.length > 0 ? (
               <div className="rounded-xl border bg-muted/20 p-3 text-xs">
                 <p className="mb-1 font-semibold">Attachments</p>
@@ -246,11 +257,6 @@ function EmailDetailDialog({
                 </ul>
               </div>
             ) : null}
-            <div className="rounded-xl border bg-muted/20 p-3">
-              <pre className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                {email.body}
-              </pre>
-            </div>
             {onSend ? (
               <div className="flex gap-2">
                 <Button

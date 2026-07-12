@@ -172,11 +172,9 @@ export function RentReviewAgentWorkflowPanel({
   };
 
   const emailHistoryTitle =
-    viewingStepId === RENT_REVIEW_AGENT_STEP.RENT_RESEARCH
-      ? 'Email/message history'
-      : viewingStepId === RENT_REVIEW_AGENT_STEP.COMPLETED
-        ? 'All e-mail'
-        : undefined;
+    viewingStepId === RENT_REVIEW_AGENT_STEP.COMPLETED
+      ? 'All e-mail'
+      : 'Email/message history';
 
   const enableCommCompose = viewingStepId === RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
 

@@ -209,46 +209,79 @@ function tenantNotifiedSubProgress(detail: RentReviewWorkflowDetail): RentReview
   return [
     {
       id: 'notice',
-      label: 'Formal rent increase notice sent to tenant',
+      label: noticeAt
+        ? `Formal notice sent to tenant (${noticeAt.slice(0, 10)})`
+        : 'Formal rent increase notice sent to tenant',
       done: hasTenantNoticeSent(detail),
     },
     {
       id: 'reminders',
       label:
         reminderCount > 0
-          ? `${reminderCount} reminder email${reminderCount === 1 ? '' : 's'} sent (every 3 days)`
-          : 'Auto-reminder every 3 days if no reply',
+          ? `${reminderCount} automated reminder${reminderCount === 1 ? '' : 's'} sent (every 2 days)`
+          : 'Auto-reminder every 2 days if no reply',
       done: reminderCount > 0,
     },
     {
       id: 'awaiting',
-      label: noticeAt ? `Notice sent ${noticeAt.slice(0, 10)}` : 'Awaiting tenant response',
+      label: hasTenantDecision(detail)
+        ? 'Tenant response recorded'
+        : noticeAt
+          ? `Awaiting tenant response since ${noticeAt.slice(0, 10)}`
+          : 'Awaiting tenant response',
       done: hasTenantDecision(detail),
     },
   ];
 }
 
 function tenantDecisionSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
-  const accepted = detail.workflowState === 'tenant_accepted' || auditHas(detail, 'tenant_accepted_response');
-  const rejected = detail.workflowState === 'tenant_rejected' || auditHas(detail, 'tenant_rejected_response');
+  const accepted = isTenantDecisionAccepted(detail);
+  const rejected = isTenantDecisionRejected(detail);
+  const counter = auditHas(detail, 'tenant_counter_submitted');
   const accounting = detail.workflowState === 'accounting' || auditHas(detail, 'accounting_handoff');
+  const preferredFixed = detail.preferredLeaseType === 'fixed';
+  const leaseSteps = preferredFixed && accepted
+    ? [
+        {
+          id: 'lease-preparing',
+          label: 'Lease agreement preparing',
+          done: auditHas(detail, 'tenant_accepted_response') || auditHas(detail, 'agent_accepted_tenant_counter'),
+        },
+        {
+          id: 'lease-sent',
+          label: 'Lease agreement sent',
+          done: accounting || auditHas(detail, 'ledger_complete'),
+        },
+        {
+          id: 'lease-signed',
+          label: 'Lease agreement signed',
+          done: auditHas(detail, 'ledger_complete') || hasCompleted(detail),
+        },
+      ]
+    : [];
+
   return [
     {
       id: 'response',
       label: accepted
         ? 'Tenant accepted increase'
         : rejected
-          ? 'Tenant rejected — move-out or counter path'
-          : 'Awaiting tenant accept / reject / counter',
+          ? `Tenant declined${detail.tenantMoveOutDate ? ` · move-out ${detail.tenantMoveOutDate}` : ''}`
+          : counter
+            ? `Tenant counter-offer${detail.tenantCounterWeekly != null ? `: $${detail.tenantCounterWeekly}/wk` : ''}`
+            : 'Awaiting tenant accept / counter / decline',
       done: accepted || rejected,
     },
     {
-      id: 'rent-update',
+      id: 'terms',
       label: accepted
-        ? `New rent $${detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly}/wk from ${detail.effectiveDate ?? 'TBC'}`
-        : 'Rent & effective date update on acceptance',
-      done: accepted && detail.proposedWeeklyRent != null,
+        ? `New rent $${detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly}/wk · increase from ${detail.effectiveDate ?? 'TBC'}`
+        : rejected
+          ? 'Move-out date recorded'
+          : 'Rent terms on acceptance',
+      done: (accepted && detail.proposedWeeklyRent != null) || (rejected && detail.tenantMoveOutDate != null),
     },
+    ...leaseSteps,
     {
       id: 'accounting',
       label: accounting ? 'Submitted to accounting' : 'Accounting sync pending',
@@ -257,10 +290,34 @@ function tenantDecisionSubProgress(detail: RentReviewWorkflowDetail): RentReview
   ];
 }
 
+function isTenantDecisionAccepted(detail: RentReviewWorkflowDetail): boolean {
+  return (
+    detail.workflowState === 'tenant_accepted' ||
+    detail.workflowState === 'accounting' ||
+    detail.workflowState === 'completed' ||
+    auditHas(detail, 'tenant_accepted_response') ||
+    auditHas(detail, 'agent_accepted_tenant_counter')
+  );
+}
+
+function isTenantDecisionRejected(detail: RentReviewWorkflowDetail): boolean {
+  return detail.workflowState === 'tenant_rejected' || auditHas(detail, 'tenant_rejected_response');
+}
+
 function completedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
   const accounting =
     detail.workflowState === 'accounting' || auditHas(detail, 'accounting_handoff');
+  const auditCount = detail.auditLog.length;
   return [
+    {
+      id: 'tenant-path',
+      label: isTenantDecisionAccepted(detail)
+        ? 'Tenant accepted · terms finalised'
+        : isTenantDecisionRejected(detail)
+          ? 'Tenant declined · vacate path'
+          : 'Tenant decision recorded',
+      done: isTenantDecisionAccepted(detail) || isTenantDecisionRejected(detail),
+    },
     {
       id: 'accounting',
       label: accounting ? 'Submitted to accounting' : 'Accounting handoff pending',
@@ -274,6 +331,11 @@ function completedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPr
     {
       id: 'sync',
       label: 'System rent sync completed',
+      done: hasCompleted(detail),
+    },
+    {
+      id: 'audit',
+      label: auditCount > 0 ? `Full workflow audit (${auditCount} events)` : 'Full workflow audit',
       done: hasCompleted(detail),
     },
     {
@@ -492,6 +554,7 @@ function researchStepEmails(detail: RentReviewWorkflowDetail): RentReviewEmailRe
   return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));
 }
 
+/** Email records for one workflow stage only (no prior steps). */
 function emailRecordsForStepOnly(
   detail: RentReviewWorkflowDetail,
   step: RentReviewAgentStep,
@@ -514,26 +577,34 @@ function emailRecordsForStepOnly(
   }
 }
 
-/** Every email sent across the rent-review workflow (deduped, newest first). */
-export function allRentReviewEmailRecords(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
+function accumulateEmailRecordsThroughStep(
+  detail: RentReviewWorkflowDetail,
+  throughStep: RentReviewAgentStep,
+): RentReviewEmailRecord[] {
+  const endIdx = stepIndex(throughStep);
+  if (endIdx < 0) return [];
+
   const byId = new Map<string, RentReviewEmailRecord>();
-  for (const step of RENT_REVIEW_AGENT_STEP_ORDER) {
-    for (const record of emailRecordsForStepOnly(detail, step)) {
+  for (let i = 0; i <= endIdx; i++) {
+    const stepId = RENT_REVIEW_AGENT_STEP_ORDER[i];
+    for (const record of emailRecordsForStepOnly(detail, stepId)) {
       byId.set(record.id, record);
     }
   }
   return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));
 }
 
-/** Email records scoped to a single rent-review workflow stage. */
+/** Every email sent across the rent-review workflow (deduped, newest first). */
+export function allRentReviewEmailRecords(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
+  return accumulateEmailRecordsThroughStep(detail, RENT_REVIEW_AGENT_STEP.COMPLETED);
+}
+
+/** Emails through the viewed stage — each step accumulates all prior step mail. */
 export function emailRecordsForStep(
   detail: RentReviewWorkflowDetail,
   step: RentReviewAgentStep,
 ): RentReviewEmailRecord[] {
-  if (step === RENT_REVIEW_AGENT_STEP.COMPLETED) {
-    return allRentReviewEmailRecords(detail);
-  }
-  return [...emailRecordsForStepOnly(detail, step)].sort((a, b) => b.at.localeCompare(a.at));
+  return accumulateEmailRecordsThroughStep(detail, step);
 }
 
 /** @deprecated Use `allRentReviewEmailRecords` — kept for callers expecting the old name. */
@@ -545,8 +616,12 @@ export function auditEntriesForStep(
   detail: RentReviewWorkflowDetail,
   step: RentReviewAgentStep,
 ): RentReviewAuditEntry[] {
-  const kindsByStep: Record<RentReviewAgentStep, string[]> = {
-    rent_research: ['ai_report_ready', 'agent_confirmation_reminder', 'statutory_notice_alert'],
+  if (step === RENT_REVIEW_AGENT_STEP.COMPLETED) {
+    return [...detail.auditLog].sort((a, b) => a.at.localeCompare(b.at));
+  }
+
+  const kindsByStep: Record<Exclude<RentReviewAgentStep, 'completed'>, string[]> = {
+    rent_research: ['ai_report_ready', 'agent_confirmation_reminder', 'statutory_notice_alert', 'landlord_research_email'],
     agent_confirmed: [
       'review_confirmed',
       'pricing_snapshot',
@@ -556,11 +631,13 @@ export function auditEntriesForStep(
     ],
     tenant_notified: ['tenant_notices_dispatched', 'tenant_response_reminder'],
     tenant_decision: [
+      'tenant_counter_submitted',
+      'agent_accepted_tenant_counter',
+      'agent_reproposed_after_counter',
       'tenant_accepted_response',
       'tenant_rejected_response',
       'accounting_handoff',
     ],
-    completed: ['ledger_complete'],
   };
   const kinds = kindsByStep[step];
   return detail.auditLog.filter((e) => kinds.includes(e.kind));

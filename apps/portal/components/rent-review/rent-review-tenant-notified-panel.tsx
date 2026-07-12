@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileDown } from 'lucide-react';
+import { Bell, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RentReviewTenantRemindersDialog } from '@/components/rent-review/rent-review-tenant-reminders-dialog';
 import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
 import {
   RENT_REVIEW_AGENT_STEP,
@@ -15,11 +16,12 @@ import {
   canSendTenantNotice,
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
+import { listTenantResponseReminders } from '@/lib/rent-review/tenant-reminders';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 export function RentReviewTenantNotifiedPanel({
   detail,
@@ -31,6 +33,7 @@ export function RentReviewTenantNotifiedPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
   const [effectiveDate, setEffectiveDate] = useState('');
+  const [remindersOpen, setRemindersOpen] = useState(false);
 
   useEffect(() => {
     setEffectiveDate(detail.effectiveDate ?? '');
@@ -40,6 +43,8 @@ export function RentReviewTenantNotifiedPanel({
   const noticeSent = hasTenantNoticeSent(detail);
   const showSendNotice = canSendTenantNotice(detail);
   const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
+  const reminders = listTenantResponseReminders(detail);
+  const noticeAudit = [...detail.auditLog].reverse().find((e) => e.kind === 'tenant_notices_dispatched');
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -78,11 +83,11 @@ export function RentReviewTenantNotifiedPanel({
   return (
     <div className="space-y-4">
       <section className="rounded-xl border bg-card p-4">
-        <p className="mb-2 text-sm font-semibold">Tenant notified</p>
+        <p className="mb-2 text-sm font-semibold">Tenant notify</p>
         <p className="text-muted-foreground mb-3 text-xs">
           {noticeSent
-            ? 'Formal rent increase notice sent to tenant. If no reply, the system sends a reminder email every 3 days.'
-            : 'Send the formal notice to advance this step. You can also record the tenant response on behalf of the tenant once the notice is sent.'}
+            ? 'Confirmed terms have been sent to the tenant for acceptance. The system automatically sends a reminder email every 2 days until they respond.'
+            : 'Send the formal notice with the agent-confirmed terms so the tenant can accept, counter, or decline.'}
         </p>
         <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
@@ -92,11 +97,42 @@ export function RentReviewTenantNotifiedPanel({
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Effective date</dt>
+            <dt className="text-muted-foreground">Rent increase on</dt>
             <dd className="font-medium">{detail.effectiveDate ?? 'Not set'}</dd>
           </div>
+          {detail.preferredLeaseType ? (
+            <div>
+              <dt className="text-muted-foreground">Preferred renewal</dt>
+              <dd className="font-medium capitalize">{detail.preferredLeaseType} term</dd>
+            </div>
+          ) : null}
         </dl>
       </section>
+
+      {noticeSent ? (
+        <section className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4">
+          <p className="text-sky-800 text-xs font-semibold uppercase dark:text-sky-300">Audit</p>
+          <p className="mt-1 text-sm">
+            Formal notice dispatched to tenant
+            {noticeAudit ? ` on ${formatDateTime(noticeAudit.at)}` : ''}.
+          </p>
+          <p className="text-muted-foreground mt-2 text-xs">
+            {reminders.length > 0
+              ? `${reminders.length} automated reminder${reminders.length === 1 ? '' : 's'} sent so far (every 2 days).`
+              : 'No reminders sent yet — the first reminder is scheduled 2 days after dispatch if there is no response.'}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3 gap-2"
+            onClick={() => setRemindersOpen(true)}
+          >
+            <Bell className="size-4" />
+            View all reminder emails
+          </Button>
+        </section>
+      ) : null}
 
       {showSendNotice ? (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
@@ -105,7 +141,7 @@ export function RentReviewTenantNotifiedPanel({
             Dispatch the formal increase notice on behalf of the tenant communication channel (email,
             post, or hand delivery).
           </p>
-          <Label htmlFor="notice-effective">Effective date</Label>
+          <Label htmlFor="notice-effective">Rent increase on</Label>
           <Input
             id="notice-effective"
             type="date"
@@ -146,6 +182,7 @@ export function RentReviewTenantNotifiedPanel({
           <ul className="space-y-1 text-xs">
             {auditEntries.map((e) => (
               <li key={e.id}>
+                <span className="text-muted-foreground">{formatDateTime(e.at)} · </span>
                 <span className="font-medium">{e.message}</span>
                 {e.detail ? <span className="text-muted-foreground"> · {e.detail}</span> : null}
               </li>
@@ -153,6 +190,12 @@ export function RentReviewTenantNotifiedPanel({
           </ul>
         </section>
       ) : null}
+
+      <RentReviewTenantRemindersDialog
+        detail={detail}
+        open={remindersOpen}
+        onOpenChange={setRemindersOpen}
+      />
     </div>
   );
 }
