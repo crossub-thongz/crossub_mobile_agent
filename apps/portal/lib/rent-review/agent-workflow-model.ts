@@ -224,7 +224,14 @@ function tenantDecisionSubProgress(detail: RentReviewWorkflowDetail): RentReview
 }
 
 function completedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
+  const accounting =
+    detail.workflowState === 'accounting' || auditHas(detail, 'accounting_handoff');
   return [
+    {
+      id: 'accounting',
+      label: accounting ? 'Submitted to accounting' : 'Accounting handoff pending',
+      done: accounting || hasCompleted(detail),
+    },
     {
       id: 'confirmation',
       label: 'Confirmation email sent to tenant',
@@ -258,8 +265,9 @@ export function resolveRentReviewAgentStep(detail: RentReviewWorkflowDetail): Re
       return RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED;
     case 'tenant_accepted':
     case 'tenant_rejected':
-    case 'accounting':
       return RENT_REVIEW_AGENT_STEP.TENANT_DECISION;
+    case 'accounting':
+      return RENT_REVIEW_AGENT_STEP.COMPLETED;
     case 'completed':
       return RENT_REVIEW_AGENT_STEP.COMPLETED;
     case 'cancelled':
@@ -418,53 +426,72 @@ function tenantNoticeAndReminderEmails(detail: RentReviewWorkflowDetail): RentRe
   return records;
 }
 
+function agentConfirmedEmails(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
+  return detail.auditLog
+    .filter((entry) =>
+      ['agent_confirmation_reminder', 'statutory_notice_alert'].includes(entry.kind),
+    )
+    .map((entry) => ({
+      id: entry.id,
+      subject:
+        entry.kind === 'statutory_notice_alert'
+          ? 'Statutory notice period alert'
+          : 'Reminder — confirm rent review',
+      from: 'CROSSUB',
+      to: 'Managing Agent',
+      at: entry.at,
+      kind: entry.kind,
+      body: [entry.message, entry.detail].filter(Boolean).join('\n\n'),
+    }));
+}
+
+function emailRecordsForStepOnly(
+  detail: RentReviewWorkflowDetail,
+  step: RentReviewAgentStep,
+): RentReviewEmailRecord[] {
+  switch (step) {
+    case RENT_REVIEW_AGENT_STEP.RENT_RESEARCH:
+      return hasResearchComplete(detail) ? [buildResearchEmailToAgent(detail)] : [];
+    case RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED:
+      return agentConfirmedEmails(detail);
+    case RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED:
+      return tenantNoticeAndReminderEmails(detail);
+    case RENT_REVIEW_AGENT_STEP.TENANT_DECISION:
+      return [];
+    case RENT_REVIEW_AGENT_STEP.COMPLETED: {
+      const completion = buildCompletionEmail(detail);
+      return completion ? [completion] : [];
+    }
+    default:
+      return [];
+  }
+}
+
+/** Every email sent across the rent-review workflow (deduped, newest first). */
+export function allRentReviewEmailRecords(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
+  const byId = new Map<string, RentReviewEmailRecord>();
+  for (const step of RENT_REVIEW_AGENT_STEP_ORDER) {
+    for (const record of emailRecordsForStepOnly(detail, step)) {
+      byId.set(record.id, record);
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));
+}
+
 /** Email records scoped to a single rent-review workflow stage. */
 export function emailRecordsForStep(
   detail: RentReviewWorkflowDetail,
   step: RentReviewAgentStep,
 ): RentReviewEmailRecord[] {
-  let records: RentReviewEmailRecord[] = [];
-
-  switch (step) {
-    case RENT_REVIEW_AGENT_STEP.RENT_RESEARCH:
-      records = [buildResearchEmailToAgent(detail)];
-      break;
-    case RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED:
-      records = [];
-      break;
-    case RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED:
-      records = tenantNoticeAndReminderEmails(detail);
-      break;
-    case RENT_REVIEW_AGENT_STEP.TENANT_DECISION:
-      records = tenantNoticeAndReminderEmails(detail);
-      break;
-    case RENT_REVIEW_AGENT_STEP.COMPLETED: {
-      const completion = buildCompletionEmail(detail);
-      records = completion ? [completion] : [];
-      break;
-    }
-    default:
-      records = [];
+  if (step === RENT_REVIEW_AGENT_STEP.COMPLETED) {
+    return allRentReviewEmailRecords(detail);
   }
-
-  return [...records].sort((a, b) => b.at.localeCompare(a.at));
+  return [...emailRecordsForStepOnly(detail, step)].sort((a, b) => b.at.localeCompare(a.at));
 }
 
+/** @deprecated Use `allRentReviewEmailRecords` — kept for callers expecting the old name. */
 export function emailRecordsFromAudit(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
-  const records: RentReviewEmailRecord[] = [];
-  if (detail.workflowState !== 'pending_confirmation' || detail.ai.suggestedWeekly != null) {
-    records.push(buildResearchEmailToAgent(detail));
-  }
-  const notice = buildTenantNoticeEmail(detail);
-  if (notice) records.push(notice);
-  for (const entry of detail.auditLog) {
-    if (entry.kind === 'tenant_response_reminder') {
-      records.push(buildTenantReminderEmail(entry, detail));
-    }
-  }
-  const completion = buildCompletionEmail(detail);
-  if (completion) records.push(completion);
-  return records;
+  return allRentReviewEmailRecords(detail);
 }
 
 export function auditEntriesForStep(

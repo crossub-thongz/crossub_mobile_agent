@@ -131,6 +131,19 @@ export function RentReviewTenantDecisionPanel({
         >
           Submit to accounting
         </Button>
+      ) : detail.workflowState === 'accounting' ? (
+        <Button
+          className="w-full"
+          disabled={busy}
+          onClick={() =>
+            void run(
+              () => rentReviewApi.complete(detail.id),
+              'Rent review completed & system synced',
+            )
+          }
+        >
+          Complete rent review & sync system
+        </Button>
       ) : null}
 
       {auditEntries.length > 0 ? (

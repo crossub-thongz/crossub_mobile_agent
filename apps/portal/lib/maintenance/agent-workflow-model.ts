@@ -1,4 +1,5 @@
 import type { ApiQuotation } from '@/lib/crossub-api/types';
+import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import type { MaintenanceRequest } from '@/lib/types';
 
@@ -567,4 +568,44 @@ export function auditEntriesForStep(
   return ctx.workspaceCase.auditEntries.filter((e) =>
     regs.some((r) => r.test(e.message)),
   );
+}
+
+function emailRecordsForStepOnly(
+  ctx: MaintenanceWorkflowContext,
+  step: MaintenanceAgentStep,
+): MaintenanceEmailRecord[] {
+  switch (step) {
+    case MAINTENANCE_AGENT_STEP.JOB_CREATED:
+      return buildJobCreatedEmails(ctx);
+    case MAINTENANCE_AGENT_STEP.REVIEW:
+      return [];
+    case MAINTENANCE_AGENT_STEP.GET_QUOTE: {
+      const quote = buildQuoteSentToAgentEmail(ctx);
+      return quote ? [quote] : [];
+    }
+    case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
+      return buildAcceptanceEmails(ctx);
+    case MAINTENANCE_AGENT_STEP.JOB_COMPLETED:
+      return emailNotifications(ctx.workspaceCase);
+    default:
+      return [];
+  }
+}
+
+export function allMaintenanceEmailRecords(ctx: MaintenanceWorkflowContext): JobCaseEmailRecord[] {
+  const records: JobCaseEmailRecord[] = [];
+  for (const step of MAINTENANCE_AGENT_STEP_ORDER) {
+    records.push(...emailRecordsForStepOnly(ctx, step));
+  }
+  return dedupeJobCaseEmails(records);
+}
+
+export function maintenanceEmailRecordsForStep(
+  ctx: MaintenanceWorkflowContext,
+  step: MaintenanceAgentStep,
+): JobCaseEmailRecord[] {
+  if (step === MAINTENANCE_AGENT_STEP.JOB_COMPLETED) {
+    return allMaintenanceEmailRecords(ctx);
+  }
+  return dedupeJobCaseEmails(emailRecordsForStepOnly(ctx, step));
 }

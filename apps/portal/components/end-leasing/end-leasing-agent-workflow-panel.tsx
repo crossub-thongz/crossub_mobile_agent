@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   WorkflowProgressRail,
 } from '@/components/agent/workflow-progress-rail';
+import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { EndLeasingBondReleasedPanel } from '@/components/end-leasing/end-leasing-bond-released-panel';
 import { EndLeasingReportComparisonPanel } from '@/components/end-leasing/end-leasing-report-comparison-panel';
 import { EndLeasingResultConfirmedPanel } from '@/components/end-leasing/end-leasing-result-confirmed-panel';
@@ -17,6 +18,7 @@ import {
   END_LEASING_AGENT_STEP_LABEL,
   END_LEASING_AGENT_STEP_ORDER,
   buildEndLeasingAgentWorkflow,
+  endLeasingEmailRecordsForStep,
   type EndLeasingAgentStep,
 } from '@/lib/end-leasing/agent-workflow-model';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
@@ -132,6 +134,10 @@ export function EndLeasingAgentWorkflowPanel({
 
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
+  const stageEmails = useMemo(
+    () => endLeasingEmailRecordsForStep(caseData, viewingStepId),
+    [caseData, viewingStepId],
+  );
   const legacyStage = mapAgentStepToTerminationStage(viewingStepId);
   const stageOrder = terminationStageOrderForCase(caseData.terminationType);
   const showLegacyPanel =
@@ -193,6 +199,15 @@ export function EndLeasingAgentWorkflowPanel({
               <TerminationPhasePanel caseData={caseData} stage={legacyStage} />
             </div>
           ) : null}
+
+          <JobCaseStageEmailHistory
+            emails={stageEmails}
+            title={
+              viewingStepId === END_LEASING_AGENT_STEP.BOND_RELEASED
+                ? 'All e-mail'
+                : undefined
+            }
+          />
         </div>
       </div>
     </div>

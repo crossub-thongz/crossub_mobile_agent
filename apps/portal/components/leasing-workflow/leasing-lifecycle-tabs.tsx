@@ -1,5 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
+
+import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { LeasingStepApplicationApproval } from '@/components/leasing-workflow/leasing-step-application-approval';
 import { LeasingStepOnboarding } from '@/components/leasing-workflow/leasing-step-onboarding';
@@ -7,6 +10,7 @@ import { LeasingStepOpenInspection } from '@/components/leasing-workflow/leasing
 import { LeasingStepOpenReport } from '@/components/leasing-workflow/leasing-step-open-report';
 import { LeasingStepResults } from '@/components/leasing-workflow/leasing-step-results';
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
+import { leasingEmailRecordsForStep } from '@/lib/leasing/agent-workflow-email';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
@@ -35,6 +39,28 @@ export function LeasingLifecycleTabs({
 }
 
 function StepPanel({
+  step,
+  detail,
+  onCaseClosed,
+}: {
+  step: LeasingLifecycleStep;
+  detail: LeasingPropertyDetail;
+  onCaseClosed?: () => void;
+}) {
+  const stageEmails = useMemo(() => leasingEmailRecordsForStep(detail, step), [detail, step]);
+
+  return (
+    <div className="space-y-4">
+      <StepPanelContent step={step} detail={detail} onCaseClosed={onCaseClosed} />
+      <JobCaseStageEmailHistory
+        emails={stageEmails}
+        title={step === LEASING_LIFECYCLE_STEP.ONBOARDING ? 'All e-mail' : undefined}
+      />
+    </div>
+  );
+}
+
+function StepPanelContent({
   step,
   detail,
   onCaseClosed,

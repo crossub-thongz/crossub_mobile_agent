@@ -2,6 +2,7 @@
 
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import { RentReviewWorkflowTimeline } from '@/components/rent-review/rent-review-workflow-timeline';
+import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import type { RentReviewCase } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
@@ -24,7 +25,7 @@ export function PropertyRentReviewCaseWorkflowDialog({
       onClose={onClose}
       title="Rent review"
       subtitle={`${name} · ${review.status}`}
-      size="xl"
+      size={JOB_CASE_DIALOG_SIZE}
     >
       <RentReviewWorkflowTimeline review={review} />
     </CaseDetailDialog>

@@ -6,6 +6,7 @@ import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dia
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { fromProperty } from '@/lib/detail-navigation';
+import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import { inspectionJobRows } from '@/lib/property-job-rows';
 import { VACANT_TENANCY_INSPECTIONS_HINT } from '@/lib/property-leasing';
 import type {
@@ -99,7 +100,7 @@ export function PropertyInspectionTab({
         onClose={handleDialogClose}
         inspection={dialogInspection}
         navContext={fromProperty(propertyId, 'Inspection')}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       />
     </div>
   );

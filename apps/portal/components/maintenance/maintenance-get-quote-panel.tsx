@@ -1,9 +1,7 @@
 'use client';
 
-import { MaintenanceEmailLog } from '@/components/maintenance/maintenance-email-log';
 import {
   auditEntriesForStep,
-  buildQuoteSentToAgentEmail,
   MAINTENANCE_AGENT_STEP,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
@@ -14,7 +12,6 @@ export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowCont
   const quote = ctx.workspaceCase.quotations
     .slice()
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
-  const quoteEmail = buildQuoteSentToAgentEmail(ctx);
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
   const landlordFlow = requiresContractorFlow(ctx);
 
@@ -69,8 +66,6 @@ export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowCont
           The quotation should include labour, call-out, and parts breakdown with GST noted.
         </p>
       )}
-
-      {quoteEmail ? <MaintenanceEmailLog title="Quotation report to agent" emails={[quoteEmail]} /> : null}
 
       {audit.length > 0 ? (
         <div className="rounded-xl border bg-card p-3">

@@ -14,6 +14,7 @@ import {
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type { Property, RentReviewCase, VacatingCase } from '@/lib/types';
 import { formatPropertyFullAddress } from '@/lib/utils';
+import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 
 export function PropertyLeasingCaseWorkflowContent({
   item,
@@ -109,7 +110,7 @@ export function PropertyLeasingCaseWorkflowDialog({
       onClose={onClose}
       title={LEASING_CATEGORY_LABEL[item.category]}
       subtitle={`${item.label} · ${item.currentStep}`}
-      size="xl"
+      size={JOB_CASE_DIALOG_SIZE}
       headerActions={
         deletable && onDeleteCase ? (
           <Button

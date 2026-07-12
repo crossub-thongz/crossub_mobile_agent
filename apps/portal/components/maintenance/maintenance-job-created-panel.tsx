@@ -1,10 +1,8 @@
 'use client';
 
-import { MaintenanceEmailLog } from '@/components/maintenance/maintenance-email-log';
 import { ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
 import {
   auditEntriesForStep,
-  buildJobCreatedEmails,
   MAINTENANCE_AGENT_STEP,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
@@ -22,7 +20,6 @@ function sourceLabel(source: MaintenanceWorkflowContext['workspaceCase']['source
 }
 
 export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
-  const emails = buildJobCreatedEmails(ctx);
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.JOB_CREATED);
 
   return (
@@ -48,8 +45,6 @@ export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowCo
           </div>
         </dl>
       </section>
-
-      <MaintenanceEmailLog title="Email records" emails={emails} />
 
       {audit.length > 0 ? (
         <div className="rounded-xl border bg-card p-3">

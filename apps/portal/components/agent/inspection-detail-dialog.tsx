@@ -1,16 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
+import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
 import { Button } from '@/components/ui/button';
 import { inspectionDetail } from '@/constants/routes';
 import type { DetailNavContext } from '@/lib/detail-navigation';
+import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
+import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import {
   OPEN_CONDUCTED_BY_LABEL,
   OPEN_LISTING_CONTEXT_LABEL,
@@ -24,7 +28,7 @@ export function InspectionDetailDialog({
   onClose,
   inspection,
   navContext,
-  size = 'default',
+  size = JOB_CASE_DIALOG_SIZE,
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,6 +38,12 @@ export function InspectionDetailDialog({
 }) {
   const { apiConnected } = useAgentData();
   if (!inspection) return null;
+
+  const stageEmails = useMemo(() => inspectionEmailRecordsForStep(inspection), [inspection]);
+  const emailTitle =
+    inspection.apiStatus === 'PUBLISHED' || inspection.reportStatus === 'sent'
+      ? 'All e-mail'
+      : undefined;
 
   const isFieldInspection =
     inspection.type === 'INGOING' || inspection.type === 'OUTGOING';
@@ -48,6 +58,7 @@ export function InspectionDetailDialog({
         size={size}
       >
         <AgentFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
+        <JobCaseStageEmailHistory emails={stageEmails} title={emailTitle} />
       </CaseDetailDialog>
     );
   }
@@ -177,6 +188,8 @@ export function InspectionDetailDialog({
             <Timeline entries={inspection.timeline} />
           </div>
         )}
+
+        <JobCaseStageEmailHistory emails={stageEmails} title={emailTitle} />
 
         <Button variant="outline" className="w-full" asChild>
           <Link href={inspectionDetail(inspection.id, navContext)} onClick={onClose}>

@@ -152,7 +152,14 @@ export function RentReviewAgentWorkflowPanel({
         <div className="space-y-4 p-4">
           <SubProgressList items={viewingStep?.subProgress ?? []} />
           <StepContent stepId={viewingStepId} detail={detail} onUpdated={onUpdated} />
-          <RentReviewStageEmailHistory emails={stageEmails} />
+          <RentReviewStageEmailHistory
+            emails={stageEmails}
+            title={
+              viewingStepId === RENT_REVIEW_AGENT_STEP.COMPLETED
+                ? 'All e-mail'
+                : undefined
+            }
+          />
         </div>
       </div>
     </div>

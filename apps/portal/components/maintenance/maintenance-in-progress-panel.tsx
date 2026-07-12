@@ -3,13 +3,11 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { MaintenanceEmailLog } from '@/components/maintenance/maintenance-email-log';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
   auditEntriesForStep,
-  buildAcceptanceEmails,
   MAINTENANCE_AGENT_STEP,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
@@ -24,7 +22,6 @@ export function MaintenanceInProgressPanel({ ctx }: { ctx: MaintenanceWorkflowCo
   const [busy, setBusy] = useState(false);
 
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.IN_PROGRESS);
-  const acceptanceEmails = buildAcceptanceEmails(ctx);
   const landlordFlow = requiresContractorFlow(ctx);
   const awaitingApproval = ctx.item.requiresApproval && ctx.workspaceCase.status === 'pending_approval';
 
@@ -146,10 +143,6 @@ export function MaintenanceInProgressPanel({ ctx }: { ctx: MaintenanceWorkflowCo
             </dd>
           </div>
         </dl>
-      ) : null}
-
-      {acceptanceEmails.length > 0 ? (
-        <MaintenanceEmailLog title="Acceptance notifications" emails={acceptanceEmails} />
       ) : null}
 
       {audit.length > 0 ? (

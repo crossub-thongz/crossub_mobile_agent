@@ -27,6 +27,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
+import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 
 export function PropertyOverviewJobDialog({
   job,
@@ -76,7 +77,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         title="Rent review"
         subtitle={`${job.name} · ${job.status}`}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       >
         <RentReviewWorkflowTimeline review={review} />
       </CaseDetailDialog>
@@ -91,7 +92,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         inspection={inspection}
         navContext={fromProperty(propertyId, 'Overview')}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       />
     );
   }
@@ -105,7 +106,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         title="Maintenance"
         subtitle={`${job.name} · ${job.status}`}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       >
         <PropertyMaintenanceJobPanel
           item={request}
@@ -132,7 +133,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         title={job.jobType}
         subtitle={`${job.name} · ${job.status}`}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       >
         <PropertyLeasingCaseWorkflowContent
           item={workflowCase}
@@ -157,7 +158,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         title="End leasing"
         subtitle={`${job.name} · ${job.status}`}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       >
         <VacatingWorkflowTimeline vacatingCase={vacatingCase} />
       </CaseDetailDialog>
@@ -173,7 +174,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         title="Tribunal"
         subtitle={`${job.name} · ${job.status}`}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       >
         <div className="space-y-3 rounded-xl border bg-card p-4 text-sm">
           <p className="font-semibold">{tribunalCase.matter}</p>
@@ -200,7 +201,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         title="Rent arrears"
         subtitle={job.status}
-        size="xl"
+        size={JOB_CASE_DIALOG_SIZE}
       >
         <div className="space-y-2 rounded-xl border bg-card p-4 text-sm">
           <p className="font-semibold">{accounting.tenantName}</p>

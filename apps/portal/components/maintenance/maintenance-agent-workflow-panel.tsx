@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
+import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
 import { MaintenanceInProgressPanel } from '@/components/maintenance/maintenance-in-progress-panel';
 import { MaintenanceJobCompletedPanel } from '@/components/maintenance/maintenance-job-completed-panel';
@@ -14,6 +15,7 @@ import {
   MAINTENANCE_AGENT_STEP_LABEL,
   MAINTENANCE_AGENT_STEP_ORDER,
   MAINTENANCE_AGENT_STEP_TITLE,
+  maintenanceEmailRecordsForStep,
   type MaintenanceAgentStep,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
@@ -100,6 +102,10 @@ export function MaintenanceAgentWorkflowPanel({ ctx }: { ctx: MaintenanceWorkflo
 
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
+  const stageEmails = useMemo(
+    () => maintenanceEmailRecordsForStep(ctx, viewingStepId),
+    [ctx, viewingStepId],
+  );
 
   return (
     <div className="space-y-4">
@@ -139,6 +145,14 @@ export function MaintenanceAgentWorkflowPanel({ ctx }: { ctx: MaintenanceWorkflo
         <div className="space-y-4 p-4">
           <SubProgressList items={viewingStep?.subProgress ?? []} />
           <StepContent stepId={viewingStepId} ctx={ctx} />
+          <JobCaseStageEmailHistory
+            emails={stageEmails}
+            title={
+              viewingStepId === MAINTENANCE_AGENT_STEP.JOB_COMPLETED
+                ? 'All e-mail'
+                : undefined
+            }
+          />
         </div>
       </div>
     </div>

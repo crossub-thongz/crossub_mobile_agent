@@ -1,6 +1,7 @@
 import { TERMINATION_TYPE, TENANT_SETTLEMENT_CONFIRMATION } from '@/constants/end-leasing';
+import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
-import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
+import type { EndLeasingOverviewEmail, TerminationCaseDetail } from '@/lib/end-leasing/types';
 
 /** Six-stage end-leasing flow (manager spec). */
 export const END_LEASING_AGENT_STEP = {
@@ -404,3 +405,132 @@ export function buildEndLeasingAgentWorkflow(
 }
 
 export { leaseTypeLabel, breachStatusLabel };
+
+function storedEmailToRecord(
+  id: string,
+  email: EndLeasingOverviewEmail | null | undefined,
+  kind: string,
+  fallbackSubject: string,
+  fallbackAt: string,
+): JobCaseEmailRecord | null {
+  if (!email?.body && !email?.sentAt) return null;
+  return {
+    id,
+    subject: email.subject ?? fallbackSubject,
+    body: email.body ?? '',
+    from: email.from ?? 'Managing Agent',
+    to: email.to ?? '—',
+    at: email.sentAt ?? fallbackAt,
+    kind,
+  };
+}
+
+function emailRecordsForStepOnly(
+  caseData: TerminationCaseDetail,
+  step: EndLeasingAgentStep,
+): JobCaseEmailRecord[] {
+  const rc = caseData.reportComparison;
+  switch (step) {
+    case END_LEASING_AGENT_STEP.VACATE_CONFIRMED: {
+      const tenantNotice = buildTenantNoticeEmailView(caseData);
+      const records: JobCaseEmailRecord[] = [
+        {
+          id: `${caseData.id}-tenant-notice`,
+          subject: tenantNotice.subject,
+          body: tenantNotice.body,
+          from: tenantNotice.from,
+          to: tenantNotice.to,
+          at: tenantNotice.receivedAt ?? caseData.createdAt,
+          kind: 'tenant_notice',
+        },
+      ];
+      const reply = buildVacatingInfoReplyEmailView(caseData);
+      if (reply) {
+        records.push({
+          id: `${caseData.id}-vacating-reply`,
+          subject: reply.subject,
+          body: reply.body,
+          from: reply.from,
+          to: reply.to,
+          at: reply.receivedAt ?? caseData.createdAt,
+          kind: 'vacating_reply',
+        });
+      }
+      return records;
+    }
+    case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
+      return [];
+    case END_LEASING_AGENT_STEP.REPORT_COMPARISON: {
+      const records: JobCaseEmailRecord[] = [];
+      const tenantSummary = storedEmailToRecord(
+        `${caseData.id}-tenant-comparison`,
+        rc.tenantComparisonSummaryEmail,
+        'tenant_comparison',
+        'Tenant responsibility summary',
+        caseData.createdAt,
+      );
+      const agentSummary = storedEmailToRecord(
+        `${caseData.id}-agent-comparison`,
+        rc.agentComparisonSummaryEmail,
+        'agent_comparison',
+        'Inspection comparison summary',
+        caseData.createdAt,
+      );
+      if (tenantSummary) records.push(tenantSummary);
+      if (agentSummary) records.push(agentSummary);
+      return records;
+    }
+    case END_LEASING_AGENT_STEP.GET_QUOTE: {
+      const records: JobCaseEmailRecord[] = [];
+      const agentQuote = storedEmailToRecord(
+        `${caseData.id}-agent-repair-quote`,
+        rc.agentRepairQuoteEmail,
+        'agent_repair_quote',
+        'Repair quotes for agent',
+        caseData.createdAt,
+      );
+      const landlordQuote = storedEmailToRecord(
+        `${caseData.id}-landlord-repair-quote`,
+        rc.landlordRepairQuoteEmail,
+        'landlord_repair_quote',
+        'Landlord repair quote',
+        caseData.createdAt,
+      );
+      if (agentQuote) records.push(agentQuote);
+      if (landlordQuote) records.push(landlordQuote);
+      return records;
+    }
+    case END_LEASING_AGENT_STEP.RESULT_CONFIRMED: {
+      const tenantQuote = storedEmailToRecord(
+        `${caseData.id}-tenant-repair-quote`,
+        rc.tenantRepairQuoteEmail,
+        'tenant_repair_quote',
+        'Tenant repair quote',
+        caseData.createdAt,
+      );
+      return tenantQuote ? [tenantQuote] : [];
+    }
+    case END_LEASING_AGENT_STEP.BOND_RELEASED:
+      return [];
+    default:
+      return [];
+  }
+}
+
+export function allEndLeasingEmailRecords(caseData: TerminationCaseDetail): JobCaseEmailRecord[] {
+  const records: JobCaseEmailRecord[] = [];
+  for (const step of END_LEASING_AGENT_STEP_ORDER) {
+    records.push(...emailRecordsForStepOnly(caseData, step));
+  }
+  return dedupeJobCaseEmails(records);
+}
+
+export function endLeasingEmailRecordsForStep(
+  caseData: TerminationCaseDetail,
+  step: EndLeasingAgentStep,
+): JobCaseEmailRecord[] {
+  if (step === END_LEASING_AGENT_STEP.BOND_RELEASED) {
+    return allEndLeasingEmailRecords(caseData);
+  }
+  return dedupeJobCaseEmails(emailRecordsForStepOnly(caseData, step));
+}
