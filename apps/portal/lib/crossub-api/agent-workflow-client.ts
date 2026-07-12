@@ -60,10 +60,10 @@ export type CreateAgentIngoingInspectionInput = {
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
-  priority?: 'normal' | 'urgent';
+  priority?: 'normal' | 'high' | 'urgent';
   accessInstructions?: string;
+  notes?: string;
   leaseApprovalRef?: string;
-  manualNotes?: string;
 };
 
 export async function createAgentLeasingCycle(

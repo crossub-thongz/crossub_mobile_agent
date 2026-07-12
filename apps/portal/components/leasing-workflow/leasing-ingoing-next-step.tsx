@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail } from '@/constants/routes';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
-import { inspectionsApi } from '@/lib/inspections-api';
+import { createAgentIngoingInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { LEASING_AGENT_DECISION, LEASING_UI } from '@/lib/leasing/constants';
 import {
   LEASING_INGOING_SCHEDULE_WINDOW_DAYS,
@@ -71,21 +71,23 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
         applyCycleView(detail.propertyId, view);
         inspectionId = view.onboarding?.ingoingInspection?.inspectionId ?? null;
         await refresh();
-      } else {
+      } else if (apiConnected) {
         const approved = detail.applicationsDetail.find(
           (a) => a.agentDecision === LEASING_AGENT_DECISION.APPROVED,
         );
-        const created = await inspectionsApi.createIngoing({
-          propertyId: detail.propertyId,
+        const created = await createAgentIngoingInspection(detail.propertyId, {
           moveInDate: moveIn.slice(0, 10),
           scheduledTime: new Date(scheduledTime).toISOString(),
           tenantName: approved?.applicant ?? 'Tenant',
-          tenantEmail: approved?.email,
-          tenantPhone: approved?.phone,
+          tenantEmail: approved?.email?.trim() || undefined,
+          tenantPhone: approved?.phone?.trim() || undefined,
           leaseApprovalRef: leasingCycleApprovalRef(cycleId),
         });
         inspectionId = created.id;
         scheduleLocal(detail.propertyId, scheduledTime, 'Task pool', created.id);
+        await refresh();
+      } else {
+        scheduleLocal(detail.propertyId, scheduledTime, 'Task pool');
       }
 
       if (!inspectionId) {

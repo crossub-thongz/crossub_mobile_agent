@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, ROUTES } from '@/constants/routes';
+import { createAgentIngoingInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import {
@@ -412,12 +413,12 @@ export function CreateInspectionWizard({
       if (inspectionType === 'INGOING') {
         if (!ingoing.tenantName.trim()) throw new Error('Tenant name is required');
         if (!ingoing.moveInDate) throw new Error('Move-in date is required');
-        const created = await inspectionsApi.createIngoing({
-          propertyId: property.id,
+        const scheduledTime = ingoingScheduledLocal
+          ? new Date(ingoingScheduledLocal).toISOString()
+          : ingoing.scheduledTime || undefined;
+        const created = await createAgentIngoingInspection(property.id, {
           moveInDate: ingoing.moveInDate,
-          scheduledTime: ingoingScheduledLocal
-            ? new Date(ingoingScheduledLocal).toISOString()
-            : ingoing.scheduledTime || undefined,
+          scheduledTime,
           tenantName: ingoing.tenantName.trim(),
           tenantEmail: ingoing.tenantEmail.trim() || undefined,
           tenantPhone: ingoing.tenantPhone.trim() || undefined,
@@ -426,7 +427,25 @@ export function CreateInspectionWizard({
           notes: ingoing.notes?.trim() || undefined,
           leaseApprovalRef: ingoing.leaseApprovalRef.trim() || undefined,
         });
-        const view = mapInspectionRecordToView(created);
+        let view: Inspection;
+        try {
+          const record = await inspectionsApi.get(created.id);
+          view = mapInspectionRecordToView(record);
+        } catch {
+          view = {
+            id: created.id,
+            trackingNumber: workflowCaseReferenceLabel(created.id, 'ingoing'),
+            type: 'INGOING',
+            propertyId: property.id,
+            propertyAddress: property.address,
+            scheduledAt: scheduledTime,
+            status: 'Scheduled',
+            reportStatus: 'pending',
+            createdAt: new Date().toISOString(),
+            timeline: [],
+            source: 'inspection',
+          };
+        }
         toast.success('Ingoing inspection created');
         finalizeInspectionCreate(view);
         return;
