@@ -1,16 +1,33 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronRight, Mail, Reply } from 'lucide-react';
+import { ChevronRight, Forward, Mail, Reply, Send } from 'lucide-react';
+import { toast } from 'sonner';
 
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
 import { cn, formatDate, formatDateTime } from '@/lib/utils';
+
+export type CommComposeMode = 'view' | 'reply' | 'forward';
+
+export interface CommSendDraft {
+  subject: string;
+  body: string;
+  to: string;
+  toEmail: string;
+  mode: CommComposeMode;
+  inReplyTo?: JobCaseEmailRecord;
+}
 
 function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
   const from = email.from.toLowerCase();
@@ -22,16 +39,16 @@ function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
 
 function emailPartyLine(email: JobCaseEmailRecord): string {
   const direction = emailDirection(email);
-  return direction === 'inbound' ? `From ${email.from}` : `To ${email.to}`;
+  const channel = email.channel === 'message' ? 'Message' : 'Email';
+  const party = direction === 'inbound' ? `From ${email.from}` : `To ${email.to}`;
+  return `${channel} · ${party}`;
 }
 
 function EmailListRow({
   email,
-  selected,
   onSelect,
 }: {
   email: JobCaseEmailRecord;
-  selected: boolean;
   onSelect: () => void;
 }) {
   const direction = emailDirection(email);
@@ -41,10 +58,7 @@ function EmailListRow({
     <button
       type="button"
       onClick={onSelect}
-      className={cn(
-        'flex w-full items-start gap-3 px-3 py-3 text-left transition-colors',
-        selected ? 'bg-primary/5' : 'hover:bg-muted/30',
-      )}
+      className="hover:bg-muted/30 flex w-full items-start gap-3 px-3 py-3 text-left transition-colors"
     >
       <span
         className={cn(
@@ -64,41 +78,195 @@ function EmailListRow({
   );
 }
 
+function buildReplyDraft(email: JobCaseEmailRecord): CommSendDraft {
+  const replyTo = email.toEmail ?? email.from;
+  const subject = email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`;
+  return {
+    subject,
+    body: `\n\n---\nOn ${formatDateTime(email.at)}, ${email.from} wrote:\n${email.body}`,
+    to: email.from,
+    toEmail: replyTo.includes('@') ? replyTo : '',
+    mode: 'reply',
+    inReplyTo: email,
+  };
+}
+
+function buildForwardDraft(email: JobCaseEmailRecord): CommSendDraft {
+  const subject = email.subject.startsWith('Fwd:') ? email.subject : `Fwd: ${email.subject}`;
+  return {
+    subject,
+    body:
+      `\n\n---------- Forwarded message ----------\n` +
+      `From: ${email.from}\n` +
+      `To: ${email.to}\n` +
+      `Date: ${formatDateTime(email.at)}\n` +
+      `Subject: ${email.subject}\n\n` +
+      email.body,
+    to: '',
+    toEmail: '',
+    mode: 'forward',
+    inReplyTo: email,
+  };
+}
+
 function EmailDetailDialog({
   email,
   open,
   onOpenChange,
+  onSend,
 }: {
   email: JobCaseEmailRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSend?: (draft: CommSendDraft) => void;
 }) {
+  const [mode, setMode] = useState<CommComposeMode>('view');
+  const [toEmail, setToEmail] = useState('');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+
+  const resetCompose = (nextMode: CommComposeMode, draft?: CommSendDraft) => {
+    setMode(nextMode);
+    if (draft) {
+      setToEmail(draft.toEmail);
+      setSubject(draft.subject);
+      setBody(draft.body);
+    }
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setMode('view');
+      setToEmail('');
+      setSubject('');
+      setBody('');
+    }
+    onOpenChange(next);
+  };
+
   if (!email) return null;
 
+  const sendCompose = () => {
+    if (!onSend) return;
+    if (!toEmail.trim()) {
+      toast.error('Recipient email is required');
+      return;
+    }
+    onSend({
+      subject: subject.trim(),
+      body: body.trim(),
+      to: toEmail.trim(),
+      toEmail: toEmail.trim(),
+      mode,
+      inReplyTo: email,
+    });
+    handleOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent elevated className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent elevated className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-left text-base leading-snug">{email.subject}</DialogTitle>
+          <DialogTitle className="text-left text-base leading-snug">
+            {mode === 'view' ? email.subject : mode === 'reply' ? 'Reply' : 'Forward'}
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 text-sm">
-          <p className="text-muted-foreground text-xs">{formatDateTime(email.at)}</p>
-          <dl className="grid gap-2 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">From</dt>
-              <dd className="font-medium">{email.from}</dd>
+
+        {mode === 'view' ? (
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground text-xs">{formatDateTime(email.at)}</p>
+            <dl className="grid gap-2 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">From</dt>
+                <dd className="font-medium">{email.from}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">To</dt>
+                <dd className="font-medium">{email.to}</dd>
+              </div>
+            </dl>
+            {email.attachments && email.attachments.length > 0 ? (
+              <div className="rounded-xl border bg-muted/20 p-3 text-xs">
+                <p className="mb-1 font-semibold">Attachments</p>
+                <ul className="space-y-1">
+                  {email.attachments.map((a) => (
+                    <li key={a.name} className="text-muted-foreground">
+                      {a.name}
+                      {a.sizeLabel ? ` · ${a.sizeLabel}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="rounded-xl border bg-muted/20 p-3">
+              <pre className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                {email.body}
+              </pre>
             </div>
-            <div>
-              <dt className="text-muted-foreground">To</dt>
-              <dd className="font-medium">{email.to}</dd>
-            </div>
-          </dl>
-          <div className="rounded-xl border bg-muted/20 p-3">
-            <pre className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-              {email.body}
-            </pre>
+            {onSend ? (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => resetCompose('reply', buildReplyDraft(email))}
+                >
+                  <Reply className="size-3.5" />
+                  Reply
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => resetCompose('forward', buildForwardDraft(email))}
+                >
+                  <Forward className="size-3.5" />
+                  Forward
+                </Button>
+              </div>
+            ) : null}
           </div>
-        </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="comm-to">To</Label>
+              <Input
+                id="comm-to"
+                type="email"
+                value={toEmail}
+                onChange={(e) => setToEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="comm-subject">Subject</Label>
+              <Input
+                id="comm-subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="comm-body">Message</Label>
+              <Textarea
+                id="comm-body"
+                rows={10}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+              />
+            </div>
+            <DialogFooter className="gap-2 px-0 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setMode('view')}>
+                Back
+              </Button>
+              <Button type="button" className="gap-1.5" onClick={sendCompose}>
+                <Send className="size-3.5" />
+                Send
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -107,9 +275,13 @@ function EmailDetailDialog({
 export function JobCaseEmailLog({
   title = 'E-mail',
   emails,
+  onSend,
+  enableComposeActions = false,
 }: {
   title?: string;
   emails: JobCaseEmailRecord[];
+  onSend?: (draft: CommSendDraft) => void;
+  enableComposeActions?: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const sorted = useMemo(
@@ -132,18 +304,14 @@ export function JobCaseEmailLog({
 
       {sorted.length === 0 ? (
         <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs">
-          No email records yet for this stage.
+          No email or message records yet for this stage.
         </p>
       ) : (
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <ul className="divide-y">
             {sorted.map((email) => (
               <li key={email.id}>
-                <EmailListRow
-                  email={email}
-                  selected={selectedId === email.id}
-                  onSelect={() => setSelectedId(email.id)}
-                />
+                <EmailListRow email={email} onSelect={() => setSelectedId(email.id)} />
               </li>
             ))}
           </ul>
@@ -156,6 +324,7 @@ export function JobCaseEmailLog({
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
         }}
+        onSend={enableComposeActions ? onSend : undefined}
       />
     </div>
   );
@@ -164,13 +333,22 @@ export function JobCaseEmailLog({
 export function JobCaseStageEmailHistory({
   emails,
   title,
+  onSend,
+  enableComposeActions,
 }: {
   emails: JobCaseEmailRecord[];
   title?: string;
+  onSend?: (draft: CommSendDraft) => void;
+  enableComposeActions?: boolean;
 }) {
   return (
     <section className="border-t pt-4">
-      <JobCaseEmailLog emails={emails} title={title} />
+      <JobCaseEmailLog
+        emails={emails}
+        title={title}
+        onSend={onSend}
+        enableComposeActions={enableComposeActions}
+      />
     </section>
   );
 }

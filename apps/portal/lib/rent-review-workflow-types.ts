@@ -158,3 +158,13 @@ export interface ResolveNegotiationInput {
   resolvedWeekly?: number;
   effectiveDate?: string;
 }
+
+export interface SendRentReviewEmailInput {
+  toEmail: string;
+  toName?: string;
+  subject: string;
+  body: string;
+  kind: 'landlord_research_email' | 'comm_reply' | 'comm_forward';
+  inReplyToAuditId?: string;
+  channel?: 'email' | 'message';
+}

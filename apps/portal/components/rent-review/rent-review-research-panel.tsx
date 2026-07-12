@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { Mail, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
+import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
 import {
   RENT_RESEARCH_PLATFORMS,
   auditEntriesForStep,
@@ -16,6 +18,14 @@ import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { formatCurrency } from '@/lib/utils';
 
+function hasResearchComplete(detail: RentReviewWorkflowDetail): boolean {
+  return (
+    detail.auditLog.some((e) => e.kind === 'ai_report_ready') ||
+    detail.workflowState !== 'pending_confirmation' ||
+    detail.ai.suggestedWeekly != null
+  );
+}
+
 export function RentReviewResearchPanel({
   detail,
   onUpdated,
@@ -23,11 +33,19 @@ export function RentReviewResearchPanel({
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
 }) {
+  const { properties } = useAgentData();
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
+  const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
+
+  const property = properties.find((p) => p.id === detail.propertyId);
+  const landlordEmail =
+    property?.homeOwnerContact?.email?.trim() || undefined;
+  const landlordName = property?.homeOwnerName;
 
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.RENT_RESEARCH);
   const suggested = detail.ai.suggestedWeekly;
+  const researchComplete = hasResearchComplete(detail);
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -47,8 +65,8 @@ export function RentReviewResearchPanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Rent research</p>
         <p className="text-muted-foreground mb-3 text-xs">
-          Market research via {RENT_RESEARCH_PLATFORMS.join(', ')}. Results are emailed to the
-          agent with current and recommended rent.
+          Market research via {RENT_RESEARCH_PLATFORMS.join(', ')}. Email the full research pack to
+          the landlord for confirmation before proceeding.
         </p>
         <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
@@ -89,6 +107,24 @@ export function RentReviewResearchPanel({
         </div>
       ) : null}
 
+      {researchComplete ? (
+        <div className="space-y-2">
+          <Button
+            className="w-full gap-2"
+            variant="default"
+            disabled={busy}
+            onClick={() => setLandlordDialogOpen(true)}
+          >
+            <Mail className="size-4" />
+            Email to landlord
+          </Button>
+          <p className="text-muted-foreground text-[11px]">
+            Sends the research report and NSW Fair Trading reference for landlord approval. The
+            landlord email is auto-filled from the property record.
+          </p>
+        </div>
+      ) : null}
+
       {auditEntries.length > 0 ? (
         <section className="rounded-xl border bg-muted/20 p-3">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide">Activity</p>
@@ -102,6 +138,15 @@ export function RentReviewResearchPanel({
           </ul>
         </section>
       ) : null}
+
+      <RentReviewEmailToLandlordDialog
+        open={landlordDialogOpen}
+        onOpenChange={setLandlordDialogOpen}
+        detail={detail}
+        landlordName={landlordName}
+        landlordEmail={landlordEmail}
+        onUpdated={onUpdated}
+      />
     </div>
   );
 }

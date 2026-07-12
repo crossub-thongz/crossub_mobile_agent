@@ -1,0 +1,67 @@
+import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+
+const COMM_AUDIT_KINDS = new Set([
+  'landlord_research_email',
+  'comm_reply',
+  'comm_forward',
+]);
+
+interface RentReviewEmailSnapshot {
+  subject: string;
+  body: string;
+  from: string;
+  to: string;
+  toEmail?: string;
+  channel?: 'email' | 'message';
+  attachments?: JobCaseEmailRecord['attachments'];
+}
+
+function parseEmailSnapshot(detail: string | undefined): RentReviewEmailSnapshot | null {
+  if (!detail?.trim()) return null;
+  try {
+    const parsed = JSON.parse(detail) as Partial<RentReviewEmailSnapshot>;
+    if (
+      typeof parsed.subject === 'string' &&
+      typeof parsed.body === 'string' &&
+      typeof parsed.from === 'string' &&
+      typeof parsed.to === 'string'
+    ) {
+      return parsed as RentReviewEmailSnapshot;
+    }
+  } catch {
+    /* legacy plain-text detail */
+  }
+  return null;
+}
+
+/** Sent/received emails persisted on the rent-review audit log (server-side). */
+export function commRecordsFromAuditLog(detail: RentReviewWorkflowDetail): JobCaseEmailRecord[] {
+  const records: JobCaseEmailRecord[] = [];
+  for (const entry of detail.auditLog) {
+    if (!COMM_AUDIT_KINDS.has(entry.kind)) continue;
+    const snapshot = parseEmailSnapshot(entry.detail);
+    if (!snapshot) continue;
+    records.push({
+      id: entry.id,
+      subject: snapshot.subject,
+      body: snapshot.body,
+      from: snapshot.from,
+      to: snapshot.to,
+      toEmail: snapshot.toEmail,
+      at: entry.at,
+      kind: entry.kind,
+      channel: snapshot.channel ?? 'email',
+      attachments: snapshot.attachments,
+    });
+  }
+  return records.sort((a, b) => b.at.localeCompare(a.at));
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function resolveCommInReplyToAuditId(recordId: string | undefined): string | undefined {
+  if (!recordId?.trim() || !UUID_RE.test(recordId)) return undefined;
+  return recordId;
+}

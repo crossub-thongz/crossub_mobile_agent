@@ -10,6 +10,7 @@ import type {
   RentReviewListResult,
   ResolveNegotiationInput,
   SendTenantNoticeInput,
+  SendRentReviewEmailInput,
   ServerRentReviewWorkflowView,
   SetProposedRentInput,
   TenantResponseInput,
@@ -238,6 +239,39 @@ export const rentReviewApi = {
         apiV1.patch<{ review: ServerRentReviewWorkflowView }>(
           `${agentRentReviewWorkflowPath(propertyId, id)}/complete`,
           {},
+        ),
+      ),
+      leaseEndDate,
+    ),
+
+  getCommunications: (
+    id: string,
+    propertyId: string,
+  ): Promise<{ communications: Array<{
+    id: string;
+    subject: string;
+    body: string;
+    from: string;
+    to: string;
+    toEmail?: string;
+    at: string;
+    kind: string;
+    channel?: 'email' | 'message';
+    attachments?: Array<{ name: string; sizeLabel?: string }>;
+  }> }> =>
+    apiV1.get(`${agentRentReviewWorkflowPath(propertyId, id)}/communications`),
+
+  sendEmail: (
+    id: string,
+    input: SendRentReviewEmailInput,
+    propertyId: string,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> =>
+    map(
+      unwrap(
+        apiV1.post<{ review: ServerRentReviewWorkflowView }>(
+          `${agentRentReviewWorkflowPath(propertyId, id)}/emails`,
+          input,
         ),
       ),
       leaseEndDate,

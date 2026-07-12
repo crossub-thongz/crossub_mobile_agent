@@ -1,4 +1,8 @@
+import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import { commRecordsFromAuditLog } from '@/lib/rent-review/communications';
 import type { RentReviewAuditEntry, RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+
+export type RentReviewEmailRecord = JobCaseEmailRecord;
 
 /** Five-stage rent review flow (manager Excel spec). */
 export const RENT_REVIEW_AGENT_STEP = {
@@ -48,16 +52,6 @@ export interface RentReviewAgentWorkflowModel {
   steps: RentReviewAgentStepState[];
   liveStepId: RentReviewAgentStep;
   progressFillIndex: number;
-}
-
-export interface RentReviewEmailRecord {
-  id: string;
-  subject: string;
-  body: string;
-  from: string;
-  to: string;
-  at: string;
-  kind: string;
 }
 
 function auditHas(detail: RentReviewWorkflowDetail, kind: string): boolean {
@@ -130,6 +124,7 @@ function hasCompleted(detail: RentReviewWorkflowDetail): boolean {
 function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
   const researchDone = hasResearchComplete(detail);
   const emailSent = auditHas(detail, 'ai_report_ready') || researchDone;
+  const landlordEmailed = auditHas(detail, 'landlord_research_email');
   return [
     {
       id: 'platforms',
@@ -140,6 +135,11 @@ function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPro
       id: 'email-agent',
       label: 'Research results emailed to agent',
       done: emailSent,
+    },
+    {
+      id: 'email-landlord',
+      label: 'Research emailed to landlord',
+      done: landlordEmailed,
     },
     {
       id: 'amounts',
@@ -470,13 +470,23 @@ function agentConfirmedEmails(detail: RentReviewWorkflowDetail): RentReviewEmail
     }));
 }
 
+function researchStepEmails(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
+  const synthesized = hasResearchComplete(detail) ? [buildResearchEmailToAgent(detail)] : [];
+  const fromAudit = commRecordsFromAuditLog(detail);
+  const byId = new Map<string, RentReviewEmailRecord>();
+  for (const record of [...synthesized, ...fromAudit]) {
+    byId.set(record.id, record);
+  }
+  return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));
+}
+
 function emailRecordsForStepOnly(
   detail: RentReviewWorkflowDetail,
   step: RentReviewAgentStep,
 ): RentReviewEmailRecord[] {
   switch (step) {
     case RENT_REVIEW_AGENT_STEP.RENT_RESEARCH:
-      return hasResearchComplete(detail) ? [buildResearchEmailToAgent(detail)] : [];
+      return researchStepEmails(detail);
     case RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED:
       return agentConfirmedEmails(detail);
     case RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED:

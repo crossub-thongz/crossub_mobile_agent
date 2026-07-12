@@ -15,6 +15,7 @@ import {
 import {
   deriveNewLeaseStartDate,
   deriveRentIncreaseOnDate,
+  isCurrentTenancyFixed,
 } from '@/lib/rent-review/agent-decision-scheduling';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -63,16 +64,14 @@ function AutoDateField({
   label,
   value,
   hint,
-  muted = false,
 }: {
   label: string;
   value: string | null;
   hint: string;
-  muted?: boolean;
 }) {
   return (
-    <div className={cn('space-y-1', muted && 'opacity-50')}>
-      <Label className={cn(muted && 'text-muted-foreground')}>{label}</Label>
+    <div className="space-y-1">
+      <Label>{label}</Label>
       <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
         <span className="font-medium tabular-nums">{formatDateOnly(value) ?? '—'}</span>
         <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
@@ -100,7 +99,7 @@ export function RentReviewAgentConfirmedPanel({
   const hasCounter = detail.tenantCounterWeekly != null;
   const editable = canEditAgentDecision(detail);
   const noticeSent = hasTenantNoticeSent(detail);
-  const currentLeaseIsFixed = detail.leaseType === 'fixed';
+  const currentLeaseIsFixed = isCurrentTenancyFixed(detail);
   const autoNewLeaseStart = useMemo(() => deriveNewLeaseStartDate(detail), [detail]);
   const autoRentIncreaseOn = useMemo(() => deriveRentIncreaseOnDate(detail), [detail]);
 
@@ -191,6 +190,7 @@ export function RentReviewAgentConfirmedPanel({
           rentNegotiable={detail.rentNegotiable}
           effectiveDate={effectiveDate}
           newLeaseStart={newLeaseStart}
+          currentLeaseIsFixed={currentLeaseIsFixed}
           preferredLeaseType={detail.preferredLeaseType ?? preferredLeaseType}
           fixedTermEndDate={detail.newAgreementEnd}
         />
@@ -365,7 +365,7 @@ export function RentReviewAgentConfirmedPanel({
               </div>
               {preferredLeaseType === 'fixed' ? (
                 <div className="space-y-1 pt-1">
-                  <Label htmlFor="fixed-term-end">Fixed term end date</Label>
+                  <Label htmlFor="fixed-term-end">Fixed Term (Date)</Label>
                   <Input
                     id="fixed-term-end"
                     type="date"
@@ -377,23 +377,30 @@ export function RentReviewAgentConfirmedPanel({
               ) : null}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={cn('grid gap-3', currentLeaseIsFixed ? 'sm:grid-cols-2' : '')}>
               <AutoDateField
                 label="Rent increase on"
                 value={effectiveDate}
-                hint="Same day the current lease ends — one day before the new lease start."
-              />
-              <AutoDateField
-                label="New lease start date"
-                value={newLeaseStart}
                 hint={
                   currentLeaseIsFixed
-                    ? 'Day after the current fixed lease ends.'
-                    : 'Not applicable for periodic tenancies.'
+                    ? 'Same day the current fixed lease ends — one day before the new lease start.'
+                    : 'NSW statutory minimum — 60 days from today for periodic tenancies.'
                 }
-                muted={!currentLeaseIsFixed}
               />
+              {currentLeaseIsFixed ? (
+                <AutoDateField
+                  label="New lease start date"
+                  value={newLeaseStart}
+                  hint="Day after the current fixed lease ends — auto-continues into the new term."
+                />
+              ) : null}
             </div>
+            {!currentLeaseIsFixed ? (
+              <p className="text-muted-foreground text-[11px]">
+                New lease start does not apply — the tenant remains on the existing periodic
+                agreement.
+              </p>
+            ) : null}
 
             <Button className="w-full" disabled={busy} onClick={() => saveAgentDecision()}>
               Confirm agent decision
@@ -406,6 +413,7 @@ export function RentReviewAgentConfirmedPanel({
           rentNegotiable={detail.rentNegotiable}
           effectiveDate={effectiveDate}
           newLeaseStart={newLeaseStart}
+          currentLeaseIsFixed={currentLeaseIsFixed}
           preferredLeaseType={detail.preferredLeaseType ?? preferredLeaseType}
           fixedTermEndDate={detail.newAgreementEnd ?? (fixedTermEndDate || null)}
         />
@@ -421,6 +429,7 @@ function ReadOnlySummary({
   rentNegotiable,
   effectiveDate,
   newLeaseStart,
+  currentLeaseIsFixed,
   preferredLeaseType,
   fixedTermEndDate,
 }: {
@@ -428,6 +437,7 @@ function ReadOnlySummary({
   rentNegotiable: boolean | null;
   effectiveDate: string;
   newLeaseStart: string | null;
+  currentLeaseIsFixed: boolean;
   preferredLeaseType: PreferredLeaseType | null;
   fixedTermEndDate: string | null;
 }) {
@@ -460,7 +470,7 @@ function ReadOnlySummary({
           <dt className="text-muted-foreground">Rent increase on</dt>
           <dd className="font-medium tabular-nums">{formatDateOnly(effectiveDate) ?? '—'}</dd>
         </div>
-        {newLeaseStart ? (
+        {currentLeaseIsFixed && newLeaseStart ? (
           <div>
             <dt className="text-muted-foreground">New lease start</dt>
             <dd className="font-medium tabular-nums">{formatDateOnly(newLeaseStart) ?? '—'}</dd>

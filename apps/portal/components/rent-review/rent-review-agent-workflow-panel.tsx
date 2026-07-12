@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
+import type { CommSendDraft } from '@/components/rent-review/rent-review-email-log';
 import { RentReviewAgentConfirmedPanel } from '@/components/rent-review/rent-review-agent-confirmed-panel';
 import { RentReviewCompletedPanel } from '@/components/rent-review/rent-review-completed-panel';
 import { RentReviewResearchPanel } from '@/components/rent-review/rent-review-research-panel';
@@ -17,7 +19,11 @@ import {
   emailRecordsForStep,
   type RentReviewAgentStep,
 } from '@/lib/rent-review/agent-workflow-model';
+import { resolveCommInReplyToAuditId } from '@/lib/rent-review/communications';
+import { rentReviewApi } from '@/lib/rent-review-api';
+import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
 function SubProgressList({ items }: { items: { id: string; label: string; done: boolean }[] }) {
   if (items.length === 0) return null;
@@ -84,8 +90,10 @@ export function RentReviewAgentWorkflowPanel({
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
 }) {
+  const runMutation = useRentReviewStore((s) => s.runMutation);
   const workflow = useMemo(() => buildRentReviewAgentWorkflow(detail), [detail]);
   const [viewingStepId, setViewingStepId] = useState<RentReviewAgentStep>(workflow.liveStepId);
+  const [sendingComm, setSendingComm] = useState(false);
   const initializedRef = useRef<string | null>(null);
   const followLiveStepRef = useRef(true);
 
@@ -113,6 +121,56 @@ export function RentReviewAgentWorkflowPanel({
     () => emailRecordsForStep(detail, viewingStepId),
     [detail, viewingStepId],
   );
+
+  const handleCommSend = async (draft: CommSendDraft) => {
+    if (!detail.propertyId) {
+      toast.error('Property is required to send email');
+      return;
+    }
+    if (!draft.toEmail?.trim()) {
+      toast.error('Recipient email is required');
+      return;
+    }
+    if (!draft.subject.trim() || !draft.body.trim()) {
+      toast.error('Subject and message are required');
+      return;
+    }
+    setSendingComm(true);
+    try {
+      const updated = await runMutation(
+        detail.id,
+        rentReviewApi.sendEmail(
+          detail.id,
+          {
+            toEmail: draft.toEmail.trim(),
+            toName: draft.to.trim() || undefined,
+            subject: draft.subject.trim(),
+            body: draft.body.trim(),
+            kind: draft.mode === 'reply' ? 'comm_reply' : 'comm_forward',
+            inReplyToAuditId: resolveCommInReplyToAuditId(draft.inReplyTo?.id),
+            channel: 'email',
+          },
+          detail.propertyId,
+          detail.leaseEndDate,
+        ),
+      );
+      onUpdated?.(updated);
+      toast.success(draft.mode === 'reply' ? 'Reply sent' : 'Message forwarded');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setSendingComm(false);
+    }
+  };
+
+  const emailHistoryTitle =
+    viewingStepId === RENT_REVIEW_AGENT_STEP.RENT_RESEARCH
+      ? 'Email/message history'
+      : viewingStepId === RENT_REVIEW_AGENT_STEP.COMPLETED
+        ? 'All e-mail'
+        : undefined;
+
+  const enableCommCompose = viewingStepId === RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
 
   return (
     <div className="space-y-4">
@@ -154,11 +212,9 @@ export function RentReviewAgentWorkflowPanel({
           <StepContent stepId={viewingStepId} detail={detail} onUpdated={onUpdated} />
           <RentReviewStageEmailHistory
             emails={stageEmails}
-            title={
-              viewingStepId === RENT_REVIEW_AGENT_STEP.COMPLETED
-                ? 'All e-mail'
-                : undefined
-            }
+            title={emailHistoryTitle}
+            onSend={enableCommCompose && !sendingComm ? handleCommSend : undefined}
+            enableComposeActions={enableCommCompose && !sendingComm}
           />
         </div>
       </div>
