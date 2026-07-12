@@ -10,10 +10,15 @@ import {
   endLeasingKeyReturnDate,
   endLeasingKeyReturnTo,
   endLeasingVacateDate,
-  endOfAgreementExpiredLabel,
   isBreachLease,
-  leaseTypeLabel,
 } from '@/lib/end-leasing/agent-workflow-model';
+import {
+  actualDaysNoticeToVacate,
+  agreementRemainingPercent,
+  daysNotifyInAdvanceLabel,
+  endLeasingLeaseTypeLabel,
+  tenantNoticeDate,
+} from '@/lib/end-leasing/vacate-display';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -62,18 +67,31 @@ export function EndLeasingTenancyDetailsSection({
 }) {
   const vacateDate = endLeasingVacateDate(caseData);
   const breach = isBreachLease(caseData);
+  const noticeDate = tenantNoticeDate(caseData);
+  const actualDays = actualDaysNoticeToVacate(caseData);
+  const remainingPct = agreementRemainingPercent(caseData);
 
   return (
-    <SectionCard title="Tenancy details">
+    <SectionCard title="Tenant details">
       <dl className="grid gap-4 sm:grid-cols-2">
-        <SummaryField label="Lease end">
+        <SummaryField label="Lease end date">
           {caseData.leaseEndDate ? formatDate(caseData.leaseEndDate) : '—'}
         </SummaryField>
+        <SummaryField label="Notice date">
+          {noticeDate ? formatDate(noticeDate) : '—'}
+        </SummaryField>
+        <SummaryField label="Days notify in advance">
+          {daysNotifyInAdvanceLabel(caseData)}
+          {actualDays != null && !breach ? (
+            <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
+              Actual: {actualDays} day{actualDays === 1 ? '' : 's'} notice given
+            </span>
+          ) : null}
+        </SummaryField>
+        <SummaryField label="Lease type">{endLeasingLeaseTypeLabel(caseData)}</SummaryField>
         <SummaryField label="Vacate date">
           {vacateDate ? formatDate(vacateDate) : 'Not confirmed'}
         </SummaryField>
-        <SummaryField label="Lease type">{leaseTypeLabel(caseData)}</SummaryField>
-        <SummaryField label="Bond amount">{formatCurrency(caseData.bondHeld)}</SummaryField>
         <SummaryField label="Breach lease">
           <span className={breach ? 'text-destructive' : 'text-foreground'}>
             {breach ? 'Yes' : 'No'}
@@ -84,9 +102,12 @@ export function EndLeasingTenancyDetailsSection({
             </span>
           ) : null}
         </SummaryField>
-        <SummaryField label="End of agreement expired">
-          {endOfAgreementExpiredLabel(caseData)}
-        </SummaryField>
+        <SummaryField label="Bond amount">{formatCurrency(caseData.bondHeld)}</SummaryField>
+        {breach && remainingPct != null ? (
+          <SummaryField label="% of agreement remaining">
+            {remainingPct}% of lease term not completed
+          </SummaryField>
+        ) : null}
       </dl>
     </SectionCard>
   );
@@ -134,10 +155,10 @@ export function EndLeasingKeysReturnSection({
         }
       >
         <dl className="grid gap-4 sm:grid-cols-2">
-          <SummaryField label="Key return date">
+          <SummaryField label="Keys return date">
             {keyReturnDate ? formatDate(keyReturnDate) : 'Not set'}
           </SummaryField>
-          <SummaryField label="Return to">{endLeasingKeyReturnTo(caseData)}</SummaryField>
+          <SummaryField label="Keys return address">{endLeasingKeyReturnTo(caseData)}</SummaryField>
           <div className="sm:col-span-2">
             <p className="text-muted-foreground text-xs">
               {caseData.vacate.keysReturned

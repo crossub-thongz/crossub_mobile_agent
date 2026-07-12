@@ -560,8 +560,22 @@ export function endLeasingEmailRecordsForStep(
   caseData: TerminationCaseDetail,
   step: EndLeasingAgentStep,
 ): JobCaseEmailRecord[] {
-  if (step === END_LEASING_AGENT_STEP.BOND_RELEASED) {
-    return allEndLeasingEmailRecords(caseData);
+  const stepIdx = END_LEASING_AGENT_STEP_ORDER.indexOf(step);
+  if (stepIdx < 0) return [];
+
+  const fromOutgoing =
+    stepIdx >= END_LEASING_AGENT_STEP_ORDER.indexOf(END_LEASING_AGENT_STEP.OUTGOING_INSPECTION);
+
+  if (fromOutgoing) {
+    const byId = new Map<string, JobCaseEmailRecord>();
+    for (let i = 0; i <= stepIdx; i++) {
+      const stepId = END_LEASING_AGENT_STEP_ORDER[i];
+      for (const record of emailRecordsForStepOnly(caseData, stepId)) {
+        byId.set(record.id, record);
+      }
+    }
+    return dedupeJobCaseEmails([...byId.values()]);
   }
+
   return dedupeJobCaseEmails(emailRecordsForStepOnly(caseData, step));
 }

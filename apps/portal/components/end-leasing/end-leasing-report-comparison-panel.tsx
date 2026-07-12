@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { AddHandymanDialog } from '@/components/end-leasing/add-handyman-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { communicationsThread } from '@/constants/routes';
@@ -392,8 +393,8 @@ function CompareResponsibilitySection({
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <Input
-                        className="h-8 text-xs"
+                      <Textarea
+                        className="min-h-[4.5rem] text-xs leading-relaxed"
                         value={row.description}
                         placeholder="Description"
                         disabled={busy}
@@ -671,8 +672,8 @@ function RepairItemsTable({
               <th className="px-3 py-2 font-semibold">Description</th>
               {!hideQuoteColumns ? (
                 <>
-                  <th className="px-3 py-2 font-semibold">Quote</th>
-                  <th className="px-3 py-2 font-semibold">Handyman</th>
+                  <th className="px-3 py-2 font-semibold">$</th>
+                  <th className="px-3 py-2 font-semibold">Company</th>
                 </>
               ) : null}
               {!readOnly ? <th className="px-3 py-2" /> : null}
@@ -695,7 +696,9 @@ function RepairItemsTable({
                   {readOnly ? (
                     <>
                       <td className="px-3 py-2">{row.area || '—'}</td>
-                      <td className="px-3 py-2">{row.description || '—'}</td>
+                      <td className="max-w-md px-3 py-2 whitespace-pre-wrap leading-relaxed">
+                        {row.description || '—'}
+                      </td>
                       {!hideQuoteColumns ? (
                         <>
                           <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
@@ -715,8 +718,8 @@ function RepairItemsTable({
                         />
                       </td>
                       <td className="px-3 py-2">
-                        <Input
-                          className="h-8 text-xs"
+                        <Textarea
+                          className="min-h-[4.5rem] text-xs leading-relaxed"
                           value={row.description}
                           placeholder="Description"
                           disabled={busy}
@@ -1069,16 +1072,31 @@ export function EndLeasingReportComparisonPanel({
           ingoingDetail={ingoingDetail}
           loading={loadingReports}
         />
+        <section className="rounded-xl border bg-card">
+          <div className="border-b px-4 py-2.5">
+            <h3 className="text-sm font-semibold">Tenant responsibility</h3>
+            <p className="text-muted-foreground mt-0.5 text-[11px]">
+              Synced automatically from the inspector outgoing report — not editable here.
+            </p>
+          </div>
+          <div className="p-4">
+            <RepairItemsTable
+              title=""
+              hideTitle
+              showAddRow={false}
+              items={tenantItems}
+              contractors={contractors}
+              agencyId={agencyId}
+              onContractorsChange={setContractors}
+              onChange={() => undefined}
+              readOnly
+              hideQuoteColumns
+              busy={busy}
+            />
+          </div>
+        </section>
         <CompareResponsibilitySection
-          title="Tenant Responsibility"
-          items={tenantItems}
-          onChange={setTenantItems}
-          busy={busy}
-          emailHint="Send to tenant only"
-          onEmail={() => void sendComparisonSummary('tenant')}
-        />
-        <CompareResponsibilitySection
-          title="Landlord Responsibility"
+          title="Landlord responsibility"
           items={landlordItems}
           onChange={setLandlordItems}
           busy={busy}

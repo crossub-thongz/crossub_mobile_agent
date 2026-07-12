@@ -1,28 +1,51 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Check, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
-import { TENANT_SETTLEMENT_CONFIRMATION } from '@/constants/end-leasing';
+import { TENANT_SETTLEMENT_CONFIRMATION, TERMINATION_CASE_STATUS } from '@/constants/end-leasing';
+import {
+  endLeasingKeyReturnDate,
+  endLeasingVacateDate,
+} from '@/lib/end-leasing/agent-workflow-model';
+import { NSW_BOND_RELEASE_URL, jobCompletedReminderTimelineEntries } from '@/lib/end-leasing/vacate-display';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { terminationApi } from '@/lib/termination-case-api';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 
 const DONE = LEASING_ITEM_STATUS.DONE;
 
-function DeductionRow({ label, amount }: { label: string; amount: number }) {
+function DeductionLine({
+  label,
+  amount,
+  description,
+}: {
+  label: string;
+  amount: number;
+  description?: string;
+}) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium tabular-nums">{formatCurrency(amount)}</span>
+    <div className="px-3 py-2 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium tabular-nums">{formatCurrency(amount)}</span>
+      </div>
+      {description ? (
+        <p className="text-muted-foreground mt-1 whitespace-pre-wrap leading-relaxed">{description}</p>
+      ) : null}
     </div>
   );
+}
+
+function jobCompleteReminders(caseData: TerminationCaseDetail) {
+  return jobCompletedReminderTimelineEntries(caseData);
 }
 
 export function EndLeasingBondReleasedPanel({
@@ -32,28 +55,35 @@ export function EndLeasingBondReleasedPanel({
 }) {
   const applyCase = useEndLeasingStore((s) => s.applyCase);
   const setSettlementOpen = useEndLeasingStore((s) => s.setSettlementDialogOpen);
+  const { properties } = useAgentData();
   const [busy, setBusy] = useState(false);
+
+  const property = useMemo(
+    () => properties.find((p) => p.id === caseData.propertyId) ?? null,
+    [properties, caseData.propertyId],
+  );
 
   const summary = caseData.reportComparison.settlementSummary;
   const deductions = caseData.settlement.deductions;
+  const vacateDate = endLeasingVacateDate(caseData);
+  const keyReturnDate = endLeasingKeyReturnDate(caseData);
+  const rentPaidTo = property?.rentPaidUntil ?? null;
+
+  const rentDeductions = deductions.filter((d) => /rent/i.test(d.category));
+  const billDeductions = deductions.filter((d) => /bill|water|utility|fee/i.test(d.category));
+  const repairDeductions = deductions.filter((d) => /repair|maintenance|make.?good/i.test(d.category));
 
   const unpaidRent =
-    summary?.unpaidRent ??
-    deductions.filter((d) => /rent/i.test(d.category)).reduce((s, d) => s + d.amount, 0);
+    summary?.unpaidRent ?? rentDeductions.reduce((s, d) => s + d.amount, 0);
   const unpaidBills =
-    summary?.unpaidBills ??
-    deductions
-      .filter((d) => /bill|water|utility|fee/i.test(d.category))
-      .reduce((s, d) => s + d.amount, 0);
-  const otherFees = deductions
-    .filter((d) => !/rent|bill|water|utility|repair|maintenance|make.?good/i.test(d.category))
-    .reduce((s, d) => s + d.amount, 0);
+    summary?.unpaidBills ?? billDeductions.reduce((s, d) => s + d.amount, 0);
   const tenantRepair =
-    summary?.maintenanceCost ??
-    deductions
-      .filter((d) => /repair|maintenance|make.?good/i.test(d.category))
-      .reduce((s, d) => s + d.amount, 0);
-  const totalDeductions = unpaidRent + unpaidBills + otherFees + tenantRepair;
+    summary?.maintenanceCost ?? repairDeductions.reduce((s, d) => s + d.amount, 0);
+
+  const billsDescription = billDeductions.map((d) => d.description).filter(Boolean).join('\n');
+  const repairDescription = repairDeductions.map((d) => d.description).filter(Boolean).join('\n');
+
+  const totalDeductions = unpaidRent + unpaidBills + tenantRepair;
   const bondHeld = summary?.bondHeld ?? caseData.bondHeld;
   const netRefund = Math.max(0, bondHeld - totalDeductions);
   const debtAmount = Math.max(0, totalDeductions - bondHeld);
@@ -63,6 +93,9 @@ export function EndLeasingBondReleasedPanel({
   const tenantAccepted =
     caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED;
   const bondReleased = caseData.bond.refundPaid || caseData.bond.status === DONE;
+  const jobCompleted = caseData.status === TERMINATION_CASE_STATUS.COMPLETED || bondReleased;
+
+  const reminders = jobCompleteReminders(caseData);
 
   const run = async (action: () => Promise<TerminationCaseDetail>, success: string) => {
     setBusy(true);
@@ -80,23 +113,48 @@ export function EndLeasingBondReleasedPanel({
   return (
     <div className="space-y-4">
       <section className="rounded-xl border bg-card p-4">
-        <p className="mb-3 text-sm font-semibold">Bond deduction summary</p>
+        <p className="mb-3 text-sm font-semibold">Bond summary</p>
+        <dl className="mb-4 grid gap-3 text-xs sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground">Bond amount</dt>
+            <dd className="text-lg font-semibold tabular-nums">{formatCurrency(bondHeld)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Rent to date</dt>
+            <dd className="font-medium">{rentPaidTo ? formatDate(rentPaidTo) : '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Vacate date</dt>
+            <dd className="font-medium">{vacateDate ? formatDate(vacateDate) : '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Key return date</dt>
+            <dd className="font-medium">{keyReturnDate ? formatDate(keyReturnDate) : '—'}</dd>
+          </div>
+        </dl>
+
+        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+          Deduct
+        </p>
         <div className="overflow-hidden rounded-xl border divide-y">
-          <DeductionRow label="Unpaid rent" amount={unpaidRent} />
-          <DeductionRow label="Unpaid water / bills" amount={unpaidBills} />
-          <DeductionRow label="Other unpaid fees" amount={otherFees} />
-          <DeductionRow label="Tenant repair cost" amount={tenantRepair} />
-          <div className="flex items-center justify-between bg-muted/30 px-3 py-2 text-xs">
+          <DeductionLine label="Unpaid rent" amount={unpaidRent} />
+          <DeductionLine
+            label="Unpaid bills"
+            amount={unpaidBills}
+            description={billsDescription || undefined}
+          />
+          <DeductionLine
+            label="Repair cost"
+            amount={tenantRepair}
+            description={repairDescription || undefined}
+          />
+          <div className="flex items-center justify-between bg-muted/30 px-3 py-2.5 text-xs">
             <span className="font-semibold">Total deductions</span>
             <span className="font-semibold tabular-nums text-destructive">
               {formatCurrency(totalDeductions)}
             </span>
           </div>
-          <div className="flex items-center justify-between px-3 py-2 text-xs">
-            <span className="text-muted-foreground">Bond held</span>
-            <span className="font-medium tabular-nums">{formatCurrency(bondHeld)}</span>
-          </div>
-          <div className="flex items-center justify-between bg-primary/5 px-3 py-2 text-xs">
+          <div className="flex items-center justify-between bg-primary/5 px-3 py-2.5 text-xs">
             <span className="font-semibold">
               {debtAmount > 0 ? 'Debt owing' : 'Refund to tenant'}
             </span>
@@ -118,13 +176,13 @@ export function EndLeasingBondReleasedPanel({
         ) : null}
       </section>
 
-      <section className="space-y-2 rounded-xl border bg-card p-4">
-        <p className="text-sm font-semibold">Release bond</p>
+      <section className="space-y-3 rounded-xl border bg-card p-4">
+        <p className="text-sm font-semibold">Agent confirmation</p>
         <p className="text-muted-foreground text-xs">
-          Finalize settlement, approve deductions, record tenant acceptance (if replying offline),
-          then confirm bond release.
+          Confirm deduction amounts, release the bond on the NSW Rental Bonds portal, then mark the
+          job completed.
         </p>
-        <div className="flex flex-wrap gap-2 pt-2">
+        <div className="flex flex-wrap gap-2">
           {!settlementFinalized ? (
             <Button
               type="button"
@@ -134,16 +192,15 @@ export function EndLeasingBondReleasedPanel({
               onClick={() =>
                 void run(
                   () => terminationApi.finalizeSettlement(caseData.id),
-                  'Settlement finalized',
+                  'Deduction amounts confirmed',
                 )
               }
             >
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
-              Finalize settlement
+              Confirm amounts
             </Button>
           ) : (
             <span className="text-primary flex items-center gap-1 text-xs">
-              <Check className="size-3.5" /> Settlement finalized
+              <Check className="size-3.5" /> Amounts confirmed
             </span>
           )}
           {settlementFinalized && !agentApproved ? (
@@ -185,27 +242,75 @@ export function EndLeasingBondReleasedPanel({
               <Check className="size-3.5" /> Tenant accepted settlement
             </span>
           ) : null}
-          {agentApproved && tenantAccepted && !bondReleased ? (
+        </div>
+
+        {agentApproved ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 gap-2 text-xs"
+            asChild
+          >
+            <a href={NSW_BOND_RELEASE_URL} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="size-3.5" />
+              Release bond (NSW Rental Bonds)
+            </a>
+          </Button>
+        ) : null}
+      </section>
+
+      <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+        <p className="text-sm font-semibold">Job completed</p>
+        {!jobCompleted ? (
+          <>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Confirm once the bond has been released on the NSW Rental Bonds portal and the case
+              is fully closed. If not confirmed, the system sends an automated reminder to the
+              managing agent every 2 days.
+            </p>
+            {reminders.length > 0 ? (
+              <div className="mt-3 rounded-lg border bg-card p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide">Audit</p>
+                <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
+                  {reminders.map((e) => (
+                    <li key={e.id}>
+                      {formatDateTime(e.timestamp)} · {e.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <Button
               type="button"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={busy}
+              className="mt-3 w-full"
+              disabled={busy || !agentApproved}
               onClick={() =>
                 void run(
                   () => terminationApi.processBondRefund(caseData.id),
-                  'Bond release recorded',
+                  'End leasing job completed',
                 )
               }
             >
-              Confirm bond released
+              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+              Job completed
             </Button>
-          ) : bondReleased ? (
-            <span className="text-primary flex items-center gap-1 text-xs font-semibold">
-              <Check className="size-4" /> Bond released
-            </span>
-          ) : null}
-        </div>
+          </>
+        ) : (
+          <p className="text-primary mt-2 flex items-center gap-2 text-sm font-medium">
+            <Check className="size-4" />
+            Job completed
+            {caseData.timeline.find((e) => /bond refund|completed/i.test(e.label)) ? (
+              <span className="text-muted-foreground text-xs font-normal">
+                ·{' '}
+                {formatDateTime(
+                  caseData.timeline.find((e) => /bond refund|completed/i.test(e.label))!
+                    .timestamp,
+                )}
+              </span>
+            ) : null}
+          </p>
+        )}
       </section>
 
       <SettlementDeductionDialog caseData={caseData} />
