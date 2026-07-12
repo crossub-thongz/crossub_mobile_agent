@@ -18,6 +18,7 @@ import {
   RENT_REVIEW_AGENT_STEP_ORDER,
   buildRentReviewAgentWorkflow,
   emailRecordsForStep,
+  isRentReviewWorkflowClosed,
   type RentReviewAgentStep,
 } from '@/lib/rent-review/agent-workflow-model';
 import { resolveCommInReplyToAuditId } from '@/lib/rent-review/communications';
@@ -64,10 +65,12 @@ function StepContent({
   stepId,
   detail,
   onUpdated,
+  onNavigateToStep,
 }: {
   stepId: RentReviewAgentStep;
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
+  onNavigateToStep?: (step: RentReviewAgentStep) => void;
 }) {
   switch (stepId) {
     case RENT_REVIEW_AGENT_STEP.RENT_RESEARCH:
@@ -79,7 +82,13 @@ function StepContent({
     case RENT_REVIEW_AGENT_STEP.TENANT_DECISION:
       return <RentReviewTenantDecisionPanel detail={detail} onUpdated={onUpdated} />;
     case RENT_REVIEW_AGENT_STEP.COMPLETED:
-      return <RentReviewCompletedPanel detail={detail} onUpdated={onUpdated} />;
+      return (
+        <RentReviewCompletedPanel
+          detail={detail}
+          onUpdated={onUpdated}
+          onNavigateToStep={onNavigateToStep}
+        />
+      );
     default:
       return null;
   }
@@ -123,8 +132,13 @@ export function RentReviewAgentWorkflowPanel({
     followLiveStepRef.current = stepId === workflow.liveStepId;
   };
 
+  const handleAuditNavigate = (stepId: RentReviewAgentStep) => {
+    handleStepClick(stepId);
+  };
+
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
+  const workflowClosed = isRentReviewWorkflowClosed(detail);
   const stageEmails = useMemo(
     () => emailRecordsForStep(detail, viewingStepId),
     [detail, viewingStepId],
@@ -197,6 +211,7 @@ export function RentReviewAgentWorkflowPanel({
           workflow.steps.find((s) => s.id === stepId)?.status === 'done'
         }
         isStepEnabled={(stepId) => {
+          if (workflowClosed) return true;
           const step = workflow.steps.find((s) => s.id === stepId);
           return step != null && step.status !== 'upcoming';
         }}
@@ -215,7 +230,12 @@ export function RentReviewAgentWorkflowPanel({
         </div>
         <div className="space-y-4 p-4">
           <SubProgressList items={viewingStep?.subProgress ?? []} />
-          <StepContent stepId={viewingStepId} detail={detail} onUpdated={onUpdated} />
+          <StepContent
+            stepId={viewingStepId}
+            detail={detail}
+            onUpdated={onUpdated}
+            onNavigateToStep={handleAuditNavigate}
+          />
           <RentReviewStageEmailHistory
             emails={stageEmails}
             title={emailHistoryTitle}
