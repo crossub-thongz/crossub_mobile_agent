@@ -184,6 +184,7 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     tenantQuoteResponseAt: string | null
     tenantQuoteDeclineReason: string | null
     tenantQuoteReplyExcerpt: string | null
+    tenantAcknowledgedPrice: string | null
     settlementSummary: {
       unpaidRent: number
       unpaidBills: number

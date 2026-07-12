@@ -30,6 +30,11 @@ import type {
   TenantQuoteResponse,
   TerminationCaseDetail,
 } from '@/lib/end-leasing/types';
+import {
+  extractTenantResponsibilityFromOutgoing,
+  mergeInspectionResponsibilityItems,
+  responsibilityItemsEqual,
+} from '@/lib/end-leasing/outgoing-inspection-sync';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { ReportComparisonRepairItemInput } from '@/lib/termination-case-types';
 import { terminationApi } from '@/lib/termination-case-api';
@@ -408,6 +413,7 @@ function CompareResponsibilitySection({
   onEmail,
   emailHint,
   actionBusy = false,
+  readOnly = false,
 }: {
   title: string;
   description?: string;
@@ -417,6 +423,7 @@ function CompareResponsibilitySection({
   emailHint: string;
   /** Disables email/actions only — not row inputs (avoids flicker during autosave). */
   actionBusy?: boolean;
+  readOnly?: boolean;
 }) {
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -453,9 +460,20 @@ function CompareResponsibilitySection({
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-muted-foreground px-3 py-4 text-center">
-                    No items yet.
+                    {readOnly
+                      ? 'No tenant-responsible items on the outgoing inspection report yet.'
+                      : 'No items yet.'}
                   </td>
                 </tr>
+              ) : readOnly ? (
+                items.map((row, index) => (
+                  <tr key={repairRowKey(row, `${title}-${index}`)} className="border-t align-top">
+                    <td className="px-3 py-2 tabular-nums">{index + 1}</td>
+                    <td className="px-3 py-2">{row.area}</td>
+                    <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
+                    <td className="px-2 py-2" />
+                  </tr>
+                ))
               ) : (
                 items.map((row, index) => (
                   <tr key={repairRowKey(row, `${title}-${index}`)} className="border-t align-top">
@@ -496,17 +514,23 @@ function CompareResponsibilitySection({
           </table>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 text-xs"
-            disabled={actionBusy}
-            onClick={addRow}
-          >
-            <Plus className="size-3.5" />
-            Add
-          </Button>
+          {!readOnly ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1 text-xs"
+              disabled={actionBusy}
+              onClick={addRow}
+            >
+              <Plus className="size-3.5" />
+              Add
+            </Button>
+          ) : (
+            <span className="text-muted-foreground text-[10px]">
+              Synced from inspector outgoing report
+            </span>
+          )}
           <Button
             type="button"
             size="sm"
@@ -610,14 +634,24 @@ function hasRepairContent(item: ReportComparisonRepairItem): boolean {
   );
 }
 
-function normalizeRepairItems(items: ReportComparisonRepairItem[]): ReportComparisonRepairItemInput[] {
-  return items.filter(hasRepairContent).map((item) => ({
-    area: item.area.trim(),
-    description: item.description.trim(),
-    quote: item.quote?.trim() || undefined,
-    handymanId: item.handymanId || undefined,
-    handymanName: item.handymanName?.trim() || undefined,
-  }));
+function normalizeRepairItems(
+  items: ReportComparisonRepairItem[],
+  contractors: PreferredContractor[] = [],
+): ReportComparisonRepairItemInput[] {
+  return items.filter(hasRepairContent).map((item) => {
+    const handymanId = item.handymanId || undefined;
+    let handymanName = item.handymanName?.trim() || undefined;
+    if (!handymanName && handymanId) {
+      handymanName = contractors.find((c) => c.id === handymanId)?.name.trim() || undefined;
+    }
+    return {
+      area: item.area.trim(),
+      description: item.description.trim(),
+      quote: item.quote?.trim() || undefined,
+      handymanId,
+      handymanName,
+    };
+  });
 }
 
 /** Prefer local draft rows while the user is still typing (autosave responses can be stale). */
@@ -905,22 +939,70 @@ function RepairItemsTable({
   );
 }
 
-function extractOutgoingRepairCandidates(detail: InspectionDetail): ReportComparisonRepairItem[] {
-  const rows: ReportComparisonRepairItem[] = [];
-  for (const area of detail.areas) {
-    const areaName = (area.name ?? 'General').replace(/ \(Outgoing\)$/, '').trim() || 'General';
-    for (const item of area.items) {
-      if (!item.flagged && item.conditionTags.length === 0 && !item.comment) continue;
-      rows.push({
-        area: areaName,
-        description: item.comment?.trim() || item.name?.trim() || 'Issue noted on outgoing report',
-        quote: '',
-        handymanId: null,
-        handymanName: '',
-      });
-    }
-  }
-  return rows;
+function InspectorSyncedResponsibilityTable({
+  title,
+  items,
+  showQuoteColumns = false,
+}: {
+  title: string;
+  items: ReportComparisonRepairItem[];
+  showQuoteColumns?: boolean;
+}) {
+  return (
+    <section className="rounded-xl border bg-card">
+      <div className="border-b px-4 py-2.5">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <p className="text-muted-foreground mt-0.5 text-[11px]">
+          Synced from the inspector outgoing report — read only.
+        </p>
+      </div>
+      <div className="p-4">
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="w-full min-w-[420px] text-left text-xs">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-semibold">#</th>
+                <th className="px-3 py-2 font-semibold">Area</th>
+                <th className="px-3 py-2 font-semibold">Description</th>
+                {showQuoteColumns ? (
+                  <>
+                    <th className="px-3 py-2 font-semibold">Quote</th>
+                    <th className="px-3 py-2 font-semibold">Company</th>
+                  </>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={showQuoteColumns ? 5 : 3}
+                    className="text-muted-foreground px-3 py-4 text-center"
+                  >
+                    No tenant-responsible items on the outgoing inspection report yet.
+                  </td>
+                </tr>
+              ) : (
+                items.map((row, index) => (
+                  <tr key={repairRowKey(row, `inspector-${index}`)} className="border-t">
+                    <td className="px-3 py-2 tabular-nums">{index + 1}</td>
+                    <td className="px-3 py-2">{row.area}</td>
+                    <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
+                    {showQuoteColumns ? (
+                      <>
+                        <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
+                        <td className="px-3 py-2">{row.handymanName || '—'}</td>
+                      </>
+                    ) : null}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export function EndLeasingReportComparisonPanel({
@@ -928,7 +1010,7 @@ export function EndLeasingReportComparisonPanel({
   mode = 'compare',
 }: {
   caseData: TerminationCaseDetail;
-  mode?: 'compare' | 'quote' | 'tenant-response';
+  mode?: 'compare' | 'quote' | 'tenant-response' | 'inspector-readonly';
 }) {
   const { apiConnected, properties } = useAgentData();
   const applyCase = useEndLeasingStore((s) => s.applyCase);
@@ -955,7 +1037,6 @@ export function EndLeasingReportComparisonPanel({
     caseData.reportComparison.landlordResponsibility,
   );
   const [busy, setBusy] = useState(false);
-  const seededFromInspectionRef = useRef(false);
   const compareAutosaveReadyRef = useRef(false);
   const quoteAutosaveReadyRef = useRef(false);
 
@@ -989,7 +1070,6 @@ export function EndLeasingReportComparisonPanel({
   }, [apiConnected, agencyId]);
 
   useEffect(() => {
-    seededFromInspectionRef.current = false;
     compareAutosaveReadyRef.current = false;
     quoteAutosaveReadyRef.current = false;
     setTenantItems(withRepairRowKeys(caseData.reportComparison.tenantResponsibility));
@@ -999,23 +1079,22 @@ export function EndLeasingReportComparisonPanel({
   }, [caseData.id]);
 
   useEffect(() => {
-    if (seededFromInspectionRef.current || !outgoingDetail) return;
-    if (
-      caseData.reportComparison.tenantResponsibility.length > 0 ||
-      caseData.reportComparison.landlordResponsibility.length > 0
-    ) {
-      seededFromInspectionRef.current = true;
-      return;
-    }
-    const seeded = extractOutgoingRepairCandidates(outgoingDetail);
-    if (seeded.length > 0) setTenantItems(withRepairRowKeys(seeded));
-    seededFromInspectionRef.current = true;
-  }, [
-    outgoingDetail,
-    caseData.id,
-    caseData.reportComparison.tenantResponsibility.length,
-    caseData.reportComparison.landlordResponsibility.length,
-  ]);
+    if (mode !== 'compare' || !outgoingDetail) return;
+    const extracted = extractTenantResponsibilityFromOutgoing(outgoingDetail);
+    setTenantItems((prev) => {
+      const merged = withRepairRowKeys(mergeInspectionResponsibilityItems(prev, extracted));
+      if (responsibilityItemsEqual(prev, merged)) return prev;
+      queueMicrotask(() => {
+        void terminationApi
+          .updateReportComparison(caseData.id, {
+            tenantResponsibility: normalizeRepairItems(merged, contractors),
+          })
+          .then((updated) => applyCase(updated))
+          .catch(() => undefined);
+      });
+      return merged;
+    });
+  }, [applyCase, caseData.id, contractors, mode, outgoingDetail]);
 
   const persist = async (
     patch: Parameters<typeof terminationApi.updateReportComparison>[1],
@@ -1052,10 +1131,10 @@ export function EndLeasingReportComparisonPanel({
         rcNow.tenantQuoteResponse === 'accepted' ||
         !rcNow.tenantQuoteResponse);
     const patch: Parameters<typeof terminationApi.updateReportComparison>[1] = {
-      landlordResponsibility: normalizeRepairItems(landlordItems),
+      landlordResponsibility: normalizeRepairItems(landlordItems, contractors),
     };
     if (!tenantLocked) {
-      patch.tenantResponsibility = normalizeRepairItems(tenantItems);
+      patch.tenantResponsibility = normalizeRepairItems(tenantItems, contractors);
     }
     await persist(patch, { silent });
   };
@@ -1200,6 +1279,16 @@ export function EndLeasingReportComparisonPanel({
   const showCompare = mode === 'compare';
   const showQuote = mode === 'quote';
   const showTenantResponse = mode === 'tenant-response';
+  const showInspectorReadonly = mode === 'inspector-readonly';
+
+  const inspectorReadOnlyItems = useMemo(() => {
+    const saved = caseData.reportComparison.tenantResponsibility;
+    if (!outgoingDetail) return saved;
+    return mergeInspectionResponsibilityItems(
+      saved,
+      extractTenantResponsibilityFromOutgoing(outgoingDetail),
+    );
+  }, [caseData.reportComparison.tenantResponsibility, outgoingDetail]);
 
   useEffect(() => {
     if (!apiConnected || !tenantQuoteEmailSent || rc.tenantQuoteResponse !== 'pending') return;
@@ -1213,6 +1302,16 @@ export function EndLeasingReportComparisonPanel({
       .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync once when awaiting reply
   }, [apiConnected, caseData.id, tenantQuoteEmailSent, rc.tenantQuoteResponse]);
+
+  if (showInspectorReadonly) {
+    return (
+      <InspectorSyncedResponsibilityTable
+        title="Tenant responsibility"
+        items={inspectorReadOnlyItems}
+        showQuoteColumns
+      />
+    );
+  }
 
   if (showCompare) {
     return (
@@ -1228,9 +1327,10 @@ export function EndLeasingReportComparisonPanel({
         />
         <CompareResponsibilitySection
           title="Tenant responsibility"
-          description="Prefilled from the inspector outgoing report. Add or adjust items before emailing the tenant."
+          description="Auto-synced from the inspector outgoing report. Quotes and handymen are added on the Repair quotes step."
           items={tenantItems}
           onChange={setTenantItems}
+          readOnly
           actionBusy={busy}
           emailHint="Send to tenant"
           onEmail={() => void sendComparisonSummary('tenant')}

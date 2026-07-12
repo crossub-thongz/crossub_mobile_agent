@@ -365,6 +365,7 @@ export function mapTerminationCase(
       tenantQuoteResponse: s.reportComparison?.tenantQuoteResponse ?? null,
       tenantQuoteResponseAt: s.reportComparison?.tenantQuoteResponseAt ?? undefined,
       tenantQuoteDeclineReason: s.reportComparison?.tenantQuoteDeclineReason ?? undefined,
+      tenantAcknowledgedPrice: s.reportComparison?.tenantAcknowledgedPrice ?? undefined,
       tenantQuoteReplyExcerpt: s.reportComparison?.tenantQuoteReplyExcerpt ?? undefined,
       settlementSummary: s.reportComparison?.settlementSummary ?? null,
     },
@@ -599,12 +600,12 @@ export const terminationApi = {
 
   declineTenantRepairQuote: (
     id: string,
-    reason?: string,
+    input?: { reason?: string; acknowledgedPrice?: string },
   ): Promise<TerminationCaseDetail> =>
     unwrap(
       api.patch<{ case: ServerTerminationCase }>(
         `/end-leasing/cases/${id}/report-comparison/tenant-quote/decline`,
-        { reason },
+        input ?? {},
       ),
     ),
 

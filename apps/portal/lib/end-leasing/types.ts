@@ -128,6 +128,7 @@ export interface ReportComparisonStageState {
   tenantQuoteResponseAt?: string | null
   tenantQuoteDeclineReason?: string | null
   tenantQuoteReplyExcerpt?: string | null
+  tenantAcknowledgedPrice?: string | null
   settlementSummary?: ReportComparisonSettlementSummary | null
 }
 

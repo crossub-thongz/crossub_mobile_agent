@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
   ArchivedEndLeasingTable,
   ArchivedLeasingCyclesTable,
 } from '@/components/agent/archive-module-tables';
+import { EmptyState } from '@/components/agent/empty-state';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyLeasingCaseWorkflowDialog } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { PropertyLeasingWorkflowActions } from '@/components/agent/property-leasing-workflow-actions';
@@ -22,6 +24,7 @@ import { workflowRentWeekly } from '@/lib/property-leasing-job';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { leasingWorkflowJobRows } from '@/lib/property-job-rows';
 import {
+  buildPropertyLeasingHistoryCases,
   buildPropertyLeasingWorkflowCases,
   filterLeasingTabWorkflowCases,
   type PropertyLeasingWorkflowCase,
@@ -126,6 +129,16 @@ export function PropertyLeasingJobPanel({
   });
 
   const jobRows = useMemo(() => leasingWorkflowJobRows(workflowCases), [workflowCases]);
+  const historyCases = useMemo(
+    () =>
+      buildPropertyLeasingHistoryCases({
+        propertyId,
+        leasingCycles,
+        vacatingCases,
+      }),
+    [leasingCycles, propertyId, vacatingCases],
+  );
+  const historyJobRows = useMemo(() => leasingWorkflowJobRows(historyCases), [historyCases]);
 
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [dialogCase, setDialogCase] = useState<PropertyLeasingWorkflowCase | null>(null);
@@ -177,7 +190,10 @@ export function PropertyLeasingJobPanel({
 
   const handleRowClick = (id: string) => {
     setSelectedCaseId(id);
-    const item = workflowCases.find((workflowCase) => workflowCase.id === id) ?? null;
+    const item =
+      workflowCases.find((workflowCase) => workflowCase.id === id) ??
+      historyCases.find((workflowCase) => workflowCase.id === id) ??
+      null;
     setDialogCase(item);
   };
 
@@ -275,6 +291,29 @@ export function PropertyLeasingJobPanel({
             if (item) setDeleteTarget(item);
           }}
         />
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold">History</h3>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Completed end-leasing cases and past letting cycles — click a row to reopen the workflow.
+          </p>
+        </div>
+        {historyJobRows.length === 0 ? (
+          <EmptyState
+            icon={RefreshCw}
+            title="No leasing history"
+            description="Completed end-leasing cases and past letting cycles will appear here."
+          />
+        ) : (
+          <PropertyJobCasesTable
+            rows={historyJobRows}
+            selectedId={selectedCaseId}
+            onRowClick={handleRowClick}
+            showViewToggle
+          />
+        )}
       </section>
 
       {(deletedLeasingCycles.length > 0 || deletedEndLeasingCases.length > 0) && (

@@ -1,6 +1,11 @@
 import { leasingLifecycleProgress } from '@/lib/case-workflows/leasing';
 import { rentReviewWorkflowProgress } from '@/lib/case-workflows/rent-review';
 import { vacatingWorkflowProgress } from '@/lib/case-workflows/vacating';
+import {
+  activeVacatingCasesForProperty,
+  historyVacatingCasesForProperty,
+  splitLeasingCyclesByHistory,
+} from '@/lib/property-leasing-history';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
   LeasingCycle,
@@ -73,8 +78,9 @@ export function buildPropertyLeasingWorkflowCases(input: {
   } = input;
 
   const cases: PropertyLeasingWorkflowCase[] = [];
+  const { active: activeCycles } = splitLeasingCyclesByHistory(leasingCycles);
 
-  for (const cycle of leasingCycles) {
+  for (const cycle of activeCycles) {
     const progress = leasingLifecycleProgress(cycle);
     cases.push({
       id: cycle.id,
@@ -89,7 +95,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
   }
 
   if (
-    leasingCycles.length === 0 &&
+    activeCycles.length === 0 &&
     (tenantSelections.length > 0 || (inOpenInspectionPhase && isVacant))
   ) {
     const pending = tenantSelections.find((t) => t.requiresApproval);
@@ -104,8 +110,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
     });
   }
 
-  for (const vacating of vacatingCases) {
-    if (isTerminalWorkflowStatus(vacating.apiStatus)) continue;
+  for (const vacating of activeVacatingCasesForProperty(vacatingCases)) {
     const progress = vacatingWorkflowProgress(vacating);
     cases.push({
       id: vacating.id,
@@ -146,6 +151,45 @@ export function buildPropertyLeasingWorkflowCases(input: {
       status: 'current tenancy',
       currentStep: 'Active lease',
       detail: currentLease.approvedTenant,
+    });
+  }
+
+  return sortPropertyLeasingWorkflowCases(cases);
+}
+
+export function buildPropertyLeasingHistoryCases(input: {
+  propertyId: string;
+  leasingCycles: LeasingCycle[];
+  vacatingCases: VacatingCase[];
+}): PropertyLeasingWorkflowCase[] {
+  const cases: PropertyLeasingWorkflowCase[] = [];
+  const { history: historicalCycles } = splitLeasingCyclesByHistory(input.leasingCycles);
+
+  for (const cycle of historicalCycles) {
+    const progress = leasingLifecycleProgress(cycle);
+    cases.push({
+      id: cycle.id,
+      category: 'leasing',
+      label: workflowCaseReferenceLabel(cycle.id, 'leasing'),
+      status: cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
+      currentStep: progress.currentStepLabel,
+      detail: cycle.propertyAddress,
+      sortAt: cycle.availableFrom,
+      createdAt: cycle.createdAt,
+    });
+  }
+
+  for (const vacating of historyVacatingCasesForProperty(input.vacatingCases)) {
+    const progress = vacatingWorkflowProgress(vacating);
+    cases.push({
+      id: vacating.id,
+      category: 'end_leasing',
+      label: workflowCaseReferenceLabel(vacating.id, 'end_leasing'),
+      status: vacating.apiStatus?.replaceAll('_', ' ').toLowerCase(),
+      currentStep: progress.currentStepLabel,
+      detail: `Vacate ${vacating.vacateDate} · ${vacating.reason}`,
+      sortAt: vacating.vacateDate,
+      createdAt: vacating.createdAt,
     });
   }
 

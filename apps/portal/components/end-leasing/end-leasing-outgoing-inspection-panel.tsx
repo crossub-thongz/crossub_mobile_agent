@@ -1,13 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { ClipboardCheck, ExternalLink, Loader2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { TerminationCompleteInspectionDialog } from '@/components/end-leasing/termination-complete-inspection-dialog';
 import { inspectionDetail } from '@/constants/routes';
+import { OUTGOING_INSPECTION_DAYS_AFTER_VACATE } from '@/constants/end-leasing';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import {
   endLeasingKeyReturnDate,
@@ -17,8 +18,8 @@ import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { suggestedOutgoingInspectionIsoFromDate } from '@/lib/inspections/outgoing-schedule';
 import { terminationApi } from '@/lib/termination-case-api';
-import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { LEASING_ITEM_STATUS, LEASING_UI } from '@/lib/leasing/constants';
+import { cn, formatDateTime } from '@/lib/utils';
 
 const DONE = LEASING_ITEM_STATUS.DONE;
 
@@ -95,8 +96,7 @@ export function EndLeasingOutgoingInspectionPanel({
 
   return (
     <>
-      <section className="rounded-xl border bg-card p-4">
-        <p className="mb-3 text-sm font-semibold">Outgoing inspection</p>
+      <section>
         <dl className="grid gap-4 sm:grid-cols-2">
           <Field label="Inspection date">
             {inspection.inspectionDate
@@ -135,19 +135,43 @@ export function EndLeasingOutgoingInspectionPanel({
           </div>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {!inspection.inspectionId ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={createBusy}
-              onClick={() => void createOutgoingInspection()}
-            >
-              {createBusy ? <Loader2 className="size-3.5 animate-spin" /> : null}
-              Create outgoing inspection
-            </Button>
-          ) : (
+        {!inspection.inspectionId ? (
+          <div
+            className={cn(
+              'mt-4 rounded-xl border border-teal-500/30 bg-teal-500/[0.06] p-4',
+              LEASING_UI.ingoingTabGlow,
+            )}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <p className="flex items-center gap-2 text-sm font-semibold text-teal-950 dark:text-teal-50">
+                  <ClipboardCheck className="size-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                  Schedule outgoing inspection
+                </p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Creates the inspection job, targets{' '}
+                  {OUTGOING_INSPECTION_DAYS_AFTER_VACATE} days after key return, and opens it
+                  so you can track inspector assignment and the report.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className={cn('h-9 w-full shrink-0 gap-1.5 sm:w-auto', LEASING_UI.ingoingBtn)}
+                disabled={createBusy}
+                onClick={() => void createOutgoingInspection()}
+              >
+                {createBusy ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Plus className="size-3.5" />
+                )}
+                {createBusy ? 'Creating…' : 'Create outgoing inspection'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button
               type="button"
               size="sm"
@@ -158,18 +182,19 @@ export function EndLeasingOutgoingInspectionPanel({
               <ExternalLink className="size-3.5" />
               Open inspection job case
             </Button>
-          )}
-          {!inspectionDone ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => setCompleteDialogOpen(true)}
-            >
-              Mark inspection completed
-            </Button>
-          ) : null}
-        </div>
+            {!inspectionDone ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => setCompleteDialogOpen(true)}
+              >
+                Mark inspection completed
+              </Button>
+            ) : null}
+          </div>
+        )}
       </section>
 
       <TerminationCompleteInspectionDialog

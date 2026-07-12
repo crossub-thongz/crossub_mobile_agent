@@ -6,6 +6,7 @@ import { Check, ExternalLink, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { communicationsThread } from '@/constants/routes';
@@ -50,6 +51,9 @@ export function EndLeasingResultConfirmedPanel({
 }) {
   const applyCase = useEndLeasingStore((s) => s.applyCase);
   const [busy, setBusy] = useState(false);
+  const [tenantAcknowledgedPrice, setTenantAcknowledgedPrice] = useState(
+    caseData.reportComparison.tenantAcknowledgedPrice ?? '',
+  );
   const [tenantNotice, setTenantNotice] = useState(
     caseData.reportComparison.tenantQuoteDeclineReason ?? '',
   );
@@ -81,13 +85,23 @@ export function EndLeasingResultConfirmedPanel({
     }
   };
 
-  const recordTenantOwnQuote = async () => {
-    if (!tenantNotice.trim()) {
+  const recordTenantOwnPrice = async () => {
+    const price = tenantAcknowledgedPrice.trim();
+    const notice = tenantNotice.trim();
+    if (!price) {
+      toast.error('Enter the tenant-acknowledged price');
+      return;
+    }
+    if (!notice) {
       toast.error('Enter a notice explaining the tenant-acknowledged price');
       return;
     }
     await run(
-      () => terminationApi.declineTenantRepairQuote(caseData.id, tenantNotice.trim()),
+      () =>
+        terminationApi.declineTenantRepairQuote(caseData.id, {
+          acknowledgedPrice: price,
+          reason: notice,
+        }),
       'Tenant-acknowledged price recorded with notice',
     );
   };
@@ -134,8 +148,8 @@ export function EndLeasingResultConfirmedPanel({
           <section className="rounded-xl border bg-card p-4">
             <p className="text-sm font-semibold">Tenant acknowledged price</p>
             <p className="text-muted-foreground mt-1 text-xs">
-              The tenant may accept the quoted repair amount or provide their own price from another
-              provider. Record their acknowledged figure and a notice explaining the basis.
+              The tenant may accept the quoted repair total or provide their own price from another
+              provider. Record the acknowledged amount and a notice explaining the basis.
             </p>
             <dl className="mt-3 grid gap-3 text-xs sm:grid-cols-2">
               <div>
@@ -152,17 +166,36 @@ export function EndLeasingResultConfirmedPanel({
                       : 'Pending'}
                 </dd>
               </div>
+              {rc.tenantAcknowledgedPrice ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground">Tenant acknowledged price</dt>
+                  <dd className="font-semibold tabular-nums">{rc.tenantAcknowledgedPrice}</dd>
+                </div>
+              ) : null}
             </dl>
-            <div className="mt-3 space-y-2">
-              <Label htmlFor={`tenant-notice-${caseData.id}`}>Notice / reason</Label>
-              <Textarea
-                id={`tenant-notice-${caseData.id}`}
-                className="min-h-[5rem] text-xs leading-relaxed"
-                placeholder="e.g. Tenant obtained a lower quote from their own cleaner and accepts $X instead."
-                value={tenantNotice}
-                disabled={busy || rc.tenantQuoteResponse === 'accepted'}
-                onChange={(e) => setTenantNotice(e.target.value)}
-              />
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`tenant-price-${caseData.id}`}>Tenant acknowledged price</Label>
+                <Input
+                  id={`tenant-price-${caseData.id}`}
+                  className="h-9 text-xs"
+                  placeholder="e.g. 420"
+                  value={tenantAcknowledgedPrice}
+                  disabled={busy || rc.tenantQuoteResponse === 'accepted'}
+                  onChange={(e) => setTenantAcknowledgedPrice(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-1">
+                <Label htmlFor={`tenant-notice-${caseData.id}`}>Notice / reason</Label>
+                <Textarea
+                  id={`tenant-notice-${caseData.id}`}
+                  className="min-h-[5rem] text-xs leading-relaxed"
+                  placeholder="e.g. Tenant obtained a lower quote from their own cleaner and accepts $420 instead."
+                  value={tenantNotice}
+                  disabled={busy || rc.tenantQuoteResponse === 'accepted'}
+                  onChange={(e) => setTenantNotice(e.target.value)}
+                />
+              </div>
             </div>
             {rc.tenantQuoteResponse !== 'accepted' ? (
               <div className="mt-3 flex flex-wrap gap-2">
@@ -186,7 +219,7 @@ export function EndLeasingResultConfirmedPanel({
                   variant="outline"
                   className="h-8 text-xs"
                   disabled={busy}
-                  onClick={() => void recordTenantOwnQuote()}
+                  onClick={() => void recordTenantOwnPrice()}
                 >
                   Record tenant own price
                 </Button>
@@ -220,13 +253,7 @@ export function EndLeasingResultConfirmedPanel({
             </section>
           )}
 
-          <section className="rounded-xl border bg-muted/20 p-4">
-            <p className="mb-2 text-sm font-semibold">Tenant responsibility</p>
-            <p className="text-muted-foreground mb-3 text-xs">
-              Synced from the inspector outgoing report — read only.
-            </p>
-            <EndLeasingReportComparisonPanel caseData={caseData} mode="tenant-response" />
-          </section>
+          <EndLeasingReportComparisonPanel caseData={caseData} mode="inspector-readonly" />
         </>
       ) : null}
     </div>
