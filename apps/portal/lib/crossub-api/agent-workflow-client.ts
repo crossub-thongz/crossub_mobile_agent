@@ -23,6 +23,7 @@ export type CreateAgentRentReviewInput = {
   currentWeeklyRent: number;
   tenantName?: string;
   rentReviewDate?: string;
+  leaseEndDate?: string;
   leaseType?: 'fixed' | 'periodic';
   fixedTermWeeks?: number;
   initialLeaseStartDate?: string;

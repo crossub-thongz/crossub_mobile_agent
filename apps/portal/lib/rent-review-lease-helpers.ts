@@ -48,16 +48,18 @@ export function derivePreferredLeaseStart(input: {
   fixedTermWeeks?: FixedTermWeeks;
 }): { date: string; hint: string; leaseTermAnchor?: string } {
   if (input.leaseEnd) {
+    const leaseEnd = input.leaseEnd.slice(0, 10);
     return {
-      date: input.leaseEnd.slice(0, 10),
-      hint: 'From active tenancy lease end',
+      date: isoDateAddDays(leaseEnd, 1),
+      hint: 'Day after current tenancy lease end',
     };
   }
 
   if (input.agreementEnd) {
+    const agreementEnd = input.agreementEnd.slice(0, 10);
     return {
-      date: input.agreementEnd.slice(0, 10),
-      hint: 'From leasing agreement end date',
+      date: isoDateAddDays(agreementEnd, 1),
+      hint: 'Day after leasing agreement end date',
     };
   }
 
@@ -65,16 +67,17 @@ export function derivePreferredLeaseStart(input: {
   const weeks = input.fixedTermWeeks ?? 52;
 
   if (anchor) {
+    const leaseEnd = leaseEndFromFixedTermWeeks(anchor, weeks);
     return {
-      date: leaseEndFromFixedTermWeeks(anchor, weeks),
-      hint: `From ${weeks}-week term ending`,
+      date: isoDateAddDays(leaseEnd, 1),
+      hint: `Day after ${weeks}-week term ending`,
       leaseTermAnchor: anchor,
     };
   }
 
   const noticeFloor = isoDateAddDays(todayIso(), 60);
   return {
-    date: noticeFloor,
+    date: isoDateAddDays(noticeFloor, 1),
     hint: 'Default · 60-day NSW notice horizon (no lease end on file)',
   };
 }

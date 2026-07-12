@@ -6,10 +6,16 @@ import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
 import { defaultRoutineScheduledDate, suggestedOutgoingInspectionIso } from '@/lib/inspections/outgoing-schedule';
 import {
   derivePreferredLeaseStart,
+  isoDateAddDays,
   leaseEndFromFixedTermWeeks,
   parseLeaseTermWeeks,
   type FixedTermWeeks,
 } from '@/lib/rent-review-lease-helpers';
+import {
+  deriveRentReviewDueDate,
+  RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE,
+  resolveCurrentTenancyLeaseEnd,
+} from '@/lib/rent-review/scheduling';
 import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
 import { resolveRentPaidTo } from '@/lib/property-overview';
 import { fetchProperty } from '@/lib/crossub-api/agent-client';
@@ -329,10 +335,17 @@ export function buildRentReviewPrefill(
     null;
 
   const preferred = derivePreferredLeaseStart({
-    leaseEnd: currentLease?.leaseEnd,
+    leaseEnd: currentLease?.leaseEnd ?? property.leaseEnd,
     agreementEnd: draft?.endDate,
     termAnchor,
     fixedTermWeeks,
+  });
+
+  const currentTenancyLeaseEnd = resolveCurrentTenancyLeaseEnd({
+    leaseEnd: currentLease?.leaseEnd ?? property.leaseEnd,
+    agreementEnd: draft?.endDate,
+    termAnchor,
+    termWeeks: fixedTermWeeks,
   });
 
   return {
@@ -346,7 +359,9 @@ export function buildRentReviewPrefill(
     leaseTermAnchor: preferred.leaseTermAnchor ?? termAnchor ?? undefined,
     currentWeeklyRent: weekly > 0 ? formatWeeklyRent(weekly) : '',
     managingAgentLabel: contact.managingAgentLabel,
-    rentReviewDate: isoDateAddYears(preferred.date, 1),
+    rentReviewDate: currentTenancyLeaseEnd
+      ? deriveRentReviewDueDate(currentTenancyLeaseEnd)
+      : isoDateAddDays(preferred.date, -RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE),
   };
 }
 
@@ -415,9 +430,10 @@ export function recalcRentReviewLeaseStart(
   fixedTermWeeks: FixedTermWeeks,
 ): { initialLeaseStartDate: string; hint: string } {
   if (prefill.leaseTermAnchor) {
+    const leaseEnd = leaseEndFromFixedTermWeeks(prefill.leaseTermAnchor, fixedTermWeeks);
     return {
-      initialLeaseStartDate: leaseEndFromFixedTermWeeks(prefill.leaseTermAnchor, fixedTermWeeks),
-      hint: `From ${fixedTermWeeks}-week term ending`,
+      initialLeaseStartDate: isoDateAddDays(leaseEnd, 1),
+      hint: `Day after ${fixedTermWeeks}-week term ending`,
     };
   }
   return {

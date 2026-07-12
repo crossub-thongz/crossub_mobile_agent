@@ -381,7 +381,7 @@ export function RentReviewAgentConfirmedPanel({
               <AutoDateField
                 label="Rent increase on"
                 value={effectiveDate}
-                hint="Calculated from lease scheduling and the 60-day statutory notice period."
+                hint="Same day the current lease ends — one day before the new lease start."
               />
               <AutoDateField
                 label="New lease start date"

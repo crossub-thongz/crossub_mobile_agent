@@ -25,9 +25,9 @@ export interface RentReviewScheduleBadge {
 }
 
 export interface RentReviewScheduleIndicators {
-  /** T−90 order placed — agent's 30-day conduct window until T−60. */
+  /** Opens 90 days before the rent increase date. */
   orderCountdown: RentReviewScheduleBadge;
-  /** T−60 automatic tenant reminder before lease end. */
+  /** T−60 automatic tenant reminder before the rent increase date. */
   tenantReminder: RentReviewScheduleBadge;
 }
 
@@ -90,7 +90,7 @@ function buildOrderCountdownBadge(
   if (isNoticeSent(review)) {
     return {
       label: 'Notice sent',
-      title: `Formal tenant notice issued — increase effective from ${scheduling.scheduleAnchor}`,
+      title: `Formal tenant notice issued — rent increase on ${scheduling.scheduleAnchor}`,
       tone: 'notice_sent',
     };
   }
@@ -100,8 +100,8 @@ function buildOrderCountdownBadge(
     return {
       label: `Opens in ${daysUntilWindowOpens}d`,
       title:
-        `Rent review order opens ${scheduling.advanceReviewOpensOn} ` +
-        `(${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before lease end ${scheduling.scheduleAnchor}).`,
+        `Rent review opens ${scheduling.advanceReviewOpensOn} ` +
+        `(${RENT_REVIEW_ADVANCE_ORDER_DAYS} days before rent increase on ${scheduling.scheduleAnchor}).`,
       tone: 'ok',
     };
   }
@@ -118,9 +118,9 @@ function buildOrderCountdownBadge(
   return {
     label: formatCountdownLabel(conductDaysRemaining),
     title:
-      `${RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day agent conduct window — the rent review must be completed by ` +
-      `${scheduling.noticeDeadlineOn} (${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease end ` +
-      `${scheduling.scheduleAnchor}, leaving ${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days for the statutory tenant notice).`,
+      `${RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day agent conduct window — complete the rent review by ` +
+      `${scheduling.noticeDeadlineOn} (${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before rent increase on ` +
+      `${scheduling.scheduleAnchor}, leaving ${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days for statutory tenant notice).`,
     tone: toneForDays(conductDaysRemaining),
   };
 }
@@ -141,7 +141,7 @@ function buildTenantReminderBadge(
   if (isNoticeSent(review)) {
     return {
       label: 'Sent',
-      title: `Tenant notified — statutory ${RENT_REVIEW_STATUTORY_NOTICE_DAYS}-day notice before ${scheduling.scheduleAnchor}`,
+      title: `Tenant notified — statutory ${RENT_REVIEW_STATUTORY_NOTICE_DAYS}-day notice before rent increase on ${scheduling.scheduleAnchor}`,
       tone: 'notice_sent',
     };
   }
@@ -160,7 +160,7 @@ function buildTenantReminderBadge(
       label: `In ${daysUntilReminder}d`,
       title:
         `System sends an automatic tenant reminder on ${scheduling.noticeDeadlineOn} ` +
-        `(${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease end ${scheduling.scheduleAnchor}).`,
+        `(${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before rent increase on ${scheduling.scheduleAnchor}).`,
       tone: toneForUpcoming(daysUntilReminder),
     };
   }
@@ -170,7 +170,7 @@ function buildTenantReminderBadge(
       label: 'Today',
       title:
         `Automatic tenant reminder due today (${scheduling.noticeDeadlineOn}) — ` +
-        `${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease end.`,
+        `${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before rent increase.`,
       tone: 'urgent',
     };
   }
@@ -179,28 +179,29 @@ function buildTenantReminderBadge(
     label: 'Sent',
     title:
       `Automatic tenant reminder dispatched on ${scheduling.noticeDeadlineOn} ` +
-      `(${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease end). Issue formal notice if not yet sent.`,
+      `(${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before rent increase). Issue formal notice if not yet sent.`,
     tone: 'notice_sent',
   };
 }
 
+function rentReviewSchedulingForCase(review: RentReviewCase) {
+  return deriveRentReviewScheduling({
+    leaseEnd: review.leaseEnd,
+    newLeaseStart: review.leaseStart,
+    createdAt: review.createdAt,
+  });
+}
+
 /**
  * Rent review schedule badges for the property jobs table:
- * - **Countdown** — T−90 order / agent's 30-day conduct window (90 − 60 days before lease end).
- * - **Tenant reminder** — T−60 automatic tenant reminder before lease end.
+ * - **Countdown** — opens 90 days before rent increase; then the 30-day conduct window.
+ * - **Tenant reminder** — T−60 automatic tenant reminder before rent increase.
  */
 export function getRentReviewScheduleIndicators(
   review: RentReviewCase,
   reference = new Date(),
 ): RentReviewScheduleIndicators | null {
-  const scheduling = deriveRentReviewScheduling({
-    leaseStart: review.leaseStart,
-    leaseEnd: review.leaseEnd,
-    reviewDue: review.reviewDue,
-    leaseType: review.leaseType,
-    fixedTermWeeks: review.fixedTermWeeks,
-    createdAt: review.createdAt,
-  });
+  const scheduling = rentReviewSchedulingForCase(review);
 
   if (!scheduling) return null;
 
@@ -211,21 +212,14 @@ export function getRentReviewScheduleIndicators(
 }
 
 /**
- * Countdown for the 30-day rent review conduct window (order countdown column).
- * Case opens at T−90; tenant reminder fires at T−60.
+ * Countdown for the rent review conduct window.
+ * Opens 90 days before rent increase; tenant reminder fires 60 days before.
  */
 export function getRentReviewConductCountdown(
   review: RentReviewCase,
   reference = new Date(),
 ): RentReviewConductCountdown | null {
-  const scheduling = deriveRentReviewScheduling({
-    leaseStart: review.leaseStart,
-    leaseEnd: review.leaseEnd,
-    reviewDue: review.reviewDue,
-    leaseType: review.leaseType,
-    fixedTermWeeks: review.fixedTermWeeks,
-    createdAt: review.createdAt,
-  });
+  const scheduling = rentReviewSchedulingForCase(review);
 
   if (!scheduling) return null;
 

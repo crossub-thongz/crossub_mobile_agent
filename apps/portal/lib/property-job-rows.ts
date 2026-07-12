@@ -10,6 +10,7 @@ import { isDeletedRentReview } from '@/lib/property-rent-review-history';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { getRentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
+import { deriveRentReviewDueDateFromInput } from '@/lib/rent-review/scheduling';
 import type { RentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
 import type {
   Inspection,
@@ -392,13 +393,18 @@ export function rentReviewJobRows(
     const decision = decisions[review.id];
     const createdIso = rentReviewCreatedAtIso(review);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
+    const dueDate = deriveRentReviewDueDateFromInput({
+      leaseEnd: review.leaseEnd,
+      reviewDue: review.reviewDue,
+      newLeaseStart: review.leaseStart,
+    });
     return {
       id: review.id,
       kind: 'rent_review',
       jobType: 'Rent review',
       name: workflowCaseReferenceLabel(review.id, 'rent_review'),
       description: formatRentReviewJobDescription(review, decision),
-      date: formatDate(review.reviewDue),
+      date: dueDate ? formatDate(dueDate) : '—',
       createdAt,
       createdAtMs,
       status: progress.currentStepLabel,

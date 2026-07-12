@@ -1,7 +1,6 @@
 import { api, apiV1 } from '@/lib/api';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
-  leaseEndFromFixedTermWeeks,
   toDateOnly,
 } from '@/lib/rent-review/scheduling';
 import type {
@@ -29,9 +28,6 @@ function resolveLeaseEndDate(
 ): string | null {
   if (leaseEndDate) return leaseEndDate;
   if (d.leaseEndDate) return dateOnly(d.leaseEndDate);
-  if (d.leaseType === 'fixed' && d.initialLeaseStartDate && d.fixedTermWeeks) {
-    return leaseEndFromFixedTermWeeks(d.initialLeaseStartDate, d.fixedTermWeeks);
-  }
   return null;
 }
 

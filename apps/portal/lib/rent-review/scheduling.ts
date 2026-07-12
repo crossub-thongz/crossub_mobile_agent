@@ -1,15 +1,18 @@
 /**
- * Rent-review scheduling mirrors `crossub_web/apps/web/modules/rent-review/rent-review-lease-helpers.ts`.
+ * Rent-review scheduling:
  *
- * - Orders are placed ~90 days before lease end / review due.
+ * - Countdown opens 90 days before the rent increase date.
  * - Tenants require 60-day advance notice before a rent increase.
- * - That leaves a 30-day window to complete the rent review (90 − 60).
+ * - That leaves a 30-day agent conduct window (90 − 60).
+ * - Agent due date is 30 days before the new lease start (separate helper).
  */
 
 export const RENT_REVIEW_ADVANCE_ORDER_DAYS = 90;
 export const RENT_REVIEW_STATUTORY_NOTICE_DAYS = 60;
 export const RENT_REVIEW_CONDUCT_WINDOW_DAYS =
   RENT_REVIEW_ADVANCE_ORDER_DAYS - RENT_REVIEW_STATUTORY_NOTICE_DAYS;
+/** Agent due date — 30 days before the new lease start. */
+export const RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE = 30;
 
 export function toDateOnly(iso: string | null | undefined): string | null {
   if (!iso?.trim()) return null;
@@ -44,38 +47,115 @@ export function leaseEndFromFixedTermWeeks(startDate: string, weeks: number): st
   return isoDateAddDays(startDate, weeks * 7);
 }
 
+/**
+ * Current tenancy lease end — anchor for rent increase / new lease start and
+ * countdown scheduling. Does not use `reviewDue` (that is the agent due date).
+ */
+export function resolveCurrentTenancyLeaseEnd(input: {
+  leaseEndDate?: string | null;
+  leaseEnd?: string | null;
+  agreementEnd?: string | null;
+  termAnchor?: string | null;
+  termWeeks?: number | null;
+}): string | null {
+  const explicit =
+    toDateOnly(input.leaseEndDate) ??
+    toDateOnly(input.leaseEnd) ??
+    toDateOnly(input.agreementEnd);
+  if (explicit) return explicit;
+
+  const anchor = toDateOnly(input.termAnchor);
+  if (anchor && input.termWeeks != null && input.termWeeks > 0) {
+    return leaseEndFromFixedTermWeeks(anchor, input.termWeeks);
+  }
+
+  return null;
+}
+
+/** Day after the current tenancy lease ends. */
+export function deriveNewLeaseStartFromTenancyEnd(tenancyLeaseEnd: string): string {
+  return isoDateAddDays(tenancyLeaseEnd, 1);
+}
+
+/** Agent due date — 30 days before the new lease start. */
+export function deriveRentReviewDueDate(tenancyLeaseEnd: string): string {
+  return isoDateSubtractDays(
+    deriveNewLeaseStartFromTenancyEnd(tenancyLeaseEnd),
+    RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE,
+  );
+}
+
+export function deriveRentReviewDueDateFromInput(input: {
+  leaseEndDate?: string | null;
+  leaseEnd?: string | null;
+  agreementEnd?: string | null;
+  termAnchor?: string | null;
+  termWeeks?: number | null;
+  /** Persisted due date when tenancy lease end is unavailable. */
+  reviewDue?: string | null;
+  /** Preferred / new lease start — due date is 30 days before this. */
+  newLeaseStart?: string | null;
+}): string | null {
+  const tenancyLeaseEnd = resolveCurrentTenancyLeaseEnd(input);
+  if (tenancyLeaseEnd) return deriveRentReviewDueDate(tenancyLeaseEnd);
+
+  const newLeaseStart = toDateOnly(input.newLeaseStart);
+  if (newLeaseStart) {
+    return isoDateSubtractDays(newLeaseStart, RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE);
+  }
+
+  return toDateOnly(input.reviewDue);
+}
+
+/** Rent increase on — same day as the current tenancy lease ends. */
+export function resolveRentIncreaseDate(input: {
+  rentIncreaseDate?: string | null;
+  leaseEndDate?: string | null;
+  leaseEnd?: string | null;
+  agreementEnd?: string | null;
+  termAnchor?: string | null;
+  termWeeks?: number | null;
+  /** Preferred / new lease start — rent increase is the day before. */
+  newLeaseStart?: string | null;
+}): string | null {
+  const explicit = toDateOnly(input.rentIncreaseDate);
+  if (explicit) return explicit;
+
+  const tenancyLeaseEnd = resolveCurrentTenancyLeaseEnd(input);
+  if (tenancyLeaseEnd) return tenancyLeaseEnd;
+
+  const newLeaseStart = toDateOnly(input.newLeaseStart);
+  if (newLeaseStart) return isoDateAddDays(newLeaseStart, -1);
+
+  return null;
+}
+
 export interface RentReviewSchedulingFields {
+  /** Rent increase date — countdown anchor. */
   scheduleAnchor: string;
+  /** Rent review order opens (rent increase date − 90 days). */
   advanceReviewOpensOn: string;
-  /** Last day to finish review & issue 60-day notice. */
+  /** Last day to finish review & issue 60-day notice (rent increase date − 60 days). */
   noticeDeadlineOn: string;
 }
 
 export function deriveRentReviewScheduling(input: {
-  leaseStart?: string;
+  rentIncreaseDate?: string;
   leaseEnd?: string;
-  reviewDue?: string;
-  leaseType?: 'fixed' | 'periodic';
-  fixedTermWeeks?: number;
+  leaseEndDate?: string;
+  newLeaseStart?: string;
   createdAt?: string;
 }): RentReviewSchedulingFields | null {
-  const leaseStart = input.leaseStart?.trim() || null;
-  const reviewDue = input.reviewDue?.trim() || null;
   const createdDay = input.createdAt?.slice(0, 10) ?? null;
 
-  let scheduleAnchor: string | null = input.leaseEnd?.trim() || null;
+  const rentIncreaseDate = resolveRentIncreaseDate({
+    rentIncreaseDate: input.rentIncreaseDate,
+    leaseEndDate: input.leaseEndDate,
+    leaseEnd: input.leaseEnd,
+    newLeaseStart: input.newLeaseStart,
+  });
 
-  if (!scheduleAnchor && input.leaseType === 'fixed' && leaseStart && input.fixedTermWeeks) {
-    scheduleAnchor = leaseEndFromFixedTermWeeks(leaseStart, input.fixedTermWeeks);
-  }
-
-  if (!scheduleAnchor && reviewDue) {
-    scheduleAnchor = reviewDue;
-  }
-
-  if (!scheduleAnchor && leaseStart) {
-    scheduleAnchor = isoDateAddYears(leaseStart, 1);
-  }
+  let scheduleAnchor = rentIncreaseDate;
 
   if (!scheduleAnchor && createdDay) {
     scheduleAnchor = isoDateAddYears(createdDay, 1);
@@ -85,8 +165,14 @@ export function deriveRentReviewScheduling(input: {
 
   return {
     scheduleAnchor,
-    advanceReviewOpensOn: isoDateSubtractDays(scheduleAnchor, RENT_REVIEW_ADVANCE_ORDER_DAYS),
-    noticeDeadlineOn: isoDateSubtractDays(scheduleAnchor, RENT_REVIEW_STATUTORY_NOTICE_DAYS),
+    advanceReviewOpensOn: isoDateSubtractDays(
+      scheduleAnchor,
+      RENT_REVIEW_ADVANCE_ORDER_DAYS,
+    ),
+    noticeDeadlineOn: isoDateSubtractDays(
+      scheduleAnchor,
+      RENT_REVIEW_STATUTORY_NOTICE_DAYS,
+    ),
   };
 }
 
