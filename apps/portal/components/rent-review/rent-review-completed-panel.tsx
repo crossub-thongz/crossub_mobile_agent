@@ -3,36 +3,47 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
+import { RentReviewFullAuditLog } from '@/components/rent-review/rent-review-full-audit-log';
+import { RentReviewLeaseAgreementAudit } from '@/components/rent-review/rent-review-lease-agreement-audit';
+import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
 import { Button } from '@/components/ui/button';
 import {
-  RENT_REVIEW_AGENT_STEP,
-  auditEntriesForStep,
+  isRentReviewWorkflowClosed,
+  type RentReviewAgentStep,
 } from '@/lib/rent-review/agent-workflow-model';
 import {
+  buildLeaseAgreementProgress,
   buildTenantAcceptanceSummary,
   isPreferredRenewalFixed,
   isTenantAccepted,
   isTenantDeclined,
+  isTenantVacatePathComplete,
 } from '@/lib/rent-review/tenant-decision-display';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 
 export function RentReviewCompletedPanel({
   detail,
   onUpdated,
+  onNavigateToStep,
 }: {
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
+  onNavigateToStep?: (step: RentReviewAgentStep) => void;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
 
-  const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.COMPLETED);
   const weekly = detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent;
   const acceptance = buildTenantAcceptanceSummary(detail);
+  const leaseAgreement = buildLeaseAgreementProgress(detail);
+  const vacateComplete = isTenantVacatePathComplete(detail);
+  const declined = isTenantDeclined(detail);
+  const workflowClosed = isRentReviewWorkflowClosed(detail);
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -49,49 +60,86 @@ export function RentReviewCompletedPanel({
 
   return (
     <div className="space-y-4">
+      {workflowClosed ? (
+        <p className="text-muted-foreground rounded-lg border bg-muted/20 px-3 py-2 text-xs">
+          Use the step rail above to review each stage. The full audit log below links back to the
+          step where each event was recorded.
+        </p>
+      ) : null}
+
       <section className="rounded-xl border bg-primary/5 p-4">
         <p className="mb-2 text-sm font-semibold">Completed</p>
-        <dl className="grid gap-3 text-xs sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Final rent</dt>
-            <dd className="text-primary font-medium tabular-nums">{formatCurrency(weekly)}/wk</dd>
+        {vacateComplete || declined ? (
+          <div className="space-y-3 text-xs">
+            <p className="font-medium text-rose-600">Tenant declined the increase</p>
+            <p className="text-muted-foreground">
+              Vacate path recorded — no accounting sync required.
+            </p>
+            {detail.tenantMoveOutDate ? (
+              <dl className="grid gap-3 border-t pt-3 sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted-foreground">Move-out date</dt>
+                  <dd className="font-medium tabular-nums">
+                    {formatDate(detail.tenantMoveOutDate)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Closed</dt>
+                  <dd className="font-medium">
+                    {detail.completedDate ? formatDate(detail.completedDate) : '—'}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <dl className="grid gap-3 border-t pt-3 sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted-foreground">Closed</dt>
+                  <dd className="font-medium">
+                    {detail.completedDate ? formatDate(detail.completedDate) : '—'}
+                  </dd>
+                </div>
+              </dl>
+            )}
           </div>
-          <div>
-            <dt className="text-muted-foreground">Rent increase from</dt>
-            <dd className="font-medium">{detail.effectiveDate ? formatDate(detail.effectiveDate) : '—'}</dd>
-          </div>
-          {isTenantAccepted(detail) && acceptance && isPreferredRenewalFixed(detail) ? (
-            <>
-              <div>
-                <dt className="text-muted-foreground">New lease period</dt>
-                <dd className="font-medium">
-                  {acceptance.newLeaseStart && acceptance.newLeaseEnd
-                    ? `${formatDate(acceptance.newLeaseStart)} – ${formatDate(acceptance.newLeaseEnd)}`
-                    : '—'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Lease term</dt>
-                <dd className="font-medium">
-                  {acceptance.leaseTermWeeks != null ? `${acceptance.leaseTermWeeks} weeks` : '—'}
-                </dd>
-              </div>
-            </>
-          ) : null}
-          {isTenantDeclined(detail) && detail.tenantMoveOutDate ? (
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">Tenant move-out</dt>
-              <dd className="font-medium">{formatDate(detail.tenantMoveOutDate)}</dd>
+        ) : isTenantAccepted(detail) && acceptance ? (
+          <RentReviewTenantAcceptanceSummary summary={acceptance} showSchedulingNote={false} />
+        ) : (
+          <dl className="grid gap-3 text-xs sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Final rent</dt>
+              <dd className="text-primary font-medium tabular-nums">{formatCurrency(weekly)}/wk</dd>
             </div>
-          ) : null}
-          <div>
-            <dt className="text-muted-foreground">Completed</dt>
-            <dd className="font-medium">
-              {detail.completedDate ? formatDate(detail.completedDate) : 'In progress'}
-            </dd>
-          </div>
-        </dl>
+            <div>
+              <dt className="text-muted-foreground">Rent increase from</dt>
+              <dd className="font-medium">{detail.effectiveDate ? formatDate(detail.effectiveDate) : '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Completed</dt>
+              <dd className="font-medium">
+                {detail.completedDate ? formatDate(detail.completedDate) : 'In progress'}
+              </dd>
+            </div>
+          </dl>
+        )}
+        {isTenantAccepted(detail) && acceptance ? (
+          <dl className="mt-3 grid gap-3 border-t pt-3 text-xs sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Completed</dt>
+              <dd className="font-medium">
+                {detail.completedDate ? formatDate(detail.completedDate) : 'In progress'}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
       </section>
+
+      {declined ? (
+        <RentReviewEndLeasingPanel detail={detail} busy={busy} onBusyChange={setBusy} />
+      ) : null}
+
+      {isTenantAccepted(detail) && isPreferredRenewalFixed(detail) ? (
+        <RentReviewLeaseAgreementAudit steps={leaseAgreement} />
+      ) : null}
 
       {detail.workflowState === 'accounting' ? (
         <Button
@@ -112,25 +160,7 @@ export function RentReviewCompletedPanel({
         </Button>
       ) : null}
 
-      {auditEntries.length > 0 ? (
-        <section className="rounded-xl border bg-muted/20 p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide">
-            Full workflow audit ({auditEntries.length} events)
-          </p>
-          <ul className="space-y-2 text-xs">
-            {auditEntries.map((e) => (
-              <li key={e.id} className="border-b border-border/50 pb-2 last:border-0 last:pb-0">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <span className="text-muted-foreground tabular-nums">{formatDateTime(e.at)}</span>
-                  <span className="text-muted-foreground capitalize">· {e.actor}</span>
-                </div>
-                <p className="mt-0.5 font-medium">{e.message}</p>
-                {e.detail ? <p className="text-muted-foreground mt-0.5">{e.detail}</p> : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <RentReviewFullAuditLog detail={detail} onNavigateToStep={onNavigateToStep} />
     </div>
   );
 }

@@ -1,5 +1,18 @@
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
 import { commRecordsFromAuditLog } from '@/lib/rent-review/communications';
+import {
+  canResendTenantNotice,
+  hasPendingTenantCounter,
+} from '@/lib/rent-review/negotiation-display';
+import {
+  buildLeaseAgreementProgress,
+  isPreferredRenewalFixed,
+  isTenantVacatePathComplete,
+} from '@/lib/rent-review/tenant-decision-display';
+import {
+  buildTenantNoticeEmailRecord,
+} from '@/lib/rent-review/tenant-notice-email';
+import { tenantNoticeTermsEmailLines, resolveTenantNoticeTerms } from '@/lib/rent-review/tenant-notice-terms';
 import type { RentReviewAuditEntry, RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 
 export type RentReviewEmailRecord = JobCaseEmailRecord;
@@ -93,11 +106,19 @@ function hasAgentConfirmedRent(detail: RentReviewWorkflowDetail): boolean {
   return hasAgentPricingFinalized(detail);
 }
 
-/** Agent may edit step-2 decision fields before tenant notice is sent. */
+/** Agent may edit step-2 decision fields before tenant notice is sent, or while a counter is pending. */
 export function canEditAgentDecision(detail: RentReviewWorkflowDetail): boolean {
+  if (hasPendingTenantCounter(detail)) return true;
   if (hasTenantNoticeSent(detail)) return false;
   return detail.workflowState === 'agent_review' || detail.workflowState === 'negotiation';
 }
+
+/** Agent may accept, counter, or mark non-negotiable while a tenant counter is pending. */
+export function canResolveNegotiation(detail: RentReviewWorkflowDetail): boolean {
+  return hasPendingTenantCounter(detail);
+}
+
+export { canResendTenantNotice, hasPendingTenantCounter };
 
 /** Formal increase notice has been dispatched to the tenant. */
 export function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
@@ -106,10 +127,12 @@ export function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
 
 /** Agent may dispatch the formal increase notice (backend: `agent_review` only). */
 export function canSendTenantNotice(detail: RentReviewWorkflowDetail): boolean {
-  if (hasTenantNoticeSent(detail)) return false;
+  if (hasPendingTenantCounter(detail)) return false;
   if (!hasAgentPricingFinalized(detail)) return false;
   if (detail.workflowState !== 'agent_review') return false;
-  return detail.proposedWeeklyRent != null || detail.ai.suggestedWeekly != null;
+  if (detail.proposedWeeklyRent == null && detail.ai.suggestedWeekly == null) return false;
+  if (!hasTenantNoticeSent(detail)) return true;
+  return canResendTenantNotice(detail);
 }
 
 /** Agent may record accept / reject / counter when the tenant responds offline. */
@@ -159,9 +182,10 @@ function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPro
 }
 
 function agentConfirmedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
-  const hasCounter = detail.tenantCounterWeekly != null;
+  const hasCounter = hasPendingTenantCounter(detail);
   const pricingFinalized = hasAgentPricingFinalized(detail);
   const noticeSent = hasTenantNoticeSent(detail);
+  const resend = canResendTenantNotice(detail);
   return [
     {
       id: 'negotiable',
@@ -180,7 +204,7 @@ function agentConfirmedSubProgress(detail: RentReviewWorkflowDetail): RentReview
         : pricingFinalized
           ? `Agent confirmed ${detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? '—'}/wk`
           : 'Confirm rent & lease terms',
-      done: pricingFinalized,
+      done: pricingFinalized && !hasCounter,
     },
     {
       id: 'lease-term',
@@ -191,14 +215,16 @@ function agentConfirmedSubProgress(detail: RentReviewWorkflowDetail): RentReview
     },
     {
       id: 'counter',
-      label: noticeSent
-        ? 'Tenant notified — decision locked'
-        : hasCounter
-          ? `Tenant counter: $${detail.tenantCounterWeekly}/wk`
-          : pricingFinalized
-            ? 'Ready to notify tenant'
-            : 'Awaiting agent decision',
-      done: noticeSent || pricingFinalized,
+      label: hasCounter
+        ? `Tenant counter: $${detail.tenantCounterWeekly}/wk — awaiting agent`
+        : resend
+          ? 'Re-send notice with updated terms'
+          : noticeSent
+            ? 'Tenant notified — decision locked'
+            : pricingFinalized
+              ? 'Ready to notify tenant'
+              : 'Awaiting agent decision',
+      done: hasCounter ? false : resend ? false : noticeSent || pricingFinalized,
     },
   ];
 }
@@ -237,30 +263,19 @@ function tenantNotifiedSubProgress(detail: RentReviewWorkflowDetail): RentReview
 function tenantDecisionSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
   const accepted = isTenantDecisionAccepted(detail);
   const rejected = isTenantDecisionRejected(detail);
+  const vacateComplete = isTenantVacatePathComplete(detail);
   const counter = auditHas(detail, 'tenant_counter_submitted');
   const accounting = detail.workflowState === 'accounting' || auditHas(detail, 'accounting_handoff');
-  const preferredFixed = detail.preferredLeaseType === 'fixed';
-  const leaseSteps = preferredFixed && accepted
-    ? [
-        {
-          id: 'lease-preparing',
-          label: 'Lease agreement preparing',
-          done: auditHas(detail, 'tenant_accepted_response') || auditHas(detail, 'agent_accepted_tenant_counter'),
-        },
-        {
-          id: 'lease-sent',
-          label: 'Lease agreement sent',
-          done: accounting || auditHas(detail, 'ledger_complete'),
-        },
-        {
-          id: 'lease-signed',
-          label: 'Lease agreement signed',
-          done: auditHas(detail, 'ledger_complete') || hasCompleted(detail),
-        },
-      ]
-    : [];
+  const leaseSteps =
+    accepted && isPreferredRenewalFixed(detail)
+      ? buildLeaseAgreementProgress(detail).map((step) => ({
+          id: `lease-${step.id}`,
+          label: step.label,
+          done: step.done,
+        }))
+      : [];
 
-  return [
+  const base: RentReviewSubProgressItem[] = [
     {
       id: 'response',
       label: accepted
@@ -270,7 +285,7 @@ function tenantDecisionSubProgress(detail: RentReviewWorkflowDetail): RentReview
           : counter
             ? `Tenant counter-offer${detail.tenantCounterWeekly != null ? `: $${detail.tenantCounterWeekly}/wk` : ''}`
             : 'Awaiting tenant accept / counter / decline',
-      done: accepted || rejected,
+      done: accepted || vacateComplete,
     },
     {
       id: 'terms',
@@ -279,9 +294,24 @@ function tenantDecisionSubProgress(detail: RentReviewWorkflowDetail): RentReview
         : rejected
           ? 'Move-out date recorded'
           : 'Rent terms on acceptance',
-      done: (accepted && detail.proposedWeeklyRent != null) || (rejected && detail.tenantMoveOutDate != null),
+      done: (accepted && detail.proposedWeeklyRent != null) || vacateComplete,
     },
     ...leaseSteps,
+  ];
+
+  if (rejected) {
+    return [
+      ...base,
+      {
+        id: 'vacate-closed',
+        label: vacateComplete ? 'Vacate path complete' : 'Awaiting move-out date',
+        done: vacateComplete,
+      },
+    ];
+  }
+
+  return [
+    ...base,
     {
       id: 'accounting',
       label: accounting ? 'Submitted to accounting' : 'Accounting sync pending',
@@ -305,9 +335,42 @@ function isTenantDecisionRejected(detail: RentReviewWorkflowDetail): boolean {
 }
 
 function completedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
+  const vacateComplete = isTenantVacatePathComplete(detail);
+  if (vacateComplete) {
+    return [
+      {
+        id: 'tenant-path',
+        label: 'Tenant declined · vacate path',
+        done: true,
+      },
+      {
+        id: 'move-out',
+        label: detail.tenantMoveOutDate
+          ? `Move-out ${detail.tenantMoveOutDate}`
+          : 'Move-out date recorded',
+        done: true,
+      },
+      {
+        id: 'closed',
+        label: detail.completedDate
+          ? `Closed ${detail.completedDate}`
+          : 'Case closed',
+        done: hasCompleted(detail) || vacateComplete,
+      },
+    ];
+  }
+
   const accounting =
     detail.workflowState === 'accounting' || auditHas(detail, 'accounting_handoff');
   const auditCount = detail.auditLog.length;
+  const leaseSteps =
+    isTenantDecisionAccepted(detail) && isPreferredRenewalFixed(detail)
+      ? buildLeaseAgreementProgress(detail).map((step) => ({
+          id: `lease-${step.id}`,
+          label: step.label,
+          done: step.done,
+        }))
+      : [];
   return [
     {
       id: 'tenant-path',
@@ -318,6 +381,7 @@ function completedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPr
           : 'Tenant decision recorded',
       done: isTenantDecisionAccepted(detail) || isTenantDecisionRejected(detail),
     },
+    ...leaseSteps,
     {
       id: 'accounting',
       label: accounting ? 'Submitted to accounting' : 'Accounting handoff pending',
@@ -357,14 +421,20 @@ export function resolveRentReviewAgentStep(detail: RentReviewWorkflowDetail): Re
       if (!isRentResearchStepComplete(detail)) {
         return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
       }
+      if (hasPendingTenantCounter(detail)) {
+        return RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
+      }
       return hasAgentPricingFinalized(detail)
         ? RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED
         : RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
     case 'tenant_notified':
       return RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED;
     case 'tenant_accepted':
-    case 'tenant_rejected':
       return RENT_REVIEW_AGENT_STEP.TENANT_DECISION;
+    case 'tenant_rejected':
+      return isTenantVacatePathComplete(detail)
+        ? RENT_REVIEW_AGENT_STEP.COMPLETED
+        : RENT_REVIEW_AGENT_STEP.TENANT_DECISION;
     case 'accounting':
       return RENT_REVIEW_AGENT_STEP.COMPLETED;
     case 'completed':
@@ -406,6 +476,7 @@ export function buildRentReviewAgentWorkflow(
 ): RentReviewAgentWorkflowModel {
   const liveStepId = resolveRentReviewAgentStep(detail);
   const liveIdx = stepIndex(liveStepId);
+  const workflowClosed = isRentReviewWorkflowClosed(detail);
 
   const steps: RentReviewAgentStepState[] = RENT_REVIEW_AGENT_STEP_ORDER.map((id, idx) => ({
     id,
@@ -415,19 +486,54 @@ export function buildRentReviewAgentWorkflow(
     workflowName: 'Rent review',
   }));
 
-  if (detail.workflowState === 'completed') {
+  if (workflowClosed) {
     for (const step of steps) {
       step.status = 'done';
     }
   }
 
   const doneCount = steps.filter((s) => s.status === 'done').length;
-  const progressFillIndex =
-    detail.workflowState === 'completed'
-      ? steps.length - 1
-      : Math.max(0, doneCount - 0.5);
+  const progressFillIndex = workflowClosed
+    ? steps.length - 1
+    : Math.max(0, doneCount - 0.5);
 
   return { steps, liveStepId, progressFillIndex };
+}
+
+/** Rent review is finished — accept/accounting path or tenant vacate path. */
+export function isRentReviewWorkflowClosed(detail: RentReviewWorkflowDetail): boolean {
+  return detail.workflowState === 'completed' || isTenantVacatePathComplete(detail);
+}
+
+/** Map an audit event to the workflow step where it belongs (for navigation from Completed). */
+export function resolveRentReviewStepForAuditKind(kind: string): RentReviewAgentStep {
+  switch (kind) {
+    case 'ai_report_ready':
+    case 'statutory_notice_alert':
+    case 'agent_confirmation_reminder':
+    case 'landlord_research_email':
+    case 'comm_reply':
+    case 'comm_forward':
+      return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
+    case 'review_confirmed':
+    case 'pricing_snapshot':
+    case 'tenant_counter_submitted':
+    case 'agent_accepted_tenant_counter':
+    case 'agent_reproposed_after_counter':
+    case 'agent_marked_non_negotiable':
+      return RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
+    case 'tenant_notices_dispatched':
+    case 'tenant_response_reminder':
+      return RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED;
+    case 'tenant_accepted_response':
+    case 'tenant_rejected_response':
+    case 'lease_agreement_preparing':
+    case 'lease_agreement_sent':
+    case 'lease_agreement_signed':
+      return RENT_REVIEW_AGENT_STEP.TENANT_DECISION;
+    default:
+      return RENT_REVIEW_AGENT_STEP.COMPLETED;
+  }
 }
 
 export function buildResearchEmailToAgent(detail: RentReviewWorkflowDetail): RentReviewEmailRecord {
@@ -456,22 +562,7 @@ export function buildResearchEmailToAgent(detail: RentReviewWorkflowDetail): Ren
 export function buildTenantNoticeEmail(detail: RentReviewWorkflowDetail): RentReviewEmailRecord | null {
   const hit = [...detail.auditLog].reverse().find((e) => e.kind === 'tenant_notices_dispatched');
   if (!hit) return null;
-  const weekly = detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent;
-  return {
-    id: hit.id,
-    subject: `Notice of rent increase — ${detail.propertyAddress}`,
-    from: 'Managing Agent',
-    to: detail.tenantName,
-    at: hit.at,
-    kind: hit.kind,
-    body:
-      `Dear ${detail.tenantName},\n\n` +
-      `Please find attached your formal Notice of Rent Increase.\n\n` +
-      `Proposed new rent: $${weekly}/week\n` +
-      `Effective date: ${detail.effectiveDate ?? 'as per notice'}\n\n` +
-      `Please reply to confirm acceptance or discuss any concerns.\n\n` +
-      (hit.detail ?? ''),
-  };
+  return buildTenantNoticeEmailRecord(detail, hit);
 }
 
 export function buildCompletionEmail(detail: RentReviewWorkflowDetail): RentReviewEmailRecord | null {
@@ -498,6 +589,9 @@ function buildTenantReminderEmail(
   entry: RentReviewAuditEntry,
   detail: RentReviewWorkflowDetail,
 ): RentReviewEmailRecord {
+  const terms = resolveTenantNoticeTerms(detail);
+  const termsBlock = tenantNoticeTermsEmailLines(terms).map((line) => `• ${line}`).join('\n');
+
   return {
     id: entry.id,
     subject: 'Reminder — rent increase response',
@@ -509,7 +603,7 @@ function buildTenantReminderEmail(
       `Dear ${detail.tenantName},\n\n` +
       `We have not yet received your response to the proposed rent increase. ` +
       `Please let us know if you have any feedback or questions.\n\n` +
-      `Proposed rent: $${detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly}/week`,
+      `Confirmed terms:\n${termsBlock}`,
   };
 }
 
@@ -628,14 +722,19 @@ export function auditEntriesForStep(
       'tenant_counter_submitted',
       'agent_accepted_tenant_counter',
       'agent_reproposed_after_counter',
+      'agent_marked_non_negotiable',
     ],
     tenant_notified: ['tenant_notices_dispatched', 'tenant_response_reminder'],
     tenant_decision: [
       'tenant_counter_submitted',
       'agent_accepted_tenant_counter',
       'agent_reproposed_after_counter',
+      'agent_marked_non_negotiable',
       'tenant_accepted_response',
       'tenant_rejected_response',
+      'lease_agreement_preparing',
+      'lease_agreement_sent',
+      'lease_agreement_signed',
       'accounting_handoff',
     ],
   };

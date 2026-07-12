@@ -229,6 +229,34 @@ export const rentReviewApi = {
       leaseEndDate,
     ),
 
+  sendLeaseAgreement: (
+    id: string,
+    propertyId: string,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> =>
+    map(
+      unwrap(
+        apiV1.post<{ review: ServerRentReviewWorkflowView }>(
+          `${agentRentReviewWorkflowPath(propertyId, id)}/send-lease-agreement`,
+        ),
+      ),
+      leaseEndDate,
+    ),
+
+  recordLeaseAgreementSigned: (
+    id: string,
+    propertyId: string,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> =>
+    map(
+      unwrap(
+        apiV1.post<{ review: ServerRentReviewWorkflowView }>(
+          `${agentRentReviewWorkflowPath(propertyId, id)}/lease-agreement-signed`,
+        ),
+      ),
+      leaseEndDate,
+    ),
+
   complete: (
     id: string,
     propertyId: string,

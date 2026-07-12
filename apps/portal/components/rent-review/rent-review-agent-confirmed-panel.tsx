@@ -10,8 +10,13 @@ import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
   canEditAgentDecision,
+  canResolveNegotiation,
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
+import {
+  buildNegotiationComparison,
+  formatNegotiationDelta,
+} from '@/lib/rent-review/negotiation-display';
 import {
   deriveNewLeaseStartDate,
   deriveRentIncreaseOnDate,
@@ -96,9 +101,11 @@ export function RentReviewAgentConfirmedPanel({
   const [confirmedWeekly, setConfirmedWeekly] = useState('');
   const [preferredLeaseType, setPreferredLeaseType] = useState<PreferredLeaseType>('periodic');
   const [fixedTermEndDate, setFixedTermEndDate] = useState('');
-  const hasCounter = detail.tenantCounterWeekly != null;
+  const hasCounter = canResolveNegotiation(detail);
   const editable = canEditAgentDecision(detail);
   const noticeSent = hasTenantNoticeSent(detail);
+  const negotiation = useMemo(() => buildNegotiationComparison(detail), [detail]);
+  const counterDelta = formatNegotiationDelta(negotiation.deltaWeekly);
   const currentLeaseIsFixed = isCurrentTenancyFixed(detail);
   const autoNewLeaseStart = useMemo(() => deriveNewLeaseStartDate(detail), [detail]);
   const autoRentIncreaseOn = useMemo(() => deriveRentIncreaseOnDate(detail), [detail]);
@@ -175,7 +182,7 @@ export function RentReviewAgentConfirmedPanel({
 
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED);
 
-  if (noticeSent) {
+  if (noticeSent && !hasCounter) {
     return (
       <div className="space-y-4">
         <section className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
@@ -207,34 +214,62 @@ export function RentReviewAgentConfirmedPanel({
         </p>
         <p className="text-muted-foreground mb-3 text-xs">
           {hasCounter
-            ? 'Tenant provided a counter-offer. Accept it or revise the proposed rent and re-notify.'
+            ? 'The tenant proposed a counter-offer. Accept it, submit your own counter-offer, or mark the rent as non-negotiable so the tenant can only accept or decline.'
             : 'Confirm rent, negotiability, preferred lease term, and scheduling before notifying the tenant.'}
         </p>
-        <dl className="grid gap-3 text-xs sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Current rent</dt>
-            <dd className="font-medium tabular-nums">{formatCurrency(detail.currentWeeklyRent)}/wk</dd>
+        {hasCounter ? (
+          <div className="mb-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                Agent proposed
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {negotiation.agentWeekly != null
+                  ? `${formatCurrency(negotiation.agentWeekly)}/wk`
+                  : '—'}
+              </p>
+            </div>
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                Tenant counter
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums text-amber-900 dark:text-amber-100">
+                {negotiation.tenantCounterWeekly != null
+                  ? `${formatCurrency(negotiation.tenantCounterWeekly)}/wk`
+                  : '—'}
+              </p>
+              {counterDelta ? (
+                <p className="text-muted-foreground mt-1 text-[11px]">{counterDelta}</p>
+              ) : null}
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                Current rent
+              </p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {formatCurrency(detail.currentWeeklyRent)}/wk
+              </p>
+            </div>
           </div>
-          <div>
-            <dt className="text-muted-foreground">CROSSUB suggested</dt>
-            <dd className="text-primary font-medium tabular-nums">
-              {formatCurrency(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent)}/wk
-            </dd>
-          </div>
-          {hasCounter ? (
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">Tenant counter</dt>
-              <dd className="font-medium tabular-nums">
-                {formatCurrency(detail.tenantCounterWeekly!)}/wk
+        ) : (
+          <dl className="grid gap-3 text-xs sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Current rent</dt>
+              <dd className="font-medium tabular-nums">{formatCurrency(detail.currentWeeklyRent)}/wk</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">CROSSUB suggested</dt>
+              <dd className="text-primary font-medium tabular-nums">
+                {formatCurrency(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent)}/wk
               </dd>
             </div>
-          ) : null}
-        </dl>
+          </dl>
+        )}
       </section>
 
       {editable ? (
         hasCounter ? (
-          <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <div className="space-y-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
             <Button
               className="w-full"
               disabled={busy}
@@ -252,8 +287,14 @@ export function RentReviewAgentConfirmedPanel({
             >
               Accept tenant counter {formatCurrency(detail.tenantCounterWeekly!)}/wk
             </Button>
-            <div className="space-y-2">
-              <Label htmlFor="revised-weekly">Revised proposed rent ($/week)</Label>
+
+            <div className="space-y-2 border-t pt-4">
+              <p className="text-sm font-semibold">Submit agent counter-offer</p>
+              <p className="text-muted-foreground text-xs">
+                Propose a revised weekly rent. Re-send the formal notice on the Tenant notified
+                step once recorded.
+              </p>
+              <Label htmlFor="revised-weekly">Agent counter ($/week)</Label>
               <Input
                 id="revised-weekly"
                 type="number"
@@ -282,14 +323,49 @@ export function RentReviewAgentConfirmedPanel({
                           action: 'repropose',
                           resolvedWeekly: Number(confirmedWeekly),
                           effectiveDate,
+                          rentNegotiable: true,
                         },
                         detail.leaseEndDate,
                       ),
-                    'Revised proposal recorded — send tenant notice when ready',
+                    'Agent counter-offer recorded — re-send tenant notice when ready',
                   )
                 }
               >
-                Decline counter & set revised rent
+                Send counter-offer to tenant
+              </Button>
+            </div>
+
+            <div className="space-y-2 border-t pt-4">
+              <p className="text-sm font-semibold">Mark non-negotiable</p>
+              <p className="text-muted-foreground text-xs">
+                Lock the rent at your confirmed proposal of{' '}
+                <span className="font-medium tabular-nums">
+                  {formatCurrency(
+                    detail.proposedWeeklyRent ??
+                      detail.ai.suggestedWeekly ??
+                      detail.currentWeeklyRent,
+                  )}
+                  /wk
+                </span>
+                . The tenant may accept or decline only — no further counter-offers.
+              </p>
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={busy}
+                onClick={() =>
+                  void run(
+                    () =>
+                      rentReviewApi.resolveNegotiation(
+                        detail.id,
+                        { action: 'mark_non_negotiable' },
+                        detail.leaseEndDate,
+                      ),
+                    'Marked non-negotiable — re-send tenant notice when ready',
+                  )
+                }
+              >
+                Mark non-negotiable
               </Button>
             </div>
           </div>

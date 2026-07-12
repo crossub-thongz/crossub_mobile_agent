@@ -154,9 +154,10 @@ export interface TenantResponseInput {
 }
 
 export interface ResolveNegotiationInput {
-  action: 'accept_counter' | 'repropose';
+  action: 'accept_counter' | 'repropose' | 'mark_non_negotiable';
   resolvedWeekly?: number;
   effectiveDate?: string;
+  rentNegotiable?: boolean;
 }
 
 export interface SendRentReviewEmailInput {

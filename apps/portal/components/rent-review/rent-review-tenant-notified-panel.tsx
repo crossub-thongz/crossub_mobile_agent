@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RentReviewTenantRemindersDialog } from '@/components/rent-review/rent-review-tenant-reminders-dialog';
+import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
 import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
   canRecordTenantResponseOnBehalf,
+  canResendTenantNotice,
   canSendTenantNotice,
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
@@ -21,7 +23,7 @@ import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 
 export function RentReviewTenantNotifiedPanel({
   detail,
@@ -42,6 +44,7 @@ export function RentReviewTenantNotifiedPanel({
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED);
   const noticeSent = hasTenantNoticeSent(detail);
   const showSendNotice = canSendTenantNotice(detail);
+  const resendNotice = canResendTenantNotice(detail);
   const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
   const reminders = listTenantResponseReminders(detail);
   const noticeAudit = [...detail.auditLog].reverse().find((e) => e.kind === 'tenant_notices_dispatched');
@@ -85,28 +88,17 @@ export function RentReviewTenantNotifiedPanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Tenant notify</p>
         <p className="text-muted-foreground mb-3 text-xs">
-          {noticeSent
-            ? 'Confirmed terms have been sent to the tenant for acceptance. The system automatically sends a reminder email every 2 days until they respond.'
-            : 'Send the formal notice with the agent-confirmed terms so the tenant can accept, counter, or decline.'}
+          {resendNotice
+            ? 'Updated terms are ready after negotiation. Re-send the formal notice so the tenant can accept, counter (if negotiable), or decline.'
+            : noticeSent
+              ? 'Confirmed terms have been sent to the tenant for acceptance. The system automatically sends a reminder email every 2 days until they respond.'
+              : 'Send the formal notice with the agent-confirmed terms so the tenant can accept, counter, or decline.'}
         </p>
-        <dl className="grid gap-3 text-xs sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Proposed rent</dt>
-            <dd className="font-medium tabular-nums">
-              {formatCurrency(detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent)}/wk
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Rent increase on</dt>
-            <dd className="font-medium">{detail.effectiveDate ?? 'Not set'}</dd>
-          </div>
-          {detail.preferredLeaseType ? (
-            <div>
-              <dt className="text-muted-foreground">Preferred renewal</dt>
-              <dd className="font-medium capitalize">{detail.preferredLeaseType} term</dd>
-            </div>
-          ) : null}
-        </dl>
+        <RentReviewTenantNoticeTermsSummary
+          detail={detail}
+          effectiveDateOverride={showSendNotice ? effectiveDate : undefined}
+          className="grid gap-3 text-xs sm:grid-cols-2"
+        />
       </section>
 
       {noticeSent ? (
@@ -136,11 +128,19 @@ export function RentReviewTenantNotifiedPanel({
 
       {showSendNotice ? (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <p className="text-primary text-xs font-semibold uppercase">Send tenant notice</p>
-          <p className="text-muted-foreground text-xs">
-            Dispatch the formal increase notice on behalf of the tenant communication channel (email,
-            post, or hand delivery).
+          <p className="text-primary text-xs font-semibold uppercase">
+            {resendNotice ? 'Re-send tenant notice' : 'Send tenant notice'}
           </p>
+          <p className="text-muted-foreground text-xs">
+            {resendNotice
+              ? 'Dispatch the updated formal increase notice with the revised or non-negotiable terms.'
+              : 'Dispatch the formal increase notice on behalf of the tenant communication channel (email, post, or hand delivery).'}
+          </p>
+          {detail.rentNegotiable === false ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-100">
+              Rent is marked non-negotiable — the tenant can accept or decline only.
+            </p>
+          ) : null}
           <Label htmlFor="notice-effective">Rent increase on</Label>
           <Input
             id="notice-effective"
@@ -162,7 +162,7 @@ export function RentReviewTenantNotifiedPanel({
               )
             }
           >
-            Send formal notice to tenant
+            {resendNotice ? 'Re-send formal notice to tenant' : 'Send formal notice to tenant'}
           </Button>
         </div>
       ) : null}

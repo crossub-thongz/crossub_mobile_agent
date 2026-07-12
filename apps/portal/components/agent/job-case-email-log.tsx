@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronRight, Forward, Mail, Reply, Send } from 'lucide-react';
+import { ChevronRight, ExternalLink, Forward, Mail, Paperclip, Reply, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import type { JobCaseEmailAttachment, JobCaseEmailRecord } from '@/lib/job-case-email';
 import type { WorkflowEmailContact } from '@/lib/job-case-email-recipients';
 import {
   extractEmailAddress,
@@ -85,6 +85,55 @@ function EmailListRow({
   );
 }
 
+function resolveEmailAttachments(
+  email: JobCaseEmailRecord,
+  allEmails: JobCaseEmailRecord[],
+): JobCaseEmailAttachment[] {
+  if (email.attachments?.length) return email.attachments;
+  if (!email.inReplyToId) return [];
+
+  const parent = allEmails.find((record) => record.id === email.inReplyToId);
+  return parent?.attachments ?? [];
+}
+
+function EmailAttachmentList({ attachments }: { attachments: JobCaseEmailAttachment[] }) {
+  if (attachments.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border bg-muted/20 p-3 text-xs">
+      <p className="mb-2 flex items-center gap-1.5 font-semibold">
+        <Paperclip className="size-3.5" />
+        Attachments
+      </p>
+      <ul className="space-y-1.5">
+        {attachments.map((attachment) => (
+          <li key={attachment.name}>
+            {attachment.url ? (
+              <a
+                href={attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 inline-flex items-center gap-1.5 font-medium underline-offset-2 hover:underline"
+              >
+                <span>{attachment.name}</span>
+                {attachment.sizeLabel ? (
+                  <span className="text-muted-foreground font-normal">· {attachment.sizeLabel}</span>
+                ) : null}
+                <ExternalLink className="size-3 shrink-0 opacity-70" />
+              </a>
+            ) : (
+              <span className="text-muted-foreground">
+                {attachment.name}
+                {attachment.sizeLabel ? ` · ${attachment.sizeLabel}` : ''}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function buildReplyDraft(email: JobCaseEmailRecord): CommSendDraft {
   const replyTo = email.toEmail ?? email.from;
   const subject = email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`;
@@ -151,12 +200,14 @@ function RecipientPicker({
 
 function EmailDetailDialog({
   email,
+  allEmails,
   open,
   onOpenChange,
   onSend,
   recipientContacts = [],
 }: {
   email: JobCaseEmailRecord | null;
+  allEmails: JobCaseEmailRecord[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSend?: (draft: CommSendDraft) => void;
@@ -195,6 +246,8 @@ function EmailDetailDialog({
   };
 
   if (!email) return null;
+
+  const attachments = resolveEmailAttachments(email, allEmails);
 
   const sendCompose = () => {
     if (!onSend) return;
@@ -244,19 +297,7 @@ function EmailDetailDialog({
                 {email.body}
               </pre>
             </div>
-            {email.attachments && email.attachments.length > 0 ? (
-              <div className="rounded-xl border bg-muted/20 p-3 text-xs">
-                <p className="mb-1 font-semibold">Attachments</p>
-                <ul className="space-y-1">
-                  {email.attachments.map((a) => (
-                    <li key={a.name} className="text-muted-foreground">
-                      {a.name}
-                      {a.sizeLabel ? ` · ${a.sizeLabel}` : ''}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            <EmailAttachmentList attachments={attachments} />
             {onSend ? (
               <div className="flex gap-2">
                 <Button
@@ -384,6 +425,7 @@ export function JobCaseEmailLog({
 
       <EmailDetailDialog
         email={selected}
+        allEmails={sorted}
         open={selectedId != null}
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);

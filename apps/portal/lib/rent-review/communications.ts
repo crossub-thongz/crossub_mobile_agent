@@ -1,4 +1,8 @@
-import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import {
+  dedupeJobCaseEmails,
+  mimeTypeForAttachmentFilename,
+  type JobCaseEmailRecord,
+} from '@/lib/job-case-email';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 
 const COMM_AUDIT_KINDS = new Set([
@@ -15,6 +19,7 @@ interface RentReviewEmailSnapshot {
   toEmail?: string;
   channel?: 'email' | 'message';
   attachments?: JobCaseEmailRecord['attachments'];
+  inReplyToId?: string;
 }
 
 function parseEmailSnapshot(detail: string | undefined): RentReviewEmailSnapshot | null {
@@ -35,6 +40,67 @@ function parseEmailSnapshot(detail: string | undefined): RentReviewEmailSnapshot
   return null;
 }
 
+export function rentReviewEmailAttachmentUrl(
+  propertyId: string,
+  reviewId: string,
+  auditId: string,
+  filename: string,
+): string {
+  return `/api/v1/agent/properties/${propertyId}/workflows/rent-review/${reviewId}/communications/${auditId}/attachments/${encodeURIComponent(filename)}`;
+}
+
+/** Add open/download URLs for persisted email attachments. */
+export function enrichRentReviewEmailRecords(
+  detail: RentReviewWorkflowDetail,
+  records: JobCaseEmailRecord[],
+): JobCaseEmailRecord[] {
+  if (!detail.propertyId) return records;
+
+  const byId = new Map(records.map((r) => [r.id, r]));
+
+  const withUrls = records.map((record) => {
+    const sourceId = record.id;
+    const attachments = record.attachments?.map((attachment) => ({
+      ...attachment,
+      mimeType: attachment.mimeType ?? mimeTypeForAttachmentFilename(attachment.name),
+      url:
+        attachment.url ??
+        rentReviewEmailAttachmentUrl(
+          detail.propertyId!,
+          detail.id,
+          sourceId,
+          attachment.name,
+        ),
+    }));
+
+    let inheritedAttachments = attachments;
+    if ((!inheritedAttachments || inheritedAttachments.length === 0) && record.inReplyToId) {
+      const parent = byId.get(record.inReplyToId);
+      if (parent?.attachments?.length) {
+        inheritedAttachments = parent.attachments.map((attachment) => ({
+          ...attachment,
+          mimeType: attachment.mimeType ?? mimeTypeForAttachmentFilename(attachment.name),
+          url:
+            attachment.url ??
+            rentReviewEmailAttachmentUrl(
+              detail.propertyId!,
+              detail.id,
+              parent.id,
+              attachment.name,
+            ),
+        }));
+      }
+    }
+
+    return {
+      ...record,
+      attachments: inheritedAttachments,
+    };
+  });
+
+  return dedupeJobCaseEmails(withUrls);
+}
+
 /** Sent/received emails persisted on the rent-review audit log (server-side). */
 export function commRecordsFromAuditLog(detail: RentReviewWorkflowDetail): JobCaseEmailRecord[] {
   const records: JobCaseEmailRecord[] = [];
@@ -53,9 +119,13 @@ export function commRecordsFromAuditLog(detail: RentReviewWorkflowDetail): JobCa
       kind: entry.kind,
       channel: snapshot.channel ?? 'email',
       attachments: snapshot.attachments,
+      inReplyToId: snapshot.inReplyToId,
     });
   }
-  return records.sort((a, b) => b.at.localeCompare(a.at));
+  return enrichRentReviewEmailRecords(
+    detail,
+    records.sort((a, b) => b.at.localeCompare(a.at)),
+  );
 }
 
 const UUID_RE =
