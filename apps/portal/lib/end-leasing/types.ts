@@ -130,6 +130,8 @@ export interface ReportComparisonStageState {
   tenantQuoteReplyExcerpt?: string | null
   tenantAcknowledgedPrice?: string | null
   settlementSummary?: ReportComparisonSettlementSummary | null
+  tenantBondSummaryEmail?: EndLeasingOverviewEmail | null
+  landlordBondSummaryEmail?: EndLeasingOverviewEmail | null
 }
 
 export interface MakeGoodStageState {

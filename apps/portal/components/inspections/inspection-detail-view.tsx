@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
@@ -49,13 +50,54 @@ import {
 } from '@/lib/open-inspection';
 import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sync';
 import { useLivePoll } from '@/lib/use-live-poll';
+import { inspectionsApi } from '@/lib/inspections-api';
+import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 import { LEASING_AGENT_DECISION } from '@/lib/leasing/constants';
 
 export function InspectionDetailView({ inspectionId }: { inspectionId: string }) {
-  const { inspections, apiConnected } = useAgentData();
-  const base = inspections.find((i) => i.id === inspectionId);
+  const { inspections, apiConnected, registerInspection } = useAgentData();
+  const baseFromList = inspections.find((i) => i.id === inspectionId);
+  const [fetchedBase, setFetchedBase] = useState<Inspection | null>(null);
+  const [resolveState, setResolveState] = useState<'pending' | 'ready' | 'missing'>(
+    baseFromList ? 'ready' : 'pending',
+  );
+
+  useEffect(() => {
+    if (baseFromList) {
+      setFetchedBase(null);
+      setResolveState('ready');
+      return;
+    }
+
+    if (!apiConnected) {
+      setResolveState('missing');
+      return;
+    }
+
+    let cancelled = false;
+    setResolveState('pending');
+    void inspectionsApi
+      .get(inspectionId)
+      .then((record) => {
+        if (cancelled) return;
+        const mapped = mapInspectionRecordToView(record);
+        registerInspection(mapped);
+        setFetchedBase(mapped);
+        setResolveState('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setResolveState('missing');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, baseFromList, inspectionId, registerInspection]);
+
+  const base = baseFromList ?? fetchedBase;
   const insp = useInspectionDetailLiveSync(base, apiConnected);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [reportGenerated, setReportGenerated] = useState(false);
@@ -97,7 +139,16 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
     module: 'inspection',
   });
 
-  if (!insp) notFound();
+  if (resolveState === 'pending') {
+    return (
+      <div className="text-muted-foreground flex items-center justify-center gap-2 py-16 text-sm">
+        <Loader2 className="size-4 animate-spin" />
+        Loading inspection…
+      </div>
+    );
+  }
+
+  if (resolveState === 'missing' || !insp) notFound();
 
   if (insp.type === 'INGOING' || insp.type === 'OUTGOING') {
     return <AgentFieldInspectionDetail inspection={insp} apiConnected={apiConnected} />;

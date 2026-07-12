@@ -71,9 +71,22 @@ export function agreementRemainingPercent(caseData: TerminationCaseDetail): numb
 export const NSW_BOND_RELEASE_URL = 'https://rbo.fairtrading.nsw.gov.au/agent/login';
 
 const JOB_COMPLETED_REMINDER_RE = /^Job completed reminder #/i;
+const JOB_COMPLETED_CONFIRMED_RE = /^Job completed confirmed/i;
 
+/** Reminder nudges + agent confirmation entries for the bond step audit trail. */
+export function jobCompletedAuditTimelineEntries(
+  caseData: TerminationCaseDetail,
+): TerminationCaseDetail['timeline'] {
+  return caseData.timeline.filter(
+    (e) =>
+      JOB_COMPLETED_REMINDER_RE.test(e.label) ||
+      JOB_COMPLETED_CONFIRMED_RE.test(e.label),
+  );
+}
+
+/** @deprecated Use {@link jobCompletedAuditTimelineEntries}. */
 export function jobCompletedReminderTimelineEntries(
   caseData: TerminationCaseDetail,
 ): TerminationCaseDetail['timeline'] {
-  return caseData.timeline.filter((e) => JOB_COMPLETED_REMINDER_RE.test(e.label));
+  return jobCompletedAuditTimelineEntries(caseData);
 }

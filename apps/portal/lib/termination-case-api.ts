@@ -368,6 +368,8 @@ export function mapTerminationCase(
       tenantAcknowledgedPrice: s.reportComparison?.tenantAcknowledgedPrice ?? undefined,
       tenantQuoteReplyExcerpt: s.reportComparison?.tenantQuoteReplyExcerpt ?? undefined,
       settlementSummary: s.reportComparison?.settlementSummary ?? null,
+      tenantBondSummaryEmail: mapOverviewEmail(s.reportComparison?.tenantBondSummaryEmail),
+      landlordBondSummaryEmail: mapOverviewEmail(s.reportComparison?.landlordBondSummaryEmail),
     },
     makeGood: {
       status: makeGood.status,

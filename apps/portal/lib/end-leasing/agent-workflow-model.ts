@@ -1,4 +1,4 @@
-import { TERMINATION_TYPE, TENANT_SETTLEMENT_CONFIRMATION } from '@/constants/end-leasing';
+import { TERMINATION_TYPE, TENANT_SETTLEMENT_CONFIRMATION, TERMINATION_CASE_STATUS } from '@/constants/end-leasing';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { EndLeasingOverviewEmail, TerminationCaseDetail } from '@/lib/end-leasing/types';
@@ -267,14 +267,14 @@ function bondReleasedSubProgress(caseData: TerminationCaseDetail): EndLeasingSub
   const rentReviewed = caseData.settlement.deductions.some((d) => /rent/i.test(d.category));
   const billsChecked = caseData.settlement.deductions.some((d) => /bill|water|utility/i.test(d.category));
   const repairsApplied = caseData.settlement.deductions.some((d) => /repair|maintenance|make.?good/i.test(d.category));
-  const bondReleased = caseData.bond.refundPaid || caseData.bond.status === DONE;
+  const jobCompleted = caseData.status === TERMINATION_CASE_STATUS.COMPLETED;
 
   return [
     { id: 'rent', label: 'Unpaid rent reviewed', done: rentReviewed || caseData.settlement.status !== LEASING_ITEM_STATUS.NOT_STARTED },
     { id: 'bills', label: 'Unpaid bills reviewed', done: billsChecked || caseData.settlement.deductions.length > 0 },
     { id: 'repairs', label: 'Tenant repair costs applied', done: repairsApplied || caseData.makeGood.status === DONE },
     { id: 'total', label: 'Total bond deduction calculated', done: caseData.settlement.status === DONE },
-    { id: 'release', label: 'Agent confirmed bond released', done: bondReleased },
+    { id: 'job_completed', label: 'Job completed', done: jobCompleted },
   ];
 }
 
@@ -306,6 +306,7 @@ function workflowNameForStep(
       if (!caseData.reportComparison.agentQuoteConfirmed) return 'Agent confirms figures';
       return 'Send tenant portion to tenant';
     case END_LEASING_AGENT_STEP.BOND_RELEASED:
+      if (caseData.status === TERMINATION_CASE_STATUS.COMPLETED) return 'Job completed';
       if (caseData.bond.refundPaid) return 'Bond released';
       return 'Calculate deductions & release bond';
     default:
@@ -340,7 +341,7 @@ function stepComplete(
         caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED
       );
     case END_LEASING_AGENT_STEP.BOND_RELEASED:
-      return caseData.bond.status === DONE || caseData.bond.refundPaid;
+      return caseData.status === TERMINATION_CASE_STATUS.COMPLETED;
     default:
       return false;
   }
@@ -547,8 +548,26 @@ function emailRecordsForStepOnly(
       );
       return tenantQuote ? [tenantQuote] : [];
     }
-    case END_LEASING_AGENT_STEP.BOND_RELEASED:
-      return [];
+    case END_LEASING_AGENT_STEP.BOND_RELEASED: {
+      const records: JobCaseEmailRecord[] = [];
+      const tenantBond = storedEmailToRecord(
+        `${caseData.id}-tenant-bond-summary`,
+        rc.tenantBondSummaryEmail,
+        'tenant_bond_summary',
+        'Bond settlement summary (tenant)',
+        caseData.createdAt,
+      );
+      const landlordBond = storedEmailToRecord(
+        `${caseData.id}-landlord-bond-summary`,
+        rc.landlordBondSummaryEmail,
+        'landlord_bond_summary',
+        'Bond settlement summary (landlord)',
+        caseData.createdAt,
+      );
+      if (tenantBond) records.push(tenantBond);
+      if (landlordBond) records.push(landlordBond);
+      return records;
+    }
     default:
       return [];
   }

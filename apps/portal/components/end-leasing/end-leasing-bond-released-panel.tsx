@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Check, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -8,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { TENANT_SETTLEMENT_CONFIRMATION, TERMINATION_CASE_STATUS } from '@/constants/end-leasing';
+import { communicationsThread } from '@/constants/routes';
 import {
   endLeasingKeyReturnDate,
   endLeasingVacateDate,
 } from '@/lib/end-leasing/agent-workflow-model';
-import { NSW_BOND_RELEASE_URL, jobCompletedReminderTimelineEntries } from '@/lib/end-leasing/vacate-display';
+import { NSW_BOND_RELEASE_URL, jobCompletedAuditTimelineEntries } from '@/lib/end-leasing/vacate-display';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { terminationApi } from '@/lib/termination-case-api';
@@ -21,6 +23,33 @@ import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 
 const DONE = LEASING_ITEM_STATUS.DONE;
+
+function BondSummaryEmailCard({
+  title,
+  email,
+}: {
+  title: string;
+  email: NonNullable<TerminationCaseDetail['reportComparison']['tenantBondSummaryEmail']>;
+}) {
+  return (
+    <div className="space-y-2 rounded-xl border bg-muted/20 p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold">{title}</p>
+        {email.commConversationId ? (
+          <Button asChild size="sm" variant="outline" className="h-7 gap-1 text-[10px]">
+            <Link href={communicationsThread(email.commConversationId)}>
+              <ExternalLink className="size-3" />
+              Message Center
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+      <p className="text-muted-foreground">
+        To: {email.to} · {email.sentAt ? formatDateTime(email.sentAt) : 'Sent'}
+      </p>
+    </div>
+  );
+}
 
 function DeductionLine({
   label,
@@ -44,8 +73,8 @@ function DeductionLine({
   );
 }
 
-function jobCompleteReminders(caseData: TerminationCaseDetail) {
-  return jobCompletedReminderTimelineEntries(caseData);
+function jobCompleteAudit(caseData: TerminationCaseDetail) {
+  return jobCompletedAuditTimelineEntries(caseData);
 }
 
 export function EndLeasingBondReleasedPanel({
@@ -92,10 +121,12 @@ export function EndLeasingBondReleasedPanel({
   const agentApproved = caseData.agentApproval.decision === 'approved';
   const tenantAccepted =
     caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED;
-  const bondReleased = caseData.bond.refundPaid || caseData.bond.status === DONE;
-  const jobCompleted = caseData.status === TERMINATION_CASE_STATUS.COMPLETED || bondReleased;
+  const jobCompleted = caseData.status === TERMINATION_CASE_STATUS.COMPLETED;
 
-  const reminders = jobCompleteReminders(caseData);
+  const auditEntries = jobCompleteAudit(caseData);
+  const jobCompletedAt = auditEntries.find((e) => /^Job completed confirmed/i.test(e.label));
+  const tenantBondEmail = caseData.reportComparison.tenantBondSummaryEmail;
+  const landlordBondEmail = caseData.reportComparison.landlordBondSummaryEmail;
 
   const run = async (action: () => Promise<TerminationCaseDetail>, success: string) => {
     setBusy(true);
@@ -175,6 +206,22 @@ export function EndLeasingBondReleasedPanel({
           </Button>
         ) : null}
       </section>
+
+      {tenantAccepted && (tenantBondEmail?.sentAt || landlordBondEmail?.sentAt) ? (
+        <section className="space-y-3 rounded-xl border bg-card p-4">
+          <p className="text-sm font-semibold">Bond summary emailed</p>
+          <p className="text-muted-foreground text-xs">
+            The bond settlement summary above was automatically sent to the tenant and landlord when
+            tenant acceptance was recorded.
+          </p>
+          {tenantBondEmail?.sentAt ? (
+            <BondSummaryEmailCard title="Tenant" email={tenantBondEmail} />
+          ) : null}
+          {landlordBondEmail?.sentAt ? (
+            <BondSummaryEmailCard title="Landlord" email={landlordBondEmail} />
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Agent confirmation</p>
@@ -261,7 +308,7 @@ export function EndLeasingBondReleasedPanel({
       </section>
 
       <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-        <p className="text-sm font-semibold">Job completed</p>
+        <p className="text-sm font-semibold uppercase tracking-wide">Job completed</p>
         {!jobCompleted ? (
           <>
             <p className="text-muted-foreground mt-1 text-xs">
@@ -269,13 +316,14 @@ export function EndLeasingBondReleasedPanel({
               is fully closed. If not confirmed, the system sends an automated reminder to the
               managing agent every 2 days.
             </p>
-            {reminders.length > 0 ? (
+            {auditEntries.length > 0 ? (
               <div className="mt-3 rounded-lg border bg-card p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide">Audit</p>
                 <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
-                  {reminders.map((e) => (
+                  {auditEntries.map((e) => (
                     <li key={e.id}>
                       {formatDateTime(e.timestamp)} · {e.label}
+                      {e.actor ? ` · ${e.actor}` : ''}
                     </li>
                   ))}
                 </ul>
@@ -283,8 +331,8 @@ export function EndLeasingBondReleasedPanel({
             ) : null}
             <Button
               type="button"
-              className="mt-3 w-full"
-              disabled={busy || !agentApproved}
+              className="mt-3 w-full font-semibold uppercase tracking-wide"
+              disabled={busy || !tenantAccepted}
               onClick={() =>
                 void run(
                   () => terminationApi.processBondRefund(caseData.id),
@@ -295,18 +343,20 @@ export function EndLeasingBondReleasedPanel({
               {busy ? <Loader2 className="size-4 animate-spin" /> : null}
               Job completed
             </Button>
+            {!tenantAccepted ? (
+              <p className="text-muted-foreground mt-2 text-center text-[10px]">
+                Record tenant acceptance before closing the case.
+              </p>
+            ) : null}
           </>
         ) : (
           <p className="text-primary mt-2 flex items-center gap-2 text-sm font-medium">
             <Check className="size-4" />
             Job completed
-            {caseData.timeline.find((e) => /bond refund|completed/i.test(e.label)) ? (
+            {jobCompletedAt ? (
               <span className="text-muted-foreground text-xs font-normal">
-                ·{' '}
-                {formatDateTime(
-                  caseData.timeline.find((e) => /bond refund|completed/i.test(e.label))!
-                    .timestamp,
-                )}
+                · {formatDateTime(jobCompletedAt.timestamp)}
+                {jobCompletedAt.actor ? ` · ${jobCompletedAt.actor}` : ''}
               </span>
             ) : null}
           </p>

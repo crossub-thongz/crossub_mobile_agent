@@ -193,6 +193,22 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       netRefund: number
       debtAmount: number
     } | null
+    tenantBondSummaryEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    landlordBondSummaryEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
   }
   makeGood: {
     status: LeasingItemStatus

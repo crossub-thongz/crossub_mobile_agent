@@ -6,8 +6,11 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TerminationCompleteInspectionDialog } from '@/components/end-leasing/termination-complete-inspection-dialog';
 import { inspectionDetail } from '@/constants/routes';
+import { inspectionsApi } from '@/lib/inspections-api';
+import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import { OUTGOING_INSPECTION_DAYS_AFTER_VACATE } from '@/constants/end-leasing';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import {
@@ -41,6 +44,7 @@ export function EndLeasingOutgoingInspectionPanel({
 }) {
   const router = useRouter();
   const applyCase = useEndLeasingStore((s) => s.applyCase);
+  const { refresh, registerInspection } = useAgentData();
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
@@ -68,6 +72,13 @@ export function EndLeasingOutgoingInspectionPanel({
         toast.error('Outgoing inspection was created but could not be opened');
         return;
       }
+      try {
+        const record = await inspectionsApi.get(inspectionId);
+        registerInspection(mapInspectionRecordToView(record));
+      } catch {
+        // Detail page can still resolve by id if the portfolio list is stale.
+      }
+      await refresh();
       toast.success('Outgoing inspection created');
       openInspection(inspectionId);
     } catch (err) {
