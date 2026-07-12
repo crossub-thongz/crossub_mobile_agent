@@ -2,6 +2,7 @@ import { api, apiV1 } from '@/lib/api';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
   leaseEndFromFixedTermWeeks,
+  toDateOnly,
 } from '@/lib/rent-review/scheduling';
 import type {
   CancelReviewInput,
@@ -20,7 +21,7 @@ const BASE = '/leasing/rent-reviews';
 const agentRentReviewWorkflowPath = (propertyId: string, id: string) =>
   `/agent/properties/${encodeURIComponent(propertyId)}/workflows/rent-review/${encodeURIComponent(id)}`;
 
-const dateOnly = (iso: string | null): string | null => (iso ? iso.slice(0, 10) : null);
+const dateOnly = (iso: string | null): string | null => toDateOnly(iso);
 
 function resolveLeaseEndDate(
   d: ServerRentReviewWorkflowView,

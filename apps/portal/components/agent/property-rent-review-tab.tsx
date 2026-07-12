@@ -1,15 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
+import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { rentReviewDetail } from '@/constants/routes';
+import { cancelAgentRentReview } from '@/lib/crossub-api/agent-workflow-client';
 import {
   applySortDirection,
   compareSortTime,
@@ -32,7 +36,6 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { rentReviewJobRows } from '@/lib/property-job-rows';
 import { RENT_REVIEW_ADVANCE_ORDER_DAYS, RENT_REVIEW_CONDUCT_WINDOW_DAYS, RENT_REVIEW_STATUTORY_NOTICE_DAYS } from '@/lib/rent-review/scheduling';
 import { formatDateTime } from '@/lib/utils';
 
@@ -187,8 +190,10 @@ export function PropertyRentReviewTab({
   onViewRentReview?: (reviewId: string) => void;
   onWorkflowCreated?: () => void;
 }) {
+  const { apiConnected, refresh } = useAgentData();
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [dialogReview, setDialogReview] = useState<RentReviewCase | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RentReviewCase | null>(null);
 
   const workflowPanelProps = {
     tab: 'rent_review' as const,
@@ -267,6 +272,34 @@ export function PropertyRentReviewTab({
     setSelectedCaseId(null);
   };
 
+  const canDeleteReview = useCallback(
+    (review: RentReviewCase) => {
+      if (!apiConnected) return false;
+      return isActiveRentReview(review, rentReviewDecisions[review.id]);
+    },
+    [apiConnected, rentReviewDecisions],
+  );
+
+  const canDeleteRow = useCallback(
+    (row: PropertyJobRow) => {
+      const review = rentReviews.find((item) => item.id === row.id);
+      return review ? canDeleteReview(review) : false;
+    },
+    [canDeleteReview, rentReviews],
+  );
+
+  const handleDeleteConfirm = async (reason: string) => {
+    if (!deleteTarget) return;
+    if (!apiConnected) {
+      throw new Error('Connect to the API to delete cases');
+    }
+    await cancelAgentRentReview(propertyId, deleteTarget.id, { reason });
+    toast.success('Rent review deleted');
+    handleDialogClose();
+    await refresh();
+    onWorkflowCreated?.();
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -293,6 +326,11 @@ export function PropertyRentReviewTab({
           dateColumnLabel="Due date"
           selectedId={selectedCaseId}
           onRowClick={handleRowClick}
+          canDeleteRow={canDeleteRow}
+          onDeleteRow={(row) => {
+            const review = rentReviews.find((item) => item.id === row.id) ?? null;
+            if (review) setDeleteTarget(review);
+          }}
           emptyTitle="No rent review cases"
           emptyDescription="Start a rent review when the lease is due for renewal."
         />
@@ -321,6 +359,22 @@ export function PropertyRentReviewTab({
         open={dialogReview !== null}
         onClose={handleDialogClose}
         review={dialogReview}
+        canDelete={dialogReview ? canDeleteReview(dialogReview) : false}
+        onDelete={() => {
+          if (dialogReview) setDeleteTarget(dialogReview);
+        }}
+      />
+
+      <WorkflowCaseDeleteDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete rent review"
+        description="The rent review will be cancelled and removed from active cases. A reason is required."
+        confirmLabel="Delete rent review"
+        onConfirm={handleDeleteConfirm}
+        onSuccess={() => setDeleteTarget(null)}
       />
     </div>
   );

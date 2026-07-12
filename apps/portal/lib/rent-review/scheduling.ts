@@ -11,8 +11,18 @@ export const RENT_REVIEW_STATUTORY_NOTICE_DAYS = 60;
 export const RENT_REVIEW_CONDUCT_WINDOW_DAYS =
   RENT_REVIEW_ADVANCE_ORDER_DAYS - RENT_REVIEW_STATUTORY_NOTICE_DAYS;
 
+export function toDateOnly(iso: string | null | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const trimmed = iso.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+  const d = new Date(trimmed);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 export function isoDateAddDays(dateStr: string, days: number): string {
-  const d = new Date(`${dateStr}T12:00:00`);
+  const base = toDateOnly(dateStr) ?? dateStr;
+  const d = new Date(`${base}T12:00:00`);
   if (Number.isNaN(d.getTime())) return dateStr;
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
@@ -23,7 +33,8 @@ export function isoDateSubtractDays(dateStr: string, days: number): string {
 }
 
 export function isoDateAddYears(dateStr: string, years: number): string {
-  const d = new Date(`${dateStr}T12:00:00`);
+  const base = toDateOnly(dateStr) ?? dateStr;
+  const d = new Date(`${base}T12:00:00`);
   if (Number.isNaN(d.getTime())) return dateStr;
   d.setFullYear(d.getFullYear() + years);
   return d.toISOString().slice(0, 10);

@@ -389,6 +389,9 @@ export function rentReviewJobRows(
     const decision = decisions[review.id];
     const createdIso = rentReviewCreatedAtIso(review);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
+    const cancelled =
+      review.workflowState === 'CANCELLED' ||
+      review.status.toLowerCase().includes('cancelled');
     return {
       id: review.id,
       kind: 'rent_review',
@@ -398,9 +401,10 @@ export function rentReviewJobRows(
       date: formatDate(review.reviewDue),
       createdAt,
       createdAtMs,
-      status: progress.currentStepLabel,
-      phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
-      rentReviewSchedule: getRentReviewScheduleIndicators(review) ?? undefined,
+      status: cancelled ? 'Cancelled' : progress.currentStepLabel,
+      phase:
+        cancelled || isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
+      rentReviewSchedule: cancelled ? undefined : getRentReviewScheduleIndicators(review) ?? undefined,
     };
   });
 }

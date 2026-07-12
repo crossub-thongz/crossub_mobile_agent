@@ -20,7 +20,8 @@ import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { toDateOnly } from '@/lib/rent-review/scheduling';
 
 type PreferredLeaseType = 'fixed' | 'periodic';
 
@@ -36,16 +37,50 @@ function ChoiceButton({
   onClick: () => void;
 }) {
   return (
-    <Button
+    <button
       type="button"
-      variant={active ? 'default' : 'outline'}
-      size="sm"
-      className="flex-1"
       disabled={disabled}
       onClick={onClick}
+      className={cn(
+        'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+        active
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-border bg-background text-foreground hover:bg-muted/60',
+        disabled && 'pointer-events-none opacity-50',
+      )}
     >
       {children}
-    </Button>
+    </button>
+  );
+}
+
+function formatDateOnly(value: string | null | undefined): string | null {
+  const day = toDateOnly(value);
+  return day ? formatDate(day) : null;
+}
+
+function AutoDateField({
+  label,
+  value,
+  hint,
+  muted = false,
+}: {
+  label: string;
+  value: string | null;
+  hint: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className={cn('space-y-1', muted && 'opacity-50')}>
+      <Label className={cn(muted && 'text-muted-foreground')}>{label}</Label>
+      <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+        <span className="font-medium tabular-nums">{formatDateOnly(value) ?? '—'}</span>
+        <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          Auto
+        </span>
+      </div>
+      <p className="text-muted-foreground text-[11px]">{hint}</p>
+    </div>
   );
 }
 
@@ -69,6 +104,7 @@ export function RentReviewAgentConfirmedPanel({
   const autoNewLeaseStart = useMemo(() => deriveNewLeaseStartDate(detail), [detail]);
   const autoRentIncreaseOn = useMemo(() => deriveRentIncreaseOnDate(detail), [detail]);
 
+  // Initialise form once per review — avoid resetting toggles when parent re-renders.
   useEffect(() => {
     const defaultWeekly = String(
       detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
@@ -79,11 +115,16 @@ export function RentReviewAgentConfirmedPanel({
       detail.preferredLeaseType ?? (detail.newAgreementEnd ? 'fixed' : 'periodic'),
     );
     setFixedTermEndDate(detail.newAgreementEnd ?? '');
-  }, [detail]);
+  }, [detail.id]);
 
-  const effectiveDate = detail.effectiveDate ?? autoRentIncreaseOn;
-  const newLeaseStart =
-    detail.newAgreementStart ?? (currentLeaseIsFixed ? autoNewLeaseStart : null);
+  const effectiveDate = editable
+    ? autoRentIncreaseOn
+    : (toDateOnly(detail.effectiveDate) ?? autoRentIncreaseOn);
+  const newLeaseStart = editable
+    ? currentLeaseIsFixed
+      ? autoNewLeaseStart
+      : null
+    : (toDateOnly(detail.newAgreementStart) ?? (currentLeaseIsFixed ? autoNewLeaseStart : null));
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -98,9 +139,9 @@ export function RentReviewAgentConfirmedPanel({
     }
   };
 
-  const saveAgentDecision = (weeklyOverride?: number) => {
-    const weekly = weeklyOverride ?? Number(confirmedWeekly);
-    if (!weeklyOverride && (!confirmedWeekly.trim() || Number.isNaN(weekly))) {
+  const saveAgentDecision = () => {
+    const weekly = Number(confirmedWeekly);
+    if (!confirmedWeekly.trim() || Number.isNaN(weekly)) {
       toast.error('Enter a valid weekly rent');
       return;
     }
@@ -220,13 +261,14 @@ export function RentReviewAgentConfirmedPanel({
                 onChange={(e) => setConfirmedWeekly(e.target.value)}
               />
               <Label htmlFor="revised-effective">Rent increase on</Label>
-              <Input
-                id="revised-effective"
-                type="date"
-                value={effectiveDate}
-                readOnly
-                className="bg-muted/40"
-              />
+              <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                <span className="font-medium tabular-nums">
+                  {formatDateOnly(effectiveDate) ?? '—'}
+                </span>
+                <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  Auto
+                </span>
+              </div>
               <Button
                 variant="outline"
                 className="w-full"
@@ -274,7 +316,23 @@ export function RentReviewAgentConfirmedPanel({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmed-weekly">Rent confirmed by agent ($/week)</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="confirmed-weekly">Rent confirmed by agent ($/week)</Label>
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0 text-xs"
+                  disabled={busy}
+                  onClick={() =>
+                    setConfirmedWeekly(
+                      String(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent),
+                    )
+                  }
+                >
+                  Use CROSSUB suggested
+                </Button>
+              </div>
               <Input
                 id="confirmed-weekly"
                 type="number"
@@ -320,61 +378,26 @@ export function RentReviewAgentConfirmedPanel({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="rent-increase-on">Rent increase on</Label>
-                <Input
-                  id="rent-increase-on"
-                  type="date"
-                  value={effectiveDate}
-                  readOnly
-                  className="bg-muted/40"
-                />
-                <p className="text-muted-foreground text-[11px]">Auto-calculated from scheduling rules.</p>
-              </div>
-              <div className="space-y-1">
-                <Label
-                  htmlFor="new-lease-start"
-                  className={cn(!currentLeaseIsFixed && 'text-muted-foreground')}
-                >
-                  New lease start date
-                </Label>
-                <Input
-                  id="new-lease-start"
-                  type="date"
-                  value={newLeaseStart ?? ''}
-                  readOnly
-                  disabled={!currentLeaseIsFixed}
-                  className={cn('bg-muted/40', !currentLeaseIsFixed && 'opacity-50')}
-                />
-                <p className="text-muted-foreground text-[11px]">
-                  {currentLeaseIsFixed
+              <AutoDateField
+                label="Rent increase on"
+                value={effectiveDate}
+                hint="Calculated from lease scheduling and the 60-day statutory notice period."
+              />
+              <AutoDateField
+                label="New lease start date"
+                value={newLeaseStart}
+                hint={
+                  currentLeaseIsFixed
                     ? 'Day after the current fixed lease ends.'
-                    : 'Not applicable for periodic tenancies.'}
-                </p>
-              </div>
+                    : 'Not applicable for periodic tenancies.'
+                }
+                muted={!currentLeaseIsFixed}
+              />
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                className="flex-1"
-                disabled={busy}
-                onClick={() => {
-                  const weekly = detail.ai.suggestedWeekly ?? detail.currentWeeklyRent;
-                  setConfirmedWeekly(String(weekly));
-                  saveAgentDecision(weekly);
-                }}
-              >
-                Use CROSSUB suggested {formatCurrency(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent)}/wk
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                disabled={busy}
-                onClick={() => saveAgentDecision()}
-              >
-                Confirm agent decision
-              </Button>
-            </div>
+            <Button className="w-full" disabled={busy} onClick={() => saveAgentDecision()}>
+              Confirm agent decision
+            </Button>
           </div>
         )
       ) : (
@@ -430,17 +453,17 @@ function ReadOnlySummary({
         {preferredLeaseType === 'fixed' && fixedTermEndDate ? (
           <div>
             <dt className="text-muted-foreground">Fixed term ends</dt>
-            <dd className="font-medium tabular-nums">{fixedTermEndDate}</dd>
+            <dd className="font-medium tabular-nums">{formatDateOnly(fixedTermEndDate) ?? '—'}</dd>
           </div>
         ) : null}
         <div>
           <dt className="text-muted-foreground">Rent increase on</dt>
-          <dd className="font-medium tabular-nums">{effectiveDate}</dd>
+          <dd className="font-medium tabular-nums">{formatDateOnly(effectiveDate) ?? '—'}</dd>
         </div>
         {newLeaseStart ? (
           <div>
             <dt className="text-muted-foreground">New lease start</dt>
-            <dd className="font-medium tabular-nums">{newLeaseStart}</dd>
+            <dd className="font-medium tabular-nums">{formatDateOnly(newLeaseStart) ?? '—'}</dd>
           </div>
         ) : null}
       </dl>

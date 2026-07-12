@@ -98,6 +98,20 @@ export async function cancelAgentTerminationCase(
   });
 }
 
+export async function cancelAgentRentReview(
+  propertyId: string,
+  reviewId: string,
+  body: { reason: string },
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/rent-review/${encodeURIComponent(reviewId)}/cancel`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
 export async function createAgentRentReview(
   propertyId: string,
   body: CreateAgentRentReviewInput,

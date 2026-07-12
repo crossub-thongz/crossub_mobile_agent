@@ -4,11 +4,12 @@ import {
   isoDateAddDays,
   leaseEndFromFixedTermWeeks,
   RENT_REVIEW_STATUTORY_NOTICE_DAYS,
+  toDateOnly,
 } from '@/lib/rent-review/scheduling';
 
 /** Resolve the current tenancy lease end from stored or derived fields. */
 export function resolveCurrentLeaseEnd(detail: RentReviewWorkflowDetail): string | null {
-  if (detail.leaseEndDate) return detail.leaseEndDate;
+  if (detail.leaseEndDate) return toDateOnly(detail.leaseEndDate);
   if (
     detail.leaseType === 'fixed' &&
     detail.initialLeaseStartDate &&
@@ -16,7 +17,7 @@ export function resolveCurrentLeaseEnd(detail: RentReviewWorkflowDetail): string
   ) {
     return leaseEndFromFixedTermWeeks(detail.initialLeaseStartDate, detail.fixedTermWeeks);
   }
-  return detail.rentReviewDate;
+  return toDateOnly(detail.rentReviewDate);
 }
 
 /** Day after the current fixed lease ends; null for periodic tenancies. */
