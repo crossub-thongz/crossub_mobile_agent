@@ -36,6 +36,8 @@ export function RentReviewTenantResponseOnBehalfPanel({
     }
   };
 
+  const canCounter = detail.rentNegotiable === true;
+
   return (
     <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
       <div>
@@ -86,32 +88,38 @@ export function RentReviewTenantResponseOnBehalfPanel({
         </Button>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`counter-${detail.id}`}>Counter-offer ($/week)</Label>
-        <Input
-          id={`counter-${detail.id}`}
-          type="number"
-          value={counterWeekly}
-          onChange={(e) => setCounterWeekly(e.target.value)}
-        />
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={busy || !counterWeekly}
-          onClick={() =>
-            void run(
-              () =>
-                rentReviewApi.tenantResponse(detail.id, {
-                  decision: 'counter',
-                  counterWeekly: Number(counterWeekly),
-                }),
-              'Counter recorded — returned to Agent Confirmed',
-            )
-          }
-        >
-          Tenant counter-offer
-        </Button>
-      </div>
+      {canCounter ? (
+        <div className="space-y-2">
+          <Label htmlFor={`counter-${detail.id}`}>Counter-offer ($/week)</Label>
+          <Input
+            id={`counter-${detail.id}`}
+            type="number"
+            value={counterWeekly}
+            onChange={(e) => setCounterWeekly(e.target.value)}
+          />
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={busy || !counterWeekly}
+            onClick={() =>
+              void run(
+                () =>
+                  rentReviewApi.tenantResponse(detail.id, {
+                    decision: 'counter',
+                    counterWeekly: Number(counterWeekly),
+                  }),
+                'Counter recorded — returned to Agent Confirmed',
+              )
+            }
+          >
+            Tenant counter-offer
+          </Button>
+        </div>
+      ) : (
+        <p className="text-muted-foreground rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-100">
+          Rent is marked non-negotiable — the tenant can accept or decline only.
+        </p>
+      )}
     </div>
   );
 }

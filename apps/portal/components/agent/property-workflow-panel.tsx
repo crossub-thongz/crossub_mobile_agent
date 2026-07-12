@@ -353,7 +353,12 @@ export function PropertyWorkflowCreateDialog({
     if (!actionId) return;
 
     const session = actionId;
-    if (formPrefillSessionRef.current === session) return;
+    if (formPrefillSessionRef.current === session) {
+      // Form was already initialised this session. A property poll can re-run this
+      // effect and cancel the in-flight prefill without clearing `prefillLoading`.
+      setPrefillLoading(false);
+      return;
+    }
     formPrefillSessionRef.current = session;
 
     const leasingPrefill = buildLeasingCyclePrefill(property, currentLease);
