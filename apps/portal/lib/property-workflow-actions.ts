@@ -8,6 +8,7 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+import { isRentReviewDecided } from '@/lib/rent-review';
 
 export type PropertyWorkflowTab =
   | 'leasing'
@@ -83,13 +84,7 @@ export interface PropertyWorkflowContext {
 
 function hasActiveRentReview(ctx: PropertyWorkflowContext): boolean {
   return ctx.rentReviews.some(
-    (r) =>
-      r.propertyId === ctx.propertyId &&
-      r.workflowState !== 'COMPLETED' &&
-      r.workflowState !== 'CANCELLED' &&
-      r.workflowState !== 'POSTPONED' &&
-      !r.status.toLowerCase().includes('completed') &&
-      !r.status.toLowerCase().includes('cancelled'),
+    (r) => r.propertyId === ctx.propertyId && !isRentReviewDecided(r),
   );
 }
 

@@ -23,8 +23,9 @@ function resolveRentReviewStepId(workflowState?: string): string {
       return 'agent_confirmed';
     case RENT_REVIEW_WORKFLOW_STATE.TENANT_NOTIFIED:
       return 'tenant_notified';
-    case RENT_REVIEW_WORKFLOW_STATE.TENANT_ACCEPTED:
     case RENT_REVIEW_WORKFLOW_STATE.TENANT_REJECTED:
+      return 'completed';
+    case RENT_REVIEW_WORKFLOW_STATE.TENANT_ACCEPTED:
     case RENT_REVIEW_WORKFLOW_STATE.ACCOUNTING:
       return 'tenant_decision';
     case RENT_REVIEW_WORKFLOW_STATE.COMPLETED:

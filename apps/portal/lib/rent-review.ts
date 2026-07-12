@@ -47,18 +47,24 @@ export function leaseRenewalStages(review: RentReviewCase, decision?: RentReview
   }));
 }
 
+const TERMINAL_RENT_REVIEW_WORKFLOW_STATES = new Set([
+  'COMPLETED',
+  'CANCELLED',
+  'POSTPONED',
+  /** Vacate path — tenant declined with move-out; no accounting sync. */
+  'TENANT_REJECTED',
+]);
+
 export function isRentReviewDecided(
   review: RentReviewCase,
   decision?: RentReviewDecision,
 ): boolean {
   if (decision != null) return true;
-  if (review.workflowState) {
-    return (
-      review.workflowState === 'COMPLETED' ||
-      review.workflowState === 'CANCELLED' ||
-      review.workflowState === 'POSTPONED'
-    );
+  if (review.completedDate) return true;
+  if (review.workflowState && TERMINAL_RENT_REVIEW_WORKFLOW_STATES.has(review.workflowState)) {
+    return true;
   }
+  if (review.tenantResponse === 'rejected') return true;
   const status = review.status.toLowerCase().trim();
   return status === 'completed' || status.includes('cancelled');
 }
