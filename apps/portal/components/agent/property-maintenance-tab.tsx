@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyMaintenanceCaseDialog } from '@/components/agent/property-maintenance-case-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { maintenanceJobRows } from '@/lib/property-job-rows';
+import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import type {
   Inspection,
   LeasingCycle,
@@ -43,9 +45,31 @@ export function PropertyMaintenanceTab({
   currentLease?: LeasingRecord;
   onRefresh?: () => void;
 }) {
+  const { refresh } = useAgentData();
   const jobRows = useMemo(() => maintenanceJobRows(maintenance), [maintenance]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [dialogRequest, setDialogRequest] = useState<MaintenanceRequest | null>(null);
+  const [pendingOpenRequestId, setPendingOpenRequestId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingOpenRequestId) return;
+    const request = maintenance.find((item) => item.id === pendingOpenRequestId);
+    if (!request) return;
+    setSelectedCaseId(request.id);
+    setDialogRequest(request);
+    setPendingOpenRequestId(null);
+  }, [maintenance, pendingOpenRequestId]);
+
+  const handleWorkflowCreated = useCallback(
+    async (result?: PropertyWorkflowCreatedResult) => {
+      await refresh();
+      onRefresh?.();
+      if (result && isWorkflowCreatedCase(result) && result.kind === 'maintenance') {
+        setPendingOpenRequestId(result.id);
+      }
+    },
+    [onRefresh, refresh],
+  );
 
   const workflowPanelProps = {
     tab: 'maintenance' as const,
@@ -59,7 +83,7 @@ export function PropertyMaintenanceTab({
     tribunalCases,
     tenantSelections,
     currentLease,
-    onCreated: onRefresh,
+    onCreated: handleWorkflowCreated,
   };
 
   const handleRowClick = (id: string) => {

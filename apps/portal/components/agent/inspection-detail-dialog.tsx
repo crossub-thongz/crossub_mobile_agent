@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
@@ -10,10 +9,8 @@ import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log'
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
-import { Button } from '@/components/ui/button';
-import { inspectionDetail } from '@/constants/routes';
-import type { DetailNavContext } from '@/lib/detail-navigation';
 import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
+import type { DetailNavContext } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import {
   OPEN_CONDUCTED_BY_LABEL,
@@ -196,12 +193,6 @@ export function InspectionDetailDialog({
         )}
 
         <JobCaseStageEmailHistory emails={stageEmails} title={emailTitle} />
-
-        <Button variant="outline" className="w-full" asChild>
-          <Link href={inspectionDetail(inspection.id, navContext)} onClick={onClose}>
-            Open full inspection
-          </Link>
-        </Button>
       </div>
     </CaseDetailDialog>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,6 +36,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { RENT_REVIEW_ADVANCE_ORDER_DAYS, RENT_REVIEW_CONDUCT_WINDOW_DAYS, RENT_REVIEW_STATUTORY_NOTICE_DAYS } from '@/lib/rent-review/scheduling';
+import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 
 export function PropertyRentReviewTab({
   property,
@@ -72,6 +73,18 @@ export function PropertyRentReviewTab({
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [dialogReview, setDialogReview] = useState<RentReviewCase | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RentReviewCase | null>(null);
+  const [pendingOpenReviewId, setPendingOpenReviewId] = useState<string | null>(null);
+
+  const handleWorkflowCreated = useCallback(
+    async (result?: PropertyWorkflowCreatedResult) => {
+      await refresh();
+      onWorkflowCreated?.();
+      if (result && isWorkflowCreatedCase(result) && result.kind === 'rent_review') {
+        setPendingOpenReviewId(result.id);
+      }
+    },
+    [onWorkflowCreated, refresh],
+  );
 
   const workflowPanelProps = {
     tab: 'rent_review' as const,
@@ -85,7 +98,7 @@ export function PropertyRentReviewTab({
     tribunalCases,
     tenantSelections,
     currentLease,
-    onCreated: onWorkflowCreated,
+    onCreated: handleWorkflowCreated,
   };
 
   const workflowCtx = useMemo(
@@ -157,6 +170,14 @@ export function PropertyRentReviewTab({
     setSelectedCaseId(review.id);
     setDialogReview(review);
   }, []);
+
+  useEffect(() => {
+    if (!pendingOpenReviewId) return;
+    const review = rentReviews.find((item) => item.id === pendingOpenReviewId);
+    if (!review) return;
+    openReviewDialog(review);
+    setPendingOpenReviewId(null);
+  }, [openReviewDialog, pendingOpenReviewId, rentReviews]);
 
   const openReviewById = useCallback(
     (id: string) => {

@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { ExternalLink, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { inspectionDetail } from '@/constants/routes';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import { createAgentIngoingInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { LEASING_AGENT_DECISION, LEASING_UI } from '@/lib/leasing/constants';
@@ -27,12 +26,12 @@ import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { cn, formatDateTime } from '@/lib/utils';
 
 export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropertyDetail }) {
-  const router = useRouter();
-  const { leasingCycles, apiConnected, refresh } = useAgentData();
+  const { leasingCycles, inspections, apiConnected, refresh } = useAgentData();
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const scheduleLocal = useLeasingWorkflowStore((s) => s.scheduleIngoingInspection);
 
   const [busy, setBusy] = useState(false);
+  const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
 
   if (!showLeasingIngoingNextStepPanel(detail)) return null;
 
@@ -43,8 +42,13 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
   const canStart = isLeasingReadyForIngoingHandoff(detail);
 
   const openJobCase = (inspectionId: string) => {
-    router.push(inspectionDetail(inspectionId, fromLeasingWorkflow(detail.propertyId)));
+    setInspectionDialogId(inspectionId);
   };
+
+  const dialogInspection = useMemo(
+    () => inspections.find((item) => item.id === inspectionDialogId) ?? null,
+    [inspectionDialogId, inspections],
+  );
 
   const handleStart = async () => {
     const moveIn = detail.rental.moveInDate ?? detail.rental.availableFrom;
@@ -187,6 +191,13 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
           )}
         </div>
       </div>
+
+      <InspectionDetailDialog
+        open={inspectionDialogId !== null}
+        onClose={() => setInspectionDialogId(null)}
+        inspection={dialogInspection}
+        navContext={fromLeasingWorkflow(detail.propertyId)}
+      />
     </div>
   );
 }

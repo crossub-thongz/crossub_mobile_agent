@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,6 +29,7 @@ import {
   filterLeasingTabWorkflowCases,
   type PropertyLeasingWorkflowCase,
 } from '@/lib/property-leasing-workflow-cases';
+import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
   ArchivedEndLeasingCase,
@@ -143,6 +144,30 @@ export function PropertyLeasingJobPanel({
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [dialogCase, setDialogCase] = useState<PropertyLeasingWorkflowCase | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PropertyLeasingWorkflowCase | null>(null);
+  const [pendingOpenCaseId, setPendingOpenCaseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingOpenCaseId) return;
+    const item =
+      workflowCases.find((workflowCase) => workflowCase.id === pendingOpenCaseId) ??
+      historyCases.find((workflowCase) => workflowCase.id === pendingOpenCaseId) ??
+      null;
+    if (!item) return;
+    setSelectedCaseId(item.id);
+    setDialogCase(item);
+    setPendingOpenCaseId(null);
+  }, [historyCases, pendingOpenCaseId, workflowCases]);
+
+  const handleWorkflowCreated = useCallback(
+    async (result?: PropertyWorkflowCreatedResult) => {
+      await refresh();
+      onWorkflowCreated?.();
+      if (result && isWorkflowCreatedCase(result)) {
+        setPendingOpenCaseId(result.id);
+      }
+    },
+    [onWorkflowCreated, refresh],
+  );
 
   const canDeleteCase = useCallback(
     (item: PropertyLeasingWorkflowCase) => {
@@ -209,7 +234,7 @@ export function PropertyLeasingJobPanel({
       tribunalCases={tribunalCases}
       tenantSelections={tenantSelections}
       currentLease={currentLease}
-      onCreated={onWorkflowCreated}
+      onCreated={handleWorkflowCreated}
     />
   );
 
@@ -236,7 +261,7 @@ export function PropertyLeasingJobPanel({
           tenantSelections={tenantSelections}
           currentLease={currentLease}
           emptyTitle="No leasing activity yet"
-          onCreated={onWorkflowCreated}
+          onCreated={handleWorkflowCreated}
         />
       );
     }

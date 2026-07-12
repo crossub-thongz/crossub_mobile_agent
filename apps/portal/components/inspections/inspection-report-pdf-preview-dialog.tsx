@@ -132,6 +132,7 @@ export function InspectionReportPdfPreviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        elevated
         showCloseButton={false}
         className={cn(
           'fixed inset-x-0 bottom-0 left-0 top-auto flex h-[min(92dvh,860px)] w-full max-w-full translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-t-2xl border-0 p-0 shadow-2xl',

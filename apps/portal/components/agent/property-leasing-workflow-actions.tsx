@@ -14,6 +14,7 @@ import {
   type PropertyWorkflowActionId,
   type PropertyWorkflowTab,
 } from '@/lib/property-workflow-actions';
+import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import type {
   Inspection,
   LeasingCycle,
@@ -57,7 +58,7 @@ export function PropertyLeasingWorkflowActions({
   tribunalCases: TribunalCase[];
   tenantSelections?: TenantSelectionCase[];
   currentLease?: LeasingRecord;
-  onCreated?: () => void;
+  onCreated?: (result?: PropertyWorkflowCreatedResult) => void;
   /** When true, only render action buttons + dialog (no Actions card wrapper). */
   inline?: boolean;
 }) {
@@ -145,9 +146,9 @@ export function PropertyLeasingWorkflowActions({
         currentLease={currentLease}
         leasingCycle={ctx.leasingCycles[0]}
         tenantSelections={tenantSelections}
-        onSuccess={() => {
+        onSuccess={(result) => {
           setActiveAction(null);
-          onCreated?.();
+          onCreated?.(result);
         }}
       />
     </>

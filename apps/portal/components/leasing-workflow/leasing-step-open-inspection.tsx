@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { CalendarClock, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
+import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,7 +19,6 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { inspectionDetail } from '@/constants/routes';
 import { cancelAgentLeasingCycle } from '@/lib/crossub-api/agent-workflow-client';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
@@ -45,7 +44,6 @@ function pendingOr(value?: string | null): string {
 }
 
 export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyDetail }) {
-  const router = useRouter();
   const { inspections, leasingCycles, apiConnected, refresh } = useAgentData();
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
@@ -54,6 +52,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
+  const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = cycle?.id;
@@ -67,11 +66,12 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     [inspections, detail.propertyId, oi.viewingSessionId],
   );
 
-  const inspectionHref = oi.viewingSessionId
-    ? inspectionDetail(oi.viewingSessionId, fromLeasingWorkflow(detail.propertyId))
-    : linkedInspection
-      ? inspectionDetail(linkedInspection.id, fromLeasingWorkflow(detail.propertyId))
-      : null;
+  const dialogInspection = useMemo(
+    () => inspections.find((item) => item.id === inspectionDialogId) ?? linkedInspection,
+    [inspectionDialogId, inspections, linkedInspection],
+  );
+
+  const canOpenJobCase = Boolean(oi.viewingSessionId || linkedInspection);
 
   const inspectorName = pendingOr(oi.inspectorName ?? linkedInspection?.inspector);
   const inspectionTime = formatInspectionTimeRange(
@@ -103,7 +103,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
       onCycleView: (view) => applyCycleView(detail.propertyId, view),
     });
     if (!sessionId) return;
-    router.push(inspectionDetail(sessionId, fromLeasingWorkflow(detail.propertyId)));
+    setInspectionDialogId(sessionId);
   };
 
   const handleCancelLetting = async () => {
@@ -191,7 +191,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
                 Cancel letting
               </Button>
             ) : null}
-            {inspectionHref ? (
+            {canOpenJobCase ? (
               <Button
                 size="sm"
                 className={cn('h-8 gap-1.5 text-xs', LEASING_UI.btnSecondary)}
@@ -212,7 +212,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
             scheduled.
           </p>
         ) : null}
-        {!inspectionHref ? (
+        {!canOpenJobCase ? (
           <p className="text-muted-foreground text-[12px]">
             Waiting for an inspector to accept the open inspection from the task pool.
           </p>
@@ -265,6 +265,13 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InspectionDetailDialog
+        open={inspectionDialogId !== null}
+        onClose={() => setInspectionDialogId(null)}
+        inspection={dialogInspection}
+        navContext={fromLeasingWorkflow(detail.propertyId)}
+      />
     </div>
   );
 }

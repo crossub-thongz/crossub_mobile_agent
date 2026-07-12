@@ -1,16 +1,11 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import { useMemo } from 'react';
-import { ExternalLink } from 'lucide-react';
 
 import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
 import { PriorityBadge, ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
 import { useAuth } from '@/components/providers/auth-provider';
-import { Button } from '@/components/ui/button';
-import { maintenanceDetail } from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
 import { buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
 import type { MaintenanceRequest, Priority, Property } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
@@ -115,18 +110,6 @@ export function PropertyMaintenanceJobPanel({
       <MaintenanceJobHeader item={item} />
 
       <MaintenanceAgentWorkflowPanel ctx={workflowCtx} />
-
-      <Button
-        asChild
-        size="lg"
-        variant="outline"
-        className="border-primary/35 bg-primary/5 hover:bg-primary/10 h-11 w-full gap-2 text-sm font-semibold"
-      >
-        <Link href={maintenanceDetail(item.id, fromProperty(propertyId, 'Maintenance'))}>
-          Open full maintenance workspace
-          <ExternalLink className="size-4" />
-        </Link>
-      </Button>
     </div>
   );
 }

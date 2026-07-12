@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -73,9 +72,8 @@ import {
   formatMaintenanceIssueType,
   isMaintenanceIssueTypeValid,
 } from '@/constants/maintenance-issue-types';
-import { vacatingDetail, rentReviewDetail } from '@/constants/routes';
 import { MaintenanceNewJobFormFields, type MaintenanceJobPriority } from '@/components/maintenance/maintenance-new-job-form-fields';
-import { fromProperty } from '@/lib/detail-navigation';
+import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import { RENT_PERIOD_OPTIONS } from '@/lib/rent-calculations';
 import type { RentPeriod } from '@/lib/store';
 
@@ -123,7 +121,7 @@ export function PropertyWorkflowPanel({
   emptyTitle?: string;
   emptyDescription?: string;
   actionsOnly?: boolean;
-  onCreated?: (result?: InspectionCreateResult) => void;
+  onCreated?: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
   const { primaryAgency } = useAgentData();
 
@@ -279,9 +277,8 @@ export function PropertyWorkflowCreateDialog({
   currentLease?: LeasingRecord;
   leasingCycle?: LeasingCycle;
   tenantSelections?: TenantSelectionCase[];
-  onSuccess: (result?: InspectionCreateResult) => void;
+  onSuccess: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
-  const router = useRouter();
   const { refresh, apiConnected } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
@@ -548,6 +545,9 @@ export function PropertyWorkflowCreateDialog({
             /* live sync will catch up when the workflow opens */
           }
         }
+        await refresh();
+        onSuccess({ kind: 'leasing', id: result.id });
+        return;
       } else if (actionId === 'start_rent_review') {
         const rent = Number(currentWeeklyRent);
         if (!rent || rent <= 0) throw new Error('Current weekly rent is required');
@@ -580,7 +580,7 @@ export function PropertyWorkflowCreateDialog({
           });
           toast.success('Rent review submitted to CROSSUB');
           await refresh();
-          onSuccess();
+          onSuccess({ kind: 'rent_review', id: result.id });
           return;
         }
 
@@ -603,8 +603,7 @@ export function PropertyWorkflowCreateDialog({
         });
         toast.success('Rent review created');
         await refresh();
-        onSuccess();
-        router.push(rentReviewDetail(result.id, fromProperty(propertyId, 'Leasing')));
+        onSuccess({ kind: 'rent_review', id: result.id });
         return;
       } else if (actionId === 'start_end_leasing') {
         if (terminationType === 'tenant_initiated' && !expectedVacateDate) {
@@ -631,8 +630,7 @@ export function PropertyWorkflowCreateDialog({
         });
         toast.success('End leasing case created');
         await refresh();
-        onSuccess();
-        router.push(vacatingDetail(result.id, fromProperty(propertyId, 'Leasing')));
+        onSuccess({ kind: 'end_leasing', id: result.id });
         return;
       } else if (actionId === 'start_maintenance') {
         const resolvedIssueType = formatMaintenanceIssueType(issueTypeSelection, issueTypeOther);
@@ -640,7 +638,7 @@ export function PropertyWorkflowCreateDialog({
           throw new Error('Issue type is required');
         }
         if (description.trim().length < 5) throw new Error('Description is required');
-        await createAgentMaintenanceRequest(propertyId, {
+        const result = await createAgentMaintenanceRequest(propertyId, {
           issueType: resolvedIssueType,
           description: description.trim(),
           address: maintPrefill.address,
@@ -655,6 +653,9 @@ export function PropertyWorkflowCreateDialog({
             : undefined,
         });
         toast.success('Maintenance job logged');
+        await refresh();
+        onSuccess({ kind: 'maintenance', id: result.id });
+        return;
       }
       await refresh();
       onSuccess();

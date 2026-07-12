@@ -1,16 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { ClipboardCheck, ExternalLink, Loader2, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TerminationCompleteInspectionDialog } from '@/components/end-leasing/termination-complete-inspection-dialog';
-import { inspectionDetail } from '@/constants/routes';
-import { inspectionsApi } from '@/lib/inspections-api';
-import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import { OUTGOING_INSPECTION_DAYS_AFTER_VACATE } from '@/constants/end-leasing';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import {
@@ -20,6 +17,8 @@ import {
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { suggestedOutgoingInspectionIsoFromDate } from '@/lib/inspections/outgoing-schedule';
+import { inspectionsApi } from '@/lib/inspections-api';
+import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import { terminationApi } from '@/lib/termination-case-api';
 import { LEASING_ITEM_STATUS, LEASING_UI } from '@/lib/leasing/constants';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -42,20 +41,24 @@ export function EndLeasingOutgoingInspectionPanel({
 }: {
   caseData: TerminationCaseDetail;
 }) {
-  const router = useRouter();
   const applyCase = useEndLeasingStore((s) => s.applyCase);
-  const { refresh, registerInspection } = useAgentData();
+  const { refresh, registerInspection, inspections } = useAgentData();
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
+  const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
 
   const inspection = caseData.inspection;
   const inspectionDone = inspection.status === DONE;
   const tenantAttendance = inspection.tenantAttendance ?? 'pending';
   const navContext = caseData.propertyId ? fromLeasingWorkflow(caseData.propertyId) : undefined;
+  const dialogInspection = useMemo(
+    () => inspections.find((item) => item.id === inspectionDialogId) ?? null,
+    [inspectionDialogId, inspections],
+  );
 
   const openInspection = (inspectionId: string) => {
-    router.push(inspectionDetail(inspectionId, navContext));
+    setInspectionDialogId(inspectionId);
   };
 
   const createOutgoingInspection = async () => {
@@ -213,6 +216,13 @@ export function EndLeasingOutgoingInspectionPanel({
         onOpenChange={setCompleteDialogOpen}
         caseData={caseData}
         onCompleted={(updated) => applyCase(updated)}
+      />
+
+      <InspectionDetailDialog
+        open={inspectionDialogId !== null}
+        onClose={() => setInspectionDialogId(null)}
+        inspection={dialogInspection}
+        navContext={navContext}
       />
     </>
   );
