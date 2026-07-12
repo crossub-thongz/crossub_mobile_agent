@@ -121,26 +121,34 @@ export function RentReviewTenantDecisionPanel({
       {detail.workflowState === 'tenant_accepted' ? (
         <Button
           className="w-full"
-          disabled={busy}
-          onClick={() =>
+          disabled={busy || !detail.propertyId}
+          onClick={() => {
+            if (!detail.propertyId) {
+              toast.error('No property linked to this rent review');
+              return;
+            }
             void run(
-              () => rentReviewApi.submitAccounting(detail.id),
+              () => rentReviewApi.submitAccounting(detail.id, detail.propertyId!),
               'Submitted to accounting for rent sync',
-            )
-          }
+            );
+          }}
         >
           Submit to accounting
         </Button>
       ) : detail.workflowState === 'accounting' ? (
         <Button
           className="w-full"
-          disabled={busy}
-          onClick={() =>
+          disabled={busy || !detail.propertyId}
+          onClick={() => {
+            if (!detail.propertyId) {
+              toast.error('No property linked to this rent review');
+              return;
+            }
             void run(
-              () => rentReviewApi.complete(detail.id),
+              () => rentReviewApi.complete(detail.id, detail.propertyId!),
               'Rent review completed & system synced',
-            )
-          }
+            );
+          }}
         >
           Complete rent review & sync system
         </Button>

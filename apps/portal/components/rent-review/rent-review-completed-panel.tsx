@@ -65,10 +65,17 @@ export function RentReviewCompletedPanel({
       {detail.workflowState === 'accounting' ? (
         <Button
           className="w-full"
-          disabled={busy}
-          onClick={() =>
-            void run(() => rentReviewApi.complete(detail.id), 'Rent review completed & system synced')
-          }
+          disabled={busy || !detail.propertyId}
+          onClick={() => {
+            if (!detail.propertyId) {
+              toast.error('No property linked to this rent review');
+              return;
+            }
+            void run(
+              () => rentReviewApi.complete(detail.id, detail.propertyId!),
+              'Rent review completed & system synced',
+            );
+          }}
         >
           Complete rent review & sync system
         </Button>

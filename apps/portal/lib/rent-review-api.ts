@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api, apiV1 } from '@/lib/api';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import type {
   CancelReviewInput,
@@ -13,6 +13,9 @@ import type {
 } from '@/lib/rent-review-workflow-types';
 
 const BASE = '/leasing/rent-reviews';
+
+const agentRentReviewWorkflowPath = (propertyId: string, id: string) =>
+  `/agent/properties/${encodeURIComponent(propertyId)}/workflows/rent-review/${encodeURIComponent(id)}`;
 
 const dateOnly = (iso: string | null): string | null => (iso ? iso.slice(0, 10) : null);
 
@@ -157,9 +160,32 @@ export const rentReviewApi = {
       leaseEndDate,
     ),
 
-  submitAccounting: (id: string, leaseEndDate?: string | null): Promise<RentReviewWorkflowDetail> =>
-    map(unwrap(api.post<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/submit-accounting`)), leaseEndDate),
+  submitAccounting: (
+    id: string,
+    propertyId: string,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> =>
+    map(
+      unwrap(
+        apiV1.post<{ review: ServerRentReviewWorkflowView }>(
+          `${agentRentReviewWorkflowPath(propertyId, id)}/submit-accounting`,
+        ),
+      ),
+      leaseEndDate,
+    ),
 
-  complete: (id: string, leaseEndDate?: string | null): Promise<RentReviewWorkflowDetail> =>
-    map(unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/complete`, {})), leaseEndDate),
+  complete: (
+    id: string,
+    propertyId: string,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> =>
+    map(
+      unwrap(
+        apiV1.patch<{ review: ServerRentReviewWorkflowView }>(
+          `${agentRentReviewWorkflowPath(propertyId, id)}/complete`,
+          {},
+        ),
+      ),
+      leaseEndDate,
+    ),
 };
