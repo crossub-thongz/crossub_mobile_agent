@@ -1327,10 +1327,9 @@ export function EndLeasingReportComparisonPanel({
         />
         <CompareResponsibilitySection
           title="Tenant responsibility"
-          description="Auto-synced from the inspector outgoing report. Quotes and handymen are added on the Repair quotes step."
+          description="Prefilled from the inspector outgoing report. Add or adjust items before emailing the tenant."
           items={tenantItems}
           onChange={setTenantItems}
-          readOnly
           actionBusy={busy}
           emailHint="Send to tenant"
           onEmail={() => void sendComparisonSummary('tenant')}

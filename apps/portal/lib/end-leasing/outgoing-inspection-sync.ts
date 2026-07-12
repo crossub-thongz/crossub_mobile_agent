@@ -86,7 +86,8 @@ export function mergeInspectionResponsibilityItems(
   fromInspection: ReportComparisonRepairItem[],
 ): ReportComparisonRepairItem[] {
   const savedByKey = new Map(saved.map((item) => [itemKey(item), item]));
-  return fromInspection.map((item) => {
+  const inspectionKeys = new Set(fromInspection.map((item) => itemKey(item)));
+  const mergedFromInspection = fromInspection.map((item) => {
     const prior = savedByKey.get(itemKey(item));
     return {
       ...item,
@@ -96,6 +97,8 @@ export function mergeInspectionResponsibilityItems(
       localKey: prior?.localKey,
     };
   });
+  const manualOnly = saved.filter((item) => !inspectionKeys.has(itemKey(item)));
+  return [...mergedFromInspection, ...manualOnly];
 }
 
 export function responsibilityItemsEqual(
