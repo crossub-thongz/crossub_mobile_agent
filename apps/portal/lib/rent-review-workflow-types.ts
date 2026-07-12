@@ -85,6 +85,11 @@ export interface ServerRentReviewWorkflowView {
   leaseType: 'fixed' | 'periodic' | null;
   fixedTermWeeks: number | null;
   initialLeaseStartDate: string | null;
+  leaseEndDate: string | null;
+  rentNegotiable: boolean | null;
+  preferredLeaseType: 'fixed' | 'periodic' | null;
+  newAgreementStart: string | null;
+  newAgreementEnd: string | null;
   tenantRef: string | null;
   managingAgentLabel: string | null;
   createdAt: string;
@@ -131,6 +136,10 @@ export interface CancelReviewInput {
 export interface SetProposedRentInput {
   weekly: number;
   effectiveDate: string;
+  rentNegotiable?: boolean;
+  preferredLeaseType?: 'fixed' | 'periodic';
+  preferredFixedTermEndDate?: string;
+  newLeaseStartDate?: string;
 }
 
 export interface SendTenantNoticeInput {

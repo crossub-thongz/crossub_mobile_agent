@@ -22,7 +22,7 @@ export const RENT_REVIEW_AGENT_STEP_ORDER: RentReviewAgentStep[] = [
 
 export const RENT_REVIEW_AGENT_STEP_LABEL: Record<RentReviewAgentStep, string> = {
   [RENT_REVIEW_AGENT_STEP.RENT_RESEARCH]: 'Rent research',
-  [RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED]: 'Agent confirmed',
+  [RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED]: 'Agent decision',
   [RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED]: 'Tenant notified',
   [RENT_REVIEW_AGENT_STEP.TENANT_DECISION]: 'Tenant decision',
   [RENT_REVIEW_AGENT_STEP.COMPLETED]: 'Completed',
@@ -90,6 +90,12 @@ function hasAgentConfirmedRent(detail: RentReviewWorkflowDetail): boolean {
   return hasAgentPricingFinalized(detail);
 }
 
+/** Agent may edit step-2 decision fields before tenant notice is sent. */
+export function canEditAgentDecision(detail: RentReviewWorkflowDetail): boolean {
+  if (hasTenantNoticeSent(detail)) return false;
+  return detail.workflowState === 'agent_review' || detail.workflowState === 'negotiation';
+}
+
 /** Formal increase notice has been dispatched to the tenant. */
 export function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
   return auditHas(detail, 'tenant_notices_dispatched');
@@ -146,25 +152,44 @@ function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPro
 function agentConfirmedSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
   const hasCounter = detail.tenantCounterWeekly != null;
   const pricingFinalized = hasAgentPricingFinalized(detail);
+  const noticeSent = hasTenantNoticeSent(detail);
   return [
     {
+      id: 'negotiable',
+      label:
+        detail.rentNegotiable === true
+          ? 'Rent negotiable with tenant'
+          : detail.rentNegotiable === false
+            ? 'Rent not negotiable'
+            : 'Rent negotiable?',
+      done: detail.rentNegotiable != null && pricingFinalized,
+    },
+    {
       id: 'agent-confirm',
-      label: hasCounter ? 'Review tenant counter-offer' : 'Agent confirmed proposed rent',
+      label: hasCounter
+        ? 'Review tenant counter-offer'
+        : pricingFinalized
+          ? `Agent confirmed ${detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? '—'}/wk`
+          : 'Confirm rent & lease terms',
       done: pricingFinalized,
     },
     {
-      id: 'landlord',
-      label: 'Landlord recommendation recorded',
-      done: pricingFinalized,
+      id: 'lease-term',
+      label: detail.preferredLeaseType
+        ? `Preferred ${detail.preferredLeaseType} term`
+        : 'Preferred lease term',
+      done: pricingFinalized && detail.preferredLeaseType != null,
     },
     {
       id: 'counter',
-      label: hasCounter
-        ? `Tenant counter: $${detail.tenantCounterWeekly}/wk — revise or accept`
-        : pricingFinalized
-          ? 'Ready to notify tenant'
-          : 'Awaiting agent confirmation',
-      done: pricingFinalized,
+      label: noticeSent
+        ? 'Tenant notified — decision locked'
+        : hasCounter
+          ? `Tenant counter: $${detail.tenantCounterWeekly}/wk`
+          : pricingFinalized
+            ? 'Ready to notify tenant'
+            : 'Awaiting agent decision',
+      done: noticeSent || pricingFinalized,
     },
   ];
 }

@@ -1,5 +1,8 @@
 import { api, apiV1 } from '@/lib/api';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+import {
+  leaseEndFromFixedTermWeeks,
+} from '@/lib/rent-review/scheduling';
 import type {
   CancelReviewInput,
   ConfirmReviewInput,
@@ -19,10 +22,23 @@ const agentRentReviewWorkflowPath = (propertyId: string, id: string) =>
 
 const dateOnly = (iso: string | null): string | null => (iso ? iso.slice(0, 10) : null);
 
+function resolveLeaseEndDate(
+  d: ServerRentReviewWorkflowView,
+  leaseEndDate: string | null,
+): string | null {
+  if (leaseEndDate) return leaseEndDate;
+  if (d.leaseEndDate) return dateOnly(d.leaseEndDate);
+  if (d.leaseType === 'fixed' && d.initialLeaseStartDate && d.fixedTermWeeks) {
+    return leaseEndFromFixedTermWeeks(d.initialLeaseStartDate, d.fixedTermWeeks);
+  }
+  return null;
+}
+
 export function mapRentReviewWorkflowDetail(
   d: ServerRentReviewWorkflowView,
   leaseEndDate: string | null = null,
 ): RentReviewWorkflowDetail {
+  const resolvedLeaseEnd = resolveLeaseEndDate(d, leaseEndDate);
   return {
     id: d.id,
     propertyId: d.propertyId,
@@ -34,8 +50,14 @@ export function mapRentReviewWorkflowDetail(
     proposedWeeklyRent: d.proposedWeeklyRent,
     effectiveDate: dateOnly(d.effectiveDate),
     rentReviewDate: dateOnly(d.rentReviewDate),
-    leaseEndDate,
+    leaseEndDate: resolvedLeaseEnd,
     leaseType: d.leaseType,
+    fixedTermWeeks: d.fixedTermWeeks,
+    initialLeaseStartDate: dateOnly(d.initialLeaseStartDate),
+    rentNegotiable: d.rentNegotiable,
+    preferredLeaseType: d.preferredLeaseType,
+    newAgreementStart: dateOnly(d.newAgreementStart),
+    newAgreementEnd: dateOnly(d.newAgreementEnd),
     createdAt: d.createdAt,
     agentConfirmedDate: d.agentConfirmedDate,
     completedDate: dateOnly(d.completedDate),
@@ -113,15 +135,50 @@ export const rentReviewApi = {
   runAiAnalysis: (id: string, leaseEndDate?: string | null): Promise<RentReviewWorkflowDetail> =>
     map(unwrap(api.post<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/ai-analysis`)), leaseEndDate),
 
-  approveAi: (id: string, leaseEndDate?: string | null): Promise<RentReviewWorkflowDetail> =>
-    map(unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/approve-ai`, {})), leaseEndDate),
+  approveAi: (
+    id: string,
+    propertyId?: string | null,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> => {
+    if (propertyId) {
+      return map(
+        unwrap(
+          apiV1.patch<{ review: ServerRentReviewWorkflowView }>(
+            `${agentRentReviewWorkflowPath(propertyId, id)}/approve-ai`,
+            {},
+          ),
+        ),
+        leaseEndDate,
+      );
+    }
+    return map(
+      unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/approve-ai`, {})),
+      leaseEndDate,
+    );
+  },
 
   setProposedRent: (
     id: string,
     input: SetProposedRentInput,
+    propertyId?: string | null,
     leaseEndDate?: string | null,
-  ): Promise<RentReviewWorkflowDetail> =>
-    map(unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/proposed-rent`, input)), leaseEndDate),
+  ): Promise<RentReviewWorkflowDetail> => {
+    if (propertyId) {
+      return map(
+        unwrap(
+          apiV1.patch<{ review: ServerRentReviewWorkflowView }>(
+            `${agentRentReviewWorkflowPath(propertyId, id)}/proposed-rent`,
+            input,
+          ),
+        ),
+        leaseEndDate,
+      );
+    }
+    return map(
+      unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/proposed-rent`, input)),
+      leaseEndDate,
+    );
+  },
 
   sendTenantNotice: (
     id: string,

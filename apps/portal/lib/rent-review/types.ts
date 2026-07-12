@@ -54,6 +54,12 @@ export interface RentReviewWorkflowDetail {
   rentReviewDate: string | null;
   leaseEndDate: string | null;
   leaseType: 'fixed' | 'periodic' | null;
+  fixedTermWeeks: number | null;
+  initialLeaseStartDate: string | null;
+  rentNegotiable: boolean | null;
+  preferredLeaseType: 'fixed' | 'periodic' | null;
+  newAgreementStart: string | null;
+  newAgreementEnd: string | null;
   createdAt: string;
   agentConfirmedDate: string | null;
   completedDate: string | null;
