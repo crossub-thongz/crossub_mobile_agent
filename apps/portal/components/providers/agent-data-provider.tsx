@@ -78,6 +78,7 @@ import { enrichPropertyAddresses, resolvePropertyDisplayAddress } from '@/lib/pr
 import { fetchAgentInspections } from '@/lib/inspections/fetch';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { useAgentStore } from '@/lib/store';
 import { displayName, formatPropertyFullAddress } from '@/lib/utils';
 import {
@@ -264,6 +265,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const storeEnsureMessageThread = useAgentStore((s) => s.ensureMessageThread);
   const uploadedDocuments = useAgentStore((s) => s.uploadedDocuments);
   const addUploadedDocument = useAgentStore((s) => s.addUploadedDocument);
+  const notificationPrefs = useAgentStore((s) => s.notificationPrefs);
   const tenantSelectionDecisions = useAgentStore((s) => s.tenantSelectionDecisions);
 
   // The live agent facade: properties come pre-mapped (the mapping needs the portfolio
@@ -1048,8 +1050,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [apiNotifications, readIds, properties]);
 
   const unreadNotificationCount = useMemo(
-    () => notifications.filter((n) => !n.read).length,
-    [notifications],
+    () =>
+      notifications.filter(
+        (n) => !n.read && notificationMatchesPrefs(n, notificationPrefs),
+      ).length,
+    [notifications, notificationPrefs],
   );
 
   const markNotificationRead = useCallback(

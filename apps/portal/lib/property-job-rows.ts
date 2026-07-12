@@ -18,7 +18,7 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { formatDate, formatDateTime, formatScheduledAt } from '@/lib/utils';
+import { formatDate, formatDateTime, formatCurrency, formatScheduledAt } from '@/lib/utils';
 import { inspectionReferenceLabel, workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import {
   inspectionCreatedAtIso,
@@ -272,6 +272,28 @@ function maintenanceDescriptionBody(request: MaintenanceRequest): string {
   return description || '—';
 }
 
+function formatRentReviewJobDescription(
+  review: RentReviewCase,
+  decision?: RentReviewDecision | null,
+): string {
+  const currentLabel =
+    review.currentRent > 0 ? `${formatCurrency(review.currentRent)}/wk` : '—';
+
+  let newRent: number | null = null;
+  if (decision?.action === 'custom' && decision.amount != null && decision.amount > 0) {
+    newRent = decision.amount;
+  } else if (review.agreedRent != null && review.agreedRent > 0) {
+    newRent = review.agreedRent;
+  } else if (review.counterOffer != null && review.counterOffer > 0) {
+    newRent = review.counterOffer;
+  } else if (review.suggestedRent > 0) {
+    newRent = review.suggestedRent;
+  }
+
+  const newLabel = newRent != null ? `${formatCurrency(newRent)}/wk` : '—';
+  return `${currentLabel} → ${newLabel}`;
+}
+
 export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobRow[] {
   return requests.map((request) => {
     const progress = maintenanceWorkflowProgress(request);
@@ -372,16 +394,7 @@ export function rentReviewJobRows(
       kind: 'rent_review',
       jobType: 'Rent review',
       name: workflowCaseReferenceLabel(review.id, 'rent_review'),
-      description: [
-        review.tenantName,
-        review.leaseType === 'periodic'
-          ? 'Periodic'
-          : review.fixedTermWeeks
-            ? `Fixed · ${review.fixedTermWeeks} wks`
-            : 'Fixed',
-      ]
-        .filter(Boolean)
-        .join(' · ') || '—',
+      description: formatRentReviewJobDescription(review, decision),
       date: formatDate(review.reviewDue),
       createdAt,
       createdAtMs,

@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Moon, Sun } from 'lucide-react';
+import { ChevronRight, Moon, Sun } from 'lucide-react';
 
-import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useTheme } from '@/components/theme-provider';
@@ -12,7 +11,7 @@ import { useAgentStore, type NotificationPrefs } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
-  const { apiConnected } = useAgentData();
+  const { hasFullManagementAccess } = useAgentData();
   const { resolvedTheme, setTheme } = useTheme();
   const prefs = useAgentStore((s) => s.notificationPrefs);
   const setPref = useAgentStore((s) => s.setNotificationPref);
@@ -36,18 +35,8 @@ export default function SettingsPage() {
   ];
 
   return (
-    <AgentShell title="Settings" backHref={ROUTES.PROFILE} showConnectionBanner>
+    <AgentShell title="Settings" backHref={ROUTES.PROFILE}>
       <div className="space-y-5">
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Connection</h2>
-          <ConnectionBanner />
-          <p className="text-muted-foreground px-1 text-xs">
-            {apiConnected
-              ? 'Live data from crossub_web'
-              : 'Offline — set API_INTERNAL_URL and start the API (pnpm dev:api)'}
-          </p>
-        </section>
-
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">Appearance</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -85,9 +74,9 @@ export default function SettingsPage() {
             <h2 className="text-sm font-semibold">Notifications</h2>
           </div>
           {toggles.map(({ key, label, description }) => (
-            <label
+            <div
               key={key}
-              className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card p-4"
+              className="flex items-center justify-between gap-3 rounded-xl border bg-card p-4"
             >
               <div>
                 <p className="text-sm font-medium">{label}</p>
@@ -97,6 +86,7 @@ export default function SettingsPage() {
                 type="button"
                 role="switch"
                 aria-checked={prefs[key]}
+                aria-label={`${label} notifications`}
                 onClick={() => setPref(key, !prefs[key])}
                 className={cn(
                   'relative h-6 w-11 shrink-0 rounded-full transition-colors',
@@ -110,15 +100,24 @@ export default function SettingsPage() {
                   )}
                 />
               </button>
-            </label>
+            </div>
           ))}
           <p className="text-muted-foreground px-1 text-[11px]">
-            Preferences saved on this device. Push notifications when connected to
-            crossub_web.
+            Preferences are saved on this device and control which alerts appear in the
+            notification bell and live pop-ups.
           </p>
         </section>
 
         <section className="rounded-xl border bg-card divide-y">
+          {hasFullManagementAccess ? (
+            <Link
+              href={ROUTES.TENANTS}
+              className="flex items-center justify-between px-4 py-3 text-sm"
+            >
+              Tenant accounts
+              <ChevronRight className="text-muted-foreground size-4" />
+            </Link>
+          ) : null}
           <Link
             href={ROUTES.PROFILE}
             className="flex items-center justify-between px-4 py-3 text-sm"

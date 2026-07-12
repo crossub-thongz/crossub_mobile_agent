@@ -54,7 +54,7 @@ export default function TenantsPage() {
   );
 
   return (
-    <AgentShell title="Tenant accounts" backHref={ROUTES.LEASING} backLabel="Leasing">
+    <AgentShell title="Tenant accounts" backHref={ROUTES.SETTINGS} backLabel="Settings">
       <div className="space-y-4 pb-8">
         <PageIntro description="Tenant logins you have created for the CROSSUB Tenant App. Tap an account to view and copy credentials." />
 

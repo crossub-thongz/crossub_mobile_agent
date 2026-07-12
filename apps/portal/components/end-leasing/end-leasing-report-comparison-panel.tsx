@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  Camera,
-  Check,
   ExternalLink,
-  FileText,
   Loader2,
   Lock,
   Mail,
@@ -24,13 +21,8 @@ import { InspectionReportDownloadActions } from '@/components/inspections/inspec
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { communicationsThread } from '@/constants/routes';
 import { inspectionsApi } from '@/lib/inspections-api';
-import {
-  buildOutgoingAreaPhotoPairs,
-  countOutgoingReportPhotos,
-} from '@/lib/inspections/outgoing-report-evidence';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type {
-  EndLeasingOverviewEmail,
   ReportComparisonRepairItem,
   ReportComparisonSettlementSummary,
   TenantQuoteResponse,
@@ -45,62 +37,6 @@ import {
 } from '@/lib/crossub-api/agent-client';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
-
-function SummaryEmailPanel({
-  email,
-  title,
-}: {
-  email: EndLeasingOverviewEmail;
-  title: string;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Mail className="text-primary size-4" />
-          <p className="text-sm font-semibold">{title}</p>
-        </div>
-        {email.commConversationId ? (
-          <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
-            <Link href={communicationsThread(email.commConversationId)}>
-              <ExternalLink className="size-3.5" />
-              View in Message Center
-            </Link>
-          </Button>
-        ) : null}
-      </div>
-      <div className="rounded-xl border bg-muted/20 p-3 text-xs">
-        <dl className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">From</dt>
-            <dd className="font-medium">{email.from}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">To</dt>
-            <dd className="font-medium">{email.to}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Subject</dt>
-            <dd className="font-medium">{email.subject}</dd>
-          </div>
-          {email.sentAt ? (
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">Drafted</dt>
-              <dd className="font-medium">{formatDateTime(email.sentAt)}</dd>
-            </div>
-          ) : null}
-        </dl>
-      </div>
-      <div className="rounded-xl border bg-card p-3">
-        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-          Message
-        </p>
-        <pre className="text-xs leading-relaxed whitespace-pre-wrap font-sans">{email.body}</pre>
-      </div>
-    </div>
-  );
-}
 
 const TENANT_QUOTE_RESPONSE_LABEL: Record<TenantQuoteResponse, string> = {
   pending: 'Awaiting response',
@@ -333,35 +269,7 @@ function MaintenanceQuotationPanel({ items }: { items: ReportComparisonRepairIte
   );
 }
 
-function PhotoSlot({
-  label,
-  url,
-}: {
-  label: string;
-  url?: string | null;
-}) {
-  if (!url) {
-    return (
-      <div className="border-border/80 bg-secondary/10 flex aspect-square items-center justify-center rounded-lg border border-dashed p-2 text-center text-[10px] text-muted-foreground">
-        {label}
-      </div>
-    );
-  }
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="bg-secondary/30 block aspect-square overflow-hidden rounded-lg border"
-      aria-label={`View ${label}`}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={label} className="size-full object-cover" />
-    </a>
-  );
-}
-
-function ReportEvidenceSection({
+function CompareReportPdfRow({
   outgoingDetail,
   ingoingDetail,
   loading,
@@ -370,89 +278,223 @@ function ReportEvidenceSection({
   ingoingDetail: InspectionDetail | null;
   loading: boolean;
 }) {
-  const pairs = useMemo(
-    () => (outgoingDetail ? buildOutgoingAreaPhotoPairs(outgoingDetail.areas) : []),
-    [outgoingDetail],
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2.5">
+        <span className="text-sm font-semibold">Ingoing Report:</span>
+        {loading ? (
+          <span className="text-muted-foreground flex items-center gap-1 text-xs">
+            <Loader2 className="size-3 animate-spin" />
+            Loading…
+          </span>
+        ) : ingoingDetail ? (
+          <InspectionReportDownloadActions
+            inspectionId={ingoingDetail.id}
+            reportUrl={ingoingDetail.reportUrl}
+            propertyLabel={
+              ingoingDetail.propertyFullAddress ?? ingoingDetail.propertyAddress ?? 'Property'
+            }
+            inspectionType="ingoing"
+            variant="inline"
+            size="sm"
+          />
+        ) : (
+          <span className="text-muted-foreground text-xs">Not linked yet</span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2.5">
+        <span className="text-sm font-semibold">Outgoing Report:</span>
+        {loading ? (
+          <span className="text-muted-foreground flex items-center gap-1 text-xs">
+            <Loader2 className="size-3 animate-spin" />
+            Loading…
+          </span>
+        ) : outgoingDetail ? (
+          <InspectionReportDownloadActions
+            inspectionId={outgoingDetail.id}
+            reportUrl={outgoingDetail.reportUrl}
+            propertyLabel={
+              outgoingDetail.propertyFullAddress ?? outgoingDetail.propertyAddress ?? 'Property'
+            }
+            inspectionType="outgoing"
+            variant="inline"
+            size="sm"
+          />
+        ) : (
+          <span className="text-muted-foreground text-xs">Not scheduled yet</span>
+        )}
+      </div>
+    </div>
   );
-  const photoCount = countOutgoingReportPhotos(pairs);
-  const visiblePairs = pairs.filter(
-    (pair) => pair.ingoingPhotos.length > 0 || pair.outgoingPhotos.length > 0,
-  );
+}
+
+function CompareResponsibilitySection({
+  title,
+  items,
+  onChange,
+  onEmail,
+  emailHint,
+  busy,
+}: {
+  title: string;
+  items: ReportComparisonRepairItem[];
+  onChange: (items: ReportComparisonRepairItem[]) => void;
+  onEmail: () => void;
+  emailHint: string;
+  busy: boolean;
+}) {
+  const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
+    onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  const removeRow = (index: number) => {
+    onChange(items.filter((_, i) => i !== index));
+  };
+
+  const addRow = () => {
+    onChange([...items, emptyRepairItem()]);
+  };
 
   return (
-    <section className="space-y-3 rounded-xl border bg-card p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Camera className="text-primary size-4" />
-          <h3 className="text-sm font-semibold">Ingoing vs outgoing comparison</h3>
+    <section className="rounded-xl border bg-card">
+      <div className="border-b px-4 py-2.5">
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start">
+        <div className="min-w-0 flex-1 overflow-x-auto rounded-xl border">
+          <table className="w-full min-w-[420px] text-left text-xs">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-semibold">#</th>
+                <th className="px-3 py-2 font-semibold">Area</th>
+                <th className="px-3 py-2 font-semibold">Description</th>
+                <th className="px-2 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-muted-foreground px-3 py-4 text-center">
+                    No items yet.
+                  </td>
+                </tr>
+              ) : (
+                items.map((row, index) => (
+                  <tr key={`${title}-${index}`} className="border-t align-top">
+                    <td className="px-3 py-2 tabular-nums">{index + 1}</td>
+                    <td className="px-3 py-2">
+                      <Input
+                        className="h-8 text-xs"
+                        value={row.area}
+                        placeholder="Area"
+                        disabled={busy}
+                        onChange={(e) => updateRow(index, { area: e.target.value })}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        className="h-8 text-xs"
+                        value={row.description}
+                        placeholder="Description"
+                        disabled={busy}
+                        onChange={(e) => updateRow(index, { description: e.target.value })}
+                      />
+                    </td>
+                    <td className="px-2 py-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-8"
+                        disabled={busy}
+                        onClick={() => removeRow(index)}
+                        aria-label="Remove row"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-        {loading ? (
-          <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
-            <Loader2 className="size-3 animate-spin" />
-            Loading reports…
-          </span>
-        ) : photoCount > 0 ? (
-          <span className="text-muted-foreground text-[10px] uppercase tracking-wide">
-            {photoCount} photo{photoCount === 1 ? '' : 's'}
+        <div className="flex shrink-0 flex-col gap-2 sm:w-28">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 w-full gap-1 text-xs"
+            disabled={busy}
+            onClick={addRow}
+          >
+            <Plus className="size-3.5" />
+            Add
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-8 w-full gap-1.5 text-xs"
+            disabled={busy}
+            onClick={onEmail}
+          >
+            <Mail className="size-3.5" />
+            Email
+          </Button>
+          <p className="text-muted-foreground text-center text-[10px] leading-snug">{emailHint}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function QuoteResponsibilitySection({
+  title,
+  items,
+  contractors,
+  agencyId,
+  onContractorsChange,
+  onChange,
+  readOnly = false,
+  lockedHint,
+  busy = false,
+}: {
+  title: string;
+  items: ReportComparisonRepairItem[];
+  contractors: PreferredContractor[];
+  agencyId: string | null | undefined;
+  onContractorsChange: (contractors: PreferredContractor[]) => void;
+  onChange: (items: ReportComparisonRepairItem[]) => void;
+  readOnly?: boolean;
+  lockedHint?: string;
+  busy?: boolean;
+}) {
+  return (
+    <section className="rounded-xl border bg-card">
+      <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {readOnly && lockedHint ? (
+          <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
+            <Lock className="size-3" />
+            {lockedHint}
           </span>
         ) : null}
       </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border bg-muted/20 p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-            Ingoing report
-          </p>
-          {ingoingDetail ? (
-            <InspectionReportDownloadActions
-              inspectionId={ingoingDetail.id}
-              reportUrl={ingoingDetail.reportUrl}
-              propertyLabel={ingoingDetail.propertyFullAddress ?? ingoingDetail.propertyAddress ?? 'Property'}
-              inspectionType="ingoing"
-              variant="inline"
-            />
-          ) : (
-            <p className="text-muted-foreground text-xs">Ingoing inspection not linked yet.</p>
-          )}
-        </div>
-        <div className="rounded-lg border bg-muted/20 p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-            Outgoing report
-          </p>
-          {outgoingDetail ? (
-            <InspectionReportDownloadActions
-              inspectionId={outgoingDetail.id}
-              reportUrl={outgoingDetail.reportUrl}
-              propertyLabel={outgoingDetail.propertyFullAddress ?? outgoingDetail.propertyAddress ?? 'Property'}
-              inspectionType="outgoing"
-              variant="inline"
-            />
-          ) : (
-            <p className="text-muted-foreground text-xs">Outgoing inspection not scheduled yet.</p>
-          )}
-        </div>
+      <div className="p-4">
+        <RepairItemsTable
+          title=""
+          hideTitle
+          showAddRow={false}
+          items={items}
+          contractors={contractors}
+          agencyId={agencyId}
+          onContractorsChange={onContractorsChange}
+          onChange={onChange}
+          readOnly={readOnly}
+          busy={busy}
+        />
       </div>
-
-      {visiblePairs.length === 0 ? (
-        <div className="text-muted-foreground flex items-center gap-2 rounded-lg border border-dashed p-4 text-xs">
-          <FileText className="size-4 shrink-0" />
-          {loading
-            ? 'Fetching inspection reports…'
-            : 'Side-by-side ingoing and outgoing photos appear once the inspector uploads them.'}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {visiblePairs.map((pair) => (
-            <div key={pair.room} className="space-y-2">
-              <p className="text-sm font-semibold">{pair.room}</p>
-              <div className="grid grid-cols-2 gap-3">
-                <PhotoSlot label="Ingoing" url={pair.ingoingPhotos[0]?.url} />
-                <PhotoSlot label="Outgoing" url={pair.outgoingPhotos[0]?.url} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
@@ -577,6 +619,9 @@ function RepairItemsTable({
   readOnly = false,
   lockedHint,
   hideQuoteColumns = false,
+  hideTitle = false,
+  showAddRow = true,
+  busy = false,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -588,6 +633,9 @@ function RepairItemsTable({
   readOnly?: boolean;
   lockedHint?: string;
   hideQuoteColumns?: boolean;
+  hideTitle?: boolean;
+  showAddRow?: boolean;
+  busy?: boolean;
 }) {
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -603,15 +651,17 @@ function RepairItemsTable({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold">{title}</p>
-        {readOnly && lockedHint ? (
-          <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
-            <Lock className="size-3" />
-            {lockedHint}
-          </span>
-        ) : null}
-      </div>
+      {!hideTitle ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold">{title}</p>
+          {readOnly && lockedHint ? (
+            <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px]">
+              <Lock className="size-3" />
+              {lockedHint}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="overflow-x-auto rounded-xl border">
         <table className="w-full min-w-[720px] text-left text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
@@ -660,6 +710,7 @@ function RepairItemsTable({
                           className="h-8 text-xs"
                           value={row.area}
                           placeholder="Area"
+                          disabled={busy}
                           onChange={(e) => updateRow(index, { area: e.target.value })}
                         />
                       </td>
@@ -668,6 +719,7 @@ function RepairItemsTable({
                           className="h-8 text-xs"
                           value={row.description}
                           placeholder="Description"
+                          disabled={busy}
                           onChange={(e) => updateRow(index, { description: e.target.value })}
                         />
                       </td>
@@ -678,6 +730,7 @@ function RepairItemsTable({
                               className="h-8 text-xs"
                               value={row.quote ?? ''}
                               placeholder="$0.00"
+                              disabled={busy}
                               onChange={(e) => updateRow(index, { quote: e.target.value })}
                             />
                           </td>
@@ -698,6 +751,7 @@ function RepairItemsTable({
                           size="icon"
                           variant="ghost"
                           className="size-8"
+                          disabled={busy}
                           onClick={() => removeRow(index)}
                           aria-label="Remove row"
                         >
@@ -713,8 +767,15 @@ function RepairItemsTable({
         </table>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {!readOnly ? (
-          <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={addRow}>
+        {!readOnly && showAddRow ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 text-xs"
+            disabled={busy}
+            onClick={addRow}
+          >
             <Plus className="size-3.5" />
             Add row
           </Button>
@@ -776,6 +837,8 @@ export function EndLeasingReportComparisonPanel({
   );
   const [busy, setBusy] = useState(false);
   const seededFromInspectionRef = useRef(false);
+  const compareAutosaveReadyRef = useRef(false);
+  const quoteAutosaveReadyRef = useRef(false);
 
   const refreshReports = useCallback(async () => {
     if (!apiConnected) return;
@@ -808,6 +871,8 @@ export function EndLeasingReportComparisonPanel({
 
   useEffect(() => {
     seededFromInspectionRef.current = false;
+    compareAutosaveReadyRef.current = false;
+    quoteAutosaveReadyRef.current = false;
     setTenantItems(caseData.reportComparison.tenantResponsibility);
     setLandlordItems(caseData.reportComparison.landlordResponsibility);
     // Only reset draft rows when opening a different case — not on every parent re-render.
@@ -869,21 +934,29 @@ export function EndLeasingReportComparisonPanel({
     await persist(patch, { silent });
   };
 
-  const sendQuoteEmail = async (audience: 'tenant' | 'landlord' | 'agent') => {
+  useEffect(() => {
+    if (mode !== 'compare' && mode !== 'quote') return;
+    const readyRef = mode === 'compare' ? compareAutosaveReadyRef : quoteAutosaveReadyRef;
+    if (!readyRef.current) {
+      readyRef.current = true;
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void saveRepairItems(true).catch(() => undefined);
+    }, 1000);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce draft rows in compare/quote modes
+  }, [tenantItems, landlordItems, mode]);
+
+  const sendQuoteEmail = async () => {
     setBusy(true);
     try {
       await saveRepairItems(true);
-      const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, audience);
+      const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'agent');
       applyCase(updated);
       setTenantItems(updated.reportComparison.tenantResponsibility);
       setLandlordItems(updated.reportComparison.landlordResponsibility);
-      toast.success(
-        audience === 'tenant'
-          ? 'Tenant portion sent to tenant'
-          : audience === 'agent'
-            ? 'Repair quotes sent to agent'
-            : 'Repair quote summary sent',
-      );
+      toast.success('Repair quotes sent to agent');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -902,7 +975,7 @@ export function EndLeasingReportComparisonPanel({
       toast.success(
         audience === 'tenant'
           ? 'Tenant responsibility summary sent'
-          : 'Full comparison summary sent to agent',
+          : 'Comparison summary sent to tenant and landlord',
       );
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -988,6 +1061,85 @@ export function EndLeasingReportComparisonPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync once when awaiting reply
   }, [apiConnected, caseData.id, tenantQuoteEmailSent, rc.tenantQuoteResponse]);
 
+  if (showCompare) {
+    return (
+      <div className="space-y-4">
+        <CompareReportPdfRow
+          outgoingDetail={outgoingDetail}
+          ingoingDetail={ingoingDetail}
+          loading={loadingReports}
+        />
+        <CompareResponsibilitySection
+          title="Tenant Responsibility"
+          items={tenantItems}
+          onChange={setTenantItems}
+          busy={busy}
+          emailHint="Send to tenant only"
+          onEmail={() => void sendComparisonSummary('tenant')}
+        />
+        <CompareResponsibilitySection
+          title="Landlord Responsibility"
+          items={landlordItems}
+          onChange={setLandlordItems}
+          busy={busy}
+          emailHint="Send to tenant + landlord"
+          onEmail={() => void sendComparisonSummary('agent')}
+        />
+      </div>
+    );
+  }
+
+  if (showQuote) {
+    return (
+      <div className="space-y-4">
+        <CompareReportPdfRow
+          outgoingDetail={outgoingDetail}
+          ingoingDetail={ingoingDetail}
+          loading={loadingReports}
+        />
+        <QuoteResponsibilitySection
+          title="Tenant Responsibility"
+          items={tenantItems}
+          contractors={contractors}
+          agencyId={agencyId}
+          onContractorsChange={setContractors}
+          onChange={setTenantItems}
+          readOnly={tenantTableLocked}
+          lockedHint={
+            tenantTableLocked
+              ? rc.tenantQuoteResponse === 'accepted'
+                ? 'Locked — tenant agreed'
+                : 'Locked — awaiting tenant reply'
+              : undefined
+          }
+          busy={busy}
+        />
+        <QuoteResponsibilitySection
+          title="Landlord Responsibility"
+          items={landlordItems}
+          contractors={contractors}
+          agencyId={agencyId}
+          onContractorsChange={setContractors}
+          onChange={setLandlordItems}
+          busy={busy}
+        />
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-9 gap-1.5 text-xs"
+            disabled={busy}
+            onClick={() => void sendQuoteEmail()}
+          >
+            <Send className="size-3.5" />
+            Send quotes
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (showTenantResponse) {
     return (
       <div className="space-y-4">
@@ -1012,209 +1164,5 @@ export function EndLeasingReportComparisonPanel({
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {(showCompare || showQuote) && caseData.inspection.status === LEASING_ITEM_STATUS.DONE ? (
-        <div className="text-muted-foreground rounded-lg border bg-muted/20 px-3 py-2 text-xs">
-          Outgoing inspection completed
-          {caseData.inspection.inspectionDate
-            ? ` · ${caseData.inspection.inspectionDate.slice(0, 10)}`
-            : ''}
-        </div>
-      ) : null}
-
-      {showCompare || showQuote ? (
-        <ReportEvidenceSection
-          outgoingDetail={outgoingDetail}
-          ingoingDetail={ingoingDetail}
-          loading={loadingReports}
-        />
-      ) : null}
-
-      {showCompare ? (
-        <>
-          <section className="rounded-xl border bg-card p-4">
-            <p className="mb-3 text-sm font-semibold">Comparison acknowledgement</p>
-            <p className="text-muted-foreground mb-3 text-xs">
-              Agent and tenant both review the ingoing/outgoing comparison before proceeding.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={rc.agentAcknowledged ? 'default' : 'outline'}
-                className="h-8 gap-1.5 text-xs"
-                disabled={busy}
-                onClick={() => void persist({ agentAcknowledged: !rc.agentAcknowledged })}
-              >
-                <Check className="size-3.5" />
-                Agent reviewed {rc.agentAcknowledged ? '✓' : ''}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={rc.tenantAcknowledged ? 'default' : 'outline'}
-                className="h-8 gap-1.5 text-xs"
-                disabled={busy}
-                onClick={() => void persist({ tenantAcknowledged: !rc.tenantAcknowledged })}
-              >
-                <Check className="size-3.5" />
-                Tenant reviewed {rc.tenantAcknowledged ? '✓' : ''}
-              </Button>
-            </div>
-          </section>
-
-          {rc.tenantComparisonSummaryEmail?.body ? (
-            <SummaryEmailPanel
-              email={rc.tenantComparisonSummaryEmail}
-              title="Tenant responsibility summary (sent to tenant)"
-            />
-          ) : null}
-
-          {rc.agentComparisonSummaryEmail?.body ? (
-            <SummaryEmailPanel
-              email={rc.agentComparisonSummaryEmail}
-              title="Full summary (sent to agent)"
-            />
-          ) : null}
-
-          <section className="space-y-4 rounded-xl border bg-card p-4">
-            <div>
-              <p className="text-sm font-semibold">Define responsibility</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                List tenant and landlord repair items from the comparison. Save before sending
-                summary emails.
-              </p>
-            </div>
-
-            <RepairItemsTable
-              title="Tenant responsibility"
-              items={tenantItems}
-              contractors={contractors}
-              agencyId={agencyId}
-              onContractorsChange={setContractors}
-              onChange={setTenantItems}
-              readOnly={false}
-              hideQuoteColumns
-              footerAction={
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-8 gap-1.5 text-xs"
-                  disabled={busy}
-                  onClick={() => void sendComparisonSummary('tenant')}
-                >
-                  <Send className="size-3.5" />
-                  Email tenant (tenant items only)
-                </Button>
-              }
-            />
-            <RepairItemsTable
-              title="Landlord responsibility"
-              items={landlordItems}
-              contractors={contractors}
-              agencyId={agencyId}
-              onContractorsChange={setContractors}
-              onChange={setLandlordItems}
-              readOnly={false}
-              hideQuoteColumns
-              footerAction={
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-8 gap-1.5 text-xs"
-                  disabled={busy}
-                  onClick={() => void sendComparisonSummary('agent')}
-                >
-                  <Send className="size-3.5" />
-                  Email agent (tenant + landlord summary)
-                </Button>
-              }
-            />
-
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={busy}
-              onClick={() => void saveRepairItems()}
-            >
-              Save responsibility items
-            </Button>
-          </section>
-        </>
-      ) : null}
-
-      {showQuote ? (
-        <>
-          {(rc.agentRepairQuoteEmail ?? rc.landlordRepairQuoteEmail)?.body ? (
-            <SummaryEmailPanel
-              email={(rc.agentRepairQuoteEmail ?? rc.landlordRepairQuoteEmail)!}
-              title="Repair quotes sent to agent"
-            />
-          ) : null}
-
-          <section className="space-y-4 rounded-xl border bg-card p-4">
-            <div>
-              <p className="text-sm font-semibold">Obtain repair quote</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Maintenance enters quote and assigns handyman. Quotes are sent to the agent first
-                for review.
-              </p>
-            </div>
-
-            <RepairItemsTable
-              title="Tenant responsibility"
-              items={tenantItems}
-              contractors={contractors}
-              agencyId={agencyId}
-              onContractorsChange={setContractors}
-              onChange={setTenantItems}
-              readOnly={tenantTableLocked}
-              lockedHint={
-                tenantTableLocked
-                  ? rc.tenantQuoteResponse === 'accepted'
-                    ? 'Locked — tenant agreed'
-                    : 'Locked — awaiting tenant reply'
-                  : undefined
-              }
-            />
-            <RepairItemsTable
-              title="Landlord responsibility"
-              items={landlordItems}
-              contractors={contractors}
-              agencyId={agencyId}
-              onContractorsChange={setContractors}
-              onChange={setLandlordItems}
-              footerAction={
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="h-8 gap-1.5 text-xs"
-                  disabled={busy}
-                  onClick={() => void sendQuoteEmail('agent')}
-                >
-                  <Send className="size-3.5" />
-                  Email agent (tenant + landlord quotes)
-                </Button>
-              }
-            />
-
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={busy}
-              onClick={() => void saveRepairItems()}
-            >
-              Save quotes & handyman
-            </Button>
-          </section>
-        </>
-      ) : null}
-    </div>
-  );
+  return null;
 }

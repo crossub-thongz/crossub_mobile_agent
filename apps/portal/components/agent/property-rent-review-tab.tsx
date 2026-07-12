@@ -283,15 +283,14 @@ export function PropertyRentReviewTab({
         <h3 className="text-sm font-semibold">Rent review cases</h3>
         <p className="text-muted-foreground text-xs">
           Click a case to open the full rent review workflow. Countdown tracks the agent&apos;s{' '}
-          {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day review window (order placed{' '}
-          {RENT_REVIEW_ADVANCE_ORDER_DAYS} days before lease end). Tenant reminder shows when the
-          system auto-notifies the tenant {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease
-          end.
+          {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day conduct window (review opens{' '}
+          {RENT_REVIEW_ADVANCE_ORDER_DAYS} days before lease end;{' '}
+          {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days remain for the statutory tenant notice).
         </p>
         <PropertyJobCasesTable
           rows={jobRows}
           showRentReviewSchedule
-          dateColumnLabel="Due"
+          dateColumnLabel="Due date"
           selectedId={selectedCaseId}
           onRowClick={handleRowClick}
           emptyTitle="No rent review cases"

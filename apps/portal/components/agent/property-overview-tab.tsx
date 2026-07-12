@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { Archive, ListTodo } from 'lucide-react';
+import { Archive } from 'lucide-react';
 
 import { ContactTile } from '@/components/agent/property-contact-tile';
 import { PropertyBondEditDialog } from '@/components/agent/property-bond-edit-dialog';
@@ -37,7 +36,6 @@ import type {
   LeasingRecord,
   MaintenanceRequest,
   Property,
-  PropertyNeedAction,
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -143,7 +141,6 @@ function sliceDate(value?: string | null): string {
 export function PropertyOverviewTab({
   property,
   propertyId,
-  needActions,
   maintenance,
   inspections,
   propertyDocs,
@@ -162,7 +159,6 @@ export function PropertyOverviewTab({
 }: {
   property: Property;
   propertyId: string;
-  needActions: PropertyNeedAction[];
   maintenance: MaintenanceRequest[];
   inspections: Inspection[];
   propertyDocs: AgentDocument[];
@@ -435,26 +431,6 @@ export function PropertyOverviewTab({
 
   return (
     <div className="space-y-3">
-      {needActions.length > 0 ? (
-        <section className="rounded-xl border bg-card p-3">
-          <div className="mb-2 flex items-center gap-1.5">
-            <ListTodo className="text-primary size-3.5" />
-            <h3 className="text-xs font-semibold">Action needed</h3>
-          </div>
-          <div className="space-y-1.5">
-            {needActions.map((a) => (
-              <Link
-                key={a.id}
-                href={a.href}
-                className="block rounded-lg border border-destructive/30 bg-destructive/5 px-2.5 py-2 text-[11px] font-semibold text-destructive"
-              >
-                {a.label}
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       <OverviewSection
         title="Tenancy"
         onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
@@ -561,13 +537,14 @@ export function PropertyOverviewTab({
 
       <OverviewSection title="Jobs in progress">
         <p className="text-muted-foreground mb-2 text-[11px]">
-          Jobs are grouped by type. Use the job type dropdown to filter, or click a row to open
-          the workflow.
+          Choose a job type from the dropdown to view active jobs, then click a row to open the
+          workflow.
         </p>
         <PropertyJobCasesTable
           rows={inProgressJobs}
           showViewToggle={false}
           groupByJobType
+          requireJobTypeFilterSelection
           showRentReviewSchedule={false}
           selectedId={selectedJob?.id}
           onRowClick={handleJobClick}

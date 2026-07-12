@@ -127,15 +127,12 @@ export default function LeasingPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Button asChild variant="outline" className="w-full">
             <Link href={tenantNew()}>
               <UserPlus className="size-4" />
               Add tenant
             </Link>
-          </Button>
-          <Button asChild variant="outline" className="w-full">
-            <Link href={ROUTES.TENANTS}>Tenant accounts</Link>
           </Button>
         </div>
 

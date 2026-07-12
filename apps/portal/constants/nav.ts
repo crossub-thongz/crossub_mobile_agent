@@ -6,7 +6,6 @@ import {
   FolderArchive,
   LayoutDashboard,
   Settings,
-  UserPlus,
   Wrench,
 } from 'lucide-react';
 
@@ -35,10 +34,9 @@ export const MORE_NAV: NavItem[] = [
   { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive, portalAccess: 'full' },
 ];
 
-/** Pinned below workflow modules — settings & tenant directory. */
+/** Pinned below workflow modules — settings. */
 export const MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
-  { href: ROUTES.TENANTS, label: 'Tenant accounts', icon: UserPlus, portalAccess: 'full' },
 ];
 
 /** @deprecated Sidebar no longer shows Message Center — empty for import compat. */

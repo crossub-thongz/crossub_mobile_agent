@@ -6,7 +6,7 @@ import { MapPin } from 'lucide-react';
 import { propertyDetail } from '@/constants/routes';
 import { getGoogleMapsApiKey, loadGoogleMaps } from '@/lib/google-places';
 import type { Property } from '@/lib/types';
-import { formatPropertyFullAddress } from '@/lib/utils';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 const DEFAULT_CENTER = { lat: -33.8688, lng: 151.2093 };
 const DEFAULT_ZOOM = 11;
@@ -26,12 +26,17 @@ export function DashboardPropertiesMap({
   properties,
   embedded = false,
   showStats,
+  dashboardTile = false,
+  className,
 }: {
   properties: Property[];
   /** Fill parent grid cell height instead of fixed viewport height. */
   embedded?: boolean;
   /** Show the property-count line when embedded (e.g. dashboard map row). */
   showStats?: boolean;
+  /** Centered dashboard tile: 2/3 width with a landscape aspect from md up. */
+  dashboardTile?: boolean;
+  className?: string;
 }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -162,21 +167,30 @@ export function DashboardPropertiesMap({
   }
 
   return (
-    <div className={embedded ? 'flex h-full min-h-0 flex-col gap-2' : 'space-y-2'}>
+    <div
+      className={cn(
+        embedded && !dashboardTile ? 'flex h-full min-h-0 flex-col gap-2' : 'flex flex-col gap-2',
+        className,
+      )}
+    >
       <div
-        className={
-          embedded
-            ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card shadow-sm'
-            : 'overflow-hidden rounded-xl border bg-card shadow-sm'
-        }
+        className={cn(
+          'overflow-hidden rounded-xl border bg-card shadow-sm',
+          embedded && !dashboardTile && 'flex min-h-0 flex-1 flex-col',
+          dashboardTile &&
+            'aspect-[4/3] w-full shrink-0 md:aspect-[2/1]',
+        )}
       >
         <div
           ref={mapContainerRef}
-          className={
-            embedded
-              ? 'bg-muted/30 min-h-[180px] w-full flex-1'
-              : 'bg-muted/30 h-[min(52vh,360px)] w-full min-h-[220px]'
-          }
+          className={cn(
+            'bg-muted/30 w-full',
+            dashboardTile
+              ? 'h-full min-h-0'
+              : embedded
+                ? 'min-h-[180px] flex-1'
+                : 'h-[min(52vh,360px)] min-h-[220px]',
+          )}
           aria-label="Portfolio properties map"
         />
       </div>

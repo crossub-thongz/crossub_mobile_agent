@@ -106,8 +106,8 @@ function buildOrderCountdownBadge(
     };
   }
 
-  const daysUntilTenantReminder = calendarDaysUntil(scheduling.noticeDeadlineOn, reference);
-  if (daysUntilTenantReminder == null) {
+  const conductDaysRemaining = calendarDaysUntil(scheduling.noticeDeadlineOn, reference);
+  if (conductDaysRemaining == null) {
     return {
       label: '—',
       title: 'Could not calculate review countdown',
@@ -116,12 +116,12 @@ function buildOrderCountdownBadge(
   }
 
   return {
-    label: formatCountdownLabel(daysUntilTenantReminder),
+    label: formatCountdownLabel(conductDaysRemaining),
     title:
-      `${RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day agent window — complete the review before ` +
-      `${scheduling.noticeDeadlineOn} when the automatic tenant reminder fires ` +
-      `(${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease end).`,
-    tone: toneForDays(daysUntilTenantReminder),
+      `${RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day agent conduct window — the rent review must be completed by ` +
+      `${scheduling.noticeDeadlineOn} (${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days before lease end ` +
+      `${scheduling.scheduleAnchor}, leaving ${RENT_REVIEW_STATUTORY_NOTICE_DAYS} days for the statutory tenant notice).`,
+    tone: toneForDays(conductDaysRemaining),
   };
 }
 

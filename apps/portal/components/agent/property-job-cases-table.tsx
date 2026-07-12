@@ -35,6 +35,17 @@ type PropertyJobSortKey =
   | 'date'
   | 'status';
 
+type PropertyJobRowCellKey =
+  | 'jobType'
+  | 'name'
+  | 'issueType'
+  | 'createdAt'
+  | 'description'
+  | 'status'
+  | 'date'
+  | 'countdown'
+  | 'delete';
+
 function sortPropertyJobRows(
   rows: PropertyJobRow[],
   sortKey: PropertyJobSortKey,
@@ -82,6 +93,7 @@ export function PropertyJobCasesTable({
   groupByJobType = false,
   showJobTypeFilter,
   showRentReviewSchedule: showRentReviewScheduleProp,
+  requireJobTypeFilterSelection = false,
   dateColumnLabel = 'Key date',
   showKeyDateColumn = true,
   canDeleteRow,
@@ -98,6 +110,8 @@ export function PropertyJobCasesTable({
   groupByJobType?: boolean;
   /** Job-type dropdown in the table header (defaults on when grouped). */
   showJobTypeFilter?: boolean;
+  /** Hide the table until a job type is chosen (property overview). */
+  requireJobTypeFilterSelection?: boolean;
   /** Show rent-review countdown columns (Rent Review tab only). */
   showRentReviewSchedule?: boolean;
   /** Label for the contextual date column (due, scheduled, vacate, etc.). */
@@ -109,7 +123,9 @@ export function PropertyJobCasesTable({
 }) {
   const { inProgress, completed } = useMemo(() => splitPropertyJobRows(rows), [rows]);
   const [view, setView] = useState<PropertyJobPhase>(defaultView);
-  const [jobTypeFilter, setJobTypeFilter] = useState<PropertyJobTypeFilterId | 'all'>('all');
+  const [jobTypeFilter, setJobTypeFilter] = useState<PropertyJobTypeFilterId | 'all' | ''>(() =>
+    requireJobTypeFilterSelection ? '' : 'all',
+  );
   const { sortKey, sortDirection, onSort } = useClientTableSort<PropertyJobSortKey>(
     'createdAt',
     'desc',
@@ -129,8 +145,8 @@ export function PropertyJobCasesTable({
           : 'completed';
 
   useEffect(() => {
-    setJobTypeFilter('all');
-  }, [activeView]);
+    setJobTypeFilter(requireJobTypeFilterSelection ? '' : 'all');
+  }, [activeView, requireJobTypeFilterSelection]);
 
   const visibleRows = activeView === 'in_progress' ? inProgress : completed;
   const jobTypeFilterOptions = useMemo(
@@ -138,9 +154,11 @@ export function PropertyJobCasesTable({
     [visibleRows],
   );
   const filteredRows = useMemo(() => {
+    if (jobTypeFilter === '') return [];
     if (!jobTypeFilterEnabled || jobTypeFilter === 'all') return visibleRows;
     return visibleRows.filter((row) => matchesPropertyJobTypeFilter(row, jobTypeFilter));
   }, [jobTypeFilter, jobTypeFilterEnabled, visibleRows]);
+  const tableHidden = requireJobTypeFilterSelection && jobTypeFilter === '';
   const sortedRows = useMemo(
     () => sortPropertyJobRows(filteredRows, sortKey, sortDirection),
     [filteredRows, sortDirection, sortKey],
@@ -156,38 +174,117 @@ export function PropertyJobCasesTable({
   const showRentReviewSchedule =
     showRentReviewScheduleProp ??
     visibleRows.some((row) => row.kind === 'rent_review' || row.rentReviewSchedule != null);
-  const showIssueType = visibleRows.some(
-    (row) => row.kind === 'maintenance' || Boolean(row.issueType),
-  );
+  const rentReviewLayout = showRentReviewScheduleProp === true;
+  const showIssueType =
+    !rentReviewLayout &&
+    visibleRows.some((row) => row.kind === 'maintenance' || Boolean(row.issueType));
   const showDelete = Boolean(onDeleteRow && canDeleteRow);
 
-  const tableColumns: ModuleTableColumn<PropertyJobSortKey>[] = [
-    ...(jobTypeFilterEnabled
-      ? [{ kind: 'static' as const, label: 'Job type' }]
-      : [{ kind: 'sortable' as const, label: 'Job type', sortKey: 'jobType' as const }]),
-    { kind: 'sortable', label: 'Name', sortKey: 'name' },
-    ...(showIssueType
-      ? [{ kind: 'sortable' as const, label: 'Issue type', sortKey: 'issueType' as const }]
-      : []),
-    { kind: 'sortable', label: 'Description', sortKey: 'description' },
-    { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
-    ...(showKeyDateColumn
-      ? [{ kind: 'sortable' as const, label: dateColumnLabel, sortKey: 'date' as const }]
-      : []),
-    { kind: 'sortable', label: 'Status', sortKey: 'status' },
-    ...(showRentReviewSchedule
-      ? [
-          { kind: 'static' as const, label: 'Countdown', align: 'right' as const },
-          { kind: 'static' as const, label: 'Tenant reminder', align: 'right' as const },
-        ]
-      : []),
-    ...(showDelete ? [{ kind: 'static' as const, label: '' }] : []),
-  ];
+  const rowCellOrder = useMemo((): PropertyJobRowCellKey[] => {
+    if (rentReviewLayout) {
+      return [
+        'jobType',
+        'name',
+        'createdAt',
+        'description',
+        'status',
+        'date',
+        'countdown',
+        ...(showDelete ? (['delete'] as const) : []),
+      ];
+    }
+    return [
+      'jobType',
+      'name',
+      ...(showIssueType ? (['issueType'] as const) : []),
+      'description',
+      'createdAt',
+      ...(showKeyDateColumn ? (['date'] as const) : []),
+      'status',
+      ...(showRentReviewSchedule ? (['countdown'] as const) : []),
+      ...(showDelete ? (['delete'] as const) : []),
+    ];
+  }, [
+    rentReviewLayout,
+    showDelete,
+    showIssueType,
+    showKeyDateColumn,
+    showRentReviewSchedule,
+  ]);
+
+  const jobTypeSelect = (
+    <select
+      value={jobTypeFilter}
+      onChange={(e) => setJobTypeFilter(e.target.value as PropertyJobTypeFilterId | 'all' | '')}
+      aria-label="Filter by job type"
+      className="border-input bg-background h-8 w-full min-w-[8.5rem] max-w-[11rem] rounded-md border px-2 text-[11px] font-semibold uppercase tracking-wide outline-none"
+    >
+      {requireJobTypeFilterSelection ? (
+        <option value="">Select job type…</option>
+      ) : null}
+      <option value="all">All job types</option>
+      {jobTypeFilterOptions.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+
+  const tableColumns: ModuleTableColumn<PropertyJobSortKey>[] = useMemo(() => {
+    const sortable = (
+      label: string,
+      sortKey: PropertyJobSortKey,
+      defaultDirection?: 'asc' | 'desc',
+    ): ModuleTableColumn<PropertyJobSortKey> => ({
+      kind: 'sortable',
+      label,
+      sortKey,
+      ...(defaultDirection ? { defaultDirection } : {}),
+    });
+
+    if (rentReviewLayout) {
+      return [
+        sortable('Job type', 'jobType'),
+        sortable('Order number', 'name'),
+        sortable('Date created', 'createdAt', 'desc'),
+        sortable('Description', 'description'),
+        sortable('Status', 'status'),
+        sortable(dateColumnLabel, 'date'),
+        { kind: 'static', label: 'Countdown', align: 'right' },
+        ...(showDelete ? [{ kind: 'static' as const, label: '' }] : []),
+      ];
+    }
+
+    return [
+      ...(jobTypeFilterEnabled
+        ? [{ kind: 'static' as const, label: 'Job type' }]
+        : [sortable('Job type', 'jobType')]),
+      sortable('Name', 'name'),
+      ...(showIssueType ? [sortable('Issue type', 'issueType')] : []),
+      sortable('Description', 'description'),
+      sortable('Date created', 'createdAt', 'desc'),
+      ...(showKeyDateColumn ? [sortable(dateColumnLabel, 'date')] : []),
+      sortable('Status', 'status'),
+      ...(showRentReviewSchedule
+        ? [{ kind: 'static' as const, label: 'Countdown', align: 'right' as const }]
+        : []),
+      ...(showDelete ? [{ kind: 'static' as const, label: '' }] : []),
+    ];
+  }, [
+    dateColumnLabel,
+    jobTypeFilterEnabled,
+    rentReviewLayout,
+    showDelete,
+    showIssueType,
+    showKeyDateColumn,
+    showRentReviewSchedule,
+  ]);
   const tableMinWidth =
-    980 +
+    (rentReviewLayout ? 900 : 980) +
     (showIssueType ? 120 : 0) +
-    (showKeyDateColumn ? 100 : 0) +
-    (showRentReviewSchedule ? 200 : 0) +
+    (showKeyDateColumn || rentReviewLayout ? 100 : 0) +
+    (showRentReviewSchedule ? 100 : 0) +
     (showDelete ? 40 : 0);
 
   if (rows.length === 0) {
@@ -239,7 +336,17 @@ export function PropertyJobCasesTable({
         </div>
       ) : null}
 
-      {visibleRows.length === 0 ? (
+      {tableHidden ? (
+        <div className="rounded-xl border border-dashed px-4 py-4">
+          <label className="text-muted-foreground mb-2 block text-[11px] font-semibold uppercase tracking-wide">
+            Job type
+          </label>
+          {jobTypeSelect}
+          <p className="text-muted-foreground mt-2 text-xs">
+            Select a job type to view jobs in progress.
+          </p>
+        </div>
+      ) : visibleRows.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           {activeView === 'completed' ? 'No completed jobs on file yet.' : 'No jobs in progress.'}
         </p>
@@ -249,21 +356,7 @@ export function PropertyJobCasesTable({
             <thead>
               <tr className="border-b bg-muted/30">
                 <th className="px-3 py-3 text-left">
-                  <select
-                    value={jobTypeFilter}
-                    onChange={(e) =>
-                      setJobTypeFilter(e.target.value as PropertyJobTypeFilterId | 'all')
-                    }
-                    aria-label="Filter by job type"
-                    className="border-input bg-background h-8 w-full min-w-[8.5rem] max-w-[11rem] rounded-md border px-2 text-[11px] font-semibold uppercase tracking-wide outline-none"
-                  >
-                    <option value="all">All job types</option>
-                    {jobTypeFilterOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  {jobTypeSelect}
                 </th>
                 {tableColumns.slice(1).map((col) => {
                   if (col.kind === 'static') {
@@ -330,6 +423,149 @@ export function PropertyJobCasesTable({
                 ) : null}
                 {group.rows.map((row) => {
                   const selected = selectedId === row.id;
+
+                  const renderRowCell = (cell: PropertyJobRowCellKey) => {
+                    switch (cell) {
+                      case 'jobType':
+                        return (
+                          <td key={cell} className="px-3 py-3 text-xs">
+                            <span
+                              className={cn(
+                                selected ? 'font-semibold text-primary' : 'text-muted-foreground',
+                              )}
+                            >
+                              {row.jobType}
+                            </span>
+                          </td>
+                        );
+                      case 'name':
+                        return (
+                          <td key={cell} className="max-w-[10rem] px-3 py-3">
+                            <div className="flex items-center gap-2">
+                              {selected ? (
+                                <span
+                                  className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full"
+                                  aria-hidden
+                                >
+                                  <Check className="size-3" strokeWidth={3} />
+                                </span>
+                              ) : null}
+                              <span
+                                className={cn(
+                                  'leading-snug',
+                                  selected ? 'text-primary font-semibold' : 'font-medium',
+                                )}
+                              >
+                                {row.name}
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      case 'issueType':
+                        return (
+                          <td key={cell} className="max-w-[9rem] px-3 py-3 text-xs">
+                            <span
+                              className={cn(
+                                'line-clamp-2 font-medium',
+                                selected ? 'text-foreground' : 'text-muted-foreground',
+                              )}
+                            >
+                              {row.issueType ?? '—'}
+                            </span>
+                          </td>
+                        );
+                      case 'description':
+                        return (
+                          <td key={cell} className="max-w-[16rem] px-3 py-3 text-xs">
+                            <span
+                              className={cn(
+                                'line-clamp-2',
+                                selected ? 'text-foreground' : 'text-muted-foreground',
+                              )}
+                            >
+                              {row.description}
+                            </span>
+                          </td>
+                        );
+                      case 'createdAt':
+                        return (
+                          <td
+                            key={cell}
+                            className={cn(
+                              'whitespace-nowrap px-3 py-3 text-xs tabular-nums',
+                              selected ? 'text-foreground' : 'text-muted-foreground',
+                            )}
+                          >
+                            {row.createdAt}
+                          </td>
+                        );
+                      case 'date':
+                        return (
+                          <td
+                            key={cell}
+                            className={cn(
+                              'whitespace-nowrap px-3 py-3 text-xs tabular-nums',
+                              selected ? 'text-foreground' : 'text-muted-foreground',
+                            )}
+                          >
+                            {row.date}
+                          </td>
+                        );
+                      case 'status':
+                        return (
+                          <td key={cell} className="px-3 py-3 text-xs">
+                            <span
+                              className={cn(
+                                'inline-flex rounded-full px-2 py-0.5 font-semibold',
+                                selected
+                                  ? 'bg-primary/15 text-primary'
+                                  : 'text-primary font-medium',
+                              )}
+                            >
+                              {row.status}
+                            </span>
+                          </td>
+                        );
+                      case 'countdown':
+                        return (
+                          <td key={cell} className="px-3 py-3 text-right">
+                            {row.rentReviewSchedule ? (
+                              <RentReviewConductCountdownBadge
+                                label={row.rentReviewSchedule.orderCountdown.label}
+                                title={row.rentReviewSchedule.orderCountdown.title}
+                                tone={row.rentReviewSchedule.orderCountdown.tone}
+                                compact
+                              />
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                        );
+                      case 'delete':
+                        return (
+                          <td key={cell} className="px-2 py-3 text-right">
+                            {canDeleteRow?.(row) ? (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive size-8"
+                                aria-label={`Delete ${row.name}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteRow?.(row);
+                                }}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                        );
+                    }
+                  };
+
                   return (
                     <tr
                       key={row.id}
@@ -356,136 +592,7 @@ export function PropertyJobCasesTable({
                           : undefined
                       }
                     >
-                      <td className="px-3 py-3 text-xs">
-                        <span
-                          className={cn(
-                            selected ? 'font-semibold text-primary' : 'text-muted-foreground',
-                          )}
-                        >
-                          {row.jobType}
-                        </span>
-                      </td>
-                      <td className="max-w-[10rem] px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          {selected ? (
-                            <span
-                              className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full"
-                              aria-hidden
-                            >
-                              <Check className="size-3" strokeWidth={3} />
-                            </span>
-                          ) : null}
-                          <span
-                            className={cn(
-                              'leading-snug',
-                              selected ? 'text-primary font-semibold' : 'font-medium',
-                            )}
-                          >
-                            {row.name}
-                          </span>
-                        </div>
-                      </td>
-                      {showIssueType ? (
-                        <td className="max-w-[9rem] px-3 py-3 text-xs">
-                          <span
-                            className={cn(
-                              'line-clamp-2 font-medium',
-                              selected ? 'text-foreground' : 'text-muted-foreground',
-                            )}
-                          >
-                            {row.issueType ?? '—'}
-                          </span>
-                        </td>
-                      ) : null}
-                      <td className="max-w-[16rem] px-3 py-3 text-xs">
-                        <span
-                          className={cn(
-                            'line-clamp-2',
-                            selected ? 'text-foreground' : 'text-muted-foreground',
-                          )}
-                        >
-                          {row.description}
-                        </span>
-                      </td>
-                      <td
-                        className={cn(
-                          'whitespace-nowrap px-3 py-3 text-xs tabular-nums',
-                          selected ? 'text-foreground' : 'text-muted-foreground',
-                        )}
-                      >
-                        {row.createdAt}
-                      </td>
-                      {showKeyDateColumn ? (
-                        <td
-                          className={cn(
-                            'whitespace-nowrap px-3 py-3 text-xs tabular-nums',
-                            selected ? 'text-foreground' : 'text-muted-foreground',
-                          )}
-                        >
-                          {row.date}
-                        </td>
-                      ) : null}
-                      <td className="px-3 py-3 text-xs">
-                        <span
-                          className={cn(
-                            'inline-flex rounded-full px-2 py-0.5 font-semibold',
-                            selected
-                              ? 'bg-primary/15 text-primary'
-                              : 'text-primary font-medium',
-                          )}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                      {showRentReviewSchedule ? (
-                        <>
-                          <td className="px-3 py-3 text-right">
-                            {row.rentReviewSchedule ? (
-                              <RentReviewConductCountdownBadge
-                                label={row.rentReviewSchedule.orderCountdown.label}
-                                title={row.rentReviewSchedule.orderCountdown.title}
-                                tone={row.rentReviewSchedule.orderCountdown.tone}
-                                compact
-                              />
-                            ) : (
-                              <span className="text-muted-foreground text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-right">
-                            {row.rentReviewSchedule ? (
-                              <RentReviewConductCountdownBadge
-                                label={row.rentReviewSchedule.tenantReminder.label}
-                                title={row.rentReviewSchedule.tenantReminder.title}
-                                tone={row.rentReviewSchedule.tenantReminder.tone}
-                                compact
-                              />
-                            ) : (
-                              <span className="text-muted-foreground text-xs">—</span>
-                            )}
-                          </td>
-                        </>
-                      ) : null}
-                      {showDelete ? (
-                        <td className="px-2 py-3 text-right">
-                          {canDeleteRow?.(row) ? (
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive size-8"
-                              aria-label={`Delete ${row.name}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteRow?.(row);
-                              }}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </td>
-                      ) : null}
+                      {rowCellOrder.map((cell) => renderRowCell(cell))}
                     </tr>
                   );
                 })}

@@ -15,6 +15,7 @@ import { PropertyInspectionTab } from '@/components/agent/property-inspection-ta
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-tab';
 import { PropertyOverviewTab } from '@/components/agent/property-overview-tab';
+import { PropertyRemindersDialog } from '@/components/agent/property-reminders-dialog';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
@@ -100,6 +101,7 @@ export default function PropertyDetailPage() {
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
   const [selectedRentReviewId, setSelectedRentReviewId] = useState<string | null>(null);
   const [leasingChatOpen, setLeasingChatOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
   const arrearsSectionRef = useRef<HTMLElement | null>(null);
   const leasingFocusBond = isPropertyLeasingBondFocus(searchParams);
 
@@ -246,14 +248,21 @@ export default function PropertyDetailPage() {
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {needActions.length > 0 && (
-                <Link
-                  href={ROUTES.TASKS}
-                  className="flex flex-col items-center gap-0.5 rounded-xl border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-destructive"
-                  aria-label="Need action"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tab !== 'Overview') setTab('Overview');
+                    setRemindersOpen(true);
+                  }}
+                  className="flex items-center gap-2 rounded-xl border-2 border-amber-500/60 bg-amber-500/15 px-3 py-2 text-amber-950 shadow-sm transition hover:bg-amber-500/25 dark:text-amber-100"
+                  aria-label={`${needActions.length} reminder${needActions.length === 1 ? '' : 's'}`}
                 >
-                  <ListTodo className="size-4" />
-                  <span className="text-[10px] font-bold">{needActions.length}</span>
-                </Link>
+                  <ListTodo className="size-4 shrink-0" />
+                  <span className="text-xs font-bold leading-none">Reminder</span>
+                  <span className="bg-amber-600 min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white tabular-nums">
+                    {needActions.length}
+                  </span>
+                </button>
               )}
             </div>
           </div>
@@ -279,7 +288,6 @@ export default function PropertyDetailPage() {
           <PropertyOverviewTab
             property={property}
             propertyId={id}
-            needActions={needActions}
             maintenance={tasks.maintenance}
             inspections={tasks.inspections}
             propertyDocs={propertyDocs}
@@ -425,6 +433,11 @@ export default function PropertyDetailPage() {
         propertyAddress={fullAddress}
         category="Leasing"
         title="Leasing messages"
+      />
+      <PropertyRemindersDialog
+        needActions={needActions}
+        open={remindersOpen}
+        onOpenChange={setRemindersOpen}
       />
     </AgentShell>
   );

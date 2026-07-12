@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { ListTodo, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import {
   DashboardKpiWidget,
   type DashboardKpiWidgetKey,
 } from '@/components/agent/dashboard-chart-hub';
+import { DashboardNeedActionPreview } from '@/components/agent/dashboard-need-action-preview';
 import { DashboardPropertiesMap } from '@/components/agent/dashboard-properties-map';
 import {
   DashboardRecentCasesList,
@@ -17,26 +18,6 @@ import { DASHBOARD_WIDGET_BY_ID, type DashboardWidgetId } from '@/lib/dashboard-
 import { Button } from '@/components/ui/button';
 
 import type { DashboardWidgetRenderContext } from './dashboard-widget-types';
-
-function NeedActionWidget({ count }: { count: number }) {
-  return (
-    <Link
-      href={ROUTES.TASKS}
-      className="flex h-full flex-col justify-between rounded-2xl border bg-card p-4 transition hover:border-primary/30 hover:shadow-sm"
-    >
-      <div className="flex items-center gap-2">
-        <ListTodo className="text-primary size-5" />
-        <p className="text-sm font-semibold">Need action</p>
-      </div>
-      <div>
-        <p className="text-3xl font-bold tabular-nums">{count}</p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          {count === 0 ? 'All caught up' : 'Items waiting on you'}
-        </p>
-      </div>
-    </Link>
-  );
-}
 
 function QuickAddPropertyWidget() {
   return (
@@ -67,7 +48,7 @@ export function DashboardWidgetContent({
     case 'recent_cases':
       return <DashboardRecentCasesList showTitle={false} />;
     case 'need_action':
-      return <NeedActionWidget count={context.needActionCount} />;
+      return <DashboardNeedActionPreview showTitle={false} className="h-full" />;
     case 'quick_add_property':
       return context.hasFullManagementAccess ? (
         <QuickAddPropertyWidget />

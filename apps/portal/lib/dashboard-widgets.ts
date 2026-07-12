@@ -25,7 +25,7 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetDefinition[] = [
     id: 'portfolio_map',
     title: 'Portfolio map',
     description: 'Google Map with pins for your managed properties.',
-    defaultSize: { w: 12, h: 4, minW: 6, minH: 3 },
+    defaultSize: { w: 8, h: 4, minW: 6, minH: 3 },
   },
   {
     id: 'recent_properties',
@@ -42,8 +42,8 @@ export const DASHBOARD_WIDGET_CATALOG: DashboardWidgetDefinition[] = [
   {
     id: 'need_action',
     title: 'Need action',
-    description: 'Count of portfolio items waiting on you.',
-    defaultSize: { w: 4, h: 2, minW: 3, minH: 2 },
+    description: 'Portfolio items waiting on you.',
+    defaultSize: { w: 4, h: 4, minW: 4, minH: 3 },
   },
   {
     id: 'quick_add_property',
@@ -95,8 +95,6 @@ export const DASHBOARD_WIDGET_BY_ID = Object.fromEntries(
 
 export const DEFAULT_DASHBOARD_WIDGETS: DashboardWidgetId[] = [
   'portfolio_map',
-  'recent_properties',
-  'recent_cases',
   'kpi_properties',
   'kpi_maintenance',
   'kpi_inspections',
@@ -124,16 +122,16 @@ function layoutItem(
 
 export function buildDefaultLayout(widgets: DashboardWidgetId[]): Layout {
   const preset: Partial<Record<DashboardWidgetId, { x: number; y: number; w?: number; h?: number }>> = {
-    portfolio_map: { x: 0, y: 0, w: 12, h: 4 },
+    portfolio_map: { x: 2, y: 0, w: 8, h: 4 },
     recent_properties: { x: 0, y: 4, w: 6, h: 3 },
     recent_cases: { x: 6, y: 4, w: 6, h: 3 },
-    kpi_properties: { x: 0, y: 7, w: 4, h: 2 },
-    kpi_maintenance: { x: 4, y: 7, w: 4, h: 2 },
-    kpi_inspections: { x: 8, y: 7, w: 4, h: 2 },
-    kpi_tribunal: { x: 0, y: 9, w: 4, h: 2 },
-    kpi_leasing: { x: 4, y: 9, w: 4, h: 2 },
-    kpi_accounting: { x: 8, y: 9, w: 4, h: 2 },
-    need_action: { x: 0, y: 11, w: 4, h: 2 },
+    need_action: { x: 8, y: 0, w: 4, h: 4 },
+    kpi_properties: { x: 0, y: 4, w: 4, h: 2 },
+    kpi_maintenance: { x: 4, y: 4, w: 4, h: 2 },
+    kpi_inspections: { x: 8, y: 4, w: 4, h: 2 },
+    kpi_tribunal: { x: 0, y: 6, w: 4, h: 2 },
+    kpi_leasing: { x: 4, y: 6, w: 4, h: 2 },
+    kpi_accounting: { x: 8, y: 6, w: 4, h: 2 },
     quick_add_property: { x: 4, y: 11, w: 4, h: 2 },
   };
 

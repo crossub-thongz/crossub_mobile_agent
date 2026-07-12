@@ -1,56 +1,47 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle2,
   ClipboardCheck,
   FileText,
-  Home,
   KeyRound,
   Loader2,
   User,
 } from 'lucide-react';
 
-import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
-import { OutgoingFieldInspectionDetail } from '@/components/inspections/outgoing-field-inspection-detail';
-import { StatusBadge } from '@/components/agent/status-badge';
+import { OutgoingInspectionCaseSection } from '@/components/inspections/outgoing-inspection-case-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
-import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
-import { inspectionsApi } from '@/lib/inspections-api';
-import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import type { TenantOutgoingAttendanceStatus } from '@/lib/end-leasing/types';
+import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
 import {
   canViewInspectionReport,
   deriveTenantAckState,
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
+import { inspectionsApi } from '@/lib/inspections-api';
 import type { InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
+import { terminationApi } from '@/lib/termination-case-api';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
-type AgentFieldInspectionSnapshot = {
+type OutgoingSnapshot = {
   record: InspectionRecord | null;
   progression: OnSiteProgression | null;
   signName: string | null;
   signUrl: string | null;
   reportUrl: string | null;
   hasFindings: boolean;
-  leasingTenantApproved: boolean;
+  tenantAttendance: TenantOutgoingAttendanceStatus;
+  terminationCaseId: string | null;
 };
-
-function inspectionReportDownloadType(
-  type: Inspection['type'],
-): 'ingoing' | 'outgoing' | 'routine' | 'open' {
-  if (type === 'INGOING') return 'ingoing';
-  if (type === 'OUTGOING') return 'outgoing';
-  if (type === 'OPEN') return 'open';
-  return 'routine';
-}
 
 function formatCustodyTime(iso: string): string {
   return formatDateTime(iso);
@@ -81,39 +72,45 @@ function ProofPhotoGrid({ urls, label }: { urls: string[]; label: string }) {
   );
 }
 
-/**
- * Agent read-only ingoing / outgoing inspection view — key collect & return proof,
- * report submitted, and tenant acknowledgement only (matches crossub_web agent scope).
- */
-export function AgentFieldInspectionDetail({
+function isOutgoingJobCompleted(
+  inspection: Inspection,
+  record: InspectionRecord | null,
+  reportSubmitted: boolean,
+): boolean {
+  if (reportSubmitted || record?.completedDate) return true;
+  const status = (record?.status ?? inspection.apiStatus ?? '').toUpperCase();
+  return ['COMPLETED', 'PUBLISHED', 'FIRST_REVIEW', 'SECOND_REVIEW'].includes(status);
+}
+
+/** Outgoing inspection job case — manager layout + field workflow status. */
+export function OutgoingFieldInspectionDetail({
   inspection,
   apiConnected,
 }: {
   inspection: Inspection;
   apiConnected: boolean;
 }) {
-  if (inspection.type === 'OUTGOING') {
-    return (
-      <OutgoingFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
-    );
-  }
+  const { vacating } = useAgentData();
+  const linkedVacating = vacating.find((v) => v.propertyId === inspection.propertyId);
 
-  const { leasingCycles } = useAgentData();
-  const propertyLeasingCycle = leasingCycles.find(
-    (cycle) => cycle.propertyId === inspection.propertyId,
-  );
-
-  const [snapshot, setSnapshot] = useState<AgentFieldInspectionSnapshot>({
+  const [snapshot, setSnapshot] = useState<OutgoingSnapshot>({
     record: null,
     progression: null,
     signName: null,
     signUrl: null,
     reportUrl: null,
     hasFindings: false,
-    leasingTenantApproved: false,
+    tenantAttendance: 'pending',
+    terminationCaseId: linkedVacating?.id ?? null,
   });
   const [loading, setLoading] = useState(apiConnected);
   const [error, setError] = useState<string | null>(null);
+
+  const stageEmails = useMemo(() => inspectionEmailRecordsForStep(inspection), [inspection]);
+  const emailTitle =
+    inspection.apiStatus === 'PUBLISHED' || inspection.reportStatus === 'sent'
+      ? 'All e-mail'
+      : 'Email history';
 
   const refresh = useCallback(async () => {
     if (!apiConnected) {
@@ -121,20 +118,26 @@ export function AgentFieldInspectionDetail({
       return;
     }
     try {
-      const [record, progression, detail] = await Promise.all([
+      const [record, progression, detail, terminationCase] = await Promise.all([
         inspectionsApi.get(inspection.id).catch(() => null),
         inspectionsApi.getOnSiteProgression(inspection.id).catch(() => null),
         inspectionsApi.getDetail(inspection.id).catch(() => null),
+        linkedVacating?.id
+          ? terminationApi.get(linkedVacating.id).catch(() => null)
+          : Promise.resolve(null),
       ]);
 
-      let signName: string | null = detail?.signName ?? null;
-      let signUrl: string | null = detail?.signUrl ?? null;
-      let reportUrl: string | null =
-        detail?.reportUrl ?? progression?.reportUrl ?? record?.reportUrl ?? inspection.reportUrl ?? null;
+      const signName = detail?.signName ?? null;
+      const signUrl = detail?.signUrl ?? null;
+      const reportUrl =
+        detail?.reportUrl ??
+        progression?.reportUrl ??
+        record?.reportUrl ??
+        inspection.reportUrl ??
+        null;
       let hasFindings = Boolean(
         record && ((record.areaCount ?? 0) > 0 || (record.photoCount ?? 0) > 0),
       );
-
       if (detail) {
         hasFindings =
           hasFindings ||
@@ -146,16 +149,10 @@ export function AgentFieldInspectionDetail({
           );
       }
 
-      let leasingTenantApproved = false;
-      if (propertyLeasingCycle?.id) {
-        const cycleView = await leasingOpsApi.get(propertyLeasingCycle.id).catch(() => null);
-        const ingoingInspectionId =
-          cycleView?.onboarding?.ingoingInspection?.inspectionId ?? null;
-        if (ingoingInspectionId === inspection.id) {
-          leasingTenantApproved =
-            cycleView?.onboarding?.ingoingReportApproval?.tenantApproved ?? false;
-        }
-      }
+      const terminationCaseId =
+        terminationCase?.inspection.inspectionId === inspection.id
+          ? terminationCase.id
+          : terminationCase?.id ?? linkedVacating?.id ?? null;
 
       setSnapshot({
         record,
@@ -164,7 +161,8 @@ export function AgentFieldInspectionDetail({
         signUrl,
         reportUrl,
         hasFindings,
-        leasingTenantApproved,
+        tenantAttendance: terminationCase?.inspection.tenantAttendance ?? 'pending',
+        terminationCaseId,
       });
       setError(null);
     } catch (err) {
@@ -172,7 +170,7 @@ export function AgentFieldInspectionDetail({
     } finally {
       setLoading(false);
     }
-  }, [apiConnected, inspection.id, inspection.propertyId, inspection.reportUrl, propertyLeasingCycle?.id]);
+  }, [apiConnected, inspection.id, inspection.reportUrl, linkedVacating?.id]);
 
   useEffect(() => {
     void refresh();
@@ -180,8 +178,17 @@ export function AgentFieldInspectionDetail({
 
   useLivePoll(refresh, apiConnected);
 
-  const { record, progression, signName, signUrl, reportUrl, hasFindings, leasingTenantApproved } =
-    snapshot;
+  const {
+    record,
+    progression,
+    signName,
+    signUrl,
+    reportUrl,
+    hasFindings,
+    tenantAttendance,
+    terminationCaseId,
+  } = snapshot;
+
   const custody = progression?.keyCustody;
   const collectPhotos = custody?.collectPhotos ?? [];
   const returnPhotos = custody?.returnPhotos ?? [];
@@ -189,66 +196,52 @@ export function AgentFieldInspectionDetail({
   const keyReturned = custody?.returnComplete ?? returnPhotos.length > 0;
   const reportSubmitted = isReportSubmitted(record, progression);
   const reportReady = canViewInspectionReport(record, progression, { reportUrl, hasFindings });
+  const statusCompleted = isOutgoingJobCompleted(inspection, record, reportSubmitted);
   const tenantAck = deriveTenantAckState(record, signName, signUrl, {
     tenantReportSigned: record?.tenantReportSigned,
-    leasingTenantApproved,
+    leasingTenantApproved: false,
   });
 
-  const TypeIcon = inspection.type === 'OUTGOING' ? KeyRound : Home;
+  const inspectionDate =
+    inspection.scheduledAt ?? record?.scheduledDate ?? record?.inspectionDate ?? null;
+  const inspectorName = record?.inspectorName ?? inspection.inspector ?? 'Unassigned';
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border bg-card p-4">
-        <div className="flex items-start gap-3">
-          <span className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-xl">
-            <TypeIcon className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                {INSPECTION_TYPE_LABEL[inspection.type]}
-              </span>
-              <StatusBadge label={inspection.status} />
-            </div>
-            <h1 className="text-base font-semibold leading-snug">{inspection.propertyAddress}</h1>
-            <p className="text-muted-foreground text-xs">Case ref {inspection.trackingNumber}</p>
-            {inspection.propertyId && (
-              <Link
-                href={propertyDetail(inspection.propertyId)}
-                className="text-primary inline-flex text-xs font-medium hover:underline"
-              >
-                View property
-              </Link>
-            )}
-          </div>
-        </div>
+      <div className="space-y-1">
+        <p className="text-base font-semibold leading-snug">{inspection.propertyAddress}</p>
+        <p className="text-muted-foreground text-xs">Case ref {inspection.trackingNumber}</p>
+        {inspection.propertyId ? (
+          <Link
+            href={propertyDetail(inspection.propertyId)}
+            className="text-primary inline-flex text-xs font-medium hover:underline"
+          >
+            View property
+          </Link>
+        ) : null}
+      </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-          <div className="bg-secondary/30 rounded-xl px-3 py-2.5">
-            <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-              Scheduled
-            </p>
-            <p className="mt-1 font-semibold">
-              {inspection.scheduledAt ? formatDateTime(inspection.scheduledAt) : 'Not set'}
-            </p>
-          </div>
-          <div className="bg-secondary/30 rounded-xl px-3 py-2.5">
-            <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-              Inspector
-            </p>
-            <p className="mt-1 font-semibold">{inspection.inspector ?? 'Unassigned'}</p>
-          </div>
-        </div>
+      <OutgoingInspectionCaseSection
+        inspectionDate={inspectionDate}
+        inspectorName={inspectorName}
+        tenantAttendance={tenantAttendance}
+        statusCompleted={statusCompleted}
+        terminationCaseId={terminationCaseId}
+        onAttendanceChange={(attendance) =>
+          setSnapshot((current) => ({ ...current, tenantAttendance: attendance }))
+        }
+        emails={stageEmails}
+        emailTitle={emailTitle}
+      />
 
-        {!apiConnected && (
-          <p className="text-muted-foreground mt-3 text-xs">
-            Connect to the API to see live key proof and acknowledgement status.
-          </p>
-        )}
-      </section>
+      {!apiConnected ? (
+        <p className="text-muted-foreground text-xs">
+          Connect to the API to see live key proof and acknowledgement status.
+        </p>
+      ) : null}
 
-      {loading && apiConnected ? (
-        <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
+      {loading ? (
+        <div className="text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm">
           <Loader2 className="size-4 animate-spin" />
           Syncing inspection status…
         </div>
@@ -256,8 +249,8 @@ export function AgentFieldInspectionDetail({
 
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-      {!loading && (
-        <div className="space-y-3">
+      {!loading ? (
+        <div className="space-y-3 border-t pt-4">
           <StepCard
             icon={KeyRound}
             title="Key collection proof"
@@ -284,11 +277,7 @@ export function AgentFieldInspectionDetail({
           <StepCard
             icon={KeyRound}
             title="Key return proof"
-            description={
-              inspection.type === 'OUTGOING'
-                ? 'Keys returned to agency after the outgoing inspection.'
-                : 'Keys returned after the ingoing report is filed.'
-            }
+            description="Keys returned to agency after the outgoing inspection."
             status={
               keyReturned
                 ? LEASING_ITEM_STATUS.DONE
@@ -339,7 +328,7 @@ export function AgentFieldInspectionDetail({
                   inspectionId={inspection.id}
                   reportUrl={reportUrl}
                   propertyLabel={inspection.propertyAddress}
-                  inspectionType={inspectionReportDownloadType(inspection.type)}
+                  inspectionType="outgoing"
                   canDownload
                 />
               </div>
@@ -389,14 +378,14 @@ export function AgentFieldInspectionDetail({
             </div>
           </StepCard>
         </div>
-      )}
+      ) : null}
 
-      {inspection.propertyId && (
+      {inspection.propertyId ? (
         <CaseContactActions
           propertyId={inspection.propertyId}
-          caseLabel={`${inspection.type} inspection`}
+          caseLabel="Outgoing inspection"
         />
-      )}
+      ) : null}
     </div>
   );
 }

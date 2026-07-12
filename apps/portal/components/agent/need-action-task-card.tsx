@@ -27,7 +27,13 @@ const CATEGORY_ICON: Record<PropertyNeedAction['category'], LucideIcon> = {
   Others: Building2,
 };
 
-export function NeedActionTaskCard({ item }: { item: PropertyNeedAction }) {
+export function NeedActionTaskCard({
+  item,
+  hidePropertyAddress = false,
+}: {
+  item: PropertyNeedAction;
+  hidePropertyAddress?: boolean;
+}) {
   const { maintenanceAll } = useAgentData();
   const maintenanceId = item.id.startsWith('mnt-') ? item.id.slice(4) : null;
   const maintenance = maintenanceId
@@ -64,8 +70,17 @@ export function NeedActionTaskCard({ item }: { item: PropertyNeedAction }) {
         >
           {item.category}
         </span>
-        <p className="mt-1.5 line-clamp-2 text-sm font-semibold">{item.propertyAddress}</p>
-        <p className="text-muted-foreground mt-0.5 text-sm leading-snug">{item.label}</p>
+        {!hidePropertyAddress ? (
+          <p className="mt-1.5 line-clamp-2 text-sm font-semibold">{item.propertyAddress}</p>
+        ) : null}
+        <p
+          className={cn(
+            'line-clamp-2 text-sm font-semibold leading-snug',
+            hidePropertyAddress ? 'mt-1.5' : 'text-muted-foreground mt-0.5 font-normal',
+          )}
+        >
+          {item.label}
+        </p>
       </div>
       {!showInline && (
         <ChevronRight className="text-muted-foreground mt-2 size-4 shrink-0" />

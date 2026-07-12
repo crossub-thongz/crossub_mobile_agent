@@ -13,19 +13,10 @@ import {
   hasAlertedNotification,
   markNotificationAlerted,
 } from '@/lib/notification-alert-state';
-import { useAgentStore, type NotificationPrefs } from '@/lib/store';
+import { notificationMatchesPrefs } from '@/lib/notification-prefs';
+import { useAgentStore } from '@/lib/store';
 import type { AgentNotification } from '@/lib/types';
 import { cn, formatRelative } from '@/lib/utils';
-
-function shouldAlertNotification(
-  notification: AgentNotification,
-  prefs: NotificationPrefs,
-): boolean {
-  if (notification.read) return false;
-  if (notification.type === 'approval') return prefs.approvals;
-  if (notification.type === 'urgent') return prefs.urgent;
-  return prefs.updates;
-}
 
 function alertIcon(type: AgentNotification['type']) {
   if (type === 'urgent') return AlertTriangle;
@@ -60,7 +51,8 @@ export function AgentNotificationLiveAlert() {
     const newcomers = notifications.filter(
       (n) =>
         !knownIdsRef.current.has(n.id) &&
-        shouldAlertNotification(n, prefs) &&
+        !n.read &&
+        notificationMatchesPrefs(n, prefs) &&
         !hasAlertedNotification(n.id),
     );
 

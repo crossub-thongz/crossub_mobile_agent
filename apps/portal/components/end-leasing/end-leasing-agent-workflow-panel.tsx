@@ -148,8 +148,8 @@ export function EndLeasingAgentWorkflowPanel({
   const stepTitles: Record<EndLeasingAgentStep, string> = {
     [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: 'Vacate date confirmed',
     [END_LEASING_AGENT_STEP.OUTGOING_INSPECTION]: 'Outgoing inspection',
-    [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: 'Compare in / outgoing',
-    [END_LEASING_AGENT_STEP.GET_QUOTE]: 'Get quote',
+    [END_LEASING_AGENT_STEP.REPORT_COMPARISON]: 'Compare In/Outgoing',
+    [END_LEASING_AGENT_STEP.GET_QUOTE]: 'Quote',
     [END_LEASING_AGENT_STEP.RESULT_CONFIRMED]: 'Result confirmed',
     [END_LEASING_AGENT_STEP.BOND_RELEASED]: 'Bond released',
   };
@@ -206,7 +206,10 @@ export function EndLeasingAgentWorkflowPanel({
             title={
               viewingStepId === END_LEASING_AGENT_STEP.BOND_RELEASED
                 ? 'All e-mail'
-                : undefined
+                : viewingStepId === END_LEASING_AGENT_STEP.REPORT_COMPARISON ||
+                    viewingStepId === END_LEASING_AGENT_STEP.GET_QUOTE
+                  ? 'Email history'
+                  : undefined
             }
           />
         </div>
