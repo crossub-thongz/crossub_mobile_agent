@@ -81,6 +81,9 @@ export interface Property {
   longitude?: number;
   buildingName?: string;
   strataPlanNumber?: string;
+  strataContactName?: string;
+  strataContactEmail?: string;
+  strataContactPhone?: string;
   managementRatePercent?: number;
   managementRateGst?: 'include' | 'exclude';
   insuranceProvider?: string;

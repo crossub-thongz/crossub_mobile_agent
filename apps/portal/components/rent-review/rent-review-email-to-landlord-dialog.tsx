@@ -20,6 +20,10 @@ import {
   buildResearchReportHtml,
   resolveLandlordContact,
 } from '@/lib/rent-review/research-landlord-email';
+import {
+  formatWorkflowEmailContact,
+  type WorkflowEmailContact,
+} from '@/lib/job-case-email-recipients';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
@@ -31,6 +35,7 @@ export function RentReviewEmailToLandlordDialog({
   detail,
   landlordName,
   landlordEmail,
+  recipientContacts = [],
   onUpdated,
   onSent,
 }: {
@@ -39,6 +44,7 @@ export function RentReviewEmailToLandlordDialog({
   detail: RentReviewWorkflowDetail;
   landlordName?: string | null;
   landlordEmail?: string | null;
+  recipientContacts?: WorkflowEmailContact[];
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
   onSent?: () => void;
 }) {
@@ -145,6 +151,23 @@ export function RentReviewEmailToLandlordDialog({
         </DialogHeader>
 
         <div className="space-y-3">
+          {recipientContacts.length > 0 ? (
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-[11px] font-medium">Property contacts</p>
+              <div className="flex flex-wrap gap-1.5">
+                {recipientContacts.map((contact) => (
+                  <button
+                    key={`${contact.role}-${contact.email}`}
+                    type="button"
+                    onClick={() => setToEmail(contact.email)}
+                    className="hover:bg-primary/10 rounded-full border bg-background px-2.5 py-1 text-[11px] font-medium transition-colors"
+                  >
+                    {formatWorkflowEmailContact(contact)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="space-y-1">
             <Label htmlFor="landlord-to">To</Label>
             <Input

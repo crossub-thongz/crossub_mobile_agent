@@ -71,6 +71,15 @@ function hasResearchComplete(detail: RentReviewWorkflowDetail): boolean {
   );
 }
 
+function hasLandlordResearchEmailed(detail: RentReviewWorkflowDetail): boolean {
+  return auditHas(detail, 'landlord_research_email');
+}
+
+/** Research step is done only after market research and landlord email pack are sent. */
+export function isRentResearchStepComplete(detail: RentReviewWorkflowDetail): boolean {
+  return hasResearchComplete(detail) && hasLandlordResearchEmailed(detail);
+}
+
 /** Agent has finalised proposed rent (approve AI, custom amount, or counter resolution). */
 function hasAgentPricingFinalized(detail: RentReviewWorkflowDetail): boolean {
   return (
@@ -124,7 +133,7 @@ function hasCompleted(detail: RentReviewWorkflowDetail): boolean {
 function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
   const researchDone = hasResearchComplete(detail);
   const emailSent = auditHas(detail, 'ai_report_ready') || researchDone;
-  const landlordEmailed = auditHas(detail, 'landlord_research_email');
+  const landlordEmailed = hasLandlordResearchEmailed(detail);
   return [
     {
       id: 'platforms',
@@ -283,6 +292,9 @@ export function resolveRentReviewAgentStep(detail: RentReviewWorkflowDetail): Re
       return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
     case 'agent_review':
     case 'negotiation':
+      if (!isRentResearchStepComplete(detail)) {
+        return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
+      }
       return hasAgentPricingFinalized(detail)
         ? RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED
         : RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;

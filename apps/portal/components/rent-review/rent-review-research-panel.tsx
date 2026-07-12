@@ -12,6 +12,7 @@ import {
   auditEntriesForStep,
   RENT_REVIEW_AGENT_STEP,
 } from '@/lib/rent-review/agent-workflow-model';
+import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
@@ -42,6 +43,9 @@ export function RentReviewResearchPanel({
   const landlordEmail =
     property?.homeOwnerContact?.email?.trim() || undefined;
   const landlordName = property?.homeOwnerName;
+  const recipientContacts = buildPropertyWorkflowEmailContacts(property, {
+    tenantName: detail.tenantName,
+  });
 
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.RENT_RESEARCH);
   const suggested = detail.ai.suggestedWeekly;
@@ -145,6 +149,7 @@ export function RentReviewResearchPanel({
         detail={detail}
         landlordName={landlordName}
         landlordEmail={landlordEmail}
+        recipientContacts={recipientContacts}
         onUpdated={onUpdated}
       />
     </div>

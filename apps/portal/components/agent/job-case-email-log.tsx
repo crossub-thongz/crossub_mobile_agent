@@ -16,6 +16,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import type { WorkflowEmailContact } from '@/lib/job-case-email-recipients';
+import {
+  formatWorkflowEmailContact,
+  formatWorkflowEmailContactBlock,
+} from '@/lib/job-case-email-recipients';
 import { cn, formatDate, formatDateTime } from '@/lib/utils';
 
 export type CommComposeMode = 'view' | 'reply' | 'forward';
@@ -91,12 +96,17 @@ function buildReplyDraft(email: JobCaseEmailRecord): CommSendDraft {
   };
 }
 
-function buildForwardDraft(email: JobCaseEmailRecord): CommSendDraft {
+function buildForwardDraft(
+  email: JobCaseEmailRecord,
+  contacts: WorkflowEmailContact[] = [],
+): CommSendDraft {
   const subject = email.subject.startsWith('Fwd:') ? email.subject : `Fwd: ${email.subject}`;
+  const contactBlock = formatWorkflowEmailContactBlock(contacts);
   return {
     subject,
     body:
-      `\n\n---------- Forwarded message ----------\n` +
+      (contactBlock ? `${contactBlock}\n` : '') +
+      `---------- Forwarded message ----------\n` +
       `From: ${email.from}\n` +
       `To: ${email.to}\n` +
       `Date: ${formatDateTime(email.at)}\n` +
@@ -109,19 +119,50 @@ function buildForwardDraft(email: JobCaseEmailRecord): CommSendDraft {
   };
 }
 
+function RecipientPicker({
+  contacts,
+  onSelect,
+}: {
+  contacts: WorkflowEmailContact[];
+  onSelect: (contact: WorkflowEmailContact) => void;
+}) {
+  if (contacts.length === 0) return null;
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-muted-foreground text-[11px] font-medium">Suggested recipients</p>
+      <div className="flex flex-wrap gap-1.5">
+        {contacts.map((contact) => (
+          <button
+            key={`${contact.role}-${contact.email}`}
+            type="button"
+            onClick={() => onSelect(contact)}
+            className="hover:bg-primary/10 rounded-full border bg-background px-2.5 py-1 text-[11px] font-medium transition-colors"
+          >
+            {formatWorkflowEmailContact(contact)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EmailDetailDialog({
   email,
   open,
   onOpenChange,
   onSend,
+  recipientContacts = [],
 }: {
   email: JobCaseEmailRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSend?: (draft: CommSendDraft) => void;
+  recipientContacts?: WorkflowEmailContact[];
 }) {
   const [mode, setMode] = useState<CommComposeMode>('view');
   const [toEmail, setToEmail] = useState('');
+  const [toLabel, setToLabel] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
 
@@ -129,6 +170,7 @@ function EmailDetailDialog({
     setMode(nextMode);
     if (draft) {
       setToEmail(draft.toEmail);
+      setToLabel(draft.to);
       setSubject(draft.subject);
       setBody(draft.body);
     }
@@ -138,10 +180,16 @@ function EmailDetailDialog({
     if (!next) {
       setMode('view');
       setToEmail('');
+      setToLabel('');
       setSubject('');
       setBody('');
     }
     onOpenChange(next);
+  };
+
+  const applyRecipient = (contact: WorkflowEmailContact) => {
+    setToEmail(contact.email);
+    setToLabel(formatWorkflowEmailContact(contact));
   };
 
   if (!email) return null;
@@ -155,7 +203,7 @@ function EmailDetailDialog({
     onSend({
       subject: subject.trim(),
       body: body.trim(),
-      to: toEmail.trim(),
+      to: toLabel.trim() || toEmail.trim(),
       toEmail: toEmail.trim(),
       mode,
       inReplyTo: email,
@@ -220,7 +268,7 @@ function EmailDetailDialog({
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => resetCompose('forward', buildForwardDraft(email))}
+                  onClick={() => resetCompose('forward', buildForwardDraft(email, recipientContacts))}
                 >
                   <Forward className="size-3.5" />
                   Forward
@@ -230,14 +278,22 @@ function EmailDetailDialog({
           </div>
         ) : (
           <div className="space-y-3">
+            <RecipientPicker contacts={recipientContacts} onSelect={applyRecipient} />
             <div className="space-y-1">
               <Label htmlFor="comm-to">To</Label>
               <Input
                 id="comm-to"
                 type="email"
                 value={toEmail}
-                onChange={(e) => setToEmail(e.target.value)}
+                onChange={(e) => {
+                  setToEmail(e.target.value);
+                  setToLabel(e.target.value);
+                }}
+                placeholder="name@example.com"
               />
+              {toLabel && toLabel !== toEmail ? (
+                <p className="text-muted-foreground text-[11px]">{toLabel}</p>
+              ) : null}
             </div>
             <div className="space-y-1">
               <Label htmlFor="comm-subject">Subject</Label>
@@ -277,11 +333,13 @@ export function JobCaseEmailLog({
   emails,
   onSend,
   enableComposeActions = false,
+  recipientContacts = [],
 }: {
   title?: string;
   emails: JobCaseEmailRecord[];
   onSend?: (draft: CommSendDraft) => void;
   enableComposeActions?: boolean;
+  recipientContacts?: WorkflowEmailContact[];
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const sorted = useMemo(
@@ -325,6 +383,7 @@ export function JobCaseEmailLog({
           if (!open) setSelectedId(null);
         }}
         onSend={enableComposeActions ? onSend : undefined}
+        recipientContacts={recipientContacts}
       />
     </div>
   );
@@ -335,11 +394,13 @@ export function JobCaseStageEmailHistory({
   title,
   onSend,
   enableComposeActions,
+  recipientContacts,
 }: {
   emails: JobCaseEmailRecord[];
   title?: string;
   onSend?: (draft: CommSendDraft) => void;
   enableComposeActions?: boolean;
+  recipientContacts?: WorkflowEmailContact[];
 }) {
   return (
     <section className="border-t pt-4">
@@ -348,6 +409,7 @@ export function JobCaseStageEmailHistory({
         title={title}
         onSend={onSend}
         enableComposeActions={enableComposeActions}
+        recipientContacts={recipientContacts}
       />
     </section>
   );

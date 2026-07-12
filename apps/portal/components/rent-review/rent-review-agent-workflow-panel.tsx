@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
 import type { CommSendDraft } from '@/components/rent-review/rent-review-email-log';
 import { RentReviewAgentConfirmedPanel } from '@/components/rent-review/rent-review-agent-confirmed-panel';
@@ -20,6 +21,7 @@ import {
   type RentReviewAgentStep,
 } from '@/lib/rent-review/agent-workflow-model';
 import { resolveCommInReplyToAuditId } from '@/lib/rent-review/communications';
+import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
@@ -90,7 +92,13 @@ export function RentReviewAgentWorkflowPanel({
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
 }) {
+  const { properties } = useAgentData();
   const runMutation = useRentReviewStore((s) => s.runMutation);
+  const property = properties.find((p) => p.id === detail.propertyId);
+  const recipientContacts = useMemo(
+    () => buildPropertyWorkflowEmailContacts(property, { tenantName: detail.tenantName }),
+    [property, detail.tenantName],
+  );
   const workflow = useMemo(() => buildRentReviewAgentWorkflow(detail), [detail]);
   const [viewingStepId, setViewingStepId] = useState<RentReviewAgentStep>(workflow.liveStepId);
   const [sendingComm, setSendingComm] = useState(false);
@@ -215,6 +223,7 @@ export function RentReviewAgentWorkflowPanel({
             title={emailHistoryTitle}
             onSend={enableCommCompose && !sendingComm ? handleCommSend : undefined}
             enableComposeActions={enableCommCompose && !sendingComm}
+            recipientContacts={recipientContacts}
           />
         </div>
       </div>
