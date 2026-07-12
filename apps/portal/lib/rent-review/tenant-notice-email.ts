@@ -1,36 +1,10 @@
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import { parseRentReviewEmailSnapshot } from '@/lib/rent-review/audit-detail-display';
 import {
   resolveTenantNoticeTerms,
   tenantNoticeTermsEmailLines,
 } from '@/lib/rent-review/tenant-notice-terms';
 import type { RentReviewAuditEntry, RentReviewWorkflowDetail } from '@/lib/rent-review/types';
-
-interface TenantNoticeEmailSnapshot {
-  subject: string;
-  body: string;
-  from: string;
-  to: string;
-  toEmail?: string;
-  channel?: 'email' | 'message';
-}
-
-function parseTenantNoticeEmailSnapshot(detail: string | undefined): TenantNoticeEmailSnapshot | null {
-  if (!detail?.trim()) return null;
-  try {
-    const parsed = JSON.parse(detail) as Partial<TenantNoticeEmailSnapshot>;
-    if (
-      typeof parsed.subject === 'string' &&
-      typeof parsed.body === 'string' &&
-      typeof parsed.from === 'string' &&
-      typeof parsed.to === 'string'
-    ) {
-      return parsed as TenantNoticeEmailSnapshot;
-    }
-  } catch {
-    /* legacy plain-text detail */
-  }
-  return null;
-}
 
 export function buildTenantNoticeEmailSubject(detail: RentReviewWorkflowDetail): string {
   return `Notice of rent increase — ${detail.propertyAddress}`;
@@ -62,7 +36,7 @@ export function buildTenantNoticeEmailRecord(
   detail: RentReviewWorkflowDetail,
   auditEntry: RentReviewAuditEntry,
 ): JobCaseEmailRecord {
-  const snapshot = parseTenantNoticeEmailSnapshot(auditEntry.detail);
+  const snapshot = parseRentReviewEmailSnapshot(auditEntry.detail);
   if (snapshot) {
     return {
       id: auditEntry.id,
@@ -71,6 +45,7 @@ export function buildTenantNoticeEmailRecord(
       from: snapshot.from,
       to: snapshot.to,
       toEmail: snapshot.toEmail,
+      fromEmail: snapshot.fromEmail,
       at: auditEntry.at,
       kind: auditEntry.kind,
       channel: snapshot.channel ?? 'email',

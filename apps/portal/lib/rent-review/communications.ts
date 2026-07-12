@@ -17,6 +17,7 @@ interface RentReviewEmailSnapshot {
   from: string;
   to: string;
   toEmail?: string;
+  fromEmail?: string;
   channel?: 'email' | 'message';
   attachments?: JobCaseEmailRecord['attachments'];
   inReplyToId?: string;
@@ -115,6 +116,7 @@ export function commRecordsFromAuditLog(detail: RentReviewWorkflowDetail): JobCa
       from: snapshot.from,
       to: snapshot.to,
       toEmail: snapshot.toEmail,
+      fromEmail: snapshot.fromEmail,
       at: entry.at,
       kind: entry.kind,
       channel: snapshot.channel ?? 'email',

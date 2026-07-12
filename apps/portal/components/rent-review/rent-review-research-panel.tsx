@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
+import { RentReviewActivityLog } from '@/components/rent-review/rent-review-activity-log';
 import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
 import {
   RENT_RESEARCH_PLATFORMS,
@@ -130,19 +131,7 @@ export function RentReviewResearchPanel({
         </div>
       ) : null}
 
-      {auditEntries.length > 0 ? (
-        <section className="rounded-xl border bg-muted/20 p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide">Activity</p>
-          <ul className="space-y-1 text-xs">
-            {auditEntries.map((e) => (
-              <li key={e.id}>
-                <span className="font-medium">{e.message}</span>
-                {e.detail ? <span className="text-muted-foreground"> · {e.detail}</span> : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <RentReviewActivityLog entries={auditEntries} />
 
       <RentReviewEmailToLandlordDialog
         open={landlordDialogOpen}

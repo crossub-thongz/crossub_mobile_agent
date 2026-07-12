@@ -1,33 +1,28 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
-import { ArchivedRentReviewsTable } from '@/components/agent/archive-module-tables';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
-import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { rentReviewDetail } from '@/constants/routes';
 import { cancelAgentRentReview } from '@/lib/crossub-api/agent-workflow-client';
 import {
-  applySortDirection,
-  compareSortTime,
-  compareStrings,
-  useClientTableSort,
-} from '@/lib/client-table-sort';
-import { fromProperty } from '@/lib/detail-navigation';
-import { buildRentReviewHistoryRows, isActiveRentReview, type RentReviewSummaryRow } from '@/lib/property-rent-review-history';
-import { rentReviewCreatedAtIso } from '@/lib/record-created-at';
+  isActiveRentReview,
+  isDeletedRentReview,
+  rentReviewFromArchived,
+} from '@/lib/property-rent-review-history';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { buildPropertyWorkflowContext, tabActionsFor } from '@/lib/property-workflow-actions';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
-import { rentReviewJobRows } from '@/lib/property-job-rows';
+import {
+  archivedRentReviewJobRows,
+  rentReviewJobRows,
+} from '@/lib/property-job-rows';
 import type {
   ArchivedRentReview,
   Inspection,
@@ -41,128 +36,6 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { RENT_REVIEW_ADVANCE_ORDER_DAYS, RENT_REVIEW_CONDUCT_WINDOW_DAYS, RENT_REVIEW_STATUTORY_NOTICE_DAYS } from '@/lib/rent-review/scheduling';
-import { formatDateTime } from '@/lib/utils';
-
-type RentReviewHistorySortKey = 'leasePeriod' | 'term' | 'rent' | 'createdAt' | 'startDate';
-
-function RentReviewHistoryTable({
-  rows,
-  propertyId,
-}: {
-  rows: RentReviewSummaryRow[];
-  propertyId: string;
-}) {
-  const { sortKey, sortDirection, onSort } = useClientTableSort<RentReviewHistorySortKey>(
-    'createdAt',
-    'desc',
-  );
-
-  const sorted = useMemo(() => {
-    const copy = [...rows];
-    copy.sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case 'leasePeriod':
-          cmp = compareStrings(a.leasePeriod, b.leasePeriod);
-          break;
-        case 'term':
-          cmp = compareStrings(a.termLabel, b.termLabel);
-          break;
-        case 'rent':
-          cmp = compareStrings(a.rentLabel, b.rentLabel);
-          break;
-        case 'createdAt':
-          cmp = compareSortTime(
-            rentReviewCreatedAtIso(a.review),
-            rentReviewCreatedAtIso(b.review),
-          );
-          break;
-        case 'startDate':
-          cmp = compareSortTime(a.startDateIso, b.startDateIso);
-          break;
-      }
-      return applySortDirection(cmp, sortDirection);
-    });
-    return copy;
-  }, [rows, sortDirection, sortKey]);
-
-  if (rows.length === 0) return null;
-
-  return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b bg-muted/30">
-              <SortableTableHeader
-                label="Lease period"
-                sortKey="leasePeriod"
-                activeKey={sortKey}
-                direction={sortDirection}
-                onSort={onSort}
-              />
-              <SortableTableHeader
-                label="Term"
-                sortKey="term"
-                activeKey={sortKey}
-                direction={sortDirection}
-                onSort={onSort}
-              />
-              <SortableTableHeader
-                label="Rent"
-                sortKey="rent"
-                activeKey={sortKey}
-                direction={sortDirection}
-                onSort={onSort}
-              />
-              <SortableTableHeader
-                label="Date created"
-                sortKey="createdAt"
-                activeKey={sortKey}
-                direction={sortDirection}
-                onSort={onSort}
-              />
-              <SortableTableHeader
-                label="Start date"
-                sortKey="startDate"
-                activeKey={sortKey}
-                direction={sortDirection}
-                onSort={onSort}
-              />
-              <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Open
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {sorted.map((row) => (
-              <tr key={row.id} className="transition-colors hover:bg-muted/20">
-                <td className="px-3 py-3 font-medium">{row.leasePeriod}</td>
-                <td className="px-3 py-3">{row.termLabel}</td>
-                <td className="px-3 py-3 tabular-nums">{row.rentLabel}</td>
-                <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                  {(() => {
-                    const iso = rentReviewCreatedAtIso(row.review);
-                    return iso ? formatDateTime(iso) : '—';
-                  })()}
-                </td>
-                <td className="px-3 py-3 tabular-nums">{row.startDate}</td>
-                <td className="px-3 py-3 text-right">
-                  <Link
-                    href={rentReviewDetail(row.review.id, fromProperty(propertyId, 'Rent Review'))}
-                    className="text-primary text-xs font-medium hover:underline"
-                  >
-                    Open
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
 
 export function PropertyRentReviewTab({
   property,
@@ -247,30 +120,58 @@ export function PropertyRentReviewTab({
     isActiveRentReview(review, rentReviewDecisions[review.id]),
   );
 
-  const rowOptions = useMemo(
-    () => ({
-      property,
-      leasingRecords,
-      currentLease,
-      rentReviewDecisions,
-    }),
-    [property, leasingRecords, currentLease, rentReviewDecisions],
+  const activeReviews = useMemo(
+    () =>
+      rentReviews.filter((review) =>
+        isActiveRentReview(review, rentReviewDecisions[review.id]),
+      ),
+    [rentReviewDecisions, rentReviews],
   );
 
-  const historyRows = useMemo(
-    () => buildRentReviewHistoryRows(rentReviews, rowOptions),
-    [rentReviews, rowOptions],
+  const historyReviews = useMemo(
+    () =>
+      rentReviews.filter(
+        (review) =>
+          !isDeletedRentReview(review) &&
+          !isActiveRentReview(review, rentReviewDecisions[review.id]),
+      ),
+    [rentReviewDecisions, rentReviews],
   );
 
-  const jobRows = useMemo(
-    () => rentReviewJobRows(rentReviews, rentReviewDecisions),
-    [rentReviews, rentReviewDecisions],
+  const activeJobRows = useMemo(
+    () => rentReviewJobRows(activeReviews, rentReviewDecisions),
+    [activeReviews, rentReviewDecisions],
   );
 
-  const handleRowClick = (id: string) => {
-    setSelectedCaseId(id);
-    setDialogReview(rentReviews.find((review) => review.id === id) ?? null);
-  };
+  const historyJobRows = useMemo(
+    () => rentReviewJobRows(historyReviews, rentReviewDecisions),
+    [historyReviews, rentReviewDecisions],
+  );
+
+  const deletedJobRows = useMemo(
+    () => archivedRentReviewJobRows(deletedRentReviews, rentReviews, rentReviewDecisions),
+    [deletedRentReviews, rentReviewDecisions, rentReviews],
+  );
+
+  const openReviewDialog = useCallback((review: RentReviewCase) => {
+    setSelectedCaseId(review.id);
+    setDialogReview(review);
+  }, []);
+
+  const openReviewById = useCallback(
+    (id: string) => {
+      const review = rentReviews.find((item) => item.id === id);
+      if (review) {
+        openReviewDialog(review);
+        return;
+      }
+      const archived = deletedRentReviews.find((item) => item.id === id);
+      if (archived) {
+        openReviewDialog(rentReviewFromArchived(archived, rentReviews));
+      }
+    },
+    [deletedRentReviews, openReviewDialog, rentReviews],
+  );
 
   const handleDialogClose = () => {
     setDialogReview(null);
@@ -305,6 +206,14 @@ export function PropertyRentReviewTab({
     onWorkflowCreated?.();
   };
 
+  const rentReviewTableProps = {
+    showViewToggle: false,
+    showRentReviewSchedule: false,
+    dateColumnLabel: 'Due date' as const,
+    selectedId: selectedCaseId,
+    onRowClick: openReviewById,
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -320,17 +229,15 @@ export function PropertyRentReviewTab({
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Rent review cases</h3>
         <p className="text-muted-foreground text-xs">
-          Click a case to open the full rent review workflow. Countdown tracks the agent&apos;s{' '}
-          {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day conduct window (review opens{' '}
+          Active rent reviews in progress. Click a case to open the full workflow. Countdown tracks
+          the agent&apos;s {RENT_REVIEW_CONDUCT_WINDOW_DAYS}-day conduct window (review opens{' '}
           {RENT_REVIEW_ADVANCE_ORDER_DAYS} days before lease end;{' '}
           {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days remain for the statutory tenant notice).
         </p>
         <PropertyJobCasesTable
-          rows={jobRows}
+          rows={activeJobRows}
+          {...rentReviewTableProps}
           showRentReviewSchedule
-          dateColumnLabel="Due date"
-          selectedId={selectedCaseId}
-          onRowClick={handleRowClick}
           canDeleteRow={canDeleteRow}
           onDeleteRow={(row) => {
             const review = rentReviews.find((item) => item.id === row.id) ?? null;
@@ -338,6 +245,7 @@ export function PropertyRentReviewTab({
           }}
           emptyTitle="No rent review cases"
           emptyDescription="Start a rent review when the lease is due for renewal."
+          {...rentReviewTableProps}
         />
       </section>
 
@@ -345,28 +253,38 @@ export function PropertyRentReviewTab({
         <div>
           <h3 className="text-sm font-semibold">History</h3>
           <p className="text-muted-foreground mt-1 text-xs">
-            Completed rent reviews — start date is when the new rent took effect.
+            Completed rent reviews — click a row to reopen the workflow.
           </p>
         </div>
 
-        {historyRows.length === 0 ? (
+        {historyJobRows.length === 0 ? (
           <EmptyState
             icon={RefreshCw}
             title="No rent review history"
             description="Past rent reviews will appear here once completed."
           />
         ) : (
-          <RentReviewHistoryTable rows={historyRows} propertyId={propertyId} />
+          <PropertyJobCasesTable
+            rows={historyJobRows}
+            emptyTitle="No rent review history"
+            emptyDescription="Past rent reviews will appear here once completed."
+            {...rentReviewTableProps}
+          />
         )}
       </section>
 
-      {deletedRentReviews.length > 0 ? (
+      {deletedJobRows.length > 0 ? (
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">Deleted</h3>
           <p className="text-muted-foreground text-xs">
-            Cancelled rent reviews for this property, with the reason recorded at deletion.
+            Cancelled rent reviews for this property. Click a row to view the archived workflow.
           </p>
-          <ArchivedRentReviewsTable items={deletedRentReviews} />
+          <PropertyJobCasesTable
+            rows={deletedJobRows}
+            emptyTitle="No deleted rent reviews"
+            emptyDescription="Cancelled rent reviews will appear here."
+            {...rentReviewTableProps}
+          />
         </section>
       ) : null}
 

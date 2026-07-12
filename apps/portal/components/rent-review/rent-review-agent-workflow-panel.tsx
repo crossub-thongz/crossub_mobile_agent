@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAuth } from '@/components/providers/auth-provider';
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
 import type { CommSendDraft } from '@/components/rent-review/rent-review-email-log';
 import { RentReviewAgentConfirmedPanel } from '@/components/rent-review/rent-review-agent-confirmed-panel';
@@ -22,6 +23,10 @@ import {
   type RentReviewAgentStep,
 } from '@/lib/rent-review/agent-workflow-model';
 import { resolveCommInReplyToAuditId } from '@/lib/rent-review/communications';
+import {
+  applyManagingAgentFromEmail,
+  resolveRentReviewAgentEmail,
+} from '@/lib/rent-review/agent-email';
 import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -101,12 +106,18 @@ export function RentReviewAgentWorkflowPanel({
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
 }) {
-  const { properties } = useAgentData();
+  const { properties, agencies } = useAgentData();
+  const { user } = useAuth();
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const property = properties.find((p) => p.id === detail.propertyId);
+  const agency = agencies.find((a) => a.id === property?.agencyId);
+  const agentEmail = resolveRentReviewAgentEmail({
+    userEmail: user?.email,
+    agencyContactEmail: agency?.contactEmail,
+  });
   const recipientContacts = useMemo(
-    () => buildPropertyWorkflowEmailContacts(property, { tenantName: detail.tenantName }),
-    [property, detail.tenantName],
+    () => buildPropertyWorkflowEmailContacts(property, { tenantName: detail.tenantName, agentEmail }),
+    [property, detail.tenantName, agentEmail],
   );
   const workflow = useMemo(() => buildRentReviewAgentWorkflow(detail), [detail]);
   const [viewingStepId, setViewingStepId] = useState<RentReviewAgentStep>(workflow.liveStepId);
@@ -140,8 +151,8 @@ export function RentReviewAgentWorkflowPanel({
   const isLiveStep = viewingStepId === workflow.liveStepId;
   const workflowClosed = isRentReviewWorkflowClosed(detail);
   const stageEmails = useMemo(
-    () => emailRecordsForStep(detail, viewingStepId),
-    [detail, viewingStepId],
+    () => applyManagingAgentFromEmail(emailRecordsForStep(detail, viewingStepId), agentEmail),
+    [detail, viewingStepId, agentEmail],
   );
 
   const handleCommSend = async (draft: CommSendDraft) => {

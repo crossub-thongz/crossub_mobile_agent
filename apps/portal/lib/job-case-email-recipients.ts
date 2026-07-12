@@ -43,16 +43,18 @@ type PropertyWithStrata = Property & {
   strataContactEmail?: string | null;
 };
 
-/** Landlord, tenant, and strata emails for workflow compose (reply / forward). */
+/** Landlord, tenant, strata, and agent emails for workflow compose (reply / forward). */
 export function buildPropertyWorkflowEmailContacts(
   property: Property | null | undefined,
-  options?: { tenantName?: string | null },
+  options?: { tenantName?: string | null; agentEmail?: string | null; agentName?: string | null },
 ): WorkflowEmailContact[] {
   if (!property) return [];
 
   const ext = property as PropertyWithStrata;
   const contacts: WorkflowEmailContact[] = [];
   const seen = new Set<string>();
+
+  pushContact(contacts, seen, 'Agent', options?.agentEmail, options?.agentName);
 
   pushContact(contacts, seen, 'Landlord', property.homeOwnerContact?.email, property.homeOwnerName);
   pushPartyContacts(contacts, seen, 'Landlord', property.additionalLandlords);

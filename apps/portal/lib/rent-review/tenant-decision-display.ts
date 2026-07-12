@@ -1,5 +1,6 @@
 import { deriveNewLeaseStartDate } from '@/lib/rent-review/agent-decision-scheduling';
 import {
+  isoDateAddDays,
   leaseEndFromFixedTermWeeks,
   resolveRentIncreaseDate,
   RENT_REVIEW_ADVANCE_ORDER_DAYS,
@@ -39,7 +40,7 @@ export function isTenantVacatePathComplete(detail: RentReviewWorkflowDetail): bo
 }
 
 export function isPreferredRenewalFixed(detail: RentReviewWorkflowDetail): boolean {
-  return detail.preferredLeaseType === 'fixed';
+  return detail.preferredLeaseType === 'fixed' || detail.newAgreementEnd != null;
 }
 
 /** New lease start/end apply only when the agent chose a fixed-term renewal. */
@@ -47,7 +48,7 @@ export function resolveAcceptedNewLeaseDates(detail: RentReviewWorkflowDetail): 
   newLeaseStart: string | null;
   newLeaseEnd: string | null;
 } {
-  if (detail.preferredLeaseType !== 'fixed') {
+  if (detail.preferredLeaseType !== 'fixed' && !detail.newAgreementEnd) {
     return { newLeaseStart: null, newLeaseEnd: null };
   }
 
@@ -60,9 +61,21 @@ export function resolveAcceptedNewLeaseDates(detail: RentReviewWorkflowDetail): 
   return { newLeaseStart: start, newLeaseEnd: end };
 }
 
+/** Weeks between two ISO dates (inclusive span, minimum 1). */
+function weeksBetween(startIso: string, endIso: string): number {
+  const start = new Date(`${toDateOnly(startIso)}T12:00:00`);
+  const end = new Date(`${toDateOnly(endIso)}T12:00:00`);
+  const days = Math.round((end.getTime() - start.getTime()) / DAY_MS);
+  return Math.max(1, Math.round(days / 7));
+}
+
+function isFixedPreferredRenewal(detail: RentReviewWorkflowDetail): boolean {
+  return detail.preferredLeaseType === 'fixed' || detail.newAgreementEnd != null;
+}
+
 /** Lease term in weeks for a fixed-term renewal. */
 export function resolveAcceptedLeaseTermWeeks(detail: RentReviewWorkflowDetail): number | null {
-  if (detail.preferredLeaseType !== 'fixed') return null;
+  if (!isFixedPreferredRenewal(detail)) return null;
 
   if (detail.fixedTermWeeks != null && detail.fixedTermWeeks > 0) {
     return detail.fixedTermWeeks;
@@ -70,10 +83,31 @@ export function resolveAcceptedLeaseTermWeeks(detail: RentReviewWorkflowDetail):
 
   const { newLeaseStart, newLeaseEnd } = resolveAcceptedNewLeaseDates(detail);
   if (newLeaseStart && newLeaseEnd) {
-    const start = new Date(`${newLeaseStart}T12:00:00`);
-    const end = new Date(`${newLeaseEnd}T12:00:00`);
-    const days = Math.round((end.getTime() - start.getTime()) / DAY_MS);
-    return Math.max(1, Math.round(days / 7));
+    return weeksBetween(newLeaseStart, newLeaseEnd);
+  }
+
+  if (newLeaseEnd) {
+    const anchor =
+      toDateOnly(detail.newAgreementStart) ?? resolveAcceptedRentIncreaseStartDate(detail);
+    if (anchor) {
+      return weeksBetween(isoDateAddDays(anchor, 1), newLeaseEnd);
+    }
+  }
+
+  return null;
+}
+
+/** Lease term in weeks for display — fixed renewal term, or current fixed tenancy when periodic. */
+export function resolveDisplayLeaseTermWeeks(detail: RentReviewWorkflowDetail): number | null {
+  const fixedRenewalWeeks = resolveAcceptedLeaseTermWeeks(detail);
+  if (fixedRenewalWeeks != null) return fixedRenewalWeeks;
+
+  if (detail.fixedTermWeeks != null && detail.fixedTermWeeks > 0) {
+    return detail.fixedTermWeeks;
+  }
+
+  if (detail.leaseType === 'fixed' && detail.initialLeaseStartDate && detail.leaseEndDate) {
+    return weeksBetween(detail.initialLeaseStartDate, detail.leaseEndDate);
   }
 
   return null;
@@ -115,7 +149,7 @@ export function buildTenantAcceptanceSummary(
     newRentWeekly:
       detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
     rentIncreaseStartDate: resolveAcceptedRentIncreaseStartDate(detail),
-    leaseTermWeeks: resolveAcceptedLeaseTermWeeks(detail),
+    leaseTermWeeks: resolveDisplayLeaseTermWeeks(detail),
     newLeaseStart: leaseDates.newLeaseStart,
     newLeaseEnd: leaseDates.newLeaseEnd,
     preferredLeaseType: detail.preferredLeaseType,

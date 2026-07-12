@@ -87,6 +87,9 @@ export const useEndLeasingStore = create<EndLeasingStoreState>((set, get) => {
     },
 
     applyCase(detail) {
+      if (!detail?.id || !detail.inspection || !detail.vacate || !detail.reportComparison) {
+        return;
+      }
       apply(detail);
     },
 

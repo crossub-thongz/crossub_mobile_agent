@@ -177,15 +177,18 @@ function vacateConfirmedSubProgress(
 function outgoingInspectionSubProgress(
   caseData: TerminationCaseDetail,
 ): EndLeasingSubProgressItem[] {
+  const inspection = caseData.inspection;
+  if (!inspection) return [];
+
   const attendanceConfirmed =
-    caseData.inspection.tenantAttendance === 'yes' ||
-    caseData.inspection.tenantAttendance === 'no';
+    inspection.tenantAttendance === 'yes' ||
+    inspection.tenantAttendance === 'no';
 
   return [
     {
       id: 'date',
       label: 'Outgoing inspection date set',
-      done: Boolean(caseData.inspection.inspectionDate),
+      done: Boolean(inspection.inspectionDate),
     },
     {
       id: 'attendance',
@@ -195,12 +198,12 @@ function outgoingInspectionSubProgress(
     {
       id: 'inspector',
       label: 'Inspector assigned',
-      done: Boolean(caseData.inspection.inspectorName),
+      done: Boolean(inspection.inspectorName),
     },
     {
       id: 'complete',
       label: 'Outgoing inspection completed',
-      done: caseData.inspection.status === DONE,
+      done: inspection.status === DONE,
     },
   ];
 }
@@ -209,15 +212,18 @@ function reportComparisonSubProgress(
   caseData: TerminationCaseDetail,
 ): EndLeasingSubProgressItem[] {
   const rc = caseData.reportComparison;
+  const inspection = caseData.inspection;
+  if (!rc || !inspection) return [];
+
   const compared =
-    (rc.agentAcknowledged && rc.tenantAcknowledged) || caseData.inspection.reportAvailable;
+    (rc.agentAcknowledged && rc.tenantAcknowledged) || inspection.reportAvailable;
   const responsibilitiesDefined =
     rc.tenantResponsibility.length > 0 || rc.landlordResponsibility.length > 0;
   const tenantSummarySent = Boolean(rc.tenantComparisonSummaryEmail?.sentAt);
   const agentSummarySent = Boolean(rc.agentComparisonSummaryEmail?.sentAt);
 
   return [
-    { id: 'complete', label: 'Outgoing inspection completion date recorded', done: caseData.inspection.status === DONE },
+    { id: 'complete', label: 'Outgoing inspection completion date recorded', done: inspection.status === DONE },
     { id: 'compare', label: 'Ingoing/outgoing reports compared', done: compared },
     { id: 'responsibility', label: 'Landlord & tenant responsibility defined', done: responsibilitiesDefined },
     { id: 'tenant_email', label: 'Tenant responsibility summary sent to tenant', done: tenantSummarySent },
@@ -289,7 +295,7 @@ function workflowNameForStep(
       if (next?.id === 'vacating_reply') return 'Send vacating information to tenant';
       return 'Vacate date confirmed';
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
-      if (caseData.inspection.status === DONE) return 'Outgoing inspection complete';
+      if (caseData.inspection?.status === DONE) return 'Outgoing inspection complete';
       if (next?.id === 'attendance') return 'Confirm tenant attendance';
       return 'Schedule outgoing inspection';
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
@@ -316,10 +322,10 @@ function stepComplete(
     case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
       return (
         subProgress.every((i) => i.done) ||
-        caseData.inspection.inspectionDate != null
+        caseData.inspection?.inspectionDate != null
       );
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
-      return caseData.inspection.status === DONE;
+      return caseData.inspection?.status === DONE;
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
       return subProgress.every((i) => i.done) || caseData.makeGood.status === DONE;
     case END_LEASING_AGENT_STEP.GET_QUOTE:

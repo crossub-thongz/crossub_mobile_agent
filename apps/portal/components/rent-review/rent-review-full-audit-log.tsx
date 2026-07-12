@@ -2,6 +2,7 @@
 
 import { ChevronRight } from 'lucide-react';
 
+import { formatRentReviewAuditDetail } from '@/lib/rent-review/audit-detail-display';
 import {
   RENT_REVIEW_AGENT_STEP_LABEL,
   resolveRentReviewStepForAuditKind,
@@ -36,6 +37,7 @@ export function RentReviewFullAuditLog({
           const step = resolveRentReviewStepForAuditKind(e.kind);
           const stepLabel = RENT_REVIEW_AGENT_STEP_LABEL[step];
           const clickable = onNavigateToStep != null;
+          const detail = formatRentReviewAuditDetail(e);
 
           const body = (
             <>
@@ -47,7 +49,7 @@ export function RentReviewFullAuditLog({
                 </span>
               </div>
               <p className="mt-1 font-medium">{e.message}</p>
-              {e.detail ? <p className="text-muted-foreground mt-0.5 line-clamp-2">{e.detail}</p> : null}
+              {detail ? <p className="text-muted-foreground mt-0.5 line-clamp-2">{detail}</p> : null}
             </>
           );
 

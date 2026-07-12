@@ -282,7 +282,11 @@ function EmailDetailDialog({
               <div>
                 <dt className="text-muted-foreground">From</dt>
                 <dd className="font-medium break-words">
-                  {formatEmailPartyWithRole(email.from, extractEmailAddress(email.from), recipientContacts)}
+                  {formatEmailPartyWithRole(
+                    email.from,
+                    email.fromEmail ?? extractEmailAddress(email.from),
+                    recipientContacts,
+                  )}
                 </dd>
               </div>
               <div>

@@ -18,6 +18,8 @@ export interface JobCaseEmailRecord {
   to: string;
   at: string;
   kind?: string;
+  /** Sender email when distinct from display `from` label. */
+  fromEmail?: string;
   /** Recipient email when distinct from display `to` label. */
   toEmail?: string;
   attachments?: JobCaseEmailAttachment[];

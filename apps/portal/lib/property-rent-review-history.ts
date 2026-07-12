@@ -1,7 +1,7 @@
 import { formatRentReviewTermLabel } from '@/lib/rent-review-lease-helpers';
 import { isRentReviewDecided, type RentReviewDecision } from '@/lib/rent-review';
 import { isWithinLeasePeriod } from '@/lib/lease-package-data';
-import type { LeasingRecord, Property, RentReviewCase } from '@/lib/types';
+import type { ArchivedRentReview, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
 import { formatCurrency, formatDate, formatLeasePeriodMonthYear } from '@/lib/utils';
 
 export interface RentReviewSummaryRow {
@@ -175,4 +175,39 @@ export function buildRentReviewHistoryRows(
     )
     .map((review) => buildRentReviewRow(review, options, 'history'))
     .sort((a, b) => parseTime(b.startDateIso) - parseTime(a.startDateIso));
+}
+
+/** Resolve a list row for opening a cancelled review in the workflow dialog. */
+export function rentReviewFromArchived(
+  archived: ArchivedRentReview,
+  reviews: RentReviewCase[],
+): RentReviewCase {
+  const existing = reviews.find((review) => review.id === archived.id);
+  if (existing) return existing;
+
+  return {
+    id: archived.id,
+    propertyId: archived.propertyId,
+    propertyAddress: archived.propertyAddress,
+    leaseStart: '',
+    leaseEnd: '',
+    currentRent: archived.currentRent ?? 0,
+    suggestedRent: archived.currentRent ?? 0,
+    reviewDue: archived.reviewDue ?? '',
+    status: 'deleted',
+    workflowState: 'CANCELLED',
+    requiresApproval: false,
+    inheritedTerms: {
+      waterUsage: 'Tenant pays separately',
+      petsAllowed: false,
+      electricityTenant: true,
+      gasTenant: true,
+      furnished: false,
+      strataByLaws: true,
+      smokeAlarmType: 'Hardwired',
+      parkingSpaces: 1,
+      maxOccupants: 2,
+    },
+    timeline: [],
+  };
 }

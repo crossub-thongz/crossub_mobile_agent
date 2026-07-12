@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { RentReviewActivityLog } from '@/components/rent-review/rent-review-activity-log';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -201,7 +202,7 @@ export function RentReviewAgentConfirmedPanel({
           preferredLeaseType={detail.preferredLeaseType ?? preferredLeaseType}
           fixedTermEndDate={detail.newAgreementEnd}
         />
-        {auditEntries.length > 0 ? <ActivityLog entries={auditEntries} /> : null}
+        <RentReviewActivityLog entries={auditEntries} />
       </div>
     );
   }
@@ -495,7 +496,7 @@ export function RentReviewAgentConfirmedPanel({
         />
       )}
 
-      {auditEntries.length > 0 ? <ActivityLog entries={auditEntries} /> : null}
+      <RentReviewActivityLog entries={auditEntries} />
     </div>
   );
 }
@@ -557,18 +558,3 @@ function ReadOnlySummary({
   );
 }
 
-function ActivityLog({ entries }: { entries: RentReviewWorkflowDetail['auditLog'] }) {
-  return (
-    <section className="rounded-xl border bg-muted/20 p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide">Activity</p>
-      <ul className="space-y-1 text-xs">
-        {entries.map((e) => (
-          <li key={e.id}>
-            <span className="font-medium">{e.message}</span>
-            {e.detail ? <span className="text-muted-foreground"> · {e.detail}</span> : null}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}

@@ -79,7 +79,7 @@ export function deriveStageStatus(
       if (detail.vacate.keysReturned) return S.DONE
       return positionalStatus(detail, stage)
     case TERMINATION_STAGE.OUTGOING_INSPECTION:
-      return detail.inspection.status
+      return detail.inspection?.status ?? S.NOT_STARTED
     case TERMINATION_STAGE.MAINTENANCE:
       return detail.makeGood.status
     case TERMINATION_STAGE.BOND:

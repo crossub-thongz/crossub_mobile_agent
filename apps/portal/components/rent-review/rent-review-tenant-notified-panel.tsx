@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RentReviewActivityLog } from '@/components/rent-review/rent-review-activity-log';
 import { RentReviewTenantRemindersDialog } from '@/components/rent-review/rent-review-tenant-reminders-dialog';
 import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
 import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
@@ -176,20 +177,7 @@ export function RentReviewTenantNotifiedPanel({
         Download NSW Notice of Rent Increase PDF
       </Button>
 
-      {auditEntries.length > 0 ? (
-        <section className="rounded-xl border bg-muted/20 p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide">Activity</p>
-          <ul className="space-y-1 text-xs">
-            {auditEntries.map((e) => (
-              <li key={e.id}>
-                <span className="text-muted-foreground">{formatDateTime(e.at)} · </span>
-                <span className="font-medium">{e.message}</span>
-                {e.detail ? <span className="text-muted-foreground"> · {e.detail}</span> : null}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <RentReviewActivityLog entries={auditEntries} showTimestamp />
 
       <RentReviewTenantRemindersDialog
         detail={detail}

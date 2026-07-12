@@ -49,6 +49,10 @@ export function TerminationDetailView({
     return <p className="text-muted-foreground text-sm">Case not found.</p>;
   }
 
+  if (!caseData.inspection || !caseData.vacate || !caseData.reportComparison) {
+    return <p className="text-muted-foreground text-sm">Loading end-leasing case…</p>;
+  }
+
   return (
     <TerminationDetailContent caseData={caseData} hideHeader={hideHeader} />
   );

@@ -51,6 +51,8 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
   agentName?: string | null
   terminationReason: string | null
   bondPortalLink?: string | null
+  leaseStartDate?: string | null
+  leaseEndDate?: string | null
   terminationNotice?: {
     ground: string | null
     groundLabel: string | null

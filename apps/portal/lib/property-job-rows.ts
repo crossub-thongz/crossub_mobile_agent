@@ -13,6 +13,7 @@ import { getRentReviewScheduleIndicators } from '@/lib/rent-review/conduct-count
 import { deriveRentReviewDueDateFromInput } from '@/lib/rent-review/scheduling';
 import type { RentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
 import type {
+  ArchivedRentReview,
   Inspection,
   MaintenanceRequest,
   PropertyAccounting,
@@ -410,6 +411,44 @@ export function rentReviewJobRows(
       status: progress.currentStepLabel,
       phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
       rentReviewSchedule: getRentReviewScheduleIndicators(review) ?? undefined,
+    };
+  });
+}
+
+export function archivedRentReviewJobRows(
+  items: ArchivedRentReview[],
+  reviews: RentReviewCase[],
+  decisions: Record<string, RentReviewDecision | null | undefined>,
+): PropertyJobRow[] {
+  return items.map((item) => {
+    const review = reviews.find((r) => r.id === item.id);
+    const createdIso = review ? rentReviewCreatedAtIso(review) : item.cancelledAt;
+    const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
+    const dueDate = review
+      ? deriveRentReviewDueDateFromInput({
+          leaseEnd: review.leaseEnd,
+          reviewDue: review.reviewDue,
+          newLeaseStart: review.leaseStart,
+        })
+      : item.reviewDue;
+    return {
+      id: item.id,
+      kind: 'rent_review',
+      jobType: 'Rent review',
+      name: workflowCaseReferenceLabel(item.id, 'rent_review'),
+      description: review
+        ? formatRentReviewJobDescription(review, decisions[review.id])
+        : [
+            item.currentRent != null ? `${formatCurrency(item.currentRent)}/wk` : null,
+            item.cancelReason,
+          ]
+            .filter(Boolean)
+            .join(' · ') || 'Cancelled',
+      date: dueDate ? formatDate(dueDate) : '—',
+      createdAt,
+      createdAtMs,
+      status: 'Deleted',
+      phase: 'completed',
     };
   });
 }

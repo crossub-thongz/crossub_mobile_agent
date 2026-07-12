@@ -11,7 +11,10 @@ export function RentReviewTenantAcceptanceSummary({
   summary: TenantAcceptanceSummary;
   showSchedulingNote?: boolean;
 }) {
-  const isFixedRenewal = summary.preferredLeaseType === 'fixed';
+  const isFixedRenewal =
+    summary.preferredLeaseType === 'fixed' ||
+    summary.newLeaseStart != null ||
+    summary.newLeaseEnd != null;
 
   return (
     <div className="space-y-3">
@@ -32,14 +35,14 @@ export function RentReviewTenantAcceptanceSummary({
           <dt className="text-muted-foreground">Preferred renewal</dt>
           <dd className="font-medium capitalize">{summary.preferredLeaseType ?? '—'}</dd>
         </div>
+        <div>
+          <dt className="text-muted-foreground">Lease term</dt>
+          <dd className="font-medium">
+            {summary.leaseTermWeeks != null ? `${summary.leaseTermWeeks} weeks` : '—'}
+          </dd>
+        </div>
         {isFixedRenewal ? (
           <>
-            <div>
-              <dt className="text-muted-foreground">Lease term</dt>
-              <dd className="font-medium">
-                {summary.leaseTermWeeks != null ? `${summary.leaseTermWeeks} weeks` : '—'}
-              </dd>
-            </div>
             <div>
               <dt className="text-muted-foreground">New lease start</dt>
               <dd className="font-medium tabular-nums">

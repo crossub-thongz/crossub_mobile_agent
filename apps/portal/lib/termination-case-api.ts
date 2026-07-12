@@ -114,16 +114,19 @@ function mapRepairItems(
 /** Derive the bond readiness checklist the FE renders (not modelled server-side). */
 function bondReadiness(s: ServerTerminationCase): BondStageState["readiness"] {
   const agentReviewed =
-    s.agentApproval.decision === TERMINATION_AGENT_DECISION.APPROVED ||
-    s.agentApproval.decision === TERMINATION_AGENT_DECISION.ADJUSTMENT
+    s.agentApproval?.decision === TERMINATION_AGENT_DECISION.APPROVED ||
+    s.agentApproval?.decision === TERMINATION_AGENT_DECISION.ADJUSTMENT
   return [
-    { label: "Settlement finalised", done: s.settlement.status === LEASING_ITEM_STATUS.DONE },
+    {
+      label: "Settlement finalised",
+      done: s.settlement?.status === LEASING_ITEM_STATUS.DONE,
+    },
     { label: "Agent reviewed", done: agentReviewed },
     {
       label: "Tenant confirmed",
-      done: s.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED,
+      done: s.tenantConfirmation?.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED,
     },
-    { label: "Refund paid", done: s.bond.refundPaid },
+    { label: "Refund paid", done: s.bond?.refundPaid ?? false },
   ]
 }
 
@@ -134,7 +137,97 @@ function bondReadiness(s: ServerTerminationCase): BondStageState["readiness"] {
  * (`riskScore`, `daysRemaining`, `nextAction`, `assignedStaff`, `outstandingRent`)
  * are derived/defaulted here — they are not modelled in the backend view.
  */
-export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDetail {
+export function mapTerminationCase(
+  s: ServerTerminationCase | null | undefined,
+): TerminationCaseDetail {
+  if (!s?.id) {
+    throw new Error('Termination case response is missing the case payload')
+  }
+
+  const vacate = s.vacate ?? {
+    status: LEASING_ITEM_STATUS.NOT_STARTED,
+    keysReturned: false,
+    noticeEffectiveDate: null,
+    expectedVacateDate: null,
+    actualVacateDate: null,
+    possessionRegainedDate: null,
+  }
+  const inspection = s.inspection ?? {
+    status: LEASING_ITEM_STATUS.NOT_STARTED,
+    inspectorName: null,
+    inspectionDate: null,
+    overallCondition: null,
+    issuesFound: 0,
+    tenantChargeableItems: 0,
+    reportAvailable: false,
+    inspectionId: null,
+    ingoingInspectionId: null,
+    ingoingReportUrl: null,
+    outgoingReportUrl: null,
+    tenantAttendance: 'pending',
+  }
+  const makeGood = s.makeGood ?? {
+    status: LEASING_ITEM_STATUS.NOT_STARTED,
+    issueCount: 0,
+    tenantItems: 0,
+    landlordItems: 0,
+    sharedItems: 0,
+    estimatedDeductions: null,
+    qaComplete: false,
+    maintenanceRequestId: null,
+  }
+  const settlement = s.settlement ?? {
+    status: LEASING_ITEM_STATUS.NOT_STARTED,
+    bondHeld: null,
+    totalDeductions: null,
+    refundAmount: null,
+    debtAmount: null,
+    outcome: null,
+    managerApprovalRequired: false,
+    managerApprovalComplete: false,
+    deductions: [],
+  }
+  const agentApproval = s.agentApproval ?? {
+    status: LEASING_ITEM_STATUS.NOT_STARTED,
+    decision: TERMINATION_AGENT_DECISION.PENDING,
+    evidenceComplete: false,
+    proposedDeductions: null,
+  }
+  const tenantConfirmation = s.tenantConfirmation ?? {
+    status: TENANT_SETTLEMENT_CONFIRMATION.PENDING,
+    dueAt: null,
+    declineReason: null,
+    confirmedAt: null,
+  }
+  const bond = s.bond ?? {
+    status: LEASING_ITEM_STATUS.NOT_STARTED,
+    refundAmount: null,
+    debtBalance: null,
+    outcome: null,
+    refundPaid: false,
+    disbursementId: null,
+    debtArrearsCaseId: null,
+  }
+  const closure = s.closure ?? {
+    status: LEASING_ITEM_STATUS.NOT_STARTED,
+    recommendedPropertyStatus: null,
+    selectedPropertyStatus: null,
+    checklistComplete: 0,
+    checklistTotal: 0,
+    checklistBlocking: 0,
+    suggestedWeeklyRent: null,
+    targetAvailableDate: null,
+    releasingNotified: false,
+    newLeasingCycleId: null,
+  }
+  const financial = s.financial ?? {
+    bondHeld: null,
+    totalDeductions: null,
+    refundAmount: null,
+    debtAmount: null,
+    outcome: null,
+  }
+
   const status = (s.status as TerminationCaseStatus) || TERMINATION_CASE_STATUS.OPEN
   return {
     id: s.id,
@@ -165,8 +258,14 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
     terminationDate:
       s.terminationType === TERMINATION_TYPE.TENANT_INITIATED
         ? undefined
-        : undef(s.terminationNotice?.terminationDate ?? s.vacate.noticeEffectiveDate ?? s.vacateDate),
+        : undef(
+            s.terminationNotice?.terminationDate ??
+              vacate.noticeEffectiveDate ??
+              s.vacateDate,
+          ),
     terminationReason: s.terminationReason ?? undefined,
+    leaseStartDate: s.leaseStartDate ?? undefined,
+    leaseEndDate: s.leaseEndDate ?? undefined,
     bondPortalLink: s.bondPortalLink ?? null,
     cancellationReason: s.cancellationReason ?? undefined,
     cancelledAt: s.cancelledAt ?? undefined,
@@ -182,19 +281,19 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
     assignedStaff: [],
     nextAction: NEXT_ACTION_BY_STAGE[s.currentStage] ?? "Review case",
 
-    bondHeld: n0(s.financial.bondHeld),
+    bondHeld: n0(financial.bondHeld),
     outstandingRent: 0,
-    totalDeductions: n0(s.financial.totalDeductions),
-    refundAmount: n0(s.financial.refundAmount),
-    debtAmount: n0(s.financial.debtAmount),
+    totalDeductions: n0(financial.totalDeductions),
+    refundAmount: n0(financial.refundAmount),
+    debtAmount: n0(financial.debtAmount),
 
-    documents: s.documents.map((d) => ({
+    documents: (s.documents ?? []).map((d) => ({
       id: d.id,
       name: d.name,
       verified: d.verified,
       uploadedAt: d.uploadedAt,
     })),
-    timeline: s.timeline.map((e) => ({
+    timeline: (s.timeline ?? []).map((e) => ({
       id: e.id,
       label: e.label,
       timestamp: e.at,
@@ -203,12 +302,12 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
     })),
 
     vacate: {
-      status: s.vacate.status,
-      keysReturned: s.vacate.keysReturned,
-      noticeEffectiveDate: undef(s.vacate.noticeEffectiveDate),
-      expectedVacateDate: undef(s.vacate.expectedVacateDate),
-      actualVacateDate: undef(s.vacate.actualVacateDate),
-      possessionRegainedDate: undef(s.vacate.possessionRegainedDate),
+      status: vacate.status,
+      keysReturned: vacate.keysReturned,
+      noticeEffectiveDate: undef(vacate.noticeEffectiveDate),
+      expectedVacateDate: undef(vacate.expectedVacateDate),
+      actualVacateDate: undef(vacate.actualVacateDate),
+      possessionRegainedDate: undef(vacate.possessionRegainedDate),
     },
     vacatingPreparation: {
       exitCleaningConfirmed: s.vacatingPreparation?.exitCleaningConfirmed ?? false,
@@ -232,19 +331,19 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
         }
       : null,
     inspection: {
-      status: s.inspection.status,
-      inspectorName: undef(s.inspection.inspectorName),
-      inspectionDate: undef(s.inspection.inspectionDate),
-      overallCondition: undef(s.inspection.overallCondition),
-      issuesFound: s.inspection.issuesFound,
-      tenantChargeableItems: s.inspection.tenantChargeableItems,
-      reportAvailable: s.inspection.reportAvailable,
-      inspectionId: s.inspection.inspectionId ?? undefined,
-      ingoingInspectionId: s.inspection.ingoingInspectionId ?? undefined,
-      ingoingReportUrl: s.inspection.ingoingReportUrl ?? undefined,
-      outgoingReportUrl: s.inspection.outgoingReportUrl ?? undefined,
+      status: inspection.status,
+      inspectorName: undef(inspection.inspectorName),
+      inspectionDate: undef(inspection.inspectionDate),
+      overallCondition: undef(inspection.overallCondition),
+      issuesFound: inspection.issuesFound,
+      tenantChargeableItems: inspection.tenantChargeableItems,
+      reportAvailable: inspection.reportAvailable,
+      inspectionId: inspection.inspectionId ?? undefined,
+      ingoingInspectionId: inspection.ingoingInspectionId ?? undefined,
+      ingoingReportUrl: inspection.ingoingReportUrl ?? undefined,
+      outgoingReportUrl: inspection.outgoingReportUrl ?? undefined,
       tenantAttendance:
-        (s.inspection.tenantAttendance as InspectionStageState['tenantAttendance']) ?? 'pending',
+        (inspection.tenantAttendance as InspectionStageState['tenantAttendance']) ?? 'pending',
     },
     reportComparison: {
       agentAcknowledged: s.reportComparison?.agentAcknowledged ?? false,
@@ -268,25 +367,25 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
       settlementSummary: s.reportComparison?.settlementSummary ?? null,
     },
     makeGood: {
-      status: s.makeGood.status,
-      issueCount: s.makeGood.issueCount,
-      tenantItems: s.makeGood.tenantItems,
-      landlordItems: s.makeGood.landlordItems,
-      sharedItems: s.makeGood.sharedItems,
-      estimatedDeductions: n0(s.makeGood.estimatedDeductions),
-      qaComplete: s.makeGood.qaComplete,
-      maintenanceRequestId: s.makeGood.maintenanceRequestId ?? undefined,
+      status: makeGood.status,
+      issueCount: makeGood.issueCount,
+      tenantItems: makeGood.tenantItems,
+      landlordItems: makeGood.landlordItems,
+      sharedItems: makeGood.sharedItems,
+      estimatedDeductions: n0(makeGood.estimatedDeductions),
+      qaComplete: makeGood.qaComplete,
+      maintenanceRequestId: makeGood.maintenanceRequestId ?? undefined,
     },
     settlement: {
-      status: s.settlement.status,
-      bondHeld: n0(s.settlement.bondHeld),
-      totalDeductions: n0(s.settlement.totalDeductions),
-      refundAmount: n0(s.settlement.refundAmount),
-      debtAmount: n0(s.settlement.debtAmount),
-      outcome: s.settlement.outcome ?? TERMINATION_OUTCOME.REFUND,
-      managerApprovalRequired: s.settlement.managerApprovalRequired,
-      managerApprovalComplete: s.settlement.managerApprovalComplete,
-      deductions: s.settlement.deductions.map((d) => ({
+      status: settlement.status,
+      bondHeld: n0(settlement.bondHeld),
+      totalDeductions: n0(settlement.totalDeductions),
+      refundAmount: n0(settlement.refundAmount),
+      debtAmount: n0(settlement.debtAmount),
+      outcome: settlement.outcome ?? TERMINATION_OUTCOME.REFUND,
+      managerApprovalRequired: settlement.managerApprovalRequired,
+      managerApprovalComplete: settlement.managerApprovalComplete,
+      deductions: (settlement.deductions ?? []).map((d) => ({
         id: d.id,
         category: d.category,
         description: d.description ?? "",
@@ -295,16 +394,16 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
       })),
     },
     agentApproval: {
-      status: s.agentApproval.status,
-      decision: s.agentApproval.decision,
-      evidenceComplete: s.agentApproval.evidenceComplete,
-      proposedDeductions: s.agentApproval.proposedDeductions ?? undefined,
+      status: agentApproval.status,
+      decision: agentApproval.decision,
+      evidenceComplete: agentApproval.evidenceComplete,
+      proposedDeductions: agentApproval.proposedDeductions ?? undefined,
     },
     tenantConfirmation: {
-      status: s.tenantConfirmation.status,
-      dueAt: undef(s.tenantConfirmation.dueAt),
-      declineReason: s.tenantConfirmation.declineReason ?? undefined,
-      confirmedAt: undef(s.tenantConfirmation.confirmedAt),
+      status: tenantConfirmation.status,
+      dueAt: undef(tenantConfirmation.dueAt),
+      declineReason: tenantConfirmation.declineReason ?? undefined,
+      confirmedAt: undef(tenantConfirmation.confirmedAt),
     },
     terminationNotice: s.terminationNotice
       ? {
@@ -322,24 +421,24 @@ export function mapTerminationCase(s: ServerTerminationCase): TerminationCaseDet
         }
       : null,
     bond: {
-      status: s.bond.status,
-      refundAmount: n0(s.bond.refundAmount),
-      debtBalance: n0(s.bond.debtBalance),
-      outcome: s.bond.outcome ?? TERMINATION_OUTCOME.REFUND,
-      refundPaid: s.bond.refundPaid,
+      status: bond.status,
+      refundAmount: n0(bond.refundAmount),
+      debtBalance: n0(bond.debtBalance),
+      outcome: bond.outcome ?? TERMINATION_OUTCOME.REFUND,
+      refundPaid: bond.refundPaid,
       readiness: bondReadiness(s),
     },
     closure: {
-      status: s.closure.status,
+      status: closure.status,
       recommendedPropertyStatus:
-        s.closure.recommendedPropertyStatus ?? PROPERTY_RECOVERY_STATUS.AWAITING_INSPECTION,
-      selectedPropertyStatus: s.closure.selectedPropertyStatus,
-      checklistComplete: s.closure.checklistComplete,
-      checklistTotal: s.closure.checklistTotal,
-      checklistBlocking: s.closure.checklistBlocking,
-      suggestedWeeklyRent: s.closure.suggestedWeeklyRent ?? undefined,
-      targetAvailableDate: undef(s.closure.targetAvailableDate),
-      releasingNotified: s.closure.releasingNotified,
+        closure.recommendedPropertyStatus ?? PROPERTY_RECOVERY_STATUS.AWAITING_INSPECTION,
+      selectedPropertyStatus: closure.selectedPropertyStatus,
+      checklistComplete: closure.checklistComplete,
+      checklistTotal: closure.checklistTotal,
+      checklistBlocking: closure.checklistBlocking,
+      suggestedWeeklyRent: closure.suggestedWeeklyRent ?? undefined,
+      targetAvailableDate: undef(closure.targetAvailableDate),
+      releasingNotified: closure.releasingNotified,
     },
   }
 }
@@ -354,8 +453,8 @@ type ListParams = {
 }
 
 const unwrap = (
-  p: Promise<{ case: ServerTerminationCase }>,
-): Promise<TerminationCaseDetail> => p.then((r) => mapTerminationCase(r.case))
+  p: Promise<{ case?: ServerTerminationCase | null }>,
+): Promise<TerminationCaseDetail> => p.then((r) => mapTerminationCase(r?.case))
 
 /**
  * Typed wrapper over the backend End-Leasing termination workflow
