@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { ArchivedRentReviewsTable } from '@/components/agent/archive-module-tables';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
@@ -28,6 +29,7 @@ import { buildPropertyWorkflowContext, tabActionsFor } from '@/lib/property-work
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { rentReviewJobRows } from '@/lib/property-job-rows';
 import type {
+  ArchivedRentReview,
   Inspection,
   LeasingCycle,
   LeasingRecord,
@@ -176,6 +178,7 @@ export function PropertyRentReviewTab({
   tenantSelections,
   currentLease,
   onWorkflowCreated,
+  deletedRentReviews = [],
 }: {
   property: Property;
   propertyId: string;
@@ -189,8 +192,8 @@ export function PropertyRentReviewTab({
   tribunalCases: TribunalCase[];
   tenantSelections?: TenantSelectionCase[];
   currentLease?: LeasingRecord;
-  onViewRentReview?: (reviewId: string) => void;
   onWorkflowCreated?: () => void;
+  deletedRentReviews?: ArchivedRentReview[];
 }) {
   const { apiConnected, refresh } = useAgentData();
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -357,6 +360,16 @@ export function PropertyRentReviewTab({
         )}
       </section>
 
+      {deletedRentReviews.length > 0 ? (
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold">Deleted</h3>
+          <p className="text-muted-foreground text-xs">
+            Cancelled rent reviews for this property, with the reason recorded at deletion.
+          </p>
+          <ArchivedRentReviewsTable items={deletedRentReviews} />
+        </section>
+      ) : null}
+
       <PropertyRentReviewCaseWorkflowDialog
         open={dialogReview !== null}
         onClose={handleDialogClose}
@@ -373,7 +386,7 @@ export function PropertyRentReviewTab({
           if (!open) setDeleteTarget(null);
         }}
         title="Delete rent review"
-        description="The rent review will be cancelled and removed from active cases. A reason is required."
+        description="The rent review moves to the Deleted section below and the global Archive. A reason is required."
         confirmLabel="Delete rent review"
         onConfirm={handleDeleteConfirm}
         onSuccess={() => setDeleteTarget(null)}

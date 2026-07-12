@@ -85,6 +85,7 @@ export function isActiveRentReview(
   review: RentReviewCase,
   decision?: RentReviewDecision | null,
 ): boolean {
+  if (isDeletedRentReview(review)) return false;
   if (isRentReviewDecided(review, decision)) return false;
   if (
     review.workflowState === 'COMPLETED' ||
@@ -95,6 +96,13 @@ export function isActiveRentReview(
   }
   const status = review.status.toLowerCase();
   return !status.includes('completed') && !status.includes('cancelled');
+}
+
+export function isDeletedRentReview(review: RentReviewCase): boolean {
+  return (
+    review.workflowState === 'CANCELLED' ||
+    review.status.toLowerCase().includes('cancelled')
+  );
 }
 
 export function findCurrentRentReview(
@@ -160,7 +168,11 @@ export function buildRentReviewHistoryRows(
   options: RentReviewRowOptions,
 ): RentReviewSummaryRow[] {
   return reviews
-    .filter((review) => !isActiveRentReview(review, options.rentReviewDecisions?.[review.id]))
+    .filter(
+      (review) =>
+        !isDeletedRentReview(review) &&
+        !isActiveRentReview(review, options.rentReviewDecisions?.[review.id]),
+    )
     .map((review) => buildRentReviewRow(review, options, 'history'))
     .sort((a, b) => parseTime(b.startDateIso) - parseTime(a.startDateIso));
 }

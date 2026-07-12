@@ -6,6 +6,7 @@ import {
   vacatingWorkflowProgress,
 } from '@/lib/case-workflows';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
+import { isDeletedRentReview } from '@/lib/property-rent-review-history';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { getRentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
@@ -384,14 +385,13 @@ export function rentReviewJobRows(
   reviews: RentReviewCase[],
   decisions: Record<string, RentReviewDecision | null | undefined>,
 ): PropertyJobRow[] {
-  return reviews.map((review) => {
+  return reviews
+    .filter((review) => !isDeletedRentReview(review))
+    .map((review) => {
     const progress = rentReviewWorkflowProgress(review);
     const decision = decisions[review.id];
     const createdIso = rentReviewCreatedAtIso(review);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
-    const cancelled =
-      review.workflowState === 'CANCELLED' ||
-      review.status.toLowerCase().includes('cancelled');
     return {
       id: review.id,
       kind: 'rent_review',
@@ -401,10 +401,9 @@ export function rentReviewJobRows(
       date: formatDate(review.reviewDue),
       createdAt,
       createdAtMs,
-      status: cancelled ? 'Cancelled' : progress.currentStepLabel,
-      phase:
-        cancelled || isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
-      rentReviewSchedule: cancelled ? undefined : getRentReviewScheduleIndicators(review) ?? undefined,
+      status: progress.currentStepLabel,
+      phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
+      rentReviewSchedule: getRentReviewScheduleIndicators(review) ?? undefined,
     };
   });
 }

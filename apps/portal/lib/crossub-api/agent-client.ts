@@ -60,9 +60,19 @@ export type AgentArchivedEndLeasing = {
   cancelReason: string;
   cancelledAt: string;
 };
+export type AgentArchivedRentReview = {
+  id: string;
+  propertyId: string | null;
+  propertyAddress: string;
+  reviewDue?: string | null;
+  currentRent?: number | null;
+  cancelReason: string;
+  cancelledAt: string;
+};
 export type AgentArchive = {
   cancelledLeasingCycles: AgentArchivedLeasingCycle[];
   cancelledEndLeasing: AgentArchivedEndLeasing[];
+  cancelledRentReviews: AgentArchivedRentReview[];
 };
 export type AgentPortfolio = components['schemas']['AgentPortfolioResponseDto'] & {
   leasingCycles?: AgentLeasingCycle[];

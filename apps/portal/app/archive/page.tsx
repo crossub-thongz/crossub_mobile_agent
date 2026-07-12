@@ -9,6 +9,7 @@ import { PageIntro } from '@/components/agent/page-intro';
 import {
   ArchivedEndLeasingTable,
   ArchivedLeasingCyclesTable,
+  ArchivedRentReviewsTable,
 } from '@/components/agent/archive-module-tables';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -31,7 +32,7 @@ export default function ArchivePage() {
     () => ({
       'new-letting': archive.cancelledLeasingCycles.length,
       'end-leasing': archive.cancelledEndLeasing.length,
-      'rent-review': 0,
+      'rent-review': archive.cancelledRentReviews.length,
       maintenance: 0,
     }),
     [archive],
@@ -76,11 +77,15 @@ export default function ArchivePage() {
         ) : null}
 
         {tab === 'rent-review' ? (
-          <EmptyState
-            icon={FolderArchive}
-            title="No archived rent reviews"
-            description="Cancelled rent reviews will appear here when that workflow is supported."
-          />
+          archive.cancelledRentReviews.length === 0 ? (
+            <EmptyState
+              icon={FolderArchive}
+              title="No archived rent reviews"
+              description="When you delete a rent review and provide a reason, it will appear here."
+            />
+          ) : (
+            <ArchivedRentReviewsTable items={archive.cancelledRentReviews} />
+          )
         ) : null}
 
         {tab === 'maintenance' ? (

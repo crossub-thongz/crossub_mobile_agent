@@ -596,6 +596,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         properties,
       ),
       cancelledEndLeasing: enrichPropertyAddresses(mapped.cancelledEndLeasing, properties),
+      cancelledRentReviews: enrichPropertyAddresses(mapped.cancelledRentReviews, properties),
     };
   }, [portfolio, properties]);
 

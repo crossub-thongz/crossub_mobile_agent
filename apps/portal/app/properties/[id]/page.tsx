@@ -176,6 +176,10 @@ export default function PropertyDetailPage() {
     () => archive.cancelledEndLeasing.filter((c) => c.propertyId === id),
     [archive.cancelledEndLeasing, id],
   );
+  const propertyDeletedRentReviews = useMemo(
+    () => archive.cancelledRentReviews.filter((r) => r.propertyId === id),
+    [archive.cancelledRentReviews, id],
+  );
   const nextRentReviewDate = getNextRentReviewDate(property, tenancyRentReviews, {
     isVacant,
   });
@@ -334,8 +338,8 @@ export default function PropertyDetailPage() {
             tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
             tenantSelections={propertyLeasingCases}
             currentLease={currentLease}
-            onViewRentReview={setSelectedRentReviewId}
             onWorkflowCreated={() => void refresh()}
+            deletedRentReviews={propertyDeletedRentReviews}
           />
         )}
 

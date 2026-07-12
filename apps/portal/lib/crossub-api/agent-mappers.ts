@@ -47,6 +47,7 @@ import type {
   AgentArchiveView,
   ArchivedEndLeasingCase,
   ArchivedLeasingCycle,
+  ArchivedRentReview,
   Agency,
   AgentDocument,
   AgentNotification,
@@ -384,7 +385,10 @@ export function mapAgentRentReviews(dtos: AgentRentReview[]): RentReviewCase[] {
     createdAt: r.createdAt ?? undefined,
     leaseType: r.leaseType ?? undefined,
     fixedTermWeeks: r.fixedTermWeeks ?? undefined,
-    status: r.workflowState.replace(/_/g, ' ').toLowerCase(),
+    status:
+      r.workflowState === 'CANCELLED'
+        ? 'deleted'
+        : r.workflowState.replace(/_/g, ' ').toLowerCase(),
     workflowState: r.workflowState,
     tenantResponse: RENT_REVIEW_TENANT_RESPONSE[r.workflowState],
     requiresApproval:
@@ -544,6 +548,17 @@ export function mapAgentArchive(
         vacateDate: c.vacateDate ?? undefined,
         cancelReason: c.cancelReason,
         cancelledAt: c.cancelledAt,
+      }),
+    ),
+    cancelledRentReviews: (archive?.cancelledRentReviews ?? []).map(
+      (r): ArchivedRentReview => ({
+        id: r.id,
+        propertyId: r.propertyId ?? '',
+        propertyAddress: r.propertyAddress,
+        reviewDue: r.reviewDue ?? undefined,
+        currentRent: r.currentRent ?? undefined,
+        cancelReason: r.cancelReason,
+        cancelledAt: r.cancelledAt,
       }),
     ),
   };

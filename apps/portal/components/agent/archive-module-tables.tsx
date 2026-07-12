@@ -8,7 +8,7 @@ import {
 } from '@/components/agent/module-list-table';
 import { propertyDetail } from '@/constants/routes';
 import { TERMINATION_UI } from '@/constants/end-leasing';
-import type { ArchivedEndLeasingCase, ArchivedLeasingCycle } from '@/lib/types';
+import type { ArchivedEndLeasingCase, ArchivedLeasingCycle, ArchivedRentReview } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 export const WORKFLOW_CASE_DELETED_STATUS = 'DELETED';
@@ -73,6 +73,48 @@ export function ArchivedEndLeasingTable({ items }: { items: ArchivedEndLeasingCa
               <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
               <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
                 {item.vacateDate ? formatDate(item.vacateDate) : '—'}
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
+                {formatDateTime(item.cancelledAt)}
+              </td>
+              <td className="max-w-[18rem] px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap">
+                {item.cancelReason}
+              </td>
+              {href ? <ModuleTableChevronCell href={href} /> : <td className="px-3 py-3" />}
+            </tr>
+          );
+        })}
+      </tbody>
+    </ModuleListTable>
+  );
+}
+
+export function ArchivedRentReviewsTable({ items }: { items: ArchivedRentReview[] }) {
+  return (
+    <ModuleListTable minWidth={920}>
+      <ModuleTableHead
+        columns={['Property', 'Status', 'Rent/wk', 'Due date', 'Deleted', 'Reason', '']}
+      />
+      <tbody className="divide-y">
+        {items.map((item) => {
+          const href = item.propertyId ? propertyDetail(item.propertyId) : undefined;
+          return (
+            <tr key={item.id} className="align-top transition-colors hover:bg-muted/20">
+              {href ? (
+                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                  <span className="line-clamp-2">{item.propertyAddress}</span>
+                </ModuleTableLinkCell>
+              ) : (
+                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{item.propertyAddress}</span>
+                </td>
+              )}
+              <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
+              <td className="whitespace-nowrap px-3 py-3 tabular-nums">
+                {item.currentRent != null ? `${formatCurrency(item.currentRent)}/wk` : '—'}
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
+                {item.reviewDue ? formatDate(item.reviewDue) : '—'}
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
                 {formatDateTime(item.cancelledAt)}

@@ -185,9 +185,21 @@ export interface ArchivedEndLeasingCase {
   cancelledAt: string;
 }
 
+/** Cancelled rent review in the agent archive. */
+export interface ArchivedRentReview {
+  id: string;
+  propertyId: string;
+  propertyAddress: string;
+  reviewDue?: string;
+  currentRent?: number;
+  cancelReason: string;
+  cancelledAt: string;
+}
+
 export interface AgentArchiveView {
   cancelledLeasingCycles: ArchivedLeasingCycle[];
   cancelledEndLeasing: ArchivedEndLeasingCase[];
+  cancelledRentReviews: ArchivedRentReview[];
 }
 
 export interface AccountingBill {
