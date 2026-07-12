@@ -25,6 +25,8 @@ import { buildRentReviewHistoryRows, isActiveRentReview, type RentReviewSummaryR
 import { rentReviewCreatedAtIso } from '@/lib/record-created-at';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { buildPropertyWorkflowContext, tabActionsFor } from '@/lib/property-workflow-actions';
+import type { PropertyJobRow } from '@/lib/property-job-rows';
+import { rentReviewJobRows } from '@/lib/property-job-rows';
 import type {
   Inspection,
   LeasingCycle,
