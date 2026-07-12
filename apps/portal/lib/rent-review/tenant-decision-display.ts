@@ -2,7 +2,7 @@ import { deriveNewLeaseStartDate } from '@/lib/rent-review/agent-decision-schedu
 import {
   isoDateAddDays,
   leaseEndFromFixedTermWeeks,
-  resolveRentIncreaseDate,
+  resolveRentIncreaseAnchor,
   RENT_REVIEW_ADVANCE_ORDER_DAYS,
   toDateOnly,
 } from '@/lib/rent-review/scheduling';
@@ -120,11 +120,10 @@ export function resolveAcceptedRentIncreaseStartDate(
   const { newLeaseStart } = resolveAcceptedNewLeaseDates(detail);
   return (
     toDateOnly(detail.effectiveDate) ??
-    resolveRentIncreaseDate({
+    resolveRentIncreaseAnchor({
       leaseEndDate: detail.leaseEndDate,
       termAnchor: detail.initialLeaseStartDate,
       termWeeks: detail.fixedTermWeeks,
-      newLeaseStart,
     })
   );
 }

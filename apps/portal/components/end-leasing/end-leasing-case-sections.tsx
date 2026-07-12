@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { AddressLineAutocomplete } from '@/components/end-leasing/address-line-autocomplete';
 import { TerminationKeyReturnDateDialog } from '@/components/end-leasing/termination-key-return-date-dialog';
-import { TerminationVacateDateDialog } from '@/components/end-leasing/termination-vacate-date-dialog';
+// import { TerminationVacateDateDialog } from '@/components/end-leasing/termination-vacate-date-dialog';
 import {
   breachStatusLabel,
   endLeasingKeyReturnDate,
-  endLeasingKeyReturnTo,
   endLeasingVacateDate,
   isBreachLease,
 } from '@/lib/end-leasing/agent-workflow-model';
@@ -21,6 +22,7 @@ import {
 } from '@/lib/end-leasing/vacate-display';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
+import { terminationApi } from '@/lib/termination-case-api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 function SummaryField({
@@ -119,8 +121,38 @@ export function EndLeasingKeysReturnSection({
   caseData: TerminationCaseDetail;
 }) {
   const applyCase = useEndLeasingStore((s) => s.applyCase);
-  const [vacateDialogOpen, setVacateDialogOpen] = useState(false);
+  // const [vacateDialogOpen, setVacateDialogOpen] = useState(false);
   const [keyReturnDialogOpen, setKeyReturnDialogOpen] = useState(false);
+
+  const savedAddress = caseData.vacate.keysReturnAddress?.trim() ?? '';
+  const [address, setAddress] = useState(savedAddress);
+  const [savingAddress, setSavingAddress] = useState(false);
+  const lastSavedRef = useRef(savedAddress);
+
+  useEffect(() => {
+    setAddress(savedAddress);
+    lastSavedRef.current = savedAddress;
+  }, [savedAddress]);
+
+  const saveAddress = useCallback(
+    async (next: string) => {
+      const trimmed = next.trim();
+      if (trimmed === lastSavedRef.current) return;
+
+      setSavingAddress(true);
+      try {
+        const updated = await terminationApi.setKeysReturnAddress(caseData.id, trimmed);
+        lastSavedRef.current = trimmed;
+        applyCase(updated);
+        toast.success('Key return address saved');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not save key return address');
+      } finally {
+        setSavingAddress(false);
+      }
+    },
+    [applyCase, caseData.id],
+  );
 
   const expectedVacate = endLeasingVacateDate(caseData) ?? '';
   const keyReturnDate = endLeasingKeyReturnDate(caseData);
@@ -142,7 +174,7 @@ export function EndLeasingKeysReturnSection({
             >
               Set key return date
             </Button>
-            <Button
+            {/* <Button
               type="button"
               size="sm"
               variant="outline"
@@ -150,16 +182,28 @@ export function EndLeasingKeysReturnSection({
               onClick={() => setVacateDialogOpen(true)}
             >
               Change vacate date
-            </Button>
+            </Button> */}
           </div>
         }
       >
-        <dl className="grid gap-4 sm:grid-cols-2">
+        <dl className="grid gap-4">
           <SummaryField label="Keys return date">
             {keyReturnDate ? formatDate(keyReturnDate) : 'Not set'}
           </SummaryField>
-          <SummaryField label="Keys return address">{endLeasingKeyReturnTo(caseData)}</SummaryField>
-          <div className="sm:col-span-2">
+          <div className="space-y-1.5">
+            <dt className="text-muted-foreground text-xs font-medium">Keys return address</dt>
+            <dd>
+              <AddressLineAutocomplete
+                id={`keys-return-address-${caseData.id}`}
+                value={address}
+                onChange={setAddress}
+                onPlaceSelect={(line) => void saveAddress(line)}
+                onBlur={() => void saveAddress(address)}
+                disabled={savingAddress}
+              />
+            </dd>
+          </div>
+          <div>
             <p className="text-muted-foreground text-xs">
               {caseData.vacate.keysReturned
                 ? 'Keys have been returned and recorded.'
@@ -169,7 +213,7 @@ export function EndLeasingKeysReturnSection({
         </dl>
       </SectionCard>
 
-      <TerminationVacateDateDialog
+      {/* <TerminationVacateDateDialog
         open={vacateDialogOpen}
         onOpenChange={setVacateDialogOpen}
         caseId={caseData.id}
@@ -177,7 +221,7 @@ export function EndLeasingKeysReturnSection({
         onSaved={(updated) => {
           if (updated) applyCase(updated);
         }}
-      />
+      /> */}
 
       <TerminationKeyReturnDateDialog
         open={keyReturnDialogOpen}

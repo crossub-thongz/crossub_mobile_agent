@@ -1,7 +1,8 @@
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
   isoDateAddDays,
-  resolveRentIncreaseDate,
+  resolveCurrentTenancyLeaseEnd,
+  resolveRentIncreaseAnchor,
   RENT_REVIEW_STATUTORY_NOTICE_DAYS,
 } from '@/lib/rent-review/scheduling';
 
@@ -12,9 +13,10 @@ export function isCurrentTenancyFixed(detail: RentReviewWorkflowDetail): boolean
 
 /** Resolve the current tenancy lease end from stored fields. */
 export function resolveCurrentLeaseEnd(detail: RentReviewWorkflowDetail): string | null {
-  return resolveRentIncreaseDate({
+  return resolveCurrentTenancyLeaseEnd({
     leaseEndDate: detail.leaseEndDate,
-    newLeaseStart: detail.newAgreementStart ?? detail.initialLeaseStartDate,
+    termAnchor: detail.initialLeaseStartDate,
+    termWeeks: detail.fixedTermWeeks,
   });
 }
 
@@ -31,6 +33,14 @@ export function deriveNewLeaseStartDate(detail: RentReviewWorkflowDetail): strin
 
 /** Same calendar day as the current lease end (one day before the new lease start). */
 export function deriveRentIncreaseOnDate(detail: RentReviewWorkflowDetail): string {
+  const anchored = resolveRentIncreaseAnchor({
+    effectiveDate: detail.effectiveDate,
+    leaseEndDate: detail.leaseEndDate,
+    termAnchor: detail.initialLeaseStartDate,
+    termWeeks: detail.fixedTermWeeks,
+  });
+  if (anchored) return anchored;
+
   if (!isCurrentTenancyFixed(detail)) {
     const today = new Date().toISOString().slice(0, 10);
     return isoDateAddDays(today, RENT_REVIEW_STATUTORY_NOTICE_DAYS);

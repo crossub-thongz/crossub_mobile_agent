@@ -25,11 +25,15 @@ export function TerminationCompleteInspectionDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  caseData: TerminationCaseDetail;
+  caseData: TerminationCaseDetail | null | undefined;
   onCompleted?: (detail: TerminationCaseDetail) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const inspection = caseData.inspection;
+  const inspection = caseData?.inspection;
+
+  if (!caseData?.id || !inspection) {
+    return null;
+  }
 
   const submit = async () => {
     setSaving(true);

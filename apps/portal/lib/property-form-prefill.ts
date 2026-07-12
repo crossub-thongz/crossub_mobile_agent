@@ -12,7 +12,7 @@ import {
   type FixedTermWeeks,
 } from '@/lib/rent-review-lease-helpers';
 import {
-  deriveRentReviewDueDate,
+  deriveRentReviewDueDateFromInput,
   RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE,
   resolveCurrentTenancyLeaseEnd,
 } from '@/lib/rent-review/scheduling';
@@ -359,10 +359,39 @@ export function buildRentReviewPrefill(
     leaseTermAnchor: preferred.leaseTermAnchor ?? termAnchor ?? undefined,
     currentWeeklyRent: weekly > 0 ? formatWeeklyRent(weekly) : '',
     managingAgentLabel: contact.managingAgentLabel,
-    rentReviewDate: currentTenancyLeaseEnd
-      ? deriveRentReviewDueDate(currentTenancyLeaseEnd)
-      : isoDateAddDays(preferred.date, -RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE),
+    rentReviewDate:
+      deriveRentReviewDueDateFromInput({
+        leaseEnd: currentLease?.leaseEnd ?? property.leaseEnd,
+        agreementEnd: draft?.endDate,
+        termAnchor,
+        termWeeks: fixedTermWeeks,
+        lastRentIncreaseAt: property.lastRentIncrease,
+        reviewDue: property.nextRentReview,
+      }) ??
+      isoDateAddDays(preferred.date, -RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE),
   };
+}
+
+/** Load last rent increase date from portal / registry for subsequent review scheduling. */
+export async function fetchPropertyLastRentIncrease(
+  propertyId: string,
+): Promise<string | undefined> {
+  try {
+    const portal = await propertyRegistryApi.getPortal(propertyId);
+    const fromPortal = portal?.overview?.lastRentIncreaseDate?.slice(0, 10);
+    if (fromPortal) return fromPortal;
+  } catch {
+    /* portal optional */
+  }
+
+  try {
+    const record = await propertyRegistryApi.get(propertyId);
+    if (record.lastRentIncreaseAt) return record.lastRentIncreaseAt.slice(0, 10);
+  } catch {
+    /* staff property row optional */
+  }
+
+  return undefined;
 }
 
 /** Load rent paid-to from the same sources as the property Overview tab. */
@@ -406,18 +435,24 @@ export async function fetchRentReviewPrefill(
     tenantSelections?: TenantSelectionCase[];
   },
 ): Promise<RentReviewPrefill> {
-  const [cycleView, rentPaidUntil] = await Promise.all([
+  const [cycleView, rentPaidUntil, lastRentIncrease] = await Promise.all([
     options?.leasingCycle?.id
       ? leasingOpsApi.get(options.leasingCycle.id).catch(() => null)
       : Promise.resolve(null),
     fetchPropertyRentPaidUntil(property.id),
+    fetchPropertyLastRentIncrease(property.id),
   ]);
 
-  const prefill = buildRentReviewPrefill(property, agency, currentLease, {
-    cycleView,
-    tenantSelections: options?.tenantSelections,
-    leasingCycle: options?.leasingCycle,
-  });
+  const prefill = buildRentReviewPrefill(
+    { ...property, lastRentIncrease: property.lastRentIncrease ?? lastRentIncrease },
+    agency,
+    currentLease,
+    {
+      cycleView,
+      tenantSelections: options?.tenantSelections,
+      leasingCycle: options?.leasingCycle,
+    },
+  );
 
   return {
     ...prefill,

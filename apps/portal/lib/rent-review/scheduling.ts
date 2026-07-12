@@ -1,17 +1,19 @@
 /**
  * Rent-review scheduling:
  *
- * - Countdown opens 90 days before the rent increase date.
+ * - First review: order opens 90 days before initial lease expiry; rent increase on lease end.
+ * - Subsequent reviews: order opens 90 days before the 12-month anniversary of the
+ *   previous rent increase; rent increase on that anniversary.
  * - Tenants require 60-day advance notice before a rent increase.
- * - That leaves a 30-day agent conduct window (90 − 60).
- * - Agent due date is 30 days before the new lease start (separate helper).
+ * - Agent due date is 30 days before the new lease start (first fixed review) or
+ *   30 days before the rent increase (subsequent).
  */
 
 export const RENT_REVIEW_ADVANCE_ORDER_DAYS = 90;
 export const RENT_REVIEW_STATUTORY_NOTICE_DAYS = 60;
 export const RENT_REVIEW_CONDUCT_WINDOW_DAYS =
   RENT_REVIEW_ADVANCE_ORDER_DAYS - RENT_REVIEW_STATUTORY_NOTICE_DAYS;
-/** Agent due date — 30 days before the new lease start. */
+/** Agent due date — 30 days before the new lease start or rent increase. */
 export const RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE = 30;
 
 export function toDateOnly(iso: string | null | undefined): string | null {
@@ -72,17 +74,66 @@ export function resolveCurrentTenancyLeaseEnd(input: {
   return null;
 }
 
+/** Whether this tenancy has had a prior rent increase (subsequent review cycle). */
+export function isSubsequentRentReview(lastRentIncreaseAt?: string | null): boolean {
+  return toDateOnly(lastRentIncreaseAt) != null;
+}
+
+/**
+ * When the rent increase for this review cycle should take effect.
+ * First review: current tenancy lease end. Subsequent: 12 months after last increase.
+ */
+export function resolveRentIncreaseAnchor(input: {
+  rentIncreaseDate?: string | null;
+  effectiveDate?: string | null;
+  leaseEndDate?: string | null;
+  leaseEnd?: string | null;
+  agreementEnd?: string | null;
+  termAnchor?: string | null;
+  termWeeks?: number | null;
+  lastRentIncreaseAt?: string | null;
+}): string | null {
+  const explicit =
+    toDateOnly(input.rentIncreaseDate) ??
+    toDateOnly(input.effectiveDate);
+  if (explicit) return explicit;
+
+  const lastIncrease = toDateOnly(input.lastRentIncreaseAt);
+  if (lastIncrease) {
+    return isoDateAddYears(lastIncrease, 1);
+  }
+
+  return resolveCurrentTenancyLeaseEnd(input);
+}
+
+/** Agent due date from the rent increase anchor. */
+export function resolveAgentDueDateFromAnchor(
+  rentIncreaseAnchor: string,
+  isSubsequentReview: boolean,
+): string {
+  if (isSubsequentReview) {
+    return isoDateSubtractDays(rentIncreaseAnchor, RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE);
+  }
+  return isoDateSubtractDays(
+    deriveNewLeaseStartFromTenancyEnd(rentIncreaseAnchor),
+    RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE,
+  );
+}
+
+/** When the next review order should open after a completed rent increase. */
+export function resolveNextRentReviewOpensOn(completedRentIncreaseDate: string): string {
+  const anniversary = isoDateAddYears(completedRentIncreaseDate, 1);
+  return isoDateSubtractDays(anniversary, RENT_REVIEW_ADVANCE_ORDER_DAYS);
+}
+
 /** Day after the current tenancy lease ends. */
 export function deriveNewLeaseStartFromTenancyEnd(tenancyLeaseEnd: string): string {
   return isoDateAddDays(tenancyLeaseEnd, 1);
 }
 
-/** Agent due date — 30 days before the new lease start. */
+/** Agent due date — 30 days before the new lease start (first fixed review). */
 export function deriveRentReviewDueDate(tenancyLeaseEnd: string): string {
-  return isoDateSubtractDays(
-    deriveNewLeaseStartFromTenancyEnd(tenancyLeaseEnd),
-    RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE,
-  );
+  return resolveAgentDueDateFromAnchor(tenancyLeaseEnd, false);
 }
 
 export function deriveRentReviewDueDateFromInput(input: {
@@ -91,13 +142,24 @@ export function deriveRentReviewDueDateFromInput(input: {
   agreementEnd?: string | null;
   termAnchor?: string | null;
   termWeeks?: number | null;
+  lastRentIncreaseAt?: string | null;
   /** Persisted due date when tenancy lease end is unavailable. */
   reviewDue?: string | null;
   /** Preferred / new lease start — due date is 30 days before this. */
   newLeaseStart?: string | null;
 }): string | null {
-  const tenancyLeaseEnd = resolveCurrentTenancyLeaseEnd(input);
-  if (tenancyLeaseEnd) return deriveRentReviewDueDate(tenancyLeaseEnd);
+  const lastIncrease = toDateOnly(input.lastRentIncreaseAt);
+  const rentIncreaseAnchor = resolveRentIncreaseAnchor({
+    leaseEndDate: input.leaseEndDate,
+    leaseEnd: input.leaseEnd,
+    agreementEnd: input.agreementEnd,
+    termAnchor: input.termAnchor,
+    termWeeks: input.termWeeks,
+    lastRentIncreaseAt: input.lastRentIncreaseAt,
+  });
+  if (rentIncreaseAnchor) {
+    return resolveAgentDueDateFromAnchor(rentIncreaseAnchor, lastIncrease != null);
+  }
 
   const newLeaseStart = toDateOnly(input.newLeaseStart);
   if (newLeaseStart) {
@@ -141,23 +203,26 @@ export interface RentReviewSchedulingFields {
 
 export function deriveRentReviewScheduling(input: {
   rentIncreaseDate?: string;
+  effectiveDate?: string;
   leaseEnd?: string;
   leaseEndDate?: string;
+  lastRentIncreaseAt?: string;
   newLeaseStart?: string;
   createdAt?: string;
 }): RentReviewSchedulingFields | null {
-  const createdDay = input.createdAt?.slice(0, 10) ?? null;
-
-  const rentIncreaseDate = resolveRentIncreaseDate({
+  const rentIncreaseDate = resolveRentIncreaseAnchor({
     rentIncreaseDate: input.rentIncreaseDate,
+    effectiveDate: input.effectiveDate,
     leaseEndDate: input.leaseEndDate,
     leaseEnd: input.leaseEnd,
+    lastRentIncreaseAt: input.lastRentIncreaseAt,
     newLeaseStart: input.newLeaseStart,
   });
 
   let scheduleAnchor = rentIncreaseDate;
 
-  if (!scheduleAnchor && createdDay) {
+  if (!scheduleAnchor && input.createdAt) {
+    const createdDay = input.createdAt.slice(0, 10);
     scheduleAnchor = isoDateAddYears(createdDay, 1);
   }
 

@@ -98,6 +98,8 @@ export interface Property {
   leaseStart?: string;
   leaseEnd?: string;
   nextRentReview?: string;
+  /** When the most recent rent increase took effect — anchors subsequent 12-month reviews. */
+  lastRentIncrease?: string;
   createdAt?: string;
   agencyName?: string;
   propertyManager?: string;

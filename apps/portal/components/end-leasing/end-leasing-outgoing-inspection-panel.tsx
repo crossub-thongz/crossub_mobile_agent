@@ -139,10 +139,8 @@ export function EndLeasingOutgoingInspectionPanel({
       <TerminationCompleteInspectionDialog
         open={completeDialogOpen}
         onOpenChange={setCompleteDialogOpen}
-        caseId={caseData.id}
-        onSaved={(updated) => {
-          if (updated) applyCase(updated);
-        }}
+        caseData={caseData}
+        onCompleted={(updated) => applyCase(updated)}
       />
     </>
   );

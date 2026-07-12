@@ -440,7 +440,7 @@ export function endLeasingKeyReturnDate(caseData: TerminationCaseDetail): string
 }
 
 export function endLeasingKeyReturnTo(caseData: TerminationCaseDetail): string {
-  return caseData.agencyName ?? caseData.assignedTeam ?? 'Agency office';
+  return caseData.vacate.keysReturnAddress?.trim() || 'Not set — enter key return address';
 }
 
 function storedEmailToRecord(

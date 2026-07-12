@@ -147,6 +147,7 @@ export function mapTerminationCase(
   const vacate = s.vacate ?? {
     status: LEASING_ITEM_STATUS.NOT_STARTED,
     keysReturned: false,
+    keysReturnAddress: null,
     noticeEffectiveDate: null,
     expectedVacateDate: null,
     actualVacateDate: null,
@@ -304,6 +305,7 @@ export function mapTerminationCase(
     vacate: {
       status: vacate.status,
       keysReturned: vacate.keysReturned,
+      keysReturnAddress: vacate.keysReturnAddress ?? undefined,
       noticeEffectiveDate: undef(vacate.noticeEffectiveDate),
       expectedVacateDate: undef(vacate.expectedVacateDate),
       actualVacateDate: undef(vacate.actualVacateDate),
@@ -501,10 +503,17 @@ export const terminationApi = {
 
   setKeyReturn: (
     id: string,
-    input: { date: string; keysReceived?: boolean },
+    input: { date?: string; keysReceived?: boolean; returnAddress?: string },
   ): Promise<TerminationCaseDetail> =>
     unwrap(
       api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/confirm-keys`, input),
+    ),
+
+  setKeysReturnAddress: (id: string, returnAddress: string): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/confirm-keys`, {
+        returnAddress,
+      }),
     ),
 
   updateVacatingPreparation: (

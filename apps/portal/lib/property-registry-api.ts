@@ -33,6 +33,7 @@ export interface PropertyRecord {
   leaseStartDate: string | null;
   leaseEndDate: string | null;
   nextRentReviewAt: string | null;
+  lastRentIncreaseAt: string | null;
   rentPaidUntil: string | null;
   rentWeekly: number | null;
   bondAmount: number | null;
@@ -52,6 +53,7 @@ export interface PropertyPortalOverview {
   leaseStartDate?: string;
   leaseEndDate?: string;
   nextRentReviewDate?: string;
+  lastRentIncreaseDate?: string;
   rentPaidUntilDate?: string;
   vacateDate?: string;
   nextRoutineInspectionDate?: string;

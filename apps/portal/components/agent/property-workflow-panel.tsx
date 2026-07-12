@@ -42,8 +42,7 @@ import {
   minLeasingCycleAvailableFrom,
 } from '@/lib/property-form-prefill';
 import {
-  deriveRentReviewDueDate,
-  resolveCurrentTenancyLeaseEnd,
+  deriveRentReviewDueDateFromInput,
 } from '@/lib/rent-review/scheduling';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { resolveRentPaidTo } from '@/lib/property-overview';
@@ -549,12 +548,12 @@ export function PropertyWorkflowCreateDialog({
         if (!rent || rent <= 0) throw new Error('Current weekly rent is required');
         if (!initialLeaseStartDate) throw new Error('Preferred lease start date is required');
 
-        const tenancyLeaseEnd = resolveCurrentTenancyLeaseEnd({
-          leaseEnd: currentLease?.leaseEnd ?? property.leaseEnd,
-        });
-        const rentReviewDueDate = tenancyLeaseEnd
-          ? deriveRentReviewDueDate(tenancyLeaseEnd)
-          : rrPrefill.rentReviewDate;
+        const rentReviewDueDate =
+          deriveRentReviewDueDateFromInput({
+            leaseEnd: currentLease?.leaseEnd ?? property.leaseEnd,
+            lastRentIncreaseAt: property.lastRentIncrease,
+            reviewDue: property.nextRentReview,
+          }) ?? rrPrefill.rentReviewDate;
 
         const reviewPayload = {
           currentWeeklyRent: rent,

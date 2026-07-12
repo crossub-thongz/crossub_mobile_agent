@@ -76,6 +76,7 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
   vacate: {
     status: LeasingItemStatus
     keysReturned: boolean
+    keysReturnAddress: string | null
     noticeEffectiveDate: string | null
     expectedVacateDate: string | null
     actualVacateDate: string | null

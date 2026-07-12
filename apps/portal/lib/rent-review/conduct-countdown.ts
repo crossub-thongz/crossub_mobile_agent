@@ -186,7 +186,9 @@ function buildTenantReminderBadge(
 
 function rentReviewSchedulingForCase(review: RentReviewCase) {
   return deriveRentReviewScheduling({
+    effectiveDate: review.dateStarted,
     leaseEnd: review.leaseEnd,
+    leaseEndDate: review.leaseEnd,
     newLeaseStart: review.leaseStart,
     createdAt: review.createdAt,
   });

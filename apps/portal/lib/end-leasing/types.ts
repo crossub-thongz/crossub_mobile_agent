@@ -47,6 +47,7 @@ export interface VacateStageState {
   actualVacateDate?: string
   possessionRegainedDate?: string
   keysReturned: boolean
+  keysReturnAddress?: string
 }
 
 export type MoveOutServicesChoice = 'pending' | 'booked' | 'declined' | 'own_arrangement'

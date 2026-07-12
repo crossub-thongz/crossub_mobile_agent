@@ -183,3 +183,10 @@ export function parsePlaceResult(
     lng: lng ?? undefined,
   };
 }
+
+/** Single-line AU address for display (street, suburb, state, postcode). */
+export function formatAustralianAddressLine(parsed: ParsedAustralianAddress): string {
+  const street = composeStreetAddress(parsed.unit, parsed.streetNumber, parsed.streetName);
+  const locality = [parsed.suburb, parsed.state, parsed.postcode].filter(Boolean).join(' ');
+  return [street, locality].filter(Boolean).join(', ');
+}
