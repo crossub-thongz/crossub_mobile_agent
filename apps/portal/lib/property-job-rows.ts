@@ -24,6 +24,8 @@ import {
   inspectionCreatedAtIso,
   maintenanceCreatedAtIso,
   rentReviewCreatedAtIso,
+  tribunalCreatedAtIso,
+  vacatingCreatedAtIso,
 } from '@/lib/record-created-at';
 import { parseSortTime } from '@/lib/client-table-sort';
 
@@ -340,7 +342,7 @@ export function leasingWorkflowJobRows(cases: PropertyLeasingWorkflowCase[]): Pr
       item.status?.toLowerCase().includes('completed') ||
       item.status?.toLowerCase().includes('closed') ||
       item.status?.toLowerCase().includes('cancelled');
-    const { createdAt, createdAtMs } = rowCreatedAt(item.sortAt);
+    const { createdAt, createdAtMs } = rowCreatedAt(item.createdAt);
     return {
       id: item.id,
       kind: item.category,
@@ -393,7 +395,7 @@ export function rentReviewJobRows(
 export function tribunalJobRows(cases: TribunalCase[]): PropertyJobRow[] {
   return cases.map((item) => {
     const progress = tribunalWorkflowProgress(item);
-    const { createdAt, createdAtMs } = rowCreatedAt(item.hearingDate);
+    const { createdAt, createdAtMs } = rowCreatedAt(tribunalCreatedAtIso(item));
     return {
       id: item.id,
       kind: 'tribunal',
@@ -413,7 +415,7 @@ export function vacatingJobRows(cases: VacatingCase[]): PropertyJobRow[] {
   return cases.map((item) => {
     const progress = vacatingWorkflowProgress(item);
     const terminal = item.apiStatus?.toLowerCase().includes('completed');
-    const createdIso = item.timeline[0]?.at;
+    const createdIso = vacatingCreatedAtIso(item);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
     return {
       id: item.id,

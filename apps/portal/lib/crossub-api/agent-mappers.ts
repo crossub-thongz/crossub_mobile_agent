@@ -290,7 +290,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
     apiStatus: i.status,
     reportStatus: inspectionReportStatus(i),
     reportUrl: i.reportUrl ?? undefined,
-    createdAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
+    createdAt: i.createdAt ?? undefined,
     timeline: [],
   };
   });
@@ -451,6 +451,7 @@ export function mapAgentVacating(dtos: AgentVacating[]): VacatingCase[] {
       checklist: [],
       bondBreakdown:
         v.total != null ? [{ label: 'Bond total', amount: v.total }] : [],
+      createdAt: v.createdAt ?? undefined,
       timeline: [],
     };
   });
@@ -476,6 +477,7 @@ export function mapAgentTenantSelections(
       { length: a.documentCount },
       (_, i) => `Document ${i + 1}`,
     ),
+    createdAt: a.createdAt ?? undefined,
     timeline: [],
   }));
 }
@@ -514,6 +516,7 @@ export function mapAgentLeasingCycles(
     onboardingStepId: c.onboardingStepId,
     rentPerWeek: c.rentPerWeek ?? undefined,
     availableFrom: c.availableFrom ?? undefined,
+    createdAt: c.createdAt ?? undefined,
   }));
 }
 
@@ -592,6 +595,7 @@ export function mapAgentTribunal(dtos: AgentTribunal[]): TribunalCase[] {
         !closed &&
         (t.status === TRIBUNAL_CASE_STATUS.DRAFT ||
           t.status === TRIBUNAL_CASE_STATUS.SUBMITTED),
+      createdAt: t.createdAt ?? undefined,
     };
   });
 }

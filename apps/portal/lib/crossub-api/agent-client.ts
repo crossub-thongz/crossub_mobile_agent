@@ -7,7 +7,9 @@ import { crossub } from './client';
 export type AgentAgency = components['schemas']['AgentAgencyResponseDto'];
 export type AgentProperty = components['schemas']['AgentPropertyResponseDto'];
 
-export type AgentInspection = components['schemas']['AgentInspectionDto'];
+export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
+  createdAt?: string | null;
+};
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'];
 export type AgentRentReview = components['schemas']['AgentRentReviewDto'] & {
   leaseStart?: string | null;
@@ -18,12 +20,18 @@ export type AgentRentReview = components['schemas']['AgentRentReviewDto'] & {
   leaseType?: 'fixed' | 'periodic' | null;
   fixedTermWeeks?: number | null;
 };
-export type AgentVacating = components['schemas']['AgentVacatingDto'];
+export type AgentVacating = components['schemas']['AgentVacatingDto'] & {
+  createdAt?: string | null;
+};
 export type AgentTenantSelection =
-  components['schemas']['AgentTenantSelectionDto'];
+  components['schemas']['AgentTenantSelectionDto'] & {
+    createdAt?: string | null;
+  };
 export type AgentLeasing = components['schemas']['AgentLeasingDto'];
 export type AgentAccounting = components['schemas']['AgentAccountingDto'];
-export type AgentTribunal = components['schemas']['AgentTribunalDto'];
+export type AgentTribunal = components['schemas']['AgentTribunalDto'] & {
+  createdAt?: string | null;
+};
 export type AgentLeasingCycle = {
   id: string;
   propertyId: string;
@@ -32,6 +40,7 @@ export type AgentLeasingCycle = {
   onboardingStepId?: string | null;
   rentPerWeek?: number | null;
   availableFrom?: string | null;
+  createdAt?: string | null;
 };
 export type AgentArchivedLeasingCycle = {
   id: string;

@@ -492,6 +492,7 @@ export function CreateInspectionWizard({
               scheduledAt: new Date(outgoingScheduledLocal).toISOString(),
               status: 'Scheduled',
               reportStatus: 'pending',
+              createdAt: new Date().toISOString(),
               timeline: [],
               source: 'inspection',
             };

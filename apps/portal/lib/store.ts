@@ -360,6 +360,7 @@ export const useAgentStore = create<AgentStore>()(
           propertyAddress: formatPropertyFullAddress(property),
           status,
           reportStatus: 'pending',
+          createdAt: now,
           openConductedBy,
           openListingContext,
           scheduledAt: scheduledAt || undefined,

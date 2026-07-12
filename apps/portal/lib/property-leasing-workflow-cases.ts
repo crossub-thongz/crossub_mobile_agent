@@ -21,6 +21,7 @@ export interface PropertyLeasingWorkflowCase {
   currentStep: string;
   detail?: string;
   sortAt?: string;
+  createdAt?: string;
 }
 
 function parseSortTimestamp(value?: string): number {
@@ -83,6 +84,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
       currentStep: progress.currentStepLabel,
       detail: cycle.propertyAddress,
       sortAt: cycle.availableFrom,
+      createdAt: cycle.createdAt,
     });
   }
 
@@ -113,6 +115,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
       currentStep: progress.currentStepLabel,
       detail: `Vacate ${vacating.vacateDate} · ${vacating.reason}`,
       sortAt: vacating.vacateDate,
+      createdAt: vacating.createdAt,
     });
   }
 
@@ -127,6 +130,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
       currentStep: progress.currentStepLabel,
       detail: review.propertyAddress,
       sortAt: review.reviewDue,
+      createdAt: review.createdAt,
     });
   }
 

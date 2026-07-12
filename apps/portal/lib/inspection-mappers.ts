@@ -53,6 +53,7 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     apiStatus: record.status,
     reportStatus: reportStatusFromRecord(record.status, record.reportUrl),
     reportUrl: record.reportUrl ?? undefined,
+    createdAt: record.createdAt,
     timeline: [],
     source: 'inspection',
   };
@@ -75,6 +76,7 @@ export function mapOpenSessionToInspection(
     propertyId: resolvedPropertyId,
     propertyAddress: session.address || session.property,
     scheduledAt: session.startTime,
+    createdAt: session.createdAt,
     status: openSessionStatusLabel(session.sessionStatus),
     apiStatus: session.sessionStatus,
     reportStatus: 'pending',

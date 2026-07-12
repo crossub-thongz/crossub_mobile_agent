@@ -267,6 +267,7 @@ export interface TribunalCase {
   apiStatus?: string;
   status: 'active' | 'closed';
   hearingDate?: string;
+  createdAt?: string;
   inspector?: string;
   matter: string;
   requiresAction: boolean;
@@ -486,6 +487,7 @@ export interface VacatingCase {
   requiresApproval: boolean;
   checklist: { label: string; status: 'done' | 'pending' | 'dispute' }[];
   bondBreakdown: { label: string; amount: number }[];
+  createdAt?: string;
   timeline: TimelineEntry[];
 }
 

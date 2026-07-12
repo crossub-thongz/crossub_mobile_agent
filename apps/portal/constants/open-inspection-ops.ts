@@ -137,6 +137,7 @@ export interface OpenInspectionSession {
   landlord?: OpenInspectionLandlord;
   startTime: string;
   endTime: string;
+  createdAt?: string;
   sessionStatus: SessionStatus;
   agent: OpenInspectionAgent;
   cycle: SessionCycle;
