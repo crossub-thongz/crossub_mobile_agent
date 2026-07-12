@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -9,8 +9,13 @@ import { Button } from '@/components/ui/button';
 import { TerminationCompleteInspectionDialog } from '@/components/end-leasing/termination-complete-inspection-dialog';
 import { inspectionDetail } from '@/constants/routes';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
+import {
+  endLeasingKeyReturnDate,
+  endLeasingVacateDate,
+} from '@/lib/end-leasing/agent-workflow-model';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
+import { suggestedOutgoingInspectionIsoFromDate } from '@/lib/inspections/outgoing-schedule';
 import { terminationApi } from '@/lib/termination-case-api';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { formatDate, formatDateTime } from '@/lib/utils';
@@ -37,10 +42,39 @@ export function EndLeasingOutgoingInspectionPanel({
   const applyCase = useEndLeasingStore((s) => s.applyCase);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [createBusy, setCreateBusy] = useState(false);
 
   const inspection = caseData.inspection;
   const inspectionDone = inspection.status === DONE;
   const tenantAttendance = inspection.tenantAttendance ?? 'pending';
+  const navContext = caseData.propertyId ? fromLeasingWorkflow(caseData.propertyId) : undefined;
+
+  const openInspection = (inspectionId: string) => {
+    router.push(inspectionDetail(inspectionId, navContext));
+  };
+
+  const createOutgoingInspection = async () => {
+    setCreateBusy(true);
+    try {
+      const anchor = endLeasingKeyReturnDate(caseData) ?? endLeasingVacateDate(caseData);
+      const updated = await terminationApi.scheduleInspection(caseData.id, {
+        inspector: 'Pending assignment',
+        date: suggestedOutgoingInspectionIsoFromDate(anchor),
+      });
+      applyCase(updated);
+      const inspectionId = updated.inspection?.inspectionId;
+      if (!inspectionId) {
+        toast.error('Outgoing inspection was created but could not be opened');
+        return;
+      }
+      toast.success('Outgoing inspection created');
+      openInspection(inspectionId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create outgoing inspection');
+    } finally {
+      setCreateBusy(false);
+    }
+  };
 
   const attendanceLabel =
     tenantAttendance === 'yes' ? 'Yes' : tenantAttendance === 'no' ? 'No' : 'Pending';
@@ -102,27 +136,29 @@ export function EndLeasingOutgoingInspectionPanel({
         ) : null}
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {inspection.inspectionId ? (
+          {!inspection.inspectionId ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={createBusy}
+              onClick={() => void createOutgoingInspection()}
+            >
+              {createBusy ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              Create outgoing inspection
+            </Button>
+          ) : (
             <Button
               type="button"
               size="sm"
               variant="outline"
               className="h-8 gap-1.5 text-xs"
-              onClick={() => {
-                router.push(
-                  inspectionDetail(
-                    inspection.inspectionId!,
-                    caseData.propertyId
-                      ? fromLeasingWorkflow(caseData.propertyId)
-                      : undefined,
-                  ),
-                );
-              }}
+              onClick={() => openInspection(inspection.inspectionId!)}
             >
               <ExternalLink className="size-3.5" />
               Open inspection job case
             </Button>
-          ) : null}
+          )}
           {!inspectionDone ? (
             <Button
               type="button"

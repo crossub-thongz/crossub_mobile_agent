@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
+  CheckCircle2,
   ExternalLink,
   Loader2,
   Lock,
@@ -329,20 +330,93 @@ function CompareReportPdfRow({
   );
 }
 
+function CompareReportsSection({
+  outgoingDetail,
+  ingoingDetail,
+  loading,
+  agentAcknowledged,
+  agentAcknowledgedAt,
+  actionBusy,
+  onConfirm,
+}: {
+  outgoingDetail: InspectionDetail | null;
+  ingoingDetail: InspectionDetail | null;
+  loading: boolean;
+  agentAcknowledged: boolean;
+  agentAcknowledgedAt?: string | null;
+  actionBusy: boolean;
+  onConfirm: () => void;
+}) {
+  const hasOutgoingReport = Boolean(outgoingDetail?.reportUrl || outgoingDetail?.id);
+  const hasIngoingReport = Boolean(ingoingDetail?.reportUrl || ingoingDetail?.id);
+
+  return (
+    <section className="space-y-3 rounded-xl border bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Ingoing / outgoing comparison</h3>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
+            Open the reports when available, compare condition changes, then confirm as the
+            managing agent.
+          </p>
+        </div>
+        {agentAcknowledged ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:text-emerald-200">
+            <CheckCircle2 className="size-3.5" />
+            Agent confirmed
+            {agentAcknowledgedAt ? (
+              <span className="text-muted-foreground font-normal">
+                · {formatDateTime(agentAcknowledgedAt)}
+              </span>
+            ) : null}
+          </span>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={actionBusy || loading}
+            onClick={onConfirm}
+          >
+            Confirm comparison
+          </Button>
+        )}
+      </div>
+      <CompareReportPdfRow
+        outgoingDetail={outgoingDetail}
+        ingoingDetail={ingoingDetail}
+        loading={loading}
+      />
+      {!agentAcknowledged && !loading && (!hasOutgoingReport || !hasIngoingReport) ? (
+        <p className="text-muted-foreground text-[11px]">
+          {!hasOutgoingReport && !hasIngoingReport
+            ? 'Reports are not linked yet — you can still confirm once you have reviewed the comparison.'
+            : !hasIngoingReport
+              ? 'Ingoing report is not linked yet — confirm when you are satisfied with the comparison.'
+              : 'Outgoing report is not available yet — confirm when you are satisfied with the comparison.'}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function CompareResponsibilitySection({
   title,
+  description,
   items,
   onChange,
   onEmail,
   emailHint,
-  busy,
+  actionBusy = false,
 }: {
   title: string;
+  description?: string;
   items: ReportComparisonRepairItem[];
   onChange: (items: ReportComparisonRepairItem[]) => void;
   onEmail: () => void;
   emailHint: string;
-  busy: boolean;
+  /** Disables email/actions only — not row inputs (avoids flicker during autosave). */
+  actionBusy?: boolean;
 }) {
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -360,9 +434,12 @@ function CompareResponsibilitySection({
     <section className="rounded-xl border bg-card">
       <div className="border-b px-4 py-2.5">
         <h3 className="text-sm font-semibold">{title}</h3>
+        {description ? (
+          <p className="text-muted-foreground mt-0.5 text-[11px]">{description}</p>
+        ) : null}
       </div>
-      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start">
-        <div className="min-w-0 flex-1 overflow-x-auto rounded-xl border">
+      <div className="p-4">
+        <div className="overflow-x-auto rounded-xl border">
           <table className="w-full min-w-[420px] text-left text-xs">
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
@@ -381,14 +458,13 @@ function CompareResponsibilitySection({
                 </tr>
               ) : (
                 items.map((row, index) => (
-                  <tr key={`${title}-${index}`} className="border-t align-top">
+                  <tr key={repairRowKey(row, `${title}-${index}`)} className="border-t align-top">
                     <td className="px-3 py-2 tabular-nums">{index + 1}</td>
                     <td className="px-3 py-2">
                       <Input
                         className="h-8 text-xs"
                         value={row.area}
                         placeholder="Area"
-                        disabled={busy}
                         onChange={(e) => updateRow(index, { area: e.target.value })}
                       />
                     </td>
@@ -397,7 +473,6 @@ function CompareResponsibilitySection({
                         className="min-h-[4.5rem] text-xs leading-relaxed"
                         value={row.description}
                         placeholder="Description"
-                        disabled={busy}
                         onChange={(e) => updateRow(index, { description: e.target.value })}
                       />
                     </td>
@@ -407,7 +482,7 @@ function CompareResponsibilitySection({
                         size="icon"
                         variant="ghost"
                         className="size-8"
-                        disabled={busy}
+                        disabled={actionBusy}
                         onClick={() => removeRow(index)}
                         aria-label="Remove row"
                       >
@@ -420,13 +495,13 @@ function CompareResponsibilitySection({
             </tbody>
           </table>
         </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:w-28">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 w-full gap-1 text-xs"
-            disabled={busy}
+            className="h-8 gap-1 text-xs"
+            disabled={actionBusy}
             onClick={addRow}
           >
             <Plus className="size-3.5" />
@@ -436,14 +511,14 @@ function CompareResponsibilitySection({
             type="button"
             size="sm"
             variant="secondary"
-            className="h-8 w-full gap-1.5 text-xs"
-            disabled={busy}
+            className="h-8 gap-1.5 text-xs"
+            disabled={actionBusy}
             onClick={onEmail}
+            title={emailHint}
           >
             <Mail className="size-3.5" />
             Email
           </Button>
-          <p className="text-muted-foreground text-center text-[10px] leading-snug">{emailHint}</p>
         </div>
       </div>
     </section>
@@ -501,7 +576,28 @@ function QuoteResponsibilitySection({
 }
 
 function emptyRepairItem(): ReportComparisonRepairItem {
-  return { area: '', description: '', quote: '', handymanId: null, handymanName: '' };
+  return {
+    area: '',
+    description: '',
+    quote: '',
+    handymanId: null,
+    handymanName: '',
+    localKey: crypto.randomUUID(),
+  };
+}
+
+type RepairRow = ReportComparisonRepairItem & { localKey?: string };
+
+function repairRowKey(row: RepairRow, fallback: string): string {
+  return row.localKey ?? fallback;
+}
+
+function withRepairRowKeys(items: ReportComparisonRepairItem[]): RepairRow[] {
+  return items.map((item) =>
+    (item as RepairRow).localKey
+      ? (item as RepairRow)
+      : { ...item, localKey: crypto.randomUUID() },
+  );
 }
 
 function hasRepairContent(item: ReportComparisonRepairItem): boolean {
@@ -522,6 +618,26 @@ function normalizeRepairItems(items: ReportComparisonRepairItem[]): ReportCompar
     handymanId: item.handymanId || undefined,
     handymanName: item.handymanName?.trim() || undefined,
   }));
+}
+
+/** Prefer local draft rows while the user is still typing (autosave responses can be stale). */
+function mergeRepairItemsAfterSave(
+  local: ReportComparisonRepairItem[],
+  server: ReportComparisonRepairItem[],
+): ReportComparisonRepairItem[] {
+  if (local.length === 0) return withRepairRowKeys(server);
+  if (server.length === 0) return local;
+
+  const serverKeys = new Set(
+    server.map((item) => `${item.area.trim()}|${item.description.trim()}`),
+  );
+  const unmatchedLocal = local.filter((item) => {
+    const key = `${item.area.trim()}|${item.description.trim()}`;
+    if (!hasRepairContent(item)) return true;
+    return !serverKeys.has(key);
+  });
+
+  return [...withRepairRowKeys(server), ...unmatchedLocal];
 }
 
 function contractorOptionLabel(contractor: PreferredContractor): string {
@@ -780,7 +896,7 @@ function RepairItemsTable({
             onClick={addRow}
           >
             <Plus className="size-3.5" />
-            Add row
+            Add
           </Button>
         ) : null}
         {footerAction}
@@ -876,8 +992,8 @@ export function EndLeasingReportComparisonPanel({
     seededFromInspectionRef.current = false;
     compareAutosaveReadyRef.current = false;
     quoteAutosaveReadyRef.current = false;
-    setTenantItems(caseData.reportComparison.tenantResponsibility);
-    setLandlordItems(caseData.reportComparison.landlordResponsibility);
+    setTenantItems(withRepairRowKeys(caseData.reportComparison.tenantResponsibility));
+    setLandlordItems(withRepairRowKeys(caseData.reportComparison.landlordResponsibility));
     // Only reset draft rows when opening a different case — not on every parent re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- caseData.reportComparison is read at case switch
   }, [caseData.id]);
@@ -892,7 +1008,7 @@ export function EndLeasingReportComparisonPanel({
       return;
     }
     const seeded = extractOutgoingRepairCandidates(outgoingDetail);
-    if (seeded.length > 0) setTenantItems(seeded);
+    if (seeded.length > 0) setTenantItems(withRepairRowKeys(seeded));
     seededFromInspectionRef.current = true;
   }, [
     outgoingDetail,
@@ -905,19 +1021,26 @@ export function EndLeasingReportComparisonPanel({
     patch: Parameters<typeof terminationApi.updateReportComparison>[1],
     options?: { silent?: boolean },
   ) => {
-    setBusy(true);
+    const silent = options?.silent ?? false;
+    if (!silent) setBusy(true);
     try {
       const updated = await terminationApi.updateReportComparison(caseData.id, patch);
       applyCase(updated);
-      setTenantItems(updated.reportComparison.tenantResponsibility);
-      setLandlordItems(updated.reportComparison.landlordResponsibility);
-      if (!options?.silent) toast.success('Comparison updated');
+      if (!silent) {
+        setTenantItems((prev) =>
+          mergeRepairItemsAfterSave(prev, updated.reportComparison.tenantResponsibility),
+        );
+        setLandlordItems((prev) =>
+          mergeRepairItemsAfterSave(prev, updated.reportComparison.landlordResponsibility),
+        );
+      }
+      if (!silent) toast.success('Comparison updated');
       return updated;
     } catch (err) {
-      toast.error(apiErrorMessage(err));
+      if (!silent) toast.error(apiErrorMessage(err));
       throw err;
     } finally {
-      setBusy(false);
+      if (!silent) setBusy(false);
     }
   };
 
@@ -951,14 +1074,33 @@ export function EndLeasingReportComparisonPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce draft rows in compare/quote modes
   }, [tenantItems, landlordItems, mode]);
 
+  const confirmAgentComparison = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.updateReportComparison(caseData.id, {
+        agentAcknowledged: true,
+      });
+      applyCase(updated);
+      toast.success('Ingoing/outgoing comparison confirmed');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const sendQuoteEmail = async () => {
     setBusy(true);
     try {
       await saveRepairItems(true);
       const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'agent');
       applyCase(updated);
-      setTenantItems(updated.reportComparison.tenantResponsibility);
-      setLandlordItems(updated.reportComparison.landlordResponsibility);
+      setTenantItems((prev) =>
+        mergeRepairItemsAfterSave(prev, updated.reportComparison.tenantResponsibility),
+      );
+      setLandlordItems((prev) =>
+        mergeRepairItemsAfterSave(prev, updated.reportComparison.landlordResponsibility),
+      );
       toast.success('Repair quotes sent to agent');
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -973,8 +1115,12 @@ export function EndLeasingReportComparisonPanel({
       await saveRepairItems(true);
       const updated = await terminationApi.sendComparisonSummaryEmail(caseData.id, audience);
       applyCase(updated);
-      setTenantItems(updated.reportComparison.tenantResponsibility);
-      setLandlordItems(updated.reportComparison.landlordResponsibility);
+      setTenantItems((prev) =>
+        mergeRepairItemsAfterSave(prev, updated.reportComparison.tenantResponsibility),
+      );
+      setLandlordItems((prev) =>
+        mergeRepairItemsAfterSave(prev, updated.reportComparison.landlordResponsibility),
+      );
       toast.success(
         audience === 'tenant'
           ? 'Tenant responsibility summary sent'
@@ -989,8 +1135,12 @@ export function EndLeasingReportComparisonPanel({
 
   const applyUpdatedCase = (updated: TerminationCaseDetail) => {
     applyCase(updated);
-    setTenantItems(updated.reportComparison.tenantResponsibility);
-    setLandlordItems(updated.reportComparison.landlordResponsibility);
+    setTenantItems((prev) =>
+      mergeRepairItemsAfterSave(prev, updated.reportComparison.tenantResponsibility),
+    );
+    setLandlordItems((prev) =>
+      mergeRepairItemsAfterSave(prev, updated.reportComparison.landlordResponsibility),
+    );
   };
 
   const checkTenantReply = async () => {
@@ -1067,39 +1217,29 @@ export function EndLeasingReportComparisonPanel({
   if (showCompare) {
     return (
       <div className="space-y-4">
-        <CompareReportPdfRow
+        <CompareReportsSection
           outgoingDetail={outgoingDetail}
           ingoingDetail={ingoingDetail}
           loading={loadingReports}
+          agentAcknowledged={rc.agentAcknowledged}
+          agentAcknowledgedAt={rc.agentAcknowledgedAt}
+          actionBusy={busy}
+          onConfirm={() => void confirmAgentComparison()}
         />
-        <section className="rounded-xl border bg-card">
-          <div className="border-b px-4 py-2.5">
-            <h3 className="text-sm font-semibold">Tenant responsibility</h3>
-            <p className="text-muted-foreground mt-0.5 text-[11px]">
-              Synced automatically from the inspector outgoing report — not editable here.
-            </p>
-          </div>
-          <div className="p-4">
-            <RepairItemsTable
-              title=""
-              hideTitle
-              showAddRow={false}
-              items={tenantItems}
-              contractors={contractors}
-              agencyId={agencyId}
-              onContractorsChange={setContractors}
-              onChange={() => undefined}
-              readOnly
-              hideQuoteColumns
-              busy={busy}
-            />
-          </div>
-        </section>
+        <CompareResponsibilitySection
+          title="Tenant responsibility"
+          description="Prefilled from the inspector outgoing report. Add or adjust items before emailing the tenant."
+          items={tenantItems}
+          onChange={setTenantItems}
+          actionBusy={busy}
+          emailHint="Send to tenant"
+          onEmail={() => void sendComparisonSummary('tenant')}
+        />
         <CompareResponsibilitySection
           title="Landlord responsibility"
           items={landlordItems}
           onChange={setLandlordItems}
-          busy={busy}
+          actionBusy={busy}
           emailHint="Send to tenant + landlord"
           onEmail={() => void sendComparisonSummary('agent')}
         />

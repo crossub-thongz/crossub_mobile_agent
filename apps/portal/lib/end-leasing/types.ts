@@ -94,6 +94,8 @@ export interface ReportComparisonRepairItem {
   quote?: string
   handymanId?: string | null
   handymanName?: string | null
+  /** Client-only stable key for compare-step draft rows (not sent to API). */
+  localKey?: string
 }
 
 export type TenantQuoteResponse = 'pending' | 'accepted' | 'declined'

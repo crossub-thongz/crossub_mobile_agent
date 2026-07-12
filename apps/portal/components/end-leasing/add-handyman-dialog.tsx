@@ -87,8 +87,8 @@ export function AddHandymanDialog({
         <DialogHeader>
           <DialogTitle>Add handyman</DialogTitle>
           <DialogDescription>
-            Save a contractor to your agency list. They will appear in the handyman dropdown for
-            future repair quotes.
+            Save a contractor to your personal handyman list for this agency. They will appear
+            in the handyman dropdown for your future repair quotes.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-1">

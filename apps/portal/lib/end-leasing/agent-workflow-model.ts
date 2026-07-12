@@ -216,7 +216,7 @@ function reportComparisonSubProgress(
   if (!rc || !inspection) return [];
 
   const compared =
-    (rc.agentAcknowledged && rc.tenantAcknowledged) || inspection.reportAvailable;
+    rc.agentAcknowledged || inspection.reportAvailable;
   const responsibilitiesDefined =
     rc.tenantResponsibility.length > 0 || rc.landlordResponsibility.length > 0;
   const tenantSummarySent = Boolean(rc.tenantComparisonSummaryEmail?.sentAt);
@@ -224,7 +224,7 @@ function reportComparisonSubProgress(
 
   return [
     { id: 'complete', label: 'Outgoing inspection completion date recorded', done: inspection.status === DONE },
-    { id: 'compare', label: 'Ingoing/outgoing reports compared', done: compared },
+    { id: 'compare', label: 'Ingoing/outgoing reports compared (agent confirmed)', done: compared },
     { id: 'responsibility', label: 'Landlord & tenant responsibility defined', done: responsibilitiesDefined },
     { id: 'tenant_email', label: 'Tenant responsibility summary sent to tenant', done: tenantSummarySent },
     { id: 'agent_email', label: 'Full summary sent to agent', done: agentSummarySent },

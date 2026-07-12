@@ -252,12 +252,12 @@ export interface PreferredContractor {
   serviceTypes: string[];
 }
 
-/** Agency preferred tradies/handymen for repair quote assignment. */
+/** Agency preferred tradies/handymen for repair quote assignment (agent-scoped). */
 export async function fetchPreferredContractors(
   agencyId: string,
 ): Promise<PreferredContractor[]> {
   const res = await apiV1.get<{ preferredContractors: PreferredContractor[] }>(
-    `/agencies/${agencyId}/preferred-contractors`,
+    `/agent/agencies/${agencyId}/preferred-contractors`,
   );
   return res.preferredContractors;
 }
@@ -270,13 +270,13 @@ export interface AddPreferredContractorInput {
   contractorId?: string;
 }
 
-/** Add a handyman/contractor to the agency preferred list (saved in DB). */
+/** Add a handyman/contractor to the agent's personal preferred list (saved in DB). */
 export async function addPreferredContractor(
   agencyId: string,
   input: AddPreferredContractorInput,
 ): Promise<PreferredContractor> {
   const res = await apiV1.post<{ preferredContractor: PreferredContractor }>(
-    `/agencies/${agencyId}/preferred-contractors`,
+    `/agent/agencies/${agencyId}/preferred-contractors`,
     input,
   );
   return res.preferredContractor;

@@ -4,17 +4,30 @@ import type { Property, VacatingCase } from '@/lib/types';
 
 export const OUTGOING_INSPECTION_DAYS_AFTER_VACATE = 3;
 
-export function suggestedOutgoingInspectionIso(vacatingCase: VacatingCase): string {
-  const anchor = vacatingCase.vacateDate?.slice(0, 10);
-  if (!anchor) return '';
-  const d = addDays(new Date(`${anchor}T09:00:00`), OUTGOING_INSPECTION_DAYS_AFTER_VACATE);
-  if (Number.isNaN(d.getTime())) return '';
+export function suggestedOutgoingInspectionIsoFromDate(anchor?: string | null): string {
+  if (!anchor?.trim()) {
+    const tomorrow = addDays(new Date(), 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    return tomorrow.toISOString();
+  }
+  const d = addDays(new Date(`${anchor.slice(0, 10)}T09:00:00`), OUTGOING_INSPECTION_DAYS_AFTER_VACATE);
+  if (Number.isNaN(d.getTime())) {
+    const tomorrow = addDays(new Date(), 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    return tomorrow.toISOString();
+  }
   if (d.getTime() < Date.now()) {
     const tomorrow = addDays(new Date(), 1);
     tomorrow.setHours(9, 0, 0, 0);
     return tomorrow.toISOString();
   }
   return d.toISOString();
+}
+
+export function suggestedOutgoingInspectionIso(vacatingCase: VacatingCase): string {
+  const anchor = vacatingCase.vacateDate?.slice(0, 10);
+  if (!anchor) return '';
+  return suggestedOutgoingInspectionIsoFromDate(anchor);
 }
 
 export function toDatetimeLocalValue(iso: string): string {
