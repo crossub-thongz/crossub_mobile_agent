@@ -37,9 +37,12 @@ export function InspectionDetailDialog({
   size?: 'default' | 'wide' | 'xl';
 }) {
   const { apiConnected } = useAgentData();
-  if (!inspection) return null;
+  const stageEmails = useMemo(
+    () => (inspection ? inspectionEmailRecordsForStep(inspection) : []),
+    [inspection],
+  );
 
-  const stageEmails = useMemo(() => inspectionEmailRecordsForStep(inspection), [inspection]);
+  if (!inspection) return null;
   const emailTitle =
     inspection.apiStatus === 'PUBLISHED' || inspection.reportStatus === 'sent'
       ? 'All e-mail'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -8,6 +8,7 @@ import {
   Building2,
   Calendar,
   Loader2,
+  Plus,
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,47 +46,91 @@ import {
   SELF_OPEN_NEW_LISTING_NOTE,
   type OpenConductedBy,
 } from '@/lib/open-inspection';
-import type { Property } from '@/lib/types';
+import type { Inspection, Property } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import { cn } from '@/lib/utils';
 
 export type InspectionCreateType = 'OPEN' | 'INGOING' | 'OUTGOING' | 'ROUTINE';
 
-const TYPE_OPTIONS: {
+export type InspectionCreateResult = {
+  inspectionId: string;
+  inspection: Inspection;
+};
+
+export const INSPECTION_CREATE_TYPE_OPTIONS: {
   id: InspectionCreateType;
   label: string;
   description: string;
+  scheduleLabel: string;
 }[] = [
   {
     id: 'OPEN',
     label: 'Open',
+    scheduleLabel: 'Schedule open inspection',
     description: 'Prospect viewing for a vacant or new listing.',
   },
   {
     id: 'INGOING',
     label: 'Ingoing',
+    scheduleLabel: 'Schedule ingoing inspection',
     description: 'Move-in condition report before a new tenant.',
   },
   {
     id: 'OUTGOING',
     label: 'Outgoing',
+    scheduleLabel: 'Schedule outgoing inspection',
     description: 'End-of-lease condition report after vacating.',
   },
   {
     id: 'ROUTINE',
     label: 'Routine',
+    scheduleLabel: 'Schedule routine inspection',
     description: 'Scheduled self or in-person routine check.',
   },
 ];
 
+const TYPE_OPTIONS = INSPECTION_CREATE_TYPE_OPTIONS;
+
+export function InspectionCreateTypeButtons({
+  onSelect,
+  className,
+}: {
+  onSelect: (type: InspectionCreateType) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn('grid grid-cols-2 gap-2 sm:grid-cols-4', className)}>
+      {INSPECTION_CREATE_TYPE_OPTIONS.map((option) => (
+        <Button
+          key={option.id}
+          type="button"
+          size="lg"
+          variant={option.id === 'OPEN' ? 'default' : 'outline'}
+          className="h-11 rounded-xl"
+          onClick={() => onSelect(option.id)}
+        >
+          <Plus className="size-4" />
+          {option.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 export function CreateInspectionWizard({
   preselectedPropertyId: preselectedPropertyIdProp,
   initialType: initialTypeProp,
+  hideTypePicker: hideTypePickerProp,
+  hidePropertySelect: hidePropertySelectProp,
+  navigateOnSuccess = true,
   onCreated,
 }: {
   preselectedPropertyId?: string | null;
   initialType?: InspectionCreateType | null;
-  onCreated?: () => void;
+  hideTypePicker?: boolean;
+  hidePropertySelect?: boolean;
+  navigateOnSuccess?: boolean;
+  onCreated?: (result: InspectionCreateResult) => void;
 } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -115,15 +160,32 @@ export function CreateInspectionWizard({
   const initialType =
     typeParam && TYPE_OPTIONS.some((t) => t.id === typeParam) ? typeParam : null;
 
+  const hideTypePicker = hideTypePickerProp ?? Boolean(initialType);
+  const hidePropertySelect = hidePropertySelectProp ?? Boolean(validPreselected);
+
   const [inspectionType, setInspectionType] = useState<InspectionCreateType | null>(initialType);
   const [propertyId, setPropertyId] = useState(validPreselected);
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
+  const prefillSessionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (validPreselected) setPropertyId(validPreselected);
-    if (initialType) setInspectionType(initialType);
-  }, [validPreselected, initialType]);
+    if (validPreselected) {
+      setPropertyId((current) => current || validPreselected);
+    }
+  }, [validPreselected]);
+
+  useEffect(() => {
+    if (initialType) {
+      setInspectionType((current) => current ?? initialType);
+    }
+  }, [initialType]);
+
+  useEffect(() => {
+    return () => {
+      prefillSessionRef.current = null;
+    };
+  }, []);
 
   const property = useMemo(
     () => properties.find((p) => p.id === propertyId),
@@ -198,22 +260,37 @@ export function CreateInspectionWizard({
   );
 
   useEffect(() => {
-    if (!property || !inspectionType) return;
+    if (!propertyId || !inspectionType) return;
+
+    const propertyRow = properties.find((p) => p.id === propertyId);
+    if (!propertyRow) return;
+
+    const session = `${propertyId}:${inspectionType}`;
+    if (prefillSessionRef.current === session) return;
+
+    const lease = leasingRecords.find(
+      (r) =>
+        r.propertyId === propertyId && (r.status === 'current' || r.status === 'upcoming'),
+    );
+    const cycle = leasingCycles.find((c) => c.propertyId === propertyId);
+    const vacatingForProperty = vacating.filter((v) => v.propertyId === propertyId);
+    const tenantSelectionsForProperty = tenantSelections.filter((t) => t.propertyId === propertyId);
 
     let cancelled = false;
     setPrefillLoading(true);
+    prefillSessionRef.current = session;
 
     const applyPrefill = async () => {
       if (inspectionType === 'INGOING') {
         const prefill = apiConnected
           ? await fetchIngoingInspectionPrefill(
-              property,
-              currentLease,
-              leasingCycle,
-              propertyTenantSelections,
+              propertyRow,
+              lease,
+              cycle,
+              tenantSelectionsForProperty,
             )
-          : buildIngoingInspectionPrefill(property, currentLease, leasingCycle, {
-              tenantSelections: propertyTenantSelections,
+          : buildIngoingInspectionPrefill(propertyRow, lease, cycle, {
+              tenantSelections: tenantSelectionsForProperty,
             });
         if (cancelled) return;
         setIngoing(prefill);
@@ -223,9 +300,9 @@ export function CreateInspectionWizard({
       if (inspectionType === 'ROUTINE') {
         if (!cancelled) {
           setRoutine(
-            buildRoutineInspectionPrefill(property, {
-              currentLease,
-              tenantSelections: propertyTenantSelections,
+            buildRoutineInspectionPrefill(propertyRow, {
+              currentLease: lease,
+              tenantSelections: tenantSelectionsForProperty,
             }),
           );
         }
@@ -235,7 +312,7 @@ export function CreateInspectionWizard({
         if (!cancelled) {
           setOpenScheduledLocal(
             toDatetimeLocalValue(
-              defaultOpenInspectionSchedule(property, leasingCycle?.availableFrom),
+              defaultOpenInspectionSchedule(propertyRow, cycle?.availableFrom),
             ),
           );
           setOpenConductedBy(null);
@@ -245,7 +322,7 @@ export function CreateInspectionWizard({
       }
 
       if (inspectionType === 'OUTGOING') {
-        const activeCase = propertyVacating[0];
+        const activeCase = vacatingForProperty[0];
         if (!cancelled) {
           if (activeCase) {
             const prefill = buildOutgoingInspectionPrefill(activeCase);
@@ -267,11 +344,29 @@ export function CreateInspectionWizard({
     return () => {
       cancelled = true;
     };
-  }, [property, inspectionType, currentLease, leasingCycle, propertyVacating, propertyTenantSelections, apiConnected]);
+  }, [
+    propertyId,
+    inspectionType,
+    properties,
+    leasingRecords,
+    leasingCycles,
+    vacating,
+    tenantSelections,
+    apiConnected,
+  ]);
 
   const openListingContext = property ? getOpenListingContext(property) : null;
   const isOccupiedOpen = openListingContext === 'occupied';
   const isSelfOpen = openConductedBy === 'agent';
+
+  const finalizeInspectionCreate = (inspection: Inspection) => {
+    registerInspection(inspection);
+    onCreated?.({ inspectionId: inspection.id, inspection });
+    if (navigateOnSuccess) {
+      router.push(inspectionDetail(inspection.id));
+    }
+    void refresh();
+  };
 
   const submit = async () => {
     if (!property || !inspectionType) return;
@@ -304,15 +399,13 @@ export function CreateInspectionWizard({
           agentPhone: agentContact.agentPhone || undefined,
           agentRole: 'leasing_agent',
         });
-        registerInspection(mapOpenSessionToInspection(session, property.id));
-        await refresh();
+        const view = mapOpenSessionToInspection(session, property.id);
         toast.success(
           openConductedBy === 'crossub'
             ? 'Open inspection requested'
             : 'Open inspection scheduled',
         );
-        onCreated?.();
-        router.push(inspectionDetail(session.id));
+        finalizeInspectionCreate(view);
         return;
       }
 
@@ -333,11 +426,9 @@ export function CreateInspectionWizard({
           notes: ingoing.notes?.trim() || undefined,
           leaseApprovalRef: ingoing.leaseApprovalRef.trim() || undefined,
         });
-        registerInspection(mapInspectionRecordToView(created));
-        await refresh();
+        const view = mapInspectionRecordToView(created);
         toast.success('Ingoing inspection created');
-        onCreated?.();
-        router.push(inspectionDetail(created.id));
+        finalizeInspectionCreate(view);
         return;
       }
 
@@ -352,22 +443,28 @@ export function CreateInspectionWizard({
           inspectorName:
             routine.flow === 'in_person' ? routine.inspectorName.trim() || undefined : undefined,
         });
-        await refresh();
         const inspectionId = schedule.currentInspection?.id;
+        let view: Inspection | null = null;
         if (inspectionId) {
           try {
             const record = await inspectionsApi.get(inspectionId);
-            registerInspection(mapInspectionRecordToView(record));
+            view = mapInspectionRecordToView(record);
           } catch {
-            // refresh() will reconcile when the inspection row appears
+            view = null;
           }
         }
         toast.success('Routine inspection schedule created');
-        onCreated?.();
-        if (inspectionId) {
-          router.push(inspectionDetail(inspectionId));
+        if (view) {
+          finalizeInspectionCreate(view);
         } else {
-          router.push(ROUTES.INSPECTIONS);
+          void refresh();
+          if (navigateOnSuccess) {
+            if (inspectionId) {
+              router.push(inspectionDetail(inspectionId));
+            } else {
+              router.push(ROUTES.INSPECTIONS);
+            }
+          }
         }
         return;
       }
@@ -375,14 +472,38 @@ export function CreateInspectionWizard({
       if (inspectionType === 'OUTGOING') {
         if (!vacatingCaseId) throw new Error('Select a vacating case');
         if (!outgoingScheduledLocal) throw new Error('Scheduled date is required');
-        await terminationApi.scheduleInspection(vacatingCaseId, {
+        const updatedCase = await terminationApi.scheduleInspection(vacatingCaseId, {
           inspector: outgoingInspector.trim() || 'Pending assignment',
           date: new Date(outgoingScheduledLocal).toISOString(),
         });
-        await refresh();
+        const inspectionId = updatedCase.inspection?.inspectionId ?? undefined;
+        let view: Inspection | null = null;
+        if (inspectionId) {
+          try {
+            const record = await inspectionsApi.get(inspectionId);
+            view = mapInspectionRecordToView(record);
+          } catch {
+            view = {
+              id: inspectionId,
+              trackingNumber: inspectionReferenceLabel(inspectionId, 'OUTGOING'),
+              type: 'OUTGOING',
+              propertyId: property.id,
+              propertyAddress: property.address,
+              scheduledAt: new Date(outgoingScheduledLocal).toISOString(),
+              status: 'Scheduled',
+              reportStatus: 'pending',
+              timeline: [],
+              source: 'inspection',
+            };
+          }
+        }
         toast.success('Outgoing inspection scheduled');
-        onCreated?.();
-        router.push(`${ROUTES.INSPECTIONS}?type=OUTGOING`);
+        if (view) {
+          finalizeInspectionCreate(view);
+        } else {
+          void refresh();
+          if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=OUTGOING`);
+        }
         return;
       }
     } catch (err) {
@@ -407,50 +528,63 @@ export function CreateInspectionWizard({
       ) : null}
 
       <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold">Inspection type</h2>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Select a type — the form below autofills from the property portfolio, same as property
-            workflow cases.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {TYPE_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setInspectionType(option.id)}
-              className={cn(
-                'rounded-xl border bg-card p-3 text-left transition hover:bg-secondary/30',
-                inspectionType === option.id && 'border-primary ring-1 ring-primary/20',
-              )}
-            >
-              <p className="text-sm font-semibold">{option.label}</p>
-              <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
-                {option.description}
+        {!hideTypePicker ? (
+          <>
+            <div>
+              <h2 className="text-sm font-semibold">Inspection type</h2>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Select a type — the form below autofills from the property portfolio, same as property
+                workflow cases.
               </p>
-            </button>
-          ))}
-        </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {TYPE_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setInspectionType(option.id)}
+                  className={cn(
+                    'rounded-xl border bg-card p-3 text-left transition hover:bg-secondary/30',
+                    inspectionType === option.id && 'border-primary ring-1 ring-primary/20',
+                  )}
+                >
+                  <p className="text-sm font-semibold">{option.label}</p>
+                  <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                    {option.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
       </section>
 
-      <section className="space-y-2">
-        <Label htmlFor="inspection-property">Property *</Label>
-        <select
-          id="inspection-property"
-          className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
-          value={propertyId}
-          onChange={(e) => setPropertyId(e.target.value)}
-        >
-          <option value="">Select a property…</option>
-          {properties.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.address}, {p.suburb}
-              {p.tenantName ? ` · ${p.tenantName}` : ''}
-            </option>
-          ))}
-        </select>
-      </section>
+      {!hidePropertySelect ? (
+        <section className="space-y-2">
+          <Label htmlFor="inspection-property">Property *</Label>
+          <select
+            id="inspection-property"
+            className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
+            value={propertyId}
+            onChange={(e) => setPropertyId(e.target.value)}
+          >
+            <option value="">Select a property…</option>
+            {properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.address}, {p.suburb}
+                {p.tenantName ? ` · ${p.tenantName}` : ''}
+              </option>
+            ))}
+          </select>
+        </section>
+      ) : property ? (
+        <section className="rounded-xl border bg-secondary/20 px-3 py-2 text-xs">
+          <p className="text-muted-foreground font-medium uppercase tracking-wide">Property</p>
+          <p className="mt-0.5 font-medium">
+            {property.address}, {property.suburb}
+          </p>
+        </section>
+      ) : null}
 
       {showForm ? (
         <section className="space-y-4 rounded-xl border bg-card p-4">

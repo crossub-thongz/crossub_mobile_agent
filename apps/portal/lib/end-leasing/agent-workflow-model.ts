@@ -406,6 +406,37 @@ export function buildEndLeasingAgentWorkflow(
 
 export { leaseTypeLabel, breachStatusLabel };
 
+export function isBreachLease(caseData: TerminationCaseDetail): boolean {
+  if (caseData.terminationType === TERMINATION_TYPE.TENANT_INITIATED) return false;
+  const notice = caseData.terminationNotice;
+  if (notice?.ground === 'breach' || notice?.ground === 'non_payment') return true;
+  return Boolean(notice?.breachClause?.trim() || notice?.breachConduct?.trim());
+}
+
+export function endOfAgreementExpiredLabel(caseData: TerminationCaseDetail): string {
+  if (!caseData.leaseEndDate) return 'N/A — periodic';
+  const end = new Date(caseData.leaseEndDate);
+  if (Number.isNaN(end.getTime())) return '—';
+  return end.getTime() < Date.now() ? 'Yes' : 'No';
+}
+
+export function endLeasingVacateDate(caseData: TerminationCaseDetail): string | null {
+  return (
+    caseData.vacate.expectedVacateDate ??
+    caseData.vacateDate ??
+    caseData.terminationNotice?.tenantVacateDate ??
+    null
+  );
+}
+
+export function endLeasingKeyReturnDate(caseData: TerminationCaseDetail): string | null {
+  return caseData.vacate.possessionRegainedDate ?? caseData.vacate.actualVacateDate ?? null;
+}
+
+export function endLeasingKeyReturnTo(caseData: TerminationCaseDetail): string {
+  return caseData.agencyName ?? caseData.assignedTeam ?? 'Agency office';
+}
+
 function storedEmailToRecord(
   id: string,
   email: EndLeasingOverviewEmail | null | undefined,

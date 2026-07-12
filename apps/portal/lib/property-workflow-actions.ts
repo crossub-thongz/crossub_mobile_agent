@@ -21,8 +21,46 @@ export type PropertyWorkflowActionId =
   | 'start_rent_review'
   | 'start_end_leasing'
   | 'start_maintenance'
-  | 'schedule_inspection'
+  | 'schedule_open_inspection'
+  | 'schedule_ingoing_inspection'
+  | 'schedule_outgoing_inspection'
+  | 'schedule_routine_inspection'
   | 'open_tribunal';
+
+export type InspectionScheduleActionId =
+  | 'schedule_open_inspection'
+  | 'schedule_ingoing_inspection'
+  | 'schedule_outgoing_inspection'
+  | 'schedule_routine_inspection';
+
+export type InspectionScheduleType = 'OPEN' | 'INGOING' | 'OUTGOING' | 'ROUTINE';
+
+const INSPECTION_SCHEDULE_ACTION_TYPES: Record<
+  InspectionScheduleActionId,
+  InspectionScheduleType
+> = {
+  schedule_open_inspection: 'OPEN',
+  schedule_ingoing_inspection: 'INGOING',
+  schedule_outgoing_inspection: 'OUTGOING',
+  schedule_routine_inspection: 'ROUTINE',
+};
+
+export function isInspectionScheduleAction(
+  actionId: PropertyWorkflowActionId | null,
+): actionId is InspectionScheduleActionId {
+  return (
+    actionId === 'schedule_open_inspection' ||
+    actionId === 'schedule_ingoing_inspection' ||
+    actionId === 'schedule_outgoing_inspection' ||
+    actionId === 'schedule_routine_inspection'
+  );
+}
+
+export function inspectionTypeForScheduleAction(
+  actionId: InspectionScheduleActionId,
+): InspectionScheduleType {
+  return INSPECTION_SCHEDULE_ACTION_TYPES[actionId];
+}
 
 export interface PropertyWorkflowAction {
   id: PropertyWorkflowActionId;
@@ -105,10 +143,25 @@ export function tabActionsFor(
     case 'inspection':
       return [
         {
-          id: 'schedule_inspection',
-          label: 'Schedule inspection',
-          description: 'Book an ingoing (move-in) inspection',
+          id: 'schedule_open_inspection',
+          label: 'Open',
+          description: 'Schedule an open inspection for prospects',
           primary: true,
+        },
+        {
+          id: 'schedule_ingoing_inspection',
+          label: 'Ingoing',
+          description: 'Move-in condition report before a new tenant',
+        },
+        {
+          id: 'schedule_outgoing_inspection',
+          label: 'Outgoing',
+          description: 'End-of-lease condition report after vacating',
+        },
+        {
+          id: 'schedule_routine_inspection',
+          label: 'Routine',
+          description: 'Scheduled self or in-person routine check',
         },
       ];
     case 'tribunal':

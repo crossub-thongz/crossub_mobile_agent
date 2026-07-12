@@ -143,8 +143,7 @@ export function EndLeasingAgentWorkflowPanel({
   const showLegacyPanel =
     legacyStage != null &&
     stageOrder.includes(legacyStage) &&
-    (viewingStepId === END_LEASING_AGENT_STEP.VACATE_CONFIRMED ||
-      viewingStepId === END_LEASING_AGENT_STEP.OUTGOING_INSPECTION);
+    viewingStepId === END_LEASING_AGENT_STEP.OUTGOING_INSPECTION;
 
   const stepTitles: Record<EndLeasingAgentStep, string> = {
     [END_LEASING_AGENT_STEP.VACATE_CONFIRMED]: 'Vacate date confirmed',
@@ -186,7 +185,9 @@ export function EndLeasingAgentWorkflowPanel({
             {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
           <p className="mt-0.5 text-sm font-semibold">{stepTitles[viewingStepId]}</p>
-          {isLiveStep && viewingStep?.workflowName ? (
+          {viewingStepId !== END_LEASING_AGENT_STEP.VACATE_CONFIRMED &&
+          isLiveStep &&
+          viewingStep?.workflowName ? (
             <p className="text-muted-foreground mt-1 text-xs">{viewingStep.workflowName}</p>
           ) : null}
         </div>

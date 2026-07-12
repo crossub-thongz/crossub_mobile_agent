@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
+import type { InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
 import { fromProperty } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import { inspectionJobRows } from '@/lib/property-job-rows';
@@ -69,7 +70,13 @@ export function PropertyInspectionTab({
     tribunalCases,
     tenantSelections,
     currentLease,
-    onCreated: onRefresh,
+    onCreated: (result?: InspectionCreateResult) => {
+      void onRefresh?.();
+      if (result?.inspection) {
+        setSelectedCaseId(result.inspection.id);
+        setDialogInspection(result.inspection);
+      }
+    },
   };
 
   const handleRowClick = (id: string) => {

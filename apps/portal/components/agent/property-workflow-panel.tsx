@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,17 +25,14 @@ import {
   createAgentRentReview,
   createAgentTerminationCase,
 } from '@/lib/crossub-api/agent-workflow-client';
-import { inspectionsApi } from '@/lib/inspections-api';
 import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
-  buildIngoingInspectionPrefill,
   buildLeasingCyclePrefill,
   buildMaintenancePrefill,
   buildRentReviewPrefill,
   buildTerminationPrefill,
-  fetchIngoingInspectionPrefill,
   fetchMaintenancePrefill,
   fetchRentReviewPrefill,
   fetchPropertyRentPaidUntil,
@@ -47,6 +45,8 @@ import { isPropertyVacant } from '@/lib/property-leasing';
 import { resolveRentPaidTo } from '@/lib/property-overview';
 import {
   buildPropertyWorkflowContext,
+  inspectionTypeForScheduleAction,
+  isInspectionScheduleAction,
   tabActionsFor,
   type PropertyWorkflowAction,
   type PropertyWorkflowActionId,
@@ -120,7 +120,7 @@ export function PropertyWorkflowPanel({
   emptyTitle?: string;
   emptyDescription?: string;
   actionsOnly?: boolean;
-  onCreated?: () => void;
+  onCreated?: (result?: InspectionCreateResult) => void;
 }) {
   const { primaryAgency } = useAgentData();
 
@@ -160,7 +160,7 @@ export function PropertyWorkflowPanel({
       : tab === 'maintenance'
         ? 'Log a maintenance job for this property.'
         : tab === 'inspection'
-          ? 'Schedule an ingoing inspection for this property.'
+          ? 'Schedule open, ingoing, outgoing, or routine inspections for this property.'
           : 'Open a tribunal case when escalated from maintenance or rent review.');
 
   return (
@@ -223,9 +223,9 @@ export function PropertyWorkflowPanel({
         currentLease={currentLease}
         leasingCycle={ctx.leasingCycles[0]}
         tenantSelections={tenantSelections}
-        onSuccess={() => {
+        onSuccess={(result) => {
           setActiveAction(null);
-          onCreated?.();
+          onCreated?.(result);
         }}
       />
     </>
@@ -276,7 +276,7 @@ export function PropertyWorkflowCreateDialog({
   currentLease?: LeasingRecord;
   leasingCycle?: LeasingCycle;
   tenantSelections?: TenantSelectionCase[];
-  onSuccess: () => void;
+  onSuccess: (result?: InspectionCreateResult) => void;
 }) {
   const router = useRouter();
   const { refresh, apiConnected } = useAgentData();
@@ -330,13 +330,6 @@ export function PropertyWorkflowCreateDialog({
   const [maintTenantPhone, setMaintTenantPhone] = useState('');
   const [maintMediaUrls, setMaintMediaUrls] = useState<string[]>([]);
 
-  const [moveInDate, setMoveInDate] = useState('');
-  const [scheduledTime, setScheduledTime] = useState('');
-  const [inspTenantName, setInspTenantName] = useState('');
-  const [inspTenantEmail, setInspTenantEmail] = useState('');
-  const [inspTenantPhone, setInspTenantPhone] = useState('');
-  const [accessInstructions, setAccessInstructions] = useState('');
-
   const rrPrefill = useMemo(
     () => buildRentReviewPrefill(property, agency, currentLease, { leasingCycle, tenantSelections }),
     [property, agency, currentLease, leasingCycle, tenantSelections],
@@ -344,10 +337,6 @@ export function PropertyWorkflowCreateDialog({
   const maintPrefill = useMemo(
     () => buildMaintenancePrefill(property, { currentLease, tenantSelections }),
     [property, currentLease, tenantSelections],
-  );
-  const inspPrefill = useMemo(
-    () => buildIngoingInspectionPrefill(property, currentLease, leasingCycle, { tenantSelections }),
-    [property, currentLease, leasingCycle, tenantSelections],
   );
   const minAvailableFrom = useMemo(() => minLeasingCycleAvailableFrom(), [open]);
   /** Avoid re-prefilling while the dialog is open (portfolio live-poll updates `property`). */
@@ -415,21 +404,10 @@ export function PropertyWorkflowCreateDialog({
     setMaintTenantPhone(maintenance.tenantPhone);
     setMaintMediaUrls([]);
 
-    const ingoing = buildIngoingInspectionPrefill(property, currentLease, leasingCycle, {
-      tenantSelections,
-    });
-    setMoveInDate(ingoing.moveInDate);
-    setScheduledTime(ingoing.scheduledTime ? ingoing.scheduledTime.slice(0, 16) : '');
-    setInspTenantName(ingoing.tenantName);
-    setInspTenantEmail(ingoing.tenantEmail);
-    setInspTenantPhone(ingoing.tenantPhone);
-    setAccessInstructions('');
-
     const needsAsyncPrefill =
       actionId === 'start_rent_review' ||
       actionId === 'start_end_leasing' ||
-      actionId === 'start_maintenance' ||
-      actionId === 'schedule_inspection';
+      actionId === 'start_maintenance';
 
     if (!needsAsyncPrefill) return;
 
@@ -471,19 +449,6 @@ export function PropertyWorkflowCreateDialog({
           setMaintTenantName(maint.tenantName);
           setMaintTenantEmail(maint.tenantEmail);
           setMaintTenantPhone(maint.tenantPhone);
-        } else if (actionId === 'schedule_inspection') {
-          const ing = await fetchIngoingInspectionPrefill(
-            property,
-            currentLease,
-            leasingCycle,
-            tenantSelections,
-          );
-          if (!active) return;
-          setMoveInDate(ing.moveInDate);
-          setScheduledTime(ing.scheduledTime ? ing.scheduledTime.slice(0, 16) : '');
-          setInspTenantName(ing.tenantName);
-          setInspTenantEmail(ing.tenantEmail);
-          setInspTenantPhone(ing.tenantPhone);
         }
       } finally {
         if (active) setPrefillLoading(false);
@@ -519,9 +484,17 @@ export function PropertyWorkflowCreateDialog({
     start_rent_review: 'Add rent review',
     start_end_leasing: 'End Leasing',
     start_maintenance: 'Log maintenance job',
-    schedule_inspection: 'Schedule inspection',
+    schedule_open_inspection: 'Schedule open inspection',
+    schedule_ingoing_inspection: 'Schedule ingoing inspection',
+    schedule_outgoing_inspection: 'Schedule outgoing inspection',
+    schedule_routine_inspection: 'Schedule routine inspection',
     open_tribunal: 'Open tribunal case',
   };
+
+  const inspectionCreateType =
+    actionId && isInspectionScheduleAction(actionId)
+      ? inspectionTypeForScheduleAction(actionId)
+      : null;
 
   const handleSubmit = async () => {
     if (!actionId) return;
@@ -670,21 +643,6 @@ export function PropertyWorkflowCreateDialog({
             : undefined,
         });
         toast.success('Maintenance job logged');
-      } else if (actionId === 'schedule_inspection') {
-        if (!inspTenantName.trim()) throw new Error('Tenant name is required');
-        if (!moveInDate) throw new Error('Move-in date is required');
-        await inspectionsApi.createIngoing({
-          propertyId,
-          moveInDate,
-          scheduledTime: scheduledTime
-            ? new Date(scheduledTime).toISOString()
-            : undefined,
-          tenantName: inspTenantName.trim(),
-          tenantEmail: inspTenantEmail.trim() || undefined,
-          tenantPhone: inspTenantPhone.trim() || undefined,
-          accessInstructions: accessInstructions.trim() || undefined,
-        });
-        toast.success('Ingoing inspection scheduled');
       }
       await refresh();
       onSuccess();
@@ -1192,67 +1150,44 @@ export function PropertyWorkflowCreateDialog({
           />
         ) : null}
 
-        {actionId === 'schedule_inspection' ? (
-          <div className="space-y-3">
-            <ReadOnlyField label="Property" value={inspPrefill.address} />
-            <ReadOnlyField label="Type" value={inspPrefill.propertyType} />
-            <Field label="Tenant name *">
-              <Input value={inspTenantName} onChange={(e) => setInspTenantName(e.target.value)} />
-            </Field>
-            <Field label="Tenant email">
-              <Input
-                type="email"
-                value={inspTenantEmail}
-                onChange={(e) => setInspTenantEmail(e.target.value)}
-              />
-            </Field>
-            <Field label="Tenant phone">
-              <Input value={inspTenantPhone} onChange={(e) => setInspTenantPhone(e.target.value)} />
-            </Field>
-            <Field label="Move-in date *">
-              <Input type="date" value={moveInDate} onChange={(e) => setMoveInDate(e.target.value)} />
-            </Field>
-            <Field label="Scheduled inspection">
-              <Input
-                type="datetime-local"
-                value={scheduledTime}
-                onChange={(e) => setScheduledTime(e.target.value)}
-              />
-            </Field>
-            <Field label="Access instructions">
-              <Textarea
-                value={accessInstructions}
-                onChange={(e) => setAccessInstructions(e.target.value)}
-                rows={2}
-              />
-            </Field>
-          </div>
+        {inspectionCreateType ? (
+          <CreateInspectionWizard
+            key={inspectionCreateType}
+            preselectedPropertyId={propertyId}
+            initialType={inspectionCreateType}
+            hideTypePicker
+            hidePropertySelect
+            navigateOnSuccess={false}
+            onCreated={(result) => onSuccess(result)}
+          />
         ) : null}
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            disabled={
-              submitting ||
-              (actionId === 'start_rent_review' && prefillLoading) ||
-              (actionId === 'start_maintenance' &&
-                (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
-                  !description.trim()))
-            }
-            onClick={() => void handleSubmit()}
-          >
-            {submitting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : actionId === 'start_rent_review' && rentReviewPath === 'crossub_managed' ? (
-              'Submit to CROSSUB'
-            ) : (
-              'Create'
-            )}
-          </Button>
-        </DialogFooter>
+        {!inspectionCreateType ? (
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                submitting ||
+                (actionId === 'start_rent_review' && prefillLoading) ||
+                (actionId === 'start_maintenance' &&
+                  (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
+                    !description.trim()))
+              }
+              onClick={() => void handleSubmit()}
+            >
+              {submitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : actionId === 'start_rent_review' && rentReviewPath === 'crossub_managed' ? (
+                'Submit to CROSSUB'
+              ) : (
+                'Create'
+              )}
+            </Button>
+          </DialogFooter>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

@@ -2,9 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ClipboardList, DoorOpen, Plus } from 'lucide-react';
+import { ClipboardList, DoorOpen } from 'lucide-react';
 
-import { CreateInspectionWizard } from '@/components/inspections/create-inspection-wizard';
+import {
+  CreateInspectionWizard,
+  INSPECTION_CREATE_TYPE_OPTIONS,
+  InspectionCreateTypeButtons,
+  type InspectionCreateType,
+} from '@/components/inspections/create-inspection-wizard';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
@@ -58,7 +63,9 @@ export function InspectionsHub({
   );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [search, setSearch] = useState('');
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createType, setCreateType] = useState<InspectionCreateType | null>(null);
+
+  const createOption = INSPECTION_CREATE_TYPE_OPTIONS.find((option) => option.id === createType);
 
   const counts = useMemo(() => inspectionSummaryCounts(inspections), [inspections]);
 
@@ -89,28 +96,24 @@ export function InspectionsHub({
         <SummaryTile label="Completed" value={counts.done} />
       </div>
 
-      <Button
-        type="button"
-        size="lg"
-        className="h-11 w-full rounded-xl"
-        onClick={() => setCreateOpen(true)}
-      >
-        <Plus className="size-4" />
-        Add inspection
-      </Button>
+      <InspectionCreateTypeButtons onSelect={setCreateType} />
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createType !== null} onOpenChange={(open) => !open && setCreateType(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add inspection</DialogTitle>
+            <DialogTitle>{createOption?.scheduleLabel ?? 'Add inspection'}</DialogTitle>
             <DialogDescription>
-              Choose a type and property — fields autofill from your portfolio like property workflow
-              cases.
+              {createOption?.description ??
+                'Fields autofill from your portfolio like property workflow cases.'}
             </DialogDescription>
           </DialogHeader>
           <CreateInspectionWizard
+            key={createType ?? 'none'}
             preselectedPropertyId={propertyFilterId}
-            onCreated={() => setCreateOpen(false)}
+            initialType={createType}
+            hideTypePicker
+            hidePropertySelect={Boolean(propertyFilterId)}
+            onCreated={() => setCreateType(null)}
           />
         </DialogContent>
       </Dialog>
@@ -143,8 +146,13 @@ export function InspectionsHub({
           }
           action={
             statusFilter === 'active' ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-                Add inspection
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCreateType('OPEN')}
+              >
+                Schedule open inspection
               </Button>
             ) : undefined
           }
