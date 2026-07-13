@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarClock, DoorOpen, ExternalLink, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -61,9 +61,10 @@ export function LeasingStepOpenInspection({
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [now, setNow] = useState(() => new Date());
 
-  useLivePoll(() => {
+  const tickNow = useCallback(() => {
     setNow(new Date());
-  });
+  }, []);
+  useLivePoll(tickNow);
 
   const showOpenReport = isLettingOpenReportVisibleStep(detail, now);
   const isScheduledStep = isLettingScheduledStep(detail, now);
@@ -270,14 +271,14 @@ export function LeasingStepOpenInspection({
                 Open job case
               </Button>
             ) : null}
-            {staffOpenInspectionHref ? (
+            {/* {staffOpenInspectionHref ? (
               <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
                 <a href={staffOpenInspectionHref} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="size-3.5" />
                   Open in staff portal
                 </a>
               </Button>
-            ) : null}
+            ) : null} */}
           </div>
         </div>
       ) : (
@@ -309,7 +310,7 @@ export function LeasingStepOpenInspection({
         />
       ) : null}
 
-      {!reportReady && (isScheduled || isScheduledStep || showOpenReport) ? (
+      {!reportReady && hasOpenInspection && (isScheduled || isScheduledStep || showOpenReport) ? (
         <OpenLeasingGenerateReportButton
           cycleId={cycleId}
           sessionId={oi.viewingSessionId ?? undefined}

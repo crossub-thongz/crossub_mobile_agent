@@ -339,7 +339,11 @@ export function CreateInspectionWizard({
               defaultOpenInspectionSchedule(propertyRow, cycle?.availableFrom),
             ),
           );
-          setOpenConductedBy(null);
+          if (leasingCycleIdProp) {
+            setOpenConductedBy('crossub');
+          } else {
+            setOpenConductedBy(null);
+          }
           setOpenAcknowledged(false);
           setOpenTenantNotified(false);
         }
@@ -376,6 +380,7 @@ export function CreateInspectionWizard({
     leasingCycles,
     vacating,
     tenantSelections,
+    leasingCycleIdProp,
     apiConnected,
   ]);
 
