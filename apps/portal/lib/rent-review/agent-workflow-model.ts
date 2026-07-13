@@ -45,7 +45,11 @@ export const RENT_REVIEW_AGENT_STEP_LABEL: Record<RentReviewAgentStep, string> =
   [RENT_REVIEW_AGENT_STEP.COMPLETED]: 'Completed',
 };
 
-export const RENT_RESEARCH_PLATFORMS = ['Hartracing', 'RP DATA', 'REA'] as const;
+export const RENT_RESEARCH_PLATFORMS = [
+  'NSW Fair Trading',
+  'RP Data',
+  'REA Group Ltd',
+] as const;
 
 export interface RentReviewSubProgressItem {
   id: string;

@@ -33,7 +33,31 @@ export interface RentReviewAuditEntry {
   detail?: string;
 }
 
-export interface RentReviewPricingMilestone {
+export type RentPlatformResearchStatus =
+  | 'complete'
+  | 'failed'
+  | 'pending_credentials'
+  | 'insufficient_data';
+
+export interface RentPlatformResearch {
+  id: 'nsw_fair_trading' | 'rp_data' | 'rea';
+  label: string;
+  status: RentPlatformResearchStatus;
+  medianWeekly: number | null;
+  rangeLow: number | null;
+  rangeHigh: number | null;
+  sampleCount: number | null;
+  summary: string | null;
+  sourceUrl: string | null;
+  error: string | null;
+  researchedAt: string;
+}
+
+export interface RentMarketResearchSnapshot {
+  platforms: RentPlatformResearch[];
+  researchedAt: string;
+}
+
   id: string;
   source: string;
   headline: string;
@@ -70,6 +94,7 @@ export interface RentReviewWorkflowDetail {
     suggestedWeekly: number | null;
     increasePercent: number | null;
     rationale: string | null;
+    research: RentMarketResearchSnapshot | null;
   };
   tenantCounterWeekly: number | null;
   tenantMoveOutDate: string | null;

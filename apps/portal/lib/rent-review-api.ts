@@ -63,6 +63,7 @@ export function mapRentReviewWorkflowDetail(
       suggestedWeekly: d.ai.suggestedWeekly,
       increasePercent: d.ai.increasePercent,
       rationale: d.ai.rationale,
+      research: d.ai.research,
     },
     tenantCounterWeekly: d.tenantCounterWeekly,
     tenantMoveOutDate: dateOnly(d.tenantMoveOutDate),

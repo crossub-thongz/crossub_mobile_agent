@@ -100,6 +100,22 @@ export interface ServerRentReviewWorkflowView {
     suggestedWeekly: number | null;
     increasePercent: number | null;
     rationale: string | null;
+    research: {
+      platforms: Array<{
+        id: string;
+        label: string;
+        status: string;
+        medianWeekly: number | null;
+        rangeLow: number | null;
+        rangeHigh: number | null;
+        sampleCount: number | null;
+        summary: string | null;
+        sourceUrl: string | null;
+        error: string | null;
+        researchedAt: string;
+      }>;
+      researchedAt: string;
+    } | null;
   };
   tenantCounterWeekly: number | null;
   tenantMoveOutDate: string | null;

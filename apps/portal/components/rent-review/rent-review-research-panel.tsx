@@ -8,6 +8,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { RentReviewActivityLog } from '@/components/rent-review/rent-review-activity-log';
 import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
+import { RentResearchPlatformsPanel } from '@/components/rent-review/rent-research-platforms-panel';
 import {
   RENT_RESEARCH_PLATFORMS,
   auditEntriesForStep,
@@ -68,11 +69,14 @@ export function RentReviewResearchPanel({
 
   return (
     <div className="space-y-4">
+      <RentResearchPlatformsPanel platforms={detail.ai.research?.platforms ?? []} />
+
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Rent research</p>
         <p className="text-muted-foreground mb-3 text-xs">
-          Market research via {RENT_RESEARCH_PLATFORMS.join(', ')}. Email the full research pack to
-          the landlord for confirmation before proceeding.
+          Blended summary from {RENT_RESEARCH_PLATFORMS.join(', ')}. Recommended rent reflects
+          completed sources; NSW Fair Trading uses public bond data, while RP Data and REA Group Ltd
+          need API credentials on the server.
         </p>
         <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
@@ -108,8 +112,28 @@ export function RentReviewResearchPanel({
             Confirm rent review & run market research
           </Button>
           <p className="text-muted-foreground text-[11px]">
-            Confirms the review pathway and seeds the recommended rent from comparables.
+            Confirms the review pathway and runs research across NSW Fair Trading, RP Data, and REA
+            Group Ltd.
           </p>
+        </div>
+      ) : null}
+
+      {researchComplete ? (
+        <div className="space-y-2">
+          <Button
+            className="w-full gap-2"
+            variant="outline"
+            disabled={busy}
+            onClick={() =>
+              void run(
+                () => rentReviewApi.runAiAnalysis(detail.id),
+                'Market research rerun complete',
+              )
+            }
+          >
+            <RefreshCw className={`size-4 ${busy ? 'animate-spin' : ''}`} />
+            Rerun market research
+          </Button>
         </div>
       ) : null}
 
