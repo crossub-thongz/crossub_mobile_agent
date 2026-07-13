@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Trash2 } from 'lucide-react';
 
 import {
   ModuleListTable,
@@ -10,6 +11,7 @@ import {
   ModuleTableLinkCell,
 } from '@/components/agent/module-list-table';
 import { StatusBadge } from '@/components/agent/status-badge';
+import { Button } from '@/components/ui/button';
 import {
   accountingArrearsProgress,
   inspectionWorkflowProgress,
@@ -350,7 +352,15 @@ type InspectionSortKey =
   | 'scheduled'
   | 'stage';
 
-export function InspectionsListTable({ items }: { items: Inspection[] }) {
+export function InspectionsListTable({
+  items,
+  canDeleteRow,
+  onDeleteRow,
+}: {
+  items: Inspection[];
+  canDeleteRow?: (inspection: Inspection) => boolean;
+  onDeleteRow?: (inspection: Inspection) => void;
+}) {
   const { sortKey, sortDirection, onSort } = useClientTableSort<InspectionSortKey>(
     'createdAt',
     'desc',
@@ -388,8 +398,10 @@ export function InspectionsListTable({ items }: { items: Inspection[] }) {
     return rows;
   }, [items, sortDirection, sortKey]);
 
+  const showDelete = Boolean(onDeleteRow && canDeleteRow);
+
   return (
-    <ModuleListTable minWidth={1040}>
+    <ModuleListTable minWidth={showDelete ? 1080 : 1040}>
       <ModuleSortableTableHead
         sortKey={sortKey}
         sortDirection={sortDirection}
@@ -402,6 +414,7 @@ export function InspectionsListTable({ items }: { items: Inspection[] }) {
           { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
           { kind: 'sortable', label: 'Scheduled', sortKey: 'scheduled', defaultDirection: 'desc' },
           { kind: 'sortable', label: 'Stage', sortKey: 'stage' },
+          ...(showDelete ? [{ kind: 'static' as const, label: '' }] : []),
           { kind: 'static', label: '' },
         ]}
       />
@@ -428,6 +441,28 @@ export function InspectionsListTable({ items }: { items: Inspection[] }) {
                 {formatScheduledAt(i.scheduledAt)}
               </td>
               <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
+              {showDelete && (
+                <td className="px-2 py-3 text-right">
+                  {canDeleteRow?.(i) ? (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive size-8"
+                      aria-label={`Delete ${i.trackingNumber}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDeleteRow?.(i);
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                  )}
+                </td>
+              )}
               <ModuleTableChevronCell href={href} />
             </tr>
           );

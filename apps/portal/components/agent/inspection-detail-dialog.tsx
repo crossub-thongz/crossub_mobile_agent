@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
@@ -9,6 +9,7 @@ import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log'
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
+import { Button } from '@/components/ui/button';
 import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
 import type { DetailNavContext } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
@@ -26,12 +27,16 @@ export function InspectionDetailDialog({
   inspection,
   navContext,
   size = JOB_CASE_DIALOG_SIZE,
+  canDelete = false,
+  onDelete,
 }: {
   open: boolean;
   onClose: () => void;
   inspection: Inspection | null;
   navContext?: DetailNavContext;
   size?: 'default' | 'wide' | 'xl';
+  canDelete?: boolean;
+  onDelete?: () => void;
 }) {
   const { apiConnected } = useAgentData();
   const stageEmails = useMemo(
@@ -69,6 +74,20 @@ export function InspectionDetailDialog({
   const isSelfOpen = inspection.type === 'OPEN' && inspection.openConductedBy === 'agent';
   const isCrossubOpen = inspection.type === 'OPEN' && inspection.openConductedBy === 'crossub';
 
+  const deleteAction =
+    canDelete && onDelete ? (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="text-destructive hover:text-destructive h-8 gap-1.5 text-xs"
+        onClick={onDelete}
+      >
+        <Trash2 className="size-3.5" />
+        Delete
+      </Button>
+    ) : null;
+
   return (
     <CaseDetailDialog
       open={open}
@@ -76,6 +95,7 @@ export function InspectionDetailDialog({
       title={inspection.trackingNumber}
       subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
       size={size}
+      headerActions={deleteAction}
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">

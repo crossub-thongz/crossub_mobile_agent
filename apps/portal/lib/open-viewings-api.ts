@@ -79,8 +79,12 @@ export const openViewingsApi = {
     unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/open`, {})),
   close: (id: string) =>
     unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/close`, {})),
-  cancel: (id: string) =>
-    unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/cancel`, {})),
+  cancel: (id: string, reason?: string) =>
+    unwrap(
+      api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/cancel`, {
+        reason,
+      }),
+    ),
 
   // Attendance
   addWalkIn: (sessionId: string, input: CreateWalkInInput) =>

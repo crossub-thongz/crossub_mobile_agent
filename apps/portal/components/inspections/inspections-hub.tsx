@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ClipboardList, DoorOpen } from 'lucide-react';
+import { toast } from 'sonner';
 
 import {
   CreateInspectionWizard,
@@ -14,7 +15,9 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { InspectionsListTable } from '@/components/agent/portfolio-module-tables';
+import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { Button } from '@/components/ui/button';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +30,10 @@ import {
   inspectionSummaryCounts,
   isInspectionDone,
 } from '@/lib/inspections/presentation';
+import {
+  canDeleteOpenInspection,
+  cancelOpenInspectionJob,
+} from '@/lib/open-inspection-delete';
 import type { Inspection } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +63,7 @@ export function InspectionsHub({
   propertyFilterId?: string | null;
   propertyLabel?: string;
 }) {
+  const { apiConnected, refresh } = useAgentData();
   const searchParams = useSearchParams();
   const typeParam = searchParams.get('type');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>(
@@ -64,6 +72,7 @@ export function InspectionsHub({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [search, setSearch] = useState('');
   const [createType, setCreateType] = useState<InspectionCreateType | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Inspection | null>(null);
 
   const createOption = INSPECTION_CREATE_TYPE_OPTIONS.find((option) => option.id === createType);
 
@@ -86,6 +95,21 @@ export function InspectionsHub({
     }
     return items;
   }, [inspections, propertyFilterId, typeFilter, statusFilter, search]);
+
+  const canDeleteInspection = useCallback(
+    (inspection: Inspection) => apiConnected && canDeleteOpenInspection(inspection),
+    [apiConnected],
+  );
+
+  const handleDeleteConfirm = async (reason: string) => {
+    if (!deleteTarget) return;
+    if (!apiConnected) {
+      throw new Error('Connect to the API to delete cases');
+    }
+    await cancelOpenInspectionJob(deleteTarget.id, reason);
+    toast.success('Open inspection deleted');
+    await refresh();
+  };
 
   return (
     <div className="space-y-5">
@@ -158,8 +182,24 @@ export function InspectionsHub({
           }
         />
       ) : (
-        <InspectionsListTable items={filtered} />
+        <InspectionsListTable
+          items={filtered}
+          canDeleteRow={canDeleteInspection}
+          onDeleteRow={setDeleteTarget}
+        />
       )}
+
+      <WorkflowCaseDeleteDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete open inspection"
+        description="The open inspection is cancelled and removed from applicant browse. A reason is required."
+        confirmLabel="Delete open inspection"
+        onConfirm={handleDeleteConfirm}
+        onSuccess={() => setDeleteTarget(null)}
+      />
 
       <ModuleCommunications
         categories={['Inspection']}

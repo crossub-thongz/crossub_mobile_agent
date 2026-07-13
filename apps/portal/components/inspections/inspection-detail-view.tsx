@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -16,6 +16,7 @@ import {
   Key,
   Mail,
   MessageSquare,
+  Trash2,
   User,
   Users,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progr
 import { DocumentViewer } from '@/components/agent/document-viewer';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
+import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES, inspectionDetail } from '@/constants/routes';
@@ -42,6 +44,10 @@ import {
   inspectionNextAction,
 } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
+import {
+  canDeleteOpenInspection,
+  cancelOpenInspectionJob,
+} from '@/lib/open-inspection-delete';
 import { canCompleteOpenSessionReview } from '@/lib/open-inspection-session-rail';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import {
@@ -58,7 +64,8 @@ import { cn, formatDateTime } from '@/lib/utils';
 import { LEASING_AGENT_DECISION } from '@/lib/leasing/constants';
 
 export function InspectionDetailView({ inspectionId }: { inspectionId: string }) {
-  const { inspections, apiConnected, registerInspection } = useAgentData();
+  const router = useRouter();
+  const { inspections, apiConnected, registerInspection, refresh } = useAgentData();
   const baseFromList = inspections.find((i) => i.id === inspectionId);
   const [fetchedBase, setFetchedBase] = useState<Inspection | null>(null);
   const [resolveState, setResolveState] = useState<'pending' | 'ready' | 'missing'>(
@@ -103,6 +110,7 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
   const syncOpenSession = useCallback(async () => {
@@ -172,6 +180,17 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
     : false;
   const hasReport = reportGenerated || insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
   const sources = openSession?.reportSourceCounts;
+  const canDelete = apiConnected && canDeleteOpenInspection(insp);
+
+  const handleDeleteConfirm = async (reason: string) => {
+    if (!apiConnected) {
+      throw new Error('Connect to the API to delete cases');
+    }
+    await cancelOpenInspectionJob(insp.id, reason);
+    toast.success('Open inspection deleted');
+    await refresh();
+    router.push(back.href);
+  };
 
   const TypeIcon =
     insp.type === 'OPEN' ? DoorOpen : insp.type === 'ROUTINE' ? ClipboardList : Home;
@@ -201,6 +220,18 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
               </Link>
             )}
           </div>
+          {canDelete && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive h-8 shrink-0 gap-1.5 text-xs"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="size-3.5" />
+              Delete
+            </Button>
+          )}
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -463,6 +494,15 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
         <h2 className="mb-3 text-sm font-semibold">Activity</h2>
         <Timeline entries={insp.timeline} />
       </section>
+
+      <WorkflowCaseDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete open inspection"
+        description="The open inspection is cancelled and removed from applicant browse. A reason is required."
+        confirmLabel="Delete open inspection"
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

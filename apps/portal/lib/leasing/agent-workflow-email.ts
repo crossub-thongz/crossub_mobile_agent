@@ -70,13 +70,47 @@ function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailReco
   return records.filter((record) => record.at);
 }
 
+function openInspectionPushRecord(detail: LeasingPropertyDetail): JobCaseEmailRecord | null {
+  if (!detail.openInspection.pushedToAgentApp || !detail.openInspection.scheduledTime) {
+    return null;
+  }
+  const scheduled = detail.openInspection.scheduledTime;
+  const rental = detail.rental;
+  const lines = [
+    `Address: ${detail.propertyAddress}`,
+    rental.rentPerWeek ? `Rent: $${rental.rentPerWeek}/week` : null,
+    rental.availableFrom
+      ? `Available from: ${new Date(rental.availableFrom).toLocaleDateString('en-AU')}`
+      : null,
+    rental.leaseTerm ? `Lease term: ${rental.leaseTerm}` : null,
+    `Scheduled: ${new Date(scheduled).toLocaleString('en-AU', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    })}`,
+    '',
+    'Please find tenants for this listing and submit applicants back to CROSSUB when ready.',
+  ].filter((line): line is string => line != null);
+
+  return {
+    id: `${detail.propertyId}-open-inspection-push`,
+    subject: `Open inspection scheduled — ${detail.propertyAddress}`,
+    body: lines.join('\n'),
+    from: 'CROSSUB Leasing',
+    to: detail.agentInfo.email ?? 'Managing Agent',
+    at: scheduled,
+    kind: 'open_inspection_push',
+  };
+}
+
 function emailRecordsForStepOnly(
   detail: LeasingPropertyDetail,
   step: LeasingLifecycleStep,
 ): JobCaseEmailRecord[] {
   switch (step) {
-    case LEASING_LIFECYCLE_STEP.OPEN_INSPECTION:
-      return [];
+    case LEASING_LIFECYCLE_STEP.OPEN_INSPECTION: {
+      const push = openInspectionPushRecord(detail);
+      return push ? [push] : [];
+    }
     case LEASING_LIFECYCLE_STEP.OPEN_REPORT: {
       const records = viewerInviteRecords(detail);
       const agentReport = openReportToAgentRecord(detail);
