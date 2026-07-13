@@ -85,6 +85,8 @@ export function PropertyLeasingCaseWorkflowDialog({
   onFocusBondHandled,
   onCaseClosed,
   onOpenInspectionCreated,
+  onDeleteCase,
+  canDeleteCase,
 }: {
   open: boolean;
   onClose: () => void;
