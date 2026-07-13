@@ -1,9 +1,12 @@
 'use client';
 
+import { useCallback, useState } from 'react';
+
 import {
   WorkflowProgressRail,
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
+import { useLivePoll } from '@/lib/use-live-poll';
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
   LETTING_RAIL_STEP,
@@ -49,7 +52,13 @@ export function LeasingLifecycleStepRail({
   href?: string;
   className?: string;
 }) {
-  const { currentRailStep, fillIndex } = deriveLettingRailProgress(detail);
+  const [now, setNow] = useState(() => new Date());
+  const tickNow = useCallback(() => {
+    setNow(new Date());
+  }, []);
+  useLivePoll(tickNow);
+
+  const { currentRailStep, fillIndex } = deriveLettingRailProgress(detail, now);
 
   return (
     <WorkflowProgressRail
@@ -58,14 +67,14 @@ export function LeasingLifecycleStepRail({
       currentStep={currentRailStep}
       progressFillIndex={fillIndex}
       getStepState={(step) => {
-        const enabled = isLettingRailStepEnabled(detail, step);
-        const isDone = isLettingRailStepCompleted(detail, step);
+        const enabled = isLettingRailStepEnabled(detail, step, now);
+        const isDone = isLettingRailStepCompleted(detail, step, now);
         const isViewing = step === currentRailStep;
         if (!enabled && !isDone && !isViewing) return 'upcoming';
         return resolveWorkflowStepState(isDone, isViewing);
       }}
-      isStepCompleted={(step) => isLettingRailStepCompleted(detail, step)}
-      isStepEnabled={(step) => isLettingRailStepEnabled(detail, step)}
+      isStepCompleted={(step) => isLettingRailStepCompleted(detail, step, now)}
+      isStepEnabled={(step) => isLettingRailStepEnabled(detail, step, now)}
       onStepClick={
         onStepClick
           ? (railStep) => onStepClick(railStepToContentStep(railStep, detail))

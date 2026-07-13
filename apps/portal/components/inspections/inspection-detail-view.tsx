@@ -41,6 +41,7 @@ import { inspectionWorkflowProgress } from '@/lib/case-workflows';
 import type { DetailNavContext } from '@/lib/detail-navigation';
 import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
 import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { formatInspectionTimeRange } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
@@ -363,11 +364,30 @@ export function InspectionDetailView({
         <InfoSection title="Preferred schedule">
           <InfoRow
             label="Agent preferred time"
-            value={formatDateTime(leasingDetail.openInspection.preferredScheduledTime)}
+            value={formatInspectionTimeRange(
+              leasingDetail.openInspection.preferredScheduledTime,
+              leasingDetail.openInspection.preferredScheduledTimeEnd,
+            )}
             icon={Calendar}
           />
           {leasingDetail.openInspection.preferredNotes ? (
             <InfoRow label="Notes" value={leasingDetail.openInspection.preferredNotes} />
+          ) : null}
+        </InfoSection>
+      ) : null}
+
+      {insp.type === 'OPEN' && leasingDetail?.openInspection.scheduledTime ? (
+        <InfoSection title="Confirmed viewing">
+          <InfoRow
+            label="Scheduled time"
+            value={formatInspectionTimeRange(
+              leasingDetail.openInspection.scheduledTime,
+              leasingDetail.openInspection.scheduledTimeEnd,
+            )}
+            icon={Calendar}
+          />
+          {leasingDetail.openInspection.inspectorName ? (
+            <InfoRow label="Inspector" value={leasingDetail.openInspection.inspectorName} icon={User} />
           ) : null}
         </InfoSection>
       ) : null}

@@ -1,6 +1,9 @@
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { areAllApplicantResultsSent } from '@/lib/leasing/lifecycle';
-import { isAssignedInspectorName } from '@/lib/leasing/open-inspection-display';
+import {
+  openInspectionStartReached,
+  resolveEffectiveOpenInspectionStart,
+} from '@/lib/leasing/open-inspection-display';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
 export const LETTING_RAIL_STEP = {
@@ -29,9 +32,17 @@ export const LETTING_RAIL_STEP_LABEL: Record<LettingRailStep, string> = {
   [LETTING_RAIL_STEP.RESULTS]: 'Results',
 };
 
-function hasScheduledInspection(detail: LeasingPropertyDetail): boolean {
+function hasSchedulingActivity(detail: LeasingPropertyDetail): boolean {
   const oi = detail.openInspection;
-  return Boolean(oi.scheduledTime) || isAssignedInspectorName(oi.inspectorName);
+  return (
+    oi.status !== LEASING_ITEM_STATUS.NOT_STARTED ||
+    Boolean(
+      oi.preferredScheduledTime ||
+        oi.preferredNotes ||
+        oi.inspectionId ||
+        oi.viewingSessionId,
+    )
+  );
 }
 
 function isReportReady(detail: LeasingPropertyDetail): boolean {
@@ -43,26 +54,29 @@ function isReportReady(detail: LeasingPropertyDetail): boolean {
   );
 }
 
-export function deriveLettingRailProgress(detail: LeasingPropertyDetail): {
+export function deriveLettingRailProgress(
+  detail: LeasingPropertyDetail,
+  now: Date = new Date(),
+): {
   currentRailStep: LettingRailStep;
   /** Fractional index 0–4 for the progress line (0.5 = halfway to next step). */
   fillIndex: number;
 } {
   const oi = detail.openInspection;
-  const oiDone = oi.status === LEASING_ITEM_STATUS.DONE;
   const reportReady = isReportReady(detail);
-  const scheduled = hasScheduledInspection(detail);
+  const started = openInspectionStartReached(oi, now);
+  const hasConfirmedSchedule = Boolean(oi.scheduledTime);
 
   if (reportReady) {
     return { currentRailStep: LETTING_RAIL_STEP.RESULTS, fillIndex: 4 };
   }
-  if (oiDone) {
+  if (started) {
     return { currentRailStep: LETTING_RAIL_STEP.REPORT_AVAILABLE, fillIndex: 3.5 };
   }
-  if (scheduled) {
+  if (hasConfirmedSchedule) {
     return { currentRailStep: LETTING_RAIL_STEP.SCHEDULED, fillIndex: 2 };
   }
-  if (oi.status !== LEASING_ITEM_STATUS.NOT_STARTED) {
+  if (hasSchedulingActivity(detail)) {
     return { currentRailStep: LETTING_RAIL_STEP.SCHEDULING, fillIndex: 1.5 };
   }
   return { currentRailStep: LETTING_RAIL_STEP.ORDER_CREATED, fillIndex: 0.5 };
@@ -71,11 +85,12 @@ export function deriveLettingRailProgress(detail: LeasingPropertyDetail): {
 export function isLettingRailStepCompleted(
   detail: LeasingPropertyDetail,
   step: LettingRailStep,
+  now: Date = new Date(),
 ): boolean {
   if (step === LETTING_RAIL_STEP.RESULTS && areAllApplicantResultsSent(detail)) {
     return true;
   }
-  const { currentRailStep } = deriveLettingRailProgress(detail);
+  const { currentRailStep } = deriveLettingRailProgress(detail, now);
   const stepIndex = LETTING_RAIL_STEP_ORDER.indexOf(step);
   const currentIndex = LETTING_RAIL_STEP_ORDER.indexOf(currentRailStep);
   return stepIndex < currentIndex;
@@ -84,17 +99,25 @@ export function isLettingRailStepCompleted(
 export function isLettingRailStepEnabled(
   detail: LeasingPropertyDetail,
   step: LettingRailStep,
+  now: Date = new Date(),
 ): boolean {
-  const oiDone = detail.openInspection.status === LEASING_ITEM_STATUS.DONE;
+  const oi = detail.openInspection;
   const reportReady = isReportReady(detail);
+  const started = openInspectionStartReached(oi, now);
+  const hasWindow = Boolean(resolveEffectiveOpenInspectionStart(oi));
 
   switch (step) {
     case LETTING_RAIL_STEP.ORDER_CREATED:
     case LETTING_RAIL_STEP.SCHEDULING:
-    case LETTING_RAIL_STEP.SCHEDULED:
       return true;
+    case LETTING_RAIL_STEP.SCHEDULED:
+      return hasWindow || Boolean(oi.scheduledTime);
     case LETTING_RAIL_STEP.REPORT_AVAILABLE:
-      return oiDone;
+      return (
+        started ||
+        reportReady ||
+        oi.status === LEASING_ITEM_STATUS.DONE
+      );
     case LETTING_RAIL_STEP.RESULTS:
       return reportReady;
     default:

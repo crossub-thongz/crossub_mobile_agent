@@ -1,5 +1,5 @@
 import type { Inspection } from '@/lib/types';
-import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { LeasingOpenInspection, LeasingPropertyDetail } from '@/lib/leasing/types';
 import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
 
 export const OPEN_INSPECTION_PENDING = 'Pending';
@@ -37,6 +37,28 @@ export function resolveOpenInspectionForProperty(
       i.status.toLowerCase() !== 'deleted' &&
       !i.status.toLowerCase().includes('cancel'),
   );
+}
+
+/** Staff-confirmed schedule wins over agent preference for progress and display. */
+export function resolveEffectiveOpenInspectionStart(
+  oi: LeasingOpenInspection,
+): string | undefined {
+  return oi.scheduledTime ?? oi.preferredScheduledTime;
+}
+
+export function resolveEffectiveOpenInspectionEnd(
+  oi: LeasingOpenInspection,
+): string | undefined {
+  return oi.scheduledTimeEnd ?? oi.preferredScheduledTimeEnd;
+}
+
+export function openInspectionStartReached(
+  oi: LeasingOpenInspection,
+  now: Date = new Date(),
+): boolean {
+  const start = resolveEffectiveOpenInspectionStart(oi);
+  if (!start) return false;
+  return new Date(start) <= now;
 }
 
 export function formatInspectionTimeRange(
