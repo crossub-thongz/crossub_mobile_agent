@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { Mail, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, Mail, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { RentReviewActivityLog } from '@/components/rent-review/rent-review-activity-log';
 import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
-import { RentResearchPlatformsPanel } from '@/components/rent-review/rent-research-platforms-panel';
+import {
+  RentResearchPlatformsPanel,
+  RentResearchRunningBanner,
+} from '@/components/rent-review/rent-research-platforms-panel';
 import {
   RENT_RESEARCH_PLATFORMS,
   auditEntriesForStep,
@@ -39,7 +42,21 @@ export function RentReviewResearchPanel({
   const { properties } = useAgentData();
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
+  const [researchRunning, setResearchRunning] = useState(false);
+  const [researchStartedAt, setResearchStartedAt] = useState<number | null>(null);
+  const [researchElapsedSec, setResearchElapsedSec] = useState(0);
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!researchRunning || researchStartedAt == null) {
+      setResearchElapsedSec(0);
+      return;
+    }
+    const tick = () => setResearchElapsedSec(Math.floor((Date.now() - researchStartedAt) / 1000));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [researchRunning, researchStartedAt]);
 
   const property = properties.find((p) => p.id === detail.propertyId);
   const landlordEmail =
@@ -67,9 +84,34 @@ export function RentReviewResearchPanel({
     }
   };
 
+  const runResearch = async (
+    action: () => Promise<RentReviewWorkflowDetail>,
+    success: string,
+  ) => {
+    setBusy(true);
+    setResearchRunning(true);
+    setResearchStartedAt(Date.now());
+    try {
+      const updated = await runMutation(detail.id, action());
+      onUpdated?.(updated);
+      toast.success(success);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setResearchRunning(false);
+      setResearchStartedAt(null);
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <RentResearchPlatformsPanel platforms={detail.ai.research?.platforms ?? []} />
+      {researchRunning ? <RentResearchRunningBanner elapsedSeconds={researchElapsedSec} /> : null}
+
+      <RentResearchPlatformsPanel
+        platforms={detail.ai.research?.platforms ?? []}
+        loading={researchRunning}
+      />
 
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Rent research</p>
@@ -102,14 +144,18 @@ export function RentReviewResearchPanel({
             className="w-full gap-2"
             disabled={busy}
             onClick={() =>
-              void run(
+              void runResearch(
                 () => rentReviewApi.confirm(detail.id, { type: 'rent_review' }),
-                'Rent review confirmed — proceeding to agent review',
+                'Rent review confirmed — market research complete',
               )
             }
           >
-            <RefreshCw className={`size-4 ${busy ? 'animate-spin' : ''}`} />
-            Confirm rent review & run market research
+            {researchRunning ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            {researchRunning ? 'Running market research…' : 'Confirm rent review & run market research'}
           </Button>
           <p className="text-muted-foreground text-[11px]">
             Confirms the review pathway and runs research across NSW Fair Trading, RP Data, and REA
@@ -125,14 +171,18 @@ export function RentReviewResearchPanel({
             variant="outline"
             disabled={busy}
             onClick={() =>
-              void run(
+              void runResearch(
                 () => rentReviewApi.runAiAnalysis(detail.id),
                 'Market research rerun complete',
               )
             }
           >
-            <RefreshCw className={`size-4 ${busy ? 'animate-spin' : ''}`} />
-            Rerun market research
+            {researchRunning ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            {researchRunning ? 'Running market research…' : 'Rerun market research'}
           </Button>
         </div>
       ) : null}
