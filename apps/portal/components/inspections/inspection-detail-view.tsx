@@ -100,7 +100,6 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const base = baseFromList ?? fetchedBase;
   const insp = useInspectionDetailLiveSync(base, apiConnected);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
-  const [reportGenerated, setReportGenerated] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
@@ -166,8 +165,8 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const approvedApplicants = applicantsWithApplications.filter(
     (v) => v.application?.agentDecision === LEASING_AGENT_DECISION.APPROVED,
   );
-  const canGenerateReport =
-    applicantsWithApplications.length > 0 && !reportGenerated;
+  const reportGenerated = openSession?.openReportGenerated === true;
+  const canGenerateReport = !reportGenerated;
   const hasReport = insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
 
   const TypeIcon =
@@ -339,8 +338,8 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
               onClick={async () => {
                 setGeneratingReport(true);
                 try {
-                  await openViewingsApi.generateReport(openSession.id);
-                  setReportGenerated(true);
+                  const session = await openViewingsApi.generateReport(openSession.id);
+                  setOpenSession(session);
                   toast.success('Open report generated — New Leasing open-report step complete');
                 } catch (err) {
                   toast.error(err instanceof Error ? err.message : 'Could not generate report');
