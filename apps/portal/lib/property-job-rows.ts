@@ -7,6 +7,7 @@ import {
 } from '@/lib/case-workflows';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { isDeletedRentReview } from '@/lib/property-rent-review-history';
+import { isDeletedInspection } from '@/lib/property-inspection-history';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { getRentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
@@ -333,6 +334,7 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
     const progress = inspectionWorkflowProgress(inspection);
     const createdIso = inspectionCreatedAtIso(inspection);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
+    const deleted = isDeletedInspection(inspection);
     return {
       id: inspection.id,
       kind: 'inspection',
@@ -349,8 +351,8 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
       date: inspection.scheduledAt ? formatScheduledAt(inspection.scheduledAt) : '—',
       createdAt,
       createdAtMs,
-      status: progress.currentStepLabel,
-      phase: isCompletedInspection(inspection) ? 'completed' : 'in_progress',
+      status: deleted ? 'Deleted' : progress.currentStepLabel,
+      phase: deleted || isCompletedInspection(inspection) ? 'completed' : 'in_progress',
     };
   });
 }

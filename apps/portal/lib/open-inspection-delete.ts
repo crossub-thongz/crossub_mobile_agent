@@ -5,7 +5,7 @@ import { isInspectionDone } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { Inspection } from '@/lib/types';
 
-function isOpenInspectionDeleted(inspection: Inspection): boolean {
+export function isDeletedInspection(inspection: Inspection): boolean {
   const raw = (inspection.apiStatus ?? inspection.status).toLowerCase();
   return (
     raw === SessionStatusEnum.CANCELLED ||
@@ -17,8 +17,8 @@ function isOpenInspectionDeleted(inspection: Inspection): boolean {
 /** Active open inspection job cases the agent may delete (cancel). */
 export function canDeleteOpenInspection(inspection: Inspection): boolean {
   if (inspection.type !== 'OPEN') return false;
-  if (isInspectionDone(inspection) && !isOpenInspectionDeleted(inspection)) return false;
-  if (isOpenInspectionDeleted(inspection)) return false;
+  if (isInspectionDone(inspection) && !isDeletedInspection(inspection)) return false;
+  if (isDeletedInspection(inspection)) return false;
 
   if (inspection.source === 'open_viewing') {
     const status = (inspection.apiStatus ?? '').toLowerCase();
