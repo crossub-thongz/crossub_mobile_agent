@@ -2,6 +2,36 @@ import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
+const CROSSUB_LEASING_FROM_EMAIL = 'leasing@crossub.com.au';
+
+function normalizeEmail(value: string | undefined | null): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed?.includes('@') ? trimmed : undefined;
+}
+
+function crossubSender(): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
+  return { from: CROSSUB_LEASING_FROM_EMAIL, fromEmail: CROSSUB_LEASING_FROM_EMAIL };
+}
+
+function agentSender(detail: LeasingPropertyDetail): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
+  const email = normalizeEmail(detail.agentInfo.email);
+  if (email) return { from: email, fromEmail: email };
+  return { from: 'Managing Agent' };
+}
+
+function agentRecipient(detail: LeasingPropertyDetail): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+  const email = normalizeEmail(detail.agentInfo.email);
+  if (email) return { to: email, toEmail: email };
+  return { to: 'Managing Agent' };
+}
+
+function emailRecipient(value: string | undefined | null, fallback = '—'): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+  const email = normalizeEmail(value);
+  if (email) return { to: email, toEmail: email };
+  const label = value?.trim();
+  return { to: label || fallback };
+}
+
 function viewerInviteRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
   return (detail.openReport.viewerInvites ?? [])
     .filter((invite) => invite.channel === 'email' && invite.email?.trim())
@@ -9,8 +39,8 @@ function viewerInviteRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[
       id: invite.id,
       subject: 'Open inspection invitation',
       body: invite.body,
-      from: detail.agentInfo.email ?? 'Managing Agent',
-      to: invite.email ?? '—',
+      ...agentSender(detail),
+      ...emailRecipient(invite.email),
       at: invite.sentAt,
       kind: 'viewer_invite',
     }));
@@ -22,8 +52,8 @@ function openReportToAgentRecord(detail: LeasingPropertyDetail): JobCaseEmailRec
     id: `${detail.propertyId}-open-report-agent`,
     subject: `Open inspection report — ${detail.propertyAddress}`,
     body: `Open inspection report sent to agent for review.\n\nAttendees: ${detail.openReport.attendeeCount ?? 0}`,
-    from: 'CROSSUB',
-    to: detail.agentInfo.email ?? 'Managing Agent',
+    ...crossubSender(),
+    ...agentRecipient(detail),
     at: detail.openReport.sentToAgentAt,
     kind: 'open_report_agent',
   };
@@ -36,8 +66,8 @@ function applicationFeedbackRecords(detail: LeasingPropertyDetail): JobCaseEmail
       id: `${app.id}-feedback`,
       subject: `Application feedback — ${detail.propertyAddress}`,
       body: app.feedback ?? '',
-      from: detail.agentInfo.email ?? 'Managing Agent',
-      to: app.email ?? app.applicant,
+      ...agentSender(detail),
+      ...emailRecipient(app.email, app.applicant),
       at: app.feedbackSentAt!,
       kind: 'application_feedback',
     }));
@@ -50,7 +80,7 @@ function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailReco
       id: `${detail.propertyId}-bond-link`,
       subject: `Bond lodgement — ${detail.propertyAddress}`,
       body: 'Bond payment link sent to tenant.',
-      from: detail.agentInfo.email ?? 'Managing Agent',
+      ...agentSender(detail),
       to: 'Tenant',
       at: detail.onboarding.bond.sentToTenantAt,
       kind: 'bond_link',
@@ -61,7 +91,7 @@ function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailReco
       id: `${detail.propertyId}-lease-agreement`,
       subject: `Lease agreement — ${detail.propertyAddress}`,
       body: `Lease agreement signing status: ${detail.onboarding.agreement.signingStatus}.`,
-      from: detail.agentInfo.email ?? 'Managing Agent',
+      ...agentSender(detail),
       to: 'Tenant',
       at: detail.onboarding.agreement.signedAt ?? detail.onboarding.bond.sentToTenantAt ?? '',
       kind: 'lease_agreement',
@@ -70,62 +100,154 @@ function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailReco
   return records.filter((record) => record.at);
 }
 
-function openInspectionPushRecord(detail: LeasingPropertyDetail): JobCaseEmailRecord | null {
-  if (!detail.openInspection.pushedToAgentApp || !detail.openInspection.scheduledTime) {
-    return null;
-  }
-  const scheduled = detail.openInspection.scheduledTime;
+function formatAuDate(value: string): string {
+  return new Date(value).toLocaleDateString('en-AU', { dateStyle: 'medium' });
+}
+
+function formatAuTime(value: string): string {
+  return new Date(value).toLocaleString('en-AU', { timeStyle: 'short' });
+}
+
+function formatAuDateTime(value: string): string {
+  return new Date(value).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function buildOpenInspectionScheduledEmailBody(detail: LeasingPropertyDetail): string {
+  const oi = detail.openInspection;
   const rental = detail.rental;
-  const lines = [
-    `Address: ${detail.propertyAddress}`,
-    rental.rentPerWeek ? `Rent: $${rental.rentPerWeek}/week` : null,
-    rental.availableFrom
-      ? `Available from: ${new Date(rental.availableFrom).toLocaleDateString('en-AU')}`
-      : null,
-    rental.leaseTerm ? `Lease term: ${rental.leaseTerm}` : null,
-    `Scheduled: ${new Date(scheduled).toLocaleString('en-AU', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    })}`,
+  const propertyLines = [`Address: ${detail.propertyAddress}`];
+  if (rental.rentPerWeek != null) {
+    propertyLines.push(
+      `Rent: $${rental.rentPerWeek.toLocaleString('en-AU', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      })}/week`,
+    );
+  }
+  if (rental.availableFrom) propertyLines.push(`Available from: ${formatAuDate(rental.availableFrom)}`);
+  if (rental.leaseTerm?.trim()) propertyLines.push(`Lease term: ${rental.leaseTerm.trim()}`);
+  if (rental.deposit != null) {
+    propertyLines.push(`Deposit: $${rental.deposit.toLocaleString('en-AU')}`);
+  }
+  if (rental.bond != null) {
+    propertyLines.push(`Bond: $${rental.bond.toLocaleString('en-AU')}`);
+  }
+  if (rental.lettingNotes?.trim()) propertyLines.push(`Notes: ${rental.lettingNotes.trim()}`);
+
+  const scheduleLines: string[] = [];
+  if (oi.scheduledTime) {
+    scheduleLines.push(`Date: ${formatAuDate(oi.scheduledTime)}`);
+    scheduleLines.push(`Start: ${formatAuTime(oi.scheduledTime)}`);
+    if (oi.scheduledTimeEnd) {
+      scheduleLines.push(`End: ${formatAuTime(oi.scheduledTimeEnd)}`);
+      scheduleLines.push(
+        `Window: ${formatAuDateTime(oi.scheduledTime)} – ${formatAuTime(oi.scheduledTimeEnd)}`,
+      );
+    } else {
+      scheduleLines.push(`Scheduled: ${formatAuDateTime(oi.scheduledTime)}`);
+    }
+  }
+
+  return [
+    'An open inspection has been scheduled for a property in your portfolio.',
+    '',
+    'Property details',
+    propertyLines.join('\n'),
+    '',
+    'Open inspection',
+    scheduleLines.join('\n'),
     '',
     'Please find tenants for this listing and submit applicants back to CROSSUB when ready.',
-  ].filter((line): line is string => line != null);
+    'You can track progress under Open Report (step 2) in the leasing workflow.',
+  ].join('\n');
+}
 
+function openInspectionScheduledRecord(detail: LeasingPropertyDetail): JobCaseEmailRecord | null {
+  const oi = detail.openInspection;
+  if (!oi.scheduledTime) return null;
   return {
-    id: `${detail.propertyId}-open-inspection-push`,
+    id: `${detail.propertyId}-open-inspection-scheduled`,
     subject: `Open inspection scheduled — ${detail.propertyAddress}`,
-    body: lines.join('\n'),
-    from: 'CROSSUB Leasing',
-    to: detail.agentInfo.email ?? 'Managing Agent',
-    at: scheduled,
-    kind: 'open_inspection_push',
+    body: buildOpenInspectionScheduledEmailBody(detail),
+    ...crossubSender(),
+    ...agentRecipient(detail),
+    at: oi.scheduledTime,
+    kind: 'open_inspection_scheduled',
   };
 }
 
 function openInspectionPreferenceRecord(detail: LeasingPropertyDetail): JobCaseEmailRecord | null {
   const oi = detail.openInspection;
   if (oi.scheduledTime || !oi.preferredScheduledTime) return null;
+
+  const lines = [
+    `Your open inspection request has been received for ${detail.propertyAddress}.`,
+    '',
+    'Preferred viewing window',
+    `Start: ${formatAuDateTime(oi.preferredScheduledTime)}`,
+  ];
+  if (oi.preferredScheduledTimeEnd) {
+    lines.push(`End: ${formatAuTime(oi.preferredScheduledTimeEnd)}`);
+  }
+  if (oi.preferredNotes?.trim()) {
+    lines.push('', `Notes: ${oi.preferredNotes.trim()}`);
+  }
+  lines.push('', 'CROSSUB will confirm the official schedule and email you the property details.');
+
   return {
     id: `${detail.propertyId}-open-inspection-preference`,
-    subject: 'OPEN inspection scheduled',
-    body: `Open inspection preference submitted for ${detail.propertyAddress}.`,
-    from: 'CROSSUB',
-    to: detail.agentInfo.email ?? 'Managing Agent',
+    subject: 'Open inspection request received',
+    body: lines.join('\n'),
+    ...crossubSender(),
+    ...agentRecipient(detail),
     at: oi.preferredScheduledTime,
     kind: 'open_inspection_preference',
   };
 }
 
+/** Fill missing agent addresses on synthesized leasing mail (cycle view may omit agent email). */
+export function enrichLeasingEmailRecords(
+  records: JobCaseEmailRecord[],
+  fallbackAgentEmail?: string | null,
+): JobCaseEmailRecord[] {
+  const agentEmail = normalizeEmail(fallbackAgentEmail);
+  if (!agentEmail) return records;
+
+  return records.map((record) => {
+    const next = { ...record };
+    if (!next.fromEmail && next.from.trim().toLowerCase() === 'managing agent') {
+      next.from = agentEmail;
+      next.fromEmail = agentEmail;
+    }
+    if (!next.toEmail && next.to.trim().toLowerCase() === 'managing agent') {
+      next.to = agentEmail;
+      next.toEmail = agentEmail;
+    }
+    return next;
+  });
+}
+
 export function openInspectionJobCaseEmails(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
+  return dedupeJobCaseEmails([
+    ...openInspectionArrangementEmailRecords(detail),
+    ...openReportPhaseEmailRecords(detail),
+  ]);
+}
+
+function openInspectionArrangementEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
   const records: JobCaseEmailRecord[] = [];
-  const push = openInspectionPushRecord(detail);
-  if (push) records.push(push);
+  const scheduled = openInspectionScheduledRecord(detail);
+  if (scheduled) records.push(scheduled);
   const preference = openInspectionPreferenceRecord(detail);
   if (preference) records.push(preference);
+  return records;
+}
+
+function openReportPhaseEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
+  const records = viewerInviteRecords(detail);
   const agentReport = openReportToAgentRecord(detail);
   if (agentReport) records.push(agentReport);
-  records.push(...viewerInviteRecords(detail));
-  return dedupeJobCaseEmails(records);
+  return records;
 }
 
 function emailRecordsForStepOnly(
@@ -133,16 +255,10 @@ function emailRecordsForStepOnly(
   step: LeasingLifecycleStep,
 ): JobCaseEmailRecord[] {
   switch (step) {
-    case LEASING_LIFECYCLE_STEP.OPEN_INSPECTION: {
-      const push = openInspectionPushRecord(detail);
-      return push ? [push] : [];
-    }
-    case LEASING_LIFECYCLE_STEP.OPEN_REPORT: {
-      const records = viewerInviteRecords(detail);
-      const agentReport = openReportToAgentRecord(detail);
-      if (agentReport) records.push(agentReport);
-      return records;
-    }
+    case LEASING_LIFECYCLE_STEP.OPEN_INSPECTION:
+      return openInspectionArrangementEmailRecords(detail);
+    case LEASING_LIFECYCLE_STEP.OPEN_REPORT:
+      return openReportPhaseEmailRecords(detail);
     case LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL:
       return [];
     case LEASING_LIFECYCLE_STEP.RESULTS:
@@ -152,6 +268,24 @@ function emailRecordsForStepOnly(
     default:
       return [];
   }
+}
+
+/** Emails from earlier lifecycle phases that should stay visible on later steps. */
+function priorPhaseEmailRecords(
+  detail: LeasingPropertyDetail,
+  step: LeasingLifecycleStep,
+): JobCaseEmailRecord[] {
+  const records: JobCaseEmailRecord[] = [];
+  if (step !== LEASING_LIFECYCLE_STEP.OPEN_INSPECTION) {
+    records.push(...openInspectionArrangementEmailRecords(detail));
+  }
+  if (
+    step === LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL ||
+    step === LEASING_LIFECYCLE_STEP.RESULTS
+  ) {
+    records.push(...openReportPhaseEmailRecords(detail));
+  }
+  return records;
 }
 
 export function allLeasingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
@@ -169,5 +303,8 @@ export function leasingEmailRecordsForStep(
   if (step === LEASING_LIFECYCLE_STEP.ONBOARDING) {
     return allLeasingEmailRecords(detail);
   }
-  return dedupeJobCaseEmails(emailRecordsForStepOnly(detail, step));
+  return dedupeJobCaseEmails([
+    ...priorPhaseEmailRecords(detail, step),
+    ...emailRecordsForStepOnly(detail, step),
+  ]);
 }

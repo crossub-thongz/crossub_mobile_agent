@@ -48,6 +48,7 @@ import {
   isLettingOpenReportVisibleStep,
   isLettingResultsStep,
 } from '@/lib/leasing/letting-rail-progress';
+import { OpenNewLeasingCaseButton } from '@/components/leasing-workflow/open-new-leasing-case-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
 import { formatInspectionTimeRange } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
@@ -65,6 +66,7 @@ import {
   cancelOpenInspectionJob,
 } from '@/lib/open-inspection-delete';
 import { canCompleteOpenSessionReview } from '@/lib/open-inspection-session-rail';
+import { mergeOpenInspectionSessionPoll } from '@/lib/open-inspection-session-sync';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import {
   OPEN_CONDUCTED_BY_LABEL,
@@ -178,12 +180,15 @@ export function InspectionDetailView({
       setOpenSession(null);
       return;
     }
+    const applySession = (session: OpenInspectionSession) => {
+      setOpenSession((previous) => mergeOpenInspectionSessionPoll(previous, session));
+    };
     if (insp.source === 'open_viewing') {
       try {
         const session = await openViewingsApi.get(insp.id);
-        setOpenSession(session);
+        applySession(session);
       } catch {
-        setOpenSession(null);
+        /* keep last good session on transient poll errors */
       }
       return;
     }
@@ -191,9 +196,9 @@ export function InspectionDetailView({
     if (sessionId) {
       try {
         const session = await openViewingsApi.get(sessionId);
-        setOpenSession(session);
+        applySession(session);
       } catch {
-        setOpenSession(null);
+        /* keep last good session on transient poll errors */
       }
       return;
     }
@@ -274,6 +279,8 @@ export function InspectionDetailView({
     Boolean(leasingDetail) &&
     insp.type === 'OPEN' &&
     isLettingOpenReportVisibleStep(leasingDetail);
+  const showSessionRail = Boolean(openSession && insp.type === 'OPEN' && !isOpenReportVisibleStep);
+  const showLettingRail = Boolean(insp.type === 'OPEN' && leasingDetail && !showSessionRail);
 
   const handleDeleteConfirm = async (reason: string) => {
     if (!apiConnected) {
@@ -376,11 +383,23 @@ export function InspectionDetailView({
       </section>
       ) : null}
 
-      {insp.type === 'OPEN' && leasingDetail ? (
-        <LeasingLifecycleStepRail
-          detail={leasingDetail}
-          currentStep={LEASING_LIFECYCLE_STEP.OPEN_INSPECTION}
-        />
+      {showLettingRail && leasingDetail ? (
+        <div className="space-y-3">
+          <LeasingLifecycleStepRail
+            detail={leasingDetail}
+            currentStep={
+              isOpenResultsStep
+                ? LEASING_LIFECYCLE_STEP.RESULTS
+                : LEASING_LIFECYCLE_STEP.OPEN_INSPECTION
+            }
+            liveUpdates={false}
+          />
+          {isOpenResultsStep ? (
+            <div className="flex justify-end">
+              <OpenNewLeasingCaseButton propertyId={insp.propertyId} />
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {insp.type === 'OPEN' && leasingDetail?.openInspection.preferredScheduledTime && !isOpenResultsStep ? (
@@ -497,7 +516,7 @@ export function InspectionDetailView({
         </InfoSection>
       )}
 
-      {openSession && insp.type === 'OPEN' && !isOpenResultsStep ? (
+      {showSessionRail && openSession ? (
         <section className="rounded-2xl border bg-card px-2 py-1">
           <OpenInspectionSessionRail session={openSession} />
         </section>

@@ -9,10 +9,16 @@ import { LeasingStepOnboarding } from '@/components/leasing-workflow/leasing-ste
 import { LeasingStepOpenInspection } from '@/components/leasing-workflow/leasing-step-open-inspection';
 import { LeasingStepOpenReport } from '@/components/leasing-workflow/leasing-step-open-report';
 import { LeasingStepResults } from '@/components/leasing-workflow/leasing-step-results';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAuth } from '@/components/providers/auth-provider';
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
-import { leasingEmailRecordsForStep } from '@/lib/leasing/agent-workflow-email';
+import {
+  enrichLeasingEmailRecords,
+  leasingEmailRecordsForStep,
+} from '@/lib/leasing/agent-workflow-email';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import { resolveRentReviewAgentEmail } from '@/lib/rent-review/agent-email';
 
 export function LeasingLifecycleTabs({
   detail,
@@ -56,7 +62,18 @@ function StepPanel({
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
-  const stageEmails = useMemo(() => leasingEmailRecordsForStep(detail, step), [detail, step]);
+  const { properties, agencies } = useAgentData();
+  const { user } = useAuth();
+  const property = properties.find((p) => p.id === detail.propertyId);
+  const agency = agencies.find((a) => a.id === property?.agencyId);
+  const agentEmail = resolveRentReviewAgentEmail({
+    userEmail: user?.email,
+    agencyContactEmail: agency?.contactEmail ?? detail.agentInfo.email,
+  });
+  const stageEmails = useMemo(
+    () => enrichLeasingEmailRecords(leasingEmailRecordsForStep(detail, step), agentEmail),
+    [agentEmail, detail, step],
+  );
 
   return (
     <div className="space-y-4">

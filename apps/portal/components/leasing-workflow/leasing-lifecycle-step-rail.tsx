@@ -43,18 +43,21 @@ export function LeasingLifecycleStepRail({
   onStepClick,
   href,
   className,
+  liveUpdates = true,
 }: {
   detail: LeasingPropertyDetail;
   currentStep: LeasingLifecycleStep;
   onStepClick?: (step: LeasingLifecycleStep) => void;
   href?: string;
   className?: string;
+  /** When false, the rail progress does not tick every live-poll interval (embedded job cases). */
+  liveUpdates?: boolean;
 }) {
   const [now, setNow] = useState(() => new Date());
   const tickNow = useCallback(() => {
     setNow(new Date());
   }, []);
-  useLivePoll(tickNow);
+  useLivePoll(tickNow, liveUpdates);
 
   const { currentRailStep, fillIndex } = deriveLettingRailProgress(detail, now);
 
