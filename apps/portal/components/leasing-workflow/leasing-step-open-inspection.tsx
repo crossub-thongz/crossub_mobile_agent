@@ -31,10 +31,11 @@ import {
   formatInspectionTimeRange,
   formatLettingRent,
   formatTenantMovedOutDate,
+  openInspectionStartReached,
   resolveOpenInspectionForProperty,
 } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
-import { isLettingOpenReportVisibleStep, isLettingScheduledStep } from '@/lib/leasing/letting-rail-progress';
+import { isLettingOpenReportVisibleStep, isLettingScheduledStep, deriveLettingRailProgress, LETTING_RAIL_STEP } from '@/lib/leasing/letting-rail-progress';
 import { isLeasingOpenReportReady } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
@@ -68,6 +69,7 @@ export function LeasingStepOpenInspection({
 
   const showOpenReport = isLettingOpenReportVisibleStep(detail, now);
   const isScheduledStep = isLettingScheduledStep(detail, now);
+  const { currentRailStep } = deriveLettingRailProgress(detail, now);
   const reportReady =
     isLeasingOpenReportReady(detail) || openSession?.openReportGenerated === true;
 
@@ -121,6 +123,14 @@ export function LeasingStepOpenInspection({
     oi.viewingSessionId
       ? crossubWebOpenInspectionUrl(detail.propertyId, oi.viewingSessionId)
       : null;
+
+  /** Only on this cycle's OI — not a stale OPEN job from another letting on the property. */
+  const canShowGenerateReport =
+    hasOpenInspection &&
+    !reportReady &&
+    (showOpenReport ||
+      (currentRailStep === LETTING_RAIL_STEP.SCHEDULED &&
+        openInspectionStartReached(oi, now)));
 
   useEffect(() => {
     if (!apiConnected || !oi.viewingSessionId) {
@@ -310,7 +320,7 @@ export function LeasingStepOpenInspection({
         />
       ) : null}
 
-      {!reportReady && hasOpenInspection && (isScheduled || isScheduledStep || showOpenReport) ? (
+      {canShowGenerateReport ? (
         <OpenLeasingGenerateReportButton
           cycleId={cycleId}
           sessionId={oi.viewingSessionId ?? undefined}
@@ -320,7 +330,7 @@ export function LeasingStepOpenInspection({
         />
       ) : null}
 
-      {showOpenReport ? (
+      {showOpenReport && hasOpenInspection ? (
         <OpenLeasingInspectionReportPanel
           detail={detail}
           openSession={openSession}
