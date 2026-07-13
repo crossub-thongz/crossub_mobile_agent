@@ -28,6 +28,7 @@ export function PropertyLeasingCaseWorkflowContent({
   focusBond,
   onFocusBondHandled,
   onCaseClosed,
+  onOpenInspectionCreated,
 }: {
   item: PropertyLeasingWorkflowCase;
   property: Property;
@@ -40,6 +41,7 @@ export function PropertyLeasingCaseWorkflowContent({
   focusBond?: boolean;
   onFocusBondHandled?: () => void;
   onCaseClosed?: () => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   if (item.category === 'leasing') {
     return (
@@ -51,6 +53,7 @@ export function PropertyLeasingCaseWorkflowContent({
         focusBond={focusBond}
         onFocusBondHandled={onFocusBondHandled}
         onCaseClosed={onCaseClosed}
+        onOpenInspectionCreated={onOpenInspectionCreated}
       />
     );
   }
@@ -81,8 +84,7 @@ export function PropertyLeasingCaseWorkflowDialog({
   focusBond,
   onFocusBondHandled,
   onCaseClosed,
-  onDeleteCase,
-  canDeleteCase,
+  onOpenInspectionCreated,
 }: {
   open: boolean;
   onClose: () => void;
@@ -97,6 +99,7 @@ export function PropertyLeasingCaseWorkflowDialog({
   focusBond?: boolean;
   onFocusBondHandled?: () => void;
   onCaseClosed?: () => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
   onDeleteCase?: (item: PropertyLeasingWorkflowCase) => void;
   canDeleteCase?: (item: PropertyLeasingWorkflowCase) => boolean;
 }) {
@@ -138,6 +141,7 @@ export function PropertyLeasingCaseWorkflowDialog({
         focusBond={focusBond}
         onFocusBondHandled={onFocusBondHandled}
         onCaseClosed={onCaseClosed}
+        onOpenInspectionCreated={onOpenInspectionCreated}
       />
     </CaseDetailDialog>
   );

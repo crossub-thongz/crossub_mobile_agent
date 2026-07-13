@@ -20,13 +20,22 @@ export function resolveOpenInspectionForProperty(
   inspections: Inspection[],
   propertyId: string,
   viewingSessionId?: string,
+  inspectionId?: string,
 ): Inspection | undefined {
+  if (inspectionId) {
+    const linked = inspections.find((i) => i.id === inspectionId);
+    if (linked) return linked;
+  }
   if (viewingSessionId) {
     const linked = inspections.find((i) => i.id === viewingSessionId);
     if (linked) return linked;
   }
   return inspections.find(
-    (i) => i.propertyId === propertyId && i.type === 'OPEN' && !i.status.toLowerCase().includes('cancel'),
+    (i) =>
+      i.propertyId === propertyId &&
+      i.type === 'OPEN' &&
+      i.status.toLowerCase() !== 'deleted' &&
+      !i.status.toLowerCase().includes('cancel'),
   );
 }
 

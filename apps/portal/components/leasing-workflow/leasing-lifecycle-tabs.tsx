@@ -17,9 +17,11 @@ import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 export function LeasingLifecycleTabs({
   detail,
   onCaseClosed,
+  onOpenInspectionCreated,
 }: {
   detail: LeasingPropertyDetail;
   onCaseClosed?: () => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const activeStep = useLeasingWorkflowStore((s) => s.getActiveStep(detail.propertyId));
   const setActiveStep = useLeasingWorkflowStore((s) => s.setActiveStep);
@@ -33,7 +35,12 @@ export function LeasingLifecycleTabs({
         onStepClick={(step) => setActiveStep(detail.propertyId, step)}
       />
 
-      <StepPanel step={activeStep} detail={liveDetail} onCaseClosed={onCaseClosed} />
+      <StepPanel
+        step={activeStep}
+        detail={liveDetail}
+        onCaseClosed={onCaseClosed}
+        onOpenInspectionCreated={onOpenInspectionCreated}
+      />
     </div>
   );
 }
@@ -42,16 +49,23 @@ function StepPanel({
   step,
   detail,
   onCaseClosed,
+  onOpenInspectionCreated,
 }: {
   step: LeasingLifecycleStep;
   detail: LeasingPropertyDetail;
   onCaseClosed?: () => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const stageEmails = useMemo(() => leasingEmailRecordsForStep(detail, step), [detail, step]);
 
   return (
     <div className="space-y-4">
-      <StepPanelContent step={step} detail={detail} onCaseClosed={onCaseClosed} />
+      <StepPanelContent
+        step={step}
+        detail={detail}
+        onCaseClosed={onCaseClosed}
+        onOpenInspectionCreated={onOpenInspectionCreated}
+      />
       <JobCaseStageEmailHistory
         emails={stageEmails}
         title={step === LEASING_LIFECYCLE_STEP.ONBOARDING ? 'All e-mail' : undefined}
@@ -64,14 +78,21 @@ function StepPanelContent({
   step,
   detail,
   onCaseClosed,
+  onOpenInspectionCreated,
 }: {
   step: LeasingLifecycleStep;
   detail: LeasingPropertyDetail;
   onCaseClosed?: () => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   switch (step) {
     case LEASING_LIFECYCLE_STEP.OPEN_INSPECTION:
-      return <LeasingStepOpenInspection detail={detail} />;
+      return (
+        <LeasingStepOpenInspection
+          detail={detail}
+          onOpenInspectionCreated={onOpenInspectionCreated}
+        />
+      );
     case LEASING_LIFECYCLE_STEP.OPEN_REPORT:
       return <LeasingStepOpenReport detail={detail} />;
     case LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL:

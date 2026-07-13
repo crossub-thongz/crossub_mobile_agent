@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, DoorOpen, ExternalLink, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { CreateInspectionWizard } from '@/components/inspections/create-inspection-wizard';
+import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
@@ -25,6 +25,7 @@ import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import { LEASING_UI } from '@/lib/leasing/constants';
 import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspection-session';
+import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import {
   canCancelLetting,
   formatInspectionTimeRange,
@@ -39,7 +40,13 @@ import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { cn, formatDate } from '@/lib/utils';
 
-export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyDetail }) {
+export function LeasingStepOpenInspection({
+  detail,
+  onOpenInspectionCreated,
+}: {
+  detail: LeasingPropertyDetail;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
+}) {
   const { inspections, leasingCycles, apiConnected, refresh } = useAgentData();
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
@@ -52,15 +59,20 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
-  const cycleId = cycle?.id;
+  const cycleId = detail.cycleId ?? cycle?.id;
 
   const oi = detail.openInspection;
   const { rental } = detail;
 
   const linkedInspection = useMemo(
     () =>
-      resolveOpenInspectionForProperty(inspections, detail.propertyId, oi.viewingSessionId),
-    [inspections, detail.propertyId, oi.viewingSessionId],
+      resolveOpenInspectionForProperty(
+        inspections,
+        detail.propertyId,
+        oi.viewingSessionId,
+        oi.inspectionId,
+      ),
+    [inspections, detail.propertyId, oi.viewingSessionId, oi.inspectionId],
   );
 
   const dialogInspection = useMemo(
@@ -116,6 +128,10 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const allowCancel = canCancelLetting(detail, linkedInspection);
 
   const openJobCase = async () => {
+    if (linkedInspection && !oi.viewingSessionId) {
+      setInspectionDialogId(linkedInspection.id);
+      return;
+    }
     const sessionId = await resolveOpenInspectionSessionId(detail, {
       cycleId: apiConnected ? cycleId : undefined,
       onCycleView: (view) => applyCycleView(detail.propertyId, view),
@@ -149,7 +165,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     }
   };
 
-  const handleOpenInspectionCreated = async () => {
+  const handleOpenInspectionCreated = async (result?: InspectionCreateResult) => {
     setCreateOpen(false);
     if (apiConnected && cycleId) {
       try {
@@ -160,6 +176,27 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
       }
     }
     await refresh();
+
+    let inspectionId = result?.inspectionId;
+    if (!inspectionId && oi.inspectionId) {
+      inspectionId = oi.inspectionId;
+    }
+    if (!inspectionId && apiConnected) {
+      const pooled = await fetchLatestOpenPoolInspection(detail.propertyId);
+      inspectionId = pooled?.id;
+    }
+    if (!inspectionId) {
+      inspectionId = (
+        await resolveOpenInspectionSessionId(detail, {
+          cycleId: apiConnected ? cycleId : undefined,
+          onCycleView: (view) => applyCycleView(detail.propertyId, view),
+        })
+      ) ?? undefined;
+    }
+
+    if (inspectionId) {
+      onOpenInspectionCreated?.(inspectionId);
+    }
   };
 
   return (
@@ -280,8 +317,9 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
             initialType="OPEN"
             hideTypePicker
             hidePropertySelect
+            leasingCycleId={cycleId}
             navigateOnSuccess={false}
-            onCreated={() => void handleOpenInspectionCreated()}
+            onCreated={(result) => void handleOpenInspectionCreated(result)}
           />
         </DialogContent>
       </Dialog>

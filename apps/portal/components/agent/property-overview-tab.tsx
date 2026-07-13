@@ -156,6 +156,7 @@ export function PropertyOverviewTab({
   onRefresh,
   onViewBondLodgement,
   onViewRentReview,
+  onOpenInspectionCreated,
 }: {
   property: Property;
   propertyId: string;
@@ -174,6 +175,7 @@ export function PropertyOverviewTab({
   onRefresh?: () => void;
   onViewBondLodgement?: () => void;
   onViewRentReview?: (reviewId: string) => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const { apiConnected } = useAgentData();
   const activeCycle = leasingCycles?.[0];
@@ -598,6 +600,10 @@ export function PropertyOverviewTab({
         onViewRentReview={(reviewId) => {
           setSelectedJob(null);
           onViewRentReview?.(reviewId);
+        }}
+        onOpenInspectionCreated={(inspectionId) => {
+          setSelectedJob(null);
+          onOpenInspectionCreated?.(inspectionId);
         }}
       />
 

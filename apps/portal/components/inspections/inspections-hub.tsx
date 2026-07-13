@@ -106,7 +106,7 @@ export function InspectionsHub({
     if (!apiConnected) {
       throw new Error('Connect to the API to delete cases');
     }
-    await cancelOpenInspectionJob(deleteTarget.id, reason);
+    await cancelOpenInspectionJob(deleteTarget, reason);
     toast.success('Open inspection deleted');
     await refresh();
   };

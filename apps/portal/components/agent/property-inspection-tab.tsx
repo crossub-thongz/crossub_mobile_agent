@@ -118,7 +118,7 @@ export function PropertyInspectionTab({
     if (!apiConnected) {
       throw new Error('Connect to the API to delete cases');
     }
-    await cancelOpenInspectionJob(deleteTarget.id, reason);
+    await cancelOpenInspectionJob(deleteTarget, reason);
     toast.success('Open inspection deleted');
     handleDialogClose();
     await refresh();

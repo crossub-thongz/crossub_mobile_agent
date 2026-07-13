@@ -38,7 +38,14 @@ export async function fetchAgentInspections(
 export async function fetchInspectionDetail(
   inspection: Inspection,
 ): Promise<InspectionDetail | OpenInspectionSession | null> {
-  if (inspection.source === 'open_viewing' || inspection.type === 'OPEN') {
+  if (inspection.source === 'open_viewing') {
+    try {
+      return await openViewingsApi.get(inspection.id);
+    } catch {
+      return null;
+    }
+  }
+  if (inspection.type === 'OPEN' && inspection.source !== 'inspection') {
     try {
       return await openViewingsApi.get(inspection.id);
     } catch {

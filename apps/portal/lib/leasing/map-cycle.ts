@@ -125,6 +125,7 @@ export function patchDetailFromCycleView(
   return {
     ...existing,
     propertyId: view.propertyId,
+    cycleId: view.id,
     cycleActive: view.isActive,
     activeStepHint: (view.activeStepHint ?? view.lifecycleStep) as LeasingLifecycleStep,
     agentInfo: {
@@ -152,6 +153,7 @@ export function patchDetailFromCycleView(
     },
     openInspection: {
       status: asItemStatus(view.openInspection.status),
+      inspectionId: u(view.openInspection.inspectionId ?? undefined),
       inspectorName,
       inspectorPhone: u(view.openInspection.inspectorPhone ?? undefined),
       inspectorEmail: u(view.openInspection.inspectorEmail ?? undefined),

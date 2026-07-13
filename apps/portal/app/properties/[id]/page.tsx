@@ -43,6 +43,10 @@ import {
   isPropertyLeasingBondFocus,
   propertyLeasingBondFocusPath,
 } from '@/lib/property-leasing-navigation';
+import {
+  propertyInspectionFocusPath,
+  readPropertyInspectionFocusId,
+} from '@/lib/property-inspection-navigation';
 import { useAgentStore } from '@/lib/store';
 import { formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
 import { useRecordRecentPropertyVisit } from '@/hooks/use-record-recent-visit';
@@ -104,6 +108,16 @@ export default function PropertyDetailPage() {
   const [remindersOpen, setRemindersOpen] = useState(false);
   const arrearsSectionRef = useRef<HTMLElement | null>(null);
   const leasingFocusBond = isPropertyLeasingBondFocus(searchParams);
+  const inspectionFocusId = readPropertyInspectionFocusId(searchParams);
+
+  const openPropertyInspection = useCallback(
+    (inspectionId: string) => {
+      setTab('Inspection');
+      setSelectedInspectionId(inspectionId);
+      router.replace(propertyInspectionFocusPath(id, inspectionId));
+    },
+    [id, router],
+  );
 
   const clearLeasingBondFocus = useCallback(() => {
     if (!leasingFocusBond) return;
@@ -123,6 +137,16 @@ export default function PropertyDetailPage() {
   useEffect(() => {
     setTab(normalizeTab(searchParams.get('tab'), propertyTabs));
   }, [searchParams, propertyTabs]);
+
+  useEffect(() => {
+    if (!inspectionFocusId || !propertyTabs.includes('Inspection')) return;
+    const match = inspections.find(
+      (i) => i.propertyId === id && i.id === inspectionFocusId,
+    );
+    if (!match) return;
+    setTab('Inspection');
+    setSelectedInspectionId(inspectionFocusId);
+  }, [id, inspectionFocusId, inspections, propertyTabs]);
 
   useEffect(() => {
     if (searchParams.get('focus') !== 'arrears' || tab !== 'Accounting') return;
@@ -307,6 +331,7 @@ export default function PropertyDetailPage() {
             onRefresh={() => void refresh()}
             onViewBondLodgement={viewBondLodgement}
             onViewRentReview={setSelectedRentReviewId}
+            onOpenInspectionCreated={openPropertyInspection}
           />
         )}
 
@@ -366,6 +391,7 @@ export default function PropertyDetailPage() {
             leasingFocusBond={leasingFocusBond}
             leasingInitialCategory={leasingFocusBond ? 'leasing' : undefined}
             onLeasingFocusBondHandled={clearLeasingBondFocus}
+            onOpenInspectionCreated={openPropertyInspection}
             deletedLeasingCycles={propertyDeletedLeasingCycles}
             deletedEndLeasingCases={propertyDeletedEndLeasingCases}
           />

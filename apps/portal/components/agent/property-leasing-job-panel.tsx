@@ -67,6 +67,7 @@ export function PropertyLeasingJobPanel({
   leasingFocusBond = false,
   leasingInitialCategory,
   onLeasingFocusBondHandled,
+  onOpenInspectionCreated,
   deletedLeasingCycles = [],
   deletedEndLeasingCases = [],
 }: {
@@ -91,6 +92,7 @@ export function PropertyLeasingJobPanel({
   leasingFocusBond?: boolean;
   leasingInitialCategory?: import('@/lib/property-leasing-workflow-cases').PropertyLeasingWorkflowCategory;
   onLeasingFocusBondHandled?: () => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
   deletedLeasingCycles?: ArchivedLeasingCycle[];
   deletedEndLeasingCases?: ArchivedEndLeasingCase[];
 }) {
@@ -399,6 +401,11 @@ export function PropertyLeasingJobPanel({
             setSelectedCaseId(null);
             onWorkflowCreated?.();
           });
+        }}
+        onOpenInspectionCreated={(inspectionId) => {
+          setDialogCase(null);
+          setSelectedCaseId(null);
+          onOpenInspectionCreated?.(inspectionId);
         }}
         canDeleteCase={canDeleteCase}
         onDeleteCase={(item) => setDeleteTarget(item)}

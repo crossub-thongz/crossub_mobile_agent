@@ -45,6 +45,7 @@ export function PropertyOverviewJobDialog({
   tenantSelections,
   currentLease,
   onViewRentReview,
+  onOpenInspectionCreated,
 }: {
   job: PropertyJobRow | null;
   onClose: () => void;
@@ -61,6 +62,7 @@ export function PropertyOverviewJobDialog({
   tenantSelections?: TenantSelectionCase[];
   currentLease?: LeasingRecord;
   onViewRentReview?: (reviewId: string) => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const open = job != null;
 
@@ -144,6 +146,7 @@ export function PropertyOverviewJobDialog({
           vacatingCases={vacatingCases}
           rentWeekly={rentWeekly}
           onViewRentReview={onViewRentReview}
+          onOpenInspectionCreated={onOpenInspectionCreated}
         />
       </CaseDetailDialog>
     );

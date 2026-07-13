@@ -286,17 +286,21 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       id: i.id,
       trackingNumber: inspectionReferenceLabel(i.id, type),
       type,
-    propertyId: i.propertyId ?? '',
-    propertyAddress: i.propertyAddress,
-    inspector: i.inspectorName ?? undefined,
-    scheduledAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
-    status: INSPECTION_STATUS_LABEL[i.status] ?? i.status,
-    apiStatus: i.status,
-    reportStatus: inspectionReportStatus(i),
-    reportUrl: i.reportUrl ?? undefined,
-    createdAt: i.createdAt ?? undefined,
-    timeline: [],
-  };
+      propertyId: i.propertyId ?? '',
+      propertyAddress: i.propertyAddress,
+      inspector: i.inspectorName ?? undefined,
+      scheduledAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
+      status:
+        type === 'OPEN' && i.status === INSPECTION_STATUS.CANCELLED
+          ? 'Deleted'
+          : (INSPECTION_STATUS_LABEL[i.status] ?? i.status),
+      apiStatus: i.status,
+      reportStatus: inspectionReportStatus(i),
+      reportUrl: i.reportUrl ?? undefined,
+      createdAt: i.createdAt ?? undefined,
+      timeline: [],
+      source: 'inspection' as const,
+    };
   });
 }
 

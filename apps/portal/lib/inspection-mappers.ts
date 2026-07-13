@@ -5,6 +5,7 @@ import {
 } from '@/constants/inspection-records';
 import {
   SESSION_STATUS_LABEL,
+  SessionStatusEnum,
   type OpenInspectionSession,
   type SessionStatus,
 } from '@/constants/open-inspection-ops';
@@ -18,6 +19,20 @@ const RECORD_TYPE_VIEW: Record<string, Inspection['type']> = {
   ROUTINE: 'ROUTINE',
   OPEN: 'OPEN',
 };
+
+const OPEN_DELETED_LABEL = 'Deleted';
+
+function openInspectionStatusLabel(
+  type: Inspection['type'],
+  status: string,
+  apiStatus?: string,
+): string {
+  const raw = (apiStatus ?? status).toLowerCase();
+  if (type === 'OPEN' && (raw === 'cancelled' || raw === SessionStatusEnum.CANCELLED)) {
+    return OPEN_DELETED_LABEL;
+  }
+  return status;
+}
 
 const STATUS_LABEL: Record<InspectionRecordStatus, string> = {
   [INSPECTION_RECORD_STATUS.DRAFT]: 'Draft',
@@ -49,7 +64,11 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     propertyAddress: record.propertyAddress ?? '—',
     inspector: record.inspectorName ?? undefined,
     scheduledAt: record.scheduledDate ?? record.inspectionDate ?? undefined,
-    status: STATUS_LABEL[record.status] ?? record.status,
+    status: openInspectionStatusLabel(
+      type,
+      STATUS_LABEL[record.status] ?? record.status,
+      record.status,
+    ),
     apiStatus: record.status,
     reportStatus: reportStatusFromRecord(record.status, record.reportUrl),
     reportUrl: record.reportUrl ?? undefined,
@@ -60,6 +79,7 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
 }
 
 function openSessionStatusLabel(status: SessionStatus): string {
+  if (status === SessionStatusEnum.CANCELLED) return OPEN_DELETED_LABEL;
   return SESSION_STATUS_LABEL[status] ?? status;
 }
 
@@ -94,23 +114,40 @@ export function mergeInspectionRows(
   sessions: OpenInspectionSession[],
   propertyIdByAddress: Map<string, string>,
 ): Inspection[] {
+  const fromOpenRecords = records
+    .filter((r) => r.type === INSPECTION_RECORD_TYPE.OPEN)
+    .map(mapInspectionRecordToView);
+
+  const activeSessions = sessions.filter(
+    (s) => s.sessionStatus !== SessionStatusEnum.CANCELLED,
+  );
+  const sessionIds = new Set(activeSessions.map((s) => s.id));
+  const propertiesWithOpenSessions = new Set(
+    activeSessions
+      .map(
+        (s) =>
+          s.propertyId ?? propertyIdByAddress.get(s.address.toLowerCase().trim()) ?? '',
+      )
+      .filter(Boolean),
+  );
+  const orphanOpenRecords = fromOpenRecords.filter(
+    (r) =>
+      r.propertyId &&
+      !sessionIds.has(r.id) &&
+      !propertiesWithOpenSessions.has(r.propertyId),
+  );
+
   const fromRecords = records
     .filter((r) => r.type !== INSPECTION_RECORD_TYPE.OPEN)
     .map(mapInspectionRecordToView);
 
-  const openRecordIds = new Set(
-    records.filter((r) => r.type === INSPECTION_RECORD_TYPE.OPEN).map((r) => r.id),
-  );
-
-  const fromSessions = sessions
-    .filter((s) => !openRecordIds.has(s.id))
-    .map((s) => {
+  const fromSessions = sessions.map((s) => {
       const propertyId =
         s.propertyId ?? propertyIdByAddress.get(s.address.toLowerCase().trim());
       return mapOpenSessionToInspection(s, propertyId);
     });
 
-  const merged = [...fromSessions, ...fromRecords];
+  const merged = [...fromSessions, ...orphanOpenRecords, ...fromRecords];
   merged.sort((a, b) => {
     const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
     const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;

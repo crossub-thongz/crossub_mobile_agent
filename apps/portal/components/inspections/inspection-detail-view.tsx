@@ -186,7 +186,7 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
     if (!apiConnected) {
       throw new Error('Connect to the API to delete cases');
     }
-    await cancelOpenInspectionJob(insp.id, reason);
+    await cancelOpenInspectionJob(insp, reason);
     toast.success('Open inspection deleted');
     await refresh();
     router.push(back.href);

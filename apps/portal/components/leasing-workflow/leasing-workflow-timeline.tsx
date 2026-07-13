@@ -16,6 +16,7 @@ export function LeasingWorkflowTimeline({
   focusBond = false,
   onFocusBondHandled,
   onCaseClosed,
+  onOpenInspectionCreated,
 }: {
   propertyId: string;
   propertyAddress: string;
@@ -24,6 +25,7 @@ export function LeasingWorkflowTimeline({
   focusBond?: boolean;
   onFocusBondHandled?: () => void;
   onCaseClosed?: () => void;
+  onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const resetActiveStepToHint = useLeasingWorkflowStore((s) => s.resetActiveStepToHint);
@@ -66,7 +68,11 @@ export function LeasingWorkflowTimeline({
           Leasing workflow
         </p>
       ) : null}
-      <LeasingLifecycleTabs detail={detail} onCaseClosed={onCaseClosed} />
+      <LeasingLifecycleTabs
+        detail={detail}
+        onCaseClosed={onCaseClosed}
+        onOpenInspectionCreated={onOpenInspectionCreated}
+      />
     </div>
   );
 }

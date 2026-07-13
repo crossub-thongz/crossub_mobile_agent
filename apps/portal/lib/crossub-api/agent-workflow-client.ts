@@ -1,6 +1,6 @@
 import { agentFetch } from './agent-client';
 
-export type AgentWorkflowCreateResult = { id: string };
+export type AgentWorkflowCreateResult = { id: string; openInspectionId?: string };
 
 const base = (propertyId: string) =>
   `/agent/properties/${encodeURIComponent(propertyId)}/workflows`;
@@ -101,6 +101,20 @@ export async function requestAgentOpenInspection(
 ): Promise<AgentWorkflowCreateResult> {
   return agentFetch(
     `${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/open-inspection/request`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export async function cancelAgentOpenInspection(
+  propertyId: string,
+  inspectionId: string,
+  body: { reason: string },
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/open-inspection/${encodeURIComponent(inspectionId)}/cancel`,
     {
       method: 'POST',
       body: JSON.stringify(body),

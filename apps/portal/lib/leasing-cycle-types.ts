@@ -173,6 +173,7 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
   openInspection: {
     status: string
     required: boolean
+    inspectionId?: string | null
     inspectorName: string | null
     inspectorPhone?: string | null
     inspectorEmail?: string | null

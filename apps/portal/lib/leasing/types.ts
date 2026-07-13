@@ -29,6 +29,8 @@ export interface LeasingRentalInfo {
 
 export interface LeasingOpenInspection {
   status: LeasingItemStatus;
+  /** OPEN pool inspection row (inspector task pool / agent job case). */
+  inspectionId?: string;
   inspectorName?: string;
   inspectorPhone?: string;
   inspectorEmail?: string;
@@ -177,6 +179,8 @@ export interface LeasingOnboardingState {
 export interface LeasingPropertyDetail {
   propertyId: string;
   propertyAddress: string;
+  /** Server `LeasingCycle` id when loaded from the API. */
+  cycleId?: string;
   /** False when the agent NL case closed after applicant results were sent. */
   cycleActive?: boolean;
   agentInfo: LeasingAgentInfo;

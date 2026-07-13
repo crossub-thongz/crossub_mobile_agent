@@ -38,8 +38,8 @@ import {
 } from '@/lib/property-form-prefill';
 import { routineInspectionApi } from '@/lib/routine-inspection-api';
 import { terminationApi } from '@/lib/termination-case-api';
+import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import {
-  getOpenListingContext,
   OCCUPIED_SELF_TENANT_NOTE,
   OPEN_CONDUCTED_BY_LABEL,
   OPEN_LISTING_CONTEXT_LABEL,
@@ -54,8 +54,8 @@ import { cn } from '@/lib/utils';
 export type InspectionCreateType = 'OPEN' | 'INGOING' | 'OUTGOING' | 'ROUTINE';
 
 export type InspectionCreateResult = {
-  inspectionId: string;
-  inspection: Inspection;
+  inspectionId?: string;
+  inspection?: Inspection;
 };
 
 export const INSPECTION_CREATE_TYPE_OPTIONS: {
@@ -118,11 +118,27 @@ export function InspectionCreateTypeButtons({
   );
 }
 
+async function resolveCreatedOpenInspection(
+  propertyId: string,
+  openInspectionId?: string,
+): Promise<Inspection | null> {
+  if (openInspectionId) {
+    try {
+      const record = await inspectionsApi.get(openInspectionId);
+      return mapInspectionRecordToView(record);
+    } catch {
+      /* fall through to list lookup */
+    }
+  }
+  return fetchLatestOpenPoolInspection(propertyId);
+}
+
 export function CreateInspectionWizard({
   preselectedPropertyId: preselectedPropertyIdProp,
   initialType: initialTypeProp,
   hideTypePicker: hideTypePickerProp,
   hidePropertySelect: hidePropertySelectProp,
+  leasingCycleId: leasingCycleIdProp,
   navigateOnSuccess = true,
   onCreated,
 }: {
@@ -130,6 +146,8 @@ export function CreateInspectionWizard({
   initialType?: InspectionCreateType | null;
   hideTypePicker?: boolean;
   hidePropertySelect?: boolean;
+  /** When set (e.g. from new leasing step 1), CROSSUB requests link to this cycle. */
+  leasingCycleId?: string;
   navigateOnSuccess?: boolean;
   onCreated?: (result: InspectionCreateResult) => void;
 } = {}) {
@@ -392,7 +410,13 @@ export function CreateInspectionWizard({
           throw new Error('Set the open inspection date and time');
         }
 
-        if (openConductedBy === 'crossub' && leasingCycle?.id) {
+        if (openConductedBy === 'crossub') {
+          const cycleId = leasingCycleIdProp ?? leasingCycle?.id;
+          if (leasingCycleIdProp && !cycleId) {
+            throw new Error(
+              'Letting cycle is not ready — close and reopen the workflow, then try again',
+            );
+          }
           if (!openPreferredStartLocal && !openPreferredNotes.trim()) {
             throw new Error('Enter a preferred date and time, or notes for CROSSUB');
           }
@@ -403,19 +427,30 @@ export function CreateInspectionWizard({
           ) {
             throw new Error('Preferred end time must be after the start time');
           }
-          await requestAgentOpenInspection(property.id, leasingCycle.id, {
-            preferredStartTime: openPreferredStartLocal
-              ? new Date(openPreferredStartLocal).toISOString()
-              : undefined,
-            preferredEndTime: openPreferredEndLocal
-              ? new Date(openPreferredEndLocal).toISOString()
-              : undefined,
-            preferredNotes: openPreferredNotes.trim() || undefined,
-          });
-          toast.success('Open inspection requested — CROSSUB will confirm the schedule');
-          onCreated?.({});
-          void refresh();
-          return;
+          if (cycleId) {
+            const result = await requestAgentOpenInspection(property.id, cycleId, {
+              preferredStartTime: openPreferredStartLocal
+                ? new Date(openPreferredStartLocal).toISOString()
+                : undefined,
+              preferredEndTime: openPreferredEndLocal
+                ? new Date(openPreferredEndLocal).toISOString()
+                : undefined,
+              preferredNotes: openPreferredNotes.trim() || undefined,
+            });
+            toast.success('Open inspection requested — CROSSUB will confirm the schedule');
+            const inspection = await resolveCreatedOpenInspection(
+              property.id,
+              result.openInspectionId,
+            );
+            if (inspection) {
+              registerInspection(inspection);
+              onCreated?.({ inspectionId: inspection.id, inspection });
+            } else {
+              onCreated?.({});
+            }
+            await refresh();
+            return;
+          }
         }
 
         if (openConductedBy === 'crossub' && !openPreferredStartLocal) {
