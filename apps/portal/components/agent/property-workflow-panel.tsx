@@ -531,6 +531,7 @@ export function PropertyWorkflowCreateDialog({
           tenantMovedOut,
           tenantMovedOutDate: tenantMovedOut ? tenantMovedOutDate : undefined,
           notes: lettingNotes.trim() || undefined,
+          skipOpenInspection: true,
         });
         toast.success('Letting cycle created');
         if (apiConnected) {

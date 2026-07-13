@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
-import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,7 +21,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { cancelAgentLeasingCycle } from '@/lib/crossub-api/agent-workflow-client';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
-import { fromLeasingWorkflow } from '@/lib/detail-navigation';
 import { LEASING_UI } from '@/lib/leasing/constants';
 import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspection-session';
 import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
@@ -56,7 +54,6 @@ export function LeasingStepOpenInspection({
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
-  const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = detail.cycleId ?? cycle?.id;
@@ -75,21 +72,16 @@ export function LeasingStepOpenInspection({
     [inspections, detail.propertyId, oi.viewingSessionId, oi.inspectionId],
   );
 
-  const dialogInspection = useMemo(
-    () => inspections.find((item) => item.id === inspectionDialogId) ?? linkedInspection,
-    [inspectionDialogId, inspections, linkedInspection],
-  );
-
   const hasOpenInspection = Boolean(
     oi.viewingSessionId ||
       oi.scheduledTime ||
       oi.preferredScheduledTime ||
       oi.preferredNotes ||
-      linkedInspection,
+      oi.inspectionId,
   );
   const isScheduled = Boolean(oi.scheduledTime ?? linkedInspection?.scheduledAt);
   const isRequested = !isScheduled && Boolean(oi.preferredScheduledTime || oi.preferredNotes);
-  const canOpenJobCase = Boolean(oi.viewingSessionId || linkedInspection);
+  const canOpenJobCase = Boolean(oi.viewingSessionId || oi.inspectionId || linkedInspection);
 
   const inspectionTime = isScheduled
     ? formatInspectionTimeRange(
@@ -128,16 +120,18 @@ export function LeasingStepOpenInspection({
   const allowCancel = canCancelLetting(detail, linkedInspection);
 
   const openJobCase = async () => {
-    if (linkedInspection && !oi.viewingSessionId) {
-      setInspectionDialogId(linkedInspection.id);
+    const inspectionId = oi.inspectionId ?? linkedInspection?.id;
+    if (inspectionId) {
+      onOpenInspectionCreated?.(inspectionId);
       return;
     }
     const sessionId = await resolveOpenInspectionSessionId(detail, {
       cycleId: apiConnected ? cycleId : undefined,
       onCycleView: (view) => applyCycleView(detail.propertyId, view),
     });
-    if (!sessionId) return;
-    setInspectionDialogId(sessionId);
+    if (sessionId) {
+      onOpenInspectionCreated?.(sessionId);
+    }
   };
 
   const handleCancelLetting = async () => {
@@ -366,13 +360,6 @@ export function LeasingStepOpenInspection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <InspectionDetailDialog
-        open={inspectionDialogId !== null}
-        onClose={() => setInspectionDialogId(null)}
-        inspection={dialogInspection}
-        navContext={fromLeasingWorkflow(detail.propertyId)}
-      />
     </div>
   );
 }

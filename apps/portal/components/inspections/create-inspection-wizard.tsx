@@ -40,6 +40,7 @@ import { routineInspectionApi } from '@/lib/routine-inspection-api';
 import { terminationApi } from '@/lib/termination-case-api';
 import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import {
+  getOpenListingContext,
   OCCUPIED_SELF_TENANT_NOTE,
   OPEN_CONDUCTED_BY_LABEL,
   OPEN_LISTING_CONTEXT_LABEL,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { notFound, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -28,6 +28,8 @@ import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-
 import { OpenInspectionRentalFacts } from '@/components/open-inspection/open-inspection-rental-facts';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
+import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
+import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { DocumentViewer } from '@/components/agent/document-viewer';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
@@ -36,6 +38,11 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES, inspectionDetail } from '@/constants/routes';
 import { inspectionWorkflowProgress } from '@/lib/case-workflows';
+import type { DetailNavContext } from '@/lib/detail-navigation';
+import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
+import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { useLeasingWorkflowStore } from '@/lib/leasing/store';
+import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
@@ -61,11 +68,20 @@ import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
-import { LEASING_AGENT_DECISION } from '@/lib/leasing/constants';
 
-export function InspectionDetailView({ inspectionId }: { inspectionId: string }) {
+export function InspectionDetailView({
+  inspectionId,
+  embedded = false,
+  navContext,
+  onClose,
+}: {
+  inspectionId: string;
+  embedded?: boolean;
+  navContext?: DetailNavContext;
+  onClose?: () => void;
+}) {
   const router = useRouter();
-  const { inspections, apiConnected, registerInspection, refresh } = useAgentData();
+  const { inspections, leasingCycles, apiConnected, registerInspection, refresh } = useAgentData();
   const baseFromList = inspections.find((i) => i.id === inspectionId);
   const [fetchedBase, setFetchedBase] = useState<Inspection | null>(null);
   const [resolveState, setResolveState] = useState<'pending' | 'ready' | 'missing'>(
@@ -107,6 +123,33 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
 
   const base = baseFromList ?? fetchedBase;
   const insp = useInspectionDetailLiveSync(base, apiConnected);
+  const leasingDetail = useLeasingWorkflowStore((s) =>
+    insp?.propertyId ? s.getDetail(insp.propertyId) : undefined,
+  );
+  const ensureLeasingDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
+  const activeLeasingCycle = useMemo(
+    () =>
+      insp?.propertyId
+        ? leasingCycles.find((cycle) => cycle.propertyId === insp.propertyId)
+        : undefined,
+    [insp?.propertyId, leasingCycles],
+  );
+
+  useEffect(() => {
+    if (!insp || insp.type !== 'OPEN' || !activeLeasingCycle) return;
+    ensureLeasingDetail(
+      insp.propertyId,
+      insp.propertyAddress,
+      activeLeasingCycle.rentPerWeek,
+    );
+  }, [activeLeasingCycle, ensureLeasingDetail, insp]);
+
+  useLeasingCycleLiveSync(
+    insp?.propertyId ?? '',
+    activeLeasingCycle?.id,
+    Boolean(insp?.type === 'OPEN' && activeLeasingCycle),
+  );
+  const stageEmails = insp ? inspectionEmailRecordsForStep(insp) : [];
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -114,23 +157,37 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
   const syncOpenSession = useCallback(async () => {
-    if (!apiConnected || !insp || insp.source !== 'open_viewing') {
+    if (!apiConnected || !insp || insp.type !== 'OPEN') {
       setOpenSession(null);
       return;
     }
-    try {
-      const session = await openViewingsApi.get(insp.id);
-      setOpenSession(session);
-    } catch {
-      setOpenSession(null);
+    if (insp.source === 'open_viewing') {
+      try {
+        const session = await openViewingsApi.get(insp.id);
+        setOpenSession(session);
+      } catch {
+        setOpenSession(null);
+      }
+      return;
     }
-  }, [apiConnected, insp]);
+    const sessionId = leasingDetail?.openInspection.viewingSessionId;
+    if (sessionId) {
+      try {
+        const session = await openViewingsApi.get(sessionId);
+        setOpenSession(session);
+      } catch {
+        setOpenSession(null);
+      }
+      return;
+    }
+    setOpenSession(null);
+  }, [apiConnected, insp, leasingDetail?.openInspection.viewingSessionId]);
 
   useEffect(() => {
     void syncOpenSession();
   }, [syncOpenSession]);
 
-  useLivePoll(syncOpenSession, apiConnected && insp?.source === 'open_viewing');
+  useLivePoll(syncOpenSession, apiConnected && insp?.type === 'OPEN');
 
   useRecordRecentCaseVisit({
     id: base?.id,
@@ -156,7 +213,16 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
     );
   }
 
-  if (resolveState === 'missing' || !insp) notFound();
+  if (resolveState === 'missing' || !insp) {
+    if (embedded) {
+      return (
+        <p className="text-muted-foreground py-8 text-center text-sm">
+          Could not load this inspection job case.
+        </p>
+      );
+    }
+    notFound();
+  }
 
   if (insp.type === 'INGOING' || insp.type === 'OUTGOING') {
     return <AgentFieldInspectionDetail inspection={insp} apiConnected={apiConnected} />;
@@ -165,7 +231,10 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const workflow = inspectionWorkflowProgress(insp);
   const nextAction = inspectionNextAction(insp);
   const isSelfOpen = insp.type === 'OPEN' && insp.openConductedBy === 'agent';
-  const isCrossubOpen = insp.type === 'OPEN' && insp.openConductedBy === 'crossub';
+  const isCrossubOpen =
+    insp.type === 'OPEN' &&
+    (insp.openConductedBy === 'crossub' ||
+      Boolean(leasingDetail?.openInspection.preferredScheduledTime || leasingDetail?.openInspection.preferredNotes));
   const inspectorLabel = isSelfOpen
     ? OPEN_CONDUCTED_BY_LABEL.agent
     : insp.inspector ?? 'Unassigned';
@@ -189,6 +258,10 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
     await cancelOpenInspectionJob(insp, reason);
     toast.success('Open inspection deleted');
     await refresh();
+    if (embedded) {
+      onClose?.();
+      return;
+    }
     router.push(back.href);
   };
 
@@ -197,6 +270,22 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
 
   return (
     <div className="space-y-5">
+      {embedded && canDelete ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:text-destructive h-8 gap-1.5 text-xs"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="size-3.5" />
+            Delete
+          </Button>
+        </div>
+      ) : null}
+
+      {!embedded ? (
       <section className="rounded-2xl border bg-card p-4">
         <div className="flex items-start gap-3">
           <span className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-xl">
@@ -261,6 +350,27 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
           />
         </div>
       </section>
+      ) : null}
+
+      {insp.type === 'OPEN' && leasingDetail ? (
+        <LeasingLifecycleStepRail
+          detail={leasingDetail}
+          currentStep={LEASING_LIFECYCLE_STEP.OPEN_INSPECTION}
+        />
+      ) : null}
+
+      {insp.type === 'OPEN' && leasingDetail?.openInspection.preferredScheduledTime ? (
+        <InfoSection title="Preferred schedule">
+          <InfoRow
+            label="Agent preferred time"
+            value={formatDateTime(leasingDetail.openInspection.preferredScheduledTime)}
+            icon={Calendar}
+          />
+          {leasingDetail.openInspection.preferredNotes ? (
+            <InfoRow label="Notes" value={leasingDetail.openInspection.preferredNotes} />
+          ) : null}
+        </InfoSection>
+      ) : null}
 
       {nextAction && (
         <section
@@ -284,6 +394,8 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
       )}
 
       <CaseWorkflowProgressCard progress={workflow} />
+
+      <JobCaseStageEmailHistory emails={stageEmails} />
 
       {isSelfOpen && (
         <Callout
@@ -342,21 +454,21 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
         </InfoSection>
       )}
 
-      {openSession && insp.source === 'open_viewing' ? (
+      {openSession && insp.type === 'OPEN' ? (
         <section className="rounded-2xl border bg-card px-2 py-1">
           <OpenInspectionSessionRail session={openSession} />
         </section>
       ) : null}
 
-      {openSession && insp.source === 'open_viewing' ? (
+      {openSession && insp.type === 'OPEN' ? (
         <OpenInspectionRentalFacts rental={openSession.rental} />
       ) : null}
 
-      {openSession && insp.source === 'open_viewing' ? (
+      {openSession && insp.type === 'OPEN' ? (
         <OpenInspectionApplyShareCard session={openSession} />
       ) : null}
 
-      {openSession && insp.source === 'open_viewing' ? (
+      {openSession && insp.type === 'OPEN' ? (
         <InfoSection title={`Applicants (${applicantsWithApplications.length})`}>
           <OpenInspectionApplicantPanel
             session={openSession}

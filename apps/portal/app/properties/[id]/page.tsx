@@ -10,7 +10,7 @@ import {
   ListTodo,
 } from 'lucide-react';
 
-import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
+import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
 import { PropertyInspectionTab } from '@/components/agent/property-inspection-tab';
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-tab';
@@ -140,13 +140,9 @@ export default function PropertyDetailPage() {
 
   useEffect(() => {
     if (!inspectionFocusId || !propertyTabs.includes('Inspection')) return;
-    const match = inspections.find(
-      (i) => i.propertyId === id && i.id === inspectionFocusId,
-    );
-    if (!match) return;
     setTab('Inspection');
     setSelectedInspectionId(inspectionFocusId);
-  }, [id, inspectionFocusId, inspections, propertyTabs]);
+  }, [inspectionFocusId, propertyTabs]);
 
   useEffect(() => {
     if (searchParams.get('focus') !== 'arrears' || tab !== 'Accounting') return;
@@ -210,10 +206,15 @@ export default function PropertyDetailPage() {
   const nextRentReviewCase = getNextRentReviewCase(property, tenancyRentReviews, {
     isVacant,
   });
-  const selectedInspection =
-    selectedInspectionId != null
-      ? tasks.inspections.find((i) => i.id === selectedInspectionId) ?? null
-      : null;
+  const clearPropertyInspectionFocus = useCallback(() => {
+    setSelectedInspectionId(null);
+    if (!searchParams.get('inspection')) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('inspection');
+    const query = next.toString();
+    router.replace(query ? `/properties/${id}?${query}` : `/properties/${id}`);
+  }, [id, router, searchParams]);
+
   const selectedRentReview =
     selectedRentReviewId != null
       ? tasks.rentReviews.find((r) => r.id === selectedRentReviewId) ?? null
@@ -444,10 +445,10 @@ export default function PropertyDetailPage() {
         )}
       </div>
 
-      <InspectionDetailDialog
+      <InspectionCaseDetailDialog
         open={selectedInspectionId !== null}
-        onClose={() => setSelectedInspectionId(null)}
-        inspection={selectedInspection}
+        onClose={clearPropertyInspectionFocus}
+        inspectionId={selectedInspectionId}
         navContext={fromProperty(id, 'Inspection')}
       />
       <RentReviewDetailDialog
