@@ -34,6 +34,9 @@ export interface LeasingOpenInspection {
   inspectorEmail?: string;
   scheduledTime?: string;
   scheduledTimeEnd?: string;
+  preferredScheduledTime?: string;
+  preferredScheduledTimeEnd?: string;
+  preferredNotes?: string;
   viewingSessionId?: string;
   pushedToAgentApp: boolean;
   agentNotifiedToAdvertise: boolean;

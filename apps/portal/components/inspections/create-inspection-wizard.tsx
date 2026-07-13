@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, ROUTES } from '@/constants/routes';
-import { createAgentIngoingInspection } from '@/lib/crossub-api/agent-workflow-client';
+import { createAgentIngoingInspection, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import {
@@ -218,6 +218,8 @@ export function CreateInspectionWizard({
 
   const [openConductedBy, setOpenConductedBy] = useState<OpenConductedBy | null>(null);
   const [openScheduledLocal, setOpenScheduledLocal] = useState('');
+  const [openPreferredStartLocal, setOpenPreferredStartLocal] = useState('');
+  const [openPreferredEndLocal, setOpenPreferredEndLocal] = useState('');
   const [openPreferredNotes, setOpenPreferredNotes] = useState('');
   const [openAcknowledged, setOpenAcknowledged] = useState(false);
   const [openTenantNotified, setOpenTenantNotified] = useState(false);
@@ -386,11 +388,47 @@ export function CreateInspectionWizard({
         if (isSelfOpen && isOccupiedOpen && !openScheduledLocal) {
           throw new Error('Set the open inspection date and time');
         }
-        const scheduledAt = openScheduledLocal
-          ? new Date(openScheduledLocal).toISOString()
-          : undefined;
-        const start = scheduledAt ?? new Date().toISOString();
-        const end = new Date(new Date(start).getTime() + 60 * 60_000).toISOString();
+        if (isSelfOpen && !openScheduledLocal) {
+          throw new Error('Set the open inspection date and time');
+        }
+
+        if (openConductedBy === 'crossub' && leasingCycle?.id) {
+          if (!openPreferredStartLocal && !openPreferredNotes.trim()) {
+            throw new Error('Enter a preferred date and time, or notes for CROSSUB');
+          }
+          if (
+            openPreferredEndLocal &&
+            openPreferredStartLocal &&
+            new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)
+          ) {
+            throw new Error('Preferred end time must be after the start time');
+          }
+          await requestAgentOpenInspection(property.id, leasingCycle.id, {
+            preferredStartTime: openPreferredStartLocal
+              ? new Date(openPreferredStartLocal).toISOString()
+              : undefined,
+            preferredEndTime: openPreferredEndLocal
+              ? new Date(openPreferredEndLocal).toISOString()
+              : undefined,
+            preferredNotes: openPreferredNotes.trim() || undefined,
+          });
+          toast.success('Open inspection requested — CROSSUB will confirm the schedule');
+          onCreated?.({});
+          void refresh();
+          return;
+        }
+
+        if (openConductedBy === 'crossub' && !openPreferredStartLocal) {
+          throw new Error('Enter a preferred date and time for CROSSUB to schedule');
+        }
+
+        const scheduledAt = openConductedBy === 'crossub'
+          ? new Date(openPreferredStartLocal).toISOString()
+          : new Date(openScheduledLocal).toISOString();
+        const start = scheduledAt;
+        const end = openConductedBy === 'crossub' && openPreferredEndLocal
+          ? new Date(openPreferredEndLocal).toISOString()
+          : new Date(new Date(start).getTime() + 60 * 60_000).toISOString();
         const session = await openViewingsApi.create({
           propertyId: property.id,
           startTime: start,
@@ -631,6 +669,10 @@ export function CreateInspectionWizard({
                   onConductedByChange={setOpenConductedBy}
                   scheduledLocal={openScheduledLocal}
                   onScheduledLocalChange={setOpenScheduledLocal}
+                  preferredStartLocal={openPreferredStartLocal}
+                  onPreferredStartLocalChange={setOpenPreferredStartLocal}
+                  preferredEndLocal={openPreferredEndLocal}
+                  onPreferredEndLocalChange={setOpenPreferredEndLocal}
                   preferredNotes={openPreferredNotes}
                   onPreferredNotesChange={setOpenPreferredNotes}
                   acknowledged={openAcknowledged}
@@ -699,6 +741,10 @@ function OpenInspectionForm({
   onConductedByChange,
   scheduledLocal,
   onScheduledLocalChange,
+  preferredStartLocal,
+  onPreferredStartLocalChange,
+  preferredEndLocal,
+  onPreferredEndLocalChange,
   preferredNotes,
   onPreferredNotesChange,
   acknowledged,
@@ -712,6 +758,10 @@ function OpenInspectionForm({
   onConductedByChange: (v: OpenConductedBy) => void;
   scheduledLocal: string;
   onScheduledLocalChange: (v: string) => void;
+  preferredStartLocal: string;
+  onPreferredStartLocalChange: (v: string) => void;
+  preferredEndLocal: string;
+  onPreferredEndLocalChange: (v: string) => void;
   preferredNotes: string;
   onPreferredNotesChange: (v: string) => void;
   acknowledged: boolean;
@@ -757,19 +807,39 @@ function OpenInspectionForm({
       {isSelf ? <Callout body={SELF_OPEN_INSPECTION_DISCLAIMER} /> : null}
 
       {conductedBy === 'crossub' ? (
-        <Field label="Preferred dates or notes (optional)">
-          <Textarea
-            value={preferredNotes}
-            onChange={(e) => onPreferredNotesChange(e.target.value)}
-            rows={3}
-            placeholder="e.g. Saturdays preferred, after 2pm…"
-          />
-        </Field>
+        <>
+          <Field label="Preferred date & time">
+            <Input
+              type="datetime-local"
+              value={preferredStartLocal}
+              onChange={(e) => onPreferredStartLocalChange(e.target.value)}
+            />
+          </Field>
+          <Field label="Preferred end time (optional)">
+            <Input
+              type="datetime-local"
+              value={preferredEndLocal}
+              onChange={(e) => onPreferredEndLocalChange(e.target.value)}
+            />
+          </Field>
+          <Field label="Notes for CROSSUB (optional)">
+            <Textarea
+              value={preferredNotes}
+              onChange={(e) => onPreferredNotesChange(e.target.value)}
+              rows={3}
+              placeholder="e.g. Saturdays preferred, tenant needs 24h notice…"
+            />
+          </Field>
+          <p className="text-muted-foreground text-xs">
+            This is your preference only. CROSSUB will confirm the official schedule in the
+            admin portal before the viewing is advertised.
+          </p>
+        </>
       ) : conductedBy === 'agent' ? (
         <>
           <Callout body={isOccupied ? OCCUPIED_SELF_TENANT_NOTE : SELF_OPEN_NEW_LISTING_NOTE} />
           {isOccupied ? <TenantContactCard property={property} /> : null}
-          <Field label={isOccupied ? 'Open inspection date & time *' : 'Open inspection date & time'}>
+          <Field label="Open inspection date & time *">
             <Input
               type="datetime-local"
               value={scheduledLocal}

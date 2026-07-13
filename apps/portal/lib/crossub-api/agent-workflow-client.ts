@@ -88,6 +88,26 @@ export async function cancelAgentLeasingCycle(
   });
 }
 
+export type RequestAgentOpenInspectionInput = {
+  preferredStartTime?: string;
+  preferredEndTime?: string;
+  preferredNotes?: string;
+};
+
+export async function requestAgentOpenInspection(
+  propertyId: string,
+  cycleId: string,
+  body: RequestAgentOpenInspectionInput,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/open-inspection/request`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
 export async function cancelAgentTerminationCase(
   propertyId: string,
   caseId: string,

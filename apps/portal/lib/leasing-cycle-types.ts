@@ -178,6 +178,9 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
     inspectorEmail?: string | null
     scheduledTime: string | null
     scheduledTimeEnd?: string | null
+    preferredScheduledTime?: string | null
+    preferredScheduledTimeEnd?: string | null
+    preferredNotes?: string | null
     pushedToAgentApp: boolean
     agentNotifiedToAdvertise: boolean
     advertising: string

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ExternalLink } from 'lucide-react';
+import { CalendarClock, DoorOpen, ExternalLink, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CreateInspectionWizard } from '@/components/inspections/create-inspection-wizard';
 import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
 import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
-import { StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,19 +30,14 @@ import {
   formatInspectionTimeRange,
   formatLettingRent,
   formatTenantMovedOutDate,
-  isAssignedInspectorName,
-  OPEN_INSPECTION_PENDING,
   resolveOpenInspectionForProperty,
 } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { cn, formatDate } from '@/lib/utils';
-
-function pendingOr(value?: string | null): string {
-  return isAssignedInspectorName(value) ? value!.trim() : OPEN_INSPECTION_PENDING;
-}
 
 export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyDetail }) {
   const { inspections, leasingCycles, apiConnected, refresh } = useAgentData();
@@ -49,6 +45,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
   const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
 
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
@@ -71,13 +68,34 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     [inspectionDialogId, inspections, linkedInspection],
   );
 
+  const hasOpenInspection = Boolean(
+    oi.viewingSessionId ||
+      oi.scheduledTime ||
+      oi.preferredScheduledTime ||
+      oi.preferredNotes ||
+      linkedInspection,
+  );
+  const isScheduled = Boolean(oi.scheduledTime ?? linkedInspection?.scheduledAt);
+  const isRequested = !isScheduled && Boolean(oi.preferredScheduledTime || oi.preferredNotes);
   const canOpenJobCase = Boolean(oi.viewingSessionId || linkedInspection);
 
-  const inspectorName = pendingOr(oi.inspectorName ?? linkedInspection?.inspector);
-  const inspectionTime = formatInspectionTimeRange(
-    oi.scheduledTime ?? linkedInspection?.scheduledAt,
-    oi.scheduledTimeEnd,
-  );
+  const inspectionTime = isScheduled
+    ? formatInspectionTimeRange(
+        oi.scheduledTime ?? linkedInspection?.scheduledAt,
+        oi.scheduledTimeEnd,
+      )
+    : isRequested
+      ? formatInspectionTimeRange(
+          oi.preferredScheduledTime,
+          oi.preferredScheduledTimeEnd,
+        )
+      : formatInspectionTimeRange();
+
+  const inspectionTimeLabel = isScheduled
+    ? 'Scheduled'
+    : isRequested
+      ? 'Preferred (awaiting CROSSUB)'
+      : 'Awaiting schedule';
 
   const staffOpenInspectionHref =
     oi.viewingSessionId
@@ -131,40 +149,31 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
     }
   };
 
-  const lettingFacts = (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StepFact label="New rental" value={formatLettingRent(rental.rentPerWeek)} />
-      <StepFact
-        label="Available from"
-        value={rental.availableFrom ? formatDate(rental.availableFrom) : '—'}
-      />
-      <StepFact label="Lease term" value={rental.leaseTerm ?? '—'} />
-      <StepFact label="Tenant moved out" value={formatTenantMovedOutDate(detail)} />
-    </div>
-  );
-
-  const inspectorFacts = (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <StepFact label="Inspection time" value={inspectionTime} className="sm:col-span-2" />
-        <StepFact label="Inspector name" value={inspectorName} />
-        <StepFact label="Contact number" value={pendingOr(oi.inspectorPhone)} />
-        <StepFact label="Email" value={pendingOr(oi.inspectorEmail)} className="sm:col-span-2" />
-      </div>
-      {staffOpenInspectionHref ? (
-        <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
-          <a href={staffOpenInspectionHref} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="size-3.5" />
-            Open in CROSSUB staff portal
-          </a>
-        </Button>
-      ) : null}
-    </div>
-  );
+  const handleOpenInspectionCreated = async () => {
+    setCreateOpen(false);
+    if (apiConnected && cycleId) {
+      try {
+        const view = await leasingOpsApi.get(cycleId);
+        applyCycleView(detail.propertyId, view);
+      } catch {
+        /* live sync will catch up */
+      }
+    }
+    await refresh();
+  };
 
   return (
     <div className="space-y-3">
-      {lettingFacts}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StepFact label="New rental" value={formatLettingRent(rental.rentPerWeek)} />
+        <StepFact
+          label="Available from"
+          value={rental.availableFrom ? formatDate(rental.availableFrom) : '—'}
+        />
+        <StepFact label="Lease term" value={rental.leaseTerm ?? '—'} />
+        <StepFact label="Tenant moved out" value={formatTenantMovedOutDate(detail)} />
+      </div>
+
       {rental.lettingNotes ? (
         <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
@@ -174,54 +183,108 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
         </div>
       ) : null}
 
-      <StepCard
-        icon={CalendarClock}
-        title="Open inspection & arrangement"
-        description="An inspector will claim this job from the task pool. Details appear here once accepted."
-        status={oi.status}
-        footer={
+      {hasOpenInspection ? (
+        <div className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+              <CalendarClock className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm font-semibold">Open inspection</p>
+              <p className="text-muted-foreground text-xs">
+                {inspectionTimeLabel} ·{' '}
+                <span className="text-foreground font-medium">{inspectionTime}</span>
+              </p>
+              {isRequested && oi.preferredNotes ? (
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Notes: {oi.preferredNotes}
+                </p>
+              ) : null}
+              {oi.pushedToAgentApp ? (
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Advertise the property, run the viewing, and submit applicants when ready.
+                </p>
+              ) : null}
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
-            {allowCancel ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs text-destructive hover:text-destructive"
-                onClick={() => setCancelOpen(true)}
-              >
-                Cancel letting
-              </Button>
-            ) : null}
             {canOpenJobCase ? (
               <Button
                 size="sm"
                 className={cn('h-8 gap-1.5 text-xs', LEASING_UI.btnSecondary)}
-                variant="ghost"
+                variant="outline"
                 onClick={() => void openJobCase()}
               >
                 <ExternalLink className="size-3.5" />
                 Open job case
               </Button>
             ) : null}
+            {staffOpenInspectionHref ? (
+              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+                <a href={staffOpenInspectionHref} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="size-3.5" />
+                  Open in staff portal
+                </a>
+              </Button>
+            ) : null}
           </div>
-        }
-      >
-        {inspectorFacts}
-        {!allowCancel && (oi.scheduledTime || isAssignedInspectorName(oi.inspectorName)) ? (
-          <p className="text-muted-foreground text-[11px]">
-            This letting can no longer be cancelled — an inspector or inspection time has been
-            scheduled.
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
+          <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
+            <DoorOpen className="text-muted-foreground size-5" />
+          </div>
+          <p className="mt-3 text-sm font-medium">No open inspection yet</p>
+          <p className="text-muted-foreground mt-1 max-w-sm text-xs">
+            Schedule an open inspection for prospects, or wait for CROSSUB to arrange one for you.
           </p>
-        ) : null}
-        {!canOpenJobCase ? (
-          <p className="text-muted-foreground text-[12px]">
-            Waiting for an inspector to accept the open inspection from the task pool.
-          </p>
-        ) : null}
-      </StepCard>
+          <Button
+            type="button"
+            size="sm"
+            className="mt-4 h-9 gap-1.5"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-4" />
+            Create open inspection
+          </Button>
+        </div>
+      )}
 
       {openSession?.applyUrl ? (
         <OpenInspectionApplyShareCard session={openSession} compact />
       ) : null}
+
+      {allowCancel ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 text-xs text-destructive hover:text-destructive"
+          onClick={() => setCancelOpen(true)}
+        >
+          Cancel letting
+        </Button>
+      ) : null}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request open inspection</DialogTitle>
+            <DialogDescription>
+              Tell CROSSUB when you would like the viewing, or schedule it yourself. CROSSUB
+              confirms the official time before advertising.
+            </DialogDescription>
+          </DialogHeader>
+          <CreateInspectionWizard
+            key={createOpen ? 'open-create' : 'closed'}
+            preselectedPropertyId={detail.propertyId}
+            initialType="OPEN"
+            hideTypePicker
+            hidePropertySelect
+            navigateOnSuccess={false}
+            onCreated={() => void handleOpenInspectionCreated()}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={cancelOpen}
@@ -234,7 +297,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
           <DialogHeader>
             <DialogTitle>Cancel this letting?</DialogTitle>
             <DialogDescription>
-              This will close the new letting workflow and stop the weekly auto-rerun. Please
+              This will close the new leasing workflow and stop the weekly auto-rerun. Please
               provide a reason — for example, the landlord decided not to lease anymore.
             </DialogDescription>
           </DialogHeader>
