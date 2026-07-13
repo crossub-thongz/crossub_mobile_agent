@@ -266,7 +266,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
       ) : null}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent elevated className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request open inspection</DialogTitle>
             <DialogDescription>
@@ -293,7 +293,7 @@ export function LeasingStepOpenInspection({ detail }: { detail: LeasingPropertyD
           if (!open) setCancelReason('');
         }}
       >
-        <DialogContent>
+        <DialogContent elevated>
           <DialogHeader>
             <DialogTitle>Cancel this letting?</DialogTitle>
             <DialogDescription>
