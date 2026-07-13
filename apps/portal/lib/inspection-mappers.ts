@@ -77,9 +77,11 @@ export function mapOpenSessionToInspection(
     propertyAddress: session.address || session.property,
     scheduledAt: session.startTime,
     createdAt: session.createdAt,
-    status: openSessionStatusLabel(session.sessionStatus),
-    apiStatus: session.sessionStatus,
-    reportStatus: 'pending',
+    status: session.openReportGenerated
+      ? 'Completed'
+      : openSessionStatusLabel(session.sessionStatus),
+    apiStatus: session.openReportGenerated ? 'completed' : session.sessionStatus,
+    reportStatus: session.openReportGenerated ? 'sent' : 'pending',
     openConductedBy: session.agent?.role === 'leasing_agent' ? 'agent' : 'crossub',
     visitorCount: session.visitors?.length ?? 0,
     timeline: [],

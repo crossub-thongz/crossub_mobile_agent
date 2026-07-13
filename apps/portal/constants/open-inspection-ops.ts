@@ -65,6 +65,7 @@ export type FollowUpStatus =
 
 export const RegistrationSourceEnum = {
   QR_PRE_REGISTERED: 'qr_pre_registered',
+  TENANT_APP: 'tenant_app',
   WALK_IN: 'walk_in',
 } as const;
 
@@ -147,6 +148,13 @@ export interface OpenInspectionSession {
   applyUrl?: string;
   /** True once the linked leasing cycle's open report has been generated. */
   openReportGenerated?: boolean;
+  reviewCompletedAt?: string;
+  reportSourceCounts?: {
+    tenantApp: number;
+    linkOrQr: number;
+    walkIn: number;
+    totalWithApplication: number;
+  };
   visitors: OpenInspectionVisitor[];
 }
 

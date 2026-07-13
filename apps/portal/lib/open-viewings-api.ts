@@ -110,6 +110,9 @@ export const openViewingsApi = {
   generateReport: (sessionId: string) =>
     unwrap(api.post<{ session: OpenInspectionSession }>(`${BASE}/sessions/${sessionId}/generate-report`, {})),
 
+  completeReview: (sessionId: string) =>
+    unwrap(api.post<{ session: OpenInspectionSession }>(`${BASE}/sessions/${sessionId}/complete-review`, {})),
+
   downloadReportPdf: (sessionId: string): Promise<Blob> =>
     api.getBlob(`${BASE}/sessions/${sessionId}/report.pdf`),
 

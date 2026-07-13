@@ -15,17 +15,13 @@ import {
 
 export function OpenInspectionSessionRail({
   session,
-  reportGenerated,
   className,
 }: {
   session: OpenInspectionSession;
-  reportGenerated: boolean;
+  reportGenerated?: boolean;
   className?: string;
 }) {
-  const { currentRailStep, fillIndex } = deriveOpenSessionRailProgress(
-    session,
-    reportGenerated,
-  );
+  const { currentRailStep, fillIndex } = deriveOpenSessionRailProgress(session);
 
   return (
     <WorkflowProgressRail
@@ -34,13 +30,11 @@ export function OpenInspectionSessionRail({
       currentStep={currentRailStep}
       progressFillIndex={fillIndex}
       getStepState={(step) => {
-        const isDone = isOpenSessionRailStepCompleted(session, step, reportGenerated);
+        const isDone = isOpenSessionRailStepCompleted(session, step);
         const isViewing = step === currentRailStep;
         return resolveWorkflowStepState(isDone, isViewing);
       }}
-      isStepCompleted={(step) =>
-        isOpenSessionRailStepCompleted(session, step, reportGenerated)
-      }
+      isStepCompleted={(step) => isOpenSessionRailStepCompleted(session, step)}
       className={className}
     />
   );

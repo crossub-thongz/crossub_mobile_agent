@@ -42,6 +42,7 @@ import {
   inspectionNextAction,
 } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
+import { canCompleteOpenSessionReview } from '@/lib/open-inspection-session-rail';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import {
   OPEN_CONDUCTED_BY_LABEL,
@@ -100,7 +101,7 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
   const base = baseFromList ?? fetchedBase;
   const insp = useInspectionDetailLiveSync(base, apiConnected);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
-  const [generatingReport, setGeneratingReport] = useState(false);
+  const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
@@ -166,8 +167,11 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
     (v) => v.application?.agentDecision === LEASING_AGENT_DECISION.APPROVED,
   );
   const reportGenerated = openSession?.openReportGenerated === true;
-  const canGenerateReport = !reportGenerated;
-  const hasReport = insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
+  const canCompleteReview = openSession
+    ? canCompleteOpenSessionReview(openSession)
+    : false;
+  const hasReport = reportGenerated || insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
+  const sources = openSession?.reportSourceCounts;
 
   const TypeIcon =
     insp.type === 'OPEN' ? DoorOpen : insp.type === 'ROUTINE' ? ClipboardList : Home;
@@ -217,8 +221,8 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
             icon={FileText}
             label="Report"
             value={
-              insp.reportStatus === 'sent'
-                ? 'Sent'
+              reportGenerated || insp.reportStatus === 'sent'
+                ? 'Complete'
                 : insp.reportUrl
                   ? 'Available'
                   : 'Pending'
@@ -309,7 +313,7 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
 
       {openSession && insp.source === 'open_viewing' ? (
         <section className="rounded-2xl border bg-card px-2 py-1">
-          <OpenInspectionSessionRail session={openSession} reportGenerated={reportGenerated} />
+          <OpenInspectionSessionRail session={openSession} />
         </section>
       ) : null}
 
@@ -330,28 +334,30 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
             }}
           />
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 text-xs"
-              disabled={!canGenerateReport || generatingReport}
-              onClick={async () => {
-                setGeneratingReport(true);
-                try {
-                  const session = await openViewingsApi.generateReport(openSession.id);
-                  setOpenSession(session);
-                  toast.success('Open report generated — New Leasing open-report step complete');
-                } catch (err) {
-                  toast.error(err instanceof Error ? err.message : 'Could not generate report');
-                } finally {
-                  setGeneratingReport(false);
-                }
-              }}
-            >
-              <FileText className="size-3.5" />
-              {generatingReport ? 'Generating…' : 'Generate open report'}
-            </Button>
-            {(reportGenerated || approvedApplicants.length > 0) && (
+            {!reportGenerated ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 text-xs"
+                disabled={!canCompleteReview || completingReview}
+                onClick={async () => {
+                  setCompletingReview(true);
+                  try {
+                    const session = await openViewingsApi.completeReview(openSession.id);
+                    setOpenSession(session);
+                    toast.success('Review complete — open report generated');
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Could not complete review');
+                  } finally {
+                    setCompletingReview(false);
+                  }
+                }}
+              >
+                <CheckCircle2 className="size-3.5" />
+                {completingReview ? 'Completing…' : 'Complete review'}
+              </Button>
+            ) : null}
+            {reportGenerated && (
               <InspectionReportDownloadActions
                 inspectionId={openSession.id}
                 propertyLabel={insp.propertyAddress}
@@ -362,6 +368,15 @@ export function InspectionDetailView({ inspectionId }: { inspectionId: string })
               />
             )}
           </div>
+          {reportGenerated && sources ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <p className="text-muted-foreground col-span-2 font-medium uppercase tracking-wide">
+                Open report summary
+              </p>
+              <p>Tenant app: {sources.tenantApp}</p>
+              <p>Apply link / QR: {sources.linkOrQr}</p>
+            </div>
+          ) : null}
         </InfoSection>
       ) : null}
 
