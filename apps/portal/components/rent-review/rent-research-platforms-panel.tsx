@@ -71,7 +71,7 @@ function PlatformCard({
             rel="noopener noreferrer"
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[10px]"
           >
-            Source
+            Source (Rent Check)
             <ExternalLink className="size-3" />
           </a>
         ) : null}
