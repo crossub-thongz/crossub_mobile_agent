@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Trash2 } from 'lucide-react';
+import { ChevronRight, Trash2 } from 'lucide-react';
 
 import {
   ModuleListTable,
@@ -537,7 +537,17 @@ type LeasingCycleSortKey =
   | 'createdAt'
   | 'available';
 
-export function LeasingCyclesTable({ items }: { items: LeasingCycle[] }) {
+export function LeasingCyclesTable({
+  items,
+  hidePropertyColumn = false,
+  onCycleClick,
+  selectedCycleId,
+}: {
+  items: LeasingCycle[];
+  hidePropertyColumn?: boolean;
+  onCycleClick?: (cycle: LeasingCycle) => void;
+  selectedCycleId?: string | null;
+}) {
   const { sortKey, sortDirection, onSort } = useClientTableSort<LeasingCycleSortKey>(
     'createdAt',
     'desc',
@@ -549,7 +559,12 @@ export function LeasingCyclesTable({ items }: { items: LeasingCycle[] }) {
       let cmp = 0;
       switch (sortKey) {
         case 'property':
-          cmp = compareStrings(a.propertyAddress, b.propertyAddress);
+          cmp = hidePropertyColumn
+            ? compareStrings(
+                workflowCaseReferenceLabel(a.id, 'leasing'),
+                workflowCaseReferenceLabel(b.id, 'leasing'),
+              )
+            : compareStrings(a.propertyAddress, b.propertyAddress);
           break;
         case 'lifecycle':
           cmp = compareStrings(leasingLifecycleProgress(a).currentStepLabel, leasingLifecycleProgress(b).currentStepLabel);
@@ -570,34 +585,82 @@ export function LeasingCyclesTable({ items }: { items: LeasingCycle[] }) {
       return applySortDirection(cmp, sortDirection);
     });
     return rows;
-  }, [items, sortDirection, sortKey]);
+  }, [hidePropertyColumn, items, sortDirection, sortKey]);
+
+  const headColumns = hidePropertyColumn
+    ? [
+        { kind: 'sortable' as const, label: 'Case', sortKey: 'property' as const },
+        { kind: 'sortable' as const, label: 'Lifecycle stage', sortKey: 'lifecycle' as const },
+        { kind: 'sortable' as const, label: 'Onboarding', sortKey: 'onboarding' as const },
+        { kind: 'sortable' as const, label: 'Rent/wk', sortKey: 'rent' as const },
+        {
+          kind: 'sortable' as const,
+          label: 'Date created',
+          sortKey: 'createdAt' as const,
+          defaultDirection: 'desc' as const,
+        },
+        {
+          kind: 'sortable' as const,
+          label: 'Available',
+          sortKey: 'available' as const,
+          defaultDirection: 'asc' as const,
+        },
+        { kind: 'static' as const, label: '' },
+      ]
+    : [
+        { kind: 'sortable' as const, label: 'Property', sortKey: 'property' as const },
+        { kind: 'sortable' as const, label: 'Lifecycle stage', sortKey: 'lifecycle' as const },
+        { kind: 'sortable' as const, label: 'Onboarding', sortKey: 'onboarding' as const },
+        { kind: 'sortable' as const, label: 'Rent/wk', sortKey: 'rent' as const },
+        {
+          kind: 'sortable' as const,
+          label: 'Date created',
+          sortKey: 'createdAt' as const,
+          defaultDirection: 'desc' as const,
+        },
+        {
+          kind: 'sortable' as const,
+          label: 'Available',
+          sortKey: 'available' as const,
+          defaultDirection: 'asc' as const,
+        },
+        { kind: 'static' as const, label: '' },
+      ];
 
   return (
-    <ModuleListTable minWidth={980}>
+    <ModuleListTable minWidth={hidePropertyColumn ? 860 : 980}>
       <ModuleSortableTableHead
         sortKey={sortKey}
         sortDirection={sortDirection}
         onSort={onSort}
-        columns={[
-          { kind: 'sortable', label: 'Property', sortKey: 'property' },
-          { kind: 'sortable', label: 'Lifecycle stage', sortKey: 'lifecycle' },
-          { kind: 'sortable', label: 'Onboarding', sortKey: 'onboarding' },
-          { kind: 'sortable', label: 'Rent/wk', sortKey: 'rent' },
-          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
-          { kind: 'sortable', label: 'Available', sortKey: 'available', defaultDirection: 'asc' },
-          { kind: 'static', label: '' },
-        ]}
+        columns={headColumns}
       />
       <tbody className="divide-y">
         {sorted.map((cycle) => {
           const href = propertyDetail(cycle.propertyId);
           const lifecycle = leasingLifecycleProgress(cycle);
           const onboarding = leasingOnboardingProgress(cycle);
+          const isSelected = selectedCycleId === cycle.id;
+          const openCycle = onCycleClick ? () => onCycleClick(cycle) : undefined;
           return (
-            <tr key={cycle.id} className="transition-colors hover:bg-muted/20">
-              <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                <span className="line-clamp-2">{cycle.propertyAddress}</span>
-              </ModuleTableLinkCell>
+            <tr
+              key={cycle.id}
+              className={cn(
+                'transition-colors hover:bg-muted/20',
+                onCycleClick && 'cursor-pointer',
+                isSelected && 'bg-primary/5',
+              )}
+              onClick={openCycle}
+            >
+              {hidePropertyColumn ? (
+                <td className="px-3 py-3 font-medium">
+                  {workflowCaseReferenceLabel(cycle.id, 'leasing')}
+                </td>
+              ) : (
+                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                  <span className="line-clamp-2">{cycle.propertyAddress}</span>
+                </ModuleTableLinkCell>
+              )}
               <td className="px-3 py-3 text-xs font-medium text-primary">
                 {lifecycle.currentStepLabel}
               </td>
@@ -613,7 +676,13 @@ export function LeasingCyclesTable({ items }: { items: LeasingCycle[] }) {
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {cycle.availableFrom ? formatDateTime(cycle.availableFrom) : '—'}
               </td>
-              <ModuleTableChevronCell href={href} />
+              {onCycleClick ? (
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  <ChevronRight className="inline size-4" />
+                </td>
+              ) : (
+                <ModuleTableChevronCell href={href} />
+              )}
             </tr>
           );
         })}

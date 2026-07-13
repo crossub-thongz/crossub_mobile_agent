@@ -4,15 +4,9 @@ import { useState } from 'react';
 import { Check, Mail, MessageSquare, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CaseNestedDialog } from '@/components/agent/case-nested-dialog';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -25,11 +19,13 @@ import type { OpenInspectionSession, OpenInspectionVisitor } from '@/constants/o
 function ApplicantRow({
   visitor,
   busy,
+  readOnly,
   onApprove,
   onReject,
 }: {
   visitor: OpenInspectionVisitor;
   busy: boolean;
+  readOnly?: boolean;
   onApprove: () => void;
   onReject: () => void;
 }) {
@@ -71,7 +67,7 @@ function ApplicantRow({
       {app?.rejectReason ? (
         <p className="mt-1.5 text-[11px] text-rose-600">Reason: {app.rejectReason}</p>
       ) : null}
-      {app && pending ? (
+      {app && pending && !readOnly ? (
         <div className="mt-2 flex gap-1.5">
           <Button
             size="sm"
@@ -108,9 +104,12 @@ function ApplicantRow({
 export function OpenInspectionApplicantPanel({
   session,
   onSessionChange,
+  readOnly = false,
 }: {
   session: OpenInspectionSession;
   onSessionChange: (session: OpenInspectionSession) => void;
+  /** When true, applicants are view-only (approve/reject happens on the Results step). */
+  readOnly?: boolean;
 }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [approveVisitor, setApproveVisitor] = useState<OpenInspectionVisitor | null>(null);
@@ -178,6 +177,7 @@ export function OpenInspectionApplicantPanel({
             key={visitor.id}
             visitor={visitor}
             busy={busyId === visitor.id}
+            readOnly={readOnly}
             onApprove={() => {
               setFeedback('');
               setApproveVisitor(visitor);
@@ -190,62 +190,64 @@ export function OpenInspectionApplicantPanel({
         ))}
       </ul>
 
-      <Dialog open={!!approveVisitor} onOpenChange={(open) => !open && setApproveVisitor(null)}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Approve applicant</DialogTitle>
-            <DialogDescription className="text-xs">
-              {approveVisitor?.name} will be notified by email. Add an optional message for the
-              candidate.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Optional feedback for the approved applicant…"
-            className="min-h-20 text-sm"
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setApproveVisitor(null)}>
-              Cancel
-            </Button>
-            <Button size="sm" disabled={!!busyId} onClick={() => void confirmApprove()}>
-              Approve &amp; notify
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CaseNestedDialog
+        open={!!approveVisitor}
+        onClose={() => setApproveVisitor(null)}
+        title="Approve applicant"
+        description={
+          <>
+            {approveVisitor?.name} will be notified by email. Add an optional message for the
+            candidate.
+          </>
+        }
+      >
+        <Textarea
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          placeholder="Optional feedback for the approved applicant…"
+          className="min-h-20 text-sm"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setApproveVisitor(null)}>
+            Cancel
+          </Button>
+          <Button size="sm" disabled={!!busyId} onClick={() => void confirmApprove()}>
+            Approve &amp; notify
+          </Button>
+        </div>
+      </CaseNestedDialog>
 
-      <Dialog open={!!rejectVisitor} onOpenChange={(open) => !open && setRejectVisitor(null)}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reject applicant</DialogTitle>
-            <DialogDescription className="text-xs">
-              {rejectVisitor?.name} will receive a decline email. You can include an optional
-              reason.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Optional reason (included in email)"
-            className="text-sm"
-          />
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setRejectVisitor(null)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={!!busyId}
-              onClick={() => void confirmReject()}
-            >
-              Send reject email
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CaseNestedDialog
+        open={!!rejectVisitor}
+        onClose={() => setRejectVisitor(null)}
+        title="Reject applicant"
+        description={
+          <>
+            {rejectVisitor?.name} will receive a decline email. You can include an optional
+            reason.
+          </>
+        }
+      >
+        <Input
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder="Optional reason (included in email)"
+          className="text-sm"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setRejectVisitor(null)}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={!!busyId}
+            onClick={() => void confirmReject()}
+          >
+            Send reject email
+          </Button>
+        </div>
+      </CaseNestedDialog>
     </>
   );
 }

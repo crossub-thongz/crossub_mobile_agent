@@ -175,6 +175,22 @@ export const leasingOpsApi = {
       ),
     ),
 
+  sendApplicantResultsDecision: (
+    cycleId: string,
+    applicationId: string,
+    input: {
+      decision: 'approved' | 'rejected';
+      feedback?: string;
+      rejectReason?: string;
+    },
+  ) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/applications/${applicationId}/results/decision/send`,
+        input,
+      ),
+    ),
+
   setBondLink: (cycleId: string, input: { link: string }) =>
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(

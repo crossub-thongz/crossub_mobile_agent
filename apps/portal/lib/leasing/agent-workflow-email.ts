@@ -102,6 +102,32 @@ function openInspectionPushRecord(detail: LeasingPropertyDetail): JobCaseEmailRe
   };
 }
 
+function openInspectionPreferenceRecord(detail: LeasingPropertyDetail): JobCaseEmailRecord | null {
+  const oi = detail.openInspection;
+  if (oi.scheduledTime || !oi.preferredScheduledTime) return null;
+  return {
+    id: `${detail.propertyId}-open-inspection-preference`,
+    subject: 'OPEN inspection scheduled',
+    body: `Open inspection preference submitted for ${detail.propertyAddress}.`,
+    from: 'CROSSUB',
+    to: detail.agentInfo.email ?? 'Managing Agent',
+    at: oi.preferredScheduledTime,
+    kind: 'open_inspection_preference',
+  };
+}
+
+export function openInspectionJobCaseEmails(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
+  const records: JobCaseEmailRecord[] = [];
+  const push = openInspectionPushRecord(detail);
+  if (push) records.push(push);
+  const preference = openInspectionPreferenceRecord(detail);
+  if (preference) records.push(preference);
+  const agentReport = openReportToAgentRecord(detail);
+  if (agentReport) records.push(agentReport);
+  records.push(...viewerInviteRecords(detail));
+  return dedupeJobCaseEmails(records);
+}
+
 function emailRecordsForStepOnly(
   detail: LeasingPropertyDetail,
   step: LeasingLifecycleStep,

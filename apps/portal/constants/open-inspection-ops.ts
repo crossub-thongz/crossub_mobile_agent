@@ -91,6 +91,8 @@ export interface OpenInspectionApplication {
   rejectReason?: string;
   feedback?: string;
   candidateNotified: boolean;
+  resultsSentAt?: string;
+  tenantLoginProvisioned?: boolean;
 }
 
 export interface OpenInspectionVisitor {

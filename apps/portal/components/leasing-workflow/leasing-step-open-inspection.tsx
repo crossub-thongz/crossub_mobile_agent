@@ -5,7 +5,9 @@ import { CalendarClock, DoorOpen, ExternalLink, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
-import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
+import { OpenLeasingGenerateReportButton } from '@/components/leasing-workflow/open-leasing-generate-report-button';
+import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
+import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,10 +34,13 @@ import {
   resolveOpenInspectionForProperty,
 } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
+import { isLettingOpenReportVisibleStep, isLettingScheduledStep } from '@/lib/leasing/letting-rail-progress';
+import { isLeasingOpenReportReady } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { openViewingsApi } from '@/lib/open-viewings-api';
+import { useLivePoll } from '@/lib/use-live-poll';
 import { cn, formatDate } from '@/lib/utils';
 
 export function LeasingStepOpenInspection({
@@ -54,6 +59,16 @@ export function LeasingStepOpenInspection({
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useLivePoll(() => {
+    setNow(new Date());
+  });
+
+  const showOpenReport = isLettingOpenReportVisibleStep(detail, now);
+  const isScheduledStep = isLettingScheduledStep(detail, now);
+  const reportReady =
+    isLeasingOpenReportReady(detail) || openSession?.openReportGenerated === true;
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = detail.cycleId ?? cycle?.id;
@@ -111,10 +126,15 @@ export function LeasingStepOpenInspection({
       setOpenSession(null);
       return;
     }
-    void openViewingsApi
-      .get(oi.viewingSessionId)
-      .then(setOpenSession)
-      .catch(() => setOpenSession(null));
+    const load = () => {
+      void openViewingsApi
+        .get(oi.viewingSessionId!)
+        .then(setOpenSession)
+        .catch(() => setOpenSession(null));
+    };
+    load();
+    const id = window.setInterval(load, 5000);
+    return () => window.clearInterval(id);
   }, [apiConnected, oi.viewingSessionId]);
 
   const allowCancel = canCancelLetting(detail, linkedInspection);
@@ -281,8 +301,30 @@ export function LeasingStepOpenInspection({
         </div>
       )}
 
-      {openSession?.applyUrl ? (
-        <OpenInspectionApplyShareCard session={openSession} compact />
+      {openSession && (isScheduled || isScheduledStep || showOpenReport) ? (
+        <OpenInspectionApplicantPanel
+          session={openSession}
+          onSessionChange={setOpenSession}
+          readOnly
+        />
+      ) : null}
+
+      {!reportReady && (isScheduled || isScheduledStep || showOpenReport) ? (
+        <OpenLeasingGenerateReportButton
+          cycleId={cycleId}
+          sessionId={oi.viewingSessionId ?? undefined}
+          reportReady={reportReady}
+          onCycleView={(view) => applyCycleView(detail.propertyId, view)}
+          onSessionUpdated={setOpenSession}
+        />
+      ) : null}
+
+      {showOpenReport ? (
+        <OpenLeasingInspectionReportPanel
+          detail={detail}
+          openSession={openSession}
+          showPending
+        />
       ) : null}
 
       {allowCancel ? (
@@ -301,8 +343,8 @@ export function LeasingStepOpenInspection({
           <DialogHeader>
             <DialogTitle>Request open inspection</DialogTitle>
             <DialogDescription>
-              Tell CROSSUB when you would like the viewing, or schedule it yourself. CROSSUB
-              confirms the official time before advertising.
+              Choose when you would like the viewing window to start and end. CROSSUB will
+              confirm the official schedule in the admin portal.
             </DialogDescription>
           </DialogHeader>
           <CreateInspectionWizard

@@ -18,10 +18,10 @@ function mergeInspectionDetail(base: Inspection, detail: InspectionDetail | Open
   if (isOpenSession(detail)) {
     return {
       ...base,
-      scheduledAt: detail.startTime,
+      scheduledAt: detail.startTime ?? base.scheduledAt,
       status: detail.sessionStatus,
       visitorCount: detail.visitors.length,
-      inspector: detail.agent?.name,
+      inspector: detail.agent?.name ?? base.inspector,
     };
   }
   return {
@@ -36,6 +36,19 @@ function mergeInspectionDetail(base: Inspection, detail: InspectionDetail | Open
   };
 }
 
+/** Keep detail fields enriched by polling when the list row refreshes with sparse data. */
+function preserveLiveInspectionFields(base: Inspection, prev: Inspection): Inspection {
+  return {
+    ...base,
+    scheduledAt: base.scheduledAt ?? prev.scheduledAt,
+    inspector: base.inspector ?? prev.inspector,
+    reportUrl: base.reportUrl ?? prev.reportUrl,
+    visitorCount: base.visitorCount ?? prev.visitorCount,
+    areaOutcomes: prev.areaOutcomes?.length ? prev.areaOutcomes : base.areaOutcomes,
+    timeline: prev.timeline.length > base.timeline.length ? prev.timeline : base.timeline,
+  };
+}
+
 /** Poll full inspection / open-viewing detail every 5 seconds (ingoing, outgoing, routine, open). */
 export function useInspectionDetailLiveSync(
   base: Inspection | null | undefined,
@@ -44,7 +57,11 @@ export function useInspectionDetailLiveSync(
   const [live, setLive] = useState<Inspection | null | undefined>(base);
 
   useEffect(() => {
-    setLive(base);
+    setLive((prev) => {
+      if (!base) return base;
+      if (!prev || prev.id !== base.id) return base;
+      return preserveLiveInspectionFields(base, prev);
+    });
   }, [base]);
 
   const sync = useCallback(async () => {
@@ -54,7 +71,10 @@ export function useInspectionDetailLiveSync(
     }
     const detail = await fetchInspectionDetail(base);
     if (!detail) return;
-    setLive((prev) => mergeInspectionDetail(prev ?? base, detail));
+    setLive((prev) => {
+      const seed = prev && prev.id === base.id ? prev : base;
+      return mergeInspectionDetail(seed, detail);
+    });
   }, [apiConnected, base]);
 
   useLivePoll(sync, apiConnected && Boolean(base));

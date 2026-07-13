@@ -61,15 +61,27 @@ export function openInspectionStartReached(
   return new Date(start) <= now;
 }
 
+function isSameCalendarDay(start: string, end: string): boolean {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  return (
+    startDate.getFullYear() === endDate.getFullYear() &&
+    startDate.getMonth() === endDate.getMonth() &&
+    startDate.getDate() === endDate.getDate()
+  );
+}
+
 export function formatInspectionTimeRange(
   start?: string,
   end?: string,
 ): string {
   if (!start) return OPEN_INSPECTION_PENDING;
-  const dateLabel = formatDate(start);
-  const startTime = formatTime(start);
-  if (!end) return `${dateLabel} · ${startTime}`;
-  return `${dateLabel} · ${startTime} – ${formatTime(end)}`;
+  const startLabel = `${formatDate(start)} · ${formatTime(start)}`;
+  if (!end) return startLabel;
+  if (isSameCalendarDay(start, end)) {
+    return `${startLabel} – ${formatTime(end)}`;
+  }
+  return `${startLabel} – ${formatDate(end)} · ${formatTime(end)}`;
 }
 
 export function canCancelLetting(

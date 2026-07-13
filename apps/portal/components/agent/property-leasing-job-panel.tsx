@@ -9,6 +9,10 @@ import {
   ArchivedLeasingCyclesTable,
 } from '@/components/agent/archive-module-tables';
 import { EmptyState } from '@/components/agent/empty-state';
+import {
+  LeasingCyclesTable,
+  TenantSelectionsTable,
+} from '@/components/agent/portfolio-module-tables';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyLeasingCaseWorkflowDialog } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { PropertyLeasingWorkflowActions } from '@/components/agent/property-leasing-workflow-actions';
@@ -29,6 +33,7 @@ import {
   filterLeasingTabWorkflowCases,
   type PropertyLeasingWorkflowCase,
 } from '@/lib/property-leasing-workflow-cases';
+import { splitLeasingCyclesByHistory } from '@/lib/property-leasing-history';
 import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
@@ -131,7 +136,34 @@ export function PropertyLeasingJobPanel({
     currentLease,
   });
 
-  const jobRows = useMemo(() => leasingWorkflowJobRows(workflowCases), [workflowCases]);
+  const { active: activeLeasingCycles, history: historicalLeasingCycles } = useMemo(
+    () => splitLeasingCyclesByHistory(leasingCycles),
+    [leasingCycles],
+  );
+  const activeLeasingCycleIds = useMemo(
+    () => new Set(activeLeasingCycles.map((cycle) => cycle.id)),
+    [activeLeasingCycles],
+  );
+  const newLeasingCases = useMemo(
+    () => workflowCases.filter((workflowCase) => workflowCase.category === 'leasing'),
+    [workflowCases],
+  );
+  const endLeasingCases = useMemo(
+    () => workflowCases.filter((workflowCase) => workflowCase.category === 'end_leasing'),
+    [workflowCases],
+  );
+  const newLeasingJobRows = useMemo(
+    () => leasingWorkflowJobRows(newLeasingCases),
+    [newLeasingCases],
+  );
+  const endLeasingJobRows = useMemo(
+    () => leasingWorkflowJobRows(endLeasingCases),
+    [endLeasingCases],
+  );
+  const supplementalNewLeasingJobRows = useMemo(
+    () => newLeasingJobRows.filter((row) => !activeLeasingCycleIds.has(row.id)),
+    [activeLeasingCycleIds, newLeasingJobRows],
+  );
   const historyCases = useMemo(
     () =>
       buildPropertyLeasingHistoryCases({
@@ -141,7 +173,26 @@ export function PropertyLeasingJobPanel({
       }),
     [leasingCycles, propertyId, vacatingCases],
   );
-  const historyJobRows = useMemo(() => leasingWorkflowJobRows(historyCases), [historyCases]);
+  const historyNewLeasingCases = useMemo(
+    () => historyCases.filter((workflowCase) => workflowCase.category === 'leasing'),
+    [historyCases],
+  );
+  const historyEndLeasingCases = useMemo(
+    () => historyCases.filter((workflowCase) => workflowCase.category === 'end_leasing'),
+    [historyCases],
+  );
+  const historyNewLeasingJobRows = useMemo(
+    () => leasingWorkflowJobRows(historyNewLeasingCases),
+    [historyNewLeasingCases],
+  );
+  const historyEndLeasingJobRows = useMemo(
+    () => leasingWorkflowJobRows(historyEndLeasingCases),
+    [historyEndLeasingCases],
+  );
+  const propertyTenantSelections = useMemo(
+    () => tenantSelections.filter((selection) => selection.propertyId === propertyId),
+    [propertyId, tenantSelections],
+  );
 
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [dialogCase, setDialogCase] = useState<PropertyLeasingWorkflowCase | null>(null);
@@ -215,14 +266,24 @@ export function PropertyLeasingJobPanel({
     onWorkflowCreated?.();
   };
 
-  const handleRowClick = (id: string) => {
-    setSelectedCaseId(id);
-    const item =
-      workflowCases.find((workflowCase) => workflowCase.id === id) ??
-      historyCases.find((workflowCase) => workflowCase.id === id) ??
-      null;
-    setDialogCase(item);
-  };
+  const handleRowClick = useCallback(
+    (id: string) => {
+      setSelectedCaseId(id);
+      const item =
+        workflowCases.find((workflowCase) => workflowCase.id === id) ??
+        historyCases.find((workflowCase) => workflowCase.id === id) ??
+        null;
+      setDialogCase(item);
+    },
+    [historyCases, workflowCases],
+  );
+
+  const openLeasingCycle = useCallback(
+    (cycle: LeasingCycle) => {
+      handleRowClick(cycle.id);
+    },
+    [handleRowClick],
+  );
 
   const workflowActions = (
     <PropertyLeasingWorkflowActions
@@ -243,6 +304,141 @@ export function PropertyLeasingJobPanel({
   const showCurrentTenancySummary =
     Boolean(currentLease) &&
     (vacatingCases.length > 0 || leasingCycles.length === 0);
+
+  const leasingTableProps = {
+    showViewToggle: true,
+    selectedId: selectedCaseId,
+    onRowClick: handleRowClick,
+    canDeleteRow,
+    onDeleteRow: (row: PropertyJobRow) => {
+      const item = workflowCases.find((workflowCase) => workflowCase.id === row.id);
+      if (item) setDeleteTarget(item);
+    },
+  };
+
+  const renderLeasingTables = () => (
+    <>
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold">New leasing</h3>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Active letting cycles and applications — click a row to open the full workflow.
+          </p>
+        </div>
+
+        {activeLeasingCycles.length > 0 ? (
+          <LeasingCyclesTable
+            items={activeLeasingCycles}
+            hidePropertyColumn
+            selectedCycleId={selectedCaseId}
+            onCycleClick={openLeasingCycle}
+          />
+        ) : supplementalNewLeasingJobRows.length === 0 && propertyTenantSelections.length === 0 ? (
+          <EmptyState
+            icon={RefreshCw}
+            title="No new leasing cases"
+            description="Start a new letting cycle when the property is ready to lease."
+          />
+        ) : null}
+
+        {supplementalNewLeasingJobRows.length > 0 ? (
+          <PropertyJobCasesTable
+            rows={supplementalNewLeasingJobRows}
+            {...leasingTableProps}
+            emptyTitle="No new leasing cases"
+            emptyDescription="Start a new letting cycle when the property is ready to lease."
+          />
+        ) : null}
+
+        {propertyTenantSelections.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Tenant applications
+            </p>
+            <TenantSelectionsTable items={propertyTenantSelections} />
+          </div>
+        ) : null}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold">End leasing</h3>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Active end-leasing cases — click a case to open the vacating workflow.
+          </p>
+        </div>
+        <PropertyJobCasesTable
+          rows={endLeasingJobRows}
+          {...leasingTableProps}
+          emptyTitle="No end leasing cases"
+          emptyDescription="End leasing cases appear here when a tenancy is being wound up."
+        />
+      </section>
+    </>
+  );
+
+  const renderHistoryTables = () => (
+    <section className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold">History</h3>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Completed letting and end-leasing cases — click a row to reopen the workflow.
+        </p>
+      </div>
+
+      {historyNewLeasingJobRows.length === 0 &&
+      historyEndLeasingJobRows.length === 0 &&
+      historicalLeasingCycles.length === 0 ? (
+        <EmptyState
+          icon={RefreshCw}
+          title="No leasing history"
+          description="Completed end-leasing cases and past letting cycles will appear here."
+        />
+      ) : (
+        <>
+          {historicalLeasingCycles.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                New leasing
+              </p>
+              <LeasingCyclesTable
+                items={historicalLeasingCycles}
+                hidePropertyColumn
+                selectedCycleId={selectedCaseId}
+                onCycleClick={openLeasingCycle}
+              />
+            </div>
+          ) : null}
+          {historyNewLeasingJobRows.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                New leasing
+              </p>
+              <PropertyJobCasesTable
+                rows={historyNewLeasingJobRows}
+                showViewToggle
+                selectedId={selectedCaseId}
+                onRowClick={handleRowClick}
+              />
+            </div>
+          ) : null}
+          {historyEndLeasingJobRows.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                End leasing
+              </p>
+              <PropertyJobCasesTable
+                rows={historyEndLeasingJobRows}
+                showViewToggle
+                selectedId={selectedCaseId}
+                onRowClick={handleRowClick}
+              />
+            </div>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
 
   if (workflowCases.length === 0) {
     const hasDeleted =
@@ -271,6 +467,8 @@ export function PropertyLeasingJobPanel({
     return (
       <div className="space-y-4">
         {workflowActions}
+        {renderLeasingTables()}
+        {renderHistoryTables()}
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">Deleted</h3>
           <p className="text-muted-foreground text-xs">
@@ -302,46 +500,9 @@ export function PropertyLeasingJobPanel({
     <div className="space-y-4">
       {workflowActions}
 
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold">Letting cases</h3>
-        <p className="text-muted-foreground text-xs">
-          Click a case to open the full letting or end-leasing workflow.
-        </p>
-        <PropertyJobCasesTable
-          rows={jobRows}
-          selectedId={selectedCaseId}
-          onRowClick={handleRowClick}
-          showViewToggle
-          canDeleteRow={canDeleteRow}
-          onDeleteRow={(row) => {
-            const item = workflowCases.find((workflowCase) => workflowCase.id === row.id);
-            if (item) setDeleteTarget(item);
-          }}
-        />
-      </section>
+      {renderLeasingTables()}
 
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold">History</h3>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Completed end-leasing cases and past letting cycles — click a row to reopen the workflow.
-          </p>
-        </div>
-        {historyJobRows.length === 0 ? (
-          <EmptyState
-            icon={RefreshCw}
-            title="No leasing history"
-            description="Completed end-leasing cases and past letting cycles will appear here."
-          />
-        ) : (
-          <PropertyJobCasesTable
-            rows={historyJobRows}
-            selectedId={selectedCaseId}
-            onRowClick={handleRowClick}
-            showViewToggle
-          />
-        )}
-      </section>
+      {renderHistoryTables()}
 
       {(deletedLeasingCycles.length > 0 || deletedEndLeasingCases.length > 0) && (
         <section className="space-y-3">

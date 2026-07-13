@@ -20,6 +20,8 @@ interface InspectionReportDownloadActionsProps {
   inspectionType?: 'ingoing' | 'outgoing' | 'routine' | 'open';
   fetchPdf?: (id: string) => Promise<Blob>;
   canDownload?: boolean;
+  /** Hide inline PDF preview — download only (open inspection results view). */
+  downloadOnly?: boolean;
   size?: 'sm' | 'default';
   variant?: 'card' | 'inline';
   className?: string;
@@ -32,6 +34,7 @@ export function InspectionReportDownloadActions({
   inspectionType = 'ingoing',
   fetchPdf = inspectionsApi.downloadReportPdf,
   canDownload = true,
+  downloadOnly = false,
   size = 'sm',
   variant = 'card',
   className,
@@ -59,19 +62,21 @@ export function InspectionReportDownloadActions({
     <>
       {variant === 'inline' ? (
         <div className={cn('flex flex-wrap items-center gap-2', className)}>
+          {!downloadOnly ? (
+            <Button
+              type="button"
+              variant="outline"
+              size={size}
+              className="gap-1.5"
+              onClick={() => setPreviewOpen(true)}
+            >
+              <Eye className="size-3.5" />
+              View report
+            </Button>
+          ) : null}
           <Button
             type="button"
-            variant="outline"
-            size={size}
-            className="gap-1.5"
-            onClick={() => setPreviewOpen(true)}
-          >
-            <Eye className="size-3.5" />
-            View report
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
+            variant={downloadOnly ? 'default' : 'secondary'}
             size={size}
             className="gap-1.5"
             disabled={downloading}
@@ -95,23 +100,25 @@ export function InspectionReportDownloadActions({
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">Inspection report ready</p>
             <p className="text-muted-foreground text-xs">
-              View or download the completed report as PDF
+              {downloadOnly ? 'Download the completed report as PDF' : 'View or download the completed report as PDF'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {!downloadOnly ? (
+              <Button
+                type="button"
+                variant="outline"
+                size={size}
+                className="gap-1.5"
+                onClick={() => setPreviewOpen(true)}
+              >
+                <Eye className="size-3.5" />
+                View report
+              </Button>
+            ) : null}
             <Button
               type="button"
-              variant="outline"
-              size={size}
-              className="gap-1.5"
-              onClick={() => setPreviewOpen(true)}
-            >
-              <Eye className="size-3.5" />
-              View report
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
+              variant={downloadOnly ? 'default' : 'secondary'}
               size={size}
               className="gap-1.5"
               disabled={downloading}
@@ -128,15 +135,17 @@ export function InspectionReportDownloadActions({
         </div>
       )}
 
-      <InspectionReportPdfPreviewDialog
-        open={previewOpen}
-        onOpenChange={setPreviewOpen}
-        reportUrl={reportUrl}
-        inspectionId={inspectionId}
-        fetchPdf={fetchPdf}
-        filename={filename}
-        title={title}
-      />
+      {!downloadOnly ? (
+        <InspectionReportPdfPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          reportUrl={reportUrl}
+          inspectionId={inspectionId}
+          fetchPdf={fetchPdf}
+          filename={filename}
+          title={title}
+        />
+      ) : null}
     </>
   );
 }

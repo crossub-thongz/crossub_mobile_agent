@@ -4,15 +4,8 @@ import { useMemo, useState } from 'react';
 import { Check, Copy, Download, ExternalLink, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CaseNestedDialog } from '@/components/agent/case-nested-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
@@ -161,41 +154,42 @@ export function OpenInspectionApplyShareCard({
         </div>
       </div>
 
-      <Dialog open={sendOpen} onOpenChange={setSendOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Send application link</DialogTitle>
-            <DialogDescription>
-              Email the tenant-app apply link for {session.property || session.address}. Separate
-              multiple addresses with commas or new lines.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="apply-link-recipients">Recipient emails</Label>
-            <Textarea
-              id="apply-link-recipients"
-              rows={4}
-              placeholder="prospect1@email.com, prospect2@email.com"
-              value={recipients}
-              onChange={(e) => setRecipients(e.target.value)}
-              disabled={sending}
-            />
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setSendOpen(false)}
-              disabled={sending}
-            >
-              Cancel
-            </Button>
-            <Button type="button" onClick={() => void sendLink()} disabled={sending}>
-              {sending ? 'Sending…' : 'Send link'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CaseNestedDialog
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        title="Send application link"
+        description={
+          <>
+            Email the tenant-app apply link for {session.property || session.address}. Separate
+            multiple addresses with commas or new lines.
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <Label htmlFor="apply-link-recipients">Recipient emails</Label>
+          <Textarea
+            id="apply-link-recipients"
+            rows={4}
+            placeholder="prospect1@email.com, prospect2@email.com"
+            value={recipients}
+            onChange={(e) => setRecipients(e.target.value)}
+            disabled={sending}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSendOpen(false)}
+            disabled={sending}
+          >
+            Cancel
+          </Button>
+          <Button type="button" onClick={() => void sendLink()} disabled={sending}>
+            {sending ? 'Sending…' : 'Send link'}
+          </Button>
+        </div>
+      </CaseNestedDialog>
     </>
   );
 }

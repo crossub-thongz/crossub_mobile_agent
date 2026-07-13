@@ -124,3 +124,38 @@ export function isLettingRailStepEnabled(
       return false;
   }
 }
+
+export function isLettingResultsStep(
+  detail: LeasingPropertyDetail,
+  now: Date = new Date(),
+): boolean {
+  return deriveLettingRailProgress(detail, now).currentRailStep === LETTING_RAIL_STEP.RESULTS;
+}
+
+export function isLettingReportAvailableStep(
+  detail: LeasingPropertyDetail,
+  now: Date = new Date(),
+): boolean {
+  return (
+    deriveLettingRailProgress(detail, now).currentRailStep ===
+    LETTING_RAIL_STEP.REPORT_AVAILABLE
+  );
+}
+
+export function isLettingScheduledStep(
+  detail: LeasingPropertyDetail,
+  now: Date = new Date(),
+): boolean {
+  return deriveLettingRailProgress(detail, now).currentRailStep === LETTING_RAIL_STEP.SCHEDULED;
+}
+
+/** Report Available or Results on the letting rail — show the open inspection report. */
+export function isLettingOpenReportVisibleStep(
+  detail: LeasingPropertyDetail,
+  now: Date = new Date(),
+): boolean {
+  const step = deriveLettingRailProgress(detail, now).currentRailStep;
+  return (
+    step === LETTING_RAIL_STEP.REPORT_AVAILABLE || step === LETTING_RAIL_STEP.RESULTS
+  );
+}

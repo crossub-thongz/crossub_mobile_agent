@@ -196,10 +196,10 @@ export function CreateInspectionWizard({
   }, [validPreselected]);
 
   useEffect(() => {
-    if (initialType) {
-      setInspectionType((current) => current ?? initialType);
+    if (leasingCycleIdProp) {
+      setOpenConductedBy('crossub');
     }
-  }, [initialType]);
+  }, [leasingCycleIdProp]);
 
   useEffect(() => {
     return () => {
@@ -235,7 +235,9 @@ export function CreateInspectionWizard({
     [tenantSelections, propertyId],
   );
 
-  const [openConductedBy, setOpenConductedBy] = useState<OpenConductedBy | null>(null);
+  const [openConductedBy, setOpenConductedBy] = useState<OpenConductedBy | null>(
+    leasingCycleIdProp ? 'crossub' : null,
+  );
   const [openScheduledLocal, setOpenScheduledLocal] = useState('');
   const [openPreferredStartLocal, setOpenPreferredStartLocal] = useState('');
   const [openPreferredEndLocal, setOpenPreferredEndLocal] = useState('');
@@ -419,7 +421,10 @@ export function CreateInspectionWizard({
             );
           }
           if (!openPreferredStartLocal && !openPreferredNotes.trim()) {
-            throw new Error('Enter a preferred date and time, or notes for CROSSUB');
+            throw new Error('Enter a viewing start time, or notes for CROSSUB');
+          }
+          if (leasingCycleIdProp && !openPreferredEndLocal) {
+            throw new Error('Enter a viewing end time');
           }
           if (
             openPreferredEndLocal &&
@@ -701,6 +706,7 @@ export function CreateInspectionWizard({
                 <OpenInspectionForm
                   property={property}
                   listingContext={openListingContext}
+                  leasingRequestMode={Boolean(leasingCycleIdProp)}
                   conductedBy={openConductedBy}
                   onConductedByChange={setOpenConductedBy}
                   scheduledLocal={openScheduledLocal}
@@ -773,6 +779,7 @@ export function CreateInspectionWizard({
 function OpenInspectionForm({
   property,
   listingContext,
+  leasingRequestMode = false,
   conductedBy,
   onConductedByChange,
   scheduledLocal,
@@ -790,6 +797,7 @@ function OpenInspectionForm({
 }: {
   property: Property;
   listingContext: ReturnType<typeof getOpenListingContext> | null;
+  leasingRequestMode?: boolean;
   conductedBy: OpenConductedBy | null;
   onConductedByChange: (v: OpenConductedBy) => void;
   scheduledLocal: string;
@@ -821,37 +829,45 @@ function OpenInspectionForm({
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label>Who conducts the open inspection?</Label>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {(['crossub', 'agent'] as const).map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onConductedByChange(id)}
-              className={cn(
-                'rounded-xl border p-3 text-left text-xs',
-                conductedBy === id ? 'border-primary bg-primary/5' : 'hover:bg-secondary/40',
-              )}
-            >
-              <p className="text-sm font-semibold">{OPEN_CONDUCTED_BY_LABEL[id]}</p>
-            </button>
-          ))}
+      {!leasingRequestMode ? (
+        <div className="space-y-2">
+          <Label>Who conducts the open inspection?</Label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(['crossub', 'agent'] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onConductedByChange(id)}
+                className={cn(
+                  'rounded-xl border p-3 text-left text-xs',
+                  conductedBy === id ? 'border-primary bg-primary/5' : 'hover:bg-secondary/40',
+                )}
+              >
+                <p className="text-sm font-semibold">{OPEN_CONDUCTED_BY_LABEL[id]}</p>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {isSelf ? <Callout body={SELF_OPEN_INSPECTION_DISCLAIMER} /> : null}
 
       {conductedBy === 'crossub' ? (
         <>
-          <Field label="Preferred date & time">
+          <Field label={leasingRequestMode ? 'Viewing start date & time *' : 'Preferred start date & time'}>
             <Input
               type="datetime-local"
               value={preferredStartLocal}
               onChange={(e) => onPreferredStartLocalChange(e.target.value)}
             />
           </Field>
-          <Field label="Preferred end time (optional)">
+          <Field
+            label={
+              leasingRequestMode
+                ? 'Viewing end date & time *'
+                : 'Preferred end date & time (optional)'
+            }
+          >
             <Input
               type="datetime-local"
               value={preferredEndLocal}
@@ -867,8 +883,9 @@ function OpenInspectionForm({
             />
           </Field>
           <p className="text-muted-foreground text-xs">
-            This is your preference only. CROSSUB will confirm the official schedule in the
-            admin portal before the viewing is advertised.
+            {leasingRequestMode
+              ? 'CROSSUB will confirm the official viewing window in the admin portal before the inspection is advertised.'
+              : 'This is your preference only. Use the end field for a range or latest option (e.g. 14 Jul start and 15 Jul end if either day works). CROSSUB will confirm the official schedule in the admin portal before the viewing is advertised.'}
           </p>
         </>
       ) : conductedBy === 'agent' ? (
