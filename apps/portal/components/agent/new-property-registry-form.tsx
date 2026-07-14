@@ -555,8 +555,10 @@ export function NewPropertyRegistryForm({
           });
           setForm((f) => patchUploadStatusInForm(f, doc.id, 'uploaded'));
           return true;
-        } catch {
+        } catch (err) {
           setForm((f) => patchUploadStatusInForm(f, doc.id, 'failed'));
+          const message = err instanceof Error ? err.message : 'Upload failed';
+          toast.error(message);
           return false;
         }
       };
@@ -660,20 +662,6 @@ export function NewPropertyRegistryForm({
     }
     setPreviewDoc(null);
   }, []);
-
-  if (apiConnected && loading && !primaryAgency) {
-    return (
-      <p className="text-muted-foreground text-sm">Loading your agency profile…</p>
-    );
-  }
-
-  if (apiConnected && !loading && !primaryAgency) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        Your agency profile is not set up yet. Complete registration before adding properties.
-      </p>
-    );
-  }
 
   const handlePlaceSelect = useCallback((parsed: ParsedAustralianAddress) => {
     setForm((f) => ({
@@ -824,6 +812,20 @@ export function NewPropertyRegistryForm({
   };
 
   const formBusy = submitting || completing;
+
+  if (apiConnected && loading && !primaryAgency) {
+    return (
+      <p className="text-muted-foreground text-sm">Loading your agency profile…</p>
+    );
+  }
+
+  if (apiConnected && !loading && !primaryAgency) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        Your agency profile is not set up yet. Complete registration before adding properties.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-4">
