@@ -1,6 +1,7 @@
 import type { components } from '@crossub-thongz/api-contract';
 
 import { ApiError, apiV1 } from '@/lib/api';
+import { fileToBase64WithProgress } from '@/lib/file-upload';
 
 import { crossub } from './client';
 
@@ -518,6 +519,119 @@ export async function uploadDocumentWithProgress(
     xhr.onerror = () => reject(new Error('Failed to upload document'));
     xhr.send(JSON.stringify(input));
   });
+}
+
+type DocumentUploadMeta = {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  category: UploadAgentDocumentInput['category'];
+  propertyId?: string;
+  title?: string;
+};
+
+type DocumentUploadSession =
+  | { mode: 'inline' }
+  | { mode: 'direct'; uploadUrl: string; storageKey: string };
+
+async function beginDocumentUploadSession(
+  meta: DocumentUploadMeta,
+): Promise<DocumentUploadSession> {
+  try {
+    return await apiV1.post<DocumentUploadSession>('/agent/documents/upload-session', meta);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new Error(formatApiErrorMessage(err));
+    }
+    throw err;
+  }
+}
+
+function putFileToPresignedUrl(
+  uploadUrl: string,
+  file: File,
+  mimeType: string,
+  onProgress?: (percent: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', mimeType);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress?.(100);
+        resolve();
+        return;
+      }
+      reject(new Error(`Direct upload failed: ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error('Direct upload failed'));
+    xhr.send(file);
+  });
+}
+
+async function completeDocumentUploadSession(
+  storageKey: string,
+  meta: DocumentUploadMeta,
+): Promise<AgentDocumentDto> {
+  try {
+    return await apiV1.post<AgentDocumentDto>('/agent/documents/upload-complete', {
+      storageKey,
+      ...meta,
+    });
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new Error(formatApiErrorMessage(err));
+    }
+    throw err;
+  }
+}
+
+/**
+ * Upload a document file — uses direct-to-R2 on staging/production (presigned PUT) so large
+ * files never pass through the portal BFF or API body. Falls back to base64 JSON locally.
+ */
+export async function uploadAgentDocumentFileWithProgress(
+  file: File,
+  meta: {
+    category: UploadAgentDocumentInput['category'];
+    propertyId?: string;
+    title?: string;
+  },
+  onNetworkProgress?: (networkPercent: number) => void,
+): Promise<AgentDocumentDto> {
+  const payload: DocumentUploadMeta = {
+    fileName: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    sizeBytes: file.size,
+    category: meta.category,
+    propertyId: meta.propertyId,
+    title: meta.title?.trim() || file.name,
+  };
+
+  const session = await beginDocumentUploadSession(payload);
+  if (session.mode === 'direct') {
+    await putFileToPresignedUrl(
+      session.uploadUrl,
+      file,
+      payload.mimeType,
+      onNetworkProgress,
+    );
+    return completeDocumentUploadSession(session.storageKey, payload);
+  }
+
+  const contentBase64 = await fileToBase64WithProgress(file, (readPct) =>
+    onNetworkProgress?.(Math.min(40, readPct)),
+  );
+  return uploadDocumentWithProgress(
+    { ...payload, contentBase64 } as UploadAgentDocumentInput,
+    (networkPct) => onNetworkProgress?.(40 + Math.round(networkPct * 0.6)),
+  );
 }
 
 /** Key-collection DTOs — present on backend; awaiting api-contract publish. */

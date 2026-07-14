@@ -29,7 +29,7 @@ import {
   markNotificationRead as apiMarkNotificationRead,
   replyToThread as apiReplyToThread,
   uploadDocument as apiUploadDocument,
-  uploadDocumentWithProgress as apiUploadDocumentWithProgress,
+  uploadAgentDocumentFileWithProgress as apiUploadAgentDocumentFileWithProgress,
   deleteDocument as apiDeleteDocument,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
@@ -38,7 +38,7 @@ import {
   buildRegistryApiBody,
   type PropertyRegistryAutosaveState,
 } from '@/lib/property-registry-persist';
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, fileToBase64WithProgress, mapNetworkUploadProgress } from '@/lib/file-upload';
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, mapNetworkUploadProgress } from '@/lib/file-upload';
 import {
   mapAgentAccounting,
   mapAgentAgencies,
@@ -317,15 +317,35 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const [props, port] = await Promise.all([
+      const [propsRes, portRes] = await Promise.allSettled([
         fetchProperties(),
         fetchPortfolio(),
       ]);
-      const mappedProps = mapAgentProperties(props, agentPortfolioId);
-      setApiProperties(mappedProps);
-      setPortfolio(port);
+
+      if (propsRes.status === 'rejected' && portRes.status === 'rejected') {
+        throw propsRes.reason;
+      }
+
+      const mappedProps =
+        propsRes.status === 'fulfilled'
+          ? mapAgentProperties(propsRes.value, agentPortfolioId)
+          : null;
+
+      if (mappedProps) {
+        setApiProperties(mappedProps);
+      }
+      if (portRes.status === 'fulfilled') {
+        setPortfolio(portRes.value);
+      }
+
       setApiConnected(true);
-      setApiError(null);
+      setApiError(
+        propsRes.status === 'rejected' || portRes.status === 'rejected'
+          ? 'Some property data could not be refreshed'
+          : null,
+      );
+
+      const propsForMessages = mappedProps ?? [];
       // Messages + notifications + documents + agencies load after the portfolio; each
       // domain degrades independently (one hiccup never blanks the others).
       const [threadsRes, notifsRes, docsRes, agenciesRes] = await Promise.allSettled([
@@ -336,7 +356,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       ]);
       setApiMessages(
         threadsRes.status === 'fulfilled'
-          ? mapAgentMessages(threadsRes.value, mappedProps, agentPortfolioId)
+          ? mapAgentMessages(threadsRes.value, propsForMessages, agentPortfolioId)
           : null,
       );
       setApiNotifications(
@@ -353,11 +373,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           : null,
       );
       try {
-        const liveInspections = await fetchAgentInspections(mappedProps);
+        const liveInspections = await fetchAgentInspections(propsForMessages);
         setApiInspections(liveInspections);
       } catch {
         setApiInspections(
-          port.inspections?.length ? mapAgentInspections(port.inspections) : [],
+          portRes.status === 'fulfilled' && portRes.value.inspections?.length
+            ? mapAgentInspections(portRes.value.inspections)
+            : [],
         );
       }
     } catch (err) {
@@ -971,17 +993,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           );
         const propertyId = options?.propertyId ?? prop?.id;
         try {
-          const contentBase64 = await fileToBase64(file, onProgress);
-          await apiUploadDocumentWithProgress(
+          await apiUploadAgentDocumentFileWithProgress(
+            file,
             {
-              fileName: file.name,
-              mimeType: file.type || 'application/octet-stream',
-              sizeBytes: file.size,
-              contentBase64,
               category,
               propertyId,
               title: displayTitle,
-            } as Parameters<typeof apiUploadDocumentWithProgress>[0],
+            },
             (networkPct) => onProgress?.(mapNetworkUploadProgress(networkPct)),
           );
           onProgress?.(100);
