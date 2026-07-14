@@ -499,7 +499,7 @@ export function PropertyManagementAgreementSection({
         <p className="text-sm font-semibold">Management details</p>
         <p className="text-muted-foreground text-xs">
           {stagingOnly
-            ? `Add the property management agreement — it uploads when you complete the property (up to ${MAX_UPLOAD_LABEL} per file).`
+            ? `Add the property management agreement — files upload on the Documents tab after you complete the property (up to ${MAX_UPLOAD_LABEL} per file).`
             : 'Upload the property management agreement for this landlord.'}
         </p>
       </div>

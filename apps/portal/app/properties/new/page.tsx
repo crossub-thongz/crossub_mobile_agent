@@ -132,10 +132,8 @@ export default function AddPropertyPage() {
     }
   };
 
-  const onPropertyCreated = (propertyId: string, uploadFailures: number) => {
-    if (uploadFailures === 0) {
-      toast.success('Property added — available across leasing, maintenance, and more');
-    }
+  const onPropertyCreated = (propertyId: string) => {
+    toast.success('Property added — uploading documents on the Documents tab');
     router.push(`${propertyDetail(propertyId)}?tab=${encodeURIComponent('Documents')}`);
   };
 

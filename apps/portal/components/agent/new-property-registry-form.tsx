@@ -57,15 +57,19 @@ import { emptyPartyContact, splitParties } from '@/lib/property-parties';
 import type { Property, PropertyPartyContact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
-  canAutoSaveRegistry,
-  type PropertyRegistryAutosaveState,
-  type PropertyRegistryWizardStep,
-} from '@/lib/property-registry-persist';
+  fileToPendingUploadRecord,
+  queuePropertyPendingUploads,
+} from '@/lib/property-create-pending-uploads';
 import {
   isBlockedDocumentFile,
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_LABEL,
 } from '@/lib/file-upload';
+import {
+  canAutoSaveRegistry,
+  type PropertyRegistryAutosaveState,
+  type PropertyRegistryWizardStep,
+} from '@/lib/property-registry-persist';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
@@ -344,7 +348,7 @@ export function NewPropertyRegistryForm({
   draftPropertyId,
 }: {
   onSubmit: (values: NewPropertyRegistryValues) => Promise<{ propertyId: string } | void>;
-  onPropertyCreated?: (propertyId: string, uploadFailures: number) => void;
+  onPropertyCreated?: (propertyId: string) => void;
   submitting: boolean;
   initialState?: PropertyRegistryAutosaveState;
   onAutosave?: (state: PropertyRegistryAutosaveState) => Promise<void>;
@@ -352,7 +356,7 @@ export function NewPropertyRegistryForm({
   resumeMode?: boolean;
   draftPropertyId?: string | null;
 }) {
-  const { primaryAgency, loading, apiConnected, uploadDocument } = useAgentData();
+  const { primaryAgency, loading, apiConnected } = useAgentData();
   const agencyLocked = !!primaryAgency || apiConnected;
   const [step, setStep] = useState<PropertyRegistryWizardStep>(initialState?.step ?? 'property');
   const [furthestStepIndex, setFurthestStepIndex] = useState(initialState?.furthestStepIndex ?? 0);
@@ -361,7 +365,6 @@ export function NewPropertyRegistryForm({
   const [previewDoc, setPreviewDoc] = useState<DocumentPreviewItem | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const [completing, setCompleting] = useState(false);
-  const [uploadingDocs, setUploadingDocs] = useState(false);
   const [form, setForm] = useState<NewPropertyRegistryValues>(() =>
     initialState?.form ?? {
     agencyName: primaryAgency?.name ?? '',
@@ -389,7 +392,6 @@ export function NewPropertyRegistryForm({
   const skipAutosaveRef = useRef(true);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
-  const uploadInFlightRef = useRef(new Map<string, Promise<boolean>>());
   formRef.current = form;
 
   const set = <K extends keyof NewPropertyRegistryValues>(key: K, value: NewPropertyRegistryValues[K]) =>
@@ -513,51 +515,6 @@ export function NewPropertyRegistryForm({
       return doc;
     },
     [apiConnected],
-  );
-
-  const tryUploadDocument = useCallback(
-    async (doc: PendingPropertyDocument, propertyId: string): Promise<boolean> => {
-      if (!apiConnected) return true;
-      if (doc.uploadStatus === 'uploaded') return true;
-
-      const inFlight = uploadInFlightRef.current.get(doc.id);
-      if (inFlight) return inFlight;
-
-      const run = async (): Promise<boolean> => {
-        setForm((f) => patchUploadStatusInForm(f, doc.id, 'uploading'));
-
-        const current = formRef.current;
-        const street = composeStreetAddress(
-          current.unit,
-          current.streetNumber,
-          current.streetName,
-        ).trim();
-        const propertyAddress = current.suburb.trim()
-          ? `${street}, ${current.suburb.trim()}`
-          : street;
-
-        try {
-          await uploadDocument(doc.file, 'lease', propertyAddress, {
-            title: doc.title,
-            propertyId,
-          });
-          setForm((f) => patchUploadStatusInForm(f, doc.id, 'uploaded'));
-          return true;
-        } catch (err) {
-          setForm((f) => patchUploadStatusInForm(f, doc.id, 'failed'));
-          const message = err instanceof Error ? err.message : 'Upload failed';
-          toast.error(message);
-          return false;
-        }
-      };
-
-      const promise = run().finally(() => {
-        uploadInFlightRef.current.delete(doc.id);
-      });
-      uploadInFlightRef.current.set(doc.id, promise);
-      return promise;
-    },
-    [apiConnected, uploadDocument],
   );
 
   const handleLeasingUpload = useCallback(
@@ -767,26 +724,28 @@ export function NewPropertyRegistryForm({
       const propertyId = result?.propertyId;
       if (!propertyId) return;
 
-      let uploadFailures = 0;
-      if (apiConnected && formRef.current.pendingDocuments.length > 0) {
-        setUploadingDocs(true);
-        const outcomes = await Promise.all(
-          formRef.current.pendingDocuments.map((doc) => tryUploadDocument(doc, propertyId)),
+      const pending = formRef.current.pendingDocuments;
+      if (apiConnected && pending.length > 0) {
+        await queuePropertyPendingUploads(
+          propertyId,
+          pending.map((doc) =>
+            fileToPendingUploadRecord(doc.file, {
+              id: doc.id,
+              title: doc.title,
+              slotId: doc.slotId,
+              source: doc.source,
+            }),
+          ),
         );
-        uploadFailures = outcomes.filter((ok) => !ok).length;
-        setUploadingDocs(false);
-        if (uploadFailures > 0) {
-          toast.error(
-            uploadFailures === 1
-              ? '1 document failed to upload. Retry from the property Documents tab.'
-              : `${uploadFailures} documents failed to upload. Retry from the property Documents tab.`,
-          );
-        }
+        toast.message(
+          pending.length === 1
+            ? '1 document queued — uploading on the Documents tab.'
+            : `${pending.length} documents queued — uploading on the Documents tab.`,
+        );
       }
 
-      onPropertyCreated?.(propertyId, uploadFailures);
+      onPropertyCreated?.(propertyId);
     } finally {
-      setUploadingDocs(false);
       setCompleting(false);
     }
   };
@@ -1201,13 +1160,7 @@ export function NewPropertyRegistryForm({
           </Button>
         ) : (
           <Button type="button" className="flex-1" disabled={formBusy} onClick={handleSubmit}>
-            {formBusy
-              ? uploadingDocs
-                ? 'Uploading documents…'
-                : 'Saving…'
-              : resumeMode
-                ? 'Complete property'
-                : 'Add property'}
+            {formBusy ? 'Saving…' : resumeMode ? 'Complete property' : 'Add property'}
           </Button>
         )}
       </div>

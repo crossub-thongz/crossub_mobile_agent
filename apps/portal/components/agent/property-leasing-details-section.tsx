@@ -423,8 +423,8 @@ export function PropertyDocumentsSection({
     <div className="space-y-4">
       {stagingOnly ? (
         <p className="text-muted-foreground text-xs">
-          Add files here — they upload when you complete the property (up to {MAX_UPLOAD_LABEL} per
-          file).
+          Add files here — they upload on the Documents tab after you complete the property (up
+          to {MAX_UPLOAD_LABEL} per file).
         </p>
       ) : null}
       <DocumentChecklistSection

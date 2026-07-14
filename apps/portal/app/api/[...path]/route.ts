@@ -49,15 +49,24 @@ const proxy = async (
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> => {
   const { path } = await context.params;
-  const upstream = await fetch(buildUpstreamUrl(req, path), {
-    method: req.method,
-    headers: forwardHeaders(req),
-    body:
-      req.method === 'GET' || req.method === 'HEAD'
-        ? undefined
-        : await req.arrayBuffer(),
-    redirect: 'manual',
-  });
+  const isBodyMethod = req.method !== 'GET' && req.method !== 'HEAD';
+  let upstream: Response;
+  try {
+    upstream = await fetch(buildUpstreamUrl(req, path), {
+      method: req.method,
+      headers: forwardHeaders(req),
+      body: isBodyMethod ? req.body : undefined,
+      // Stream large JSON uploads (base64 documents) without buffering the full body in the portal.
+      ...(isBodyMethod ? { duplex: 'half' as const } : {}),
+      redirect: 'manual',
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Upstream request failed';
+    return NextResponse.json(
+      { message: `API unavailable: ${message}` },
+      { status: 502 },
+    );
+  }
 
   const responseBody =
     upstream.status === 204 || req.method === 'HEAD'
@@ -93,3 +102,6 @@ export const PATCH = proxy;
 export const PUT = proxy;
 export const DELETE = proxy;
 export const OPTIONS = proxy;
+
+/** Large document uploads can take several minutes on staging. */
+export const maxDuration = 300;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, FileText, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +20,12 @@ import {
   type DocumentChecklistFile,
   type DocumentChecklistRow,
 } from '@/lib/property-create-document-groups';
+import {
+  clearPropertyPendingUploads,
+  peekPropertyPendingUploads,
+  queuePropertyPendingUploads,
+  type PendingPropertyUploadRecord,
+} from '@/lib/property-create-pending-uploads';
 import {
   filterUploadableFiles,
   MAX_UPLOAD_LABEL,
@@ -313,6 +319,9 @@ export function PropertyDocumentsTab({
 
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [queuedUpload, setQueuedUpload] = useState<PendingPropertyUploadRecord | null>(null);
+  const [queuedRemaining, setQueuedRemaining] = useState(0);
+  const queueStartedRef = useRef(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [extraDrafts, setExtraDrafts] =
     useState<Record<CreatePropertyDocumentGroup, ExtraDraftRow[]>>(EMPTY_DRAFTS);
@@ -330,6 +339,78 @@ export function PropertyDocumentsTab({
   } | null>(null);
 
   const fullAddress = formatPropertyFullAddress(property);
+
+  useEffect(() => {
+    if (!apiConnected || queueStartedRef.current) return;
+    queueStartedRef.current = true;
+
+    let cancelled = false;
+    void (async () => {
+      const queued = await peekPropertyPendingUploads(propertyId);
+      if (cancelled || queued.length === 0) return;
+
+      let succeeded = 0;
+      let failed = 0;
+      const remaining: PendingPropertyUploadRecord[] = [];
+
+      for (let i = 0; i < queued.length; i++) {
+        if (cancelled) return;
+        const record = queued[i]!;
+        setQueuedUpload(record);
+        setQueuedRemaining(queued.length - i);
+        setUploadProgress(0);
+
+        try {
+          const file = new File([record.blob], record.fileName, { type: record.mimeType });
+          await uploadDocument(file, 'lease', fullAddress, {
+            title: record.title,
+            propertyId,
+            onProgress: (pct) => {
+              const overall = Math.round(((i + pct / 100) / queued.length) * 100);
+              setUploadProgress(overall);
+            },
+          });
+          succeeded += 1;
+        } catch (err) {
+          failed += 1;
+          remaining.push(record);
+          toast.error(
+            err instanceof Error ? err.message : `Failed to upload ${record.fileName}`,
+          );
+        }
+      }
+
+      if (remaining.length === 0) {
+        await clearPropertyPendingUploads(propertyId);
+      } else {
+        await queuePropertyPendingUploads(propertyId, remaining);
+      }
+      if (cancelled) return;
+
+      setQueuedUpload(null);
+      setQueuedRemaining(0);
+      setUploadProgress(null);
+      await refresh();
+
+      if (failed === 0) {
+        toast.success(
+          succeeded === 1
+            ? 'Property document uploaded'
+            : `${succeeded} property documents uploaded`,
+        );
+      } else if (succeeded > 0) {
+        toast.warning(
+          `Uploaded ${succeeded} document${succeeded === 1 ? '' : 's'}, ${failed} failed — refresh to retry the rest.`,
+        );
+      } else {
+        toast.error('Document uploads failed — refresh this tab to retry.');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, fullAddress, propertyId, refresh, uploadDocument]);
 
   const displayDocs = useMemo<DisplayDoc[]>(() => {
     const byId = new Map<string, DisplayDoc>();
@@ -526,6 +607,19 @@ export function PropertyDocumentsTab({
         <p className="rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
           {readOnlyHint}
         </p>
+      ) : null}
+      {queuedUpload ? (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-3">
+          <DocumentUploadProgress
+            percent={uploadProgress ?? 0}
+            label={`Uploading ${queuedUpload.title || queuedUpload.fileName}${
+              queuedRemaining > 1 ? ` (${queuedRemaining} left)` : ''
+            }`}
+          />
+          <p className="text-muted-foreground mt-2 text-xs">
+            Large files can take a few minutes — keep this tab open until uploads finish.
+          </p>
+        </div>
       ) : null}
       <p className="text-muted-foreground text-sm">
         Document types for {fullAddress}. Upload any file type except videos and GIFs (max{' '}
