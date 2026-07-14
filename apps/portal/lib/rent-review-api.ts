@@ -308,4 +308,19 @@ export const rentReviewApi = {
       ),
       leaseEndDate,
     ),
+
+  requestMarketResearch: (
+    id: string,
+    propertyId: string,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> =>
+    map(
+      unwrap(
+        apiV1.post<{ review: ServerRentReviewWorkflowView }>(
+          `${agentRentReviewWorkflowPath(propertyId, id)}/request-research`,
+          {},
+        ),
+      ),
+      leaseEndDate,
+    ),
 };

@@ -74,9 +74,11 @@ function resolveFixedTermWeeks(detail: RentReviewWorkflowDetail): FixedTermWeeks
 export function RentReviewAgentConfirmedPanel({
   detail,
   onUpdated,
+  readOnly,
 }: {
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
+  readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
@@ -87,7 +89,7 @@ export function RentReviewAgentConfirmedPanel({
   const [fixedTermEndDate, setFixedTermEndDate] = useState('');
 
   const hasCounter = canResolveNegotiation(detail);
-  const editable = canEditAgentDecision(detail);
+  const editable = canEditAgentDecision(detail) && !readOnly;
   const noticeSent = hasTenantNoticeSent(detail);
   const currentLeaseIsFixed = isCurrentTenancyFixed(detail);
   const autoNewLeaseStart = useMemo(() => deriveNewLeaseStartDate(detail), [detail]);

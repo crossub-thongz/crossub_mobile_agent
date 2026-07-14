@@ -14,14 +14,18 @@ import { apiErrorMessage } from '@/lib/utils/api-error-message';
 export function RentReviewTenantResponseOnBehalfPanel({
   detail,
   onUpdated,
+  readOnly,
 }: {
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
+  readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
   const [moveOutDate, setMoveOutDate] = useState(detail.tenantMoveOutDate ?? '');
   const [counterWeekly, setCounterWeekly] = useState('');
+
+  if (readOnly) return null;
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);

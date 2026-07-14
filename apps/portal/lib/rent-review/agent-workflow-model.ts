@@ -92,11 +92,30 @@ function auditAt(detail: RentReviewWorkflowDetail, kind: string): string | null 
 }
 
 function hasResearchComplete(detail: RentReviewWorkflowDetail): boolean {
+  if (auditHas(detail, 'ai_report_ready')) return true;
+  const platforms = detail.ai.research?.platforms ?? [];
   return (
-    auditHas(detail, 'ai_report_ready') ||
-    detail.workflowState !== 'pending_confirmation' ||
-    detail.ai.suggestedWeekly != null
+    detail.ai.suggestedWeekly != null &&
+    platforms.some((platform) => platform.status === 'complete')
   );
+}
+
+/** True when admin has finished market research (data on file). */
+export function hasMarketResearchComplete(detail: RentReviewWorkflowDetail): boolean {
+  return hasResearchComplete(detail);
+}
+
+export function hasResearchRequested(detail: RentReviewWorkflowDetail): boolean {
+  return auditHas(detail, 'research_requested');
+}
+
+export function hasAgentResearchPackSent(detail: RentReviewWorkflowDetail): boolean {
+  return auditHas(detail, 'agent_research_email');
+}
+
+/** Agent portal — results visible after admin emails the research pack. */
+export function canAgentViewResearchResults(detail: RentReviewWorkflowDetail): boolean {
+  return hasAgentResearchPackSent(detail);
 }
 
 function hasLandlordResearchEmailed(detail: RentReviewWorkflowDetail): boolean {
@@ -169,10 +188,16 @@ function hasCompleted(detail: RentReviewWorkflowDetail): boolean {
 }
 
 function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
+  const requested = hasResearchRequested(detail);
   const researchDone = hasResearchComplete(detail);
-  const emailSent = auditHas(detail, 'ai_report_ready') || researchDone;
+  const agentPackSent = hasAgentResearchPackSent(detail);
   const landlordEmailed = hasLandlordResearchEmailed(detail);
   return [
+    {
+      id: 'request',
+      label: 'Agent requested market research',
+      done: requested,
+    },
     {
       id: 'platforms',
       label: `Market research (${RENT_RESEARCH_PLATFORMS.join(', ')})`,
@@ -181,7 +206,7 @@ function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPro
     {
       id: 'email-agent',
       label: 'Research results emailed to agent',
-      done: emailSent,
+      done: agentPackSent,
     },
     {
       id: 'email-landlord',
@@ -584,6 +609,8 @@ export function resolveRentReviewStepForAuditKind(kind: string): RentReviewAgent
     case 'statutory_notice_alert':
     case 'agent_confirmation_reminder':
     case 'landlord_research_email':
+    case 'agent_research_email':
+    case 'research_requested':
     case 'comm_reply':
     case 'comm_forward':
       return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
@@ -790,7 +817,7 @@ export function auditEntriesForStep(
   }
 
   const kindsByStep: Record<Exclude<RentReviewAgentStep, 'completed'>, string[]> = {
-    rent_research: ['ai_report_ready', 'agent_confirmation_reminder', 'statutory_notice_alert', 'landlord_research_email'],
+    rent_research: ['research_requested', 'ai_report_ready', 'agent_confirmation_reminder', 'statutory_notice_alert', 'agent_research_email', 'landlord_research_email'],
     agent_confirmed: ['review_confirmed', 'pricing_snapshot'],
     tenant_notified: ['tenant_notices_dispatched', 'tenant_response_reminder'],
     negotiation: [

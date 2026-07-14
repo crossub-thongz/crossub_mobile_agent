@@ -23,12 +23,14 @@ export function RentReviewResearchResultSection({
   landlordEmailed,
   emailBusy,
   onEmail,
+  helperText,
 }: {
   detail: RentReviewWorkflowDetail;
   researchComplete: boolean;
   landlordEmailed: boolean;
   emailBusy?: boolean;
   onEmail: () => void;
+  helperText?: string;
 }) {
   const suggested = detail.ai.suggestedWeekly;
 
@@ -89,10 +91,10 @@ export function RentReviewResearchResultSection({
           Email
         </Button>
       </div>
-      {!researchComplete ? (
+      {!researchComplete || helperText ? (
         <p className="text-muted-foreground mt-2 text-[11px]">
-          Run market research above to populate recommended rent, then email the landlord for
-          approval.
+          {helperText ??
+            'Market research is completed in the admin portal. Email the landlord once results are shown above.'}
         </p>
       ) : null}
     </section>

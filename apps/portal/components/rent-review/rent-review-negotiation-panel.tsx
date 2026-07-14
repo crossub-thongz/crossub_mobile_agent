@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RentReviewNegotiationAuditBadge } from '@/components/rent-review/rent-review-negotiation-audit-badge';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
@@ -82,9 +83,11 @@ function ChoiceButton({
 export function RentReviewNegotiationPanel({
   detail,
   onUpdated,
+  readOnly,
 }: {
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
+  readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
@@ -159,12 +162,15 @@ export function RentReviewNegotiationPanel({
   return (
     <div className="space-y-4">
       <section className="rounded-xl border bg-card p-4">
-        <p className="mb-4 text-sm font-semibold">Negotiation</p>
+        <p className="mb-4 text-sm font-semibold">
+          {readOnly ? 'Negotiation results' : 'Negotiation'}
+        </p>
 
         {!pending && !hasHistory ? (
           <p className="text-muted-foreground text-xs">
-            Awaiting a tenant counter-offer after the formal notice is sent. If the tenant accepts or
-            declines outright, continue on Tenant decision.
+            {readOnly
+              ? 'No tenant counter-offer yet. When the tenant submits a counter via the tenant app, the outcome will appear here.'
+              : 'Awaiting a tenant counter-offer after the formal notice is sent. If the tenant accepts or declines outright, continue on Tenant decision.'}
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -208,7 +214,7 @@ export function RentReviewNegotiationPanel({
           </div>
         )}
 
-        {pending ? (
+        {pending && !readOnly ? (
           <div className="mt-4 space-y-3 border-t pt-4">
             <Label>Agent&apos;s feedback</Label>
             <div className="flex gap-2">
@@ -265,22 +271,37 @@ export function RentReviewNegotiationPanel({
           </div>
         ) : hasHistory ? (
           <p className="text-muted-foreground mt-4 border-t pt-4 text-xs">
-            {detail.rentNegotiable === false
-              ? 'Rent is non-negotiable — re-send the notice on Tenant notified.'
-              : canResolveNegotiation(detail)
-                ? 'Review the tenant offer above.'
-                : 'Negotiation round complete — continue on Tenant notified or Tenant decision.'}
+            {readOnly
+              ? detail.rentNegotiable === false
+                ? 'Rent is non-negotiable — the tenant may accept or decline only.'
+                : pending
+                  ? 'Tenant counter-offer received — your property manager will review and respond.'
+                  : 'Negotiation round complete — see audit below for the recorded outcome.'
+              : detail.rentNegotiable === false
+                ? 'Rent is non-negotiable — re-send the notice on Tenant notified.'
+                : canResolveNegotiation(detail)
+                  ? 'Review the tenant offer above.'
+                  : 'Negotiation round complete — continue on Tenant notified or Tenant decision.'}
           </p>
         ) : null}
       </section>
 
-      {counterAudit.length > 0 || detail.pricingMilestones.length > 0 ? (
+      {(counterAudit.length > 0 ||
+        detail.pricingMilestones.length > 0 ||
+        pending ||
+        hasHistory ||
+        readOnly) ? (
         <section className="rounded-xl border bg-muted/20 p-4">
-          <p className="mb-3 text-sm font-semibold">Audit information</p>
-          <p className="text-muted-foreground mb-3 text-xs">
-            Rent and offer amounts update as tenant and agent negotiate — each change is recorded
-            below.
-          </p>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold">Audit</p>
+            <RentReviewNegotiationAuditBadge detail={detail} readOnly={readOnly} />
+          </div>
+          {(counterAudit.length > 0 || detail.pricingMilestones.length > 0) ? (
+            <p className="text-muted-foreground mb-3 text-xs">
+              Rent and offer amounts update as tenant and agent negotiate — each change is recorded
+              below.
+            </p>
+          ) : null}
           <ul className="space-y-2 text-xs">
             {detail.pricingMilestones.map((milestone) => (
               <li

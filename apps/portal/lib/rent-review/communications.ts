@@ -7,6 +7,7 @@ import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 
 const COMM_AUDIT_KINDS = new Set([
   'landlord_research_email',
+  'agent_research_email',
   'comm_reply',
   'comm_forward',
 ]);

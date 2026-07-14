@@ -153,7 +153,7 @@ export function RentReviewCompletedPanel({
         ) : null}
       </section>
 
-      {declined ? (
+      {declined && !readOnly ? (
         <RentReviewEndLeasingPanel
           detail={detail}
           busy={busy}
@@ -162,7 +162,7 @@ export function RentReviewCompletedPanel({
         />
       ) : null}
 
-      {detail.workflowState === 'accounting' ? (
+      {detail.workflowState === 'accounting' && !readOnly ? (
         <Button
           className="w-full"
           disabled={busy || !detail.propertyId}

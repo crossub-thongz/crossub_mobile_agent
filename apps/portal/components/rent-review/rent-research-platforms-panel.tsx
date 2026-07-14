@@ -41,12 +41,14 @@ function PlatformResearchRow({
   fileType,
   platform,
   loading = false,
+  readOnly = false,
 }: {
   index: number;
   label: string;
   fileType: 'jpg' | 'pdf';
   platform: RentPlatformResearch | null;
   loading?: boolean;
+  readOnly?: boolean;
 }) {
   const status = loading ? 'loading' : (platform?.status ?? 'pending');
   const meta = STATUS_META[status];
@@ -100,7 +102,9 @@ function PlatformResearchRow({
         </p>
       ) : status === 'pending' ? (
         <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-          Runs when you confirm the rent review or rerun market research.
+          {readOnly
+            ? 'Pending — admin will run market research from the admin portal.'
+            : 'Runs when you confirm the rent review or rerun market research.'}
         </p>
       ) : null}
 
@@ -145,9 +149,11 @@ export function RentResearchRunningBanner({
 export function RentResearchPlatformsPanel({
   platforms,
   loading = false,
+  readOnly = false,
 }: {
   platforms: RentPlatformResearch[];
   loading?: boolean;
+  readOnly?: boolean;
 }) {
   const byId = new Map(platforms.map((platform) => [platform.id, platform]));
 
@@ -163,6 +169,7 @@ export function RentResearchPlatformsPanel({
             fileType={row.fileType}
             platform={byId.get(row.id) ?? null}
             loading={loading}
+            readOnly={readOnly}
           />
         ))}
       </ol>

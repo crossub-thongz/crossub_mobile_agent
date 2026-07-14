@@ -26,9 +26,11 @@ import { formatDate } from '@/lib/utils';
 export function RentReviewTenantDecisionPanel({
   detail,
   onUpdated,
+  readOnly,
 }: {
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
+  readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
@@ -90,11 +92,11 @@ export function RentReviewTenantDecisionPanel({
         ) : null}
       </section>
 
-      {showRecordResponse ? (
-        <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
+      {showRecordResponse && !readOnly ? (
+        <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} readOnly={readOnly} />
       ) : null}
 
-      {declined ? (
+      {declined && !readOnly ? (
         <RentReviewEndLeasingPanel
           detail={detail}
           busy={busy}
@@ -107,7 +109,7 @@ export function RentReviewTenantDecisionPanel({
         <RentReviewLeaseAgreementAudit steps={leaseAgreement} />
       ) : null}
 
-      {accepted && detail.workflowState === 'tenant_accepted' ? (
+      {accepted && detail.workflowState === 'tenant_accepted' && !readOnly ? (
         <div className="space-y-2">
           {fixedRenewal && leaseAudit.preparingDone && !leaseAudit.sentDone ? (
             <Button
@@ -169,7 +171,7 @@ export function RentReviewTenantDecisionPanel({
             </p>
           ) : null}
         </div>
-      ) : detail.workflowState === 'accounting' ? (
+      ) : detail.workflowState === 'accounting' && !readOnly ? (
         <Button
           className="w-full"
           disabled={busy || !detail.propertyId}

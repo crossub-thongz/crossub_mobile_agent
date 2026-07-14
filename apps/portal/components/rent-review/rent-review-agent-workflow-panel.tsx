@@ -72,29 +72,32 @@ function StepContent({
   detail,
   onUpdated,
   onNavigateToStep,
+  readOnly,
 }: {
   stepId: RentReviewAgentStep;
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
   onNavigateToStep?: (step: RentReviewAgentStep) => void;
+  readOnly?: boolean;
 }) {
   switch (stepId) {
     case RENT_REVIEW_AGENT_STEP.RENT_RESEARCH:
       return <RentReviewResearchPanel detail={detail} onUpdated={onUpdated} />;
     case RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED:
-      return <RentReviewAgentConfirmedPanel detail={detail} onUpdated={onUpdated} />;
+      return <RentReviewAgentConfirmedPanel detail={detail} onUpdated={onUpdated} readOnly={readOnly} />;
     case RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED:
-      return <RentReviewTenantNotifiedPanel detail={detail} onUpdated={onUpdated} />;
+      return <RentReviewTenantNotifiedPanel detail={detail} onUpdated={onUpdated} readOnly={readOnly} />;
     case RENT_REVIEW_AGENT_STEP.NEGOTIATION:
-      return <RentReviewNegotiationPanel detail={detail} onUpdated={onUpdated} />;
+      return <RentReviewNegotiationPanel detail={detail} onUpdated={onUpdated} readOnly={readOnly} />;
     case RENT_REVIEW_AGENT_STEP.TENANT_DECISION:
-      return <RentReviewTenantDecisionPanel detail={detail} onUpdated={onUpdated} />;
+      return <RentReviewTenantDecisionPanel detail={detail} onUpdated={onUpdated} readOnly={readOnly} />;
     case RENT_REVIEW_AGENT_STEP.COMPLETED:
       return (
         <RentReviewCompletedPanel
           detail={detail}
           onUpdated={onUpdated}
           onNavigateToStep={onNavigateToStep}
+          readOnly={readOnly}
         />
       );
     default:
@@ -204,10 +207,23 @@ export function RentReviewAgentWorkflowPanel({
       ? 'All e-mail'
       : 'Email/message history';
 
-  const enableCommCompose = viewingStepId === RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
+  const enableCommCompose = false;
+
+  const agentEditableSteps: RentReviewAgentStep[] = [
+    RENT_REVIEW_AGENT_STEP.RENT_RESEARCH,
+    RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED,
+  ];
+  const stepReadOnly = !agentEditableSteps.includes(viewingStepId);
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
+        <p className="font-semibold">Agent steps — research & decision</p>
+        <p className="mt-1 text-amber-900/80 dark:text-amber-100/80">
+          Complete rent research and agent decision here. Tenant notice, negotiation, and
+          completion are managed in the admin portal.
+        </p>
+      </div>
       <WorkflowProgressRail
         steps={RENT_REVIEW_AGENT_STEP_ORDER}
         labels={RENT_REVIEW_AGENT_STEP_LABEL}
@@ -249,6 +265,7 @@ export function RentReviewAgentWorkflowPanel({
             detail={detail}
             onUpdated={onUpdated}
             onNavigateToStep={handleAuditNavigate}
+            readOnly={stepReadOnly}
           />
           <RentReviewStageEmailHistory
             emails={stageEmails}

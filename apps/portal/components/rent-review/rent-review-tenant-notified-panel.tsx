@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RentReviewTenantReminderCountdownBadge } from '@/components/rent-review/rent-review-tenant-reminder-countdown-badge';
 import { RentReviewTenantRemindersDialog } from '@/components/rent-review/rent-review-tenant-reminders-dialog';
 import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
 import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
@@ -29,9 +30,11 @@ import { formatDateTime } from '@/lib/utils';
 export function RentReviewTenantNotifiedPanel({
   detail,
   onUpdated,
+  readOnly,
 }: {
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
+  readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
@@ -97,7 +100,7 @@ export function RentReviewTenantNotifiedPanel({
         />
       </section>
 
-      {showSendNotice ? (
+      {showSendNotice && !readOnly ? (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
           <p className="text-primary text-xs font-semibold uppercase">
             {resendNotice ? 'Re-send tenant notice' : 'Send tenant notice'}
@@ -145,7 +148,10 @@ export function RentReviewTenantNotifiedPanel({
 
       {auditEntries.length > 0 ? (
         <section className="rounded-xl border bg-muted/20 p-4">
-          <p className="mb-3 text-sm font-semibold">Audit</p>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <p className="text-sm font-semibold">Audit</p>
+            {noticeSent ? <RentReviewTenantReminderCountdownBadge detail={detail} /> : null}
+          </div>
           <ul className="space-y-2 text-xs">
             {auditEntries.map((e) => {
               const auditDetail = formatRentReviewAuditDetail(e);
@@ -185,7 +191,7 @@ export function RentReviewTenantNotifiedPanel({
         </section>
       ) : null}
 
-      {showRecordResponse ? (
+      {showRecordResponse && !readOnly ? (
         <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
       ) : null}
 
