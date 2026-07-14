@@ -37,9 +37,10 @@ export function mapNetworkUploadProgress(networkPercent: number): number {
   return READ_PROGRESS_WEIGHT + Math.round((networkPercent / 100) * NETWORK_PROGRESS_WEIGHT);
 }
 
-export const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;
+/** Raw file size cap — base64 JSON payload is ~4/3× this (API/BFF allow 150 MB). */
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
-export const MAX_UPLOAD_LABEL = '1 GB';
+export const MAX_UPLOAD_LABEL = '100 MB';
 
 const BLOCKED_VIDEO_MIME = /^video\//i;
 const BLOCKED_GIF_MIME = /^image\/gif$/i;

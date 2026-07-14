@@ -432,12 +432,14 @@ export function PropertyManagementAgreementSection({
   onPreviewFile,
   onRemoveFile,
   disabled,
+  stagingOnly,
 }: {
   values: ManagementDetailsValues;
   onUploadFile: (file: File, slotId: string, title?: string) => Promise<void>;
   onPreviewFile?: (file: StagedUploadFile) => void;
   onRemoveFile?: (file: StagedUploadFile, slotId: string) => void;
   disabled?: boolean;
+  stagingOnly?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -465,20 +467,24 @@ export function PropertyManagementAgreementSection({
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
-    setUploading(true);
+    if (!stagingOnly) setUploading(true);
     try {
       await Promise.all(
         ok.map((file) => onUploadFile(file, slotId, MANAGEMENT_AGREEMENT_DOC_SLOT.label)),
       );
       toast.success(
-        ok.length === 1
-          ? `Uploaded ${ok[0]!.name}`
-          : `Uploaded ${ok.length} files`,
+        stagingOnly
+          ? ok.length === 1
+            ? `Added ${ok[0]!.name}`
+            : `Added ${ok.length} files`
+          : ok.length === 1
+            ? `Uploaded ${ok[0]!.name}`
+            : `Uploaded ${ok.length} files`,
       );
     } catch {
-      toast.error('Upload failed');
+      toast.error(stagingOnly ? 'Could not add file' : 'Upload failed');
     } finally {
-      setUploading(false);
+      if (!stagingOnly) setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
@@ -492,7 +498,9 @@ export function PropertyManagementAgreementSection({
       <div>
         <p className="text-sm font-semibold">Management details</p>
         <p className="text-muted-foreground text-xs">
-          Upload the property management agreement for this landlord.
+          {stagingOnly
+            ? `Add the property management agreement — it uploads when you complete the property (up to ${MAX_UPLOAD_LABEL} per file).`
+            : 'Upload the property management agreement for this landlord.'}
         </p>
       </div>
 

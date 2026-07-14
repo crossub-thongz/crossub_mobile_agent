@@ -14,7 +14,6 @@ import { propertyDetail, propertyNew, ROUTES } from '@/constants/routes';
 import { fetchProperty } from '@/lib/crossub-api/agent-client';
 import { mapAgentProperty } from '@/lib/crossub-api/agent-mappers';
 import {
-  canAutoSaveRegistry,
   hydrateRegistryFormFromProperty,
   type PropertyRegistryAutosaveState,
 } from '@/lib/property-registry-persist';
@@ -99,36 +98,17 @@ export default function AddPropertyPage() {
     [apiConnected, draftPropertyId, resumePropertyId, router, savePropertyRegistryDraft],
   );
 
-  const ensureDraftProperty = useCallback(
-    async (state: PropertyRegistryAutosaveState): Promise<string | null> => {
-      if (draftPropertyId) return draftPropertyId;
-      if (!canAutoSaveRegistry(state.form)) {
-        toast.error('Enter the property address before uploading documents');
-        return null;
-      }
-      try {
-        const property = await savePropertyRegistryDraft(draftPropertyId, state, {
-          complete: false,
-        });
-        setDraftPropertyId(property.id);
-        return property.id;
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not save property draft');
-        return null;
-      }
-    },
-    [draftPropertyId, savePropertyRegistryDraft],
-  );
-
-  const onSubmitNewProperty = async (values: NewPropertyRegistryValues) => {
+  const onSubmitNewProperty = async (
+    values: NewPropertyRegistryValues,
+  ): Promise<{ propertyId: string }> => {
     const address = values.address.trim();
     if (!address) {
       toast.error('Street address is required');
-      return;
+      throw new Error('Street address is required');
     }
     if (!values.state) {
       toast.error('Select the property state or territory');
-      return;
+      throw new Error('State is required');
     }
 
     setSubmitting(true);
@@ -143,13 +123,20 @@ export default function AddPropertyPage() {
         { complete: true },
       );
 
-      toast.success('Property added — available across leasing, maintenance, and more');
-      router.push(`${propertyDetail(property.id)}?tab=${encodeURIComponent('Documents')}`);
+      return { propertyId: property.id };
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not add the property');
+      throw err;
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const onPropertyCreated = (propertyId: string, uploadFailures: number) => {
+    if (uploadFailures === 0) {
+      toast.success('Property added — available across leasing, maintenance, and more');
+    }
+    router.push(`${propertyDetail(propertyId)}?tab=${encodeURIComponent('Documents')}`);
   };
 
   const resumeMode = Boolean(resumePropertyId || draftPropertyId);
@@ -172,13 +159,13 @@ export default function AddPropertyPage() {
         ) : resumePropertyId && !initialState ? null : (
           <NewPropertyRegistryForm
             onSubmit={onSubmitNewProperty}
+            onPropertyCreated={apiConnected ? onPropertyCreated : undefined}
             submitting={submitting}
             initialState={initialState ?? undefined}
             onAutosave={apiConnected ? handleAutosave : undefined}
             autosaveStatus={autosaveStatus}
             resumeMode={resumeMode}
             draftPropertyId={draftPropertyId}
-            onEnsureDraftProperty={apiConnected ? ensureDraftProperty : undefined}
           />
         )}
       </div>

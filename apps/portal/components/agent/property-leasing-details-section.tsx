@@ -99,6 +99,7 @@ function DocumentChecklistSection({
   onRemoveFile,
   disabled,
   extraIdPrefix,
+  stagingOnly,
 }: {
   title: string;
   description: string;
@@ -113,6 +114,7 @@ function DocumentChecklistSection({
   onRemoveFile?: (file: StagedUploadFile, slotId: string) => void;
   disabled?: boolean;
   extraIdPrefix: string;
+  stagingOnly?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeSlot, setActiveSlot] = useState<string | null>(null);
@@ -152,7 +154,7 @@ function DocumentChecklistSection({
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
-    setUploading(true);
+    if (!stagingOnly) setUploading(true);
     try {
       let title: string | undefined;
       const fixed = fixedSlots.find((s) => s.id === activeSlot);
@@ -165,15 +167,19 @@ function DocumentChecklistSection({
       await Promise.all(ok.map((file) => onUploadFile(file, activeSlot, title)));
       if (ok.length > 0) {
         toast.success(
-          ok.length === 1
-            ? `Uploaded ${ok[0]!.name}`
-            : `Uploaded ${ok.length} files`,
+          stagingOnly
+            ? ok.length === 1
+              ? `Added ${ok[0]!.name}`
+              : `Added ${ok.length} files`
+            : ok.length === 1
+              ? `Uploaded ${ok[0]!.name}`
+              : `Uploaded ${ok.length} files`,
         );
       }
     } catch {
-      toast.error('Upload failed');
+      toast.error(stagingOnly ? 'Could not add file' : 'Upload failed');
     } finally {
-      setUploading(false);
+      if (!stagingOnly) setUploading(false);
       setActiveSlot(null);
       if (inputRef.current) inputRef.current.value = '';
     }
@@ -400,6 +406,7 @@ export function PropertyDocumentsSection({
   onPreviewFile,
   onRemoveFile,
   disabled,
+  stagingOnly,
 }: {
   values: LeasingDetailsValues;
   onChange: (patch: Partial<LeasingDetailsValues>) => void;
@@ -410,9 +417,16 @@ export function PropertyDocumentsSection({
   onPreviewFile?: (file: StagedUploadFile) => void;
   onRemoveFile?: (file: StagedUploadFile, slotId: string) => void;
   disabled?: boolean;
+  stagingOnly?: boolean;
 }) {
   return (
     <div className="space-y-4">
+      {stagingOnly ? (
+        <p className="text-muted-foreground text-xs">
+          Add files here — they upload when you complete the property (up to {MAX_UPLOAD_LABEL} per
+          file).
+        </p>
+      ) : null}
       <DocumentChecklistSection
         title={`${CREATE_PROPERTY_DOCUMENT_GROUP_LABELS.tenancy} (Optional)`}
         description="Lease agreement, lease extension, rates, compliance, and other tenancy records."
@@ -427,6 +441,7 @@ export function PropertyDocumentsSection({
         onRemoveFile={onRemoveFile}
         disabled={disabled}
         extraIdPrefix="extra-tenancy-"
+        stagingOnly={stagingOnly}
       />
 
       <DocumentChecklistSection
@@ -443,6 +458,7 @@ export function PropertyDocumentsSection({
         onRemoveFile={onRemoveFile}
         disabled={disabled}
         extraIdPrefix="extra-landlord-"
+        stagingOnly={stagingOnly}
       />
 
       <DocumentChecklistSection
@@ -459,6 +475,7 @@ export function PropertyDocumentsSection({
         onRemoveFile={onRemoveFile}
         disabled={disabled}
         extraIdPrefix="extra-tenant-"
+        stagingOnly={stagingOnly}
       />
     </div>
   );

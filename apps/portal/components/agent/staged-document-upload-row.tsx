@@ -5,7 +5,7 @@ import { Check, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export type StagedUploadStatus = 'queued' | 'uploading' | 'uploaded' | 'failed';
+export type StagedUploadStatus = 'staged' | 'queued' | 'uploading' | 'uploaded' | 'failed';
 
 export interface StagedUploadFile {
   id: string;
@@ -94,6 +94,8 @@ export function StagedDocumentUploadRow({
                     <Loader2 className="size-3 animate-spin" />
                     Uploading
                   </span>
+                ) : file.uploadStatus === 'staged' ? (
+                  <span className="text-muted-foreground px-1 text-[10px]">Added</span>
                 ) : file.uploadStatus === 'queued' ? (
                   <span className="text-muted-foreground px-1 text-[10px]">Queued</span>
                 ) : file.uploadStatus === 'uploaded' ? (
