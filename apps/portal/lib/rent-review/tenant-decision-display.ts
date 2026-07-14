@@ -229,23 +229,32 @@ export function buildLeaseAgreementProgress(detail: RentReviewWorkflowDetail): L
   return [
     {
       id: 'preparing',
-      label: 'Lease agreement preparing',
+      label: 'Lease extension agreement preparing',
       done: preparingAt != null,
       at: preparingAt,
     },
     {
       id: 'sent',
-      label: 'Lease agreement sent',
+      label: 'Lease extension agreement sent',
       done: sentAt != null,
       at: sentAt,
     },
     {
       id: 'signed',
-      label: 'Lease agreement signed',
+      label: 'Lease extension agreement signed',
       done: signedAt != null,
       at: signedAt,
     },
   ];
+}
+
+export function formatLeaseExtensionAgreementStatus(
+  leaseAudit: LeaseAgreementAuditState,
+): string {
+  if (leaseAudit.signedDone) return 'Signed';
+  if (leaseAudit.sentDone) return 'Sent';
+  if (leaseAudit.preparingDone) return 'Preparing';
+  return '—';
 }
 
 export function leaseAgreementAuditState(detail: RentReviewWorkflowDetail): LeaseAgreementAuditState {

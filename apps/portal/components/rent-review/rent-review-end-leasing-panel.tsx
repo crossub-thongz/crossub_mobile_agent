@@ -14,10 +14,12 @@ export function RentReviewEndLeasingPanel({
   detail,
   busy,
   onBusyChange,
+  showMoveOutSummary = true,
 }: {
   detail: RentReviewWorkflowDetail;
   busy?: boolean;
   onBusyChange?: (busy: boolean) => void;
+  showMoveOutSummary?: boolean;
 }) {
   const startEndLeasing = async () => {
     if (!detail.propertyId) {
@@ -49,18 +51,20 @@ export function RentReviewEndLeasingPanel({
           outgoing inspection, and bond release.
         </p>
       </div>
-      {detail.tenantMoveOutDate ? (
-        <div className="rounded-lg border border-rose-500/30 bg-background/60 p-3">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-            Move-out date
-          </p>
-          <p className="mt-1 text-lg font-semibold tabular-nums">
-            {formatDate(detail.tenantMoveOutDate)}
-          </p>
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-xs">Move-out date not recorded yet.</p>
-      )}
+      {showMoveOutSummary ? (
+        detail.tenantMoveOutDate ? (
+          <div className="rounded-lg border border-rose-500/30 bg-background/60 p-3">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Move-out date
+            </p>
+            <p className="mt-1 text-lg font-semibold tabular-nums">
+              {formatDate(detail.tenantMoveOutDate)}
+            </p>
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-xs">Move-out date not recorded yet.</p>
+        )
+      ) : null}
       <Button
         variant="outline"
         className="w-full gap-2"

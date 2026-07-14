@@ -1,61 +1,50 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Clock, ExternalLink, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, ExternalLink, FileImage, FileText, Loader2 } from 'lucide-react';
 
-import { RENT_RESEARCH_PLATFORMS } from '@/lib/rent-review/agent-workflow-model';
 import type { RentPlatformResearch } from '@/lib/rent-review/types';
 import { cn, formatCurrency } from '@/lib/utils';
 
-const PLATFORM_IDS = ['nsw_fair_trading', 'rp_data', 'rea'] as const;
 const MARKET_RESEARCH_ESTIMATE_SECONDS = 30;
+
+const PLATFORM_ROWS = [
+  { id: 'nsw_fair_trading' as const, label: 'Fair Trading', fileType: 'jpg' as const },
+  { id: 'rp_data' as const, label: 'RP Data', fileType: 'pdf' as const },
+  { id: 'rea' as const, label: 'REA.com.au', fileType: 'jpg' as const },
+];
 
 const STATUS_META: Record<
   RentPlatformResearch['status'] | 'pending' | 'loading',
   { label: string; icon: typeof CheckCircle2; tone: string }
 > = {
-  complete: {
-    label: 'Complete',
-    icon: CheckCircle2,
-    tone: 'text-emerald-600',
-  },
-  failed: {
-    label: 'Failed',
-    icon: AlertCircle,
-    tone: 'text-destructive',
-  },
-  pending_credentials: {
-    label: 'API credentials required',
-    icon: Clock,
-    tone: 'text-amber-600',
-  },
-  insufficient_data: {
-    label: 'Insufficient data',
-    icon: AlertCircle,
-    tone: 'text-muted-foreground',
-  },
-  pending: {
-    label: 'Pending research',
-    icon: Clock,
-    tone: 'text-muted-foreground',
-  },
-  loading: {
-    label: 'Researching…',
-    icon: Loader2,
-    tone: 'text-primary',
-  },
+  complete: { label: 'Complete', icon: CheckCircle2, tone: 'text-emerald-600' },
+  failed: { label: 'Failed', icon: AlertCircle, tone: 'text-destructive' },
+  pending_credentials: { label: 'API credentials required', icon: Clock, tone: 'text-amber-600' },
+  insufficient_data: { label: 'Insufficient data', icon: AlertCircle, tone: 'text-muted-foreground' },
+  pending: { label: 'Pending', icon: Clock, tone: 'text-muted-foreground' },
+  loading: { label: 'Researching…', icon: Loader2, tone: 'text-primary' },
 };
 
-function platformTitle(platformName: string): string {
-  return `Rent Research (${platformName})`;
+function FileTypeBadge({ type }: { type: 'jpg' | 'pdf' }) {
+  const Icon = type === 'pdf' ? FileText : FileImage;
+  return (
+    <span className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide">
+      <Icon className="size-3" />
+      {type}
+    </span>
+  );
 }
 
-function PlatformCard({
-  title,
+function PlatformResearchRow({
+  index,
+  label,
+  fileType,
   platform,
   loading = false,
 }: {
-  title: string;
+  index: number;
+  label: string;
+  fileType: 'jpg' | 'pdf';
   platform: RentPlatformResearch | null;
   loading?: boolean;
 }) {
@@ -64,15 +53,18 @@ function PlatformCard({
   const Icon = meta.icon;
 
   return (
-    <section
+    <li
       className={cn(
-        'rounded-xl border bg-card p-4 transition-opacity',
-        loading && 'border-primary/30 bg-primary/5',
+        'rounded-lg border px-3 py-3',
+        loading ? 'border-primary/30 bg-primary/5' : 'border-border/70 bg-muted/10',
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">
+            {index}. Research on {label}{' '}
+            <span className="text-muted-foreground font-normal">({fileType})</span>
+          </p>
           <p className={cn('mt-1 inline-flex items-center gap-1 text-[11px] font-medium', meta.tone)}>
             <Icon className={cn('size-3.5', loading && 'animate-spin')} />
             {meta.label}
@@ -83,53 +75,39 @@ function PlatformCard({
             href={platform.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-[10px]"
+            className="text-primary inline-flex items-center gap-1 text-[11px] font-medium hover:underline"
           >
-            Source (Rent Check)
+            View source
             <ExternalLink className="size-3" />
           </a>
         ) : null}
       </div>
 
       {platform?.status === 'complete' && platform.medianWeekly != null ? (
-        <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
-          <div>
-            <dt className="text-muted-foreground">Median</dt>
-            <dd className="font-medium tabular-nums">{formatCurrency(platform.medianWeekly)}/wk</dd>
-          </div>
-          {platform.rangeLow != null && platform.rangeHigh != null ? (
-            <div>
-              <dt className="text-muted-foreground">Range</dt>
-              <dd className="font-medium tabular-nums">
-                {formatCurrency(platform.rangeLow)}–{formatCurrency(platform.rangeHigh)}
-              </dd>
-            </div>
-          ) : null}
-          {platform.sampleCount != null ? (
-            <div>
-              <dt className="text-muted-foreground">Sample</dt>
-              <dd className="font-medium tabular-nums">{platform.sampleCount}</dd>
-            </div>
-          ) : null}
-        </dl>
+        <p className="text-muted-foreground mt-2 text-xs tabular-nums">
+          Median {formatCurrency(platform.medianWeekly)}/wk
+          {platform.rangeLow != null && platform.rangeHigh != null
+            ? ` · range ${formatCurrency(platform.rangeLow)}–${formatCurrency(platform.rangeHigh)}`
+            : ''}
+        </p>
       ) : null}
 
       {platform?.summary ? (
-        <p className="text-muted-foreground mt-3 text-xs leading-relaxed">{platform.summary}</p>
+        <p className="text-muted-foreground mt-2 text-xs leading-relaxed">{platform.summary}</p>
       ) : loading ? (
-        <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-          Querying market data — this may take a little longer the first time NSW bond files are
-          downloaded.
+        <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+          Querying market data…
         </p>
       ) : status === 'pending' ? (
-        <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
+        <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
           Runs when you confirm the rent review or rerun market research.
         </p>
       ) : null}
+
       {platform?.error ? (
         <p className="text-destructive mt-2 text-xs leading-relaxed">{platform.error}</p>
       ) : null}
-    </section>
+    </li>
   );
 }
 
@@ -149,7 +127,7 @@ export function RentResearchRunningBanner({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Running market research</p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            NSW Fair Trading, RP Data, and REA Group Ltd — usually about {estimateSeconds} seconds.
+            NSW Fair Trading, RP Data, and REA.com.au — usually about {estimateSeconds} seconds.
             Elapsed {elapsedSeconds}s.
           </p>
         </div>
@@ -174,18 +152,20 @@ export function RentResearchPlatformsPanel({
   const byId = new Map(platforms.map((platform) => [platform.id, platform]));
 
   return (
-    <div className="space-y-3">
-      {PLATFORM_IDS.map((id, index) => {
-        const platformName = RENT_RESEARCH_PLATFORMS[index] ?? id;
-        return (
-          <PlatformCard
-            key={id}
-            title={platformTitle(platformName)}
-            platform={byId.get(id) ?? null}
+    <section className="rounded-xl border bg-card p-4">
+      <p className="mb-3 text-sm font-semibold">Rent research</p>
+      <ol className="space-y-2">
+        {PLATFORM_ROWS.map((row, index) => (
+          <PlatformResearchRow
+            key={row.id}
+            index={index + 1}
+            label={row.label}
+            fileType={row.fileType}
+            platform={byId.get(row.id) ?? null}
             loading={loading}
           />
-        );
-      })}
-    </div>
+        ))}
+      </ol>
+    </section>
   );
 }

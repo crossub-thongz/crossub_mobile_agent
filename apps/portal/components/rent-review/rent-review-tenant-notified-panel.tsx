@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, FileDown } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RentReviewActivityLog } from '@/components/rent-review/rent-review-activity-log';
 import { RentReviewTenantRemindersDialog } from '@/components/rent-review/rent-review-tenant-reminders-dialog';
 import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
 import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
@@ -19,6 +18,7 @@ import {
   canSendTenantNotice,
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
+import { formatRentReviewAuditDetail } from '@/lib/rent-review/audit-detail-display';
 import { listTenantResponseReminders } from '@/lib/rent-review/tenant-reminders';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -87,45 +87,15 @@ export function RentReviewTenantNotifiedPanel({
   return (
     <div className="space-y-4">
       <section className="rounded-xl border bg-card p-4">
-        <p className="mb-2 text-sm font-semibold">Tenant notify</p>
-        <p className="text-muted-foreground mb-3 text-xs">
-          {resendNotice
-            ? 'Updated terms are ready after negotiation. Re-send the formal notice so the tenant can accept, counter (if negotiable), or decline.'
-            : noticeSent
-              ? 'Confirmed terms have been sent to the tenant for acceptance. The system automatically sends a reminder email every 2 days until they respond.'
-              : 'Send the formal notice with the agent-confirmed terms so the tenant can accept, counter, or decline.'}
-        </p>
+        <p className="mb-4 text-sm font-semibold">Tenant notified</p>
         <RentReviewTenantNoticeTermsSummary
           detail={detail}
           effectiveDateOverride={showSendNotice ? effectiveDate : undefined}
-          className="grid gap-3 text-xs sm:grid-cols-2"
+          noticeSentAt={noticeAudit?.at}
+          onDownloadNotice={() => void downloadNotice()}
+          downloadBusy={busy}
         />
       </section>
-
-      {noticeSent ? (
-        <section className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-4">
-          <p className="text-sky-800 text-xs font-semibold uppercase dark:text-sky-300">Audit</p>
-          <p className="mt-1 text-sm">
-            Formal notice dispatched to tenant
-            {noticeAudit ? ` on ${formatDateTime(noticeAudit.at)}` : ''}.
-          </p>
-          <p className="text-muted-foreground mt-2 text-xs">
-            {reminders.length > 0
-              ? `${reminders.length} automated reminder${reminders.length === 1 ? '' : 's'} sent so far (every 2 days).`
-              : 'No reminders sent yet — the first reminder is scheduled 2 days after dispatch if there is no response.'}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3 gap-2"
-            onClick={() => setRemindersOpen(true)}
-          >
-            <Bell className="size-4" />
-            View all reminder emails
-          </Button>
-        </section>
-      ) : null}
 
       {showSendNotice ? (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
@@ -134,8 +104,8 @@ export function RentReviewTenantNotifiedPanel({
           </p>
           <p className="text-muted-foreground text-xs">
             {resendNotice
-              ? 'Dispatch the updated formal increase notice with the revised or non-negotiable terms.'
-              : 'Dispatch the formal increase notice on behalf of the tenant communication channel (email, post, or hand delivery).'}
+              ? 'Updated terms are ready after negotiation. Re-send the formal notice so the tenant can accept, counter (if negotiable), or decline.'
+              : 'Dispatch the formal increase notice with the agent-confirmed terms so the tenant can accept, counter, or decline.'}
           </p>
           {detail.rentNegotiable === false ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-100">
@@ -166,18 +136,58 @@ export function RentReviewTenantNotifiedPanel({
             {resendNotice ? 'Re-send formal notice to tenant' : 'Send formal notice to tenant'}
           </Button>
         </div>
+      ) : noticeSent ? (
+        <p className="text-muted-foreground text-xs">
+          Confirmed terms have been sent to the tenant. The system automatically sends a reminder
+          email every 2 days until they respond.
+        </p>
+      ) : null}
+
+      {auditEntries.length > 0 ? (
+        <section className="rounded-xl border bg-muted/20 p-4">
+          <p className="mb-3 text-sm font-semibold">Audit</p>
+          <ul className="space-y-2 text-xs">
+            {auditEntries.map((e) => {
+              const auditDetail = formatRentReviewAuditDetail(e);
+              return (
+                <li
+                  key={e.id}
+                  className="rounded-lg border border-border/60 bg-background px-3 py-2.5"
+                >
+                  <p className="text-muted-foreground tabular-nums">{formatDateTime(e.at)}</p>
+                  <p className="mt-0.5 font-medium">{e.message}</p>
+                  {auditDetail ? (
+                    <p className="text-muted-foreground mt-0.5">{auditDetail}</p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          {noticeSent ? (
+            <div className="mt-3 space-y-2">
+              <p className="text-muted-foreground text-xs">
+                {reminders.length > 0
+                  ? `${reminders.length} automated reminder${reminders.length === 1 ? '' : 's'} sent so far (every 2 days).`
+                  : 'No reminders sent yet — the first reminder is scheduled 2 days after dispatch if there is no response.'}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setRemindersOpen(true)}
+              >
+                <Bell className="size-4" />
+                View all reminder emails
+              </Button>
+            </div>
+          ) : null}
+        </section>
       ) : null}
 
       {showRecordResponse ? (
         <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
       ) : null}
-
-      <Button variant="outline" className="w-full gap-2" disabled={busy} onClick={() => void downloadNotice()}>
-        <FileDown className="size-4" />
-        Download NSW Notice of Rent Increase PDF
-      </Button>
-
-      <RentReviewActivityLog entries={auditEntries} showTimestamp />
 
       <RentReviewTenantRemindersDialog
         detail={detail}

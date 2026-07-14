@@ -58,6 +58,7 @@ export interface RentMarketResearchSnapshot {
   researchedAt: string;
 }
 
+export interface RentReviewPricingMilestone {
   id: string;
   source: string;
   headline: string;
@@ -67,7 +68,7 @@ export interface RentMarketResearchSnapshot {
   recordedAt: string;
 }
 
-/** Rich workflow detail for the agent portal 5-stage rent review flow. */
+/** Rich workflow detail for the agent portal 6-stage rent review flow. */
 export interface RentReviewWorkflowDetail {
   id: string;
   propertyId: string | null;

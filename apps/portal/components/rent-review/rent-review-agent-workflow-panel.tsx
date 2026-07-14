@@ -11,6 +11,7 @@ import { RentReviewAgentConfirmedPanel } from '@/components/rent-review/rent-rev
 import { RentReviewCompletedPanel } from '@/components/rent-review/rent-review-completed-panel';
 import { RentReviewResearchPanel } from '@/components/rent-review/rent-review-research-panel';
 import { RentReviewStageEmailHistory } from '@/components/rent-review/rent-review-email-log';
+import { RentReviewNegotiationPanel } from '@/components/rent-review/rent-review-negotiation-panel';
 import { RentReviewTenantDecisionPanel } from '@/components/rent-review/rent-review-tenant-decision-panel';
 import { RentReviewTenantNotifiedPanel } from '@/components/rent-review/rent-review-tenant-notified-panel';
 import {
@@ -84,6 +85,8 @@ function StepContent({
       return <RentReviewAgentConfirmedPanel detail={detail} onUpdated={onUpdated} />;
     case RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED:
       return <RentReviewTenantNotifiedPanel detail={detail} onUpdated={onUpdated} />;
+    case RENT_REVIEW_AGENT_STEP.NEGOTIATION:
+      return <RentReviewNegotiationPanel detail={detail} onUpdated={onUpdated} />;
     case RENT_REVIEW_AGENT_STEP.TENANT_DECISION:
       return <RentReviewTenantDecisionPanel detail={detail} onUpdated={onUpdated} />;
     case RENT_REVIEW_AGENT_STEP.COMPLETED:

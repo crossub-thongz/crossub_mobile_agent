@@ -1,30 +1,29 @@
 'use client';
 
 import { useState } from 'react';
+import { FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewFullAuditLog } from '@/components/rent-review/rent-review-full-audit-log';
-import { RentReviewLeaseAgreementAudit } from '@/components/rent-review/rent-review-lease-agreement-audit';
-import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
 import { Button } from '@/components/ui/button';
 import {
   isRentReviewWorkflowClosed,
   type RentReviewAgentStep,
 } from '@/lib/rent-review/agent-workflow-model';
+import { rentReviewApi } from '@/lib/rent-review-api';
+import { useRentReviewStore } from '@/lib/rent-review/store';
 import {
-  buildLeaseAgreementProgress,
-  buildTenantAcceptanceSummary,
+  formatLeaseExtensionAgreementStatus,
   isPreferredRenewalFixed,
   isTenantAccepted,
   isTenantDeclined,
   isTenantVacatePathComplete,
+  leaseAgreementAuditState,
 } from '@/lib/rent-review/tenant-decision-display';
-import { rentReviewApi } from '@/lib/rent-review-api';
-import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 export function RentReviewCompletedPanel({
   detail,
@@ -38,12 +37,13 @@ export function RentReviewCompletedPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
 
-  const weekly = detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent;
-  const acceptance = buildTenantAcceptanceSummary(detail);
-  const leaseAgreement = buildLeaseAgreementProgress(detail);
-  const vacateComplete = isTenantVacatePathComplete(detail);
+  const accepted = isTenantAccepted(detail);
   const declined = isTenantDeclined(detail);
+  const vacateComplete = isTenantVacatePathComplete(detail);
+  const fixedRenewal = isPreferredRenewalFixed(detail);
+  const leaseAudit = leaseAgreementAuditState(detail);
   const workflowClosed = isRentReviewWorkflowClosed(detail);
+  const leaseExtensionStatus = formatLeaseExtensionAgreementStatus(leaseAudit);
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -58,87 +58,108 @@ export function RentReviewCompletedPanel({
     }
   };
 
+  const downloadLeaseExtensionPdf = async () => {
+    setBusy(true);
+    try {
+      const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lease-extension-agreement-${detail.id.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Lease extension agreement downloaded');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {workflowClosed ? (
-        <p className="text-muted-foreground rounded-lg border bg-muted/20 px-3 py-2 text-xs">
-          Use the step rail above to review each stage. The full audit log below links back to the
-          step where each event was recorded.
-        </p>
-      ) : null}
+      <section className="rounded-xl border bg-card p-4">
+        <p className="mb-4 text-sm font-semibold">Completed</p>
 
-      <section className="rounded-xl border bg-primary/5 p-4">
-        <p className="mb-2 text-sm font-semibold">Completed</p>
-        {vacateComplete || declined ? (
-          <div className="space-y-3 text-xs">
-            <p className="font-medium text-rose-600">Tenant declined the increase</p>
-            <p className="text-muted-foreground">
-              Vacate path recorded — no accounting sync required.
+        {accepted && fixedRenewal ? (
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Situation 1 — tenant accepted
             </p>
-            {detail.tenantMoveOutDate ? (
-              <dl className="grid gap-3 border-t pt-3 sm:grid-cols-2">
+            <dl className="space-y-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <dt className="text-muted-foreground">Move-out date</dt>
-                  <dd className="font-medium tabular-nums">
-                    {formatDate(detail.tenantMoveOutDate)}
-                  </dd>
+                  <dt className="text-muted-foreground text-xs">Lease extension agreement</dt>
+                  <dd className="mt-0.5 font-medium">{leaseExtensionStatus}</dd>
                 </div>
-                <div>
-                  <dt className="text-muted-foreground">Closed</dt>
-                  <dd className="font-medium">
-                    {detail.completedDate ? formatDate(detail.completedDate) : '—'}
-                  </dd>
-                </div>
-              </dl>
-            ) : (
-              <dl className="grid gap-3 border-t pt-3 sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted-foreground">Closed</dt>
-                  <dd className="font-medium">
-                    {detail.completedDate ? formatDate(detail.completedDate) : '—'}
-                  </dd>
-                </div>
-              </dl>
-            )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2.5 text-xs"
+                  disabled={busy || !leaseAudit.sentDone}
+                  onClick={() => void downloadLeaseExtensionPdf()}
+                >
+                  <FileDown className="size-3.5" />
+                  PDF
+                </Button>
+              </div>
+            </dl>
+            {!leaseAudit.sentDone ? (
+              <p className="text-muted-foreground text-xs">
+                PDF is available once the lease extension agreement has been sent.
+              </p>
+            ) : null}
           </div>
-        ) : isTenantAccepted(detail) && acceptance ? (
-          <RentReviewTenantAcceptanceSummary summary={acceptance} showSchedulingNote={false} />
-        ) : (
-          <dl className="grid gap-3 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">Final rent</dt>
-              <dd className="text-primary font-medium tabular-nums">{formatCurrency(weekly)}/wk</dd>
+        ) : accepted ? (
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Situation 1 — tenant accepted
+            </p>
+            <p className="font-medium">Periodic renewal — no lease extension agreement required.</p>
+            <p className="text-muted-foreground text-xs">
+              {workflowClosed
+                ? 'Rent review closed and system sync completed.'
+                : 'Complete accounting sync to close this case.'}
+            </p>
+          </div>
+        ) : null}
+
+        {declined || vacateComplete ? (
+          <div className={accepted ? 'mt-6 space-y-3 border-t pt-4' : 'space-y-3'}>
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Situation 2 — tenant declined
+            </p>
+            <div className="rounded-lg border border-dashed bg-muted/20 p-4">
+              <p className="text-sm font-semibold">End leasing</p>
+              {detail.tenantMoveOutDate ? (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Move-out {formatDate(detail.tenantMoveOutDate)}
+                  {detail.completedDate ? ` · closed ${formatDate(detail.completedDate)}` : ''}
+                </p>
+              ) : (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Start the end-leasing workflow to manage vacate and bond release.
+                </p>
+              )}
             </div>
-            <div>
-              <dt className="text-muted-foreground">Rent increase from</dt>
-              <dd className="font-medium">{detail.effectiveDate ? formatDate(detail.effectiveDate) : '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Completed</dt>
-              <dd className="font-medium">
-                {detail.completedDate ? formatDate(detail.completedDate) : 'In progress'}
-              </dd>
-            </div>
-          </dl>
-        )}
-        {isTenantAccepted(detail) && acceptance ? (
-          <dl className="mt-3 grid gap-3 border-t pt-3 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">Completed</dt>
-              <dd className="font-medium">
-                {detail.completedDate ? formatDate(detail.completedDate) : 'In progress'}
-              </dd>
-            </div>
-          </dl>
+          </div>
+        ) : null}
+
+        {!accepted && !declined ? (
+          <p className="text-muted-foreground text-xs">
+            This case is not closed yet — finish Tenant decision and accounting sync first.
+          </p>
         ) : null}
       </section>
 
       {declined ? (
-        <RentReviewEndLeasingPanel detail={detail} busy={busy} onBusyChange={setBusy} />
-      ) : null}
-
-      {isTenantAccepted(detail) && isPreferredRenewalFixed(detail) ? (
-        <RentReviewLeaseAgreementAudit steps={leaseAgreement} />
+        <RentReviewEndLeasingPanel
+          detail={detail}
+          busy={busy}
+          showMoveOutSummary={false}
+          onBusyChange={setBusy}
+        />
       ) : null}
 
       {detail.workflowState === 'accounting' ? (
@@ -160,7 +181,11 @@ export function RentReviewCompletedPanel({
         </Button>
       ) : null}
 
-      <RentReviewFullAuditLog detail={detail} onNavigateToStep={onNavigateToStep} />
+      <RentReviewFullAuditLog
+        detail={detail}
+        defaultExpanded={false}
+        onNavigateToStep={onNavigateToStep}
+      />
     </div>
   );
 }

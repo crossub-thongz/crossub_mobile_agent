@@ -3,32 +3,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { RentReviewActivityLog } from '@/components/rent-review/rent-review-activity-log';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  RENT_REVIEW_AGENT_STEP,
-  auditEntriesForStep,
   canEditAgentDecision,
   canResolveNegotiation,
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
 import {
-  buildNegotiationComparison,
-  formatNegotiationDelta,
-} from '@/lib/rent-review/negotiation-display';
-import {
   deriveNewLeaseStartDate,
   deriveRentIncreaseOnDate,
   isCurrentTenancyFixed,
 } from '@/lib/rent-review/agent-decision-scheduling';
+import {
+  formatRentReviewTermLabel,
+  leaseEndFromFixedTermWeeks,
+  type FixedTermWeeks,
+} from '@/lib/rent-review-lease-helpers';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+import { toDateOnly } from '@/lib/rent-review/scheduling';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
-import { toDateOnly } from '@/lib/rent-review/scheduling';
 
 type PreferredLeaseType = 'fixed' | 'periodic';
 
@@ -66,27 +64,11 @@ function formatDateOnly(value: string | null | undefined): string | null {
   return day ? formatDate(day) : null;
 }
 
-function AutoDateField({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string | null;
-  hint: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <Label>{label}</Label>
-      <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-        <span className="font-medium tabular-nums">{formatDateOnly(value) ?? '—'}</span>
-        <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-          Auto
-        </span>
-      </div>
-      <p className="text-muted-foreground text-[11px]">{hint}</p>
-    </div>
-  );
+function resolveFixedTermWeeks(detail: RentReviewWorkflowDetail): FixedTermWeeks {
+  if (detail.fixedTermWeeks === 26 || detail.fixedTermWeeks === 52) {
+    return detail.fixedTermWeeks;
+  }
+  return 52;
 }
 
 export function RentReviewAgentConfirmedPanel({
@@ -99,28 +81,27 @@ export function RentReviewAgentConfirmedPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
   const [rentNegotiable, setRentNegotiable] = useState<boolean | null>(null);
-  const [confirmedWeekly, setConfirmedWeekly] = useState('');
+  const [preferredRent, setPreferredRent] = useState('');
   const [preferredLeaseType, setPreferredLeaseType] = useState<PreferredLeaseType>('periodic');
+  const [fixedTermWeeks, setFixedTermWeeks] = useState<FixedTermWeeks>(52);
   const [fixedTermEndDate, setFixedTermEndDate] = useState('');
+
   const hasCounter = canResolveNegotiation(detail);
   const editable = canEditAgentDecision(detail);
   const noticeSent = hasTenantNoticeSent(detail);
-  const negotiation = useMemo(() => buildNegotiationComparison(detail), [detail]);
-  const counterDelta = formatNegotiationDelta(negotiation.deltaWeekly);
   const currentLeaseIsFixed = isCurrentTenancyFixed(detail);
   const autoNewLeaseStart = useMemo(() => deriveNewLeaseStartDate(detail), [detail]);
   const autoRentIncreaseOn = useMemo(() => deriveRentIncreaseOnDate(detail), [detail]);
 
-  // Initialise form once per review — avoid resetting toggles when parent re-renders.
   useEffect(() => {
-    const defaultWeekly = String(
-      detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
+    setPreferredRent(
+      String(detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent),
     );
-    setConfirmedWeekly(defaultWeekly);
     setRentNegotiable(detail.rentNegotiable);
     setPreferredLeaseType(
       detail.preferredLeaseType ?? (detail.newAgreementEnd ? 'fixed' : 'periodic'),
     );
+    setFixedTermWeeks(resolveFixedTermWeeks(detail));
     setFixedTermEndDate(detail.newAgreementEnd ?? '');
   }, [detail.id]);
 
@@ -132,6 +113,11 @@ export function RentReviewAgentConfirmedPanel({
       ? autoNewLeaseStart
       : null
     : (toDateOnly(detail.newAgreementStart) ?? (currentLeaseIsFixed ? autoNewLeaseStart : null));
+
+  const computedFixedEnd =
+    preferredLeaseType === 'fixed' && newLeaseStart
+      ? leaseEndFromFixedTermWeeks(newLeaseStart, fixedTermWeeks)
+      : fixedTermEndDate;
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -147,17 +133,17 @@ export function RentReviewAgentConfirmedPanel({
   };
 
   const saveAgentDecision = () => {
-    const weekly = Number(confirmedWeekly);
-    if (!confirmedWeekly.trim() || Number.isNaN(weekly)) {
-      toast.error('Enter a valid weekly rent');
+    const weekly = Number(preferredRent);
+    if (!preferredRent.trim() || Number.isNaN(weekly)) {
+      toast.error('Enter a valid preferred rent value');
       return;
     }
     if (rentNegotiable == null) {
-      toast.error('Select whether rent is negotiable');
+      toast.error('Select whether the rent is negotiable');
       return;
     }
-    if (preferredLeaseType === 'fixed' && !fixedTermEndDate) {
-      toast.error('Select the fixed term end date');
+    if (preferredLeaseType === 'fixed' && !computedFixedEnd) {
+      toast.error('Select a preferred lease term for the fixed agreement');
       return;
     }
     void run(
@@ -170,7 +156,7 @@ export function RentReviewAgentConfirmedPanel({
             rentNegotiable,
             preferredLeaseType,
             preferredFixedTermEndDate:
-              preferredLeaseType === 'fixed' ? fixedTermEndDate : undefined,
+              preferredLeaseType === 'fixed' ? computedFixedEnd : undefined,
             newLeaseStartDate:
               currentLeaseIsFixed && newLeaseStart ? newLeaseStart : undefined,
           },
@@ -181,380 +167,253 @@ export function RentReviewAgentConfirmedPanel({
     );
   };
 
-  const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED);
+  if (hasCounter) {
+    return (
+      <div className="space-y-4">
+        <section className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <p className="text-sm font-semibold">Tenant counter-offer received</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Review the tenant&apos;s offer and submit your feedback on the Negotiation step.
+          </p>
+        </section>
+        <ReadOnlyAgentDecision
+          detail={detail}
+          rentNegotiable={detail.rentNegotiable}
+          preferredLeaseType={detail.preferredLeaseType ?? preferredLeaseType}
+          fixedTermWeeks={detail.fixedTermWeeks ?? fixedTermWeeks}
+          fixedTermEndDate={detail.newAgreementEnd}
+        />
+      </div>
+    );
+  }
 
-  if (noticeSent && !hasCounter) {
+  if (noticeSent) {
     return (
       <div className="space-y-4">
         <section className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
           <p className="text-sm font-semibold">Tenant has been notified</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            The formal rent increase notice was sent. Agent decision fields are read-only.
-            Continue on the Tenant notified step to track the response.
+            The formal rent increase notice was sent. Agent decision fields are read-only — continue
+            on the Tenant notified step.
           </p>
         </section>
-        <ReadOnlySummary
+        <ReadOnlyAgentDecision
           detail={detail}
           rentNegotiable={detail.rentNegotiable}
-          effectiveDate={effectiveDate}
-          newLeaseStart={newLeaseStart}
-          currentLeaseIsFixed={currentLeaseIsFixed}
           preferredLeaseType={detail.preferredLeaseType ?? preferredLeaseType}
+          fixedTermWeeks={detail.fixedTermWeeks ?? fixedTermWeeks}
           fixedTermEndDate={detail.newAgreementEnd}
         />
-        <RentReviewActivityLog entries={auditEntries} />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border bg-card p-4">
-        <p className="mb-2 text-sm font-semibold">
-          {hasCounter ? 'Tenant counter-offer' : 'Agent decision'}
-        </p>
-        <p className="text-muted-foreground mb-3 text-xs">
-          {hasCounter
-            ? 'The tenant proposed a counter-offer. Accept it, submit your own counter-offer, or mark the rent as non-negotiable so the tenant can only accept or decline.'
-            : 'Confirm rent, negotiability, preferred lease term, and scheduling before notifying the tenant.'}
-        </p>
-        {hasCounter ? (
-          <div className="mb-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border bg-muted/20 p-3">
-              <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                Agent proposed
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                {negotiation.agentWeekly != null
-                  ? `${formatCurrency(negotiation.agentWeekly)}/wk`
-                  : '—'}
-              </p>
-            </div>
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
-                Tenant counter
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums text-amber-900 dark:text-amber-100">
-                {negotiation.tenantCounterWeekly != null
-                  ? `${formatCurrency(negotiation.tenantCounterWeekly)}/wk`
-                  : '—'}
-              </p>
-              {counterDelta ? (
-                <p className="text-muted-foreground mt-1 text-[11px]">{counterDelta}</p>
-              ) : null}
-            </div>
-            <div className="rounded-lg border bg-muted/20 p-3">
-              <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                Current rent
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                {formatCurrency(detail.currentWeeklyRent)}/wk
-              </p>
-            </div>
-          </div>
-        ) : (
-          <dl className="grid gap-3 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">Current rent</dt>
-              <dd className="font-medium tabular-nums">{formatCurrency(detail.currentWeeklyRent)}/wk</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">CROSSUB suggested</dt>
-              <dd className="text-primary font-medium tabular-nums">
-                {formatCurrency(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent)}/wk
-              </dd>
-            </div>
-          </dl>
-        )}
-      </section>
-
       {editable ? (
-        hasCounter ? (
-          <div className="space-y-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
-            <Button
-              className="w-full"
-              disabled={busy}
-              onClick={() =>
-                void run(
-                  () =>
-                    rentReviewApi.resolveNegotiation(
-                      detail.id,
-                      { action: 'accept_counter' },
-                      detail.leaseEndDate,
-                    ),
-                  'Tenant counter accepted',
-                )
-              }
-            >
-              Accept tenant counter {formatCurrency(detail.tenantCounterWeekly!)}/wk
-            </Button>
-
-            <div className="space-y-2 border-t pt-4">
-              <p className="text-sm font-semibold">Submit agent counter-offer</p>
-              <p className="text-muted-foreground text-xs">
-                Propose a revised weekly rent. Re-send the formal notice on the Tenant notified
-                step once recorded.
-              </p>
-              <Label htmlFor="revised-weekly">Agent counter ($/week)</Label>
-              <Input
-                id="revised-weekly"
-                type="number"
-                value={confirmedWeekly}
-                onChange={(e) => setConfirmedWeekly(e.target.value)}
-              />
-              <Label htmlFor="revised-effective">Rent increase on</Label>
-              <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                <span className="font-medium tabular-nums">
-                  {formatDateOnly(effectiveDate) ?? '—'}
-                </span>
-                <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                  Auto
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full"
-                disabled={busy || !confirmedWeekly}
-                onClick={() =>
-                  void run(
-                    () =>
-                      rentReviewApi.resolveNegotiation(
-                        detail.id,
-                        {
-                          action: 'repropose',
-                          resolvedWeekly: Number(confirmedWeekly),
-                          effectiveDate,
-                          rentNegotiable: true,
-                        },
-                        detail.leaseEndDate,
-                      ),
-                    'Agent counter-offer recorded — re-send tenant notice when ready',
-                  )
-                }
-              >
-                Send counter-offer to tenant
-              </Button>
-            </div>
-
-            <div className="space-y-2 border-t pt-4">
-              <p className="text-sm font-semibold">Mark non-negotiable</p>
-              <p className="text-muted-foreground text-xs">
-                Lock the rent at your confirmed proposal of{' '}
-                <span className="font-medium tabular-nums">
-                  {formatCurrency(
-                    detail.proposedWeeklyRent ??
-                      detail.ai.suggestedWeekly ??
-                      detail.currentWeeklyRent,
-                  )}
-                  /wk
-                </span>
-                . The tenant may accept or decline only — no further counter-offers.
-              </p>
-              <Button
-                variant="secondary"
-                className="w-full"
-                disabled={busy}
-                onClick={() =>
-                  void run(
-                    () =>
-                      rentReviewApi.resolveNegotiation(
-                        detail.id,
-                        { action: 'mark_non_negotiable' },
-                        detail.leaseEndDate,
-                      ),
-                    'Marked non-negotiable — re-send tenant notice when ready',
-                  )
-                }
-              >
-                Mark non-negotiable
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
-            <div className="space-y-2">
-              <Label>Rent negotiable?</Label>
-              <div className="flex gap-2">
-                <ChoiceButton
-                  active={rentNegotiable === true}
-                  disabled={busy}
-                  onClick={() => setRentNegotiable(true)}
-                >
-                  Yes
-                </ChoiceButton>
-                <ChoiceButton
-                  active={rentNegotiable === false}
-                  disabled={busy}
-                  onClick={() => setRentNegotiable(false)}
-                >
-                  No
-                </ChoiceButton>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="confirmed-weekly">Rent confirmed by agent ($/week)</Label>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  className="h-auto px-0 text-xs"
-                  disabled={busy}
-                  onClick={() =>
-                    setConfirmedWeekly(
-                      String(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent),
-                    )
-                  }
-                >
-                  Use CROSSUB suggested
-                </Button>
-              </div>
-              <Input
-                id="confirmed-weekly"
-                type="number"
-                value={confirmedWeekly}
-                onChange={(e) => setConfirmedWeekly(e.target.value)}
-              />
-              <p className="text-muted-foreground text-[11px]">
-                Defaults to CROSSUB research. Override if the landlord or market warrants a
-                different figure.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Preferred lease term</Label>
-              <div className="flex gap-2">
-                <ChoiceButton
-                  active={preferredLeaseType === 'periodic'}
-                  disabled={busy}
-                  onClick={() => setPreferredLeaseType('periodic')}
-                >
-                  Periodic
-                </ChoiceButton>
-                <ChoiceButton
-                  active={preferredLeaseType === 'fixed'}
-                  disabled={busy}
-                  onClick={() => setPreferredLeaseType('fixed')}
-                >
-                  Fixed term
-                </ChoiceButton>
-              </div>
-              {preferredLeaseType === 'fixed' ? (
-                <div className="space-y-1 pt-1">
-                  <Label htmlFor="fixed-term-end">Fixed Term (Date)</Label>
+        <section className="rounded-xl border bg-card p-4">
+          <p className="mb-4 text-sm font-semibold">Agent decision</p>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="preferred-rent">Preferred rent value</Label>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto px-0 text-xs"
+                    disabled={busy}
+                    onClick={() =>
+                      setPreferredRent(
+                        String(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent),
+                      )
+                    }
+                  >
+                    Use recommended
+                  </Button>
+                </div>
+                <div className="relative">
+                  <span className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+                    $
+                  </span>
                   <Input
-                    id="fixed-term-end"
-                    type="date"
-                    value={fixedTermEndDate}
-                    min={newLeaseStart ?? undefined}
-                    onChange={(e) => setFixedTermEndDate(e.target.value)}
+                    id="preferred-rent"
+                    type="number"
+                    className="pl-7 tabular-nums"
+                    value={preferredRent}
+                    onChange={(e) => setPreferredRent(e.target.value)}
                   />
                 </div>
-              ) : null}
+                <p className="text-muted-foreground text-[11px]">Per week</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Preferred lease term</Label>
+                {preferredLeaseType === 'fixed' ? (
+                  newLeaseStart ? (
+                    <>
+                      <select
+                        className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                        value={fixedTermWeeks}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setFixedTermWeeks(Number(e.target.value) as FixedTermWeeks)
+                        }
+                      >
+                        <option value={26}>26 weeks (6 months)</option>
+                        <option value={52}>52 weeks (12 months)</option>
+                      </select>
+                      <p className="text-muted-foreground text-[11px]">
+                        New agreement ends{' '}
+                        <span className="font-medium tabular-nums">
+                          {formatDateOnly(computedFixedEnd) ?? '—'}
+                        </span>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Input
+                        type="date"
+                        value={fixedTermEndDate}
+                        onChange={(e) => setFixedTermEndDate(e.target.value)}
+                      />
+                      <p className="text-muted-foreground text-[11px]">
+                        End date for the new fixed-term agreement.
+                      </p>
+                    </>
+                  )
+                ) : (
+                  <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-sm">
+                    Not applicable — periodic tenancy
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className={cn('grid gap-3', currentLeaseIsFixed ? 'sm:grid-cols-2' : '')}>
-              <AutoDateField
-                label="Rent increase on"
-                value={effectiveDate}
-                hint={
-                  currentLeaseIsFixed
-                    ? 'Same day the current fixed lease ends — one day before the new lease start.'
-                    : 'NSW statutory minimum — 60 days from today for periodic tenancies.'
-                }
-              />
-              {currentLeaseIsFixed ? (
-                <AutoDateField
-                  label="New lease start date"
-                  value={newLeaseStart}
-                  hint="Day after the current fixed lease ends — auto-continues into the new term."
-                />
-              ) : null}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Preferred lease type</Label>
+                <div className="flex gap-2">
+                  <ChoiceButton
+                    active={preferredLeaseType === 'fixed'}
+                    disabled={busy}
+                    onClick={() => setPreferredLeaseType('fixed')}
+                  >
+                    Fixed
+                  </ChoiceButton>
+                  <ChoiceButton
+                    active={preferredLeaseType === 'periodic'}
+                    disabled={busy}
+                    onClick={() => setPreferredLeaseType('periodic')}
+                  >
+                    Periodic
+                  </ChoiceButton>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Negotiable</Label>
+                <div className="flex gap-2">
+                  <ChoiceButton
+                    active={rentNegotiable === true}
+                    disabled={busy}
+                    onClick={() => setRentNegotiable(true)}
+                  >
+                    Yes
+                  </ChoiceButton>
+                  <ChoiceButton
+                    active={rentNegotiable === false}
+                    disabled={busy}
+                    onClick={() => setRentNegotiable(false)}
+                  >
+                    No
+                  </ChoiceButton>
+                </div>
+              </div>
             </div>
-            {!currentLeaseIsFixed ? (
-              <p className="text-muted-foreground text-[11px]">
-                New lease start does not apply — the tenant remains on the existing periodic
-                agreement.
+          </div>
+
+          <div className="text-muted-foreground mt-4 grid gap-2 rounded-lg border border-dashed bg-muted/20 p-3 text-[11px] sm:grid-cols-2">
+            <p>
+              <span className="font-medium text-foreground">Rent increase on:</span>{' '}
+              {formatDateOnly(effectiveDate) ?? '—'}
+              <span className="ml-1">(auto)</span>
+            </p>
+            {currentLeaseIsFixed && newLeaseStart ? (
+              <p>
+                <span className="font-medium text-foreground">New lease start:</span>{' '}
+                {formatDateOnly(newLeaseStart) ?? '—'}
+                <span className="ml-1">(auto)</span>
               </p>
             ) : null}
-
-            <Button className="w-full" disabled={busy} onClick={() => saveAgentDecision()}>
-              Confirm agent decision
-            </Button>
           </div>
-        )
+
+          <Button className="mt-4 w-full" disabled={busy} onClick={() => saveAgentDecision()}>
+            Save agent decision
+          </Button>
+        </section>
       ) : (
-        <ReadOnlySummary
+        <ReadOnlyAgentDecision
           detail={detail}
           rentNegotiable={detail.rentNegotiable}
-          effectiveDate={effectiveDate}
-          newLeaseStart={newLeaseStart}
-          currentLeaseIsFixed={currentLeaseIsFixed}
           preferredLeaseType={detail.preferredLeaseType ?? preferredLeaseType}
-          fixedTermEndDate={detail.newAgreementEnd ?? (fixedTermEndDate || null)}
+          fixedTermWeeks={detail.fixedTermWeeks ?? fixedTermWeeks}
+          fixedTermEndDate={detail.newAgreementEnd ?? computedFixedEnd}
         />
       )}
-
-      <RentReviewActivityLog entries={auditEntries} />
     </div>
   );
 }
 
-function ReadOnlySummary({
+function ReadOnlyAgentDecision({
   detail,
   rentNegotiable,
-  effectiveDate,
-  newLeaseStart,
-  currentLeaseIsFixed,
   preferredLeaseType,
+  fixedTermWeeks,
   fixedTermEndDate,
 }: {
   detail: RentReviewWorkflowDetail;
   rentNegotiable: boolean | null;
-  effectiveDate: string;
-  newLeaseStart: string | null;
-  currentLeaseIsFixed: boolean;
   preferredLeaseType: PreferredLeaseType | null;
+  fixedTermWeeks: number | null;
   fixedTermEndDate: string | null;
 }) {
+  const preferredRent =
+    detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent;
+
   return (
-    <section className="rounded-xl border bg-muted/20 p-4 text-xs">
-      <dl className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <dt className="text-muted-foreground">Rent negotiable</dt>
-          <dd className="font-medium">
-            {rentNegotiable === true ? 'Yes' : rentNegotiable === false ? 'No' : '—'}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Rent confirmed</dt>
-          <dd className="font-medium tabular-nums">
-            {formatCurrency(detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly ?? detail.currentWeeklyRent)}/wk
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Preferred lease term</dt>
-          <dd className="font-medium capitalize">{preferredLeaseType ?? '—'}</dd>
-        </div>
-        {preferredLeaseType === 'fixed' && fixedTermEndDate ? (
+    <section className="rounded-xl border bg-card p-4">
+      <p className="mb-4 text-sm font-semibold">Agent decision</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <dl className="space-y-3 text-sm">
           <div>
-            <dt className="text-muted-foreground">Fixed term ends</dt>
-            <dd className="font-medium tabular-nums">{formatDateOnly(fixedTermEndDate) ?? '—'}</dd>
+            <dt className="text-muted-foreground text-xs">Preferred rent value</dt>
+            <dd className="mt-0.5 font-semibold tabular-nums">{formatCurrency(preferredRent)}</dd>
           </div>
-        ) : null}
-        <div>
-          <dt className="text-muted-foreground">Rent increase on</dt>
-          <dd className="font-medium tabular-nums">{formatDateOnly(effectiveDate) ?? '—'}</dd>
-        </div>
-        {currentLeaseIsFixed && newLeaseStart ? (
           <div>
-            <dt className="text-muted-foreground">New lease start</dt>
-            <dd className="font-medium tabular-nums">{formatDateOnly(newLeaseStart) ?? '—'}</dd>
+            <dt className="text-muted-foreground text-xs">Preferred lease term</dt>
+            <dd className="mt-0.5 font-medium">
+              {formatRentReviewTermLabel(preferredLeaseType, fixedTermWeeks)}
+              {preferredLeaseType === 'fixed' && fixedTermEndDate
+                ? ` · ends ${formatDateOnly(fixedTermEndDate) ?? '—'}`
+                : ''}
+            </dd>
           </div>
-        ) : null}
-      </dl>
+        </dl>
+        <dl className="space-y-3 text-sm">
+          <div>
+            <dt className="text-muted-foreground text-xs">Preferred lease type</dt>
+            <dd className="mt-0.5 font-medium capitalize">{preferredLeaseType ?? '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-xs">Negotiable</dt>
+            <dd className="mt-0.5 font-medium">
+              {rentNegotiable === true ? 'Yes' : rentNegotiable === false ? 'No' : '—'}
+            </dd>
+          </div>
+        </dl>
+      </div>
     </section>
   );
 }
-

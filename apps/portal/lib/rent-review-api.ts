@@ -199,6 +199,9 @@ export const rentReviewApi = {
     return api.getBlob(`${BASE}/${id}/notice-of-rent-increase.pdf${qs ? `?${qs}` : ''}`);
   },
 
+  downloadLeaseExtensionAgreement: (id: string): Promise<Blob> =>
+    api.getBlob(`${BASE}/${id}/lease-extension-agreement.pdf`),
+
   tenantResponse: (
     id: string,
     input: TenantResponseInput,

@@ -4,11 +4,12 @@ import type { RentReviewCase } from '@/lib/types';
 import { buildCaseWorkflowProgress } from './build-progress';
 import type { CaseWorkflowProgress } from './types';
 
-/** Five-stage rent review flow (manager Excel spec). */
+/** Six-stage rent review flow (manager Excel spec). */
 const RENT_REVIEW_AGENT_STEPS = [
   { id: 'rent_research', label: 'Rent research' },
-  { id: 'agent_confirmed', label: 'Agent confirmed' },
+  { id: 'agent_confirmed', label: 'Agent decision' },
   { id: 'tenant_notified', label: 'Tenant notified' },
+  { id: 'negotiation', label: 'Negotiation' },
   { id: 'tenant_decision', label: 'Tenant decision' },
   { id: 'completed', label: 'Completed' },
 ] as const;
@@ -19,8 +20,9 @@ function resolveRentReviewStepId(workflowState?: string): string {
     case RENT_REVIEW_WORKFLOW_STATE.PENDING_CONFIRMATION:
       return 'rent_research';
     case RENT_REVIEW_WORKFLOW_STATE.AGENT_REVIEW:
-    case RENT_REVIEW_WORKFLOW_STATE.NEGOTIATION:
       return 'agent_confirmed';
+    case RENT_REVIEW_WORKFLOW_STATE.NEGOTIATION:
+      return 'negotiation';
     case RENT_REVIEW_WORKFLOW_STATE.TENANT_NOTIFIED:
       return 'tenant_notified';
     case RENT_REVIEW_WORKFLOW_STATE.TENANT_REJECTED:

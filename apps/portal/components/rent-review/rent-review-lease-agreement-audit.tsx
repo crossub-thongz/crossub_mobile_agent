@@ -3,7 +3,7 @@ import { formatDateTime } from '@/lib/utils';
 
 export function RentReviewLeaseAgreementAudit({
   steps,
-  title = 'Lease agreement audit',
+  title = 'Lease extension agreement',
 }: {
   steps: LeaseAgreementStep[];
   title?: string;
