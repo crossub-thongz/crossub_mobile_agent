@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import { AddressLineAutocomplete } from '@/components/end-leasing/address-line-autocomplete';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +33,7 @@ export function LeasingKeyCollectionSchedule({
   const { apiConnected } = useAgentData();
   const keyByCrossub = detail.agentInfo.keyCustody === LEASING_KEY_CUSTODY.CROSSUB;
   const existing = detail.onboarding.keyCollection;
+  const tenantProofSubmitted = (existing.photos?.length ?? 0) > 0;
 
   const [time, setTime] = useState('');
   const [timeEnd, setTimeEnd] = useState('');
@@ -80,6 +82,14 @@ export function LeasingKeyCollectionSchedule({
     }
   };
 
+  if (tenantProofSubmitted) {
+    return (
+      <p className="text-muted-foreground rounded-lg border border-border/60 bg-secondary/10 p-3 text-[10px] leading-relaxed">
+        The tenant has submitted key collection proof — pickup details are locked.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-secondary/10 p-3">
       <p className="text-xs font-medium">Send key collection details to tenant</p>
@@ -112,13 +122,15 @@ export function LeasingKeyCollectionSchedule({
         <Label htmlFor="kc-location" className="text-xs">
           Location
         </Label>
-        <Input
+        <AddressLineAutocomplete
           id="kc-location"
           value={location}
+          onChange={setLocation}
           placeholder={
-            keyByCrossub ? 'CROSSUB office address' : 'Agent office or property address'
+            keyByCrossub
+              ? 'Search CROSSUB office address'
+              : 'Search agent office or property address'
           }
-          onChange={(e) => setLocation(e.target.value)}
         />
       </div>
       <Button

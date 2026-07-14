@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import { AddressLineAutocomplete } from '@/components/end-leasing/address-line-autocomplete';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -190,7 +191,12 @@ export function KeyCollectionForm({
         <Label htmlFor="kc-loc" className="text-xs">
           Location
         </Label>
-        <Input id="kc-loc" value={location} onChange={(e) => setLocation(e.target.value)} />
+        <AddressLineAutocomplete
+          id="kc-loc"
+          value={location}
+          onChange={setLocation}
+          placeholder="Search key collection address"
+        />
       </div>
       <Button type="button" size="sm" className="h-8 text-xs" disabled={loading} onClick={() => void save()}>
         {loading ? 'Saving…' : 'Confirm key collection'}

@@ -83,6 +83,22 @@ export const leasingOpsApi = {
   recordSigning: (cycleId: string) =>
     unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/contract/sign`, {})),
 
+  markDepositPaid: (cycleId: string) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/deposit-paid`,
+        {},
+      ),
+    ),
+
+  markBondPaid: (cycleId: string) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/bond-paid`,
+        {},
+      ),
+    ),
+
   setKeyCollection: (cycleId: string, input: { time: string; location: string; timeEnd?: string }) =>
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(

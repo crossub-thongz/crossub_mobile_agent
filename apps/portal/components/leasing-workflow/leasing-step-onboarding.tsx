@@ -88,6 +88,8 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
   const clearBondSectionHighlight = useLeasingWorkflowStore((s) => s.clearBondSectionHighlight);
   const { leasingCycles, apiConnected } = useAgentData();
   const [recordingSigning, setRecordingSigning] = useState(false);
+  const [confirmingDeposit, setConfirmingDeposit] = useState(false);
+  const [confirmingBond, setConfirmingBond] = useState(false);
   const [downloadingAgreement, setDownloadingAgreement] = useState(false);
   const highlightBond = bondHighlightPropertyId === id;
 
@@ -109,6 +111,48 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
       o.bond.agentLink ? extractBondReferenceFromLink(o.bond.agentLink) : null,
     ) ?? null;
 
+  const depositPendingConfirm =
+    o.deposit.status === LEASING_ITEM_STATUS.WAITING && Boolean(o.deposit.proofUrl);
+  const bondPendingConfirm =
+    o.bond.status === LEASING_ITEM_STATUS.WAITING && Boolean(o.bond.proofUrl);
+  const agreementPendingConfirm =
+    o.agreement.status === LEASING_ITEM_STATUS.WAITING &&
+    o.agreement.signingStatus !== 'signed';
+
+  const confirmDeposit = async () => {
+    setConfirmingDeposit(true);
+    try {
+      if (apiConnected && cycleId) {
+        const view = await leasingOpsApi.markDepositPaid(cycleId);
+        store.applyCycleView(id, view);
+      } else {
+        store.markDepositPaid(id);
+      }
+      toast.success('Deposit confirmed');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not confirm deposit');
+    } finally {
+      setConfirmingDeposit(false);
+    }
+  };
+
+  const confirmBond = async () => {
+    setConfirmingBond(true);
+    try {
+      if (apiConnected && cycleId) {
+        const view = await leasingOpsApi.markBondPaid(cycleId);
+        store.applyCycleView(id, view);
+      } else {
+        store.markBondPaid(id);
+      }
+      toast.success('Bond confirmed');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not confirm bond');
+    } finally {
+      setConfirmingBond(false);
+    }
+  };
+
   const recordSigning = async () => {
     setRecordingSigning(true);
     try {
@@ -118,7 +162,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
       } else {
         store.recordSigning(id);
       }
-      toast.success('Signing recorded');
+      toast.success('Agreement confirmed');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not record signing');
     } finally {
@@ -165,7 +209,20 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             value={o.deposit.paidAt ? formatDate(o.deposit.paidAt) : 'Not paid'}
           />
         </div>
-        <ProofLine fileName={o.deposit.proofFileName} proofUrl={o.deposit.proofUrl} />
+        <div className="mt-2 space-y-2">
+          <ProofLine fileName={o.deposit.proofFileName} proofUrl={o.deposit.proofUrl} />
+          {depositPendingConfirm ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 w-full text-xs"
+              disabled={confirmingDeposit}
+              onClick={() => void confirmDeposit()}
+            >
+              {confirmingDeposit ? 'Confirming…' : 'Confirm deposit'}
+            </Button>
+          ) : null}
+        </div>
       </StepCard>
 
       <StepCard
@@ -193,7 +250,20 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             />
           ) : null}
         </div>
-        <ProofLine fileName={o.bond.proofFileName} proofUrl={o.bond.proofUrl} />
+        <div className="mt-2 space-y-2">
+          <ProofLine fileName={o.bond.proofFileName} proofUrl={o.bond.proofUrl} />
+          {bondPendingConfirm ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 w-full text-xs"
+              disabled={confirmingBond}
+              onClick={() => void confirmBond()}
+            >
+              {confirmingBond ? 'Confirming…' : 'Confirm bond'}
+            </Button>
+          ) : null}
+        </div>
       </StepCard>
 
       <StepCard
@@ -230,7 +300,17 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
                   {downloadingAgreement ? 'Downloading…' : 'Download PDF'}
                 </Button>
               )}
-              {o.agreement.signingStatus !== 'signed' && (
+              {agreementPendingConfirm ? (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={recordingSigning}
+                  onClick={() => void recordSigning()}
+                >
+                  {recordingSigning ? 'Confirming…' : 'Confirm agreement'}
+                </Button>
+              ) : null}
+              {o.agreement.signingStatus !== 'signed' && !agreementPendingConfirm ? (
                 <Button
                   size="sm"
                   variant="outline"
@@ -240,7 +320,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
                 >
                   {recordingSigning ? 'Recording…' : 'Record signing'}
                 </Button>
-              )}
+              ) : null}
             </>
           ) : undefined
         }
