@@ -29,10 +29,12 @@ export function RentReviewCompletedPanel({
   detail,
   onUpdated,
   onNavigateToStep,
+  readOnly = false,
 }: {
   detail: RentReviewWorkflowDetail;
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
   onNavigateToStep?: (step: RentReviewAgentStep) => void;
+  readOnly?: boolean;
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);

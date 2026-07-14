@@ -33,6 +33,11 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
   const [busy, setBusy] = useState(false);
   const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
 
+  const dialogInspection = useMemo(
+    () => inspections.find((item) => item.id === inspectionDialogId) ?? null,
+    [inspectionDialogId, inspections],
+  );
+
   if (!showLeasingIngoingNextStepPanel(detail)) return null;
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
@@ -44,11 +49,6 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
   const openJobCase = (inspectionId: string) => {
     setInspectionDialogId(inspectionId);
   };
-
-  const dialogInspection = useMemo(
-    () => inspections.find((item) => item.id === inspectionDialogId) ?? null,
-    [inspectionDialogId, inspections],
-  );
 
   const handleStart = async () => {
     const moveIn = detail.rental.moveInDate ?? detail.rental.availableFrom;

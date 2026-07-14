@@ -77,7 +77,10 @@ export function LeasingContractDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="border-border bg-card max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent
+        elevated
+        className="border-border bg-card max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-lg"
+      >
         <DialogHeader className="border-border/60 border-b px-6 py-5">
           <DialogTitle className="text-base font-semibold">
             Agreement · {contract.contractId}

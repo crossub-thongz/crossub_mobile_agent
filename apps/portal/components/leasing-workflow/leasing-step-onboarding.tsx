@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import { LeasingAgreementSignedDocumentPanel, LeasingAgreementActionGroup } from '@/components/leasing-workflow/leasing-agreement-signed-document';
 import { LeasingContractDialog } from '@/components/leasing-workflow/leasing-contract-dialog';
 import { LeasingIngoingNextStepPanel } from '@/components/leasing-workflow/leasing-ingoing-next-step';
 import { LeasingKeyCollectionEvidencePanel } from '@/components/leasing-workflow/leasing-key-collection-evidence';
@@ -164,7 +165,11 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
     o.bond.status === LEASING_ITEM_STATUS.WAITING && hasPendingProof(o.bond);
   const agreementPendingConfirm =
     o.agreement.status === LEASING_ITEM_STATUS.WAITING &&
-    o.agreement.signingStatus !== 'signed';
+    o.agreement.signingStatus !== 'signed' &&
+    hasPendingProof({
+      proofFileName: o.agreement.signedProofFileName,
+      proofUrl: o.agreement.signedProofUrl,
+    });
 
   const confirmDeposit = async () => {
     setConfirmingDeposit(true);
@@ -375,52 +380,61 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         status={o.agreement.status}
         footer={
           agreementReady ? (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                onClick={() => store.setContractDialogOpen(true)}
-              >
-                View agreement
-              </Button>
-              {apiConnected && cycleId && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 gap-1 text-xs"
-                  disabled={downloadingAgreement}
-                  onClick={() => void downloadAgreement()}
-                >
-                  <FileDown className="size-3" />
-                  {downloadingAgreement ? 'Downloading…' : 'Download PDF'}
-                </Button>
-              )}
-              {agreementPendingConfirm ? (
-                <OnboardingReviewActions
-                  approving={recordingSigning}
-                  rejecting={rejectingAgreement}
-                  onApprove={() => void recordSigning()}
-                  onReject={() => void rejectAgreement()}
-                  approveLabel="Approve agreement"
-                  rejectLabel="Reject"
-                />
-              ) : null}
-              {o.agreement.signingStatus !== 'signed' && !agreementPendingConfirm ? (
+            <div className="flex w-full flex-col gap-3">
+              <LeasingAgreementActionGroup label="Draft agreement">
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-8 text-xs"
-                  disabled={recordingSigning}
-                  onClick={() => void recordSigning()}
+                  onClick={() => store.setContractDialogOpen(true)}
                 >
-                  {recordingSigning ? 'Recording…' : 'Record signing'}
+                  View agreement
                 </Button>
+                {apiConnected && cycleId ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1 text-xs"
+                    disabled={downloadingAgreement}
+                    onClick={() => void downloadAgreement()}
+                  >
+                    <FileDown className="size-3" />
+                    {downloadingAgreement ? 'Downloading…' : 'Download PDF'}
+                  </Button>
+                ) : null}
+                {o.agreement.signingStatus !== 'signed' && !agreementPendingConfirm ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    disabled={recordingSigning}
+                    onClick={() => void recordSigning()}
+                  >
+                    {recordingSigning ? 'Recording…' : 'Record signing'}
+                  </Button>
+                ) : null}
+              </LeasingAgreementActionGroup>
+              {agreementPendingConfirm ? (
+                <LeasingAgreementActionGroup label="Tenant submission">
+                  <OnboardingReviewActions
+                    approving={recordingSigning}
+                    rejecting={rejectingAgreement}
+                    onApprove={() => void recordSigning()}
+                    onReject={() => void rejectAgreement()}
+                    approveLabel="Approve agreement"
+                    rejectLabel="Reject"
+                  />
+                </LeasingAgreementActionGroup>
               ) : null}
-            </>
+            </div>
           ) : undefined
         }
       >
+        <LeasingAgreementSignedDocumentPanel
+          fileName={o.agreement.signedProofFileName}
+          proofUrl={o.agreement.signedProofUrl}
+          pending={agreementPendingConfirm}
+        />
         <div className="grid grid-cols-2 gap-3">
           <StepFact label="Template" value={o.agreement.contract.template} />
           <StepFact label="Term" value={o.agreement.contract.leaseTerm} />
@@ -433,13 +447,6 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             }
           />
           <StepFact label="Signing" value={SIGNING_LABEL[o.agreement.signingStatus]} />
-        </div>
-        <div className="mt-2 space-y-2">
-          <ProofLine
-            fileName={o.agreement.signedProofFileName ?? o.agreement.uploadedFileName}
-            proofUrl={o.agreement.signedProofUrl}
-            label="Signed agreement"
-          />
         </div>
       </StepCard>
 

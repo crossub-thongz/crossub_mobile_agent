@@ -34,39 +34,6 @@ import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
-function SubProgressList({ items }: { items: { id: string; label: string; done: boolean }[] }) {
-  if (items.length === 0) return null;
-
-  const doneCount = items.filter((i) => i.done).length;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-          Progress
-        </p>
-        <p className="text-muted-foreground text-[10px] tabular-nums">
-          {doneCount}/{items.length}
-        </p>
-      </div>
-      <ul className="space-y-1.5">
-        {items.map((item) => (
-          <li
-            key={item.id}
-            className={`rounded-lg border px-2.5 py-2 text-xs ${
-              item.done
-                ? 'border-primary/20 bg-primary/5 text-foreground'
-                : 'border-border/60 bg-muted/20 text-muted-foreground'
-            }`}
-          >
-            {item.label}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function StepContent({
   stepId,
   detail,
@@ -217,13 +184,6 @@ export function RentReviewAgentWorkflowPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
-        <p className="font-semibold">Agent steps — research & decision</p>
-        <p className="mt-1 text-amber-900/80 dark:text-amber-100/80">
-          Complete rent research and agent decision here. Tenant notice, negotiation, and
-          completion are managed in the admin portal.
-        </p>
-      </div>
       <WorkflowProgressRail
         steps={RENT_REVIEW_AGENT_STEP_ORDER}
         labels={RENT_REVIEW_AGENT_STEP_LABEL}
@@ -259,7 +219,6 @@ export function RentReviewAgentWorkflowPanel({
           ) : null}
         </div>
         <div className="space-y-4 p-4">
-          <SubProgressList items={viewingStep?.subProgress ?? []} />
           <StepContent
             stepId={viewingStepId}
             detail={detail}
