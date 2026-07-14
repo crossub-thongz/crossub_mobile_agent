@@ -46,6 +46,50 @@ function agreementAvailableFromCrossub(agreement: LeasingAgreementState): boolea
   );
 }
 
+function hasPendingProof(proof?: { proofFileName?: string; proofUrl?: string }): boolean {
+  return Boolean(proof?.proofFileName?.trim() || proof?.proofUrl?.trim());
+}
+
+function OnboardingReviewActions({
+  approving,
+  rejecting,
+  onApprove,
+  onReject,
+  approveLabel = 'Approve',
+  rejectLabel = 'Reject',
+}: {
+  approving: boolean;
+  rejecting: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+  approveLabel?: string;
+  rejectLabel?: string;
+}) {
+  return (
+    <div className="flex gap-2">
+      <Button
+        type="button"
+        size="sm"
+        className="h-8 flex-1 text-xs"
+        disabled={approving || rejecting}
+        onClick={onApprove}
+      >
+        {approving ? 'Approving…' : approveLabel}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8 flex-1 text-xs"
+        disabled={approving || rejecting}
+        onClick={onReject}
+      >
+        {rejecting ? 'Rejecting…' : rejectLabel}
+      </Button>
+    </div>
+  );
+}
+
 function ProofLine({
   fileName,
   proofUrl,
@@ -89,7 +133,10 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
   const { leasingCycles, apiConnected } = useAgentData();
   const [recordingSigning, setRecordingSigning] = useState(false);
   const [confirmingDeposit, setConfirmingDeposit] = useState(false);
+  const [rejectingDeposit, setRejectingDeposit] = useState(false);
   const [confirmingBond, setConfirmingBond] = useState(false);
+  const [rejectingBond, setRejectingBond] = useState(false);
+  const [rejectingAgreement, setRejectingAgreement] = useState(false);
   const [downloadingAgreement, setDownloadingAgreement] = useState(false);
   const highlightBond = bondHighlightPropertyId === id;
 
@@ -112,9 +159,9 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
     ) ?? null;
 
   const depositPendingConfirm =
-    o.deposit.status === LEASING_ITEM_STATUS.WAITING && Boolean(o.deposit.proofUrl);
+    o.deposit.status === LEASING_ITEM_STATUS.WAITING && hasPendingProof(o.deposit);
   const bondPendingConfirm =
-    o.bond.status === LEASING_ITEM_STATUS.WAITING && Boolean(o.bond.proofUrl);
+    o.bond.status === LEASING_ITEM_STATUS.WAITING && hasPendingProof(o.bond);
   const agreementPendingConfirm =
     o.agreement.status === LEASING_ITEM_STATUS.WAITING &&
     o.agreement.signingStatus !== 'signed';
@@ -123,16 +170,33 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
     setConfirmingDeposit(true);
     try {
       if (apiConnected && cycleId) {
-        const view = await leasingOpsApi.markDepositPaid(cycleId);
+        const view = await leasingOpsApi.approveDepositProof(cycleId);
         store.applyCycleView(id, view);
       } else {
         store.markDepositPaid(id);
       }
-      toast.success('Deposit confirmed');
+      toast.success('Deposit approved');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not confirm deposit');
+      toast.error(err instanceof Error ? err.message : 'Could not approve deposit');
     } finally {
       setConfirmingDeposit(false);
+    }
+  };
+
+  const rejectDeposit = async () => {
+    setRejectingDeposit(true);
+    try {
+      if (apiConnected && cycleId) {
+        const view = await leasingOpsApi.rejectDepositProof(cycleId);
+        store.applyCycleView(id, view);
+      } else {
+        store.rejectDepositProof(id);
+      }
+      toast.success('Deposit proof rejected — tenant can re-upload');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not reject deposit');
+    } finally {
+      setRejectingDeposit(false);
     }
   };
 
@@ -140,16 +204,33 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
     setConfirmingBond(true);
     try {
       if (apiConnected && cycleId) {
-        const view = await leasingOpsApi.markBondPaid(cycleId);
+        const view = await leasingOpsApi.approveBondProof(cycleId);
         store.applyCycleView(id, view);
       } else {
         store.markBondPaid(id);
       }
-      toast.success('Bond confirmed');
+      toast.success('Bond approved');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not confirm bond');
+      toast.error(err instanceof Error ? err.message : 'Could not approve bond');
     } finally {
       setConfirmingBond(false);
+    }
+  };
+
+  const rejectBond = async () => {
+    setRejectingBond(true);
+    try {
+      if (apiConnected && cycleId) {
+        const view = await leasingOpsApi.rejectBondProof(cycleId);
+        store.applyCycleView(id, view);
+      } else {
+        store.rejectBondProof(id);
+      }
+      toast.success('Bond proof rejected — tenant can re-upload');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not reject bond');
+    } finally {
+      setRejectingBond(false);
     }
   };
 
@@ -162,11 +243,28 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
       } else {
         store.recordSigning(id);
       }
-      toast.success('Agreement confirmed');
+      toast.success('Agreement approved');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not record signing');
     } finally {
       setRecordingSigning(false);
+    }
+  };
+
+  const rejectAgreement = async () => {
+    setRejectingAgreement(true);
+    try {
+      if (apiConnected && cycleId) {
+        const view = await leasingOpsApi.rejectAgreementSigning(cycleId);
+        store.applyCycleView(id, view);
+      } else {
+        store.rejectAgreementSigning(id);
+      }
+      toast.success('Agreement rejected — tenant can sign and submit again');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not reject agreement');
+    } finally {
+      setRejectingAgreement(false);
     }
   };
 
@@ -212,15 +310,14 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         <div className="mt-2 space-y-2">
           <ProofLine fileName={o.deposit.proofFileName} proofUrl={o.deposit.proofUrl} />
           {depositPendingConfirm ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 w-full text-xs"
-              disabled={confirmingDeposit}
-              onClick={() => void confirmDeposit()}
-            >
-              {confirmingDeposit ? 'Confirming…' : 'Confirm deposit'}
-            </Button>
+            <OnboardingReviewActions
+              approving={confirmingDeposit}
+              rejecting={rejectingDeposit}
+              onApprove={() => void confirmDeposit()}
+              onReject={() => void rejectDeposit()}
+              approveLabel="Approve deposit"
+              rejectLabel="Reject"
+            />
           ) : null}
         </div>
       </StepCard>
@@ -253,15 +350,14 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         <div className="mt-2 space-y-2">
           <ProofLine fileName={o.bond.proofFileName} proofUrl={o.bond.proofUrl} />
           {bondPendingConfirm ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 w-full text-xs"
-              disabled={confirmingBond}
-              onClick={() => void confirmBond()}
-            >
-              {confirmingBond ? 'Confirming…' : 'Confirm bond'}
-            </Button>
+            <OnboardingReviewActions
+              approving={confirmingBond}
+              rejecting={rejectingBond}
+              onApprove={() => void confirmBond()}
+              onReject={() => void rejectBond()}
+              approveLabel="Approve bond"
+              rejectLabel="Reject"
+            />
           ) : null}
         </div>
       </StepCard>
@@ -301,14 +397,14 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
                 </Button>
               )}
               {agreementPendingConfirm ? (
-                <Button
-                  size="sm"
-                  className="h-8 text-xs"
-                  disabled={recordingSigning}
-                  onClick={() => void recordSigning()}
-                >
-                  {recordingSigning ? 'Confirming…' : 'Confirm agreement'}
-                </Button>
+                <OnboardingReviewActions
+                  approving={recordingSigning}
+                  rejecting={rejectingAgreement}
+                  onApprove={() => void recordSigning()}
+                  onReject={() => void rejectAgreement()}
+                  approveLabel="Approve agreement"
+                  rejectLabel="Reject"
+                />
               ) : null}
               {o.agreement.signingStatus !== 'signed' && !agreementPendingConfirm ? (
                 <Button

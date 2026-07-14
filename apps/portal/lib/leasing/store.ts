@@ -39,10 +39,13 @@ type LeasingWorkflowStore = {
   sendSelectedToAgent: (id: string) => void;
   setApplicantDecision: (id: string, applicationId: string, decision: LeasingAgentDecision) => void;
   markDepositPaid: (id: string) => void;
+  rejectDepositProof: (id: string) => void;
   setBondLink: (id: string, link: string) => void;
   markBondPaid: (id: string) => void;
+  rejectBondProof: (id: string) => void;
   confirmContract: (id: string) => void;
   recordSigning: (id: string) => void;
+  rejectAgreementSigning: (id: string) => void;
   setKeyCollection: (id: string, time: string, location: string, timeEnd?: string) => void;
   /** Overlay key-collection state from `GET /agent/properties/:id/key-collection`. */
   applyKeyCollectionFromApi: (id: string, kc: AgentKeyCollection) => void;
@@ -263,6 +266,23 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
     }));
   },
 
+  rejectDepositProof(id) {
+    set((s) => ({
+      details: updateDetail(s.details, id, (p) => ({
+        ...p,
+        onboarding: {
+          ...p.onboarding,
+          deposit: {
+            ...p.onboarding.deposit,
+            status: LEASING_ITEM_STATUS.NOT_STARTED,
+            proofFileName: undefined,
+            proofUrl: undefined,
+          },
+        },
+      })),
+    }));
+  },
+
   setBondLink(id, link) {
     const now = new Date().toISOString();
     set((s) => ({
@@ -299,6 +319,23 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
     }));
   },
 
+  rejectBondProof(id) {
+    set((s) => ({
+      details: updateDetail(s.details, id, (p) => ({
+        ...p,
+        onboarding: {
+          ...p.onboarding,
+          bond: {
+            ...p.onboarding.bond,
+            status: LEASING_ITEM_STATUS.NOT_STARTED,
+            proofFileName: undefined,
+            proofUrl: undefined,
+          },
+        },
+      })),
+    }));
+  },
+
   confirmContract(id) {
     set((s) => ({
       details: updateDetail(s.details, id, (p) => ({
@@ -327,6 +364,23 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
             status: LEASING_ITEM_STATUS.DONE,
             signingStatus: 'signed',
             signedAt: now,
+          },
+        },
+      })),
+    }));
+  },
+
+  rejectAgreementSigning(id) {
+    set((s) => ({
+      details: updateDetail(s.details, id, (p) => ({
+        ...p,
+        onboarding: {
+          ...p.onboarding,
+          agreement: {
+            ...p.onboarding.agreement,
+            status: LEASING_ITEM_STATUS.NOT_STARTED,
+            signingStatus: 'sent',
+            signedAt: undefined,
           },
         },
       })),

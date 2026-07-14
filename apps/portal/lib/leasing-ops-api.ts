@@ -83,6 +83,14 @@ export const leasingOpsApi = {
   recordSigning: (cycleId: string) =>
     unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/contract/sign`, {})),
 
+  rejectAgreementSigning: (cycleId: string, input?: { reason?: string }) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/agreement/reject`,
+        input ?? {},
+      ),
+    ),
+
   markDepositPaid: (cycleId: string) =>
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(
@@ -91,11 +99,43 @@ export const leasingOpsApi = {
       ),
     ),
 
+  approveDepositProof: (cycleId: string) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/deposit-proof/approve`,
+        {},
+      ),
+    ),
+
+  rejectDepositProof: (cycleId: string, input?: { reason?: string }) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/deposit-proof/reject`,
+        input ?? {},
+      ),
+    ),
+
   markBondPaid: (cycleId: string) =>
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(
         `${BASE}/${cycleId}/onboarding/bond-paid`,
         {},
+      ),
+    ),
+
+  approveBondProof: (cycleId: string) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/bond-proof/approve`,
+        {},
+      ),
+    ),
+
+  rejectBondProof: (cycleId: string, input?: { reason?: string }) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/bond-proof/reject`,
+        input ?? {},
       ),
     ),
 
