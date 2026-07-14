@@ -135,6 +135,53 @@ export function ensureGroupDocumentTitle(
   return trimmed;
 }
 
+function groupFromExtraSlotId(slotId: string): CreatePropertyDocumentGroup | null {
+  if (slotId.startsWith('extra-landlord-')) return 'landlord';
+  if (slotId.startsWith('extra-tenant-')) return 'tenant_application';
+  if (slotId.startsWith('extra-tenancy-')) return 'tenancy';
+  return null;
+}
+
+/** Resolve the document group for a staged wizard upload (fixed slot or extra row). */
+export function resolvePendingUploadGroup(input: {
+  slotId: string;
+  title: string;
+}): CreatePropertyDocumentGroup {
+  const slot = EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === input.slotId);
+  if (slot) return slot.group;
+  return groupFromExtraSlotId(input.slotId) ?? classifyCreatePropertyDocument(input.title);
+}
+
+/** Short label for the upload progress bar (slot name, not filename). */
+export function resolvePendingUploadDisplayLabel(input: {
+  slotId: string;
+  title: string;
+  fileName: string;
+}): string {
+  const slot = EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === input.slotId);
+  if (slot) return slot.label;
+  return input.title.trim() || input.fileName;
+}
+
+/**
+ * Portal document title for a queued create-property upload — matches the Documents tab
+ * direct-upload format so files land in the correct checklist slot.
+ */
+export function resolvePendingUploadTitle(input: {
+  slotId: string;
+  title: string;
+  fileName: string;
+}): string {
+  const slot = EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === input.slotId);
+  const baseTitle = slot
+    ? ensureGroupDocumentTitle(slot.group, slot.label)
+    : ensureGroupDocumentTitle(
+        resolvePendingUploadGroup(input),
+        input.title.trim() || input.fileName,
+      );
+  return `${baseTitle} — ${input.fileName}`;
+}
+
 export type UploadedDocumentLike = {
   id: string;
   title: string;

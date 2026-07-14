@@ -94,3 +94,18 @@ export async function clearPropertyPendingUploads(propertyId: string): Promise<v
     // Best-effort cleanup.
   }
 }
+
+/** Remove one uploaded record so retries do not re-send files already saved. */
+export async function removePendingUploadRecord(
+  propertyId: string,
+  recordId: string,
+): Promise<void> {
+  const records = await peekPropertyPendingUploads(propertyId);
+  const remaining = records.filter((r) => r.id !== recordId);
+  if (remaining.length === records.length) return;
+  if (remaining.length === 0) {
+    await clearPropertyPendingUploads(propertyId);
+  } else {
+    await queuePropertyPendingUploads(propertyId, remaining);
+  }
+}

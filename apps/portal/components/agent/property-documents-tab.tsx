@@ -16,14 +16,15 @@ import {
   CREATE_PROPERTY_DOCUMENT_GROUP_LABELS,
   ensureGroupDocumentTitle,
   PROPERTY_DETAIL_DOCUMENT_GROUP_ORDER,
+  resolvePendingUploadDisplayLabel,
+  resolvePendingUploadTitle,
   type CreatePropertyDocumentGroup,
   type DocumentChecklistFile,
   type DocumentChecklistRow,
 } from '@/lib/property-create-document-groups';
 import {
-  clearPropertyPendingUploads,
   peekPropertyPendingUploads,
-  queuePropertyPendingUploads,
+  removePendingUploadRecord,
   type PendingPropertyUploadRecord,
 } from '@/lib/property-create-pending-uploads';
 import {
@@ -340,6 +341,12 @@ export function PropertyDocumentsTab({
   } | null>(null);
 
   const fullAddress = formatPropertyFullAddress(property);
+  const uploadDocumentRef = useRef(uploadDocument);
+  uploadDocumentRef.current = uploadDocument;
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  const fullAddressRef = useRef(fullAddress);
+  fullAddressRef.current = fullAddress;
 
   useEffect(() => {
     if (!apiConnected) return;
@@ -354,21 +361,21 @@ export function PropertyDocumentsTab({
 
       let succeeded = 0;
       let failed = 0;
-      const remaining: PendingPropertyUploadRecord[] = [];
-      const fileShare = 100 / queued.length;
+      const total = queued.length;
+      const fileShare = 100 / total;
 
       for (let i = 0; i < queued.length; i++) {
-        if (cancelled) return;
+        if (cancelled) break;
         const record = queued[i]!;
         setQueuedUpload(record);
-        setQueuedRemaining(queued.length - i);
+        setQueuedRemaining(total - i);
         setQueuePhase('uploading');
         setUploadProgress(Math.round(i * fileShare));
 
         try {
           const file = new File([record.blob], record.fileName, { type: record.mimeType });
-          await uploadDocument(file, 'lease', fullAddress, {
-            title: record.title,
+          await uploadDocumentRef.current(file, 'lease', fullAddressRef.current, {
+            title: resolvePendingUploadTitle(record),
             propertyId,
             skipRefresh: true,
             onProgress: (pct) => {
@@ -377,28 +384,25 @@ export function PropertyDocumentsTab({
               setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
             },
           });
+          await removePendingUploadRecord(propertyId, record.id);
           succeeded += 1;
         } catch (err) {
           failed += 1;
-          remaining.push(record);
           toast.error(
             err instanceof Error ? err.message : `Failed to upload ${record.fileName}`,
           );
         }
       }
 
-      if (remaining.length === 0) {
-        await clearPropertyPendingUploads(propertyId);
-      } else {
-        await queuePropertyPendingUploads(propertyId, remaining);
-      }
       if (cancelled) return;
 
       setQueuedUpload(null);
       setQueuedRemaining(0);
       setQueuePhase(null);
       setUploadProgress(null);
-      await refresh();
+      await refreshRef.current();
+
+      if (succeeded === 0 && failed === 0) return;
 
       if (failed === 0) {
         toast.success(
@@ -422,7 +426,7 @@ export function PropertyDocumentsTab({
     return () => {
       cancelled = true;
     };
-  }, [apiConnected, fullAddress, propertyId, refresh, uploadDocument]);
+  }, [apiConnected, propertyId]);
 
   const displayDocs = useMemo<DisplayDoc[]>(() => {
     const byId = new Map<string, DisplayDoc>();
@@ -626,10 +630,10 @@ export function PropertyDocumentsTab({
             percent={uploadProgress ?? 0}
             label={
               queuePhase === 'saving'
-                ? `Saving ${queuedUpload.title || queuedUpload.fileName}${
+                ? `Saving ${resolvePendingUploadDisplayLabel(queuedUpload)}${
                     queuedRemaining > 1 ? ` (${queuedRemaining} left)` : ''
                   }`
-                : `Uploading ${queuedUpload.title || queuedUpload.fileName}${
+                : `Uploading ${resolvePendingUploadDisplayLabel(queuedUpload)}${
                     queuedRemaining > 1 ? ` (${queuedRemaining} left)` : ''
                   }`
             }
