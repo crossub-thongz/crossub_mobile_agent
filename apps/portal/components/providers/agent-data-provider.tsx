@@ -201,7 +201,7 @@ interface AgentDataContextValue {
     file: File,
     category: AgentDocument['category'],
     propertyAddress: string,
-    options?: { title?: string; propertyId?: string; onProgress?: (percent: number) => void },
+    options?: { title?: string; propertyId?: string; onProgress?: (percent: number) => void; skipRefresh?: boolean },
   ) => Promise<void>;
   deleteDocument: (documentId: string) => Promise<void>;
   sendMessage: (
@@ -970,7 +970,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       file: File,
       category: AgentDocument['category'],
       propertyAddress: string,
-      options?: { title?: string; propertyId?: string; onProgress?: (percent: number) => void },
+      options?: { title?: string; propertyId?: string; onProgress?: (percent: number) => void; skipRefresh?: boolean },
     ) => {
       const displayTitle = options?.title?.trim() || file.name;
       const onProgress = options?.onProgress;
@@ -1003,7 +1003,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
             (networkPct) => onProgress?.(mapNetworkUploadProgress(networkPct)),
           );
           onProgress?.(100);
-          await refresh();
+          if (!options?.skipRefresh) {
+            await refresh();
+          }
         } catch (err) {
           throw err instanceof Error ? err : new Error('Failed to upload document');
         }

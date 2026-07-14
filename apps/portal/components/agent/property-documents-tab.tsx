@@ -321,7 +321,8 @@ export function PropertyDocumentsTab({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [queuedUpload, setQueuedUpload] = useState<PendingPropertyUploadRecord | null>(null);
   const [queuedRemaining, setQueuedRemaining] = useState(0);
-  const queueStartedRef = useRef(false);
+  const [queuePhase, setQueuePhase] = useState<'uploading' | 'saving' | null>(null);
+  const inflightQueueRef = useRef<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [extraDrafts, setExtraDrafts] =
     useState<Record<CreatePropertyDocumentGroup, ExtraDraftRow[]>>(EMPTY_DRAFTS);
@@ -341,33 +342,39 @@ export function PropertyDocumentsTab({
   const fullAddress = formatPropertyFullAddress(property);
 
   useEffect(() => {
-    if (!apiConnected || queueStartedRef.current) return;
-    queueStartedRef.current = true;
+    if (!apiConnected) return;
+    if (inflightQueueRef.current === propertyId) return;
 
     let cancelled = false;
     void (async () => {
       const queued = await peekPropertyPendingUploads(propertyId);
       if (cancelled || queued.length === 0) return;
 
+      inflightQueueRef.current = propertyId;
+
       let succeeded = 0;
       let failed = 0;
       const remaining: PendingPropertyUploadRecord[] = [];
+      const fileShare = 100 / queued.length;
 
       for (let i = 0; i < queued.length; i++) {
         if (cancelled) return;
         const record = queued[i]!;
         setQueuedUpload(record);
         setQueuedRemaining(queued.length - i);
-        setUploadProgress(0);
+        setQueuePhase('uploading');
+        setUploadProgress(Math.round(i * fileShare));
 
         try {
           const file = new File([record.blob], record.fileName, { type: record.mimeType });
           await uploadDocument(file, 'lease', fullAddress, {
             title: record.title,
             propertyId,
+            skipRefresh: true,
             onProgress: (pct) => {
-              const overall = Math.round(((i + pct / 100) / queued.length) * 100);
+              const overall = Math.round(i * fileShare + (pct / 100) * fileShare);
               setUploadProgress(overall);
+              setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
             },
           });
           succeeded += 1;
@@ -389,6 +396,7 @@ export function PropertyDocumentsTab({
 
       setQueuedUpload(null);
       setQueuedRemaining(0);
+      setQueuePhase(null);
       setUploadProgress(null);
       await refresh();
 
@@ -405,7 +413,11 @@ export function PropertyDocumentsTab({
       } else {
         toast.error('Document uploads failed — refresh this tab to retry.');
       }
-    })();
+    })().finally(() => {
+      if (inflightQueueRef.current === propertyId) {
+        inflightQueueRef.current = null;
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -612,9 +624,15 @@ export function PropertyDocumentsTab({
         <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-3">
           <DocumentUploadProgress
             percent={uploadProgress ?? 0}
-            label={`Uploading ${queuedUpload.title || queuedUpload.fileName}${
-              queuedRemaining > 1 ? ` (${queuedRemaining} left)` : ''
-            }`}
+            label={
+              queuePhase === 'saving'
+                ? `Saving ${queuedUpload.title || queuedUpload.fileName}${
+                    queuedRemaining > 1 ? ` (${queuedRemaining} left)` : ''
+                  }`
+                : `Uploading ${queuedUpload.title || queuedUpload.fileName}${
+                    queuedRemaining > 1 ? ` (${queuedRemaining} left)` : ''
+                  }`
+            }
           />
           <p className="text-muted-foreground mt-2 text-xs">
             Large files can take a few minutes — keep this tab open until uploads finish.

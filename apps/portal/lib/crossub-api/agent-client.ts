@@ -616,13 +616,17 @@ export async function uploadAgentDocumentFileWithProgress(
 
   const session = await beginDocumentUploadSession(payload);
   if (session.mode === 'direct') {
+    onNetworkProgress?.(0);
     await putFileToPresignedUrl(
       session.uploadUrl,
       file,
       payload.mimeType,
-      onNetworkProgress,
+      (pct) => onNetworkProgress?.(Math.min(90, Math.round(pct * 0.9))),
     );
-    return completeDocumentUploadSession(session.storageKey, payload);
+    onNetworkProgress?.(95);
+    const created = await completeDocumentUploadSession(session.storageKey, payload);
+    onNetworkProgress?.(100);
+    return created;
   }
 
   const contentBase64 = await fileToBase64WithProgress(file, (readPct) =>
