@@ -48,6 +48,15 @@ export function DashboardPropertiesMap({
   const [mapsFailed, setMapsFailed] = useState(false);
 
   const mappable = useMemo(() => properties.filter(isMappable), [properties]);
+  const mappableSignature = useMemo(
+    () =>
+      mappable
+        .map((p) => `${p.id}:${p.latitude}:${p.longitude}`)
+        .sort()
+        .join('|'),
+    [mappable],
+  );
+  const lastViewportSignatureRef = useRef<string | null>(null);
   const missingCoords = properties.length - mappable.length;
 
   useEffect(() => {
@@ -94,8 +103,12 @@ export function DashboardPropertiesMap({
       markersRef.current = [];
 
       if (mappable.length === 0) {
-        mapRef.current.setCenter(DEFAULT_CENTER);
-        mapRef.current.setZoom(DEFAULT_ZOOM);
+        const viewportChanged = lastViewportSignatureRef.current !== mappableSignature;
+        if (viewportChanged) {
+          mapRef.current.setCenter(DEFAULT_CENTER);
+          mapRef.current.setZoom(DEFAULT_ZOOM);
+          lastViewportSignatureRef.current = mappableSignature;
+        }
         google.maps.event.trigger(mapRef.current, 'resize');
         return;
       }
@@ -128,19 +141,23 @@ export function DashboardPropertiesMap({
         markersRef.current.push(marker);
       }
 
-      if (mappable.length === 1) {
-        mapRef.current.setCenter({
-          lat: mappable[0].latitude,
-          lng: mappable[0].longitude,
-        });
-        mapRef.current.setZoom(14);
-      } else {
-        mapRef.current.fitBounds(bounds, 48);
+      const viewportChanged = lastViewportSignatureRef.current !== mappableSignature;
+      if (viewportChanged) {
+        if (mappable.length === 1) {
+          mapRef.current.setCenter({
+            lat: mappable[0].latitude,
+            lng: mappable[0].longitude,
+          });
+          mapRef.current.setZoom(14);
+        } else {
+          mapRef.current.fitBounds(bounds, 48);
+        }
+        lastViewportSignatureRef.current = mappableSignature;
       }
 
       google.maps.event.trigger(mapRef.current, 'resize');
     });
-  }, [mapsReady, mappable]);
+  }, [mapsReady, mappable, mappableSignature]);
 
   useEffect(() => {
     if (!mapsReady || !mapContainerRef.current || !mapRef.current) return;

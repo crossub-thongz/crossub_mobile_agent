@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -51,8 +51,14 @@ export function PropertyAddressAutocomplete({
   const apiKey = getGoogleMapsApiKey();
   const mapsEnabled = !!apiKey;
 
-  const coords =
-    latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null;
+  const coords = useMemo(
+    () =>
+      latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null,
+    [latitude, longitude],
+  );
+  const coordsSignature =
+    coords != null ? `${coords.lat}:${coords.lng}` : 'none';
+  const lastCoordsSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     onPlaceSelectRef.current = onPlaceSelect;
@@ -142,6 +148,8 @@ export function PropertyAddressAutocomplete({
       const center = coords ?? DEFAULT_CENTER;
       const zoom = coords ? SELECTED_ZOOM : DEFAULT_ZOOM;
 
+      const coordsChanged = lastCoordsSignatureRef.current !== coordsSignature;
+
       if (!mapRef.current) {
         mapRef.current = new google.maps.Map(mapContainerRef.current, {
           center,
@@ -155,7 +163,8 @@ export function PropertyAddressAutocomplete({
           position: center,
           visible: !!coords,
         });
-      } else {
+        lastCoordsSignatureRef.current = coordsSignature;
+      } else if (coordsChanged) {
         mapRef.current.setCenter(center);
         mapRef.current.setZoom(zoom);
         if (coords) {
@@ -164,12 +173,12 @@ export function PropertyAddressAutocomplete({
         } else {
           markerRef.current?.setVisible(false);
         }
+        lastCoordsSignatureRef.current = coordsSignature;
       }
 
       google.maps.event.trigger(mapRef.current, 'resize');
-      mapRef.current.setCenter(center);
     });
-  }, [mapsEnabled, mapsReady, coords]);
+  }, [mapsEnabled, mapsReady, coords, coordsSignature]);
 
   useEffect(() => {
     if (!mapsReady || !mapContainerRef.current || !mapRef.current) return;
@@ -177,12 +186,10 @@ export function PropertyAddressAutocomplete({
     const observer = new ResizeObserver(() => {
       if (!mapRef.current) return;
       google.maps.event.trigger(mapRef.current, 'resize');
-      const center = coords ?? DEFAULT_CENTER;
-      mapRef.current.setCenter(center);
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [mapsReady, coords]);
+  }, [mapsReady]);
 
   const showMap = mapsEnabled && mapsReady;
   const showMapColumn = mapsEnabled && !mapsFailed;

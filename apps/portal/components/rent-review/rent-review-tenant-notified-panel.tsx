@@ -10,11 +10,9 @@ import { Label } from '@/components/ui/label';
 import { RentReviewTenantReminderCountdownBadge } from '@/components/rent-review/rent-review-tenant-reminder-countdown-badge';
 import { RentReviewTenantRemindersDialog } from '@/components/rent-review/rent-review-tenant-reminders-dialog';
 import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
-import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
-  canRecordTenantResponseOnBehalf,
   canResendTenantNotice,
   canSendTenantNotice,
   hasTenantNoticeSent,
@@ -49,7 +47,6 @@ export function RentReviewTenantNotifiedPanel({
   const noticeSent = hasTenantNoticeSent(detail);
   const showSendNotice = canSendTenantNotice(detail);
   const resendNotice = canResendTenantNotice(detail);
-  const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
   const reminders = listTenantResponseReminders(detail);
   const noticeAudit = [...detail.auditLog].reverse().find((e) => e.kind === 'tenant_notices_dispatched');
 
@@ -191,9 +188,11 @@ export function RentReviewTenantNotifiedPanel({
         </section>
       ) : null}
 
+      {/* Record tenant response — tenants respond via the tenant portal instead.
       {showRecordResponse && !readOnly ? (
         <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
       ) : null}
+      */}
 
       <RentReviewTenantRemindersDialog
         detail={detail}

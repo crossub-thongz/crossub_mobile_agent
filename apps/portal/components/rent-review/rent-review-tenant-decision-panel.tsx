@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewLeaseAgreementAudit } from '@/components/rent-review/rent-review-lease-agreement-audit';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
-import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
-import { canRecordTenantResponseOnBehalf } from '@/lib/rent-review/agent-workflow-model';
 import {
   buildLeaseAgreementProgress,
   buildTenantAcceptanceSummary,
@@ -35,7 +33,6 @@ export function RentReviewTenantDecisionPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
 
-  const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
   const accepted = isTenantAccepted(detail);
   const declined = isTenantDeclined(detail);
   const acceptance = buildTenantAcceptanceSummary(detail);
@@ -85,16 +82,16 @@ export function RentReviewTenantDecisionPanel({
 
         {awaiting ? (
           <p className="text-muted-foreground text-xs">
-            {showRecordResponse
-              ? 'Awaiting tenant accept or decline. Record their response below, or use Negotiation if they counter-offer.'
-              : 'Awaiting tenant accept or decline after the formal notice.'}
+            Awaiting tenant accept or decline via the tenant portal.
           </p>
         ) : null}
       </section>
 
+      {/* Record tenant response — tenants respond via the tenant portal instead.
       {showRecordResponse && !readOnly ? (
         <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} readOnly={readOnly} />
       ) : null}
+      */}
 
       {declined && !readOnly ? (
         <RentReviewEndLeasingPanel

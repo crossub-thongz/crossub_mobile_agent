@@ -97,6 +97,7 @@ type ExtendedAgentProperty = AgentProperty & {
   registryIntakeComplete?: boolean | null;
   registryDraft?: Record<string, unknown> | null;
   vacateDate?: string | null;
+  nextRentReviewAt?: string | null;
   rentPaidUntil?: string | null;
 };
 
@@ -122,6 +123,7 @@ type AgentPropertyListFields = {
   registryIntakeComplete?: boolean | null;
   registryDraft?: Record<string, unknown> | null;
   vacateDate?: string | null;
+  nextRentReviewAt?: string | null;
   rentPaidUntil?: string | null;
 };
 
@@ -192,6 +194,11 @@ export function mapAgentProperty(
       (dto as AgentProperty & { vacateDate?: string | null }).vacateDate ??
       list.vacateDate ??
       ext.vacateDate ??
+      undefined,
+    nextRentReview:
+      (dto as AgentProperty & { nextRentReviewAt?: string | null }).nextRentReviewAt?.slice(0, 10) ??
+      list.nextRentReviewAt?.slice(0, 10) ??
+      ext.nextRentReviewAt?.slice(0, 10) ??
       undefined,
     rentPaidUntil:
       (dto as AgentProperty & { rentPaidUntil?: string | null }).rentPaidUntil ??
