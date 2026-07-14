@@ -63,6 +63,7 @@ export interface ServerLeasingOnboarding {
     status: string
     paidAt: string | null
     proofFileName: string | null
+    proofUrl: string | null
     ledgerEntryId: string | null
   }
   bond: {
@@ -71,6 +72,7 @@ export interface ServerLeasingOnboarding {
     sentToTenantAt: string | null
     paidAt: string | null
     proofFileName: string | null
+    proofUrl: string | null
     ledgerEntryId: string | null
     lodgementRef: string | null
   }
@@ -85,6 +87,7 @@ export interface ServerLeasingOnboarding {
   keyCollection: {
     status: string
     time: string | null
+    timeEnd: string | null
     location: string | null
     photos: string[]
     tenantReport: {

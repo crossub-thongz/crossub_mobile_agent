@@ -51,6 +51,50 @@ export function formatScheduledAt(iso?: string | null): string {
   return `${formatDate(iso)} · ${formatTime(iso)}`;
 }
 
+/** Key collection / open inspection window for display cards. */
+export function formatOpenInspectionWindow(
+  startIso?: string,
+  endIso?: string,
+): string | null {
+  if (!startIso) return null;
+  const start = new Date(startIso);
+  if (Number.isNaN(start.getTime())) return null;
+
+  const datePart = start.toLocaleDateString('en-AU', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  const timeFmt: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: '2-digit',
+  };
+  const startTime = start.toLocaleTimeString('en-AU', timeFmt);
+
+  if (!endIso) {
+    return `${datePart} · ${startTime}`;
+  }
+
+  const end = new Date(endIso);
+  if (Number.isNaN(end.getTime())) {
+    return `${datePart} · ${startTime}`;
+  }
+
+  const sameDay = start.toDateString() === end.toDateString();
+  const endTime = end.toLocaleTimeString('en-AU', timeFmt);
+  if (sameDay) {
+    return `${datePart} · ${startTime} – ${endTime}`;
+  }
+
+  const endDatePart = end.toLocaleDateString('en-AU', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  return `${datePart} · ${startTime} – ${endDatePart} · ${endTime}`;
+}
+
 export function formatRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const hours = Math.floor(diff / 3_600_000);

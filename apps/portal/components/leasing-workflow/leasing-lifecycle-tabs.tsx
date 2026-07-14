@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
+import { LeasingLifecyclePhaseNav } from '@/components/leasing-workflow/leasing-lifecycle-phase-nav';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { LeasingStepApplicationApproval } from '@/components/leasing-workflow/leasing-step-application-approval';
 import { LeasingStepOnboarding } from '@/components/leasing-workflow/leasing-step-onboarding';
@@ -38,6 +39,11 @@ export function LeasingLifecycleTabs({
       <LeasingLifecycleStepRail
         detail={liveDetail}
         currentStep={activeStep}
+        onStepClick={(step) => setActiveStep(detail.propertyId, step)}
+      />
+
+      <LeasingLifecyclePhaseNav
+        activeStep={activeStep}
         onStepClick={(step) => setActiveStep(detail.propertyId, step)}
       />
 

@@ -83,6 +83,14 @@ export const leasingOpsApi = {
   recordSigning: (cycleId: string) =>
     unwrap(api.patch<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/contract/sign`, {})),
 
+  setKeyCollection: (cycleId: string, input: { time: string; location: string; timeEnd?: string }) =>
+    unwrap(
+      api.patch<{ cycle: ServerLeasingCycleView }>(
+        `${BASE}/${cycleId}/onboarding/key-collection`,
+        input,
+      ),
+    ),
+
   downloadAgreementPdf: (cycleId: string): Promise<Blob> =>
     api.getBlob(`${BASE}/${cycleId}/contract/agreement.pdf`),
 

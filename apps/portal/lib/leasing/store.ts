@@ -43,7 +43,7 @@ type LeasingWorkflowStore = {
   markBondPaid: (id: string) => void;
   confirmContract: (id: string) => void;
   recordSigning: (id: string) => void;
-  setKeyCollection: (id: string, time: string, location: string) => void;
+  setKeyCollection: (id: string, time: string, location: string, timeEnd?: string) => void;
   /** Overlay key-collection state from `GET /agent/properties/:id/key-collection`. */
   applyKeyCollectionFromApi: (id: string, kc: AgentKeyCollection) => void;
   /** Merge a live `/leasing/cycles/:id` view into the workflow detail. */
@@ -333,7 +333,7 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
     }));
   },
 
-  setKeyCollection(id, time, location) {
+  setKeyCollection(id, time, location, timeEnd) {
     set((s) => ({
       details: updateDetail(s.details, id, (p) => ({
         ...p,
@@ -343,6 +343,7 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
             ...p.onboarding.keyCollection,
             status: LEASING_ITEM_STATUS.DONE,
             time,
+            timeEnd,
             location,
           },
         },

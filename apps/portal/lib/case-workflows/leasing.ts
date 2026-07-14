@@ -8,7 +8,7 @@ const LEASING_LIFECYCLE_STEPS = [
   { id: LEASING_LIFECYCLE_STEP.OPEN_INSPECTION, label: 'Open inspection' },
   { id: LEASING_LIFECYCLE_STEP.OPEN_REPORT, label: 'Open report' },
   { id: LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL, label: 'Application approval' },
-  { id: LEASING_LIFECYCLE_STEP.ONBOARDING, label: 'Onboarding' },
+  { id: LEASING_LIFECYCLE_STEP.ONBOARDING, label: 'Tenant Onboarding' },
 ] as const;
 
 const LEASING_ONBOARDING_STEPS = [

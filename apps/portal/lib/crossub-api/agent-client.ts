@@ -653,6 +653,7 @@ export interface AgentKeyCollectionReport {
 
 export interface AgentKeyCollection {
   time: string | null;
+  timeEnd?: string | null;
   location: string | null;
   custody?: string | null;
   status?: string | null;
@@ -783,7 +784,7 @@ export async function fetchKeyCollection(propertyId: string): Promise<AgentKeyCo
 /** Set key-collection time and place — synced to Tenant onboarding + Inspector jobs. */
 export async function setKeyCollection(
   propertyId: string,
-  input: { time: string; location: string },
+  input: { time: string; location: string; timeEnd?: string },
 ): Promise<AgentKeyCollection> {
   return agentFetch(`/agent/properties/${propertyId}/key-collection`, {
     method: 'PATCH',

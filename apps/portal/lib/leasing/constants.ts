@@ -22,7 +22,7 @@ export const LEASING_LIFECYCLE_STEP_SHORT_LABEL: Record<LeasingLifecycleStep, st
   [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 'Report Available',
   [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 'Report Available',
   [LEASING_LIFECYCLE_STEP.RESULTS]: 'Results',
-  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboard',
+  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Tenant Onboarding',
 };
 
 export const LEASING_LIFECYCLE_STEP_LABEL: Record<LeasingLifecycleStep, string> = {
@@ -30,7 +30,7 @@ export const LEASING_LIFECYCLE_STEP_LABEL: Record<LeasingLifecycleStep, string> 
   [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 'Report Available',
   [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 'Applications',
   [LEASING_LIFECYCLE_STEP.RESULTS]: 'Applicant results',
-  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Onboarding',
+  [LEASING_LIFECYCLE_STEP.ONBOARDING]: 'Tenant Onboarding',
 };
 
 export const LEASING_ITEM_STATUS = {

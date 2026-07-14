@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   Banknote,
   ClipboardCheck,
+  FileDown,
   FileSignature,
   KeyRound,
   Landmark,
@@ -14,6 +15,8 @@ import { toast } from 'sonner';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { LeasingContractDialog } from '@/components/leasing-workflow/leasing-contract-dialog';
 import { LeasingIngoingNextStepPanel } from '@/components/leasing-workflow/leasing-ingoing-next-step';
+import { LeasingKeyCollectionEvidencePanel } from '@/components/leasing-workflow/leasing-key-collection-evidence';
+import { LeasingKeyCollectionSchedule } from '@/components/leasing-workflow/leasing-key-collection-schedule';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
@@ -26,7 +29,7 @@ import type { LeasingAgreementState, LeasingPropertyDetail } from '@/lib/leasing
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { LEASING_ONBOARDING_BOND_SECTION_ID } from '@/lib/property-leasing-navigation';
 import { extractBondReferenceFromLink, formatBondIdForDisplay } from '@/lib/property-overview';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime, formatOpenInspectionWindow } from '@/lib/utils';
 
 const SIGNING_LABEL: Record<LeasingAgreementState['signingStatus'], string> = {
   not_sent: 'Not sent',
@@ -43,12 +46,36 @@ function agreementAvailableFromCrossub(agreement: LeasingAgreementState): boolea
   );
 }
 
-function ProofLine({ fileName }: { fileName?: string }) {
-  if (!fileName) return null;
+function ProofLine({
+  fileName,
+  proofUrl,
+  label = 'View attachment',
+}: {
+  fileName?: string;
+  proofUrl?: string;
+  label?: string;
+}) {
+  if (!fileName && !proofUrl) return null;
+  const displayName = fileName ?? 'Proof document';
+  if (proofUrl) {
+    return (
+      <a
+        href={proofUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        download={fileName}
+        className="border-border bg-secondary/30 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium underline"
+      >
+        <Paperclip className="text-muted-foreground size-3" />
+        {displayName}
+      </a>
+    );
+  }
   return (
     <span className="border-border bg-secondary/30 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px]">
       <Paperclip className="text-muted-foreground size-3" />
-      {fileName}
+      {displayName}
+      <span className="text-muted-foreground">· {label} pending</span>
     </span>
   );
 }
@@ -61,6 +88,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
   const clearBondSectionHighlight = useLeasingWorkflowStore((s) => s.clearBondSectionHighlight);
   const { leasingCycles, apiConnected } = useAgentData();
   const [recordingSigning, setRecordingSigning] = useState(false);
+  const [downloadingAgreement, setDownloadingAgreement] = useState(false);
   const highlightBond = bondHighlightPropertyId === id;
 
   useEffect(() => {
@@ -74,6 +102,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
   const cycleId = leasingCycles.find((c) => c.propertyId === id)?.id;
   const agreementReady = agreementAvailableFromCrossub(o.agreement);
   const keyByCrossub = detail.agentInfo.keyCustody === LEASING_KEY_CUSTODY.CROSSUB;
+  const propertyLabel = detail.propertyAddress;
   const bondIdLabel =
     formatBondIdForDisplay(
       o.bond.lodgementRef,
@@ -97,8 +126,34 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
     }
   };
 
+  const downloadAgreement = async () => {
+    if (!cycleId) {
+      toast.error('Agreement PDF is not available offline');
+      return;
+    }
+    setDownloadingAgreement(true);
+    try {
+      const blob = await leasingOpsApi.downloadAgreementPdf(cycleId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${o.agreement.contract.contractId || 'agreement'}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      toast.success('Agreement downloaded');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not download agreement');
+    } finally {
+      setDownloadingAgreement(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        Tenant onboarding — review proofs uploaded by the tenant and send key collection details.
+      </p>
+
       <StepCard icon={Banknote} title="Deposit paid" status={o.deposit.status}>
         <div className="grid grid-cols-2 gap-3">
           <StepFact
@@ -110,7 +165,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             value={o.deposit.paidAt ? formatDate(o.deposit.paidAt) : 'Not paid'}
           />
         </div>
-        <ProofLine fileName={o.deposit.proofFileName} />
+        <ProofLine fileName={o.deposit.proofFileName} proofUrl={o.deposit.proofUrl} />
       </StepCard>
 
       <StepCard
@@ -138,12 +193,12 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
             />
           ) : null}
         </div>
-        <ProofLine fileName={o.bond.proofFileName} />
+        <ProofLine fileName={o.bond.proofFileName} proofUrl={o.bond.proofUrl} />
       </StepCard>
 
       <StepCard
         icon={FileSignature}
-        title="Agreement"
+        title="Lease agreement"
         description={
           o.agreement.signingStatus === 'signed'
             ? 'Agreement signed — terms are locked.'
@@ -161,8 +216,20 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
                 className="h-8 text-xs"
                 onClick={() => store.setContractDialogOpen(true)}
               >
-                {o.agreement.signingStatus === 'signed' ? 'View agreement' : 'View agreement'}
+                View agreement
               </Button>
+              {apiConnected && cycleId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1 text-xs"
+                  disabled={downloadingAgreement}
+                  onClick={() => void downloadAgreement()}
+                >
+                  <FileDown className="size-3" />
+                  {downloadingAgreement ? 'Downloading…' : 'Download PDF'}
+                </Button>
+              )}
               {o.agreement.signingStatus !== 'signed' && (
                 <Button
                   size="sm"
@@ -191,8 +258,11 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
           />
           <StepFact label="Signing" value={SIGNING_LABEL[o.agreement.signingStatus]} />
         </div>
-        <div className="mt-2">
-          <ProofLine fileName={o.agreement.uploadedFileName} />
+        <div className="mt-2 space-y-2">
+          <ProofLine
+            fileName={o.agreement.uploadedFileName}
+            label="Uploaded agreement"
+          />
         </div>
       </StepCard>
 
@@ -201,22 +271,36 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         title="Key collection"
         description={
           keyByCrossub
-            ? 'CROSSUB manages keys — time and location are confirmed by CROSSUB.'
-            : 'Agent manages keys — time and location are confirmed by the agency.'
+            ? 'CROSSUB manages keys — confirm time and location for the tenant.'
+            : 'Agent manages keys — confirm time and location for the tenant.'
         }
         status={o.keyCollection.status}
       >
         <div className="grid grid-cols-2 gap-3">
           <StepFact
             label="Time"
-            value={o.keyCollection.time ? formatDateTime(o.keyCollection.time) : 'TBD'}
+            value={
+              o.keyCollection.time
+                ? formatOpenInspectionWindow(
+                    o.keyCollection.time,
+                    o.keyCollection.timeEnd,
+                  ) ?? formatDateTime(o.keyCollection.time)
+                : 'Not set'
+            }
           />
-          <StepFact label="Location" value={o.keyCollection.location ?? 'TBD'} />
+          <StepFact label="Location" value={o.keyCollection.location ?? 'Not set'} />
           <StepFact
             label="Custody"
             value={LEASING_KEY_CUSTODY_LABEL[detail.agentInfo.keyCustody]}
             className="col-span-2"
           />
+          <LeasingKeyCollectionEvidencePanel
+            keyCollection={o.keyCollection}
+            propertyLabel={propertyLabel}
+          />
+        </div>
+        <div className="mt-3">
+          <LeasingKeyCollectionSchedule detail={detail} cycleId={cycleId} />
         </div>
       </StepCard>
 

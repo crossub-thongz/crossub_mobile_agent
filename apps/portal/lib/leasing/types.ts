@@ -115,6 +115,7 @@ export interface LeasingDepositState {
   amount?: number;
   paidAt?: string;
   proofFileName?: string;
+  proofUrl?: string;
 }
 
 export interface LeasingBondState {
@@ -124,6 +125,7 @@ export interface LeasingBondState {
   sentToTenantAt?: string;
   paidAt?: string;
   proofFileName?: string;
+  proofUrl?: string;
   /** Display bond ID (e.g. BOND-00001) — not the internal ledger row id. */
   lodgementRef?: string;
 }
@@ -136,11 +138,26 @@ export interface LeasingAgreementState {
   uploadedFileName?: string;
 }
 
+export interface LeasingKeyCollectionTenantReport {
+  submittedAt?: string;
+  tagNumber?: string | null;
+  keysCount?: number | null;
+  entryDoorCount?: number | null;
+  windowSlidingCount?: number | null;
+  fobsCount?: number | null;
+  remoteControlCount?: number | null;
+  mailboxCount?: number | null;
+  othersCount?: number | null;
+}
+
 export interface LeasingKeyCollectionState {
   status: LeasingItemStatus;
   custody: LeasingKeyCustody;
   time?: string;
+  timeEnd?: string;
   location?: string;
+  photos?: string[];
+  tenantReport?: LeasingKeyCollectionTenantReport | null;
 }
 
 export interface LeasingIngoingDispute {

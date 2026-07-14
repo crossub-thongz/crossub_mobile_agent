@@ -57,6 +57,7 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       amount: n(view.rental.deposit),
       paidAt: u(ob?.deposit.paidAt ?? undefined),
       proofFileName: u(ob?.deposit.proofFileName ?? undefined),
+      proofUrl: u(ob?.deposit.proofUrl ?? undefined),
     },
     bond: {
       status: asItemStatus(ob?.bond.status ?? 'not_started'),
@@ -65,6 +66,7 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       sentToTenantAt: u(ob?.bond.sentToTenantAt ?? undefined),
       paidAt: u(ob?.bond.paidAt ?? undefined),
       proofFileName: u(ob?.bond.proofFileName ?? undefined),
+      proofUrl: u(ob?.bond.proofUrl ?? undefined),
       ledgerEntryId: u(ob?.bond.ledgerEntryId ?? undefined),
       lodgementRef: u(ob?.bond.lodgementRef ?? undefined),
     },
@@ -83,7 +85,22 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       status: asItemStatus(ob?.keyCollection.status ?? 'not_started'),
       custody: (view.agent.keyCustody as LeasingKeyCustody) ?? 'crossub',
       time: u(ob?.keyCollection.time ?? undefined),
+      timeEnd: u(ob?.keyCollection.timeEnd ?? undefined),
       location: u(ob?.keyCollection.location ?? undefined),
+      photos: ob?.keyCollection.photos ?? [],
+      tenantReport: ob?.keyCollection.tenantReport
+        ? {
+            submittedAt: u(ob.keyCollection.tenantReport.submittedAt ?? undefined),
+            tagNumber: ob.keyCollection.tenantReport.tagNumber,
+            keysCount: ob.keyCollection.tenantReport.keysCount,
+            entryDoorCount: ob.keyCollection.tenantReport.entryDoorCount,
+            windowSlidingCount: ob.keyCollection.tenantReport.windowSlidingCount,
+            fobsCount: ob.keyCollection.tenantReport.fobsCount,
+            remoteControlCount: ob.keyCollection.tenantReport.remoteControlCount,
+            mailboxCount: ob.keyCollection.tenantReport.mailboxCount,
+            othersCount: ob.keyCollection.tenantReport.othersCount,
+          }
+        : null,
     },
     ingoingInspection: {
       status: asItemStatus(ob?.ingoingInspection.status ?? 'not_started'),

@@ -23,12 +23,28 @@ export function keyCollectionFromApi(kc: AgentKeyCollection): {
   status: LeasingItemStatus;
   custody: LeasingKeyCustody;
   time?: string;
+  timeEnd?: string;
   location?: string;
+  photos?: string[];
+  tenantReport?: {
+    submittedAt?: string;
+    tagNumber?: string | null;
+    keysCount?: number | null;
+    entryDoorCount?: number | null;
+    windowSlidingCount?: number | null;
+    fobsCount?: number | null;
+    remoteControlCount?: number | null;
+    mailboxCount?: number | null;
+    othersCount?: number | null;
+  } | null;
 } {
   return {
     status: mapApiKeyCollectionStatus(kc.status),
     custody: mapApiKeyCustody(kc.custody),
     time: kc.time ?? undefined,
+    timeEnd: kc.timeEnd ?? undefined,
     location: kc.location ?? undefined,
+    photos: kc.photos ?? [],
+    tenantReport: kc.report ?? null,
   };
 }
