@@ -436,8 +436,9 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         </div>
         <div className="mt-2 space-y-2">
           <ProofLine
-            fileName={o.agreement.uploadedFileName}
-            label="Uploaded agreement"
+            fileName={o.agreement.signedProofFileName ?? o.agreement.uploadedFileName}
+            proofUrl={o.agreement.signedProofUrl}
+            label="Signed agreement"
           />
         </div>
       </StepCard>

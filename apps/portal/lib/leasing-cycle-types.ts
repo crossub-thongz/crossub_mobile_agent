@@ -61,6 +61,7 @@ export interface ServerLeasingReviewStaff {
 export interface ServerLeasingOnboarding {
   deposit: {
     status: string
+    amount: number | null
     paidAt: string | null
     proofFileName: string | null
     proofUrl: string | null
@@ -68,6 +69,7 @@ export interface ServerLeasingOnboarding {
   }
   bond: {
     status: string
+    amount: number | null
     agentLink: string | null
     sentToTenantAt: string | null
     paidAt: string | null
@@ -80,6 +82,8 @@ export interface ServerLeasingOnboarding {
     status: string
     confirmed: boolean
     uploadedFileName: string | null
+    signedProofUrl: string | null
+    signedProofFileName: string | null
     signingStatus: string
     signedAt: string | null
     contractDraft: ServerContractDraft | null

@@ -54,14 +54,14 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
   return {
     deposit: {
       status: asItemStatus(ob?.deposit.status ?? 'not_started'),
-      amount: n(view.rental.deposit),
+      amount: n(ob?.deposit.amount ?? view.rental.deposit),
       paidAt: u(ob?.deposit.paidAt ?? undefined),
       proofFileName: u(ob?.deposit.proofFileName ?? undefined),
       proofUrl: u(ob?.deposit.proofUrl ?? undefined),
     },
     bond: {
       status: asItemStatus(ob?.bond.status ?? 'not_started'),
-      amount: n(view.rental.bond),
+      amount: n(ob?.bond.amount ?? view.rental.bond),
       agentLink: u(ob?.bond.agentLink ?? undefined),
       sentToTenantAt: u(ob?.bond.sentToTenantAt ?? undefined),
       paidAt: u(ob?.bond.paidAt ?? undefined),
@@ -80,6 +80,8 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
         | 'signed',
       signedAt: u(ob?.agreement.signedAt ?? undefined),
       uploadedFileName: u(ob?.agreement.uploadedFileName ?? undefined),
+      signedProofUrl: u(ob?.agreement.signedProofUrl ?? undefined),
+      signedProofFileName: u(ob?.agreement.signedProofFileName ?? undefined),
     },
     keyCollection: {
       status: asItemStatus(ob?.keyCollection.status ?? 'not_started'),

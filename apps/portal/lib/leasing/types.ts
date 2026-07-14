@@ -136,6 +136,8 @@ export interface LeasingAgreementState {
   signingStatus: 'not_sent' | 'sent' | 'viewed' | 'signed';
   signedAt?: string;
   uploadedFileName?: string;
+  signedProofUrl?: string;
+  signedProofFileName?: string;
 }
 
 export interface LeasingKeyCollectionTenantReport {
