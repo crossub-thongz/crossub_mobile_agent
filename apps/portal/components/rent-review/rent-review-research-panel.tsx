@@ -8,7 +8,6 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
 import { RentReviewResearchResultSection } from '@/components/rent-review/rent-review-research-result-section';
-import { RentResearchPlatformsPanel } from '@/components/rent-review/rent-research-platforms-panel';
 import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
 import {
   canAgentViewResearchResults,
@@ -108,17 +107,13 @@ export function RentReviewResearchPanel({
       ) : null}
 
       {canViewResults ? (
-        <>
-          <RentResearchPlatformsPanel platforms={detail.ai.research?.platforms ?? []} readOnly />
-
-          <RentReviewResearchResultSection
-            detail={detail}
-            researchComplete={researchComplete}
-            landlordEmailed={landlordEmailed}
-            onEmail={() => setLandlordDialogOpen(true)}
-            helperText="Review the research pack, then email the landlord to confirm the recommended rent."
-          />
-        </>
+        <RentReviewResearchResultSection
+          detail={detail}
+          researchComplete={researchComplete}
+          landlordEmailed={landlordEmailed}
+          onEmail={() => setLandlordDialogOpen(true)}
+          helperText="Review the research pack, then email the landlord to confirm the recommended rent."
+        />
       ) : null}
 
       <RentReviewEmailToLandlordDialog

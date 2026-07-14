@@ -51,6 +51,8 @@ export function RentReviewStageEmailHistory({
       onSend={onSend}
       enableComposeActions={enableComposeActions}
       recipientContacts={recipientContacts}
+      collapsible
+      defaultOpen={false}
     />
   );
 }

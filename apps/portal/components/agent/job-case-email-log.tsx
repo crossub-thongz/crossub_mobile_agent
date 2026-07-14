@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronRight, ExternalLink, Forward, Mail, Paperclip, Reply, Send } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Forward, Mail, Paperclip, Reply, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -385,12 +385,14 @@ export function JobCaseEmailLog({
   onSend,
   enableComposeActions = false,
   recipientContacts = [],
+  hideHeader = false,
 }: {
   title?: string;
   emails: JobCaseEmailRecord[];
   onSend?: (draft: CommSendDraft) => void;
   enableComposeActions?: boolean;
   recipientContacts?: WorkflowEmailContact[];
+  hideHeader?: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const sorted = useMemo(
@@ -401,15 +403,17 @@ export function JobCaseEmailLog({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Mail className="text-primary size-4" />
-          <p className="text-sm font-semibold">{title}</p>
+      {!hideHeader ? (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Mail className="text-primary size-4" />
+            <p className="text-sm font-semibold">{title}</p>
+          </div>
+          <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+            History
+          </span>
         </div>
-        <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-          History
-        </span>
-      </div>
+      ) : null}
 
       {sorted.length === 0 ? (
         <p className="text-muted-foreground rounded-xl border border-dashed p-3 text-xs">
@@ -443,26 +447,72 @@ export function JobCaseEmailLog({
 
 export function JobCaseStageEmailHistory({
   emails,
-  title,
+  title = 'Email/message history',
   onSend,
   enableComposeActions,
   recipientContacts,
+  collapsible = false,
+  defaultOpen = true,
 }: {
   emails: JobCaseEmailRecord[];
   title?: string;
   onSend?: (draft: CommSendDraft) => void;
   enableComposeActions?: boolean;
   recipientContacts?: WorkflowEmailContact[];
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const emailCount = emails.length;
+
+  if (!collapsible) {
+    return (
+      <section className="border-t pt-4">
+        <JobCaseEmailLog
+          emails={emails}
+          title={title}
+          onSend={onSend}
+          enableComposeActions={enableComposeActions}
+          recipientContacts={recipientContacts}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="border-t pt-4">
-      <JobCaseEmailLog
-        emails={emails}
-        title={title}
-        onSend={onSend}
-        enableComposeActions={enableComposeActions}
-        recipientContacts={recipientContacts}
-      />
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center gap-2 text-left"
+        aria-expanded={open}
+      >
+        <Mail className="text-primary size-4 shrink-0" />
+        <span className="min-w-0 flex-1 text-sm font-semibold">{title}</span>
+        {!open ? (
+          <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums">
+            {emailCount} {emailCount === 1 ? 'email' : 'emails'}
+          </span>
+        ) : null}
+        <ChevronDown
+          className={cn(
+            'text-muted-foreground size-4 shrink-0 transition-transform',
+            open && 'rotate-180',
+          )}
+        />
+      </button>
+
+      {open ? (
+        <div className="mt-3">
+          <JobCaseEmailLog
+            emails={emails}
+            onSend={onSend}
+            enableComposeActions={enableComposeActions}
+            recipientContacts={recipientContacts}
+            hideHeader
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

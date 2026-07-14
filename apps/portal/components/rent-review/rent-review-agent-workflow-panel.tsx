@@ -179,6 +179,10 @@ export function RentReviewAgentWorkflowPanel({
   const agentEditableSteps: RentReviewAgentStep[] = [
     RENT_REVIEW_AGENT_STEP.RENT_RESEARCH,
     RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED,
+    RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED,
+    RENT_REVIEW_AGENT_STEP.NEGOTIATION,
+    RENT_REVIEW_AGENT_STEP.TENANT_DECISION,
+    RENT_REVIEW_AGENT_STEP.COMPLETED,
   ];
   const stepReadOnly = !agentEditableSteps.includes(viewingStepId);
 
