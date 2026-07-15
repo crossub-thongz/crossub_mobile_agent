@@ -61,7 +61,7 @@ export function OpenInspectionStagePanel({
                       try {
                         const updated = await openViewingsApi.completeReview(session.id);
                         onSessionChange(updated);
-                        toast.success('Review complete — open report generated');
+                        toast.success('Review complete — open report generated and session closed');
                       } catch (err) {
                         toast.error(
                           err instanceof Error ? err.message : 'Could not complete review',

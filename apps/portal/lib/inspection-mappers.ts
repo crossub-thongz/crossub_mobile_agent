@@ -7,7 +7,6 @@ import {
   SESSION_STATUS_LABEL,
   SessionStatusEnum,
   type OpenInspectionSession,
-  type SessionStatus,
 } from '@/constants/open-inspection-ops';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
@@ -103,10 +102,16 @@ export function mapOpenSessionToInspection(
     propertyAddress: session.address || session.property,
     scheduledAt: session.startTime,
     createdAt: session.createdAt,
-    status: session.openReportGenerated
-      ? 'Completed'
-      : openSessionStatusLabel(session.sessionStatus),
-    apiStatus: session.openReportGenerated ? 'completed' : session.sessionStatus,
+    status:
+      session.sessionStatus === SessionStatusEnum.CANCELLED
+        ? OPEN_DELETED_LABEL
+        : session.openReportGenerated ||
+            session.sessionStatus === SessionStatusEnum.CLOSED
+          ? SESSION_STATUS_LABEL[SessionStatusEnum.CLOSED]
+          : openSessionStatusLabel(session.sessionStatus),
+    apiStatus: session.openReportGenerated
+      ? 'completed'
+      : session.sessionStatus,
     reportStatus: session.openReportGenerated ? 'sent' : 'pending',
     openConductedBy: session.agent?.role === 'leasing_agent' ? 'agent' : 'crossub',
     openListingContext,

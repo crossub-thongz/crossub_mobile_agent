@@ -112,6 +112,12 @@ export function OpenInspectionReportStage({
           Complete applicant review to generate the open inspection report.
         </p>
       )}
+
+      {session.sessionStatus === 'closed' ? (
+        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+          This open inspection is closed.
+        </p>
+      ) : null}
     </section>
   );
 }
