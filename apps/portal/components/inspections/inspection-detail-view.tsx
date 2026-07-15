@@ -43,6 +43,7 @@ import {
 } from '@/lib/inspection/agent-workflow-email';
 import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import { openInspectionJobCaseEmails } from '@/lib/leasing/agent-workflow-email';
+import { openInspectionSessionEmails } from '@/lib/open-inspection/open-inspection-session-email';
 import {
   isLettingOpenReportVisibleStep,
   isLettingResultsStep,
@@ -183,13 +184,15 @@ export function InspectionDetailView({
   const stageEmails = useMemo(() => {
     if (!insp) return [];
     if (insp.type === 'OPEN') {
-      if (isStandaloneOpenViewing) return inspectionEmailRecordsForStep(insp);
+      if (isStandaloneOpenViewing && openSession) {
+        return openInspectionSessionEmails(openSession);
+      }
       if (leasingDetail) return openInspectionJobCaseEmails(leasingDetail);
       if (activeLeasingCycle) return [];
       return inspectionEmailRecordsForStep(insp);
     }
     return inspectionEmailRecordsForStep(insp);
-  }, [activeLeasingCycle, insp, isStandaloneOpenViewing, leasingDetail]);
+  }, [activeLeasingCycle, insp, isStandaloneOpenViewing, leasingDetail, openSession]);
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);

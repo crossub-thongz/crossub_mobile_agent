@@ -1,30 +1,34 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Loader2, Mail, MessageSquare, Phone, User, Users } from 'lucide-react';
+import { Check, Loader2, Mail, MessageSquare, Phone, User, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import type { OpenInspectionVisitor } from '@/constants/open-inspection-ops';
+import type { OpenInspectionSession, OpenInspectionVisitor } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
 function CheckInRow({
   sessionId,
   visitor,
+  onSessionChange,
 }: {
   sessionId: string;
   visitor: OpenInspectionVisitor;
+  onSessionChange?: (session: OpenInspectionSession) => void;
 }) {
   const [sending, setSending] = useState(false);
   const email = visitor.email?.trim() || '';
   const hasApplication = Boolean(visitor.application);
-  const canSend = email.length > 0 && email.includes('@') && !hasApplication;
+  const alreadySent = Boolean(visitor.applyLinkSentAt);
+  const canSend = email.length > 0 && email.includes('@') && !hasApplication && !alreadySent;
 
   const sendApplicationForm = async () => {
     if (!canSend) return;
     setSending(true);
     try {
-      await openViewingsApi.sendApplyLink(sessionId, [email]);
+      const result = await openViewingsApi.sendApplyLink(sessionId, [email]);
+      onSessionChange?.(result.session);
       toast.success(`Application form link and QR sent to ${visitor.name || email}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not send application form');
@@ -67,19 +71,23 @@ function CheckInRow({
           size="sm"
           variant="outline"
           className="h-8 shrink-0 gap-1.5 text-[11px]"
-          disabled={!canSend || sending}
+          disabled={sending || hasApplication || alreadySent || !canSend}
           onClick={() => void sendApplicationForm()}
         >
           {sending ? (
             <Loader2 className="size-3.5 animate-spin" />
+          ) : alreadySent ? (
+            <Check className="size-3.5" />
           ) : (
             <Mail className="size-3.5" />
           )}
           {hasApplication
             ? 'Application received'
-            : sending
-              ? 'Sending…'
-              : 'Send application form'}
+            : alreadySent
+              ? 'Sent'
+              : sending
+                ? 'Sending…'
+                : 'Send application form'}
         </Button>
       </div>
     </li>
@@ -87,20 +95,20 @@ function CheckInRow({
 }
 
 export function OpenInspectionCheckInList({
-  sessionId,
-  visitors,
+  session,
+  onSessionChange,
 }: {
-  sessionId: string;
-  visitors: OpenInspectionVisitor[];
+  session: OpenInspectionSession;
+  onSessionChange?: (session: OpenInspectionSession) => void;
 }) {
   const checkIns = useMemo(
     () =>
-      visitors.filter(
+      session.visitors.filter(
         (visitor) =>
           visitor.registrationSource === 'qr_pre_registered' ||
           visitor.registrationSource === 'walk_in',
       ),
-    [visitors],
+    [session.visitors],
   );
 
   return (
@@ -117,7 +125,12 @@ export function OpenInspectionCheckInList({
       ) : (
         <ul className="space-y-2">
           {checkIns.map((visitor) => (
-            <CheckInRow key={visitor.id} sessionId={sessionId} visitor={visitor} />
+            <CheckInRow
+              key={visitor.id}
+              sessionId={session.id}
+              visitor={visitor}
+              onSessionChange={onSessionChange}
+            />
           ))}
         </ul>
       )}

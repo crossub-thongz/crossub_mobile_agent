@@ -114,10 +114,11 @@ export const openViewingsApi = {
   decide: (attendeeId: string, input: ViewingDecisionInput) =>
     unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/attendees/${attendeeId}/decision`, input)),
 
-  sendApplyLink: (sessionId: string, emails: string[]) =>
-    api.post<{ ok: true; sent: number }>(`${BASE}/sessions/${sessionId}/send-apply-link`, {
-      emails,
-    }),
+  sendApplyLink: async (sessionId: string, emails: string[]) =>
+    api.post<{ ok: true; sent: number; session: OpenInspectionSession }>(
+      `${BASE}/sessions/${sessionId}/send-apply-link`,
+      { emails },
+    ),
 
   sendReportToLandlord: (sessionId: string, email?: string) =>
     api.post<{ ok: true }>(`${BASE}/sessions/${sessionId}/send-report-to-landlord`, {

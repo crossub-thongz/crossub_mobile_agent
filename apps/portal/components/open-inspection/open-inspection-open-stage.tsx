@@ -10,7 +10,13 @@ import {
   resolveOpenInspectionCheckInUrl,
 } from '@/lib/tenant-app-url';
 
-export function OpenInspectionOpenStage({ session }: { session: OpenInspectionSession }) {
+export function OpenInspectionOpenStage({
+  session,
+  onSessionChange,
+}: {
+  session: OpenInspectionSession;
+  onSessionChange?: (session: OpenInspectionSession) => void;
+}) {
   const checkInUrl = useMemo(() => resolveOpenInspectionCheckInUrl(session), [session]);
   const applyUrl = useMemo(() => resolveOpenInspectionApplyUrl(session), [session]);
 
@@ -28,7 +34,7 @@ export function OpenInspectionOpenStage({ session }: { session: OpenInspectionSe
             url={checkInUrl}
             qrFilename={`check-in-qr-${session.id.slice(0, 8)}.png`}
           />
-          <OpenInspectionCheckInList sessionId={session.id} visitors={session.visitors} />
+          <OpenInspectionCheckInList session={session} onSessionChange={onSessionChange} />
         </>
       ) : null}
       {applyUrl ? (

@@ -12,6 +12,7 @@ export function openInspectionSessionSyncKey(session: OpenInspectionSession): st
     visitors: session.visitors.map((visitor) => ({
       id: visitor.id,
       attendanceStatus: visitor.attendanceStatus,
+      applyLinkSentAt: visitor.applyLinkSentAt,
       application: visitor.application
         ? {
             agentDecision: visitor.application.agentDecision,

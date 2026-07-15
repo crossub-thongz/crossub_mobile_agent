@@ -39,7 +39,7 @@ export function OpenInspectionStagePanel({
 
       {viewedStep === OPEN_SESSION_RAIL_STEP.OPEN ? (
         <>
-          <OpenInspectionOpenStage session={session} />
+          <OpenInspectionOpenStage session={session} onSessionChange={onSessionChange} />
           {applicantsWithApplications.length > 0 || !reportReady ? (
             <section className="rounded-2xl border bg-card p-4">
               <h2 className="mb-3 text-sm font-semibold">

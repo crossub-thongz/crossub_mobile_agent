@@ -106,6 +106,7 @@ export interface OpenInspectionVisitor {
   followUpStatus: FollowUpStatus;
   followUpNote?: string;
   lastContactedAt?: string;
+  applyLinkSentAt?: string;
   application?: OpenInspectionApplication;
 }
 
