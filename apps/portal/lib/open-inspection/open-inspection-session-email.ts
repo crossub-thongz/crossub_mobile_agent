@@ -7,6 +7,39 @@ function crossubSender(): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
   return { from: CROSSUB_FROM, fromEmail: CROSSUB_FROM };
 }
 
+/** Landlord open-inspection report email sent from the Report step. */
+export function openInspectionLandlordReportEmail(
+  session: OpenInspectionSession,
+): JobCaseEmailRecord | null {
+  if (!session.landlordReportEmailedAt?.trim()) return null;
+  const propertyLabel = session.address?.trim() || session.property;
+  const recipientEmail =
+    session.landlordReportEmailedTo?.trim() || session.landlord?.email?.trim() || '';
+  return {
+    id: `${session.id}-landlord-report`,
+    subject: `Open inspection report — ${propertyLabel}`,
+    body: [
+      'Open inspection PDF report emailed to the property landlord.',
+      '',
+      recipientEmail ? `Sent to: ${recipientEmail}` : '',
+      `Attached: open-report-${session.id.slice(0, 8)}.pdf`,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    ...crossubSender(),
+    to: session.landlord?.name?.trim() || recipientEmail || 'Landlord',
+    toEmail: recipientEmail || undefined,
+    at: session.landlordReportEmailedAt,
+    kind: 'open_report_landlord',
+    attachments: [
+      {
+        name: `open-report-${session.id.slice(0, 8)}.pdf`,
+        mimeType: 'application/pdf',
+      },
+    ],
+  };
+}
+
 /** Application-link emails sent to open-inspection check-in visitors. */
 export function openInspectionApplyLinkEmails(
   session: OpenInspectionSession,
@@ -37,5 +70,8 @@ export function openInspectionApplyLinkEmails(
 export function openInspectionSessionEmails(
   session: OpenInspectionSession,
 ): JobCaseEmailRecord[] {
-  return dedupeJobCaseEmails(openInspectionApplyLinkEmails(session));
+  const records = openInspectionApplyLinkEmails(session);
+  const landlordReport = openInspectionLandlordReportEmail(session);
+  if (landlordReport) records.push(landlordReport);
+  return dedupeJobCaseEmails(records);
 }

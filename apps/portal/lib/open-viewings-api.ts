@@ -120,10 +120,11 @@ export const openViewingsApi = {
       { emails },
     ),
 
-  sendReportToLandlord: (sessionId: string, email?: string) =>
-    api.post<{ ok: true }>(`${BASE}/sessions/${sessionId}/send-report-to-landlord`, {
-      ...(email ? { email } : {}),
-    }),
+  sendReportToLandlord: async (sessionId: string, email?: string) =>
+    api.post<{ ok: true; session: OpenInspectionSession }>(
+      `${BASE}/sessions/${sessionId}/send-report-to-landlord`,
+      { ...(email ? { email } : {}) },
+    ),
 
   generateReport: (sessionId: string) =>
     unwrap(api.post<{ session: OpenInspectionSession }>(`${BASE}/sessions/${sessionId}/generate-report`, {})),

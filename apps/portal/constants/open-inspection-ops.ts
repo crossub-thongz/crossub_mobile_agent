@@ -160,6 +160,8 @@ export interface OpenInspectionSession {
   /** True once the linked leasing cycle's open report has been generated. */
   openReportGenerated?: boolean;
   reviewCompletedAt?: string;
+  landlordReportEmailedAt?: string;
+  landlordReportEmailedTo?: string;
   reportSourceCounts?: {
     tenantApp: number;
     linkOrQr: number;

@@ -80,7 +80,11 @@ export function OpenInspectionStagePanel({
       ) : null}
 
       {viewedStep === OPEN_SESSION_RAIL_STEP.REPORT ? (
-        <OpenInspectionReportStage session={session} propertyLabel={propertyLabel} />
+        <OpenInspectionReportStage
+          session={session}
+          propertyLabel={propertyLabel}
+          onSessionChange={onSessionChange}
+        />
       ) : null}
     </div>
   );

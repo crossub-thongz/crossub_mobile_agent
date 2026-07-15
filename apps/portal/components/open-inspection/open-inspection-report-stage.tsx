@@ -12,9 +12,11 @@ import { openViewingsApi } from '@/lib/open-viewings-api';
 export function OpenInspectionReportStage({
   session,
   propertyLabel,
+  onSessionChange,
 }: {
   session: OpenInspectionSession;
   propertyLabel: string;
+  onSessionChange?: (session: OpenInspectionSession) => void;
 }) {
   const [sending, setSending] = useState(false);
   const reportReady = session.openReportGenerated === true;
@@ -24,10 +26,11 @@ export function OpenInspectionReportStage({
   const sendToLandlord = async () => {
     setSending(true);
     try {
-      await openViewingsApi.sendReportToLandlord(
+      const result = await openViewingsApi.sendReportToLandlord(
         session.id,
         landlordEmail || undefined,
       );
+      onSessionChange?.(result.session);
       toast.success('Open report emailed to landlord');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not email the report');
