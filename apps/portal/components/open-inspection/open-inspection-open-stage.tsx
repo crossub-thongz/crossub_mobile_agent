@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 
+import { OpenInspectionCheckInList } from '@/components/open-inspection/open-inspection-check-in-list';
 import { OpenInspectionLinkQrBlock } from '@/components/open-inspection/open-inspection-link-qr-block';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import {
@@ -20,12 +21,15 @@ export function OpenInspectionOpenStage({ session }: { session: OpenInspectionSe
         Share these links and QR codes with prospects during the viewing window.
       </p>
       {checkInUrl ? (
-        <OpenInspectionLinkQrBlock
-          title="Check-in link & QR"
-          description="For applicants to check in when they arrive at the open inspection."
-          url={checkInUrl}
-          qrFilename={`check-in-qr-${session.id.slice(0, 8)}.png`}
-        />
+        <>
+          <OpenInspectionLinkQrBlock
+            title="Check-in link & QR"
+            description="For applicants to check in when they arrive at the open inspection."
+            url={checkInUrl}
+            qrFilename={`check-in-qr-${session.id.slice(0, 8)}.png`}
+          />
+          <OpenInspectionCheckInList sessionId={session.id} visitors={session.visitors} />
+        </>
       ) : null}
       {applyUrl ? (
         <OpenInspectionLinkQrBlock
