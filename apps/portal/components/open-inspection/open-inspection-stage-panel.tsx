@@ -12,31 +12,32 @@ import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import {
   OPEN_SESSION_RAIL_STEP,
   canCompleteOpenSessionReview,
-  deriveOpenSessionRailProgress,
+  type OpenSessionRailStep,
 } from '@/lib/open-inspection-session-rail';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
 export function OpenInspectionStagePanel({
   session,
   propertyLabel,
+  viewedStep,
   onSessionChange,
 }: {
   session: OpenInspectionSession;
   propertyLabel: string;
+  viewedStep: OpenSessionRailStep;
   onSessionChange: (session: OpenInspectionSession) => void;
 }) {
-  const { currentRailStep } = deriveOpenSessionRailProgress(session);
   const reportReady = session.openReportGenerated === true;
   const canCompleteReview = canCompleteOpenSessionReview(session);
   const applicantsWithApplications = session.visitors.filter((v) => v.application);
 
   return (
     <div className="space-y-4">
-      {currentRailStep === OPEN_SESSION_RAIL_STEP.SCHEDULED ? (
+      {viewedStep === OPEN_SESSION_RAIL_STEP.SCHEDULED ? (
         <OpenInspectionScheduledStage session={session} />
       ) : null}
 
-      {currentRailStep === OPEN_SESSION_RAIL_STEP.OPEN ? (
+      {viewedStep === OPEN_SESSION_RAIL_STEP.OPEN ? (
         <>
           <OpenInspectionOpenStage session={session} />
           {applicantsWithApplications.length > 0 || !reportReady ? (
@@ -78,7 +79,7 @@ export function OpenInspectionStagePanel({
         </>
       ) : null}
 
-      {currentRailStep === OPEN_SESSION_RAIL_STEP.REPORT ? (
+      {viewedStep === OPEN_SESSION_RAIL_STEP.REPORT ? (
         <OpenInspectionReportStage session={session} propertyLabel={propertyLabel} />
       ) : null}
     </div>

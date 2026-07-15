@@ -24,7 +24,7 @@ import {
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
-import { OpenInspectionStagePanel } from '@/components/open-inspection/open-inspection-stage-panel';
+import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
@@ -583,14 +583,14 @@ export function InspectionDetailView({
         </InfoSection>
       )}
 
-      {showSessionRail && openSession ? (
+      {showSessionRail && openSession && !isStandaloneOpenViewing ? (
         <section className="rounded-2xl border bg-card px-2 py-1">
           <OpenInspectionSessionRail session={openSession} />
         </section>
       ) : null}
 
       {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (
-        <OpenInspectionStagePanel
+        <OpenInspectionWorkflowView
           session={openSession}
           propertyLabel={insp.propertyAddress}
           onSessionChange={setOpenSession}

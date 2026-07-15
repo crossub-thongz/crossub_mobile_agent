@@ -45,6 +45,17 @@ export function deriveOpenSessionRailProgress(
   return { currentRailStep: OPEN_SESSION_RAIL_STEP.SCHEDULED, fillIndex: 0 };
 }
 
+/** Steps at or before live progress can be opened to review prior stage content. */
+export function isOpenSessionRailStepNavigable(
+  session: OpenInspectionSession,
+  step: OpenSessionRailStep,
+  now: Date = new Date(),
+): boolean {
+  const { currentRailStep } = deriveOpenSessionRailProgress(session, now);
+  const order = OPEN_SESSION_RAIL_STEP_ORDER;
+  return order.indexOf(step) <= order.indexOf(currentRailStep);
+}
+
 export function isOpenSessionRailStepCompleted(
   session: OpenInspectionSession,
   step: OpenSessionRailStep,
