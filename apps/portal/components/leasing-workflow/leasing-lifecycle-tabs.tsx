@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { LeasingLifecyclePhaseNav } from '@/components/leasing-workflow/leasing-lifecycle-phase-nav';
@@ -17,9 +17,14 @@ import {
   enrichLeasingEmailRecords,
   leasingEmailRecordsForStep,
 } from '@/lib/leasing/agent-workflow-email';
+import {
+  resolveLeasingWorkflowContentStep,
+  visibleLeasingPhaseSteps,
+} from '@/lib/leasing/letting-rail-progress';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { resolveRentReviewAgentEmail } from '@/lib/rent-review/agent-email';
+import { useLivePoll } from '@/lib/use-live-poll';
 
 export function LeasingLifecycleTabs({
   detail,
@@ -33,6 +38,20 @@ export function LeasingLifecycleTabs({
   const activeStep = useLeasingWorkflowStore((s) => s.getActiveStep(detail.propertyId));
   const setActiveStep = useLeasingWorkflowStore((s) => s.setActiveStep);
   const liveDetail = useLeasingWorkflowStore((s) => s.getDetail(detail.propertyId)) ?? detail;
+  const [now, setNow] = useState(() => new Date());
+  const tickNow = useCallback(() => {
+    setNow(new Date());
+  }, []);
+  useLivePoll(tickNow);
+
+  const visiblePhaseSteps = useMemo(
+    () => visibleLeasingPhaseSteps(liveDetail, now),
+    [liveDetail, now],
+  );
+  const contentStep = useMemo(
+    () => resolveLeasingWorkflowContentStep(activeStep, liveDetail, now),
+    [activeStep, liveDetail, now],
+  );
 
   return (
     <div className="min-w-0 space-y-4">
@@ -54,11 +73,12 @@ export function LeasingLifecycleTabs({
 
       <LeasingLifecyclePhaseNav
         activeStep={activeStep}
+        visibleSteps={visiblePhaseSteps}
         onStepClick={(step) => setActiveStep(detail.propertyId, step)}
       />
 
       <StepPanel
-        step={activeStep}
+        step={contentStep}
         detail={liveDetail}
         onCaseClosed={onCaseClosed}
         onOpenInspectionCreated={onOpenInspectionCreated}

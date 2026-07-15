@@ -1,4 +1,4 @@
-import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
+import { LEASING_ITEM_STATUS, LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import { areAllApplicantResultsSent } from '@/lib/leasing/lifecycle';
 import {
   openInspectionStartReached,
@@ -158,4 +158,47 @@ export function isLettingOpenReportVisibleStep(
   return (
     step === LETTING_RAIL_STEP.REPORT_AVAILABLE || step === LETTING_RAIL_STEP.RESULTS
   );
+}
+
+const POST_OPEN_INSPECTION_PHASE_STEPS: LeasingLifecycleStep[] = [
+  LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL,
+  LEASING_LIFECYCLE_STEP.RESULTS,
+  LEASING_LIFECYCLE_STEP.ONBOARDING,
+];
+
+/** Application, Reference Check, and Onboarding tabs — gated by letting rail progress. */
+export function visibleLeasingPhaseSteps(
+  detail: LeasingPropertyDetail,
+  now: Date = new Date(),
+): LeasingLifecycleStep[] {
+  const { currentRailStep } = deriveLettingRailProgress(detail, now);
+  const steps: LeasingLifecycleStep[] = [];
+
+  if (
+    currentRailStep === LETTING_RAIL_STEP.REPORT_AVAILABLE ||
+    currentRailStep === LETTING_RAIL_STEP.RESULTS
+  ) {
+    steps.push(LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL);
+  }
+
+  if (currentRailStep === LETTING_RAIL_STEP.RESULTS) {
+    steps.push(LEASING_LIFECYCLE_STEP.RESULTS, LEASING_LIFECYCLE_STEP.ONBOARDING);
+  }
+
+  return steps;
+}
+
+export function resolveLeasingWorkflowContentStep(
+  activeStep: LeasingLifecycleStep,
+  detail: LeasingPropertyDetail,
+  now: Date = new Date(),
+): LeasingLifecycleStep {
+  const visible = visibleLeasingPhaseSteps(detail, now);
+  if (
+    POST_OPEN_INSPECTION_PHASE_STEPS.includes(activeStep) &&
+    !visible.includes(activeStep)
+  ) {
+    return LEASING_LIFECYCLE_STEP.OPEN_INSPECTION;
+  }
+  return activeStep;
 }

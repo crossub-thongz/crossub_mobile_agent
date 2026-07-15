@@ -2,27 +2,24 @@
 
 import { Button } from '@/components/ui/button';
 import {
-  LEASING_LIFECYCLE_STEP,
   LEASING_LIFECYCLE_STEP_LABEL,
   type LeasingLifecycleStep,
 } from '@/lib/leasing/constants';
 
-const POST_REPORT_STEPS: LeasingLifecycleStep[] = [
-  LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL,
-  LEASING_LIFECYCLE_STEP.RESULTS,
-  LEASING_LIFECYCLE_STEP.ONBOARDING,
-];
-
 export function LeasingLifecyclePhaseNav({
   activeStep,
+  visibleSteps,
   onStepClick,
 }: {
   activeStep: LeasingLifecycleStep;
+  visibleSteps: LeasingLifecycleStep[];
   onStepClick: (step: LeasingLifecycleStep) => void;
 }) {
+  if (visibleSteps.length === 0) return null;
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {POST_REPORT_STEPS.map((step) => {
+      {visibleSteps.map((step) => {
         const active = activeStep === step;
         return (
           <Button
