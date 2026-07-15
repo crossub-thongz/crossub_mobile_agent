@@ -124,6 +124,12 @@ export interface OpenInspectionLandlord {
   phone?: string;
 }
 
+export interface OpenInspectionCurrentTenant {
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface OpenInspectionSession {
   id: string;
   propertyId?: string;
@@ -158,6 +164,10 @@ export interface OpenInspectionSession {
     totalWithApplication: number;
   };
   visitors: OpenInspectionVisitor[];
+  /** Agent-declared on standalone open inspections (not via new-leasing workflow). */
+  tenantMovedOut?: boolean;
+  /** Populated when tenantMovedOut is false and the property has a current tenant on file. */
+  currentTenant?: OpenInspectionCurrentTenant;
 }
 
 export { LEASING_AGENT_DECISION as OPEN_INSPECTION_DECISION };

@@ -72,6 +72,7 @@ import {
   OPEN_CONDUCTED_BY_LABEL,
   OPEN_LISTING_CONTEXT_LABEL,
   SELF_OPEN_INSPECTION_DISCLAIMER,
+  shouldShowOpenInspectionTenantDetails,
 } from '@/lib/open-inspection';
 import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sync';
 import { useLivePoll } from '@/lib/use-live-poll';
@@ -92,7 +93,8 @@ export function InspectionDetailView({
   onClose?: () => void;
 }) {
   const router = useRouter();
-  const { inspections, leasingCycles, apiConnected, registerInspection, refresh } = useAgentData();
+  const { inspections, leasingCycles, apiConnected, registerInspection, refresh, properties } =
+    useAgentData();
   const baseFromList = inspections.find((i) => i.id === inspectionId);
   const [fetchedBase, setFetchedBase] = useState<Inspection | null>(null);
   const [resolveState, setResolveState] = useState<'pending' | 'ready' | 'missing'>(
@@ -273,6 +275,28 @@ export function InspectionDetailView({
   const sources = openSession?.reportSourceCounts;
   const canDelete = apiConnected && canDeleteOpenInspection(insp);
   const isOpenLeasingCase = insp.type === 'OPEN' && Boolean(leasingDetail);
+  const property = insp.propertyId
+    ? properties.find((p) => p.id === insp.propertyId)
+    : undefined;
+  const showOpenTenantDetails =
+    insp.type === 'OPEN' &&
+    !isOpenLeasingCase &&
+    shouldShowOpenInspectionTenantDetails({
+      tenantMovedOut: openSession?.tenantMovedOut ?? insp.tenantMovedOut,
+      openListingContext: insp.openListingContext,
+    });
+  const openTenantContact = (() => {
+    if (!showOpenTenantDetails) return null;
+    if (openSession?.currentTenant?.name) return openSession.currentTenant;
+    if (!property?.tenantName || property.tenantName.trim().toLowerCase() === 'vacant') {
+      return null;
+    }
+    return {
+      name: property.tenantName,
+      email: property.tenantContact?.email,
+      phone: property.tenantContact?.phone,
+    };
+  })();
   const isOpenResultsStep =
     Boolean(leasingDetail) && insp.type === 'OPEN' && isLettingResultsStep(leasingDetail);
   const isOpenReportVisibleStep =
@@ -484,19 +508,31 @@ export function InspectionDetailView({
           tone="info"
           title="CROSSUB is arranging this open inspection"
           body={`CROSSUB will contact the ${
-            insp.openListingContext === 'occupied' ? 'tenant' : 'listing contacts'
+            showOpenTenantDetails ? 'tenant' : 'listing contacts'
           } and manage scheduling on your behalf.`}
         />
       )}
 
-      {isCrossubOpen && insp.openListingContext && !isOpenResultsStep && (
+      {showOpenTenantDetails && openTenantContact && !isOpenResultsStep ? (
+        <InfoSection title="Tenant details">
+          <InfoRow label="Name" value={openTenantContact.name} icon={User} />
+          {openTenantContact.email ? (
+            <InfoRow label="Email" value={openTenantContact.email} icon={Mail} />
+          ) : null}
+          {openTenantContact.phone ? (
+            <InfoRow label="Phone" value={openTenantContact.phone} icon={MessageSquare} />
+          ) : null}
+        </InfoSection>
+      ) : null}
+
+      {isCrossubOpen && insp.openListingContext && !isOpenResultsStep && insp.tenantMovedOut == null ? (
         <InfoSection title="Open inspection details">
           <InfoRow
             label="Property context"
             value={OPEN_LISTING_CONTEXT_LABEL[insp.openListingContext]}
           />
         </InfoSection>
-      )}
+      ) : null}
 
       {(insp.keyStatus || insp.tenantAck || insp.routineMode || insp.nextDueDate) && (
         <InfoSection title="Job details">

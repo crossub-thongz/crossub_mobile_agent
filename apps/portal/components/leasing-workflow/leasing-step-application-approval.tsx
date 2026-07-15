@@ -12,6 +12,7 @@ import {
   LEASING_AGENT_DECISION,
   LEASING_AGENT_DECISION_LABEL,
   LEASING_AGENT_DECISION_TONE,
+  LEASING_AGENT_SELF_OPEN_LABEL,
   LEASING_APPLICATION_SEND_FOR_APPROVAL_LABEL,
   LEASING_TONE,
   LEASING_UI,
@@ -119,11 +120,15 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
             <div className="flex items-start gap-3">
               <CalendarClock className="text-primary mt-0.5 size-5 shrink-0" />
               <div className="space-y-2 text-sm">
-                <p className="font-semibold">Open inspection is live — find tenants</p>
+                <p className="font-semibold">
+                  {detail.openInspection.agentConducted
+                    ? LEASING_AGENT_SELF_OPEN_LABEL
+                    : 'Open inspection is live — find tenants'}
+                </p>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  CROSSUB pushed the arranged viewing time to your app. Advertise the property,
-                  run the open inspection, and submit applicant profiles here when you have
-                  candidates ready for approval.
+                  {detail.openInspection.agentConducted
+                    ? 'You opened this letting with a self-run open inspection. Advertise the property, run the viewing, and submit applicant profiles here when you have candidates ready for approval.'
+                    : 'CROSSUB pushed the arranged viewing time to your app. Advertise the property, run the open inspection, and submit applicant profiles here when you have candidates ready for approval.'}
                 </p>
                 {detail.openInspection.scheduledTime ? (
                   <p className="text-xs">

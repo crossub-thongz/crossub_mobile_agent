@@ -41,6 +41,7 @@ export interface LeasingOpenInspection {
   preferredNotes?: string;
   viewingSessionId?: string;
   pushedToAgentApp: boolean;
+  agentConducted?: boolean;
   agentNotifiedToAdvertise: boolean;
   advertising: LeasingAdvertisingStatus;
   advertisingNote?: string;

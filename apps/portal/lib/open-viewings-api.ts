@@ -38,6 +38,14 @@ export interface CreateViewingSessionInput {
   agentName?: string
   agentRole?: "leasing_agent" | "property_manager" | "ops_coordinator"
   agentPhone?: string
+  /** Standalone open inspection — whether the current tenant has vacated. */
+  tenantMovedOut?: boolean
+  /** Standalone open inspection — preferred weekly rent (AUD). */
+  preferredRentPerWeek?: number
+  /** Standalone open inspection — e.g. "52 weeks". */
+  preferredLeaseTerm?: string
+  /** Standalone open inspection — earliest availability date (YYYY-MM-DD). */
+  preferredAvailableFrom?: string
 }
 
 export interface ViewingKpiSummary {

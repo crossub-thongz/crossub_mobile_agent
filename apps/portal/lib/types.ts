@@ -421,6 +421,8 @@ export interface Inspection {
   openConductedBy?: 'agent' | 'crossub';
   /** OPEN inspections only — occupied vs vacant/new listing */
   openListingContext?: 'occupied' | 'new_listing';
+  /** Standalone OPEN — agent declared tenant has vacated. */
+  tenantMovedOut?: boolean;
   /** Agent confirmed they notified tenant (self + occupied) */
   agentTenantNotifiedAt?: string;
   agentTenantNotifiedConfirmed?: boolean;

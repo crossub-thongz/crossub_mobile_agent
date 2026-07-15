@@ -89,6 +89,12 @@ export function mapOpenSessionToInspection(
   propertyId?: string,
 ): Inspection {
   const resolvedPropertyId = session.propertyId ?? propertyId ?? '';
+  const openListingContext =
+    session.tenantMovedOut === false
+      ? 'occupied'
+      : session.tenantMovedOut === true
+        ? 'new_listing'
+        : undefined;
   return {
     id: session.id,
     trackingNumber: inspectionReferenceLabel(session.id, 'OPEN'),
@@ -103,6 +109,8 @@ export function mapOpenSessionToInspection(
     apiStatus: session.openReportGenerated ? 'completed' : session.sessionStatus,
     reportStatus: session.openReportGenerated ? 'sent' : 'pending',
     openConductedBy: session.agent?.role === 'leasing_agent' ? 'agent' : 'crossub',
+    openListingContext,
+    tenantMovedOut: session.tenantMovedOut,
     visitorCount: session.visitors?.length ?? 0,
     timeline: [],
     source: 'open_viewing',

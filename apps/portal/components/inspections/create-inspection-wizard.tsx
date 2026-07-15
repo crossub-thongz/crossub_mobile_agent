@@ -6,10 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertTriangle,
   Building2,
-  Calendar,
   Loader2,
   Plus,
-  User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,8 +17,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { inspectionDetail, propertyDetail, ROUTES } from '@/constants/routes';
-import { createAgentIngoingInspection, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
+import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
+import { createAgentIngoingInspection, createAgentLeasingCycle, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import {
@@ -31,26 +29,31 @@ import { openViewingsApi } from '@/lib/open-viewings-api';
 import {
   buildAgentContactPrefill,
   buildIngoingInspectionPrefill,
+  buildLeasingCyclePrefill,
   buildOutgoingInspectionPrefill,
   buildRoutineInspectionPrefill,
   fetchIngoingInspectionPrefill,
   type IngoingInspectionPrefill,
+  LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS,
+  minLeasingCycleAvailableFrom,
 } from '@/lib/property-form-prefill';
+import {
+  LEASING_LIFECYCLE_STEP,
+} from '@/lib/leasing/constants';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { useLeasingWorkflowStore } from '@/lib/leasing/store';
+import { isPropertyVacant } from '@/lib/property-leasing';
 import { routineInspectionApi } from '@/lib/routine-inspection-api';
 import { terminationApi } from '@/lib/termination-case-api';
 import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import {
   getOpenListingContext,
-  OCCUPIED_SELF_TENANT_NOTE,
   OPEN_CONDUCTED_BY_LABEL,
-  OPEN_LISTING_CONTEXT_LABEL,
-  SELF_OPEN_INSPECTION_DISCLAIMER,
-  SELF_OPEN_NEW_LISTING_NOTE,
   type OpenConductedBy,
 } from '@/lib/open-inspection';
 import type { Inspection, Property } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
-import { cn } from '@/lib/utils';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 export type InspectionCreateType = 'OPEN' | 'INGOING' | 'OUTGOING' | 'ROUTINE';
 
@@ -132,6 +135,21 @@ async function resolveCreatedOpenInspection(
     }
   }
   return fetchLatestOpenPoolInspection(propertyId);
+}
+
+type StandaloneOpenLeaseTermChoice = '26' | '52' | 'custom';
+
+function resolveStandaloneOpenLeaseTermWeeks(
+  choice: StandaloneOpenLeaseTermChoice,
+  customWeeks: string,
+): number {
+  if (choice === '26') return 26;
+  if (choice === '52') return 52;
+  const weeks = Number(customWeeks);
+  if (!Number.isInteger(weeks) || weeks < 1 || weeks > 520) {
+    throw new Error('Enter a valid lease term between 1 and 520 weeks');
+  }
+  return weeks;
 }
 
 export function CreateInspectionWizard({
@@ -236,7 +254,7 @@ export function CreateInspectionWizard({
   );
 
   const [openConductedBy, setOpenConductedBy] = useState<OpenConductedBy | null>(
-    leasingCycleIdProp ? 'crossub' : null,
+    'crossub',
   );
   const [openScheduledLocal, setOpenScheduledLocal] = useState('');
   const [openPreferredStartLocal, setOpenPreferredStartLocal] = useState('');
@@ -244,6 +262,12 @@ export function CreateInspectionWizard({
   const [openPreferredNotes, setOpenPreferredNotes] = useState('');
   const [openAcknowledged, setOpenAcknowledged] = useState(false);
   const [openTenantNotified, setOpenTenantNotified] = useState(false);
+  const [openTenantMovedOut, setOpenTenantMovedOut] = useState<boolean | null>(null);
+  const [openPreferredRentPerWeek, setOpenPreferredRentPerWeek] = useState('');
+  const [openPreferredAvailableFrom, setOpenPreferredAvailableFrom] = useState('');
+  const [openLeaseTermChoice, setOpenLeaseTermChoice] =
+    useState<StandaloneOpenLeaseTermChoice>('52');
+  const [openCustomLeaseTermWeeks, setOpenCustomLeaseTermWeeks] = useState('');
 
   const [ingoing, setIngoing] = useState<IngoingInspectionPrefill>({
     address: '',
@@ -334,18 +358,20 @@ export function CreateInspectionWizard({
 
       if (inspectionType === 'OPEN') {
         if (!cancelled) {
+          const leasingPrefill = buildLeasingCyclePrefill(propertyRow, lease);
           setOpenScheduledLocal(
             toDatetimeLocalValue(
               defaultOpenInspectionSchedule(propertyRow, cycle?.availableFrom),
             ),
           );
-          if (leasingCycleIdProp) {
-            setOpenConductedBy('crossub');
-          } else {
-            setOpenConductedBy(null);
-          }
+          setOpenPreferredRentPerWeek(leasingPrefill.rentPerWeek);
+          setOpenPreferredAvailableFrom(leasingPrefill.availableFrom);
+          setOpenLeaseTermChoice('52');
+          setOpenCustomLeaseTermWeeks('');
+          setOpenConductedBy('crossub');
           setOpenAcknowledged(false);
           setOpenTenantNotified(false);
+          setOpenTenantMovedOut(null);
         }
       }
 
@@ -385,7 +411,9 @@ export function CreateInspectionWizard({
   ]);
 
   const openListingContext = property ? getOpenListingContext(property) : null;
-  const isOccupiedOpen = openListingContext === 'occupied';
+  const manualStandaloneCrossubOpen =
+    !leasingCycleIdProp && openConductedBy === 'crossub';
+  const minOpenAvailableFrom = minLeasingCycleAvailableFrom();
   const isSelfOpen = openConductedBy === 'agent';
 
   const finalizeInspectionCreate = (inspection: Inspection) => {
@@ -395,6 +423,25 @@ export function CreateInspectionWizard({
       router.push(inspectionDetail(inspection.id));
     }
     void refresh();
+  };
+
+  const finalizeAgentSelfOpenLeasing = async (cycleId: string, rentPerWeek: number) => {
+    if (apiConnected) {
+      try {
+        const view = await leasingOpsApi.get(cycleId);
+        const store = useLeasingWorkflowStore.getState();
+        store.ensureDetail(property!.id, formatPropertyFullAddress(property!), rentPerWeek);
+        store.applyCycleView(property!.id, view);
+        store.setActiveStep(property!.id, LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL);
+      } catch {
+        /* live sync will catch up when the workflow opens */
+      }
+    }
+    await refresh();
+    onCreated?.({});
+    if (navigateOnSuccess) {
+      router.push(propertyLeasingWorkflow(property!.id));
+    }
   };
 
   const submit = async () => {
@@ -408,19 +455,36 @@ export function CreateInspectionWizard({
     try {
       if (inspectionType === 'OPEN') {
         if (!openConductedBy) throw new Error('Choose who conducts the open inspection');
-        if (isSelfOpen && !openAcknowledged) {
-          throw new Error('Acknowledge your responsibility for tenant contact');
-        }
-        if (isSelfOpen && isOccupiedOpen && !openScheduledLocal) {
-          throw new Error('Set the open inspection date and time');
-        }
-        if (isSelfOpen && !openScheduledLocal) {
-          throw new Error('Set the open inspection date and time');
+
+        if (isSelfOpen && !leasingCycleIdProp) {
+          if (leasingCycle?.id) {
+            throw new Error('An active letting already exists for this property');
+          }
+          const prefill = buildLeasingCyclePrefill(property, currentLease);
+          const rent = Number(prefill.rentPerWeek);
+          if (!rent || rent <= 0) {
+            throw new Error('Set weekly rent on the property before creating a letting');
+          }
+          const tenantMovedOut = isPropertyVacant(
+            property,
+            currentLease ? [currentLease] : [],
+          );
+          const result = await createAgentLeasingCycle(property.id, {
+            rentPerWeek: rent,
+            availableFrom: new Date(prefill.availableFrom).toISOString(),
+            fixedTermWeeks: 52,
+            tenantMovedOut,
+            skipOpenInspection: true,
+            agentConductsOpenInspection: true,
+          });
+          toast.success('New leasing created — you conduct the open inspection');
+          await finalizeAgentSelfOpenLeasing(result.id, rent);
+          return;
         }
 
-        if (openConductedBy === 'crossub') {
-          const cycleId = leasingCycleIdProp ?? leasingCycle?.id;
-          if (leasingCycleIdProp && !cycleId) {
+        if (openConductedBy === 'crossub' && leasingCycleIdProp) {
+          const cycleId = leasingCycleIdProp;
+          if (!cycleId) {
             throw new Error(
               'Letting cycle is not ready — close and reopen the workflow, then try again',
             );
@@ -428,7 +492,7 @@ export function CreateInspectionWizard({
           if (!openPreferredStartLocal && !openPreferredNotes.trim()) {
             throw new Error('Enter a viewing start time, or notes for CROSSUB');
           }
-          if (leasingCycleIdProp && !openPreferredEndLocal) {
+          if (!openPreferredEndLocal) {
             throw new Error('Enter a viewing end time');
           }
           if (
@@ -438,34 +502,46 @@ export function CreateInspectionWizard({
           ) {
             throw new Error('Preferred end time must be after the start time');
           }
-          if (cycleId) {
-            const result = await requestAgentOpenInspection(property.id, cycleId, {
-              preferredStartTime: openPreferredStartLocal
-                ? new Date(openPreferredStartLocal).toISOString()
-                : undefined,
-              preferredEndTime: openPreferredEndLocal
-                ? new Date(openPreferredEndLocal).toISOString()
-                : undefined,
-              preferredNotes: openPreferredNotes.trim() || undefined,
-            });
-            toast.success('Open inspection requested — CROSSUB will confirm the schedule');
-            const inspection = await resolveCreatedOpenInspection(
-              property.id,
-              result.openInspectionId,
-            );
-            if (inspection) {
-              registerInspection(inspection);
-              onCreated?.({ inspectionId: inspection.id, inspection });
-            } else {
-              onCreated?.({});
-            }
-            await refresh();
-            return;
+          const result = await requestAgentOpenInspection(property.id, cycleId, {
+            preferredStartTime: openPreferredStartLocal
+              ? new Date(openPreferredStartLocal).toISOString()
+              : undefined,
+            preferredEndTime: openPreferredEndLocal
+              ? new Date(openPreferredEndLocal).toISOString()
+              : undefined,
+            preferredNotes: openPreferredNotes.trim() || undefined,
+          });
+          toast.success('Open inspection requested — CROSSUB will confirm the schedule');
+          const inspection = await resolveCreatedOpenInspection(
+            property.id,
+            result.openInspectionId,
+          );
+          if (inspection) {
+            registerInspection(inspection);
+            onCreated?.({ inspectionId: inspection.id, inspection });
+          } else {
+            onCreated?.({});
           }
+          await refresh();
+          return;
         }
 
         if (openConductedBy === 'crossub' && !openPreferredStartLocal) {
           throw new Error('Enter a preferred date and time for CROSSUB to schedule');
+        }
+        if (manualStandaloneCrossubOpen && openTenantMovedOut === null) {
+          throw new Error('Select whether the tenant has moved out');
+        }
+        if (manualStandaloneCrossubOpen) {
+          const rent = Number(openPreferredRentPerWeek);
+          if (!rent || rent <= 0) throw new Error('Preferred rent is required');
+          if (!openPreferredAvailableFrom) throw new Error('Available from date is required');
+          if (openPreferredAvailableFrom < minOpenAvailableFrom) {
+            throw new Error(
+              `Available from must be at least ${LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today`,
+            );
+          }
+          resolveStandaloneOpenLeaseTermWeeks(openLeaseTermChoice, openCustomLeaseTermWeeks);
         }
 
         const scheduledAt = openConductedBy === 'crossub'
@@ -475,6 +551,9 @@ export function CreateInspectionWizard({
         const end = openConductedBy === 'crossub' && openPreferredEndLocal
           ? new Date(openPreferredEndLocal).toISOString()
           : new Date(new Date(start).getTime() + 60 * 60_000).toISOString();
+        const standaloneLeaseTermWeeks = manualStandaloneCrossubOpen
+          ? resolveStandaloneOpenLeaseTermWeeks(openLeaseTermChoice, openCustomLeaseTermWeeks)
+          : null;
         const session = await openViewingsApi.create({
           propertyId: property.id,
           startTime: start,
@@ -483,13 +562,17 @@ export function CreateInspectionWizard({
           agentName: agentContact.agentName || undefined,
           agentPhone: agentContact.agentPhone || undefined,
           agentRole: 'leasing_agent',
+          ...(manualStandaloneCrossubOpen && openTenantMovedOut != null
+            ? {
+                tenantMovedOut: openTenantMovedOut,
+                preferredRentPerWeek: Number(openPreferredRentPerWeek),
+                preferredLeaseTerm: `${standaloneLeaseTermWeeks} weeks`,
+                preferredAvailableFrom: new Date(openPreferredAvailableFrom).toISOString(),
+              }
+            : {}),
         });
         const view = mapOpenSessionToInspection(session, property.id);
-        toast.success(
-          openConductedBy === 'crossub'
-            ? 'Open inspection requested'
-            : 'Open inspection scheduled',
-        );
+        toast.success('Open inspection requested');
         finalizeInspectionCreate(view);
         return;
       }
@@ -692,14 +775,6 @@ export function CreateInspectionWizard({
 
       {showForm ? (
         <section className="space-y-4 rounded-xl border bg-card p-4">
-          <div className="bg-secondary/20 rounded-lg border p-3 text-xs">
-            <p className="font-medium">Auto-filled from portfolio</p>
-            <p className="text-muted-foreground mt-1">
-              {property?.address}, {property?.suburb}
-              {prefillLoading ? ' · Loading lease details…' : ' · Review and adjust before submitting.'}
-            </p>
-          </div>
-
           {prefillLoading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
               <Loader2 className="size-4 animate-spin" />
@@ -726,6 +801,18 @@ export function CreateInspectionWizard({
                   onAcknowledgedChange={setOpenAcknowledged}
                   tenantNotified={openTenantNotified}
                   onTenantNotifiedChange={setOpenTenantNotified}
+                  showTenantMovedOut={manualStandaloneCrossubOpen}
+                  tenantMovedOut={openTenantMovedOut}
+                  onTenantMovedOutChange={setOpenTenantMovedOut}
+                  preferredRentPerWeek={openPreferredRentPerWeek}
+                  onPreferredRentPerWeekChange={setOpenPreferredRentPerWeek}
+                  preferredAvailableFrom={openPreferredAvailableFrom}
+                  onPreferredAvailableFromChange={setOpenPreferredAvailableFrom}
+                  minAvailableFrom={minOpenAvailableFrom}
+                  leaseTermChoice={openLeaseTermChoice}
+                  onLeaseTermChoiceChange={setOpenLeaseTermChoice}
+                  customLeaseTermWeeks={openCustomLeaseTermWeeks}
+                  onCustomLeaseTermWeeksChange={setOpenCustomLeaseTermWeeks}
                 />
               ) : null}
 
@@ -765,6 +852,8 @@ export function CreateInspectionWizard({
                     <Loader2 className="size-4 animate-spin" />
                     Creating…
                   </>
+                ) : inspectionType === 'OPEN' ? (
+                  'Create'
                 ) : (
                   'Create inspection'
                 )}
@@ -799,6 +888,18 @@ function OpenInspectionForm({
   onAcknowledgedChange,
   tenantNotified,
   onTenantNotifiedChange,
+  showTenantMovedOut = false,
+  tenantMovedOut,
+  onTenantMovedOutChange,
+  preferredRentPerWeek,
+  onPreferredRentPerWeekChange,
+  preferredAvailableFrom,
+  onPreferredAvailableFromChange,
+  minAvailableFrom,
+  leaseTermChoice,
+  onLeaseTermChoiceChange,
+  customLeaseTermWeeks,
+  onCustomLeaseTermWeeksChange,
 }: {
   property: Property;
   listingContext: ReturnType<typeof getOpenListingContext> | null;
@@ -817,23 +918,21 @@ function OpenInspectionForm({
   onAcknowledgedChange: (v: boolean) => void;
   tenantNotified: boolean;
   onTenantNotifiedChange: (v: boolean) => void;
+  showTenantMovedOut?: boolean;
+  tenantMovedOut: boolean | null;
+  onTenantMovedOutChange: (v: boolean) => void;
+  preferredRentPerWeek: string;
+  onPreferredRentPerWeekChange: (v: string) => void;
+  preferredAvailableFrom: string;
+  onPreferredAvailableFromChange: (v: string) => void;
+  minAvailableFrom: string;
+  leaseTermChoice: StandaloneOpenLeaseTermChoice;
+  onLeaseTermChoiceChange: (v: StandaloneOpenLeaseTermChoice) => void;
+  customLeaseTermWeeks: string;
+  onCustomLeaseTermWeeksChange: (v: string) => void;
 }) {
-  const isOccupied = listingContext === 'occupied';
-  const isSelf = conductedBy === 'agent';
-
   return (
     <div className="space-y-4">
-      {listingContext && (
-        <div className="rounded-xl border bg-card p-3 text-xs">
-          <p className="font-semibold">{OPEN_LISTING_CONTEXT_LABEL[listingContext]}</p>
-          <p className="text-muted-foreground mt-1">
-            {isOccupied
-              ? `${property.tenantName ?? 'Tenant'} is the current tenant.`
-              : 'Vacant or new listing.'}
-          </p>
-        </div>
-      )}
-
       {!leasingRequestMode ? (
         <div className="space-y-2">
           <Label>Who conducts the open inspection?</Label>
@@ -855,10 +954,110 @@ function OpenInspectionForm({
         </div>
       ) : null}
 
-      {isSelf ? <Callout body={SELF_OPEN_INSPECTION_DISCLAIMER} /> : null}
-
       {conductedBy === 'crossub' ? (
         <>
+          {showTenantMovedOut ? (
+            <div className="space-y-2">
+              <Label className="text-xs">Tenant moved out? *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={tenantMovedOut === true ? 'default' : 'outline'}
+                  className={cn(
+                    'h-9',
+                    tenantMovedOut === true && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => onTenantMovedOutChange(true)}
+                >
+                  Yes
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={tenantMovedOut === false ? 'default' : 'outline'}
+                  className={cn(
+                    'h-9',
+                    tenantMovedOut === false && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => onTenantMovedOutChange(false)}
+                >
+                  No
+                </Button>
+              </div>
+              {tenantMovedOut === false ? (
+                <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                  The current tenant&apos;s details will appear on the job case for CROSSUB to contact them.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {showTenantMovedOut ? (
+            <>
+              <Field label="Preferred rent / week (AUD) *">
+                <Input
+                  type="number"
+                  min={1}
+                  value={preferredRentPerWeek}
+                  onChange={(e) => onPreferredRentPerWeekChange(e.target.value)}
+                />
+              </Field>
+              <Field label="Preferred lease term *">
+                <div className="grid grid-cols-3 gap-2">
+                  {(['26', '52'] as const).map((weeks) => (
+                    <Button
+                      key={weeks}
+                      type="button"
+                      size="sm"
+                      variant={leaseTermChoice === weeks ? 'default' : 'outline'}
+                      className={cn(
+                        'h-9',
+                        leaseTermChoice === weeks && 'bg-teal-600 text-white hover:bg-teal-700',
+                      )}
+                      onClick={() => onLeaseTermChoiceChange(weeks)}
+                    >
+                      {weeks} weeks
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={leaseTermChoice === 'custom' ? 'default' : 'outline'}
+                    className={cn(
+                      'h-9',
+                      leaseTermChoice === 'custom' && 'bg-teal-600 text-white hover:bg-teal-700',
+                    )}
+                    onClick={() => onLeaseTermChoiceChange('custom')}
+                  >
+                    Custom
+                  </Button>
+                </div>
+                {leaseTermChoice === 'custom' ? (
+                  <Input
+                    type="number"
+                    min={1}
+                    max={520}
+                    className="mt-2"
+                    placeholder="Enter number of weeks"
+                    value={customLeaseTermWeeks}
+                    onChange={(e) => onCustomLeaseTermWeeksChange(e.target.value)}
+                  />
+                ) : null}
+              </Field>
+              <Field label="Available from *">
+                <Input
+                  type="date"
+                  min={minAvailableFrom}
+                  value={preferredAvailableFrom}
+                  onChange={(e) => onPreferredAvailableFromChange(e.target.value)}
+                />
+                <p className="text-muted-foreground text-[11px]">
+                  Must be at least {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
+                  {minAvailableFrom}).
+                </p>
+              </Field>
+            </>
+          ) : null}
           <Field label={leasingRequestMode ? 'Viewing start date & time *' : 'Preferred start date & time'}>
             <Input
               type="datetime-local"
@@ -892,41 +1091,6 @@ function OpenInspectionForm({
               ? 'CROSSUB will confirm the official viewing window in the admin portal before the inspection is advertised.'
               : 'This is your preference only. Use the end field for a range or latest option (e.g. 14 Jul start and 15 Jul end if either day works). CROSSUB will confirm the official schedule in the admin portal before the viewing is advertised.'}
           </p>
-        </>
-      ) : conductedBy === 'agent' ? (
-        <>
-          <Callout body={isOccupied ? OCCUPIED_SELF_TENANT_NOTE : SELF_OPEN_NEW_LISTING_NOTE} />
-          {isOccupied ? <TenantContactCard property={property} /> : null}
-          <Field label="Open inspection date & time *">
-            <Input
-              type="datetime-local"
-              value={scheduledLocal}
-              onChange={(e) => onScheduledLocalChange(e.target.value)}
-            />
-          </Field>
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-xs">
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={acknowledged}
-              onChange={(e) => onAcknowledgedChange(e.target.checked)}
-            />
-            <span>
-              I understand CROSSUB is not responsible for contacting the{' '}
-              {isOccupied ? 'tenant' : 'prospects'} or arranging timing.
-            </span>
-          </label>
-          {isOccupied ? (
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-xs">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={tenantNotified}
-                onChange={(e) => onTenantNotifiedChange(e.target.checked)}
-              />
-              <span>I have notified the tenant of the open inspection (optional).</span>
-            </label>
-          ) : null}
         </>
       ) : null}
     </div>
@@ -1165,26 +1329,6 @@ function OutgoingInspectionForm({
   );
 }
 
-function TenantContactCard({ property }: { property: Property }) {
-  return (
-    <div className="rounded-xl border bg-card p-4 text-xs">
-      <div className="mb-2 flex items-center gap-2">
-        <User className="text-primary size-4" />
-        <p className="font-semibold">Tenant to notify</p>
-      </div>
-      <p className="font-medium">{property.tenantName}</p>
-      {property.tenantContact.email ? (
-        <p className="text-primary mt-1">{property.tenantContact.email}</p>
-      ) : null}
-      {property.tenantContact.phone ? <p>{property.tenantContact.phone}</p> : null}
-      <p className="text-muted-foreground mt-2 flex items-start gap-1.5">
-        <Calendar className="mt-0.5 size-3 shrink-0" />
-        Contact the tenant yourself before the open inspection.
-      </p>
-    </div>
-  );
-}
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
@@ -1199,15 +1343,6 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
     <div className="space-y-1">
       <Label>{label}</Label>
       <Input readOnly value={value} className="bg-muted/40" />
-    </div>
-  );
-}
-
-function Callout({ body }: { body: string }) {
-  return (
-    <div className="flex gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
-      <p>{body}</p>
     </div>
   );
 }

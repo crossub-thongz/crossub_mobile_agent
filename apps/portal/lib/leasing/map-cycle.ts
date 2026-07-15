@@ -183,6 +183,7 @@ export function patchDetailFromCycleView(
       preferredNotes: u(view.openInspection.preferredNotes ?? undefined),
       viewingSessionId: view.viewingSessionId ?? undefined,
       pushedToAgentApp: view.openInspection.pushedToAgentApp,
+      agentConducted: view.openInspection.agentConducted,
       agentNotifiedToAdvertise: view.openInspection.agentNotifiedToAdvertise,
       advertising: view.openInspection.advertising as LeasingAdvertisingStatus,
       advertisingNote: u(view.openInspection.advertisingNote),

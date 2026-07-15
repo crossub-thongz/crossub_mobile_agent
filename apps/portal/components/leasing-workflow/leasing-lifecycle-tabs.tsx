@@ -12,7 +12,7 @@ import { LeasingStepOpenReport } from '@/components/leasing-workflow/leasing-ste
 import { LeasingStepResults } from '@/components/leasing-workflow/leasing-step-results';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
-import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
+import { LEASING_LIFECYCLE_STEP, LEASING_AGENT_SELF_OPEN_LABEL, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
   enrichLeasingEmailRecords,
   leasingEmailRecordsForStep,
@@ -41,6 +41,16 @@ export function LeasingLifecycleTabs({
         currentStep={activeStep}
         onStepClick={(step) => setActiveStep(detail.propertyId, step)}
       />
+
+      {liveDetail.openInspection.agentConducted ? (
+        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3">
+          <p className="text-sm font-semibold">{LEASING_AGENT_SELF_OPEN_LABEL}</p>
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+            You are conducting the open inspection for this property. CROSSUB will not create a
+            separate open inspection order.
+          </p>
+        </div>
+      ) : null}
 
       <LeasingLifecyclePhaseNav
         activeStep={activeStep}

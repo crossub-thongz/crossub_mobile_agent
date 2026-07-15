@@ -17,6 +17,7 @@ export type CreateAgentLeasingCycleInput = {
   tenantMovedOutDate?: string;
   notes?: string;
   skipOpenInspection?: boolean;
+  agentConductsOpenInspection?: boolean;
 };
 
 export type CreateAgentRentReviewInput = {

@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { cancelAgentLeasingCycle } from '@/lib/crossub-api/agent-workflow-client';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
-import { LEASING_UI } from '@/lib/leasing/constants';
+import { LEASING_AGENT_SELF_OPEN_LABEL, LEASING_UI } from '@/lib/leasing/constants';
 import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspection-session';
 import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import {
@@ -226,6 +226,15 @@ export function LeasingStepOpenInspection({
 
   return (
     <div className="space-y-3">
+      {oi.agentConducted ? (
+        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3">
+          <p className="text-sm font-semibold">{LEASING_AGENT_SELF_OPEN_LABEL}</p>
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+            This letting was opened with you running the open inspection yourself. Advertise the
+            property, run the viewing, and add applicants when ready.
+          </p>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StepFact label="New rental" value={formatLettingRent(rental.rentPerWeek)} />
         <StepFact

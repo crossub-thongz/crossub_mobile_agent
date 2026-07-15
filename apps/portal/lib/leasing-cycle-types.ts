@@ -190,6 +190,7 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
     preferredScheduledTimeEnd?: string | null
     preferredNotes?: string | null
     pushedToAgentApp: boolean
+    agentConducted: boolean
     agentNotifiedToAdvertise: boolean
     advertising: string
     advertisingNote: string | null

@@ -10,6 +10,21 @@ export function getOpenListingContext(property: Property): OpenListingContext {
   return vacant ? 'new_listing' : 'occupied';
 }
 
+export function openListingContextFromTenantMovedOut(
+  tenantMovedOut: boolean,
+): OpenListingContext {
+  return tenantMovedOut ? 'new_listing' : 'occupied';
+}
+
+export function shouldShowOpenInspectionTenantDetails(input: {
+  tenantMovedOut?: boolean | null;
+  openListingContext?: OpenListingContext | null;
+}): boolean {
+  if (input.tenantMovedOut === true) return false;
+  if (input.tenantMovedOut === false) return true;
+  return input.openListingContext === 'occupied';
+}
+
 export const OPEN_LISTING_CONTEXT_LABEL: Record<OpenListingContext, string> = {
   occupied: 'Existing property — tenant still lives in',
   new_listing: 'New listing / vacant property',
