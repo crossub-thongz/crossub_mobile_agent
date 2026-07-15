@@ -154,6 +154,8 @@ export interface OpenInspectionSession {
   shortNote?: string;
   /** Public tenant-app URL for guest applications (QR / share link). */
   applyUrl?: string;
+  /** Public tenant-app URL for prospect check-in at the viewing. */
+  checkInUrl?: string;
   /** True once the linked leasing cycle's open report has been generated. */
   openReportGenerated?: boolean;
   reviewCompletedAt?: string;

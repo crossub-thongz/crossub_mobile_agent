@@ -24,8 +24,7 @@ import {
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
-import { OpenInspectionApplyShareCard } from '@/components/open-inspection/open-inspection-apply-share-card';
-import { OpenInspectionRentalFacts } from '@/components/open-inspection/open-inspection-rental-facts';
+import { OpenInspectionStagePanel } from '@/components/open-inspection/open-inspection-stage-panel';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
@@ -148,29 +147,33 @@ export function InspectionDetailView({
     [insp?.propertyId, leasingCycles],
   );
 
+  const isStandaloneOpenViewing =
+    insp?.type === 'OPEN' && insp.source === 'open_viewing';
+
   useEffect(() => {
-    if (!insp || insp.type !== 'OPEN' || !activeLeasingCycle) return;
+    if (!insp || insp.type !== 'OPEN' || !activeLeasingCycle || isStandaloneOpenViewing) return;
     ensureLeasingDetail(
       insp.propertyId,
       insp.propertyAddress,
       activeLeasingCycle.rentPerWeek,
     );
-  }, [activeLeasingCycle, ensureLeasingDetail, insp]);
+  }, [activeLeasingCycle, ensureLeasingDetail, insp, isStandaloneOpenViewing]);
 
   useLeasingCycleLiveSync(
     insp?.propertyId ?? '',
     activeLeasingCycle?.id,
-    Boolean(insp?.type === 'OPEN' && activeLeasingCycle),
+    Boolean(insp?.type === 'OPEN' && activeLeasingCycle && !isStandaloneOpenViewing),
   );
   const stageEmails = useMemo(() => {
     if (!insp) return [];
     if (insp.type === 'OPEN') {
+      if (isStandaloneOpenViewing) return inspectionEmailRecordsForStep(insp);
       if (leasingDetail) return openInspectionJobCaseEmails(leasingDetail);
       if (activeLeasingCycle) return [];
       return inspectionEmailRecordsForStep(insp);
     }
     return inspectionEmailRecordsForStep(insp);
-  }, [activeLeasingCycle, insp, leasingDetail]);
+  }, [activeLeasingCycle, insp, isStandaloneOpenViewing, leasingDetail]);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -274,7 +277,8 @@ export function InspectionDetailView({
   const hasReport = reportGenerated || insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
   const sources = openSession?.reportSourceCounts;
   const canDelete = apiConnected && canDeleteOpenInspection(insp);
-  const isOpenLeasingCase = insp.type === 'OPEN' && Boolean(leasingDetail);
+  const isOpenLeasingCase =
+    insp.type === 'OPEN' && Boolean(leasingDetail) && !isStandaloneOpenViewing;
   const property = insp.propertyId
     ? properties.find((p) => p.id === insp.propertyId)
     : undefined;
@@ -298,13 +302,21 @@ export function InspectionDetailView({
     };
   })();
   const isOpenResultsStep =
-    Boolean(leasingDetail) && insp.type === 'OPEN' && isLettingResultsStep(leasingDetail);
+    !isStandaloneOpenViewing &&
+    Boolean(leasingDetail) &&
+    insp.type === 'OPEN' &&
+    isLettingResultsStep(leasingDetail);
   const isOpenReportVisibleStep =
+    !isStandaloneOpenViewing &&
     Boolean(leasingDetail) &&
     insp.type === 'OPEN' &&
     isLettingOpenReportVisibleStep(leasingDetail);
-  const showSessionRail = Boolean(openSession && insp.type === 'OPEN' && !isOpenReportVisibleStep);
-  const showLettingRail = Boolean(insp.type === 'OPEN' && leasingDetail && !showSessionRail);
+  const showSessionRail = Boolean(
+    openSession && insp.type === 'OPEN' && (isStandaloneOpenViewing || !isOpenReportVisibleStep),
+  );
+  const showLettingRail = Boolean(
+    insp.type === 'OPEN' && leasingDetail && !showSessionRail && !isStandaloneOpenViewing,
+  );
 
   const handleDeleteConfirm = async (reason: string) => {
     if (!apiConnected) {
@@ -558,15 +570,15 @@ export function InspectionDetailView({
         </section>
       ) : null}
 
-      {openSession && insp.type === 'OPEN' && !isOpenResultsStep ? (
-        <OpenInspectionRentalFacts rental={openSession.rental} />
+      {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (
+        <OpenInspectionStagePanel
+          session={openSession}
+          propertyLabel={insp.propertyAddress}
+          onSessionChange={setOpenSession}
+        />
       ) : null}
 
-      {openSession && insp.type === 'OPEN' && !isOpenResultsStep ? (
-        <OpenInspectionApplyShareCard session={openSession} />
-      ) : null}
-
-      {openSession && insp.type === 'OPEN' ? (
+      {openSession && insp.type === 'OPEN' && !isStandaloneOpenViewing && !isOpenResultsStep ? (
         <InfoSection title={`Applicants (${applicantsWithApplications.length})`}>
           <OpenInspectionApplicantPanel
             session={openSession}
@@ -599,7 +611,7 @@ export function InspectionDetailView({
                 {completingReview ? 'Completing…' : 'Complete review'}
               </Button>
             ) : null}
-            {reportGenerated && !isOpenResultsStep && (
+            {reportGenerated && !isOpenResultsStep ? (
               <InspectionReportDownloadActions
                 inspectionId={openSession.id}
                 propertyLabel={insp.propertyAddress}
@@ -608,7 +620,7 @@ export function InspectionDetailView({
                 variant="inline"
                 size="sm"
               />
-            )}
+            ) : null}
           </div>
           {reportGenerated && sources && !isOpenResultsStep ? (
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">

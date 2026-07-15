@@ -21,6 +21,24 @@ export function tenantAppApplyUrl(
   return `${base}?sessionId=${encodeURIComponent(viewingSessionId)}`;
 }
 
+/** Prospect check-in link for an open inspection viewing session. */
+export function tenantAppCheckInUrl(propertyId: string, viewingSessionId: string): string {
+  const base = `${tenantAppBaseUrl()}/properties/${encodeURIComponent(propertyId)}/check-in`;
+  return `${base}?sessionId=${encodeURIComponent(viewingSessionId)}`;
+}
+
+export function resolveOpenInspectionCheckInUrl(session: {
+  checkInUrl?: string;
+  propertyId?: string;
+  id: string;
+}): string | undefined {
+  if (session.propertyId) {
+    return tenantAppCheckInUrl(session.propertyId, session.id);
+  }
+  const fromApi = session.checkInUrl?.trim();
+  return fromApi || undefined;
+}
+
 /** Prefer client-built staging URL over API applyUrl (API may still emit localhost). */
 export function resolveOpenInspectionApplyUrl(session: {
   applyUrl?: string;
