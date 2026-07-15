@@ -4,11 +4,8 @@ import { useState } from 'react';
 import { Loader2, Mail, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { CaseNestedDialog } from '@/components/agent/case-nested-dialog';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
@@ -19,23 +16,19 @@ export function OpenInspectionReportStage({
   session: OpenInspectionSession;
   propertyLabel: string;
 }) {
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [landlordEmail, setLandlordEmail] = useState(session.landlord?.email?.trim() ?? '');
   const [sending, setSending] = useState(false);
   const reportReady = session.openReportGenerated === true;
   const visitors = session.visitors;
+  const landlordEmail = session.landlord?.email?.trim() || '';
 
   const sendToLandlord = async () => {
-    const email = landlordEmail.trim();
-    if (!email || !email.includes('@')) {
-      toast.error('Enter a valid landlord email');
-      return;
-    }
     setSending(true);
     try {
-      await openViewingsApi.sendReportToLandlord(session.id, email);
+      await openViewingsApi.sendReportToLandlord(
+        session.id,
+        landlordEmail || undefined,
+      );
       toast.success('Open report emailed to landlord');
-      setEmailOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not email the report');
     } finally {
@@ -96,51 +89,29 @@ export function OpenInspectionReportStage({
             size="sm"
             variant="outline"
             className="h-8 gap-1.5 text-xs"
-            onClick={() => setEmailOpen(true)}
+            disabled={sending}
+            onClick={() => void sendToLandlord()}
           >
-            <Mail className="size-3.5" />
-            Email report (send to landlord)
+            {sending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Mail className="size-3.5" />
+            )}
+            {sending ? 'Sending…' : 'Email report to landlord'}
           </Button>
+          {landlordEmail ? (
+            <p className="text-muted-foreground text-xs">Sends to {landlordEmail}</p>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Uses the landlord email on file for this property.
+            </p>
+          )}
         </div>
       ) : (
         <p className="text-muted-foreground text-xs leading-relaxed">
           Complete applicant review to generate the open inspection report.
         </p>
       )}
-
-      <CaseNestedDialog
-        open={emailOpen}
-        onClose={() => setEmailOpen(false)}
-        title="Email report to landlord"
-        description="Send the open inspection PDF to the property landlord."
-      >
-        <div className="space-y-2">
-          <Label htmlFor="landlord-report-email">Landlord email</Label>
-          <Input
-            id="landlord-report-email"
-            type="email"
-            value={landlordEmail}
-            onChange={(e) => setLandlordEmail(e.target.value)}
-            disabled={sending}
-            placeholder="landlord@email.com"
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => setEmailOpen(false)} disabled={sending}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={() => void sendToLandlord()} disabled={sending}>
-            {sending ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Sending…
-              </>
-            ) : (
-              'Send report'
-            )}
-          </Button>
-        </div>
-      </CaseNestedDialog>
     </section>
   );
 }
