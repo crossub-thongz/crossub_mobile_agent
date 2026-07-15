@@ -76,7 +76,7 @@ import {
 import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sync';
 import { useLivePoll } from '@/lib/use-live-poll';
 import { inspectionsApi } from '@/lib/inspections-api';
-import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
+import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -134,7 +134,24 @@ export function InspectionDetailView({
   }, [apiConnected, baseFromList, inspectionId, registerInspection]);
 
   const base = baseFromList ?? fetchedBase;
-  const insp = useInspectionDetailLiveSync(base, apiConnected);
+  const isOpenViewingSource = base?.type === 'OPEN' && base?.source === 'open_viewing';
+  const liveInsp = useInspectionDetailLiveSync(base, apiConnected && !isOpenViewingSource);
+  const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
+  const insp = useMemo(() => {
+    const row = liveInsp ?? base;
+    if (!row) return row;
+    if (isOpenViewingSource && openSession) {
+      const mapped = mapOpenSessionToInspection(openSession, row.propertyId);
+      return {
+        ...row,
+        ...mapped,
+        propertyAddress: row.propertyAddress || mapped.propertyAddress,
+        timeline: row.timeline.length > 0 ? row.timeline : mapped.timeline,
+      };
+    }
+    return row;
+  }, [liveInsp, base, isOpenViewingSource, openSession]);
+
   const leasingDetail = useLeasingWorkflowStore((s) =>
     insp?.propertyId ? s.getDetail(insp.propertyId) : undefined,
   );
@@ -147,8 +164,7 @@ export function InspectionDetailView({
     [insp?.propertyId, leasingCycles],
   );
 
-  const isStandaloneOpenViewing =
-    insp?.type === 'OPEN' && insp.source === 'open_viewing';
+  const isStandaloneOpenViewing = isOpenViewingSource;
 
   useEffect(() => {
     if (!insp || insp.type !== 'OPEN' || !activeLeasingCycle || isStandaloneOpenViewing) return;
@@ -174,23 +190,22 @@ export function InspectionDetailView({
     }
     return inspectionEmailRecordsForStep(insp);
   }, [activeLeasingCycle, insp, isStandaloneOpenViewing, leasingDetail]);
-  const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
   const syncOpenSession = useCallback(async () => {
-    if (!apiConnected || !insp || insp.type !== 'OPEN') {
+    if (!apiConnected || !base || base.type !== 'OPEN') {
       setOpenSession(null);
       return;
     }
     const applySession = (session: OpenInspectionSession) => {
       setOpenSession((previous) => mergeOpenInspectionSessionPoll(previous, session));
     };
-    if (insp.source === 'open_viewing') {
+    if (base.source === 'open_viewing') {
       try {
-        const session = await openViewingsApi.get(insp.id);
+        const session = await openViewingsApi.get(base.id);
         applySession(session);
       } catch {
         /* keep last good session on transient poll errors */
@@ -208,13 +223,13 @@ export function InspectionDetailView({
       return;
     }
     setOpenSession(null);
-  }, [apiConnected, insp, leasingDetail?.openInspection.viewingSessionId]);
+  }, [apiConnected, base, leasingDetail?.openInspection.viewingSessionId]);
 
   useEffect(() => {
     void syncOpenSession();
   }, [syncOpenSession]);
 
-  useLivePoll(syncOpenSession, apiConnected && insp?.type === 'OPEN');
+  useLivePoll(syncOpenSession, apiConnected && base?.type === 'OPEN');
 
   useRecordRecentCaseVisit({
     id: base?.id,
@@ -470,7 +485,7 @@ export function InspectionDetailView({
         </InfoSection>
       ) : null}
 
-      {!isOpenLeasingCase && nextAction ? (
+      {!isOpenLeasingCase && !isStandaloneOpenViewing && nextAction ? (
         <section
           className={cn(
             'rounded-2xl border p-4',
@@ -491,11 +506,15 @@ export function InspectionDetailView({
         </section>
       ) : null}
 
-      {!isOpenLeasingCase ? <CaseWorkflowProgressCard progress={workflow} /> : null}
+      {!isOpenLeasingCase && !isStandaloneOpenViewing ? (
+        <CaseWorkflowProgressCard progress={workflow} />
+      ) : null}
 
-      {!isOpenReportVisibleStep ? <JobCaseStageEmailHistory emails={stageEmails} /> : null}
+      {!isOpenReportVisibleStep && !isStandaloneOpenViewing ? (
+        <JobCaseStageEmailHistory emails={stageEmails} />
+      ) : null}
 
-      {isSelfOpen && !isOpenResultsStep && (
+      {isSelfOpen && !isOpenResultsStep && !isStandaloneOpenViewing && (
         <Callout
           tone="warning"
           icon={AlertTriangle}
@@ -575,6 +594,15 @@ export function InspectionDetailView({
           session={openSession}
           propertyLabel={insp.propertyAddress}
           onSessionChange={setOpenSession}
+        />
+      ) : null}
+
+      {isStandaloneOpenViewing ? (
+        <JobCaseStageEmailHistory
+          emails={stageEmails}
+          title="Email/message history"
+          collapsible
+          defaultOpen={false}
         />
       ) : null}
 

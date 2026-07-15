@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { fetchInspectionDetail } from '@/lib/inspections/fetch';
+import { mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import type { Inspection } from '@/lib/types';
@@ -16,12 +17,12 @@ function isOpenSession(
 
 function mergeInspectionDetail(base: Inspection, detail: InspectionDetail | OpenInspectionSession): Inspection {
   if (isOpenSession(detail)) {
+    const mapped = mapOpenSessionToInspection(detail, base.propertyId);
     return {
       ...base,
-      scheduledAt: detail.startTime ?? base.scheduledAt,
-      status: detail.sessionStatus,
-      visitorCount: detail.visitors.length,
-      inspector: detail.agent?.name ?? base.inspector,
+      ...mapped,
+      propertyAddress: base.propertyAddress || mapped.propertyAddress,
+      timeline: base.timeline.length > mapped.timeline.length ? base.timeline : mapped.timeline,
     };
   }
   return {
