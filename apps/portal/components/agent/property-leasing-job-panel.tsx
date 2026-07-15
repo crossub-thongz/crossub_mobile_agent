@@ -4,11 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-import {
-  ArchivedEndLeasingTable,
-  ArchivedLeasingCyclesTable,
-} from '@/components/agent/archive-module-tables';
 import { EmptyState } from '@/components/agent/empty-state';
+import { FilterChips } from '@/components/agent/filter-chips';
 import {
   LeasingCyclesTable,
   TenantSelectionsTable,
@@ -26,7 +23,11 @@ import {
 } from '@/lib/crossub-api/agent-workflow-client';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
-import { leasingWorkflowJobRows } from '@/lib/property-job-rows';
+import {
+  archivedEndLeasingJobRows,
+  archivedLeasingCycleJobRows,
+  leasingWorkflowJobRows,
+} from '@/lib/property-job-rows';
 import {
   buildPropertyLeasingHistoryCases,
   buildPropertyLeasingWorkflowCases,
@@ -34,6 +35,12 @@ import {
   type PropertyLeasingWorkflowCase,
 } from '@/lib/property-leasing-workflow-cases';
 import { splitLeasingCyclesByHistory } from '@/lib/property-leasing-history';
+import {
+  LEASING_HISTORY_CATEGORY_FILTERS,
+  PROPERTY_HISTORY_SCOPE_FILTERS,
+  type LeasingHistoryCategory,
+  type PropertyHistoryScope,
+} from '@/lib/property-history-scope';
 import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
@@ -49,6 +56,10 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+
+function sortJobRowsByCreatedDesc(rows: PropertyJobRow[]): PropertyJobRow[] {
+  return [...rows].sort((a, b) => b.createdAtMs - a.createdAtMs);
+}
 
 export function PropertyLeasingJobPanel({
   property,
@@ -136,7 +147,7 @@ export function PropertyLeasingJobPanel({
     currentLease,
   });
 
-  const { active: activeLeasingCycles, history: historicalLeasingCycles } = useMemo(
+  const { active: activeLeasingCycles } = useMemo(
     () => splitLeasingCyclesByHistory(leasingCycles),
     [leasingCycles],
   );
@@ -189,6 +200,14 @@ export function PropertyLeasingJobPanel({
     () => leasingWorkflowJobRows(historyEndLeasingCases),
     [historyEndLeasingCases],
   );
+  const deletedNewLeasingJobRows = useMemo(
+    () => sortJobRowsByCreatedDesc(archivedLeasingCycleJobRows(deletedLeasingCycles)),
+    [deletedLeasingCycles],
+  );
+  const deletedEndLeasingJobRows = useMemo(
+    () => sortJobRowsByCreatedDesc(archivedEndLeasingJobRows(deletedEndLeasingCases)),
+    [deletedEndLeasingCases],
+  );
   const propertyTenantSelections = useMemo(
     () => tenantSelections.filter((selection) => selection.propertyId === propertyId),
     [propertyId, tenantSelections],
@@ -198,6 +217,8 @@ export function PropertyLeasingJobPanel({
   const [dialogCase, setDialogCase] = useState<PropertyLeasingWorkflowCase | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PropertyLeasingWorkflowCase | null>(null);
   const [pendingOpenCaseId, setPendingOpenCaseId] = useState<string | null>(null);
+  const [historyScope, setHistoryScope] = useState<PropertyHistoryScope>('completed');
+  const [historyCategory, setHistoryCategory] = useState<LeasingHistoryCategory>('new_leasing');
 
   useEffect(() => {
     if (!pendingOpenCaseId) return;
@@ -377,68 +398,91 @@ export function PropertyLeasingJobPanel({
     </>
   );
 
-  const renderHistoryTables = () => (
-    <section className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold">History</h3>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Completed letting and end-leasing cases — click a row to reopen the workflow.
-        </p>
-      </div>
+  const renderHistoryTables = () => {
+    const completedNewLeasingRows = sortJobRowsByCreatedDesc(historyNewLeasingJobRows);
+    const completedEndLeasingRows = sortJobRowsByCreatedDesc(historyEndLeasingJobRows);
+    const hasCompletedHistory =
+      completedNewLeasingRows.length > 0 || completedEndLeasingRows.length > 0;
+    const hasDeletedHistory =
+      deletedNewLeasingJobRows.length > 0 || deletedEndLeasingJobRows.length > 0;
 
-      {historyNewLeasingJobRows.length === 0 &&
-      historyEndLeasingJobRows.length === 0 &&
-      historicalLeasingCycles.length === 0 ? (
-        <EmptyState
-          icon={RefreshCw}
-          title="No leasing history"
-          description="Completed end-leasing cases and past letting cycles will appear here."
-        />
-      ) : (
-        <>
-          {historicalLeasingCycles.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                New leasing
-              </p>
-              <LeasingCyclesTable
-                items={historicalLeasingCycles}
-                hidePropertyColumn
-                selectedCycleId={selectedCaseId}
-                onCycleClick={openLeasingCycle}
-              />
-            </div>
-          ) : null}
-          {historyNewLeasingJobRows.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                New leasing
-              </p>
-              <PropertyJobCasesTable
-                rows={historyNewLeasingJobRows}
-                showViewToggle
-                selectedId={selectedCaseId}
-                onRowClick={handleRowClick}
-              />
-            </div>
-          ) : null}
-          {historyEndLeasingJobRows.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                End leasing
-              </p>
-              <PropertyJobCasesTable
-                rows={historyEndLeasingJobRows}
-                showViewToggle
-                selectedId={selectedCaseId}
-                onRowClick={handleRowClick}
-              />
-            </div>
-          ) : null}
-        </>
-      )}
-    </section>
-  );
+    const displayedHistoryRows =
+      historyScope === 'deleted'
+        ? historyCategory === 'new_leasing'
+          ? deletedNewLeasingJobRows
+          : deletedEndLeasingJobRows
+        : historyCategory === 'new_leasing'
+          ? completedNewLeasingRows
+          : completedEndLeasingRows;
+
+    const hasAnyHistory = hasCompletedHistory || hasDeletedHistory;
+    const categoryLabel =
+      historyCategory === 'new_leasing' ? 'new leasing' : 'end leasing';
+
+    return (
+      <section className="space-y-4">
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-semibold">History</h3>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {historyScope === 'deleted'
+                ? `Cancelled ${categoryLabel} cases, with the reason recorded at deletion.`
+                : `Completed ${categoryLabel} cases — click a row to reopen the workflow.`}
+            </p>
+          </div>
+          <FilterChips
+            options={[...PROPERTY_HISTORY_SCOPE_FILTERS]}
+            value={historyScope}
+            onChange={(id) => setHistoryScope(id as PropertyHistoryScope)}
+          />
+          <FilterChips
+            options={[...LEASING_HISTORY_CATEGORY_FILTERS]}
+            value={historyCategory}
+            onChange={(id) => setHistoryCategory(id as LeasingHistoryCategory)}
+          />
+        </div>
+
+        {!hasAnyHistory ? (
+          <EmptyState
+            icon={RefreshCw}
+            title="No leasing history"
+            description="Completed and cancelled leasing cases will appear here."
+          />
+        ) : displayedHistoryRows.length === 0 ? (
+          <EmptyState
+            icon={RefreshCw}
+            title={
+              historyScope === 'deleted'
+                ? `No deleted ${categoryLabel} cases`
+                : `No ${categoryLabel} history`
+            }
+            description={
+              historyScope === 'deleted'
+                ? `Cancelled ${categoryLabel} cases will appear here.`
+                : `Completed ${categoryLabel} cases will appear here.`
+            }
+          />
+        ) : (
+          <PropertyJobCasesTable
+            rows={displayedHistoryRows}
+            showViewToggle
+            selectedId={selectedCaseId}
+            onRowClick={handleRowClick}
+            emptyTitle={
+              historyScope === 'deleted'
+                ? `No deleted ${categoryLabel} cases`
+                : `No ${categoryLabel} history`
+            }
+            emptyDescription={
+              historyScope === 'deleted'
+                ? `Cancelled ${categoryLabel} cases will appear here.`
+                : `Completed ${categoryLabel} cases will appear here.`
+            }
+          />
+        )}
+      </section>
+    );
+  };
 
   if (workflowCases.length === 0) {
     const hasDeleted =
@@ -469,29 +513,6 @@ export function PropertyLeasingJobPanel({
         {workflowActions}
         {renderLeasingTables()}
         {renderHistoryTables()}
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">Deleted</h3>
-          <p className="text-muted-foreground text-xs">
-            Cancelled letting and end-leasing cases for this property, with the reason recorded at
-            deletion.
-          </p>
-          {deletedLeasingCycles.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                New letting
-              </p>
-              <ArchivedLeasingCyclesTable items={deletedLeasingCycles} />
-            </div>
-          ) : null}
-          {deletedEndLeasingCases.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                End leasing
-              </p>
-              <ArchivedEndLeasingTable items={deletedEndLeasingCases} />
-            </div>
-          ) : null}
-        </section>
       </div>
     );
   }
@@ -504,32 +525,6 @@ export function PropertyLeasingJobPanel({
 
       {renderHistoryTables()}
 
-      {(deletedLeasingCycles.length > 0 || deletedEndLeasingCases.length > 0) && (
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">Deleted</h3>
-          <p className="text-muted-foreground text-xs">
-            Cancelled letting and end-leasing cases for this property, with the reason recorded at
-            deletion.
-          </p>
-          {deletedLeasingCycles.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                New letting
-              </p>
-              <ArchivedLeasingCyclesTable items={deletedLeasingCycles} />
-            </div>
-          ) : null}
-          {deletedEndLeasingCases.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                End leasing
-              </p>
-              <ArchivedEndLeasingTable items={deletedEndLeasingCases} />
-            </div>
-          ) : null}
-        </section>
-      )}
-
       <WorkflowCaseDeleteDialog
         open={deleteTarget != null}
         onOpenChange={(open) => {
@@ -538,7 +533,7 @@ export function PropertyLeasingJobPanel({
         title={
           deleteTarget?.category === 'end_leasing' ? 'Delete end-leasing case' : 'Delete letting case'
         }
-        description="The case moves to the Deleted section below and the global Archive. A reason is required."
+        description="The case moves to History (Deleted filter) and the global Archive. A reason is required."
         onConfirm={handleDeleteConfirm}
         onSuccess={() => setDeleteTarget(null)}
       />

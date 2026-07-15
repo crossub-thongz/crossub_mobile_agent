@@ -5,6 +5,7 @@ import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { FilterChips } from '@/components/agent/filter-chips';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
@@ -16,6 +17,10 @@ import {
   isDeletedRentReview,
   rentReviewFromArchived,
 } from '@/lib/property-rent-review-history';
+import {
+  PROPERTY_HISTORY_SCOPE_FILTERS,
+  type PropertyHistoryScope,
+} from '@/lib/property-history-scope';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { buildPropertyWorkflowContext, tabActionsFor } from '@/lib/property-workflow-actions';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
@@ -74,6 +79,7 @@ export function PropertyRentReviewTab({
   const [dialogReview, setDialogReview] = useState<RentReviewCase | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RentReviewCase | null>(null);
   const [pendingOpenReviewId, setPendingOpenReviewId] = useState<string | null>(null);
+  const [historyScope, setHistoryScope] = useState<PropertyHistoryScope>('completed');
 
   const handleWorkflowCreated = useCallback(
     async (result?: PropertyWorkflowCreatedResult) => {
@@ -165,6 +171,9 @@ export function PropertyRentReviewTab({
     () => archivedRentReviewJobRows(deletedRentReviews, rentReviews, rentReviewDecisions),
     [deletedRentReviews, rentReviewDecisions, rentReviews],
   );
+
+  const displayedHistoryJobRows =
+    historyScope === 'deleted' ? deletedJobRows : historyJobRows;
 
   const openReviewDialog = useCallback((review: RentReviewCase) => {
     setSelectedCaseId(review.id);
@@ -271,43 +280,49 @@ export function PropertyRentReviewTab({
       </section>
 
       <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold">History</h3>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Completed rent reviews — click a row to reopen the workflow.
-          </p>
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-semibold">History</h3>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {historyScope === 'deleted'
+                ? 'Cancelled rent reviews — click a row to view the archived workflow.'
+                : 'Completed rent reviews — click a row to reopen the workflow.'}
+            </p>
+          </div>
+          <FilterChips
+            options={[...PROPERTY_HISTORY_SCOPE_FILTERS]}
+            value={historyScope}
+            onChange={(id) => setHistoryScope(id as PropertyHistoryScope)}
+          />
         </div>
 
-        {historyJobRows.length === 0 ? (
+        {displayedHistoryJobRows.length === 0 ? (
           <EmptyState
             icon={RefreshCw}
-            title="No rent review history"
-            description="Past rent reviews will appear here once completed."
+            title={
+              historyScope === 'deleted' ? 'No deleted rent reviews' : 'No rent review history'
+            }
+            description={
+              historyScope === 'deleted'
+                ? 'Cancelled rent reviews will appear here.'
+                : 'Past rent reviews will appear here once completed.'
+            }
           />
         ) : (
           <PropertyJobCasesTable
-            rows={historyJobRows}
-            emptyTitle="No rent review history"
-            emptyDescription="Past rent reviews will appear here once completed."
+            rows={displayedHistoryJobRows}
+            emptyTitle={
+              historyScope === 'deleted' ? 'No deleted rent reviews' : 'No rent review history'
+            }
+            emptyDescription={
+              historyScope === 'deleted'
+                ? 'Cancelled rent reviews will appear here.'
+                : 'Past rent reviews will appear here once completed.'
+            }
             {...rentReviewTableProps}
           />
         )}
       </section>
-
-      {deletedJobRows.length > 0 ? (
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">Deleted</h3>
-          <p className="text-muted-foreground text-xs">
-            Cancelled rent reviews for this property. Click a row to view the archived workflow.
-          </p>
-          <PropertyJobCasesTable
-            rows={deletedJobRows}
-            emptyTitle="No deleted rent reviews"
-            emptyDescription="Cancelled rent reviews will appear here."
-            {...rentReviewTableProps}
-          />
-        </section>
-      ) : null}
 
       <PropertyRentReviewCaseWorkflowDialog
         open={dialogReview !== null}
@@ -325,7 +340,7 @@ export function PropertyRentReviewTab({
           if (!open) setDeleteTarget(null);
         }}
         title="Delete rent review"
-        description="The rent review moves to the Deleted section below and the global Archive. A reason is required."
+        description="The rent review moves to History (Deleted filter) and the global Archive. A reason is required."
         confirmLabel="Delete rent review"
         onConfirm={handleDeleteConfirm}
         onSuccess={() => setDeleteTarget(null)}

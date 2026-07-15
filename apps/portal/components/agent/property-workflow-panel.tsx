@@ -44,6 +44,7 @@ import {
   deriveRentReviewDueDateFromInput,
 } from '@/lib/rent-review/scheduling';
 import { isPropertyVacant } from '@/lib/property-leasing';
+import { SELF_OPEN_INSPECTION_DISCLAIMER } from '@/lib/open-inspection';
 import { resolveRentPaidTo } from '@/lib/property-overview';
 import {
   buildPropertyWorkflowContext,
@@ -286,7 +287,7 @@ export function PropertyWorkflowCreateDialog({
   const [rentPerWeek, setRentPerWeek] = useState('');
   const [availableFrom, setAvailableFrom] = useState('');
   const [tenantMovedOut, setTenantMovedOut] = useState<boolean | null>(null);
-  const [tenantMovedOutDate, setTenantMovedOutDate] = useState('');
+  const [crossubConductsOpen, setCrossubConductsOpen] = useState<boolean | null>(true);
   const [lettingNotes, setLettingNotes] = useState('');
 
   const [tenantName, setTenantName] = useState('');
@@ -364,7 +365,7 @@ export function PropertyWorkflowCreateDialog({
     setTenantMovedOut(
       isPropertyVacant(property, currentLease ? [currentLease] : []) ? true : false,
     );
-    setTenantMovedOutDate('');
+    setCrossubConductsOpen(true);
     setLettingNotes('');
 
     const instantRentReview = buildRentReviewPrefill(property, agency, currentLease, {
@@ -517,8 +518,8 @@ export function PropertyWorkflowCreateDialog({
         if (tenantMovedOut === null) {
           throw new Error('Select whether the tenant has moved out');
         }
-        if (tenantMovedOut && !tenantMovedOutDate) {
-          throw new Error('Tenant moved out date is required');
+        if (crossubConductsOpen === null) {
+          throw new Error('Select whether CROSSUB should conduct the open inspection');
         }
         const fixedTermWeeks = resolveCrossubLeaseTermWeeks(
           crossubLeaseTermChoice,
@@ -529,19 +530,28 @@ export function PropertyWorkflowCreateDialog({
           availableFrom: new Date(availableFrom).toISOString(),
           fixedTermWeeks,
           tenantMovedOut,
-          tenantMovedOutDate: tenantMovedOut ? tenantMovedOutDate : undefined,
           notes: lettingNotes.trim() || undefined,
-          skipOpenInspection: true,
+          skipOpenInspection: !crossubConductsOpen,
+          ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
         });
-        toast.success('Letting cycle created');
+        toast.success(
+          crossubConductsOpen
+            ? 'Letting cycle created — open inspection queued for CROSSUB'
+            : 'Letting cycle created — you conduct the open inspection',
+        );
         if (apiConnected) {
           try {
-            const view = await leasingOpsApi.get(result.id);
+            const view = crossubConductsOpen
+              ? await leasingOpsApi.syncApplications(result.id)
+              : await leasingOpsApi.get(result.id);
             const store = useLeasingWorkflowStore.getState();
             store.ensureDetail(propertyId, formatPropertyFullAddress(property), rent);
             store.applyCycleView(propertyId, view);
-            store.resetActiveStepToHint(propertyId, LEASING_LIFECYCLE_STEP.OPEN_INSPECTION);
-            store.setActiveStep(propertyId, LEASING_LIFECYCLE_STEP.OPEN_INSPECTION);
+            const nextStep = crossubConductsOpen
+              ? LEASING_LIFECYCLE_STEP.OPEN_INSPECTION
+              : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL;
+            store.resetActiveStepToHint(propertyId, nextStep);
+            store.setActiveStep(propertyId, nextStep);
           } catch {
             /* live sync will catch up when the workflow opens */
           }
@@ -716,16 +726,7 @@ export function PropertyWorkflowCreateDialog({
                 </p>
               ) : null}
             </div>
-            {tenantMovedOut === true ? (
-              <Field label="Tenant moved out date *">
-                <Input
-                  type="date"
-                  value={tenantMovedOutDate}
-                  onChange={(e) => setTenantMovedOutDate(e.target.value)}
-                />
-              </Field>
-            ) : null}
-            <Field label="Lease term *">
+            <Field label="Preferred lease term *">
               <div className="grid grid-cols-3 gap-2">
                 {(['26', '52'] as const).map((weeks) => (
                   <Button
@@ -767,7 +768,7 @@ export function PropertyWorkflowCreateDialog({
                 />
               ) : null}
             </Field>
-            <Field label="Rent / week (AUD) *">
+            <Field label="Preferred rent / week (AUD) *">
               <Input
                 type="number"
                 min={1}
@@ -796,6 +797,45 @@ export function PropertyWorkflowCreateDialog({
                 maxLength={2000}
               />
             </Field>
+            <div className="space-y-1.5">
+              <Label className="text-xs">CROSSUB conducts open inspection? *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={crossubConductsOpen === true ? 'default' : 'outline'}
+                  className={cn(
+                    'h-9',
+                    crossubConductsOpen === true && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => setCrossubConductsOpen(true)}
+                >
+                  Yes
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={crossubConductsOpen === false ? 'default' : 'outline'}
+                  className={cn(
+                    'h-9',
+                    crossubConductsOpen === false && 'bg-teal-600 text-white hover:bg-teal-700',
+                  )}
+                  onClick={() => setCrossubConductsOpen(false)}
+                >
+                  No
+                </Button>
+              </div>
+              {crossubConductsOpen === true ? (
+                <p className="text-muted-foreground text-[11px]">
+                  CROSSUB will arrange the open inspection and contact the tenant or listing
+                  contacts on your behalf.
+                </p>
+              ) : crossubConductsOpen === false ? (
+                <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                  {SELF_OPEN_INSPECTION_DISCLAIMER}
+                </p>
+              ) : null}
+            </div>
           </div>
         ) : null}
 

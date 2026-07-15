@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, DoorOpen, ExternalLink, Plus } from 'lucide-react';
+import { CalendarClock, DoorOpen, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
@@ -78,6 +78,7 @@ export function LeasingStepOpenInspection({
 
   const oi = detail.openInspection;
   const { rental } = detail;
+  const crossubManagedOpen = !oi.agentConducted;
 
   const linkedInspection = useMemo(
     () =>
@@ -95,10 +96,14 @@ export function LeasingStepOpenInspection({
       oi.scheduledTime ||
       oi.preferredScheduledTime ||
       oi.preferredNotes ||
-      oi.inspectionId,
+      oi.inspectionId ||
+      linkedInspection?.id ||
+      (crossubManagedOpen && oi.status === 'in_progress'),
   );
   const isScheduled = Boolean(oi.scheduledTime ?? linkedInspection?.scheduledAt);
   const isRequested = !isScheduled && Boolean(oi.preferredScheduledTime || oi.preferredNotes);
+  const crossubOrderPlaced =
+    crossubManagedOpen && hasOpenInspection && !isScheduled && !isRequested;
   const canOpenJobCase = Boolean(oi.viewingSessionId || oi.inspectionId || linkedInspection);
 
   const inspectionTime = isScheduled
@@ -117,7 +122,9 @@ export function LeasingStepOpenInspection({
     ? 'Scheduled'
     : isRequested
       ? 'Preferred (awaiting CROSSUB)'
-      : 'Awaiting schedule';
+      : crossubOrderPlaced
+        ? 'Order placed'
+        : 'Awaiting schedule';
 
   const staffOpenInspectionHref =
     oi.viewingSessionId
@@ -271,6 +278,12 @@ export function LeasingStepOpenInspection({
                   Notes: {oi.preferredNotes}
                 </p>
               ) : null}
+              {crossubOrderPlaced ? (
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  CROSSUB is scheduling your open inspection. You will be notified when a time is
+                  confirmed.
+                </p>
+              ) : null}
               {oi.pushedToAgentApp ? (
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   Advertise the property, run the viewing, and submit applicants when ready.
@@ -300,6 +313,17 @@ export function LeasingStepOpenInspection({
             ) : null} */}
           </div>
         </div>
+      ) : crossubManagedOpen ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
+          <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
+            <DoorOpen className="text-muted-foreground size-5" />
+          </div>
+          <p className="mt-3 text-sm font-medium">Open inspection order placed</p>
+          <p className="text-muted-foreground mt-1 max-w-sm text-xs">
+            CROSSUB will arrange the open inspection and contact the tenant or listing contacts on
+            your behalf. Applicants who apply via the viewing QR code are linked here automatically.
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
           <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
@@ -315,7 +339,6 @@ export function LeasingStepOpenInspection({
             className="mt-4 h-9 gap-1.5"
             onClick={() => setCreateOpen(true)}
           >
-            <Plus className="size-4" />
             Create open inspection
           </Button>
         </div>

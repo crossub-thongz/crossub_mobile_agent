@@ -5,6 +5,7 @@ import { ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { FilterChips } from '@/components/agent/filter-chips';
 import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
@@ -22,6 +23,10 @@ import {
   isDeletedInspection,
   isHistoryInspection,
 } from '@/lib/property-inspection-history';
+import {
+  PROPERTY_HISTORY_SCOPE_FILTERS,
+  type PropertyHistoryScope,
+} from '@/lib/property-history-scope';
 import { inspectionJobRows } from '@/lib/property-job-rows';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { VACANT_TENANCY_INSPECTIONS_HINT } from '@/lib/property-leasing';
@@ -73,6 +78,7 @@ export function PropertyInspectionTab({
   const { apiConnected, refresh } = useAgentData();
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Inspection | null>(null);
+  const [historyScope, setHistoryScope] = useState<PropertyHistoryScope>('completed');
 
   const emptyDescription = isVacant
     ? VACANT_TENANCY_INSPECTIONS_HINT
@@ -130,6 +136,9 @@ export function PropertyInspectionTab({
     () => sortInspectionRows(inspectionJobRows(deletedInspections)),
     [deletedInspections],
   );
+
+  const displayedHistoryJobRows =
+    historyScope === 'deleted' ? deletedJobRows : historyJobRows;
 
   const openInspectionById = useCallback(
     (id: string) => {
@@ -198,43 +207,49 @@ export function PropertyInspectionTab({
       </section>
 
       <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold">History</h3>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Completed inspections — click a row to reopen the workflow.
-          </p>
+        <div className="space-y-2">
+          <div>
+            <h3 className="text-sm font-semibold">History</h3>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {historyScope === 'deleted'
+                ? 'Cancelled open inspections — click a row to view the archived case.'
+                : 'Completed inspections — click a row to reopen the workflow.'}
+            </p>
+          </div>
+          <FilterChips
+            options={[...PROPERTY_HISTORY_SCOPE_FILTERS]}
+            value={historyScope}
+            onChange={(id) => setHistoryScope(id as PropertyHistoryScope)}
+          />
         </div>
 
-        {historyJobRows.length === 0 ? (
+        {displayedHistoryJobRows.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
-            title="No inspection history"
-            description="Past inspections will appear here once completed."
+            title={
+              historyScope === 'deleted' ? 'No deleted inspections' : 'No inspection history'
+            }
+            description={
+              historyScope === 'deleted'
+                ? 'Cancelled open inspections will appear here.'
+                : 'Past inspections will appear here once completed.'
+            }
           />
         ) : (
           <PropertyJobCasesTable
-            rows={historyJobRows}
-            emptyTitle="No inspection history"
-            emptyDescription="Past inspections will appear here once completed."
+            rows={displayedHistoryJobRows}
+            emptyTitle={
+              historyScope === 'deleted' ? 'No deleted inspections' : 'No inspection history'
+            }
+            emptyDescription={
+              historyScope === 'deleted'
+                ? 'Cancelled open inspections will appear here.'
+                : 'Past inspections will appear here once completed.'
+            }
             {...inspectionTableProps}
           />
         )}
       </section>
-
-      {deletedJobRows.length > 0 ? (
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold">Deleted</h3>
-          <p className="text-muted-foreground text-xs">
-            Cancelled open inspections for this property. Click a row to view the archived case.
-          </p>
-          <PropertyJobCasesTable
-            rows={deletedJobRows}
-            emptyTitle="No deleted inspections"
-            emptyDescription="Cancelled open inspections will appear here."
-            {...inspectionTableProps}
-          />
-        </section>
-      ) : null}
 
       {!onViewInspection ? (
         <InspectionCaseDetailDialog
@@ -252,7 +267,7 @@ export function PropertyInspectionTab({
           if (!open) setDeleteTarget(null);
         }}
         title="Delete open inspection"
-        description="The open inspection is cancelled and moves to the Deleted section below. A reason is required."
+        description="The open inspection is cancelled and moves to History (Deleted filter). A reason is required."
         confirmLabel="Delete open inspection"
         onConfirm={handleDeleteConfirm}
         onSuccess={() => setDeleteTarget(null)}

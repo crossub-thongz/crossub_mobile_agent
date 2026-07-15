@@ -6,6 +6,7 @@ import {
   Building2,
   ClipboardList,
   FileText,
+  Gavel,
   RefreshCw,
   Wallet,
   Wrench,
@@ -21,6 +22,7 @@ const TAB_ICONS: Record<string, LucideIcon> = {
   Maintenance: Wrench,
   Inspection: ClipboardList,
   Accounting: Wallet,
+  Tribunal: Gavel,
   Archive: Archive,
 };
 

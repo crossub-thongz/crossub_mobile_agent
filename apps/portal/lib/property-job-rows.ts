@@ -6,14 +6,17 @@ import {
   vacatingWorkflowProgress,
 } from '@/lib/case-workflows';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
-import { isDeletedRentReview } from '@/lib/property-rent-review-history';
 import { isDeletedInspection } from '@/lib/property-inspection-history';
+import { isDeletedMaintenance } from '@/lib/property-maintenance-history';
+import { isDeletedRentReview } from '@/lib/property-rent-review-history';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { getRentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
 import { deriveRentReviewDueDateFromInput } from '@/lib/rent-review/scheduling';
 import type { RentReviewScheduleIndicators } from '@/lib/rent-review/conduct-countdown';
 import type {
+  ArchivedEndLeasingCase,
+  ArchivedLeasingCycle,
   ArchivedRentReview,
   Inspection,
   MaintenanceRequest,
@@ -232,8 +235,9 @@ export function splitPropertyJobRows(rows: PropertyJobRow[]): {
 }
 
 function isCompletedMaintenance(request: MaintenanceRequest): boolean {
+  if (isDeletedMaintenance(request)) return true;
   const status = request.status.toLowerCase();
-  return status.includes('complete') || status.includes('closed') || status.includes('cancelled');
+  return status.includes('complete') || status.includes('closed');
 }
 
 function isCompletedInspection(inspection: Inspection): boolean {
@@ -303,6 +307,7 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
     const progress = maintenanceWorkflowProgress(request);
     const createdIso = maintenanceCreatedAtIso(request);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
+    const deleted = isDeletedMaintenance(request);
     return {
       id: request.id,
       kind: 'maintenance',
@@ -323,7 +328,7 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
       date: createdAt,
       createdAt,
       createdAtMs,
-      status: progress.currentStepLabel,
+      status: deleted ? 'Deleted' : progress.currentStepLabel,
       phase: isCompletedMaintenance(request) ? 'completed' : 'in_progress',
     };
   });
@@ -413,6 +418,47 @@ export function rentReviewJobRows(
       status: progress.currentStepLabel,
       phase: isRentReviewDecided(review, decision) ? 'completed' : 'in_progress',
       rentReviewSchedule: getRentReviewScheduleIndicators(review) ?? undefined,
+    };
+  });
+}
+
+export function archivedLeasingCycleJobRows(items: ArchivedLeasingCycle[]): PropertyJobRow[] {
+  return items.map((item) => {
+    const { createdAt, createdAtMs } = rowCreatedAt(item.cancelledAt);
+    return {
+      id: item.id,
+      kind: 'leasing',
+      jobType: 'New leasing',
+      name: workflowCaseReferenceLabel(item.id, 'leasing'),
+      description: [
+        item.rentPerWeek != null ? `${formatCurrency(item.rentPerWeek)}/wk` : null,
+        item.cancelReason,
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Cancelled',
+      date: item.availableFrom ? formatDate(item.availableFrom) : '—',
+      createdAt,
+      createdAtMs,
+      status: 'Deleted',
+      phase: 'completed',
+    };
+  });
+}
+
+export function archivedEndLeasingJobRows(items: ArchivedEndLeasingCase[]): PropertyJobRow[] {
+  return items.map((item) => {
+    const { createdAt, createdAtMs } = rowCreatedAt(item.cancelledAt);
+    return {
+      id: item.id,
+      kind: 'end_leasing',
+      jobType: 'End leasing',
+      name: workflowCaseReferenceLabel(item.id, 'end_leasing'),
+      description: item.cancelReason,
+      date: item.vacateDate ? formatDate(item.vacateDate) : '—',
+      createdAt,
+      createdAtMs,
+      status: 'Deleted',
+      phase: 'completed',
     };
   });
 }

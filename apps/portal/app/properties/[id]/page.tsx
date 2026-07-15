@@ -20,6 +20,7 @@ import { PropertyProfileDetails } from '@/components/agent/property-profile-deta
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyAccountingTab } from '@/components/agent/property-accounting-tab';
+import { PropertyTribunalTab } from '@/components/agent/property-tribunal-tab';
 import { PropertyDocumentsTab } from '@/components/agent/property-documents-tab';
 import { PropertyHistoryTab } from '@/components/agent/property-history-tab';
 import { PropertyRentReviewTab } from '@/components/agent/property-rent-review-tab';
@@ -206,6 +207,7 @@ export default function PropertyDetailPage() {
   const nextRentReviewCase = getNextRentReviewCase(property, tenancyRentReviews, {
     isVacant,
   });
+  const propertyTribunalCases = tribunalCases.filter((t) => t.propertyId === id);
   const clearPropertyInspectionFocus = useCallback(() => {
     setSelectedInspectionId(null);
     if (!searchParams.get('inspection')) return;
@@ -437,6 +439,22 @@ export default function PropertyDetailPage() {
             propertyId={id}
             accounting={acct}
             arrearsSectionRef={arrearsSectionRef}
+          />
+        )}
+
+        {tab === 'Tribunal' && (
+          <PropertyTribunalTab
+            property={property}
+            propertyId={id}
+            tribunalCases={propertyTribunalCases}
+            leasingCycles={propertyLeasingCycles}
+            rentReviews={tenancyRentReviews}
+            vacatingCases={propertyVacatingCases}
+            maintenance={tasks.maintenance}
+            inspections={tasks.inspections}
+            tenantSelections={propertyLeasingCases}
+            currentLease={currentLease}
+            onRefresh={() => void refresh()}
           />
         )}
 

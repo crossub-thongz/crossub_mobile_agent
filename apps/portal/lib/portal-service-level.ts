@@ -99,6 +99,7 @@ export const PROPERTY_DETAIL_TABS = [
   'Maintenance',
   'Inspection',
   'Accounting',
+  'Tribunal',
   'Archive',
 ] as const;
 

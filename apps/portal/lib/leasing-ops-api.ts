@@ -30,6 +30,8 @@ export type ScheduleIngoingInput = {
 export const leasingOpsApi = {
   get: (cycleId: string) => unwrap(api.get<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}`)),
 
+  syncApplications: (cycleId: string) =>
+    unwrap(api.post<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/applications/sync`)),
   arrangeOpenInspection: async (cycleId: string, input: ArrangeOpenInspectionInput) => {
     try {
       return await unwrap(

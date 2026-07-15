@@ -21,10 +21,9 @@ import type { Property } from '@/lib/types';
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'occupied', label: 'Occupied' },
+  { id: 'vacating', label: 'Vacating' },
   { id: 'vacant', label: 'Vacant' },
   { id: 'arrears', label: 'Arrears' },
-  { id: 'maintenance', label: 'Maintenance' },
-  { id: 'tribunal', label: 'Tribunal' },
 ];
 
 export default function PropertiesPage() {
@@ -35,7 +34,6 @@ export default function PropertiesPage() {
     agencies,
     getPropertyActions,
     accounting,
-    tribunalCases,
     hasFullManagementAccess,
     apiConnected,
     endPropertyManagement,
@@ -51,25 +49,15 @@ export default function PropertiesPage() {
     let items = [...properties];
     if (filter === 'occupied') {
       items = items.filter(
-        (p) =>
-          p.leaseStatus === 'active' ||
-          p.leaseStatus === 'periodic' ||
-          p.leaseStatus === 'vacating',
+        (p) => p.leaseStatus === 'active' || p.leaseStatus === 'periodic',
       );
+    }
+    if (filter === 'vacating') {
+      items = items.filter((p) => p.leaseStatus === 'vacating');
     }
     if (filter === 'vacant') items = items.filter((p) => p.leaseStatus === 'vacant');
     if (filter === 'arrears') {
       items = items.filter((p) => (accounting.find((a) => a.propertyId === p.id)?.arrearsAmount ?? 0) > 0);
-    }
-    if (filter === 'maintenance') {
-      items = items.filter((p) =>
-        getPropertyActions(p.id).some((a) => a.category === 'Maintenance'),
-      );
-    }
-    if (filter === 'tribunal') {
-      items = items.filter((p) =>
-        tribunalCases.some((t) => t.propertyId === p.id && t.status === 'active'),
-      );
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -84,7 +72,7 @@ export default function PropertiesPage() {
       );
     }
     return items;
-  }, [properties, filter, search, accounting, getPropertyActions, tribunalCases]);
+  }, [properties, filter, search, accounting]);
 
   const needActionCount = properties.filter((p) => getPropertyActions(p.id).length > 0).length;
 
@@ -107,7 +95,7 @@ export default function PropertiesPage() {
       <div className="space-y-4">
         <PageIntro description="Table view of your managed properties. Rows needing action are highlighted." />
 
-        {needActionCount > 0 && (
+        {/* {needActionCount > 0 && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
             <span className="font-semibold text-destructive">{needActionCount}</span>
             <span className="text-muted-foreground">
@@ -115,7 +103,7 @@ export default function PropertiesPage() {
               propert{needActionCount === 1 ? 'y' : 'ies'} need action
             </span>
           </div>
-        )}
+        )} */}
 
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
