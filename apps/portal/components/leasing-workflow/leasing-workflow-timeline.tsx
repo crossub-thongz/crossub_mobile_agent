@@ -4,12 +4,16 @@ import { useEffect, useRef } from 'react';
 
 import { LeasingLifecycleTabs } from '@/components/leasing-workflow/leasing-lifecycle-tabs';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { isUuid } from '@/lib/file-upload';
+import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
+import { splitLeasingCyclesByHistory } from '@/lib/property-leasing-history';
+import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 
 export function LeasingWorkflowTimeline({
   propertyId,
+  leasingCycleId,
   propertyAddress,
   rentWeekly,
   hideSectionLabel = false,
@@ -19,6 +23,8 @@ export function LeasingWorkflowTimeline({
   onOpenInspectionCreated,
 }: {
   propertyId: string;
+  /** When set (e.g. history row), load this cycle instead of the property's active letting. */
+  leasingCycleId?: string;
   propertyAddress: string;
   rentWeekly?: number;
   hideSectionLabel?: boolean;
@@ -28,24 +34,71 @@ export function LeasingWorkflowTimeline({
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
+  const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
   const resetActiveStepToHint = useLeasingWorkflowStore((s) => s.resetActiveStepToHint);
   const setActiveStep = useLeasingWorkflowStore((s) => s.setActiveStep);
   const requestBondSectionHighlight = useLeasingWorkflowStore((s) => s.requestBondSectionHighlight);
   const detail = useLeasingWorkflowStore((s) => s.getDetail(propertyId));
   const { leasingCycles, apiConnected } = useAgentData();
-  const cycleId = leasingCycles.find((c) => c.propertyId === propertyId)?.id;
-  const initializedIdRef = useRef<string | null>(null);
+  const propertyCycles = leasingCycles.filter((c) => c.propertyId === propertyId);
+  const activeCycleId = splitLeasingCyclesByHistory(propertyCycles).active[0]?.id;
+  const resolvedCycleId =
+    leasingCycleId ?? activeCycleId ?? propertyCycles[0]?.id;
+  const initializedKeyRef = useRef<string | null>(null);
   const bondFocusAppliedRef = useRef(false);
 
-  useLeasingCycleLiveSync(propertyId, cycleId, apiConnected);
+  useLeasingCycleLiveSync(propertyId, resolvedCycleId, apiConnected);
 
   useEffect(() => {
-    const seeded = ensureDetail(propertyId, propertyAddress, rentWeekly);
-    if (initializedIdRef.current !== propertyId) {
-      resetActiveStepToHint(propertyId, seeded.activeStepHint);
-      initializedIdRef.current = propertyId;
-    }
-  }, [ensureDetail, resetActiveStepToHint, propertyId, propertyAddress, rentWeekly]);
+    ensureDetail(propertyId, propertyAddress, rentWeekly);
+  }, [ensureDetail, propertyId, propertyAddress, rentWeekly]);
+
+  useEffect(() => {
+    if (!apiConnected || !resolvedCycleId || !isUuid(resolvedCycleId)) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const view = await leasingOpsApi.get(resolvedCycleId);
+        if (cancelled) return;
+
+        ensureDetail(propertyId, propertyAddress, rentWeekly);
+        applyCycleView(propertyId, view);
+        const step = (view.activeStepHint ?? view.lifecycleStep) as LeasingLifecycleStep;
+        const initKey = `${propertyId}:${resolvedCycleId}`;
+        if (initializedKeyRef.current !== initKey) {
+          resetActiveStepToHint(propertyId, step);
+          initializedKeyRef.current = initKey;
+        }
+      } catch {
+        /* keep last known snapshot */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    apiConnected,
+    resolvedCycleId,
+    propertyId,
+    propertyAddress,
+    rentWeekly,
+    ensureDetail,
+    applyCycleView,
+    resetActiveStepToHint,
+  ]);
+
+  useEffect(() => {
+    if (!leasingCycleId || !isUuid(leasingCycleId)) return;
+
+    return () => {
+      if (!apiConnected || !activeCycleId || activeCycleId === leasingCycleId) return;
+      void leasingOpsApi.get(activeCycleId).then((view) => {
+        applyCycleView(propertyId, view);
+      });
+    };
+  }, [leasingCycleId, activeCycleId, apiConnected, propertyId, applyCycleView]);
 
   useEffect(() => {
     if (!focusBond) {
@@ -59,7 +112,10 @@ export function LeasingWorkflowTimeline({
     onFocusBondHandled?.();
   }, [focusBond, onFocusBondHandled, propertyId, requestBondSectionHighlight, setActiveStep]);
 
-  if (!detail) return null;
+  const cycleReady =
+    !leasingCycleId || !isUuid(leasingCycleId) || detail?.cycleId === leasingCycleId;
+
+  if (!detail || !cycleReady) return null;
 
   return (
     <div className="space-y-1.5">

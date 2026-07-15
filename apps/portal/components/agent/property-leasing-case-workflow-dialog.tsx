@@ -13,8 +13,9 @@ import {
 } from '@/lib/property-leasing-workflow-cases';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type { Property, RentReviewCase, VacatingCase } from '@/lib/types';
+import { isUuid } from '@/lib/file-upload';
 import { formatPropertyFullAddress } from '@/lib/utils';
-import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
+import { JOB_CASE_DIALOG_SIZE, END_LEASING_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 
 export function PropertyLeasingCaseWorkflowContent({
   item,
@@ -47,6 +48,7 @@ export function PropertyLeasingCaseWorkflowContent({
     return (
       <LeasingWorkflowTimeline
         propertyId={propertyId}
+        leasingCycleId={isUuid(item.id) ? item.id : undefined}
         propertyAddress={formatPropertyFullAddress(property)}
         rentWeekly={rentWeekly}
         hideSectionLabel
@@ -115,7 +117,9 @@ export function PropertyLeasingCaseWorkflowDialog({
       onClose={onClose}
       title={LEASING_CATEGORY_LABEL[item.category]}
       subtitle={`${item.label} · ${item.currentStep}`}
-      size={JOB_CASE_DIALOG_SIZE}
+      size={
+        item.category === 'end_leasing' ? END_LEASING_CASE_DIALOG_SIZE : JOB_CASE_DIALOG_SIZE
+      }
       headerActions={
         deletable && onDeleteCase ? (
           <Button

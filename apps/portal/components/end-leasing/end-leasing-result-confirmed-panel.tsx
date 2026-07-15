@@ -1,47 +1,45 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Check, ExternalLink, Loader2, Send } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { JobCaseSentEmailPreviewCard } from '@/components/agent/job-case-email-log';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { communicationsThread } from '@/constants/routes';
 import { EndLeasingReportComparisonPanel } from '@/components/end-leasing/end-leasing-report-comparison-panel';
-import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
+import { endLeasingStoredEmailToRecord } from '@/lib/end-leasing/agent-workflow-model';
+import type { EndLeasingOverviewEmail, TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { terminationApi } from '@/lib/termination-case-api';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
-function EmailSentCard({
+function RepairQuoteSentCard({
   title,
   email,
+  recordId,
+  fallbackSubject,
+  fallbackAt,
+  kind,
 }: {
   title: string;
-  email: NonNullable<TerminationCaseDetail['reportComparison']['tenantRepairQuoteEmail']>;
+  email: EndLeasingOverviewEmail;
+  recordId: string;
+  fallbackSubject: string;
+  fallbackAt: string;
+  kind: string;
 }) {
-  return (
-    <div className="space-y-2 rounded-xl border bg-muted/20 p-3 text-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-semibold">{title}</p>
-        {email.commConversationId ? (
-          <Button asChild size="sm" variant="outline" className="h-7 gap-1 text-[10px]">
-            <Link href={communicationsThread(email.commConversationId)}>
-              <ExternalLink className="size-3" />
-              Message Center
-            </Link>
-          </Button>
-        ) : null}
-      </div>
-      <p className="text-muted-foreground">
-        To: {email.to} · {email.sentAt ? formatDateTime(email.sentAt) : 'Sent'}
-      </p>
-    </div>
+  const record = useMemo(
+    () => endLeasingStoredEmailToRecord(recordId, email, kind, fallbackSubject, fallbackAt),
+    [email, recordId, kind, fallbackSubject, fallbackAt],
   );
+
+  if (!record) return null;
+
+  return <JobCaseSentEmailPreviewCard title={title} record={record} />;
 }
 
 export function EndLeasingResultConfirmedPanel({
@@ -60,6 +58,9 @@ export function EndLeasingResultConfirmedPanel({
 
   const rc = caseData.reportComparison;
   const agentQuoteEmail = rc.agentRepairQuoteEmail ?? rc.landlordRepairQuoteEmail;
+  const agentQuoteRecordId = rc.agentRepairQuoteEmail
+    ? `${caseData.id}-agent-repair-quote`
+    : `${caseData.id}-landlord-repair-quote`;
   const agentConfirmed = Boolean(rc.agentQuoteConfirmed);
   const tenantItems = rc.tenantResponsibility;
   const tenantTotal = useMemo(
@@ -109,7 +110,14 @@ export function EndLeasingResultConfirmedPanel({
   return (
     <div className="space-y-4">
       {agentQuoteEmail?.body ? (
-        <EmailSentCard title="Repair quotes sent to agent" email={agentQuoteEmail} />
+        <RepairQuoteSentCard
+          title="Repair quotes sent to agent"
+          email={agentQuoteEmail}
+          recordId={agentQuoteRecordId}
+          kind="agent_repair_quote"
+          fallbackSubject="Repair quotes for agent"
+          fallbackAt={caseData.createdAt}
+        />
       ) : (
         <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-xs">
           Complete the Quote step and send repair quotes to the agent first.
@@ -119,7 +127,7 @@ export function EndLeasingResultConfirmedPanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Agent confirms figures</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Review landlord and tenant quote totals, then confirm before sending the tenant portion.
+          Review landlord and tenant quote totals, then confirm before recording tenant response.
         </p>
         {agentConfirmed ? (
           <p className="text-primary mt-3 flex items-center gap-2 text-xs font-medium">
@@ -226,32 +234,6 @@ export function EndLeasingResultConfirmedPanel({
               </div>
             ) : null}
           </section>
-
-          {rc.tenantRepairQuoteEmail?.body ? (
-            <EmailSentCard title="Tenant portion sent to tenant" email={rc.tenantRepairQuoteEmail} />
-          ) : (
-            <section className="rounded-xl border bg-card p-4">
-              <p className="text-sm font-semibold">Send tenant portion</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Email tenant responsibility items and quotes to the tenant only.
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                className="mt-3 h-8 gap-1.5 text-xs"
-                disabled={busy}
-                onClick={() =>
-                  void run(
-                    () => terminationApi.sendRepairQuoteEmail(caseData.id, 'tenant'),
-                    'Tenant portion sent',
-                  )
-                }
-              >
-                <Send className="size-3.5" />
-                Send tenant portion to tenant
-              </Button>
-            </section>
-          )}
 
           <EndLeasingReportComparisonPanel caseData={caseData} mode="inspector-readonly" />
         </>

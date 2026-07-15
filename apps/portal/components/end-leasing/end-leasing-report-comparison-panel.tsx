@@ -51,6 +51,12 @@ const TENANT_QUOTE_RESPONSE_LABEL: Record<TenantQuoteResponse, string> = {
   declined: 'No — tenant disagrees',
 };
 
+const REPAIR_COL_INDEX = 'w-10';
+const REPAIR_COL_AREA = 'w-28';
+const REPAIR_COL_QUOTE = 'w-28';
+const REPAIR_COL_COMPANY = 'w-44';
+const REPAIR_COL_ACTION = 'w-10';
+
 function TenantQuoteResponsePanel({
   response,
   responseAt,
@@ -249,24 +255,24 @@ function MaintenanceQuotationPanel({ items }: { items: ReportComparisonRepairIte
     <section className="space-y-2 rounded-xl border bg-card p-4">
       <p className="text-sm font-semibold">Maintenance quotation (tenant agreed)</p>
       <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full min-w-[640px] text-left text-xs">
+        <table className="w-full table-fixed text-left text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 font-semibold">#</th>
-              <th className="px-3 py-2 font-semibold">Area</th>
+              <th className={`${REPAIR_COL_INDEX} px-3 py-2 font-semibold`}>#</th>
+              <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
               <th className="px-3 py-2 font-semibold">Description</th>
-              <th className="px-3 py-2 font-semibold">Quote</th>
-              <th className="px-3 py-2 font-semibold">Handyman</th>
+              <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+              <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Handyman</th>
             </tr>
           </thead>
           <tbody>
             {items.map((row, index) => (
-              <tr key={`quote-${index}`} className="border-t">
-                <td className="px-3 py-2 tabular-nums">{index + 1}</td>
-                <td className="px-3 py-2">{row.area}</td>
-                <td className="px-3 py-2">{row.description}</td>
-                <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
-                <td className="px-3 py-2">{row.handymanName || '—'}</td>
+              <tr key={`quote-${index}`} className="border-t align-top">
+                <td className={`${REPAIR_COL_INDEX} px-3 py-2 tabular-nums`}>{index + 1}</td>
+                <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area}</td>
+                <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
+                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>{row.quote || '—'}</td>
+                <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>{row.handymanName || '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -447,13 +453,13 @@ function CompareResponsibilitySection({
       </div>
       <div className="p-4">
         <div className="overflow-x-auto rounded-xl border">
-          <table className="w-full min-w-[420px] text-left text-xs">
+          <table className="w-full table-fixed text-left text-xs">
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 font-semibold">#</th>
-                <th className="px-3 py-2 font-semibold">Area</th>
+                <th className={`${REPAIR_COL_INDEX} px-3 py-2 font-semibold`}>#</th>
+                <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
                 <th className="px-3 py-2 font-semibold">Description</th>
-                <th className="px-2 py-2" />
+                <th className={REPAIR_COL_ACTION} />
               </tr>
             </thead>
             <tbody>
@@ -468,17 +474,17 @@ function CompareResponsibilitySection({
               ) : readOnly ? (
                 items.map((row, index) => (
                   <tr key={repairRowKey(row, `${title}-${index}`)} className="border-t align-top">
-                    <td className="px-3 py-2 tabular-nums">{index + 1}</td>
-                    <td className="px-3 py-2">{row.area}</td>
+                    <td className={`${REPAIR_COL_INDEX} px-3 py-2 tabular-nums`}>{index + 1}</td>
+                    <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area}</td>
                     <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
-                    <td className="px-2 py-2" />
+                    <td className={REPAIR_COL_ACTION} />
                   </tr>
                 ))
               ) : (
                 items.map((row, index) => (
                   <tr key={repairRowKey(row, `${title}-${index}`)} className="border-t align-top">
-                    <td className="px-3 py-2 tabular-nums">{index + 1}</td>
-                    <td className="px-3 py-2">
+                    <td className={`${REPAIR_COL_INDEX} px-3 py-2 tabular-nums`}>{index + 1}</td>
+                    <td className={`${REPAIR_COL_AREA} px-3 py-2`}>
                       <Input
                         className="h-8 text-xs"
                         value={row.area}
@@ -494,7 +500,7 @@ function CompareResponsibilitySection({
                         onChange={(e) => updateRow(index, { description: e.target.value })}
                       />
                     </td>
-                    <td className="px-2 py-2">
+                    <td className={`${REPAIR_COL_ACTION} px-2 py-2`}>
                       <Button
                         type="button"
                         size="icon"
@@ -814,19 +820,19 @@ function RepairItemsTable({
         </div>
       ) : null}
       <div className="overflow-x-auto rounded-xl border">
-        <table className="w-full min-w-[720px] text-left text-xs">
+        <table className="w-full table-fixed text-left text-xs">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 font-semibold">#</th>
-              <th className="px-3 py-2 font-semibold">Area</th>
+              <th className={`${REPAIR_COL_INDEX} px-3 py-2 font-semibold`}>#</th>
+              <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
               <th className="px-3 py-2 font-semibold">Description</th>
               {!hideQuoteColumns ? (
                 <>
-                  <th className="px-3 py-2 font-semibold">$</th>
-                  <th className="px-3 py-2 font-semibold">Company</th>
+                  <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>$</th>
+                  <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Company</th>
                 </>
               ) : null}
-              {!readOnly ? <th className="px-3 py-2" /> : null}
+              {!readOnly ? <th className={REPAIR_COL_ACTION} /> : null}
             </tr>
           </thead>
           <tbody>
@@ -842,23 +848,27 @@ function RepairItemsTable({
             ) : (
               items.map((row, index) => (
                 <tr key={`${title}-${index}`} className="border-t align-top">
-                  <td className="px-3 py-2 tabular-nums">{index + 1}</td>
+                  <td className={`${REPAIR_COL_INDEX} px-3 py-2 tabular-nums`}>{index + 1}</td>
                   {readOnly ? (
                     <>
-                      <td className="px-3 py-2">{row.area || '—'}</td>
-                      <td className="max-w-md px-3 py-2 whitespace-pre-wrap leading-relaxed">
+                      <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
+                      <td className="px-3 py-2 whitespace-pre-wrap leading-relaxed">
                         {row.description || '—'}
                       </td>
                       {!hideQuoteColumns ? (
                         <>
-                          <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
-                          <td className="px-3 py-2">{row.handymanName || '—'}</td>
+                          <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                            {row.quote || '—'}
+                          </td>
+                          <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
+                            {row.handymanName || '—'}
+                          </td>
                         </>
                       ) : null}
                     </>
                   ) : (
                     <>
-                      <td className="px-3 py-2">
+                      <td className={`${REPAIR_COL_AREA} px-3 py-2`}>
                         <Input
                           className="h-8 text-xs"
                           value={row.area}
@@ -878,7 +888,7 @@ function RepairItemsTable({
                       </td>
                       {!hideQuoteColumns ? (
                         <>
-                          <td className="px-3 py-2">
+                          <td className={`${REPAIR_COL_QUOTE} px-3 py-2`}>
                             <Input
                               className="h-8 text-xs"
                               value={row.quote ?? ''}
@@ -887,7 +897,7 @@ function RepairItemsTable({
                               onChange={(e) => updateRow(index, { quote: e.target.value })}
                             />
                           </td>
-                          <td className="px-3 py-2">
+                          <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
                             <HandymanField
                               row={row}
                               contractors={contractors}
@@ -898,7 +908,7 @@ function RepairItemsTable({
                           </td>
                         </>
                       ) : null}
-                      <td className="px-2 py-2">
+                      <td className={`${REPAIR_COL_ACTION} px-2 py-2`}>
                         <Button
                           type="button"
                           size="icon"
@@ -958,16 +968,16 @@ function InspectorSyncedResponsibilityTable({
       </div>
       <div className="p-4">
         <div className="overflow-x-auto rounded-xl border">
-          <table className="w-full min-w-[420px] text-left text-xs">
+          <table className="w-full table-fixed text-left text-xs">
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 font-semibold">#</th>
-                <th className="px-3 py-2 font-semibold">Area</th>
+                <th className={`${REPAIR_COL_INDEX} px-3 py-2 font-semibold`}>#</th>
+                <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
                 <th className="px-3 py-2 font-semibold">Description</th>
                 {showQuoteColumns ? (
                   <>
-                    <th className="px-3 py-2 font-semibold">Quote</th>
-                    <th className="px-3 py-2 font-semibold">Company</th>
+                    <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+                    <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Company</th>
                   </>
                 ) : null}
               </tr>
@@ -984,14 +994,18 @@ function InspectorSyncedResponsibilityTable({
                 </tr>
               ) : (
                 items.map((row, index) => (
-                  <tr key={repairRowKey(row, `inspector-${index}`)} className="border-t">
-                    <td className="px-3 py-2 tabular-nums">{index + 1}</td>
-                    <td className="px-3 py-2">{row.area}</td>
+                  <tr key={repairRowKey(row, `inspector-${index}`)} className="border-t align-top">
+                    <td className={`${REPAIR_COL_INDEX} px-3 py-2 tabular-nums`}>{index + 1}</td>
+                    <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area}</td>
                     <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
                     {showQuoteColumns ? (
                       <>
-                        <td className="px-3 py-2 tabular-nums">{row.quote || '—'}</td>
-                        <td className="px-3 py-2">{row.handymanName || '—'}</td>
+                        <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                          {row.quote || '—'}
+                        </td>
+                        <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
+                          {row.handymanName || '—'}
+                        </td>
                       </>
                     ) : null}
                   </tr>

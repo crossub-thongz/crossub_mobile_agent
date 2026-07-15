@@ -132,7 +132,7 @@ export function EndLeasingAgentWorkflowPanel({
           {showEmailHistory ? (
             <JobCaseStageEmailHistory
               emails={stageEmails}
-              title="All email"
+              title="Emails & Messages History"
             />
           ) : null}
         </div>

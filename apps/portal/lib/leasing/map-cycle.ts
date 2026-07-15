@@ -9,7 +9,9 @@ import {
   type LeasingKeyCustody,
   type LeasingLifecycleStep,
 } from '@/lib/leasing/constants';
-import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { ReferenceCheckRecommendation } from '@/lib/leasing/reference-check-draft';
+import { parseReferenceCheckDraft } from '@/lib/leasing/reference-check-draft';
+import { fileNameFromDocumentUrl } from '@/lib/leasing-applicant-upload.util';
 
 const u = (v: string | null | undefined): string | undefined => v ?? undefined;
 const n = (v: number | null | undefined): number | undefined =>
@@ -58,6 +60,7 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       paidAt: u(ob?.deposit.paidAt ?? undefined),
       proofFileName: u(ob?.deposit.proofFileName ?? undefined),
       proofUrl: u(ob?.deposit.proofUrl ?? undefined),
+      ledgerEntryId: u(ob?.deposit.ledgerEntryId ?? undefined),
     },
     bond: {
       status: asItemStatus(ob?.bond.status ?? 'not_started'),
@@ -207,7 +210,9 @@ export function patchDetailFromCycleView(
       reportViewable: view.openReport.reportViewable,
       attendeeCount: n(view.openReport.attendeeCount),
     },
-    applicationsDetail: view.applications.map((r) => ({
+    applicationsDetail: view.applications.map((r) => {
+      const referenceDraft = parseReferenceCheckDraft(r.agentFeedback);
+      return {
       id: r.applicationId,
       applicant: r.applicantName ?? 'Applicant',
       email: u(r.applicantEmail),
@@ -216,7 +221,8 @@ export function patchDetailFromCycleView(
       aiScore: r.aiScore ?? undefined,
       aiScoreLevel: (r.aiScoreLevel as 'strong' | 'medium' | 'risk' | null) ?? undefined,
       aiAdvice: u(r.aiAdvice),
-      feedback: u(r.agentFeedback),
+      feedback: referenceDraft.notes || u(r.agentFeedback),
+      referenceRecommendation: referenceDraft.recommendation,
       feedbackSentAt: u(r.feedbackSentAt),
       annualIncome: r.annualIncome ?? undefined,
       employmentStatus: u(r.employmentStatus),
@@ -225,7 +231,19 @@ export function patchDetailFromCycleView(
       selectedForAgent: r.selectedForAgent,
       sentToAgent: r.sentToAgent,
       agentDecision: (r.agentDecision as LeasingAgentDecision) ?? LEASING_AGENT_DECISION.PENDING,
-    })),
+      documents: (r.documents ?? []).map((url) => ({
+        fileName: fileNameFromDocumentUrl(url),
+        url,
+      })),
+    };
+    }),
     onboarding: mapOnboarding(view),
+    timeline: view.timeline.map((event) => ({
+      id: event.id,
+      label: event.label,
+      kind: event.kind,
+      actor: event.actor,
+      at: event.at,
+    })),
   };
 }

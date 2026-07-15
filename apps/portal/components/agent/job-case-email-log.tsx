@@ -198,7 +198,7 @@ function RecipientPicker({
   );
 }
 
-function EmailDetailDialog({
+export function JobCaseEmailDetailDialog({
   email,
   allEmails,
   open,
@@ -431,7 +431,7 @@ export function JobCaseEmailLog({
         </div>
       )}
 
-      <EmailDetailDialog
+      <JobCaseEmailDetailDialog
         email={selected}
         allEmails={sorted}
         open={selectedId != null}
@@ -445,14 +445,57 @@ export function JobCaseEmailLog({
   );
 }
 
+/** Compact sent-email row that opens the same read-only detail dialog as email history. */
+export function JobCaseSentEmailPreviewCard({
+  title,
+  record,
+}: {
+  title: string;
+  record: JobCaseEmailRecord;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="hover:bg-muted/40 w-full rounded-xl border bg-muted/20 p-3 text-left text-xs transition-colors"
+      >
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-700">
+            <Mail className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{title}</p>
+            <p className="text-muted-foreground mt-0.5 truncate">
+              To: {record.to} · {formatDateTime(record.at)}
+            </p>
+            {record.subject ? (
+              <p className="text-muted-foreground mt-1 truncate">{record.subject}</p>
+            ) : null}
+          </div>
+          <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />
+        </div>
+      </button>
+      <JobCaseEmailDetailDialog
+        email={record}
+        allEmails={[record]}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
+
 export function JobCaseStageEmailHistory({
   emails,
   title = 'Email/message history',
   onSend,
   enableComposeActions,
   recipientContacts,
-  collapsible = false,
-  defaultOpen = true,
+  collapsible = true,
+  defaultOpen = false,
 }: {
   emails: JobCaseEmailRecord[];
   title?: string;

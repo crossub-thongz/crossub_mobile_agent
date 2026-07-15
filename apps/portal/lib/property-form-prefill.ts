@@ -40,6 +40,14 @@ export function minLeasingCycleAvailableFrom(): string {
   );
 }
 
+/** Suggested lease start / available-from when relisting after a vacate or termination. */
+export function deriveRelistAvailableFrom(vacateOrTerminationDate?: string): string {
+  const min = minLeasingCycleAvailableFrom();
+  const basis = vacateOrTerminationDate?.trim().slice(0, 10);
+  if (!basis) return min;
+  return basis >= min ? basis : min;
+}
+
 function isoDateAddYears(isoDate: string, years: number): string {
   const d = new Date(isoDate.slice(0, 10));
   d.setFullYear(d.getFullYear() + years);

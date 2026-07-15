@@ -69,6 +69,11 @@ export interface LeasingOpenReport {
   attendeeCount?: number;
 }
 
+export interface LeasingApplicantDocument {
+  fileName: string;
+  url: string;
+}
+
 export interface LeasingApplicationDetail {
   id: string;
   applicant: string;
@@ -84,10 +89,14 @@ export interface LeasingApplicationDetail {
   aiAdviceSentToAgent: boolean;
   /** Agent-authored feedback for the applicant (Results step). */
   feedback?: string;
+  /** Reference-check recommendation draft (Recommend / Reject). */
+  referenceRecommendation?: 'recommend' | 'reject';
   feedbackSentAt?: string;
   selectedForAgent: boolean;
   sentToAgent: boolean;
   agentDecision: LeasingAgentDecision;
+  /** Uploaded supporting documents (application forms, ID scans, etc.). */
+  documents?: LeasingApplicantDocument[];
 }
 
 export interface LeasingContractCondition {
@@ -117,6 +126,7 @@ export interface LeasingDepositState {
   paidAt?: string;
   proofFileName?: string;
   proofUrl?: string;
+  ledgerEntryId?: string;
 }
 
 export interface LeasingBondState {
@@ -127,6 +137,7 @@ export interface LeasingBondState {
   paidAt?: string;
   proofFileName?: string;
   proofUrl?: string;
+  ledgerEntryId?: string;
   /** Display bond ID (e.g. BOND-00001) — not the internal ledger row id. */
   lodgementRef?: string;
 }
@@ -196,6 +207,14 @@ export interface LeasingOnboardingState {
   ingoingReportApproval: LeasingIngoingApprovalState;
 }
 
+export interface LeasingTimelineEvent {
+  id: string;
+  label: string;
+  kind: string;
+  actor: string;
+  at: string;
+}
+
 export interface LeasingPropertyDetail {
   propertyId: string;
   propertyAddress: string;
@@ -210,4 +229,5 @@ export interface LeasingPropertyDetail {
   openReport: LeasingOpenReport;
   applicationsDetail: LeasingApplicationDetail[];
   onboarding: LeasingOnboardingState;
+  timeline: LeasingTimelineEvent[];
 }

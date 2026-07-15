@@ -1,5 +1,5 @@
 import { LEASING_ITEM_STATUS, LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
-import { areAllApplicantResultsSent } from '@/lib/leasing/lifecycle';
+import { areAllApplicantResultsSent, deriveStepStatus } from '@/lib/leasing/lifecycle';
 import {
   openInspectionStartReached,
   resolveEffectiveOpenInspectionStart,
@@ -166,39 +166,66 @@ const POST_OPEN_INSPECTION_PHASE_STEPS: LeasingLifecycleStep[] = [
   LEASING_LIFECYCLE_STEP.ONBOARDING,
 ];
 
-/** Application, Reference Check, and Onboarding tabs — gated by letting rail progress. */
-export function visibleLeasingPhaseSteps(
+/** Application, Reference Check, and Onboarding — always shown on the phase rail. */
+export const LEASING_PHASE_STEP_ORDER = POST_OPEN_INSPECTION_PHASE_STEPS;
+
+export function isLeasingPhaseStep(step: LeasingLifecycleStep): boolean {
+  return LEASING_PHASE_STEP_ORDER.includes(step);
+}
+
+function phaseStepIndex(step: LeasingLifecycleStep): number {
+  return LEASING_PHASE_STEP_ORDER.indexOf(step);
+}
+
+function inferLeasingPhaseRailStep(detail: LeasingPropertyDetail): LeasingLifecycleStep {
+  for (const step of LEASING_PHASE_STEP_ORDER) {
+    const status = deriveStepStatus(detail, step);
+    if (status !== LEASING_ITEM_STATUS.DONE) return step;
+  }
+  return LEASING_LIFECYCLE_STEP.ONBOARDING;
+}
+
+export function deriveLeasingPhaseRailProgress(
   detail: LeasingPropertyDetail,
-  now: Date = new Date(),
+  activeStep: LeasingLifecycleStep,
+): {
+  currentPhaseStep: LeasingLifecycleStep;
+  fillIndex: number;
+} {
+  const currentPhaseStep = isLeasingPhaseStep(activeStep)
+    ? activeStep
+    : inferLeasingPhaseRailStep(detail);
+
+  const currentIndex = Math.max(0, phaseStepIndex(currentPhaseStep));
+  const currentStatus = deriveStepStatus(detail, currentPhaseStep);
+  const lastIndex = LEASING_PHASE_STEP_ORDER.length - 1;
+  const fillIndex =
+    currentStatus === LEASING_ITEM_STATUS.DONE
+      ? currentIndex
+      : Math.min(currentIndex + 0.5, lastIndex);
+
+  return { currentPhaseStep, fillIndex };
+}
+
+export function isLeasingPhaseStepCompleted(
+  detail: LeasingPropertyDetail,
+  step: LeasingLifecycleStep,
+): boolean {
+  return deriveStepStatus(detail, step) === LEASING_ITEM_STATUS.DONE;
+}
+
+/** @deprecated Use LEASING_PHASE_STEP_ORDER — all phase steps are always visible. */
+export function visibleLeasingPhaseSteps(
+  _detail: LeasingPropertyDetail,
+  _now: Date = new Date(),
 ): LeasingLifecycleStep[] {
-  const { currentRailStep } = deriveLettingRailProgress(detail, now);
-  const steps: LeasingLifecycleStep[] = [];
-
-  if (
-    currentRailStep === LETTING_RAIL_STEP.REPORT_AVAILABLE ||
-    currentRailStep === LETTING_RAIL_STEP.RESULTS
-  ) {
-    steps.push(LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL);
-  }
-
-  if (currentRailStep === LETTING_RAIL_STEP.RESULTS) {
-    steps.push(LEASING_LIFECYCLE_STEP.RESULTS, LEASING_LIFECYCLE_STEP.ONBOARDING);
-  }
-
-  return steps;
+  return [...LEASING_PHASE_STEP_ORDER];
 }
 
 export function resolveLeasingWorkflowContentStep(
   activeStep: LeasingLifecycleStep,
-  detail: LeasingPropertyDetail,
-  now: Date = new Date(),
+  _detail: LeasingPropertyDetail,
+  _now: Date = new Date(),
 ): LeasingLifecycleStep {
-  const visible = visibleLeasingPhaseSteps(detail, now);
-  if (
-    POST_OPEN_INSPECTION_PHASE_STEPS.includes(activeStep) &&
-    !visible.includes(activeStep)
-  ) {
-    return LEASING_LIFECYCLE_STEP.OPEN_INSPECTION;
-  }
   return activeStep;
 }

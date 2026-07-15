@@ -252,13 +252,11 @@ function getQuoteSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProg
 function resultConfirmedSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
   const rc = caseData.reportComparison;
   const agentConfirmed = Boolean(rc.agentQuoteConfirmed);
-  const tenantQuoteSent = Boolean(rc.tenantRepairQuoteEmail?.sentAt);
   const tenantResponded =
     rc.tenantQuoteResponse === 'accepted' || rc.tenantQuoteResponse === 'declined';
 
   return [
     { id: 'agent_confirm', label: 'Agent confirmed figures', done: agentConfirmed },
-    { id: 'tenant_quote', label: 'Tenant portion sent to tenant', done: tenantQuoteSent },
     { id: 'tenant_reply', label: 'Tenant response recorded', done: tenantResponded },
   ];
 }
@@ -304,7 +302,7 @@ function workflowNameForStep(
       return 'Obtain repair quotes & send to agent';
     case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
       if (!caseData.reportComparison.agentQuoteConfirmed) return 'Agent confirms figures';
-      return 'Send tenant portion to tenant';
+      return 'Record tenant response';
     case END_LEASING_AGENT_STEP.BOND_RELEASED:
       if (caseData.status === TERMINATION_CASE_STATUS.COMPLETED) return 'Job completed';
       if (caseData.bond.refundPaid) return 'Bond released';
@@ -442,6 +440,16 @@ export function endLeasingKeyReturnDate(caseData: TerminationCaseDetail): string
 
 export function endLeasingKeyReturnTo(caseData: TerminationCaseDetail): string {
   return caseData.vacate.keysReturnAddress?.trim() || 'Not set — enter key return address';
+}
+
+export function endLeasingStoredEmailToRecord(
+  id: string,
+  email: EndLeasingOverviewEmail | null | undefined,
+  kind: string,
+  fallbackSubject: string,
+  fallbackAt: string,
+): JobCaseEmailRecord | null {
+  return storedEmailToRecord(id, email, kind, fallbackSubject, fallbackAt);
 }
 
 function storedEmailToRecord(

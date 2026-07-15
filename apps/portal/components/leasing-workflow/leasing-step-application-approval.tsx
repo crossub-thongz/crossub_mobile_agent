@@ -1,38 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarClock, Check, Inbox, Send, Sparkles, X } from 'lucide-react';
+import { CalendarClock, ChevronDown, Inbox, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { LeasingApplicantAddPanel } from '@/components/leasing-workflow/leasing-applicant-add-panel';
-import { LeasingToneBadge } from '@/components/leasing-workflow/leasing-status-badge';
+import { LeasingApplicantDocumentIntake } from '@/components/leasing-workflow/leasing-applicant-document-intake';
+import { LeasingApplicantOrderCard } from '@/components/leasing-workflow/leasing-applicant-order-card';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   LEASING_AGENT_DECISION,
-  LEASING_AGENT_DECISION_LABEL,
-  LEASING_AGENT_DECISION_TONE,
   LEASING_AGENT_SELF_OPEN_LABEL,
   LEASING_APPLICATION_SEND_FOR_APPROVAL_LABEL,
-  LEASING_TONE,
   LEASING_UI,
 } from '@/lib/leasing/constants';
 import {
   getApprovedApplications,
-  canSelectApplicantForApproval,
   countSelectedForApprovalSend,
   isApplicationApprovalLocked,
 } from '@/lib/leasing/lifecycle';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
-import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
-import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
-
-const AI_TONE = {
-  strong: LEASING_TONE.SUCCESS,
-  medium: LEASING_TONE.WARNING,
-  risk: LEASING_TONE.DESTRUCTIVE,
-} as const;
+import { cn, formatDateTime } from '@/lib/utils';
 
 export function LeasingStepApplicationApproval({ detail }: { detail: LeasingPropertyDetail }) {
   const { leasingCycles, apiConnected } = useAgentData();
@@ -43,9 +34,10 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
   const [sendingSelected, setSendingSelected] = useState(false);
   const [busyAppId, setBusyAppId] = useState<string | null>(null);
+  const [showContactForm, setShowContactForm] = useState(false);
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
-  const cycleId = cycle?.id;
+  const cycleId = detail.cycleId ?? cycle?.id;
 
   const readOnly = isApplicationApprovalLocked(detail);
   const apps = readOnly ? getApprovedApplications(detail) : detail.applicationsDetail;
@@ -86,7 +78,10 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
     }
   };
 
-  const setDecision = async (applicationId: string, decision: typeof LEASING_AGENT_DECISION.APPROVED | typeof LEASING_AGENT_DECISION.REJECTED) => {
+  const setDecision = async (
+    applicationId: string,
+    decision: typeof LEASING_AGENT_DECISION.APPROVED | typeof LEASING_AGENT_DECISION.REJECTED,
+  ) => {
     setBusyAppId(applicationId);
     try {
       if (apiConnected && cycleId) {
@@ -111,11 +106,42 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
     }
   };
 
+  const intakeSection = !readOnly ? (
+    <div className="space-y-3">
+      <LeasingApplicantDocumentIntake
+        propertyId={detail.propertyId}
+        cycleId={cycleId}
+        applications={detail.applicationsDetail}
+      />
+      <div className="rounded-xl border">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+          onClick={() => setShowContactForm((value) => !value)}
+          aria-expanded={showContactForm}
+        >
+          <span className="text-sm font-medium">Add applicant with contact details</span>
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-4 shrink-0 transition-transform',
+              showContactForm && 'rotate-180',
+            )}
+          />
+        </button>
+        {showContactForm ? (
+          <div className="border-t px-1 pb-1">
+            <LeasingApplicantAddPanel propertyId={detail.propertyId} className="border-0 shadow-none" />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  ) : null;
+
   if (detail.applicationsDetail.length === 0) {
     if (detail.openInspection.pushedToAgentApp) {
       return (
         <div className="space-y-3">
-          <LeasingApplicantAddPanel propertyId={detail.propertyId} />
+          {intakeSection}
           <div className="border-primary/30 bg-primary/5 rounded-xl border p-4">
             <div className="flex items-start gap-3">
               <CalendarClock className="text-primary mt-0.5 size-5 shrink-0" />
@@ -127,8 +153,8 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
                 </p>
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {detail.openInspection.agentConducted
-                    ? 'You opened this letting with a self-run open inspection. Advertise the property, run the viewing, and submit applicant profiles here when you have candidates ready for approval.'
-                    : 'CROSSUB pushed the arranged viewing time to your app. Advertise the property, run the open inspection, and submit applicant profiles here when you have candidates ready for approval.'}
+                    ? 'You opened this letting with a self-run open inspection. Drag in application documents above, or wait for viewers to apply via the CROSSUB app / H5 form.'
+                    : 'CROSSUB pushed the arranged viewing time to your app. Drag in application documents above, or wait for viewers to apply via the CROSSUB app / H5 form.'}
                 </p>
                 {detail.openInspection.scheduledTime ? (
                   <p className="text-xs">
@@ -141,14 +167,14 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-8 text-center">
             <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
               <Inbox className="text-muted-foreground size-5" />
             </div>
-            <p className="mt-3 text-sm font-medium">No applicants submitted yet</p>
+            <p className="mt-3 text-sm font-medium">No applicant orders yet</p>
             <p className="text-muted-foreground mt-1 max-w-sm text-xs">
-              Add manual applicants above or wait for viewers to apply via the CROSSUB app / H5 form
-              after the open report. You will shortlist and send them to CROSSUB from here.
+              Drop application documents above and confirm to create Applicant 1. Each confirmed
+              bundle becomes its own applicant order.
             </p>
           </div>
         </div>
@@ -157,15 +183,15 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
     return (
       <div className="space-y-4">
-        <LeasingApplicantAddPanel propertyId={detail.propertyId} />
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-14 text-center">
+        {intakeSection}
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
           <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
             <Inbox className="text-muted-foreground size-5" />
           </div>
-          <p className="mt-3 text-sm font-medium">No applications yet</p>
+          <p className="mt-3 text-sm font-medium">No applicant orders yet</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Add an applicant above, or wait for viewers to apply via the CROSSUB app or H5 form after
-            the open report (step 2).
+            Drag in application documents above and confirm to create Applicant 1, or wait for
+            viewers to apply via the CROSSUB app or H5 form after the open report.
           </p>
         </div>
       </div>
@@ -182,7 +208,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
   return (
     <div className="space-y-3">
-      {!readOnly && <LeasingApplicantAddPanel propertyId={detail.propertyId} />}
+      {intakeSection}
 
       {readOnly ? (
         <div className="bg-card rounded-xl border px-4 py-2.5">
@@ -195,7 +221,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
         <div className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-2.5">
           <p className="text-muted-foreground text-[12px]">
             <span className="text-foreground font-semibold tabular-nums">{apps.length}</span>{' '}
-            application{apps.length === 1 ? '' : 's'} ·{' '}
+            applicant order{apps.length === 1 ? '' : 's'} ·{' '}
             <span className="text-foreground font-semibold tabular-nums">{selectedCount}</span>{' '}
             selected
           </p>
@@ -214,9 +240,11 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
       <ul className="space-y-2">
         {apps.map((app) => (
-          <ApplicantRow
+          <LeasingApplicantOrderCard
             key={app.id}
             app={app}
+            propertyId={detail.propertyId}
+            cycleId={cycleId}
             readOnly={readOnly}
             busy={busyAppId === app.id}
             onToggle={() => void toggleSelected(app.id)}
@@ -226,108 +254,5 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
         ))}
       </ul>
     </div>
-  );
-}
-
-function ApplicantRow({
-  app,
-  readOnly = false,
-  busy = false,
-  onToggle,
-  onApprove,
-  onReject,
-}: {
-  app: LeasingApplicationDetail;
-  readOnly?: boolean;
-  busy?: boolean;
-  onToggle: () => void;
-  onApprove: () => void;
-  onReject: () => void;
-}) {
-  const decisionPending = app.agentDecision === LEASING_AGENT_DECISION.PENDING;
-  const canSelect = canSelectApplicantForApproval(app);
-
-  return (
-    <li className="bg-card rounded-xl border p-3.5">
-      <div className="flex items-start gap-3">
-        {!readOnly && canSelect && (
-          <input
-            type="checkbox"
-            checked={app.selectedForAgent}
-            onChange={onToggle}
-            disabled={busy}
-            className="mt-1"
-            aria-label={`Select ${app.applicant}`}
-          />
-        )}
-        {!readOnly && !canSelect && <span className="mt-1 inline-flex size-4 shrink-0" aria-hidden />}
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-[13px] font-semibold">{app.applicant}</p>
-            {app.aiScoreLevel && (
-              <LeasingToneBadge
-                tone={AI_TONE[app.aiScoreLevel]}
-                label={`AI ${app.aiScoreLevel}${app.aiScore ? ` · ${app.aiScore}` : ''}`}
-                size="xs"
-              />
-            )}
-            {(readOnly || !decisionPending) && (
-              <LeasingToneBadge
-                tone={LEASING_AGENT_DECISION_TONE[app.agentDecision]}
-                label={LEASING_AGENT_DECISION_LABEL[app.agentDecision]}
-                size="xs"
-              />
-            )}
-            {!readOnly && app.sentToAgent && decisionPending && (
-              <LeasingToneBadge tone={LEASING_TONE.INFO} label="Sent for approval" size="xs" />
-            )}
-          </div>
-          <p className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11.5px]">
-            {typeof app.annualIncome === 'number' && (
-              <span className="tabular-nums">{formatCurrency(app.annualIncome)}/yr</span>
-            )}
-            {app.employmentStatus && (
-              <span className="capitalize">{app.employmentStatus.replace('_', ' ')}</span>
-            )}
-            <span>Applied {formatDateTime(app.submittedAt)}</span>
-          </p>
-          {app.aiAdvice && (
-            <p
-              className={cn(
-                'mt-1.5 flex items-start gap-1.5 rounded-md px-2.5 py-1.5 text-[11.5px]',
-                LEASING_UI.callout,
-              )}
-            >
-              <Sparkles className={cn('mt-0.5 size-3 shrink-0', LEASING_UI.accentIcon)} />
-              <span className="min-w-0">{app.aiAdvice}</span>
-            </p>
-          )}
-        </div>
-        {!readOnly && app.agentDecision === LEASING_AGENT_DECISION.PENDING && (
-          <div className="flex shrink-0 gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              className={cn('h-7 gap-1 px-2 text-xs', LEASING_UI.btnSuccess)}
-              disabled={busy}
-              onClick={onApprove}
-            >
-              <Check className="size-3.5" />
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-muted-foreground size-7 p-0 hover:bg-rose-500/10 hover:text-rose-800"
-              disabled={busy}
-              onClick={onReject}
-              aria-label="Reject"
-            >
-              <X className="size-3.5" />
-            </Button>
-          </div>
-        )}
-      </div>
-    </li>
   );
 }

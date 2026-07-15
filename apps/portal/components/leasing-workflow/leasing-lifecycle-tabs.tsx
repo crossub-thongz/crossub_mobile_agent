@@ -19,7 +19,6 @@ import {
 } from '@/lib/leasing/agent-workflow-email';
 import {
   resolveLeasingWorkflowContentStep,
-  visibleLeasingPhaseSteps,
 } from '@/lib/leasing/letting-rail-progress';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
@@ -44,10 +43,6 @@ export function LeasingLifecycleTabs({
   }, []);
   useLivePoll(tickNow);
 
-  const visiblePhaseSteps = useMemo(
-    () => visibleLeasingPhaseSteps(liveDetail, now),
-    [liveDetail, now],
-  );
   const contentStep = useMemo(
     () => resolveLeasingWorkflowContentStep(activeStep, liveDetail, now),
     [activeStep, liveDetail, now],
@@ -72,8 +67,8 @@ export function LeasingLifecycleTabs({
       ) : null}
 
       <LeasingLifecyclePhaseNav
+        detail={liveDetail}
         activeStep={activeStep}
-        visibleSteps={visiblePhaseSteps}
         onStepClick={(step) => setActiveStep(detail.propertyId, step)}
       />
 
@@ -119,10 +114,10 @@ function StepPanel({
         onCaseClosed={onCaseClosed}
         onOpenInspectionCreated={onOpenInspectionCreated}
       />
-      <JobCaseStageEmailHistory
-        emails={stageEmails}
-        title={step === LEASING_LIFECYCLE_STEP.ONBOARDING ? 'All e-mail' : undefined}
-      />
+      {step !== LEASING_LIFECYCLE_STEP.RESULTS &&
+      step !== LEASING_LIFECYCLE_STEP.ONBOARDING ? (
+        <JobCaseStageEmailHistory emails={stageEmails} />
+      ) : null}
     </div>
   );
 }

@@ -207,7 +207,7 @@ export function EndLeasingBondReleasedPanel({
         ) : null}
       </section>
 
-      {tenantAccepted && (tenantBondEmail?.sentAt || landlordBondEmail?.sentAt) ? (
+      {/* {tenantAccepted && (tenantBondEmail?.sentAt || landlordBondEmail?.sentAt) ? (
         <section className="space-y-3 rounded-xl border bg-card p-4">
           <p className="text-sm font-semibold">Bond summary emailed</p>
           <p className="text-muted-foreground text-xs">
@@ -221,7 +221,7 @@ export function EndLeasingBondReleasedPanel({
             <BondSummaryEmailCard title="Landlord" email={landlordBondEmail} />
           ) : null}
         </section>
-      ) : null}
+      ) : null} */}
 
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Agent confirmation</p>

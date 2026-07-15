@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { LeasingOnboardingSummaryPanel } from '@/components/leasing-workflow/leasing-onboarding-summary-panel';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { LeasingAgreementSignedDocumentPanel, LeasingAgreementActionGroup } from '@/components/leasing-workflow/leasing-agreement-signed-document';
 import { LeasingContractDialog } from '@/components/leasing-workflow/leasing-contract-dialog';
@@ -149,7 +150,8 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
     return () => window.clearTimeout(timer);
   }, [highlightBond, clearBondSectionHighlight]);
 
-  const cycleId = leasingCycles.find((c) => c.propertyId === id)?.id;
+  const cycleId =
+    detail.cycleId ?? leasingCycles.find((c) => c.propertyId === id)?.id;
   const agreementReady = agreementAvailableFromCrossub(o.agreement);
   const keyByCrossub = detail.agentInfo.keyCustody === LEASING_KEY_CUSTODY.CROSSUB;
   const propertyLabel = detail.propertyAddress;
@@ -297,6 +299,8 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
 
   return (
     <div className="space-y-3">
+      <LeasingOnboardingSummaryPanel detail={detail} />
+
       <p className="text-muted-foreground text-xs leading-relaxed">
         Tenant onboarding — review proofs uploaded by the tenant and send key collection details.
       </p>

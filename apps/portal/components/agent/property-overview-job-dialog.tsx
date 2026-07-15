@@ -27,7 +27,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
+import { JOB_CASE_DIALOG_SIZE, END_LEASING_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 
 export function PropertyOverviewJobDialog({
   job,
@@ -161,7 +161,7 @@ export function PropertyOverviewJobDialog({
         onClose={onClose}
         title="End leasing"
         subtitle={`${job.name} · ${job.status}`}
-        size={JOB_CASE_DIALOG_SIZE}
+        size={END_LEASING_CASE_DIALOG_SIZE}
       >
         <VacatingWorkflowTimeline vacatingCase={vacatingCase} />
       </CaseDetailDialog>

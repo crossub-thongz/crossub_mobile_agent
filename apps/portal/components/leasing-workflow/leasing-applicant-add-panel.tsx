@@ -71,10 +71,6 @@ export function LeasingApplicantAddPanel({
       toast.error('Enter the applicant name');
       return;
     }
-    if (!trimmedEmail && !trimmedPhone) {
-      toast.error('Enter an email address or phone number');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -114,7 +110,8 @@ export function LeasingApplicantAddPanel({
       <div>
         <p className="text-sm font-medium">Add applicant manually</p>
         <p className="text-muted-foreground mt-0.5 text-[11px]">
-          Enter applicant contact details and optionally upload their application documents.
+          Optional — enter contact details when you already know them. For document-only intake, use
+          the drag-and-drop area above.
         </p>
       </div>
 

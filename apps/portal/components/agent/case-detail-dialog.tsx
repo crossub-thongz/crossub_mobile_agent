@@ -17,17 +17,19 @@ export function CaseDetailDialog({
   title: string;
   subtitle?: string;
   children: ReactNode;
-  size?: 'default' | 'wide' | 'xl';
+  size?: 'default' | 'wide' | 'xl' | '2xl';
   headerActions?: ReactNode;
 }) {
   if (!open) return null;
 
   const sizeClass =
-    size === 'xl'
-      ? 'max-h-[92vh] max-w-[min(96vw,56rem)]'
-      : size === 'wide'
-        ? 'max-h-[88vh] max-w-3xl'
-        : 'max-h-[85vh] max-w-lg';
+    size === '2xl'
+      ? 'max-h-[92vh] max-w-[min(96vw,72rem)]'
+      : size === 'xl'
+        ? 'max-h-[92vh] max-w-[min(96vw,56rem)]'
+        : size === 'wide'
+          ? 'max-h-[88vh] max-w-3xl'
+          : 'max-h-[85vh] max-w-lg';
 
   return (
     <div

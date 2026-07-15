@@ -604,8 +604,6 @@ export function InspectionDetailView({
         <JobCaseStageEmailHistory
           emails={stageEmails}
           title="Email/message history"
-          collapsible
-          defaultOpen={false}
         />
       ) : null}
 

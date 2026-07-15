@@ -220,7 +220,7 @@ export const leasingOpsApi = {
   setApplicantFeedback: (
     cycleId: string,
     applicationId: string,
-    input: { feedback: string },
+    input: { feedback: string; recommendation?: 'recommend' | 'reject' },
   ) =>
     unwrap(
       api.patch<{ cycle: ServerLeasingCycleView }>(
@@ -248,6 +248,9 @@ export const leasingOpsApi = {
       decision: 'approved' | 'rejected';
       feedback?: string;
       rejectReason?: string;
+      weeklyRent?: number;
+      startDate?: string;
+      leaseTerm?: string;
     },
   ) =>
     unwrap(
