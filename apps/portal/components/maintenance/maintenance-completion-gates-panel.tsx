@@ -370,25 +370,15 @@ export function MaintenanceCompletionGatesPanel({
             No invoice attached yet.
           </p>
         ) : (
-          <ul className="space-y-2">
-            {invoiceAttachments.map((att) => (
-              <li key={att.id}>
-                <button
-                  type="button"
-                  onClick={() => setPreviewAttachment(att)}
-                  className="hover:bg-secondary/40 flex w-full items-center gap-3 rounded-lg border bg-background px-3 py-2.5 text-left transition-colors"
-                >
-                  <span className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-md border">
-                    <FileText className="text-muted-foreground size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{att.fileName}</span>
-                    <span className="text-muted-foreground text-[11px]">Tap to preview</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="rounded-lg border bg-background p-3">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+              Uploaded invoice
+            </p>
+            <InvoiceAttachmentGallery
+              attachments={invoiceAttachments}
+              onPreview={setPreviewAttachment}
+            />
+          </div>
         )}
       </section>
 
@@ -438,6 +428,59 @@ export function MaintenanceCompletionGatesPanel({
         attachment={previewAttachment}
         onClose={() => setPreviewAttachment(null)}
       />
+    </div>
+  );
+}
+
+function InvoiceAttachmentGallery({
+  attachments,
+  onPreview,
+}: {
+  attachments: ApiMaintenanceAttachment[];
+  onPreview: (att: ApiMaintenanceAttachment) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {attachments.map((att) => {
+        const preview = attachmentPreviewUrl(att);
+        const isImage = att.mimeType.startsWith('image/');
+        const isPdf = att.mimeType === 'application/pdf';
+
+        return (
+          <button
+            key={att.id}
+            type="button"
+            onClick={() => onPreview(att)}
+            className="hover:bg-secondary/20 overflow-hidden rounded-lg border bg-muted/30 text-left transition-colors"
+          >
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+              {isImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={preview}
+                  alt={att.fileName}
+                  className="size-full object-cover object-top"
+                />
+              ) : isPdf ? (
+                <iframe
+                  src={preview}
+                  title={att.fileName}
+                  className="pointer-events-none size-full border-0 bg-white"
+                />
+              ) : (
+                <div className="flex size-full flex-col items-center justify-center gap-2 px-2">
+                  <FileText className="text-muted-foreground/50 size-8" />
+                  <span className="text-muted-foreground text-center text-[10px]">Tap to preview</span>
+                </div>
+              )}
+            </div>
+            <div className="border-t bg-background px-2.5 py-2">
+              <p className="truncate text-xs font-medium">{att.fileName}</p>
+              <p className="text-muted-foreground text-[10px]">Tap to open full preview</p>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
