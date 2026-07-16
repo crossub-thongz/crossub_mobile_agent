@@ -455,17 +455,17 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
       },
       {
         id: 'completion_evidence',
-        label: 'Completion evidence uploaded',
+        label: 'Completion Evidence Uploaded',
         done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
       },
       {
         id: 'tenant_signoff',
-        label: 'Tenant sign-off received',
+        label: 'Tenant Sign-Off Received',
         done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
       },
       {
         id: 'invoice',
-        label: 'Invoice uploaded',
+        label: 'Invoice Uploaded',
         done: Boolean(ctx.workspaceCase.invoiceUploaded),
       },
     ];
@@ -508,6 +508,21 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
       label: 'Repair work in progress on site',
       done: ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status),
     },
+    {
+      id: 'completion_evidence',
+      label: 'Completion Evidence Uploaded',
+      done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
+    },
+    {
+      id: 'tenant_signoff',
+      label: 'Tenant Sign-Off Received',
+      done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
+    },
+    {
+      id: 'invoice',
+      label: 'Invoice Uploaded',
+      done: Boolean(ctx.workspaceCase.invoiceUploaded),
+    },
   ];
 }
 
@@ -528,17 +543,17 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
     return [
       {
         id: 'completion_evidence',
-        label: 'Completion evidence uploaded',
+        label: 'Completion Evidence Uploaded',
         done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
       },
       {
         id: 'tenant_signoff',
-        label: 'Tenant sign-off received',
+        label: 'Tenant Sign-Off Received',
         done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
       },
       {
         id: 'invoice',
-        label: 'Invoice uploaded',
+        label: 'Invoice Uploaded',
         done: Boolean(ctx.workspaceCase.invoiceUploaded),
       },
       {
@@ -552,12 +567,17 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
   return [
     {
       id: 'completion_photos',
-      label: 'Completion photos uploaded by handyman',
+      label: 'Completion Evidence Uploaded',
       done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
     },
     {
+      id: 'tenant_signoff',
+      label: 'Tenant Sign-Off Received',
+      done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
+    },
+    {
       id: 'sync_invoice',
-      label: 'Completion synced and invoice sent to agent',
+      label: 'Invoice Uploaded',
       done: Boolean(ctx.workspaceCase.invoiceUploaded),
     },
     {
@@ -811,9 +831,12 @@ export function auditEntriesForStep(
   };
 
   const regs = patterns[step];
-  return ctx.workspaceCase.auditEntries.filter((e) =>
-    regs.some((r) => r.test(e.message)),
-  );
+  const seen = new Set<string>();
+  return ctx.workspaceCase.auditEntries.filter((e) => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return regs.some((r) => r.test(e.message));
+  });
 }
 
 function emailRecordsForStepOnly(

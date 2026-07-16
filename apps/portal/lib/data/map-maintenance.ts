@@ -29,6 +29,17 @@ const PRIORITY_MAP: Record<string, Priority> = {
   low: 'low',
 };
 
+function dedupeAuditEntries(
+  entries: ApiMaintenanceAuditLogEntry[],
+): ApiMaintenanceAuditLogEntry[] {
+  const seen = new Set<string>();
+  return entries.filter((e) => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return true;
+  });
+}
+
 function auditToTimeline(entries: ApiMaintenanceAuditLogEntry[]): TimelineEntry[] {
   return entries.map((e) => ({
     id: e.id,
@@ -85,7 +96,9 @@ export function mapApiMaintenanceRequest(
     req.assignedContractorId ?? submittedQuote?.contractorId ?? latestQuote?.contractorId;
   const contractor = contractors.find((c) => contractorIdsMatch(c.id, contractorId ?? ''));
 
-  const reqAudit = auditLog.filter((a) => a.maintenanceRequestId === req.id);
+  const reqAudit = dedupeAuditEntries(
+    auditLog.filter((a) => a.maintenanceRequestId === req.id),
+  );
   const reqNotifications = notifications.filter(
     (n) => n.maintenanceRequestId === req.id,
   );

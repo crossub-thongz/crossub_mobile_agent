@@ -1,12 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { toast } from 'sonner';
-
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
-import { Button } from '@/components/ui/button';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
-import { markMaintenanceWorkComplete } from '@/lib/maintenance/maintenance-case-ops';
 import {
   auditEntriesForStep,
   MAINTENANCE_AGENT_STEP,
@@ -26,34 +21,10 @@ export function MaintenanceInProgressPanel({
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
-
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.IN_PROGRESS);
   const landlordFlow = requiresContractorFlow(ctx);
-  const landlordWorkInProgress =
-    landlordFlow &&
-    ctx.workspaceCase.status === 'in_progress' &&
-    !ctx.workspaceCase.completionEvidenceUploaded;
-  const showDirectPartyGates =
-    !landlordFlow &&
+  const showCompletionGates =
     ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status);
-
-  const handleMarkWorkComplete = async () => {
-    if (!apiConnected) {
-      toast.error('Connect to the API to update this job.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await markMaintenanceWorkComplete(ctx.item.id);
-      toast.success('Work marked complete — confirm payment in the Done step');
-      await onCaseUpdated?.();
-    } catch {
-      toast.error('Could not mark work complete');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   if (!landlordFlow) {
     return (
@@ -64,7 +35,7 @@ export function MaintenanceInProgressPanel({
             : 'Strata is responsible for this repair.'}
         </p>
 
-        {showDirectPartyGates ? (
+        {showCompletionGates ? (
           <MaintenanceCompletionGatesPanel
             ctx={ctx}
             attachments={attachments}
@@ -114,25 +85,16 @@ export function MaintenanceInProgressPanel({
               {ctx.workspaceCase.status === 'in_progress' ? 'Repair in progress' : 'Work complete'}
             </dd>
           </div>
-          <div>
-            <dt className="text-muted-foreground">Completion evidence</dt>
-            <dd className="font-medium">
-              {ctx.workspaceCase.completionEvidenceUploaded ? 'Uploaded' : 'Pending'}
-            </dd>
-          </div>
         </dl>
       ) : null}
 
-      {landlordWorkInProgress ? (
-        <Button
-          type="button"
-          className="w-full"
-          variant="outline"
-          disabled={busy}
-          onClick={() => void handleMarkWorkComplete()}
-        >
-          Mark work complete
-        </Button>
+      {showCompletionGates ? (
+        <MaintenanceCompletionGatesPanel
+          ctx={ctx}
+          attachments={attachments}
+          apiConnected={apiConnected}
+          onUpdated={onCaseUpdated}
+        />
       ) : null}
 
       {audit.length > 0 ? (
