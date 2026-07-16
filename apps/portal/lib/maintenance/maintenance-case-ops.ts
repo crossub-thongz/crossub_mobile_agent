@@ -12,6 +12,14 @@ import {
   type MaintenanceWorkflowResponsibility,
 } from '@/lib/crossub-api/maintenance-client';
 
+/** Row id for `assign-contractor` when the selection key is agency-scoped. */
+function preferredRowIdForAssign(selectionKey: string): string | null {
+  const fromPref = /^agency-pref-(.+)$/.exec(selectionKey.trim());
+  if (fromPref?.[1]) return fromPref[1];
+  if (/^[0-9a-f-]{36}$/i.test(selectionKey.trim())) return selectionKey.trim();
+  return null;
+}
+
 export async function confirmMaintenanceResponsibility(
   requestId: string,
   responsibility: MaintenanceWorkflowResponsibility,
@@ -32,7 +40,10 @@ export async function confirmMaintenanceResponsibility(
     if (contractorIds.length === 0) {
       throw new Error('Select at least one tradesman before confirming landlord responsibility.');
     }
-    await assignPreferredMaintenanceContractor(requestId, contractorIds[0]!);
+    const assignRowId = preferredRowIdForAssign(contractorIds[0]!);
+    if (assignRowId) {
+      await assignPreferredMaintenanceContractor(requestId, assignRowId);
+    }
     await inviteMaintenanceContractorsForRfq(requestId, contractorIds);
     await transitionMaintenanceCase(requestId, 'pending_quotation');
   }
@@ -45,6 +56,24 @@ export async function requestMoreMaintenanceEvidence(requestId: string) {
 
 export async function markTenantStrataRepairComplete(requestId: string) {
   await transitionMaintenanceCase(requestId, 'closed');
+}
+
+/** All completion gates checked — advance to the completed step (matches admin portal). */
+export async function confirmMaintenanceGatesComplete(requestId: string) {
+  await transitionMaintenanceCase(requestId, 'completed', {
+    completionEvidenceUploaded: true,
+    tenantApprovalReceived: true,
+    invoiceUploaded: true,
+  });
+}
+
+/** Close a job after completion gates are satisfied. */
+export async function closeMaintenanceCase(requestId: string) {
+  await transitionMaintenanceCase(requestId, 'closed', {
+    completionEvidenceUploaded: true,
+    tenantApprovalReceived: true,
+    invoiceUploaded: true,
+  });
 }
 
 export async function confirmMaintenancePaymentAndClose(requestId: string) {

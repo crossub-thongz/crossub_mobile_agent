@@ -127,6 +127,16 @@ export function PropertyMaintenanceJobPanel({
     [item, liveMapped],
   );
 
+  const evidenceAttachmentCount = useMemo(
+    () =>
+      attachments.filter(
+        (a) =>
+          a.maintenanceRequestId === item.id &&
+          (a.kind === 'initial_evidence' || a.kind === 'evidence'),
+      ).length,
+    [attachments, item.id],
+  );
+
   const workflowCtx = useMemo(() => {
     const caseModel =
       liveMapped && workspaceCase
@@ -136,8 +146,9 @@ export function PropertyMaintenanceJobPanel({
     return {
       item: displayItem,
       workspaceCase: caseModel,
+      evidenceAttachmentCount,
     };
-  }, [displayItem, liveMapped, property, user, workspaceCase]);
+  }, [displayItem, evidenceAttachmentCount, liveMapped, property, user, workspaceCase]);
 
   const onCaseUpdated = useCallback(async () => {
     await refreshCase();

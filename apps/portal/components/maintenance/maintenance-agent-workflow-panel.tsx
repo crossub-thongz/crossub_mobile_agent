@@ -89,12 +89,19 @@ function StepContent({
       return (
         <MaintenanceInProgressPanel
           ctx={ctx}
+          attachments={attachments}
           onCaseUpdated={onCaseUpdated}
           apiConnected={apiConnected}
         />
       );
     case MAINTENANCE_AGENT_STEP.JOB_COMPLETED:
-      return <MaintenanceJobCompletedPanel ctx={ctx} onCaseUpdated={onCaseUpdated} />;
+      return (
+        <MaintenanceJobCompletedPanel
+          ctx={ctx}
+          attachments={attachments}
+          onCaseUpdated={onCaseUpdated}
+        />
+      );
     default:
       return null;
   }

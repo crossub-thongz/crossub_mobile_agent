@@ -21,6 +21,15 @@ export async function fetchMaintenanceState(): Promise<ApiMaintenanceState> {
   return api.get<ApiMaintenanceState>('/maintenance/state');
 }
 
+export async function fetchMaintenanceRequest(
+  requestId: string,
+): Promise<ApiMaintenanceState['maintenanceRequests'][number]> {
+  const { request } = await api.get<{ request: ApiMaintenanceState['maintenanceRequests'][number] }>(
+    `/maintenance/requests/${requestId}`,
+  );
+  return request;
+}
+
 export async function fetchMaintenanceKpis(role: ApiMaintenanceUserRole = 'agent') {
   return api.get<{ total: number; overdue: number; breachRate: number }>(
     `/maintenance/kpis?role=${role}`,
@@ -129,7 +138,7 @@ export async function fetchMaintenanceContractorSuggestions(
   }>(`/maintenance/requests/${requestId}/contractor-recommendations`);
 
   return (result.recommendations ?? []).map((row) => ({
-    id: row.id,
+    id: row.contractorId ?? `agency-pref-${row.id}`,
     contractorId: row.contractorId,
     name: row.name,
     email: row.email,
@@ -207,7 +216,7 @@ export async function declineMaintenanceQuotation(
 
 export async function uploadMaintenanceAttachment(input: {
   maintenanceRequestId: string;
-  kind: 'initial_evidence' | 'evidence';
+  kind: 'initial_evidence' | 'evidence' | 'invoice';
   fileName: string;
   mimeType: string;
   sizeBytes: number;

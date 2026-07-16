@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
 import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
 import { Button } from '@/components/ui/button';
+import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import {
   approveMaintenanceQuotationCase,
   declineMaintenanceQuotationCase,
   markMaintenanceWorkComplete,
-  markTenantStrataRepairComplete,
 } from '@/lib/maintenance/maintenance-case-ops';
 import {
   auditEntriesForStep,
@@ -22,10 +23,12 @@ import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 export function MaintenanceInProgressPanel({
   ctx,
+  attachments = [],
   onCaseUpdated,
   apiConnected = true,
 }: {
   ctx: MaintenanceWorkflowContext;
+  attachments?: ApiMaintenanceAttachment[];
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
@@ -36,12 +39,13 @@ export function MaintenanceInProgressPanel({
   const submittedQuote = getSubmittedMaintenanceQuotation(ctx.workspaceCase);
   const awaitingApproval =
     ctx.item.requiresApproval && ctx.workspaceCase.status === 'pending_approval' && submittedQuote;
-  const directPartyInProgress =
-    !landlordFlow && ctx.workspaceCase.status === 'in_progress';
   const landlordWorkInProgress =
     landlordFlow &&
     ctx.workspaceCase.status === 'in_progress' &&
     !ctx.workspaceCase.completionEvidenceUploaded;
+  const showDirectPartyGates =
+    !landlordFlow &&
+    ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status);
 
   const handleApprove = async (quotationId: string) => {
     if (!apiConnected) {
@@ -94,23 +98,6 @@ export function MaintenanceInProgressPanel({
     }
   };
 
-  const handleMarkDirectPartyComplete = async () => {
-    if (!apiConnected) {
-      toast.error('Connect to the API to close this job.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await markTenantStrataRepairComplete(ctx.item.id);
-      toast.success('Repair marked complete — job closed');
-      await onCaseUpdated?.();
-    } catch {
-      toast.error('Could not close this job');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   if (!landlordFlow) {
     return (
       <div className="space-y-4">
@@ -120,15 +107,13 @@ export function MaintenanceInProgressPanel({
             : 'Strata is responsible for this repair.'}
         </p>
 
-        {directPartyInProgress ? (
-          <Button
-            type="button"
-            className="w-full"
-            disabled={busy}
-            onClick={() => void handleMarkDirectPartyComplete()}
-          >
-            Mark repair complete &amp; close job
-          </Button>
+        {showDirectPartyGates ? (
+          <MaintenanceCompletionGatesPanel
+            ctx={ctx}
+            attachments={attachments}
+            apiConnected={apiConnected}
+            onUpdated={onCaseUpdated}
+          />
         ) : null}
 
         {audit.length > 0 ? (

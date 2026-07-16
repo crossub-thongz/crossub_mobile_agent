@@ -68,6 +68,8 @@ export interface MaintenanceAgentWorkflowModel {
 export interface MaintenanceWorkflowContext {
   item: MaintenanceRequest;
   workspaceCase: MaintenanceWorkspaceCase;
+  /** Initial/evidence attachments on the shared workflow board (live sync). */
+  evidenceAttachmentCount?: number;
 }
 
 export interface MaintenanceEmailRecord {
@@ -131,20 +133,125 @@ function auditAt(
   return hit?.timestamp ?? null;
 }
 
+function responsibilityRecipientLabel(
+  responsibility: MaintenanceWorkspaceCase['responsibility'],
+  workspaceCase: MaintenanceWorkspaceCase,
+): string {
+  if (responsibility === 'strata') return 'Strata';
+  if (responsibility === 'tenant') {
+    return workspaceCase.tenant?.email ?? workspaceCase.tenant?.name ?? 'Tenant';
+  }
+  if (responsibility === 'landlord') {
+    return workspaceCase.tenant?.email ?? 'Landlord';
+  }
+  return 'Recipient';
+}
+
+function mapEmailNotification(
+  n: MaintenanceWorkspaceCase['notifications'][number],
+  workspaceCase: MaintenanceWorkspaceCase,
+  kind: string,
+  to?: string,
+): MaintenanceEmailRecord {
+  const responsibility = workspaceCase.responsibility;
+  return {
+    id: n.id,
+    subject: n.title,
+    body: n.message,
+    from: workspaceCase.agent?.email ?? 'Managing agent',
+    to:
+      to ??
+      (/responsibility determined/i.test(n.title)
+        ? responsibilityRecipientLabel(responsibility, workspaceCase)
+        : workspaceCase.tenant?.email ?? 'Recipient'),
+    at: n.createdAt,
+    kind,
+  };
+}
+
 function emailNotifications(
   workspaceCase: MaintenanceWorkspaceCase,
 ): MaintenanceEmailRecord[] {
   return workspaceCase.notifications
     .filter((n) => n.channel === 'email')
-    .map((n) => ({
-      id: n.id,
-      subject: n.title,
-      body: n.message,
-      from: 'CROSSUB',
-      to: workspaceCase.agent?.email ?? 'Agent',
-      at: n.createdAt,
-      kind: 'notification',
-    }));
+    .map((n) => mapEmailNotification(n, workspaceCase, 'notification'));
+}
+
+function parseReviewEmailFromAudit(
+  entry: MaintenanceWorkspaceCase['auditEntries'][number],
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord | null {
+  if (entry.action !== 'responsibility_set') return null;
+
+  const msg = entry.message;
+  if (msg.startsWith('Review email sent')) {
+    const subjectMatch = msg.match(/Review email sent\s*\(([^)]+)\)/i);
+    const subject = subjectMatch?.[1]?.trim() ?? 'Review email';
+    const parts = msg.split(/\r?\n\r?\n/);
+    const body = parts.length >= 2 ? parts.slice(1).join('\n\n').trim() : '';
+    if (!body) return null;
+    return {
+      id: entry.id,
+      subject,
+      body,
+      from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+      to: responsibilityRecipientLabel(ctx.workspaceCase.responsibility, ctx.workspaceCase),
+      at: entry.timestamp,
+      kind: 'responsibility_review',
+    };
+  }
+
+  if (!/^Responsibility set to \w+\./i.test(msg)) return null;
+  const responsibility = ctx.workspaceCase.responsibility;
+  if (!responsibility) return null;
+
+  const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
+  const common = [
+    `Job: ${ctx.workspaceCase.id}`,
+    `Issue: ${ctx.workspaceCase.issueType}`,
+    `Address: ${ctx.workspaceCase.address}`,
+    '',
+    'Details:',
+    ctx.workspaceCase.description,
+  ].join('\n');
+  const tenantName = ctx.workspaceCase.tenant?.name ?? 'Tenant';
+  const subject = `Responsibility Determined · ${cap(responsibility)}`;
+  const body =
+    responsibility === 'tenant'
+      ? `Hi ${tenantName},\n\n${common}\n\nThis maintenance request has been classified as Tenant responsibility. Please proceed with the next steps.`
+      : responsibility === 'landlord'
+        ? `Hi ${tenantName},\n\n${common}\n\nWe are moving forward with the quotation workflow to resolve the issue under Landlord responsibility.`
+        : `Hello Strata,\n\nWe need your approval/follow-up regarding the following maintenance issue:\n- Job: ${ctx.workspaceCase.id}\n- Issue: ${ctx.workspaceCase.issueType}\n- Description: ${ctx.workspaceCase.description || '—'}\n- Address: ${ctx.workspaceCase.address || '—'}\n\nPlease advise next steps and any required evidence.\n\nThank you.`;
+
+  return {
+    id: `synthetic-email-responsibility-${entry.id}`,
+    subject,
+    body,
+    from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+    to: responsibilityRecipientLabel(responsibility, ctx.workspaceCase),
+    at: entry.timestamp,
+    kind: 'responsibility_review',
+  };
+}
+
+/** Responsibility confirmation emails (tenant / strata / landlord review step). */
+export function buildResponsibilityReviewEmails(
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord[] {
+  const byId = new Map<string, MaintenanceEmailRecord>();
+
+  for (const n of ctx.workspaceCase.notifications) {
+    if (n.channel !== 'email') continue;
+    if (!/responsibility determined/i.test(n.title)) continue;
+    byId.set(n.id, mapEmailNotification(n, ctx.workspaceCase, 'responsibility_review'));
+  }
+
+  for (const entry of ctx.workspaceCase.auditEntries) {
+    const parsed = parseReviewEmailFromAudit(entry, ctx);
+    if (parsed) byId.set(parsed.id, parsed);
+  }
+
+  return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));
 }
 
 function isElectricalIssue(ctx: MaintenanceWorkflowContext): boolean {
@@ -159,6 +266,7 @@ function hasApplianceDetails(ctx: MaintenanceWorkflowContext): boolean {
 
 function hasMediaEvidence(ctx: MaintenanceWorkflowContext): boolean {
   return (
+    (ctx.evidenceAttachmentCount ?? 0) > 0 ||
     auditMatches(ctx.workspaceCase, /photo|video|evidence|upload|media|image/) ||
     ctx.workspaceCase.auditEntries.length > 1
   );
@@ -342,6 +450,21 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
         label: `${ctx.workspaceCase.responsibility ?? 'Responsible party'} handles repair directly`,
         done: ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status),
       },
+      {
+        id: 'completion_evidence',
+        label: 'Completion evidence uploaded',
+        done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
+      },
+      {
+        id: 'tenant_signoff',
+        label: 'Tenant sign-off received',
+        done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
+      },
+      {
+        id: 'invoice',
+        label: 'Invoice uploaded',
+        done: Boolean(ctx.workspaceCase.invoiceUploaded),
+      },
     ];
   }
 
@@ -386,6 +509,32 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
 }
 
 function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubProgressItem[] {
+  const landlordFlow = requiresContractorFlow(ctx);
+  if (!landlordFlow) {
+    return [
+      {
+        id: 'completion_evidence',
+        label: 'Completion evidence uploaded',
+        done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
+      },
+      {
+        id: 'tenant_signoff',
+        label: 'Tenant sign-off received',
+        done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
+      },
+      {
+        id: 'invoice',
+        label: 'Invoice uploaded',
+        done: Boolean(ctx.workspaceCase.invoiceUploaded),
+      },
+      {
+        id: 'closed',
+        label: 'Job closed',
+        done: ctx.workspaceCase.status === 'closed',
+      },
+    ];
+  }
+
   return [
     {
       id: 'completion_photos',
@@ -469,9 +618,6 @@ export function buildMaintenanceAgentWorkflow(
 }
 
 export function buildJobCreatedEmails(ctx: MaintenanceWorkflowContext): MaintenanceEmailRecord[] {
-  const emails = emailNotifications(ctx.workspaceCase);
-  if (emails.length > 0) return emails;
-
   const sourceLabel =
     ctx.workspaceCase.source === 'tenant_app'
       ? 'Tenant'
@@ -602,7 +748,7 @@ function emailRecordsForStepOnly(
     case MAINTENANCE_AGENT_STEP.JOB_CREATED:
       return buildJobCreatedEmails(ctx);
     case MAINTENANCE_AGENT_STEP.REVIEW:
-      return [];
+      return buildResponsibilityReviewEmails(ctx);
     case MAINTENANCE_AGENT_STEP.GET_QUOTE: {
       const quote = buildQuoteSentToAgentEmail(ctx);
       return quote ? [quote] : [];
@@ -616,20 +762,28 @@ function emailRecordsForStepOnly(
   }
 }
 
-export function allMaintenanceEmailRecords(ctx: MaintenanceWorkflowContext): JobCaseEmailRecord[] {
-  const records: JobCaseEmailRecord[] = [];
-  for (const step of MAINTENANCE_AGENT_STEP_ORDER) {
-    records.push(...emailRecordsForStepOnly(ctx, step));
+function accumulateEmailRecordsThroughStep(
+  ctx: MaintenanceWorkflowContext,
+  throughStep: MaintenanceAgentStep,
+): JobCaseEmailRecord[] {
+  const endIndex = stepIndex(throughStep);
+  const byId = new Map<string, JobCaseEmailRecord>();
+  for (let i = 0; i <= endIndex; i++) {
+    const stepId = MAINTENANCE_AGENT_STEP_ORDER[i]!;
+    for (const record of emailRecordsForStepOnly(ctx, stepId)) {
+      byId.set(record.id, record);
+    }
   }
-  return dedupeJobCaseEmails(records);
+  return dedupeJobCaseEmails([...byId.values()]);
+}
+
+export function allMaintenanceEmailRecords(ctx: MaintenanceWorkflowContext): JobCaseEmailRecord[] {
+  return accumulateEmailRecordsThroughStep(ctx, MAINTENANCE_AGENT_STEP.JOB_COMPLETED);
 }
 
 export function maintenanceEmailRecordsForStep(
   ctx: MaintenanceWorkflowContext,
   step: MaintenanceAgentStep,
 ): JobCaseEmailRecord[] {
-  if (step === MAINTENANCE_AGENT_STEP.JOB_COMPLETED) {
-    return allMaintenanceEmailRecords(ctx);
-  }
-  return dedupeJobCaseEmails(emailRecordsForStepOnly(ctx, step));
+  return accumulateEmailRecordsThroughStep(ctx, step);
 }

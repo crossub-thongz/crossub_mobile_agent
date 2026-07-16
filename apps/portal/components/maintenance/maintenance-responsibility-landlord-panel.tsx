@@ -12,11 +12,13 @@ import {
   fetchPreferredContractors,
   type PreferredContractor,
 } from '@/lib/crossub-api/agent-client';
+import { maintenanceContractorSelectionKey } from '@/lib/maintenance/maintenance-contractor-key';
 import { cn } from '@/lib/utils';
 
 function mapPreferredToSuggestion(row: PreferredContractor): MaintenanceContractorSuggestion {
+  const key = maintenanceContractorSelectionKey(row);
   return {
-    id: row.id,
+    id: key,
     contractorId: row.contractorId,
     name: row.name,
     email: row.email,
@@ -108,7 +110,9 @@ export function MaintenanceResponsibilityLandlordPanel({
   const handleCreated = (contractor: PreferredContractor) => {
     const mapped = mapPreferredToSuggestion(contractor);
     setSuggestions((prev) => [mapped, ...prev.filter((row) => row.id !== mapped.id)]);
-    onChangeSelectedContractorIds([...new Set([...selectedContractorIds, contractor.id])]);
+    onChangeSelectedContractorIds([
+      ...new Set([...selectedContractorIds, maintenanceContractorSelectionKey(contractor)]),
+    ]);
   };
 
   return (

@@ -48,8 +48,16 @@ export interface QuotationLineItem {
   amountIncGst: number;
 }
 
+export interface ApiMaintenanceParty {
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface ApiMaintenanceRequest {
   id: string;
+  propertyId?: string;
+  agencyId?: string;
   issueType: string;
   description: string;
   address: string;
@@ -59,7 +67,15 @@ export interface ApiMaintenanceRequest {
   createdAt: string;
   dueAt: string;
   source: 'tenant_app' | 'agent_submission' | 'email';
+  tenant?: ApiMaintenanceParty;
+  agent?: ApiMaintenanceParty;
   assignedContractorId?: string;
+  assignedContractor?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+  };
   invitedContractorIds?: string[];
   quotationIds: string[];
   completionEvidenceUploaded?: boolean;

@@ -1,15 +1,19 @@
-import { fetchMaintenanceState } from '@/lib/crossub-api/maintenance-client';
-import type { ApiMaintenanceAttachment, ApiMaintenanceState } from '@/lib/crossub-api/types';
+import {
+  fetchMaintenanceRequest,
+  fetchMaintenanceState,
+} from '@/lib/crossub-api/maintenance-client';
+import type { ApiMaintenanceState } from '@/lib/crossub-api/types';
 import {
   mapApiMaintenanceRequest,
   type MappedMaintenance,
 } from '@/lib/data/map-maintenance';
+import { mergeMaintenanceCaseForLiveSync } from '@/lib/maintenance/merge-maintenance-case';
 
 export type MaintenanceCaseSnapshot = {
   mapped: MappedMaintenance;
   remindersSent: number;
   nextReminderDueAt: string | null;
-  attachments: ApiMaintenanceAttachment[];
+  attachments: NonNullable<ApiMaintenanceState['maintenanceAttachments']>;
 };
 
 export function remindersForCase(
@@ -27,14 +31,23 @@ export function remindersForCase(
   return { sent, nextDueAt: upcoming[0] ?? null };
 }
 
-/** Load one maintenance case from the live ops state (`GET /maintenance/state`). */
+/** Load one maintenance case — Prisma row merged with the live workflow board. */
 export async function fetchMaintenanceCase(
   caseId: string,
   propertyId?: string,
 ): Promise<MaintenanceCaseSnapshot | null> {
   const state = await fetchMaintenanceState();
-  const req = state.maintenanceRequests.find((r) => r.id === caseId);
-  if (!req) return null;
+  const workflowReq = state.maintenanceRequests.find((r) => r.id === caseId);
+
+  let req = workflowReq ?? null;
+  try {
+    const prismaReq = await fetchMaintenanceRequest(caseId);
+    req = workflowReq
+      ? mergeMaintenanceCaseForLiveSync(prismaReq, workflowReq)
+      : prismaReq;
+  } catch {
+    if (!req) return null;
+  }
 
   const mapped = mapApiMaintenanceRequest(
     req,
