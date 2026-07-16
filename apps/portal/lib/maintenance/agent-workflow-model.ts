@@ -207,7 +207,7 @@ function parseReviewEmailFromAudit(
 
   const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
   const common = [
-    `Job: ${ctx.workspaceCase.id}`,
+    `Job: ${ctx.workspaceCase.caseRef}`,
     `Issue: ${ctx.workspaceCase.issueType}`,
     `Address: ${ctx.workspaceCase.address}`,
     '',
@@ -221,7 +221,7 @@ function parseReviewEmailFromAudit(
       ? `Hi ${tenantName},\n\n${common}\n\nThis maintenance request has been classified as Tenant responsibility. Please proceed with the next steps.`
       : responsibility === 'landlord'
         ? `Hi ${tenantName},\n\n${common}\n\nWe are moving forward with the quotation workflow to resolve the issue under Landlord responsibility.`
-        : `Hello Strata,\n\nWe need your approval/follow-up regarding the following maintenance issue:\n- Job: ${ctx.workspaceCase.id}\n- Issue: ${ctx.workspaceCase.issueType}\n- Description: ${ctx.workspaceCase.description || '—'}\n- Address: ${ctx.workspaceCase.address || '—'}\n\nPlease advise next steps and any required evidence.\n\nThank you.`;
+        : `Hello Strata,\n\nWe need your approval/follow-up regarding the following maintenance issue:\n- Job: ${ctx.workspaceCase.caseRef}\n- Issue: ${ctx.workspaceCase.issueType}\n- Description: ${ctx.workspaceCase.description || '—'}\n- Address: ${ctx.workspaceCase.address || '—'}\n\nPlease advise next steps and any required evidence.\n\nThank you.`;
 
   return {
     id: `synthetic-email-responsibility-${entry.id}`,
