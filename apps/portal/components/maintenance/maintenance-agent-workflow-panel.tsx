@@ -22,39 +22,6 @@ import {
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
 
-function SubProgressList({ items }: { items: { id: string; label: string; done: boolean }[] }) {
-  if (items.length === 0) return null;
-
-  const doneCount = items.filter((i) => i.done).length;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-          Progress
-        </p>
-        <p className="text-muted-foreground text-[10px] tabular-nums">
-          {doneCount}/{items.length}
-        </p>
-      </div>
-      <ul className="space-y-1.5">
-        {items.map((item) => (
-          <li
-            key={item.id}
-            className={`rounded-lg border px-2.5 py-2 text-xs ${
-              item.done
-                ? 'border-primary/20 bg-primary/5 text-foreground'
-                : 'border-border/60 bg-muted/20 text-muted-foreground'
-            }`}
-          >
-            {item.label}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function StepContent({
   stepId,
   ctx,
@@ -198,7 +165,6 @@ export function MaintenanceAgentWorkflowPanel({
           ) : null}
         </div>
         <div className="space-y-4 p-4">
-          <SubProgressList items={viewingStep?.subProgress ?? []} />
           <StepContent
             stepId={viewingStepId}
             ctx={ctx}
