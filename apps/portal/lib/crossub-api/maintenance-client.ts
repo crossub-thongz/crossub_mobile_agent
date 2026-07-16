@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import type {
   ApiMaintenanceState,
   ApiMaintenanceUserRole,
+  ApiQuotation,
 } from '@/lib/crossub-api/types';
 
 export type MaintenanceWorkflowResponsibility = 'tenant' | 'landlord' | 'strata';
@@ -219,12 +220,25 @@ export async function reviewMaintenanceQuotationDecision(
   decision: 'approved' | 'declined',
   declineReason?: string,
   actorRole: ApiMaintenanceUserRole = AGENT_ROLE,
+  quotationSnapshot?: {
+    maintenanceRequestId: string;
+    contractorId: string;
+    price: number;
+    currency?: 'AUD';
+    scope: string;
+    availableSchedule: string;
+    submittedAt?: string;
+    status?: 'submitted' | 'approved' | 'declined';
+    lineItems?: ApiQuotation['lineItems'];
+    comments?: string;
+  },
 ): Promise<ApiMaintenanceState> {
   return api.post<ApiMaintenanceState>('/maintenance/quotations/review-decision', {
     quotationId,
     decision,
     declineReason,
     actorRole,
+    ...(quotationSnapshot ? { quotationSnapshot } : {}),
   });
 }
 

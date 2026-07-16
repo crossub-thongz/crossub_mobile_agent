@@ -291,7 +291,7 @@ export function resolveMaintenanceAgentStep(
   const { workspaceCase } = ctx;
   const status = workspaceCase.status;
 
-  if (status === 'closed' || status === 'completed') {
+  if (status === 'closed' || status === 'completed' || status === 'deleted') {
     return MAINTENANCE_AGENT_STEP.JOB_COMPLETED;
   }
 
@@ -512,6 +512,17 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
 }
 
 function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubProgressItem[] {
+  if (ctx.workspaceCase.status === 'deleted') {
+    const reason = ctx.item.deleteReason?.trim();
+    return [
+      {
+        id: 'deleted',
+        label: reason ? `Deleted: ${reason}` : 'Job deleted by staff',
+        done: true,
+      },
+    ];
+  }
+
   const landlordFlow = requiresContractorFlow(ctx);
   if (!landlordFlow) {
     return [
@@ -599,7 +610,7 @@ export function buildMaintenanceAgentWorkflow(
     workflowName: 'Maintenance',
   }));
 
-  if (ctx.workspaceCase.status === 'closed') {
+  if (ctx.workspaceCase.status === 'closed' || ctx.workspaceCase.status === 'deleted') {
     for (const step of steps) {
       step.status = 'done';
     }
@@ -607,7 +618,7 @@ export function buildMaintenanceAgentWorkflow(
 
   const doneCount = steps.filter((s) => s.status === 'done').length;
   const progressFillIndex =
-    ctx.workspaceCase.status === 'closed'
+    ctx.workspaceCase.status === 'closed' || ctx.workspaceCase.status === 'deleted'
       ? steps.length - 1
       : Math.max(0, doneCount - 0.5);
 

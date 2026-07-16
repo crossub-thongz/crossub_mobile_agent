@@ -22,6 +22,7 @@ const REQUEST_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   'in progress': 'in_progress',
   completed: 'completed',
   closed: 'closed',
+  deleted: 'deleted',
 };
 
 const API_MAINTENANCE_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
@@ -31,7 +32,7 @@ const API_MAINTENANCE_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   [MAINTENANCE_STATUS.SCHEDULED]: 'in_progress',
   [MAINTENANCE_STATUS.INVOICED]: 'in_progress',
   [MAINTENANCE_STATUS.COMPLETED]: 'completed',
-  [MAINTENANCE_STATUS.CANCELLED]: 'closed',
+  [MAINTENANCE_STATUS.CANCELLED]: 'deleted',
 };
 
 function mapRequestStatus(status: string, apiStatus?: string): MaintenanceWorkspaceStatus {

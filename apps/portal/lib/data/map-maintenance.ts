@@ -9,6 +9,7 @@ import { inferInvitedContractorIdsFromAudit, inferResponsibilityFromAudit } from
 import { contractorIdsMatch } from '@/lib/maintenance/resolve-contractor-display';
 import type { MaintenanceRequest, Priority, TimelineEntry } from '@/lib/types';
 import { maintenanceDetail } from '@/constants/routes';
+import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -18,6 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
   in_progress: 'In progress',
   completed: 'Completed',
   closed: 'Closed',
+  deleted: 'Deleted',
 };
 
 const PRIORITY_MAP: Record<string, Priority> = {
@@ -102,6 +104,7 @@ export function mapApiMaintenanceRequest(
     title: req.issueType,
     description: req.description,
     status: STATUS_LABEL[req.status] ?? req.status,
+    apiStatus: req.status === 'deleted' ? MAINTENANCE_STATUS.CANCELLED : undefined,
     priority: PRIORITY_MAP[req.priority] ?? 'normal',
     responsibility: resolvedResponsibility,
     contractorName: contractor?.name,
@@ -137,6 +140,8 @@ export function mapApiMaintenanceRequest(
       ? resolvedInvitedContractorIds
       : undefined,
     invitedContractors: req.invitedContractors,
+    deleteReason: req.deleteReason,
+    deletedAt: req.deletedAt,
   };
 }
 

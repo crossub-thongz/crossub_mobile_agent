@@ -8,6 +8,7 @@ export const STATUS_LABELS: Record<string, string> = {
   in_progress: 'In Progress',
   completed: 'Completed',
   closed: 'Closed',
+  deleted: 'Deleted',
 };
 
 export const SOURCE_LABELS: Record<MaintenanceWorkspaceCase['source'], string> = {

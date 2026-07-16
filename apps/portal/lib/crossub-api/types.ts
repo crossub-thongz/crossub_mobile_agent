@@ -6,7 +6,8 @@ export type ApiMaintenanceStatus =
   | 'pending_approval'
   | 'in_progress'
   | 'completed'
-  | 'closed';
+  | 'closed'
+  | 'deleted';
 
 export type ApiMaintenancePriority = 'low' | 'medium' | 'high' | 'critical';
 export type ApiMaintenanceResponsibility = 'tenant' | 'landlord' | 'strata';
@@ -109,6 +110,8 @@ export interface ApiMaintenanceRequest {
   completionEvidenceUploaded?: boolean;
   tenantApprovalReceived?: boolean;
   invoiceUploaded?: boolean;
+  deleteReason?: string;
+  deletedAt?: string;
   timeline: { status: ApiMaintenanceStatus; enteredAt: string; exitedAt?: string }[];
 }
 

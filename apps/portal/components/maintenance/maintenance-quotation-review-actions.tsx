@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
-import { formatCurrency } from '@/lib/utils';
 
 export function MaintenanceQuotationReviewActions({
   quote,
@@ -219,76 +218,6 @@ export function MaintenanceQuotationReviewActions({
           Feedback sent to contractor ·{' '}
           {new Date(review!.contractorFeedbackSentAt!).toLocaleString('en-AU')}
         </p>
-      ) : null}
-
-      {canAct && decision ? (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isBusy}
-            onClick={() => setNegotiateOpen((v) => !v)}
-          >
-            Requote
-          </Button>
-        </div>
-      ) : null}
-
-      {negotiateOpen && canAct && decision ? (
-        <div className="bg-muted/20 space-y-2 rounded-md border p-3">
-          <p className="text-xs font-semibold">Requote (counter offer)</p>
-          <p className="text-muted-foreground text-xs">
-            Current quote: {formatCurrency(quote.price)}
-          </p>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={counterPrice}
-            onChange={(e) => setCounterPrice(e.target.value)}
-            placeholder="Counter price (AUD inc GST)"
-            className="border-border bg-background w-full rounded-md border px-3 py-2 text-sm"
-            disabled={isBusy}
-          />
-          <Textarea
-            value={counterMessage}
-            onChange={(e) => setCounterMessage(e.target.value)}
-            placeholder="Optional message to contractor"
-            className="min-h-[72px] resize-none text-xs"
-            disabled={isBusy}
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isBusy}
-              onClick={() => setNegotiateOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={isBusy}
-              onClick={() =>
-                void run(async () => {
-                  const price = Number(counterPrice);
-                  if (!Number.isFinite(price) || price <= 0) {
-                    toast.error('Enter a valid counter price');
-                    return;
-                  }
-                  await onCounterOffer(price, counterMessage.trim() || undefined);
-                  toast.success('Counter offer sent');
-                  setNegotiateOpen(false);
-                })
-              }
-            >
-              Send counter offer
-            </Button>
-          </div>
-        </div>
       ) : null}
     </div>
   );

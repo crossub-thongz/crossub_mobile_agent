@@ -5,6 +5,7 @@ import {
   type MaintenanceAgentStep,
 } from '@/lib/maintenance/agent-workflow-model';
 import { buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
+import { isDeletedMaintenance } from '@/lib/property-maintenance-history';
 import type { MaintenanceRequest } from '@/lib/types';
 
 import { buildCaseWorkflowProgress } from './build-progress';
@@ -36,6 +37,7 @@ export function maintenanceWorkflowProgress(
 }
 
 export function maintenanceCurrentStepLabel(request: MaintenanceRequest): string {
+  if (isDeletedMaintenance(request)) return 'Deleted';
   const workspaceCase = buildWorkspaceCaseFromRequest(request);
   const workflow = buildMaintenanceAgentWorkflow({ item: request, workspaceCase });
   return MAINTENANCE_AGENT_STEP_TITLE[workflow.liveStepId];

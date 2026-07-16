@@ -109,8 +109,15 @@ export async function reviewMaintenanceQuotationDecisionCase(
   quotationId: string,
   decision: 'approved' | 'declined',
   declineReason?: string,
+  quotationSnapshot?: Parameters<typeof reviewMaintenanceQuotationDecision>[4],
 ) {
-  await reviewMaintenanceQuotationDecision(quotationId, decision, declineReason);
+  await reviewMaintenanceQuotationDecision(
+    quotationId,
+    decision,
+    declineReason,
+    'agent',
+    quotationSnapshot,
+  );
 }
 
 export async function sendMaintenanceQuotationToLandlordCase(quotationId: string) {

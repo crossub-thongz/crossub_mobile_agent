@@ -132,6 +132,18 @@ function ContractorQuoteCollapsible({
                     submitted.id,
                     decision,
                     declineReason,
+                    {
+                      maintenanceRequestId: submitted.maintenanceRequestId,
+                      contractorId: submitted.contractorId,
+                      price: submitted.price,
+                      currency: submitted.currency,
+                      scope: submitted.scope,
+                      availableSchedule: submitted.availableSchedule,
+                      submittedAt: submitted.submittedAt,
+                      status: submitted.status,
+                      lineItems: submitted.lineItems,
+                      comments: submitted.comments,
+                    },
                   );
                   await onCaseUpdated?.();
                 }}

@@ -8,6 +8,7 @@ const STATUS_RANK: Record<string, number> = {
   in_progress: 5,
   completed: 6,
   closed: 7,
+  deleted: 8,
 };
 
 function preferAdvancedStatus(
@@ -45,6 +46,8 @@ export function mergeMaintenanceCaseForLiveSync(
     tenantApprovalReceived:
       Boolean(prisma.tenantApprovalReceived) || Boolean(workflow.tenantApprovalReceived),
     invoiceUploaded: Boolean(prisma.invoiceUploaded) || Boolean(workflow.invoiceUploaded),
+    deleteReason: prisma.deleteReason ?? workflow.deleteReason,
+    deletedAt: prisma.deletedAt ?? workflow.deletedAt,
     timeline:
       (workflow.timeline?.length ?? 0) >= (prisma.timeline?.length ?? 0)
         ? workflow.timeline

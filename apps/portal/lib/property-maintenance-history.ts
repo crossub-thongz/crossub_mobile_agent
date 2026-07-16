@@ -3,6 +3,7 @@ import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 
 export function isDeletedMaintenance(request: MaintenanceRequest): boolean {
   if (request.apiStatus === MAINTENANCE_STATUS.CANCELLED) return true;
+  if (request.status.toLowerCase() === 'deleted') return true;
   const status = request.status.toLowerCase();
   return status.includes('cancelled') || status.includes('deleted');
 }
