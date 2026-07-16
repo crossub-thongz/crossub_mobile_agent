@@ -299,11 +299,7 @@ export function resolveMaintenanceAgentStep(
     return MAINTENANCE_AGENT_STEP.IN_PROGRESS;
   }
 
-  if (status === 'pending_approval') {
-    return MAINTENANCE_AGENT_STEP.IN_PROGRESS;
-  }
-
-  if (status === 'pending_quotation' || quoteDeclinedLoopBack(ctx)) {
+  if (status === 'pending_approval' || status === 'pending_quotation' || quoteDeclinedLoopBack(ctx)) {
     return MAINTENANCE_AGENT_STEP.GET_QUOTE;
   }
 
@@ -419,6 +415,13 @@ function getQuoteSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubPro
       id: 'quote_display',
       label: 'Quote shows total, handyman contact, and breakdown',
       done: quote?.status === 'submitted' || quote?.status === 'approved',
+    },
+    {
+      id: 'agent_approval',
+      label: 'Agent accepts or rejects quote',
+      done:
+        quote?.status === 'approved' ||
+        ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status),
     },
     {
       id: 'sent_to_agent',

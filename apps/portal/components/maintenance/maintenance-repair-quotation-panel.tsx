@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { ApiQuotation } from '@/lib/crossub-api/types';
-import { buildQuotationLineItems } from '@/lib/maintenance/quotation-line-items';
+import { buildQuotationLineItems, displayUnitPrice, gstModeLabel } from '@/lib/maintenance/quotation-line-items';
 import { cn, formatCurrency } from '@/lib/utils';
 
 export function MaintenanceRepairQuotationPanel({
@@ -25,7 +25,6 @@ export function MaintenanceRepairQuotationPanel({
   onApprove?: () => void;
   onDecline?: (reason: string) => void;
 }) {
-  const [selectedLineId, setSelectedLineId] = useState('1');
   const [comments, setComments] = useState(quote.comments ?? quote.declineReason ?? '');
 
   const { lines, totals } = useMemo(
@@ -55,7 +54,6 @@ export function MaintenanceRepairQuotationPanel({
           <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-[#5f9f6b] text-white">
-                  <th className="w-10 px-2 py-2" />
                   <th className="px-3 py-2 font-semibold">Description</th>
                   <th className="px-3 py-2 font-semibold">Quantity</th>
                   <th className="px-3 py-2 font-semibold">Unit Price</th>
@@ -66,22 +64,17 @@ export function MaintenanceRepairQuotationPanel({
               <tbody>
                 {lines.map((line) => (
                   <tr key={line.id} className="border-t">
-                    <td className="px-2 py-2 align-top">
-                      <input
-                        type="radio"
-                        name={`quote-line-${quote.id}`}
-                        className="size-4 accent-[#5f9f6b]"
-                        checked={selectedLineId === line.id}
-                        disabled={busy || !showActions}
-                        onChange={() => setSelectedLineId(line.id)}
-                      />
-                    </td>
                     <td className="px-3 py-2 align-top whitespace-pre-wrap">{line.description}</td>
                     <td className="px-3 py-2 align-top tabular-nums">{line.quantity}</td>
                     <td className="px-3 py-2 align-top tabular-nums">
-                      {formatCurrency(line.unitPriceExGst)}
+                      {formatCurrency(displayUnitPrice(line))}
                     </td>
-                    <td className="px-3 py-2 align-top tabular-nums">{formatCurrency(line.gst)}</td>
+                    <td className="px-3 py-2 align-top">
+                      <p className="tabular-nums">{formatCurrency(line.gst)}</p>
+                      <p className="text-muted-foreground mt-0.5 text-[10px]">
+                        {gstModeLabel(line.gstMode, line.gstPercent)}
+                      </p>
+                    </td>
                     <td className="px-3 py-2 align-top tabular-nums">
                       {formatCurrency(line.amountIncGst)}
                     </td>

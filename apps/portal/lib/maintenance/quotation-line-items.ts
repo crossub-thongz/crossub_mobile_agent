@@ -1,9 +1,15 @@
 import type { ApiQuotation } from '@/lib/crossub-api/types';
 
+export type QuotationLineGstMode = 'include' | 'exclude';
+
+export const DEFAULT_GST_PERCENT = 10;
+
 export interface QuotationLineItem {
   id: string;
   description: string;
   quantity: number;
+  gstMode?: QuotationLineGstMode;
+  gstPercent?: number;
   unitPriceExGst: number;
   gst: number;
   amountIncGst: number;
@@ -17,6 +23,29 @@ export interface QuotationTotals {
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+export function resolveLineGstPercent(line: Pick<QuotationLineItem, 'gstPercent'>): number {
+  return typeof line.gstPercent === 'number' ? line.gstPercent : DEFAULT_GST_PERCENT;
+}
+
+export function resolveLineGstMode(line: Pick<QuotationLineItem, 'gstMode' | 'gstPercent'>): QuotationLineGstMode {
+  if (resolveLineGstPercent(line) === 0) return 'exclude';
+  return line.gstMode === 'include' ? 'include' : 'exclude';
+}
+
+export function displayUnitPrice(line: QuotationLineItem): number {
+  const mode = resolveLineGstMode(line);
+  return mode === 'include'
+    ? round2(line.amountIncGst / Math.max(1, line.quantity))
+    : line.unitPriceExGst;
+}
+
+export function gstModeLabel(mode?: QuotationLineGstMode, gstPercent?: number): string {
+  const percent = typeof gstPercent === 'number' ? gstPercent : DEFAULT_GST_PERCENT;
+  if (percent === 0) return 'No GST (0%)';
+  if (mode === 'include') return `Include GST (${percent}%)`;
+  return `Exclude GST (${percent}%)`;
 }
 
 export function totalsFromLineItems(lines: QuotationLineItem[]): QuotationTotals {
@@ -59,6 +88,8 @@ export function buildQuotationLineItems(
       id: String(index + 1),
       description,
       quantity: 1,
+      gstMode: 'exclude' as const,
+      gstPercent: DEFAULT_GST_PERCENT,
       unitPriceExGst,
       gst,
       amountIncGst,

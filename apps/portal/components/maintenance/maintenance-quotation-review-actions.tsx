@@ -71,7 +71,7 @@ export function MaintenanceQuotationReviewActions({
               disabled={isBusy}
               onClick={() => setNegotiateOpen((v) => !v)}
             >
-              Negotiate
+              Requote
             </Button>
             <Button
               type="button"
@@ -91,7 +91,7 @@ export function MaintenanceQuotationReviewActions({
                 })
               }
             >
-              Deny
+              Decline
             </Button>
             <Button
               type="button"
@@ -113,7 +113,7 @@ export function MaintenanceQuotationReviewActions({
 
       {negotiateOpen && canAct && !decision ? (
         <div className="bg-muted/20 space-y-2 rounded-md border p-3">
-          <p className="text-xs font-semibold">Counter offer</p>
+          <p className="text-xs font-semibold">Requote (counter offer)</p>
           <input
             type="number"
             min={0}
@@ -230,14 +230,14 @@ export function MaintenanceQuotationReviewActions({
             disabled={isBusy}
             onClick={() => setNegotiateOpen((v) => !v)}
           >
-            Negotiate
+            Requote
           </Button>
         </div>
       ) : null}
 
       {negotiateOpen && canAct && decision ? (
         <div className="bg-muted/20 space-y-2 rounded-md border p-3">
-          <p className="text-xs font-semibold">Counter offer</p>
+          <p className="text-xs font-semibold">Requote (counter offer)</p>
           <p className="text-muted-foreground text-xs">
             Current quote: {formatCurrency(quote.price)}
           </p>

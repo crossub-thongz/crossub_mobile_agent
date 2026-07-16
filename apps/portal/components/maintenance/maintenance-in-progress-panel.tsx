@@ -4,17 +4,11 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
-import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
 import { Button } from '@/components/ui/button';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
-import {
-  approveMaintenanceQuotationCase,
-  declineMaintenanceQuotationCase,
-  markMaintenanceWorkComplete,
-} from '@/lib/maintenance/maintenance-case-ops';
+import { markMaintenanceWorkComplete } from '@/lib/maintenance/maintenance-case-ops';
 import {
   auditEntriesForStep,
-  getSubmittedMaintenanceQuotation,
   MAINTENANCE_AGENT_STEP,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
@@ -36,9 +30,6 @@ export function MaintenanceInProgressPanel({
 
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.IN_PROGRESS);
   const landlordFlow = requiresContractorFlow(ctx);
-  const submittedQuote = getSubmittedMaintenanceQuotation(ctx.workspaceCase);
-  const awaitingApproval =
-    ctx.item.requiresApproval && ctx.workspaceCase.status === 'pending_approval' && submittedQuote;
   const landlordWorkInProgress =
     landlordFlow &&
     ctx.workspaceCase.status === 'in_progress' &&
@@ -46,40 +37,6 @@ export function MaintenanceInProgressPanel({
   const showDirectPartyGates =
     !landlordFlow &&
     ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status);
-
-  const handleApprove = async (quotationId: string) => {
-    if (!apiConnected) {
-      toast.error('Connect to the API to approve this quote.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await approveMaintenanceQuotationCase(quotationId);
-      toast.success('Quote approved — handyman and tenant will be notified');
-      await onCaseUpdated?.();
-    } catch {
-      toast.error('Approval failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleDecline = async (quotationId: string, reason: string) => {
-    if (!apiConnected) {
-      toast.error('Connect to the API to decline this quote.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await declineMaintenanceQuotationCase(quotationId, reason);
-      toast.success('Quote declined — workflow returns to get quote or closes per reason');
-      await onCaseUpdated?.();
-    } catch {
-      toast.error('Decline failed');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleMarkWorkComplete = async () => {
     if (!apiConnected) {
@@ -139,17 +96,6 @@ export function MaintenanceInProgressPanel({
 
   return (
     <div className="space-y-4">
-      {awaitingApproval ? (
-        <MaintenanceRepairQuotationPanel
-          quote={submittedQuote}
-          contractorName={ctx.item.contractorName}
-          mode="review"
-          busy={busy}
-          onApprove={() => void handleApprove(submittedQuote.id)}
-          onDecline={(reason) => void handleDecline(submittedQuote.id, reason)}
-        />
-      ) : null}
-
       {['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status) ? (
         <dl className="grid grid-cols-2 gap-3 rounded-xl border bg-card p-4 text-xs">
           <div>

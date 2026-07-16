@@ -241,7 +241,7 @@ export function MaintenanceGetQuotePanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Repair quotations</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Expand a contractor to approve, deny, negotiate, or send emails.
+          Quotations are entered in the admin portal. Expand a contractor to approve, requote, decline, or send emails.
         </p>
 
         {invitedIds.length === 0 ? (

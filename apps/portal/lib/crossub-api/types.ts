@@ -39,10 +39,14 @@ export interface ApiQuotation {
   comments?: string;
 }
 
+export type QuotationLineGstMode = 'include' | 'exclude';
+
 export interface QuotationLineItem {
   id: string;
   description: string;
   quantity: number;
+  gstMode?: QuotationLineGstMode;
+  gstPercent?: number;
   unitPriceExGst: number;
   gst: number;
   amountIncGst: number;
