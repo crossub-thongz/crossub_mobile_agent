@@ -23,6 +23,7 @@ export function useMaintenanceCaseLiveSync(
   const [nextReminderDueAt, setNextReminderDueAt] = useState<string | null>(null);
   const [workspaceCase, setWorkspaceCase] = useState<MaintenanceWorkspaceCase | null>(null);
   const [attachments, setAttachments] = useState<ApiMaintenanceAttachment[]>([]);
+  const [contractors, setContractors] = useState<Array<{ id: string; name: string }>>([]);
 
   const fallbackCase = item
     ? buildWorkspaceCaseFromRequest(item, property, user)
@@ -38,6 +39,7 @@ export function useMaintenanceCaseLiveSync(
       setRemindersSent(snapshot.remindersSent);
       setNextReminderDueAt(snapshot.nextReminderDueAt);
       setAttachments(snapshot.attachments);
+      setContractors(snapshot.contractors ?? []);
       setWorkspaceCase(buildWorkspaceCaseFromApi(snapshot.mapped, property, user));
     } catch {
       // keep last good snapshot
@@ -51,12 +53,14 @@ export function useMaintenanceCaseLiveSync(
       setWorkspaceCase(null);
       setLiveMapped(null);
       setAttachments([]);
+      setContractors([]);
       return;
     }
     if (!apiConnected) {
       setWorkspaceCase(buildWorkspaceCaseFromRequest(item, property, user));
       setLiveMapped(null);
       setAttachments([]);
+      setContractors([]);
       return;
     }
     void sync();
@@ -70,6 +74,7 @@ export function useMaintenanceCaseLiveSync(
     remindersSent,
     nextReminderDueAt,
     attachments,
+    contractors,
     syncing: syncing && apiConnected,
     refresh: sync,
   };

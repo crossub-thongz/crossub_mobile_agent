@@ -49,6 +49,7 @@ function mergeMaintenanceItem(
     requiresApproval: liveMapped.requiresApproval,
     timeline: liveMapped.timeline,
     invitedContractorIds: liveMapped.invitedContractorIds,
+    invitedContractors: liveMapped.apiRequest.invitedContractors,
   };
 }
 
@@ -116,14 +117,14 @@ export function PropertyMaintenanceJobPanel({
 }) {
   const { user } = useAuth();
   const { apiConnected, refresh } = useAgentData();
-  const { workspaceCase, liveMapped, syncing, attachments, refresh: refreshCase } = useMaintenanceCaseLiveSync(
+  const { workspaceCase, liveMapped, syncing, attachments, contractors, refresh: refreshCase } = useMaintenanceCaseLiveSync(
     item,
     property,
     apiConnected,
   );
 
   const displayItem = useMemo(
-    () => mergeMaintenanceItem(item, liveMapped),
+    () =>     mergeMaintenanceItem(item, liveMapped),
     [item, liveMapped],
   );
 
@@ -162,6 +163,7 @@ export function PropertyMaintenanceJobPanel({
         ctx={workflowCtx}
         property={property}
         attachments={attachments}
+        contractors={contractors}
         onCaseUpdated={onCaseUpdated}
         apiConnected={apiConnected}
       />

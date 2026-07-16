@@ -13,6 +13,7 @@ export function MaintenanceRepairQuotationPanel({
   contractorName,
   mode = 'review',
   busy = false,
+  embedded = false,
   onApprove,
   onDecline,
 }: {
@@ -20,6 +21,7 @@ export function MaintenanceRepairQuotationPanel({
   contractorName?: string;
   mode?: 'review' | 'readonly';
   busy?: boolean;
+  embedded?: boolean;
   onApprove?: () => void;
   onDecline?: (reason: string) => void;
 }) {
@@ -34,15 +36,21 @@ export function MaintenanceRepairQuotationPanel({
   const showActions = mode === 'review' && quote.status === 'submitted';
 
   return (
-    <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="border-b bg-background px-4 py-3 text-center">
-        <h3 className="text-base font-semibold text-[#1f4f59]">Repair Quotations</h3>
-        {contractorName ? (
-          <p className="text-muted-foreground mt-0.5 text-xs">{contractorName}</p>
-        ) : null}
-      </div>
+    <section
+      className={
+        embedded ? 'space-y-4' : 'overflow-hidden rounded-xl border bg-card shadow-sm'
+      }
+    >
+      {!embedded ? (
+        <div className="border-b bg-background px-4 py-3 text-center">
+          <h3 className="text-base font-semibold text-[#1f4f59]">Repair Quotations</h3>
+          {contractorName ? (
+            <p className="text-muted-foreground mt-0.5 text-xs">{contractorName}</p>
+          ) : null}
+        </div>
+      ) : null}
 
-      <div className="space-y-4 p-4">
+      <div className={embedded ? 'space-y-4' : 'space-y-4 p-4'}>
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-left text-xs">
               <thead>

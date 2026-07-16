@@ -14,6 +14,7 @@ export type MaintenanceCaseSnapshot = {
   remindersSent: number;
   nextReminderDueAt: string | null;
   attachments: NonNullable<ApiMaintenanceState['maintenanceAttachments']>;
+  contractors: ApiMaintenanceState['contractors'];
 };
 
 export function remindersForCase(
@@ -67,5 +68,6 @@ export async function fetchMaintenanceCase(
     remindersSent: sent,
     nextReminderDueAt: nextDueAt,
     attachments: state.maintenanceAttachments ?? [],
+    contractors: state.contractors ?? [],
   };
 }

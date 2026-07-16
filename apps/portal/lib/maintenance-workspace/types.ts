@@ -5,6 +5,7 @@ import type {
   ApiMaintenanceResponsibility,
   ApiMaintenanceStatus,
   ApiQuotation,
+  QuotationReviewRecord,
 } from '@/lib/crossub-api/types';
 
 export type MaintenanceWorkspaceStatus = ApiMaintenanceStatus | 'pending_evidence';
@@ -30,6 +31,8 @@ export interface MaintenanceWorkspaceCase {
   source: ApiMaintenanceRequest['source'];
   assignedContractorId?: string;
   invitedContractorIds?: string[];
+  invitedContractors?: Array<{ id: string; name: string }>;
+  quotationReviews?: QuotationReviewRecord[];
   quotationIds: string[];
   completionEvidenceUploaded?: boolean;
   tenantApprovalReceived?: boolean;

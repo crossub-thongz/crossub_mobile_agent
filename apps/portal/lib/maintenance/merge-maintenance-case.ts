@@ -32,6 +32,12 @@ export function mergeMaintenanceCaseForLiveSync(
     invitedContractorIds: workflow.invitedContractorIds?.length
       ? workflow.invitedContractorIds
       : prisma.invitedContractorIds,
+    invitedContractors: workflow.invitedContractors?.length
+      ? workflow.invitedContractors
+      : prisma.invitedContractors,
+    quotationReviews: workflow.quotationReviews?.length
+      ? workflow.quotationReviews
+      : prisma.quotationReviews,
     quotationIds: workflow.quotationIds?.length ? workflow.quotationIds : prisma.quotationIds,
     completionEvidenceUploaded:
       Boolean(prisma.completionEvidenceUploaded) ||

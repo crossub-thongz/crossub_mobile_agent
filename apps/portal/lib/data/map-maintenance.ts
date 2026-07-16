@@ -6,6 +6,7 @@ import type {
   ApiQuotation,
 } from '@/lib/crossub-api/types';
 import { inferInvitedContractorIdsFromAudit, inferResponsibilityFromAudit } from '@/lib/maintenance/infer-responsibility';
+import { contractorIdsMatch } from '@/lib/maintenance/resolve-contractor-display';
 import type { MaintenanceRequest, Priority, TimelineEntry } from '@/lib/types';
 import { maintenanceDetail } from '@/constants/routes';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
@@ -80,7 +81,7 @@ export function mapApiMaintenanceRequest(
   );
   const contractorId =
     req.assignedContractorId ?? submittedQuote?.contractorId ?? latestQuote?.contractorId;
-  const contractor = contractors.find((c) => c.id === contractorId);
+  const contractor = contractors.find((c) => contractorIdsMatch(c.id, contractorId ?? ''));
 
   const reqAudit = auditLog.filter((a) => a.maintenanceRequestId === req.id);
   const reqNotifications = notifications.filter(
@@ -135,6 +136,7 @@ export function mapApiMaintenanceRequest(
     invitedContractorIds: resolvedInvitedContractorIds.length
       ? resolvedInvitedContractorIds
       : undefined,
+    invitedContractors: req.invitedContractors,
   };
 }
 

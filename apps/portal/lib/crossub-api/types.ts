@@ -48,6 +48,28 @@ export interface QuotationLineItem {
   amountIncGst: number;
 }
 
+export interface QuotationCounterOffer {
+  id: string;
+  quotationId: string;
+  contractorId: string;
+  counterPrice: number;
+  message?: string;
+  sentAt: string;
+  sentBy: 'admin' | 'agent';
+}
+
+export interface QuotationReviewRecord {
+  quotationId: string;
+  contractorId: string;
+  decision?: 'approved' | 'declined';
+  declineReason?: string;
+  decidedAt?: string;
+  decidedBy?: 'admin' | 'agent';
+  landlordEmailSentAt?: string;
+  contractorFeedbackSentAt?: string;
+  counterOffers: QuotationCounterOffer[];
+}
+
 export interface ApiMaintenanceParty {
   name: string;
   email?: string;
@@ -77,6 +99,8 @@ export interface ApiMaintenanceRequest {
     phone?: string;
   };
   invitedContractorIds?: string[];
+  invitedContractors?: Array<{ id: string; name: string }>;
+  quotationReviews?: QuotationReviewRecord[];
   quotationIds: string[];
   completionEvidenceUploaded?: boolean;
   tenantApprovalReceived?: boolean;

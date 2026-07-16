@@ -60,6 +60,7 @@ function StepContent({
   ctx,
   property,
   attachments,
+  contractors = [],
   onCaseUpdated,
   apiConnected,
 }: {
@@ -67,6 +68,7 @@ function StepContent({
   ctx: MaintenanceWorkflowContext;
   property?: Property;
   attachments: ApiMaintenanceAttachment[];
+  contractors?: Array<{ id: string; name: string }>;
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
@@ -84,7 +86,15 @@ function StepContent({
         />
       );
     case MAINTENANCE_AGENT_STEP.GET_QUOTE:
-      return <MaintenanceGetQuotePanel ctx={ctx} />;
+      return (
+        <MaintenanceGetQuotePanel
+          ctx={ctx}
+          property={property}
+          contractors={contractors}
+          onCaseUpdated={onCaseUpdated}
+          apiConnected={apiConnected}
+        />
+      );
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
       return (
         <MaintenanceInProgressPanel
@@ -111,12 +121,14 @@ export function MaintenanceAgentWorkflowPanel({
   ctx,
   property,
   attachments = [],
+  contractors = [],
   onCaseUpdated,
   apiConnected = true,
 }: {
   ctx: MaintenanceWorkflowContext;
   property?: Property;
   attachments?: ApiMaintenanceAttachment[];
+  contractors?: Array<{ id: string; name: string }>;
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
@@ -192,6 +204,7 @@ export function MaintenanceAgentWorkflowPanel({
             ctx={ctx}
             property={property}
             attachments={attachments}
+            contractors={contractors}
             onCaseUpdated={onCaseUpdated}
             apiConnected={apiConnected}
           />

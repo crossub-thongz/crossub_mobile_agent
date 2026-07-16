@@ -4,6 +4,10 @@ import {
   declineMaintenanceQuotation,
   inviteMaintenanceContractorsForRfq,
   requestMaintenanceEvidence,
+  reviewMaintenanceQuotationDecision,
+  sendMaintenanceContractorFeedback,
+  sendMaintenanceQuotationCounterOffer,
+  sendMaintenanceQuotationToLandlord,
   setMaintenanceCompletionEvidence,
   setMaintenanceInvoiceUploaded,
   setMaintenanceResponsibility,
@@ -99,6 +103,33 @@ export async function approveMaintenanceQuotationCase(quotationId: string) {
 
 export async function declineMaintenanceQuotationCase(quotationId: string, reason: string) {
   await declineMaintenanceQuotation(quotationId, reason);
+}
+
+export async function reviewMaintenanceQuotationDecisionCase(
+  quotationId: string,
+  decision: 'approved' | 'declined',
+  declineReason?: string,
+) {
+  await reviewMaintenanceQuotationDecision(quotationId, decision, declineReason);
+}
+
+export async function sendMaintenanceQuotationToLandlordCase(quotationId: string) {
+  await sendMaintenanceQuotationToLandlord(quotationId);
+}
+
+export async function sendMaintenanceContractorFeedbackCase(
+  quotationId: string,
+  feedbackMessage?: string,
+) {
+  await sendMaintenanceContractorFeedback(quotationId, feedbackMessage);
+}
+
+export async function sendMaintenanceQuotationCounterOfferCase(
+  quotationId: string,
+  counterPrice: number,
+  message?: string,
+) {
+  await sendMaintenanceQuotationCounterOffer(quotationId, counterPrice, message);
 }
 
 /** @deprecated Use confirmMaintenanceResponsibility */

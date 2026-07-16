@@ -1,10 +1,15 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+
+import { MaintenanceQuotationReviewActions } from '@/components/maintenance/maintenance-quotation-review-actions';
 import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
 import {
   auditEntriesForStep,
   getMaintenanceQuotationsForCase,
   MAINTENANCE_AGENT_STEP,
+  maintenanceEmailRecordsForStep,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
@@ -12,27 +17,211 @@ import {
   resolveInvitedContractorIds,
   resolveMaintenanceResponsibility,
 } from '@/lib/maintenance/infer-responsibility';
-import { formatDateTime } from '@/lib/utils';
+import {
+  fetchMaintenanceContractorSuggestions,
+  type MaintenanceContractorSuggestion,
+} from '@/lib/crossub-api/maintenance-client';
+import type { QuotationReviewRecord } from '@/lib/crossub-api/types';
+import {
+  reviewMaintenanceQuotationDecisionCase,
+  sendMaintenanceContractorFeedbackCase,
+  sendMaintenanceQuotationCounterOfferCase,
+  sendMaintenanceQuotationToLandlordCase,
+} from '@/lib/maintenance/maintenance-case-ops';
+import {
+  latestSubmittedQuoteForContractor,
+  resolveContractorDisplayName,
+} from '@/lib/maintenance/resolve-contractor-display';
+import type { Property } from '@/lib/types';
+import { cn, formatDateTime } from '@/lib/utils';
+import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 
-function contractorLabel(
+function reviewForContractor(
+  reviews: QuotationReviewRecord[] | undefined,
   contractorId: string,
-  ctx: MaintenanceWorkflowContext,
-): string | undefined {
-  if (ctx.item.contractorName && ctx.workspaceCase.assignedContractorId === contractorId) {
-    return ctx.item.contractorName;
-  }
-  return contractorId;
+  quotationId?: string,
+) {
+  return reviews?.find(
+    (r) =>
+      r.contractorId === contractorId ||
+      (quotationId != null && r.quotationId === quotationId),
+  );
 }
 
-export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
-  const quotes = getMaintenanceQuotationsForCase(ctx.workspaceCase);
-  const submittedQuotes = quotes.filter((quote) => quote.status === 'submitted');
-  const invitedIds = resolveInvitedContractorIds(ctx);
-  const awaitingIds = invitedIds.filter(
-    (id) => !submittedQuotes.some((quote) => quote.contractorId === id),
+function ContractorQuoteCollapsible({
+  contractorName,
+  submitted,
+  review,
+  expanded,
+  canReview,
+  onToggle,
+  onCaseUpdated,
+}: {
+  contractorName: string;
+  submitted?: ReturnType<typeof latestSubmittedQuoteForContractor>;
+  review?: QuotationReviewRecord;
+  expanded: boolean;
+  canReview: boolean;
+  onToggle: () => void;
+  onCaseUpdated?: () => Promise<void>;
+}) {
+  const statusLabel = review?.decision
+    ? review.decision === 'approved'
+      ? review.landlordEmailSentAt
+        ? 'Sent to landlord'
+        : 'Approved — send to landlord'
+      : review.contractorFeedbackSentAt
+        ? 'Feedback sent'
+        : 'Declined — send feedback'
+    : submitted
+      ? `Submitted ${formatDateTime(submitted.submittedAt)}`
+      : 'Pending quotation';
+
+  return (
+    <div className="overflow-hidden rounded-lg border bg-background">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
+      >
+        <span className="min-w-0">
+          <p className="truncate text-sm font-semibold">{contractorName}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{statusLabel}</p>
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+              review?.decision === 'approved'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                : review?.decision === 'declined'
+                  ? 'bg-red-500/10 text-red-700 dark:text-red-300'
+                  : submitted
+                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+            )}
+          >
+            {review?.decision === 'approved'
+              ? 'Approved'
+              : review?.decision === 'declined'
+                ? 'Declined'
+                : submitted
+                  ? 'Submitted'
+                  : 'Awaiting'}
+          </span>
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-4 transition-transform',
+              expanded && 'rotate-180',
+            )}
+          />
+        </span>
+      </button>
+
+      {expanded ? (
+        <div className="border-t px-3 py-3">
+          {submitted ? (
+            <>
+              <MaintenanceRepairQuotationPanel quote={submitted} embedded mode="readonly" />
+              <MaintenanceQuotationReviewActions
+                quote={submitted}
+                review={review}
+                canReview={canReview}
+                onReviewDecision={async (decision, declineReason) => {
+                  await reviewMaintenanceQuotationDecisionCase(
+                    submitted.id,
+                    decision,
+                    declineReason,
+                  );
+                  await onCaseUpdated?.();
+                }}
+                onSendToLandlord={async () => {
+                  await sendMaintenanceQuotationToLandlordCase(submitted.id);
+                  await onCaseUpdated?.();
+                }}
+                onSendFeedback={async (message) => {
+                  await sendMaintenanceContractorFeedbackCase(submitted.id, message);
+                  await onCaseUpdated?.();
+                }}
+                onCounterOffer={async (counterPrice, message) => {
+                  await sendMaintenanceQuotationCounterOfferCase(
+                    submitted.id,
+                    counterPrice,
+                    message,
+                  );
+                  await onCaseUpdated?.();
+                }}
+              />
+            </>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Waiting for {contractorName} to submit a repair quotation via the admin portal.
+            </p>
+          )}
+        </div>
+      ) : null}
+    </div>
   );
-  const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
+}
+
+export function MaintenanceGetQuotePanel({
+  ctx,
+  contractors = [],
+  onCaseUpdated,
+  apiConnected = false,
+}: {
+  ctx: MaintenanceWorkflowContext;
+  property?: Property;
+  contractors?: Array<{ id: string; name: string }>;
+  onCaseUpdated?: () => Promise<void>;
+  apiConnected?: boolean;
+}) {
+  const [suggestions, setSuggestions] = useState<MaintenanceContractorSuggestion[]>([]);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
+
+  const quotes = getMaintenanceQuotationsForCase(ctx.workspaceCase);
+  const invitedIds = resolveInvitedContractorIds(ctx);
   const landlordFlow = requiresContractorFlow(ctx);
+  const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
+  const emailRecords = maintenanceEmailRecordsForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
+  const canReview = apiConnected;
+
+  useEffect(() => {
+    if (!landlordFlow) return;
+    let cancelled = false;
+    void fetchMaintenanceContractorSuggestions(ctx.item.id)
+      .then((rows) => {
+        if (!cancelled) setSuggestions(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setSuggestions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx.item.id, landlordFlow]);
+
+  const labelArgs = useMemo(
+    () => ({
+      contractors,
+      suggestions,
+      invitedContractors: ctx.workspaceCase.invitedContractors,
+      fallbackName: ctx.item.contractorName,
+    }),
+    [contractors, ctx.item.contractorName, ctx.workspaceCase.invitedContractors, suggestions],
+  );
+
+  const contractorLabel = (contractorId: string) =>
+    resolveContractorDisplayName(contractorId, labelArgs);
+
+  const toggleExpanded = (contractorId: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contractorId)) next.delete(contractorId);
+      else next.add(contractorId);
+      return next;
+    });
+  };
 
   if (!landlordFlow) {
     const responsibility = resolveMaintenanceResponsibility(ctx);
@@ -49,35 +238,48 @@ export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowCont
 
   return (
     <div className="space-y-4">
-      {awaitingIds.length > 0 ? (
-        <div className="rounded-xl border border-dashed bg-card p-4">
-          <p className="text-sm font-semibold">Awaiting handyman quote</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            RFQ sent to {awaitingIds.length} contractor
-            {awaitingIds.length === 1 ? '' : 's'} — waiting for repair quotations to be returned.
-          </p>
-          <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
-            {awaitingIds.map((id) => (
-              <li key={id}>• {contractorLabel(id, ctx) ?? id}</li>
-            ))}
-          </ul>
-        </div>
-      ) : submittedQuotes.length === 0 ? (
-        <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-sm">
-          Awaiting handyman quote
-          {ctx.item.contractorName ? ` from ${ctx.item.contractorName}` : ''}.
-          The quotation should include labour, call-out, and parts breakdown with GST noted.
+      <section className="rounded-xl border bg-card p-4">
+        <p className="text-sm font-semibold">Repair quotations</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Expand a contractor to approve, deny, negotiate, or send emails.
         </p>
-      ) : null}
 
-      {submittedQuotes.map((quote) => (
-        <MaintenanceRepairQuotationPanel
-          key={quote.id}
-          quote={quote}
-          contractorName={contractorLabel(quote.contractorId, ctx)}
-          mode="readonly"
-        />
-      ))}
+        {invitedIds.length === 0 ? (
+          <p className="text-muted-foreground mt-3 text-xs">
+            No contractors invited yet — complete Review with tradesmen selected for RFQ.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {invitedIds.map((contractorId) => {
+              const submitted = latestSubmittedQuoteForContractor(
+                quotes,
+                ctx.workspaceCase.id,
+                contractorId,
+              );
+              return (
+                <ContractorQuoteCollapsible
+                  key={contractorId}
+                  contractorName={contractorLabel(contractorId)}
+                  submitted={submitted}
+                  review={reviewForContractor(
+                    ctx.workspaceCase.quotationReviews,
+                    contractorId,
+                    submitted?.id,
+                  )}
+                  expanded={expandedIds.has(contractorId)}
+                  canReview={canReview}
+                  onToggle={() => toggleExpanded(contractorId)}
+                  onCaseUpdated={onCaseUpdated}
+                />
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {emailRecords.length > 0 ? (
+        <JobCaseStageEmailHistory emails={emailRecords} title="Email / message history" />
+      ) : null}
 
       {audit.length > 0 ? (
         <div className="rounded-xl border bg-card p-3">

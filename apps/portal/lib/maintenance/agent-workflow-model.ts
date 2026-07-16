@@ -645,6 +645,68 @@ export function buildJobCreatedEmails(ctx: MaintenanceWorkflowContext): Maintena
   ];
 }
 
+function parseQuotationWorkflowEmailFromAudit(
+  entry: MaintenanceWorkspaceCase['auditEntries'][number],
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord | null {
+  const msg = entry.message;
+  const patterns = [
+    /^Landlord quotation email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+    /^Contractor feedback email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+    /^Counter offer sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+  ];
+  for (const pattern of patterns) {
+    const match = msg.match(pattern);
+    if (!match) continue;
+    const subject = match[1]?.trim() ?? 'Maintenance quotation';
+    const body = match[2]?.trim() ?? '';
+    if (!body) return null;
+    const kind =
+      /landlord quotation/i.test(msg)
+        ? 'landlord_quotation'
+        : /contractor feedback/i.test(msg)
+          ? 'contractor_feedback'
+          : 'counter_offer';
+    return {
+      id: entry.id,
+      subject,
+      body,
+      from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+      to: kind === 'landlord_quotation' ? 'Landlord' : 'Contractor',
+      at: entry.timestamp,
+      kind,
+    };
+  }
+  return null;
+}
+
+export function buildQuotationWorkflowEmails(
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord[] {
+  const byId = new Map<string, MaintenanceEmailRecord>();
+
+  for (const n of ctx.workspaceCase.notifications) {
+    if (n.channel !== 'email') continue;
+    if (
+      /landlord|counter offer|quotation feedback|repair quotation/i.test(
+        `${n.title} ${n.message}`,
+      )
+    ) {
+      byId.set(n.id, mapEmailNotification(n, ctx.workspaceCase, 'quotation_submitted'));
+    }
+  }
+
+  for (const entry of ctx.workspaceCase.auditEntries) {
+    const parsed = parseQuotationWorkflowEmailFromAudit(entry, ctx);
+    if (parsed) byId.set(parsed.id, parsed);
+  }
+
+  const quote = buildQuoteSentToAgentEmail(ctx);
+  if (quote) byId.set(quote.id, quote);
+
+  return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));
+}
+
 export function buildQuoteSentToAgentEmail(
   ctx: MaintenanceWorkflowContext,
 ): MaintenanceEmailRecord | null {
@@ -749,10 +811,8 @@ function emailRecordsForStepOnly(
       return buildJobCreatedEmails(ctx);
     case MAINTENANCE_AGENT_STEP.REVIEW:
       return buildResponsibilityReviewEmails(ctx);
-    case MAINTENANCE_AGENT_STEP.GET_QUOTE: {
-      const quote = buildQuoteSentToAgentEmail(ctx);
-      return quote ? [quote] : [];
-    }
+    case MAINTENANCE_AGENT_STEP.GET_QUOTE:
+      return buildQuotationWorkflowEmails(ctx);
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
       return buildAcceptanceEmails(ctx);
     case MAINTENANCE_AGENT_STEP.JOB_COMPLETED:

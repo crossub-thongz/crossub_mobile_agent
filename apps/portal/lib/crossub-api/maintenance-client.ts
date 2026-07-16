@@ -214,6 +214,56 @@ export async function declineMaintenanceQuotation(
   });
 }
 
+export async function reviewMaintenanceQuotationDecision(
+  quotationId: string,
+  decision: 'approved' | 'declined',
+  declineReason?: string,
+  actorRole: ApiMaintenanceUserRole = AGENT_ROLE,
+): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/quotations/review-decision', {
+    quotationId,
+    decision,
+    declineReason,
+    actorRole,
+  });
+}
+
+export async function sendMaintenanceQuotationToLandlord(
+  quotationId: string,
+  actorRole: ApiMaintenanceUserRole = AGENT_ROLE,
+): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/quotations/send-to-landlord', {
+    quotationId,
+    actorRole,
+  });
+}
+
+export async function sendMaintenanceContractorFeedback(
+  quotationId: string,
+  feedbackMessage?: string,
+  actorRole: ApiMaintenanceUserRole = AGENT_ROLE,
+): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/quotations/send-contractor-feedback', {
+    quotationId,
+    feedbackMessage,
+    actorRole,
+  });
+}
+
+export async function sendMaintenanceQuotationCounterOffer(
+  quotationId: string,
+  counterPrice: number,
+  message?: string,
+  actorRole: ApiMaintenanceUserRole = AGENT_ROLE,
+): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/quotations/counter-offer', {
+    quotationId,
+    counterPrice,
+    message,
+    actorRole,
+  });
+}
+
 export async function uploadMaintenanceAttachment(input: {
   maintenanceRequestId: string;
   kind: 'initial_evidence' | 'evidence' | 'invoice';

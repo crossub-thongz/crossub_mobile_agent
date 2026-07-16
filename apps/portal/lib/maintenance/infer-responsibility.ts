@@ -9,6 +9,7 @@ export type MaintenanceResponsibilityContext = {
     | 'auditEntries'
     | 'status'
     | 'invitedContractorIds'
+    | 'invitedContractors'
     | 'assignedContractorId'
     | 'quotations'
   >;
@@ -55,10 +56,11 @@ export function inferInvitedContractorIdsFromAudit(
   const ids: string[] = [];
   for (const entry of entries) {
     if (entry.action !== 'contractor_assigned') continue;
-    const match = entry.message.match(/contractor\s+(\S+)\s+for quote review/i);
-    const contractorId = match?.[1];
+    const namedMatch = entry.message.match(/RFQ sent to .+? \(([^)]+)\) for quote review/i);
+    const legacyMatch = entry.message.match(/contractor\s+(\S+)\s+for quote review/i);
+    const contractorId = namedMatch?.[1] ?? legacyMatch?.[1];
     if (!contractorId) continue;
-    if (!ids.includes(contractorId)) ids.push(contractorId);
+    if (!ids.some((existing) => existing === contractorId)) ids.push(contractorId);
   }
   return ids;
 }
@@ -66,6 +68,9 @@ export function inferInvitedContractorIdsFromAudit(
 export function resolveInvitedContractorIds(
   ctx: MaintenanceResponsibilityContext,
 ): string[] {
+  const fromSnapshot = ctx.workspaceCase.invitedContractors?.map((row) => row.id) ?? [];
+  if (fromSnapshot.length > 0) return fromSnapshot;
+
   const fromCase = ctx.workspaceCase.invitedContractorIds ?? [];
   if (fromCase.length > 0) return fromCase;
 
