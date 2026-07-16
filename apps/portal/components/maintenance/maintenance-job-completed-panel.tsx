@@ -1,5 +1,13 @@
 'use client';
 
+import { useState } from 'react';
+import { toast } from 'sonner';
+
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
+import {
+  confirmMaintenancePaymentAndClose,
+} from '@/lib/maintenance/maintenance-case-ops';
 import {
   auditEntriesForStep,
   MAINTENANCE_AGENT_STEP,
@@ -7,9 +15,36 @@ import {
 } from '@/lib/maintenance/agent-workflow-model';
 import { formatDateTime } from '@/lib/utils';
 
-export function MaintenanceJobCompletedPanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
+export function MaintenanceJobCompletedPanel({
+  ctx,
+  onCaseUpdated,
+}: {
+  ctx: MaintenanceWorkflowContext;
+  onCaseUpdated?: () => Promise<void>;
+}) {
+  const { apiConnected } = useAgentData();
+  const [busy, setBusy] = useState(false);
+
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.JOB_COMPLETED);
   const isClosed = ctx.workspaceCase.status === 'closed';
+  const isCompleted = ctx.workspaceCase.status === 'completed';
+
+  const handleConfirmPayment = async () => {
+    if (!apiConnected) {
+      toast.error('Connect to the API to close this job.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await confirmMaintenancePaymentAndClose(ctx.item.id);
+      toast.success('Payment confirmed — job closed');
+      await onCaseUpdated?.();
+    } catch {
+      toast.error('Could not close this job');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -39,10 +74,20 @@ export function MaintenanceJobCompletedPanel({ ctx }: { ctx: MaintenanceWorkflow
         </dl>
       </section>
 
-      {!isClosed && ctx.workspaceCase.status === 'completed' ? (
-        <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-xs">
-          Confirm invoice payment in the full maintenance workspace to close this job.
-        </p>
+      {isCompleted && !isClosed ? (
+        <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <p className="text-muted-foreground text-xs">
+            Confirm the contractor invoice has been paid to close this maintenance job.
+          </p>
+          <Button
+            type="button"
+            className="w-full"
+            disabled={busy}
+            onClick={() => void handleConfirmPayment()}
+          >
+            Confirm payment &amp; close job
+          </Button>
+        </section>
       ) : null}
 
       {audit.length > 0 ? (

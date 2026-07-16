@@ -1,12 +1,18 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
 import { PriorityBadge, ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
-import { buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
+import type { MappedMaintenance } from '@/lib/data/map-maintenance';
+import {
+  buildWorkspaceCaseFromApi,
+  buildWorkspaceCaseFromRequest,
+} from '@/lib/maintenance-workspace/adapter';
+import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync';
 import type { MaintenanceRequest, Priority, Property } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
@@ -29,6 +35,25 @@ function priorityForBadge(priority: Priority): string {
   }
 }
 
+function mergeMaintenanceItem(
+  item: MaintenanceRequest,
+  liveMapped: MappedMaintenance | null,
+): MaintenanceRequest {
+  if (!liveMapped) return item;
+  return {
+    ...item,
+    status: liveMapped.status,
+    responsibility: liveMapped.responsibility,
+    contractorName: liveMapped.contractorName,
+    quoteAmount: liveMapped.quoteAmount,
+    quoteExpiry: liveMapped.quoteExpiry,
+    recommendation: liveMapped.recommendation,
+    quoteDocumentUrl: liveMapped.quoteDocumentUrl,
+    requiresApproval: liveMapped.requiresApproval,
+    timeline: liveMapped.timeline,
+  };
+}
+
 function SummaryField({
   label,
   children,
@@ -48,7 +73,13 @@ function SummaryField({
   );
 }
 
-function MaintenanceJobHeader({ item }: { item: MaintenanceRequest }) {
+function MaintenanceJobHeader({
+  item,
+  syncing,
+}: {
+  item: MaintenanceRequest;
+  syncing?: boolean;
+}) {
   const orderNumber = maintenanceOrderNumber(item);
   const jobDescription = item.description?.trim() || item.title;
   const issueType =
@@ -82,7 +113,10 @@ function MaintenanceJobHeader({ item }: { item: MaintenanceRequest }) {
           </div>
         </SummaryField>
       </dl>
-      <p className="text-primary mt-3 text-xs font-semibold">{item.status}</p>
+      <p className="text-primary mt-3 text-xs font-semibold">
+        {item.status}
+        {syncing ? <span className="text-muted-foreground font-normal"> · Updating…</span> : null}
+      </p>
     </div>
   );
 }
@@ -90,26 +124,50 @@ function MaintenanceJobHeader({ item }: { item: MaintenanceRequest }) {
 export function PropertyMaintenanceJobPanel({
   item,
   property,
-  propertyId,
+  propertyId: _propertyId,
 }: {
   item: MaintenanceRequest;
   property: Property;
   propertyId: string;
 }) {
   const { user } = useAuth();
-  const workflowCtx = useMemo(
-    () => ({
-      item,
-      workspaceCase: buildWorkspaceCaseFromRequest(item, property, user),
-    }),
-    [item, property, user],
+  const { apiConnected, refresh } = useAgentData();
+  const { workspaceCase, liveMapped, syncing, refresh: refreshCase } = useMaintenanceCaseLiveSync(
+    item,
+    property,
+    apiConnected,
   );
+
+  const displayItem = useMemo(
+    () => mergeMaintenanceItem(item, liveMapped),
+    [item, liveMapped],
+  );
+
+  const workflowCtx = useMemo(() => {
+    const caseModel =
+      liveMapped && workspaceCase
+        ? buildWorkspaceCaseFromApi(liveMapped, property, user)
+        : workspaceCase ?? buildWorkspaceCaseFromRequest(displayItem, property, user);
+
+    return {
+      item: displayItem,
+      workspaceCase: caseModel,
+    };
+  }, [displayItem, liveMapped, property, user, workspaceCase]);
+
+  const onCaseUpdated = useCallback(async () => {
+    await refreshCase();
+    await refresh();
+  }, [refresh, refreshCase]);
 
   return (
     <div className="space-y-4">
-      <MaintenanceJobHeader item={item} />
-
-      <MaintenanceAgentWorkflowPanel ctx={workflowCtx} />
+      <MaintenanceJobHeader item={displayItem} syncing={syncing && apiConnected} />
+      <MaintenanceAgentWorkflowPanel
+        ctx={workflowCtx}
+        property={property}
+        onCaseUpdated={onCaseUpdated}
+      />
     </div>
   );
 }

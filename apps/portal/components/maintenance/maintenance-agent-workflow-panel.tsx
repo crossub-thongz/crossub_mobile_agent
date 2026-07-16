@@ -9,6 +9,7 @@ import { MaintenanceInProgressPanel } from '@/components/maintenance/maintenance
 import { MaintenanceJobCompletedPanel } from '@/components/maintenance/maintenance-job-completed-panel';
 import { MaintenanceJobCreatedPanel } from '@/components/maintenance/maintenance-job-created-panel';
 import { MaintenanceReviewPanel } from '@/components/maintenance/maintenance-review-panel';
+import type { Property } from '@/lib/types';
 import {
   buildMaintenanceAgentWorkflow,
   MAINTENANCE_AGENT_STEP,
@@ -56,27 +57,41 @@ function SubProgressList({ items }: { items: { id: string; label: string; done: 
 function StepContent({
   stepId,
   ctx,
+  property,
+  onCaseUpdated,
 }: {
   stepId: MaintenanceAgentStep;
   ctx: MaintenanceWorkflowContext;
+  property?: Property;
+  onCaseUpdated?: () => Promise<void>;
 }) {
   switch (stepId) {
     case MAINTENANCE_AGENT_STEP.JOB_CREATED:
       return <MaintenanceJobCreatedPanel ctx={ctx} />;
     case MAINTENANCE_AGENT_STEP.REVIEW:
-      return <MaintenanceReviewPanel ctx={ctx} />;
+      return (
+        <MaintenanceReviewPanel ctx={ctx} property={property} onCaseUpdated={onCaseUpdated} />
+      );
     case MAINTENANCE_AGENT_STEP.GET_QUOTE:
       return <MaintenanceGetQuotePanel ctx={ctx} />;
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
-      return <MaintenanceInProgressPanel ctx={ctx} />;
+      return <MaintenanceInProgressPanel ctx={ctx} onCaseUpdated={onCaseUpdated} />;
     case MAINTENANCE_AGENT_STEP.JOB_COMPLETED:
-      return <MaintenanceJobCompletedPanel ctx={ctx} />;
+      return <MaintenanceJobCompletedPanel ctx={ctx} onCaseUpdated={onCaseUpdated} />;
     default:
       return null;
   }
 }
 
-export function MaintenanceAgentWorkflowPanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
+export function MaintenanceAgentWorkflowPanel({
+  ctx,
+  property,
+  onCaseUpdated,
+}: {
+  ctx: MaintenanceWorkflowContext;
+  property?: Property;
+  onCaseUpdated?: () => Promise<void>;
+}) {
   const workflow = useMemo(() => buildMaintenanceAgentWorkflow(ctx), [ctx]);
   const [viewingStepId, setViewingStepId] = useState<MaintenanceAgentStep>(workflow.liveStepId);
   const initializedRef = useRef<string | null>(null);
@@ -144,7 +159,12 @@ export function MaintenanceAgentWorkflowPanel({ ctx }: { ctx: MaintenanceWorkflo
         </div>
         <div className="space-y-4 p-4">
           <SubProgressList items={viewingStep?.subProgress ?? []} />
-          <StepContent stepId={viewingStepId} ctx={ctx} />
+          <StepContent
+            stepId={viewingStepId}
+            ctx={ctx}
+            property={property}
+            onCaseUpdated={onCaseUpdated}
+          />
           <JobCaseStageEmailHistory
             emails={stageEmails}
             title={

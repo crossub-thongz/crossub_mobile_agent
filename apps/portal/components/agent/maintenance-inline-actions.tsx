@@ -15,12 +15,12 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
   if (!item.requiresApproval) return null;
 
   const handleApprove = async () => {
-    if (!apiItem?.submittedQuotationId) {
+    if (!apiItem) {
       toast.error('Connect to the API to approve this quote.');
       return;
     }
     try {
-      await approveMaintenanceQuote(apiItem.submittedQuotationId);
+      await approveMaintenanceQuote(item.id);
       toast.success('Quote approved');
       await refresh();
     } catch {
@@ -29,12 +29,12 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
   };
 
   const handleDecline = async () => {
-    if (!apiItem?.submittedQuotationId) {
+    if (!apiItem) {
       toast.error('Connect to the API to decline this quote.');
       return;
     }
     try {
-      await declineMaintenanceQuote(apiItem.submittedQuotationId, 'Agent declined via mobile');
+      await declineMaintenanceQuote(item.id, 'Agent declined via mobile');
       toast.success('Quote declined');
       await refresh();
     } catch {

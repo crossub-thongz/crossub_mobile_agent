@@ -87,8 +87,9 @@ export function AddHandymanDialog({
         <DialogHeader>
           <DialogTitle>Add handyman</DialogTitle>
           <DialogDescription>
-            Save a contractor to your personal handyman list for this agency. They will appear
-            in the handyman dropdown for your future repair quotes.
+            Save a contractor to your agency preferred tradies list (visible in Admin Portal →
+            Agency Portal → Preferred Tradies). They will appear in tradesman suggestions for
+            future maintenance jobs.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-1">

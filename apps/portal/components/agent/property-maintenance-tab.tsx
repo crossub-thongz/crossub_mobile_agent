@@ -83,6 +83,12 @@ export function PropertyMaintenanceTab({
     historyScope === 'deleted' ? deletedJobRows : historyJobRows;
 
   useEffect(() => {
+    if (!dialogRequest) return;
+    const updated = maintenance.find((item) => item.id === dialogRequest.id);
+    if (updated) setDialogRequest(updated);
+  }, [maintenance, dialogRequest?.id]);
+
+  useEffect(() => {
     if (!pendingOpenRequestId) return;
     const request = maintenance.find((item) => item.id === pendingOpenRequestId);
     if (!request) return;
@@ -140,7 +146,7 @@ export function PropertyMaintenanceTab({
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Maintenance cases</h3>
         <p className="text-muted-foreground text-xs">
-          Active maintenance jobs in progress. Click a case to open the full workflow.
+          Active maintenance jobs in progress. Click a case to open the workflow popup.
         </p>
         <PropertyJobCasesTable
           rows={activeJobRows}

@@ -54,13 +54,12 @@ export default function MaintenanceDetailPage() {
   const reminderEta = formatReminderEta(nextReminderDueAt);
 
   const handleApprove = async () => {
-    const quotationId = liveMapped?.submittedQuotationId;
-    if (!quotationId) {
-      toast.error('No submitted quotation on the API.');
+    if (!apiConnected) {
+      toast.error('Connect to the API to approve this quote.');
       return;
     }
     try {
-      await approveMaintenanceQuote(quotationId);
+      await approveMaintenanceQuote(item.id);
       toast.success('Quote approved');
     } catch {
       toast.error('Approval failed — check API connection');
@@ -68,13 +67,12 @@ export default function MaintenanceDetailPage() {
   };
 
   const handleDecline = async (reason: string) => {
-    const quotationId = liveMapped?.submittedQuotationId;
-    if (!quotationId) {
+    if (!apiConnected) {
       toast.error('Connect to the API to decline this quote.');
       return;
     }
     try {
-      await declineMaintenanceQuote(quotationId, reason);
+      await declineMaintenanceQuote(item.id, reason);
       toast.success('Quote declined — requote workflow started');
     } catch {
       toast.error('Decline failed');
