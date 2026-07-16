@@ -25,6 +25,12 @@ import {
 } from '@/lib/maintenance/maintenance-case-ops';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import { fileToBase64 } from '@/lib/file-upload';
+import {
+  isAllowedMaintenanceInvoiceMime,
+  MAX_MAINTENANCE_ATTACHMENT_BYTES,
+  MAX_MAINTENANCE_ATTACHMENT_LABEL,
+} from '@/lib/maintenance/maintenance-attachment-limits';
+import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn } from '@/lib/utils';
 
 const MAX_COMPLETION_EVIDENCE = 8;
@@ -80,6 +86,7 @@ export function MaintenanceCompletionGatesPanel({
   const [busy, setBusy] = useState(false);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
+  const [invoiceUploadPhase, setInvoiceUploadPhase] = useState<'idle' | 'reading' | 'uploading'>('idle');
   const [pendingInvoiceFile, setPendingInvoiceFile] = useState<File | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<ApiMaintenanceAttachment | null>(
     null,
@@ -137,6 +144,10 @@ export function MaintenanceCompletionGatesPanel({
     setUploadingEvidence(true);
     try {
       for (const file of Array.from(files).slice(0, remaining)) {
+        if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
+          toast.error(`${file.name} exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
+          continue;
+        }
         const mime = file.type || 'image/jpeg';
         const contentBase64 = await fileToBase64(file);
         await uploadMaintenanceAttachment({
@@ -160,15 +171,30 @@ export function MaintenanceCompletionGatesPanel({
 
   const handleInvoiceUpload = async () => {
     if (!pendingInvoiceFile || !canEdit) return;
+
+    const file = pendingInvoiceFile;
+    if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
+      toast.error(`File exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
+      setPendingInvoiceFile(null);
+      return;
+    }
+    const mime = file.type || 'application/pdf';
+    if (!isAllowedMaintenanceInvoiceMime(mime)) {
+      toast.error('Unsupported invoice file type. Use PDF or image (PNG, JPEG, WebP, HEIC).');
+      setPendingInvoiceFile(null);
+      return;
+    }
+
     setUploadingInvoice(true);
+    setInvoiceUploadPhase('reading');
     try {
-      const file = pendingInvoiceFile;
       const contentBase64 = await fileToBase64(file);
+      setInvoiceUploadPhase('uploading');
       await uploadMaintenanceAttachment({
         maintenanceRequestId: requestId,
         kind: 'invoice',
         fileName: file.name,
-        mimeType: file.type || 'application/pdf',
+        mimeType: mime,
         sizeBytes: file.size,
         contentBase64,
       });
@@ -176,10 +202,11 @@ export function MaintenanceCompletionGatesPanel({
       setPendingInvoiceFile(null);
       toast.success('Invoice uploaded');
       await onUpdated?.();
-    } catch {
-      toast.error('Invoice upload failed');
+    } catch (err) {
+      toast.error(apiErrorMessage(err, 'Invoice upload failed'));
     } finally {
       setUploadingInvoice(false);
+      setInvoiceUploadPhase('idle');
     }
   };
 
@@ -301,7 +328,8 @@ export function MaintenanceCompletionGatesPanel({
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Invoice Uploaded" checked={invoiceUploaded} />
         <p className="text-muted-foreground text-xs">
-          Upload the contractor invoice. Tap a file to preview or download.
+          Upload the contractor invoice (PDF or image, up to {MAX_MAINTENANCE_ATTACHMENT_LABEL}). Tap a
+          file to preview or download.
         </p>
 
         {canEdit ? (
@@ -324,18 +352,30 @@ export function MaintenanceCompletionGatesPanel({
 
             <div className="flex flex-wrap items-center gap-2">
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary/40">
-                {uploadingInvoice ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Upload className="size-3.5" />
-                )}
+                <Upload className="size-3.5" />
                 Choose invoice
                 <input
                   type="file"
                   accept="application/pdf,image/*"
                   className="hidden"
                   disabled={uploadingInvoice}
-                  onChange={(e) => setPendingInvoiceFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    e.target.value = '';
+                    if (!file) return;
+                    if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
+                      toast.error(`File exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
+                      return;
+                    }
+                    const mime = file.type || 'application/pdf';
+                    if (!isAllowedMaintenanceInvoiceMime(mime)) {
+                      toast.error(
+                        'Unsupported invoice file type. Use PDF or image (PNG, JPEG, WebP, HEIC).',
+                      );
+                      return;
+                    }
+                    setPendingInvoiceFile(file);
+                  }}
                 />
               </label>
               {pendingInvoiceFile ? (
@@ -349,7 +389,14 @@ export function MaintenanceCompletionGatesPanel({
                     disabled={uploadingInvoice}
                     onClick={() => void handleInvoiceUpload()}
                   >
-                    {uploadingInvoice ? 'Uploading…' : 'Upload'}
+                    {uploadingInvoice ? (
+                      <>
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        {invoiceUploadPhase === 'reading' ? 'Reading file…' : 'Uploading…'}
+                      </>
+                    ) : (
+                      'Upload'
+                    )}
                   </Button>
                   <Button
                     type="button"

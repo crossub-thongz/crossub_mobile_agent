@@ -1,7 +1,37 @@
 import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
+import { contractorIdsMatch } from '@/lib/maintenance/resolve-contractor-display';
 
 export const REQUOTED_STATUS_CLASS =
   'bg-yellow-700/15 text-yellow-900 dark:bg-yellow-700/25 dark:text-yellow-200';
+
+export type QuotationHistoryRow = Pick<
+  ApiQuotation,
+  'id' | 'maintenanceRequestId' | 'contractorId' | 'submittedAt' | 'status' | 'price'
+>;
+
+export function getContractorQuotationHistory<T extends QuotationHistoryRow>(
+  quotations: T[],
+  requestId: string,
+  contractorId: string,
+  currentQuoteId?: string,
+): { current?: T; previous: T[] } {
+  const matches = quotations
+    .filter(
+      (quote) =>
+        quote.maintenanceRequestId === requestId &&
+        contractorIdsMatch(quote.contractorId, contractorId),
+    )
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+  const current =
+    (currentQuoteId ? matches.find((quote) => quote.id === currentQuoteId) : undefined) ??
+    matches.find((quote) => quote.status === 'submitted') ??
+    matches[0];
+
+  const previous = current ? matches.filter((quote) => quote.id !== current.id) : matches.slice(1);
+
+  return { current, previous };
+}
 
 export function latestCounterOffer(review?: QuotationReviewRecord) {
   const offers = review?.counterOffers ?? [];

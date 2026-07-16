@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { MaintenanceQuotationReviewActions } from '@/components/maintenance/maintenance-quotation-review-actions';
+import { ContractorPreviousQuotationPanel } from '@/components/maintenance/contractor-previous-quotation-panel';
 import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
+import { RequotedQuotationBadge } from '@/components/maintenance/requoted-quotation-badge';
 import {
   auditEntriesForStep,
   getMaintenanceQuotationsForCase,
@@ -21,7 +23,7 @@ import {
   fetchMaintenanceContractorSuggestions,
   type MaintenanceContractorSuggestion,
 } from '@/lib/crossub-api/maintenance-client';
-import type { QuotationReviewRecord } from '@/lib/crossub-api/types';
+import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
 import {
   reviewMaintenanceQuotationDecisionCase,
   sendMaintenanceContractorFeedbackCase,
@@ -29,6 +31,7 @@ import {
   sendMaintenanceQuotationToLandlordCase,
 } from '@/lib/maintenance/maintenance-case-ops';
 import {
+  getContractorQuotationHistory,
   hasPendingAgentCounterOffer,
   isContractorRequotedAwaitingAgent,
   REQUOTED_STATUS_CLASS,
@@ -55,6 +58,9 @@ function reviewForContractor(
 
 function ContractorQuoteCollapsible({
   contractorName,
+  contractorId,
+  requestId,
+  quotations,
   submitted,
   review,
   expanded,
@@ -63,6 +69,9 @@ function ContractorQuoteCollapsible({
   onCaseUpdated,
 }: {
   contractorName: string;
+  contractorId: string;
+  requestId: string;
+  quotations: ApiQuotation[];
   submitted?: ReturnType<typeof latestSubmittedQuoteForContractor>;
   review?: QuotationReviewRecord;
   expanded: boolean;
@@ -70,8 +79,30 @@ function ContractorQuoteCollapsible({
   onToggle: () => void;
   onCaseUpdated?: () => Promise<void>;
 }) {
+  const [viewingPreviousId, setViewingPreviousId] = useState<string | null>(null);
   const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, submitted);
   const pendingAgentCounter = hasPendingAgentCounterOffer(review, review?.decision);
+  const { previous: previousQuotes } = getContractorQuotationHistory(
+    quotations,
+    requestId,
+    contractorId,
+    submitted?.id,
+  );
+  const viewingPreviousQuote = viewingPreviousId
+    ? quotations.find((quote) => quote.id === viewingPreviousId)
+    : undefined;
+  const previousVersionLabel = viewingPreviousQuote
+    ? `Previous quote ${
+        previousQuotes.findIndex((quote) => quote.id === viewingPreviousQuote.id) >= 0
+          ? previousQuotes.length -
+            previousQuotes.findIndex((quote) => quote.id === viewingPreviousQuote.id)
+          : 1
+      }`
+    : undefined;
+
+  useEffect(() => {
+    setViewingPreviousId(null);
+  }, [submitted?.id]);
 
   const statusLabel = requotedAwaitingAgent
     ? 'Contractor requoted — review revised quotation'
@@ -125,14 +156,22 @@ function ContractorQuoteCollapsible({
           <p className="text-muted-foreground mt-0.5 text-xs">{statusLabel}</p>
         </span>
         <span className="flex shrink-0 items-center gap-2">
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-              statusBadgeClass,
-            )}
-          >
-            {statusBadgeLabel}
-          </span>
+          {requotedAwaitingAgent ? (
+            <RequotedQuotationBadge
+              previousQuotes={previousQuotes}
+              selectedPreviousId={viewingPreviousId}
+              onSelectPrevious={setViewingPreviousId}
+            />
+          ) : (
+            <span
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                statusBadgeClass,
+              )}
+            >
+              {statusBadgeLabel}
+            </span>
+          )}
           <ChevronDown
             className={cn(
               'text-muted-foreground size-4 transition-transform',
@@ -146,7 +185,20 @@ function ContractorQuoteCollapsible({
         <div className="border-t px-3 py-3">
           {submitted ? (
             <>
-              <MaintenanceRepairQuotationPanel quote={submitted} embedded mode="readonly" />
+              {viewingPreviousQuote ? (
+                <ContractorPreviousQuotationPanel
+                  quote={viewingPreviousQuote}
+                  versionLabel={previousVersionLabel}
+                />
+              ) : null}
+              <div className="space-y-2">
+                {viewingPreviousQuote ? (
+                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                    Current quotation
+                  </p>
+                ) : null}
+                <MaintenanceRepairQuotationPanel quote={submitted} embedded mode="readonly" />
+              </div>
               <MaintenanceQuotationReviewActions
                 quote={submitted}
                 review={review}
@@ -298,6 +350,9 @@ export function MaintenanceGetQuotePanel({
                 <ContractorQuoteCollapsible
                   key={contractorId}
                   contractorName={contractorLabel(contractorId)}
+                  contractorId={contractorId}
+                  requestId={ctx.workspaceCase.id}
+                  quotations={quotes}
                   submitted={submitted}
                   review={reviewForContractor(
                     ctx.workspaceCase.quotationReviews,
