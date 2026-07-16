@@ -9,6 +9,7 @@ import { MaintenanceInProgressPanel } from '@/components/maintenance/maintenance
 import { MaintenanceJobCompletedPanel } from '@/components/maintenance/maintenance-job-completed-panel';
 import { MaintenanceJobCreatedPanel } from '@/components/maintenance/maintenance-job-created-panel';
 import { MaintenanceReviewPanel } from '@/components/maintenance/maintenance-review-panel';
+import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { Property } from '@/lib/types';
 import {
   buildMaintenanceAgentWorkflow,
@@ -58,12 +59,14 @@ function StepContent({
   stepId,
   ctx,
   property,
+  attachments,
   onCaseUpdated,
   apiConnected,
 }: {
   stepId: MaintenanceAgentStep;
   ctx: MaintenanceWorkflowContext;
   property?: Property;
+  attachments: ApiMaintenanceAttachment[];
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
@@ -72,7 +75,13 @@ function StepContent({
       return <MaintenanceJobCreatedPanel ctx={ctx} />;
     case MAINTENANCE_AGENT_STEP.REVIEW:
       return (
-        <MaintenanceReviewPanel ctx={ctx} property={property} onCaseUpdated={onCaseUpdated} />
+        <MaintenanceReviewPanel
+          ctx={ctx}
+          property={property}
+          attachments={attachments}
+          onCaseUpdated={onCaseUpdated}
+          apiConnected={apiConnected}
+        />
       );
     case MAINTENANCE_AGENT_STEP.GET_QUOTE:
       return <MaintenanceGetQuotePanel ctx={ctx} />;
@@ -94,11 +103,13 @@ function StepContent({
 export function MaintenanceAgentWorkflowPanel({
   ctx,
   property,
+  attachments = [],
   onCaseUpdated,
   apiConnected = true,
 }: {
   ctx: MaintenanceWorkflowContext;
   property?: Property;
+  attachments?: ApiMaintenanceAttachment[];
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
@@ -173,6 +184,7 @@ export function MaintenanceAgentWorkflowPanel({
             stepId={viewingStepId}
             ctx={ctx}
             property={property}
+            attachments={attachments}
             onCaseUpdated={onCaseUpdated}
             apiConnected={apiConnected}
           />

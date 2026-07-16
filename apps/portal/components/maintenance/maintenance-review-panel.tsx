@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
 import { MaintenanceResponsibilityLandlordPanel } from '@/components/maintenance/maintenance-responsibility-landlord-panel';
+import { MaintenanceReviewEvidencePanel } from '@/components/maintenance/maintenance-review-evidence-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
 import { resolveInvitedContractorIds, resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { maintenanceSourceLabel } from '@/lib/maintenance/maintenance-source-labels';
 import type { MaintenanceWorkflowResponsibility } from '@/lib/crossub-api/maintenance-client';
+import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -41,13 +43,18 @@ function parseCcEmails(value: string): string[] {
 export function MaintenanceReviewPanel({
   ctx,
   property,
+  attachments = [],
   onCaseUpdated,
+  apiConnected: apiConnectedProp,
 }: {
   ctx: MaintenanceWorkflowContext;
   property?: Property;
+  attachments?: ApiMaintenanceAttachment[];
   onCaseUpdated?: () => Promise<void>;
+  apiConnected?: boolean;
 }) {
-  const { apiConnected } = useAgentData();
+  const { apiConnected: apiConnectedFromProvider } = useAgentData();
+  const apiConnected = apiConnectedProp ?? apiConnectedFromProvider;
   const [pendingResponsibility, setPendingResponsibility] =
     useState<MaintenanceWorkflowResponsibility | null>(null);
   const [pendingContractorIds, setPendingContractorIds] = useState<string[]>([]);
@@ -62,6 +69,7 @@ export function MaintenanceReviewPanel({
     (ctx.workspaceCase.responsibility as MaintenanceWorkflowResponsibility | undefined);
   const isLive =
     ctx.workspaceCase.status === 'under_review' || ctx.workspaceCase.status === 'pending_evidence';
+  const canManageEvidence = isLive && apiConnected;
   const awaitingEvidence = ctx.workspaceCase.status === 'pending_evidence';
   const isLandlord = pendingResponsibility === 'landlord';
   const showCcField =
@@ -151,6 +159,16 @@ export function MaintenanceReviewPanel({
         </dl>
       </section>
 
+      <MaintenanceReviewEvidencePanel
+        requestId={ctx.item.id}
+        title={ctx.workspaceCase.issueType}
+        description={ctx.workspaceCase.description}
+        attachments={attachments}
+        canManage={canManageEvidence}
+        apiConnected={apiConnected}
+        onUpdated={onCaseUpdated}
+      />
+
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Responsibility review</p>
         <p className="text-muted-foreground mb-3 text-xs">
@@ -175,9 +193,6 @@ export function MaintenanceReviewPanel({
             </dd>
           </div>
         </dl>
-        <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-          {ctx.workspaceCase.description}
-        </p>
       </section>
 
       {isLive ? (

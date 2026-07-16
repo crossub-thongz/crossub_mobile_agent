@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/components/providers/auth-provider';
-import type { MaintenanceRequest, Property } from '@/lib/types';
+import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
 import { fetchMaintenanceCase } from '@/lib/maintenance/fetch-maintenance-case';
 import { buildWorkspaceCaseFromApi, buildWorkspaceCaseFromRequest } from '@/lib/maintenance-workspace/adapter';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
+import type { MaintenanceRequest, Property } from '@/lib/types';
 import { useLivePoll } from '@/lib/use-live-poll';
 
 export function useMaintenanceCaseLiveSync(
@@ -21,6 +22,7 @@ export function useMaintenanceCaseLiveSync(
   const [remindersSent, setRemindersSent] = useState(0);
   const [nextReminderDueAt, setNextReminderDueAt] = useState<string | null>(null);
   const [workspaceCase, setWorkspaceCase] = useState<MaintenanceWorkspaceCase | null>(null);
+  const [attachments, setAttachments] = useState<ApiMaintenanceAttachment[]>([]);
 
   const fallbackCase = item
     ? buildWorkspaceCaseFromRequest(item, property, user)
@@ -35,6 +37,7 @@ export function useMaintenanceCaseLiveSync(
       setLiveMapped(snapshot.mapped);
       setRemindersSent(snapshot.remindersSent);
       setNextReminderDueAt(snapshot.nextReminderDueAt);
+      setAttachments(snapshot.attachments);
       setWorkspaceCase(buildWorkspaceCaseFromApi(snapshot.mapped, property, user));
     } catch {
       // keep last good snapshot
@@ -47,11 +50,13 @@ export function useMaintenanceCaseLiveSync(
     if (!item) {
       setWorkspaceCase(null);
       setLiveMapped(null);
+      setAttachments([]);
       return;
     }
     if (!apiConnected) {
       setWorkspaceCase(buildWorkspaceCaseFromRequest(item, property, user));
       setLiveMapped(null);
+      setAttachments([]);
       return;
     }
     void sync();
@@ -64,6 +69,7 @@ export function useMaintenanceCaseLiveSync(
     liveMapped,
     remindersSent,
     nextReminderDueAt,
+    attachments,
     syncing: syncing && apiConnected,
     refresh: sync,
   };

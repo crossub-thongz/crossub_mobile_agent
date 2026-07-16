@@ -87,12 +87,26 @@ export interface ApiMaintenanceNotification {
   read: boolean;
 }
 
+export interface ApiMaintenanceAttachment {
+  id: string;
+  maintenanceRequestId: string;
+  quotationId?: string;
+  kind: 'initial_evidence' | 'evidence' | 'invoice' | 'quote';
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  uploadedByRole: ApiMaintenanceUserRole;
+  previewUrl?: string;
+}
+
 export interface ApiMaintenanceState {
   maintenanceRequests: ApiMaintenanceRequest[];
   contractors: ApiContractor[];
   quotations: ApiQuotation[];
   maintenanceAuditLog: ApiMaintenanceAuditLogEntry[];
   maintenanceNotifications: ApiMaintenanceNotification[];
+  maintenanceAttachments?: ApiMaintenanceAttachment[];
   maintenanceReminders: {
     id: string;
     maintenanceRequestId: string;

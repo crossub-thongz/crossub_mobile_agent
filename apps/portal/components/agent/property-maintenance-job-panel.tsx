@@ -16,11 +16,6 @@ import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import type { MaintenanceRequest, Priority, Property } from '@/lib/types';
-import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
-
-function maintenanceOrderNumber(item: MaintenanceRequest): string {
-  return item.trackingNumber || workflowCaseReferenceLabel(item.id, 'maintenance');
-}
 
 function priorityForBadge(priority: Priority): string {
   switch (priority) {
@@ -85,50 +80,26 @@ function MaintenanceJobHeader({
   syncing?: boolean;
   workflowCtx: MaintenanceWorkflowContext;
 }) {
-  const orderNumber = maintenanceOrderNumber(item);
-  const jobDescription = item.description?.trim() || item.title;
-  const issueType =
-    item.title?.trim() && item.title.trim() !== jobDescription ? item.title.trim() : null;
   const resolvedResponsibility = resolveMaintenanceResponsibility(workflowCtx);
 
   return (
     <div className="rounded-xl border bg-card px-4 py-4">
       <dl className="grid gap-4 sm:grid-cols-2">
         <SummaryField label="Job type">Maintenance</SummaryField>
-        <SummaryField label="Order number">
-          <span className="text-primary tabular-nums">{orderNumber}</span>
-        </SummaryField>
-        <SummaryField label="Case reference">
-          <span className="text-muted-foreground font-mono text-xs">{item.id}</span>
-        </SummaryField>
         <SummaryField label="Urgency status">
           <PriorityBadge priority={priorityForBadge(item.priority)} />
         </SummaryField>
-        <SummaryField label="Responsible party">
+        <SummaryField label="Responsible party" className="sm:col-span-2">
           {!resolvedResponsibility || resolvedResponsibility === 'pending' ? (
             <span className="text-muted-foreground text-sm font-medium">Pending assignment</span>
           ) : (
             <ResponsibilityBadge responsibility={resolvedResponsibility} />
           )}
         </SummaryField>
-        <SummaryField label="Job description" className="sm:col-span-2">
-          <div className="space-y-1">
-            {issueType ? (
-              <p className="text-foreground text-sm font-semibold">{issueType}</p>
-            ) : null}
-            <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap font-normal">
-              {jobDescription}
-            </p>
-          </div>
-        </SummaryField>
       </dl>
       <p className="text-primary mt-3 text-xs font-semibold">
         {item.status}
         {syncing ? <span className="text-muted-foreground font-normal"> · Updating…</span> : null}
-      </p>
-      <p className="text-muted-foreground mt-2 text-[11px] leading-relaxed">
-        Same maintenance case as the admin portal — changes here sync via the shared case ID and
-        maintenance workflow API.
       </p>
     </div>
   );
@@ -145,7 +116,7 @@ export function PropertyMaintenanceJobPanel({
 }) {
   const { user } = useAuth();
   const { apiConnected, refresh } = useAgentData();
-  const { workspaceCase, liveMapped, syncing, refresh: refreshCase } = useMaintenanceCaseLiveSync(
+  const { workspaceCase, liveMapped, syncing, attachments, refresh: refreshCase } = useMaintenanceCaseLiveSync(
     item,
     property,
     apiConnected,
@@ -179,6 +150,7 @@ export function PropertyMaintenanceJobPanel({
       <MaintenanceAgentWorkflowPanel
         ctx={workflowCtx}
         property={property}
+        attachments={attachments}
         onCaseUpdated={onCaseUpdated}
         apiConnected={apiConnected}
       />

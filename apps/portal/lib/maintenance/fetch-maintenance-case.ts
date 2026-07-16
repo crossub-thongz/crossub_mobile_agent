@@ -1,5 +1,5 @@
 import { fetchMaintenanceState } from '@/lib/crossub-api/maintenance-client';
-import type { ApiMaintenanceState } from '@/lib/crossub-api/types';
+import type { ApiMaintenanceAttachment, ApiMaintenanceState } from '@/lib/crossub-api/types';
 import {
   mapApiMaintenanceRequest,
   type MappedMaintenance,
@@ -9,6 +9,7 @@ export type MaintenanceCaseSnapshot = {
   mapped: MappedMaintenance;
   remindersSent: number;
   nextReminderDueAt: string | null;
+  attachments: ApiMaintenanceAttachment[];
 };
 
 export function remindersForCase(
@@ -48,5 +49,10 @@ export async function fetchMaintenanceCase(
   }
 
   const { sent, nextDueAt } = remindersForCase(state, caseId);
-  return { mapped, remindersSent: sent, nextReminderDueAt: nextDueAt };
+  return {
+    mapped,
+    remindersSent: sent,
+    nextReminderDueAt: nextDueAt,
+    attachments: state.maintenanceAttachments ?? [],
+  };
 }

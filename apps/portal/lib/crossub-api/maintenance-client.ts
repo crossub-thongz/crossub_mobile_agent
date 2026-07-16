@@ -204,3 +204,23 @@ export async function declineMaintenanceQuotation(
     actorRole,
   });
 }
+
+export async function uploadMaintenanceAttachment(input: {
+  maintenanceRequestId: string;
+  kind: 'initial_evidence' | 'evidence';
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  contentBase64: string;
+}): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/attachments/upload', {
+    ...input,
+    actorRole: AGENT_ROLE,
+  });
+}
+
+export async function deleteMaintenanceAttachment(
+  attachmentId: string,
+): Promise<ApiMaintenanceState> {
+  return api.delete<ApiMaintenanceState>(`/maintenance/attachments/${attachmentId}`);
+}
