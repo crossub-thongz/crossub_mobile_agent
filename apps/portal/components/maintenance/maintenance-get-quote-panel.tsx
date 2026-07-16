@@ -29,6 +29,11 @@ import {
   sendMaintenanceQuotationToLandlordCase,
 } from '@/lib/maintenance/maintenance-case-ops';
 import {
+  hasPendingAgentCounterOffer,
+  isContractorRequotedAwaitingAgent,
+  REQUOTED_STATUS_CLASS,
+} from '@/lib/maintenance/quotation-review-state';
+import {
   latestSubmittedQuoteForContractor,
   resolveContractorDisplayName,
 } from '@/lib/maintenance/resolve-contractor-display';
@@ -65,7 +70,12 @@ function ContractorQuoteCollapsible({
   onToggle: () => void;
   onCaseUpdated?: () => Promise<void>;
 }) {
-  const statusLabel = review?.decision
+  const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, submitted);
+  const pendingAgentCounter = hasPendingAgentCounterOffer(review, review?.decision);
+
+  const statusLabel = requotedAwaitingAgent
+    ? 'Contractor requoted — review revised quotation'
+    : review?.decision
     ? review.decision === 'approved'
       ? review.landlordEmailSentAt
         ? 'Sent to landlord'
@@ -73,9 +83,35 @@ function ContractorQuoteCollapsible({
       : review.contractorFeedbackSentAt
         ? 'Feedback sent'
         : 'Declined — send feedback'
+    : pendingAgentCounter
+      ? 'Awaiting contractor response to counter offer'
     : submitted
       ? `Submitted ${formatDateTime(submitted.submittedAt)}`
       : 'Pending quotation';
+
+  const statusBadgeClass = requotedAwaitingAgent
+    ? REQUOTED_STATUS_CLASS
+    : review?.decision === 'approved'
+      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+      : review?.decision === 'declined'
+        ? 'bg-red-500/10 text-red-700 dark:text-red-300'
+        : pendingAgentCounter
+          ? 'bg-amber-500/10 text-amber-800 dark:text-amber-200'
+          : submitted
+            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+            : 'bg-amber-500/10 text-amber-700 dark:text-amber-300';
+
+  const statusBadgeLabel = requotedAwaitingAgent
+    ? 'Requoted'
+    : review?.decision === 'approved'
+      ? 'Approved'
+      : review?.decision === 'declined'
+        ? 'Declined'
+        : pendingAgentCounter
+          ? 'Counter sent'
+          : submitted
+            ? 'Submitted'
+            : 'Awaiting';
 
   return (
     <div className="overflow-hidden rounded-lg border bg-background">
@@ -92,22 +128,10 @@ function ContractorQuoteCollapsible({
           <span
             className={cn(
               'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-              review?.decision === 'approved'
-                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                : review?.decision === 'declined'
-                  ? 'bg-red-500/10 text-red-700 dark:text-red-300'
-                  : submitted
-                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+              statusBadgeClass,
             )}
           >
-            {review?.decision === 'approved'
-              ? 'Approved'
-              : review?.decision === 'declined'
-                ? 'Declined'
-                : submitted
-                  ? 'Submitted'
-                  : 'Awaiting'}
+            {statusBadgeLabel}
           </span>
           <ChevronDown
             className={cn(
@@ -195,7 +219,9 @@ export function MaintenanceGetQuotePanel({
   const invitedIds = resolveInvitedContractorIds(ctx);
   const landlordFlow = requiresContractorFlow(ctx);
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
-  const emailRecords = maintenanceEmailRecordsForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
+  const emailRecords = maintenanceEmailRecordsForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE).filter(
+    (record) => record.kind !== 'counter_offer',
+  );
   const canReview = apiConnected;
 
   useEffect(() => {

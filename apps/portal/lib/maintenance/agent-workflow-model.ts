@@ -721,8 +721,9 @@ export function buildQuotationWorkflowEmails(
 
   for (const n of ctx.workspaceCase.notifications) {
     if (n.channel !== 'email') continue;
+    if (/counter offer/i.test(`${n.title} ${n.message}`)) continue;
     if (
-      /landlord|counter offer|quotation feedback|repair quotation/i.test(
+      /landlord|quotation feedback|repair quotation/i.test(
         `${n.title} ${n.message}`,
       )
     ) {
@@ -732,7 +733,7 @@ export function buildQuotationWorkflowEmails(
 
   for (const entry of ctx.workspaceCase.auditEntries) {
     const parsed = parseQuotationWorkflowEmailFromAudit(entry, ctx);
-    if (parsed) byId.set(parsed.id, parsed);
+    if (parsed && parsed.kind !== 'counter_offer') byId.set(parsed.id, parsed);
   }
 
   const quote = buildQuoteSentToAgentEmail(ctx);

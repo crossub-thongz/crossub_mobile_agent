@@ -1,4 +1,4 @@
-import type { ApiMaintenanceRequest, ApiMaintenanceStatus } from '@/lib/crossub-api/types';
+import type { ApiMaintenanceRequest, ApiMaintenanceStatus, QuotationReviewRecord } from '@/lib/crossub-api/types';
 
 const STATUS_RANK: Record<string, number> = {
   under_review: 1,
@@ -16,6 +16,29 @@ function preferAdvancedStatus(
   b: ApiMaintenanceStatus,
 ): ApiMaintenanceStatus {
   return (STATUS_RANK[a] ?? 0) >= (STATUS_RANK[b] ?? 0) ? a : b;
+}
+
+function mergeQuotationReviews(
+  prisma?: QuotationReviewRecord[],
+  workflow?: QuotationReviewRecord[],
+): QuotationReviewRecord[] | undefined {
+  const byContractor = new Map<string, QuotationReviewRecord>();
+  const mergeOne = (r: QuotationReviewRecord) => {
+    const prev = byContractor.get(r.contractorId);
+    if (!prev) {
+      byContractor.set(r.contractorId, r);
+      return;
+    }
+    byContractor.set(r.contractorId, {
+      ...prev,
+      ...r,
+      counterOffers: r.counterOffers?.length ? r.counterOffers : prev.counterOffers,
+    });
+  };
+  for (const r of prisma ?? []) mergeOne(r);
+  for (const r of workflow ?? []) mergeOne(r);
+  const merged = Array.from(byContractor.values());
+  return merged.length > 0 ? merged : undefined;
 }
 
 /** Merge Prisma-backed job rows with the shared workflow board during live polling. */
@@ -36,9 +59,7 @@ export function mergeMaintenanceCaseForLiveSync(
     invitedContractors: workflow.invitedContractors?.length
       ? workflow.invitedContractors
       : prisma.invitedContractors,
-    quotationReviews: workflow.quotationReviews?.length
-      ? workflow.quotationReviews
-      : prisma.quotationReviews,
+    quotationReviews: mergeQuotationReviews(prisma.quotationReviews, workflow.quotationReviews),
     quotationIds: workflow.quotationIds?.length ? workflow.quotationIds : prisma.quotationIds,
     completionEvidenceUploaded:
       Boolean(prisma.completionEvidenceUploaded) ||

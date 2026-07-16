@@ -6,6 +6,38 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
+import { isContractorRequotedAwaitingAgent } from '@/lib/maintenance/quotation-review-state';
+import { formatCurrency } from '@/lib/utils';
+
+function CounterOfferHistory({
+  offers,
+}: {
+  offers: NonNullable<QuotationReviewRecord['counterOffers']>;
+}) {
+  if (offers.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+        Counter offer history
+      </p>
+      <ul className="mt-2 space-y-2">
+        {offers.map((offer) => (
+          <li key={offer.id} className="text-xs">
+            <p className="font-medium tabular-nums">
+              {formatCurrency(offer.counterPrice)} ·{' '}
+              {new Date(offer.sentAt).toLocaleString('en-AU')}
+              {offer.sentBy ? ` · ${offer.sentBy}` : ''}
+            </p>
+            {offer.message ? (
+              <p className="text-muted-foreground mt-0.5 whitespace-pre-wrap">{offer.message}</p>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export function MaintenanceQuotationReviewActions({
   quote,
@@ -26,7 +58,7 @@ export function MaintenanceQuotationReviewActions({
   onSendFeedback: (message?: string) => Promise<void>;
   onCounterOffer: (counterPrice: number, message?: string) => Promise<void>;
 }) {
-  const [comments, setComments] = useState(quote.comments ?? '');
+  const [declineReason, setDeclineReason] = useState(review?.declineReason ?? '');
   const [negotiateOpen, setNegotiateOpen] = useState(false);
   const [counterPrice, setCounterPrice] = useState('');
   const [counterMessage, setCounterMessage] = useState('');
@@ -37,6 +69,7 @@ export function MaintenanceQuotationReviewActions({
   const decision = review?.decision;
   const landlordSent = Boolean(review?.landlordEmailSentAt);
   const feedbackSent = Boolean(review?.contractorFeedbackSentAt);
+  const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, quote);
 
   const run = async (fn: () => Promise<void>) => {
     setActing(true);
@@ -49,19 +82,32 @@ export function MaintenanceQuotationReviewActions({
     }
   };
 
-  if (!canReview) return null;
+  if (!canReview && !(review?.counterOffers?.length)) return null;
 
   return (
     <div className="space-y-3 border-t pt-3">
-      {canAct && !decision ? (
+      {requotedAwaitingAgent ? (
+        <div className="rounded-md border border-yellow-700/30 bg-yellow-700/10 px-3 py-2">
+          <p className="text-xs font-semibold text-yellow-900 dark:text-yellow-200">
+            Contractor requoted — review the revised quotation below
+          </p>
+        </div>
+      ) : null}
+      {review?.counterOffers?.length ? (
+        <CounterOfferHistory offers={review.counterOffers} />
+      ) : null}
+      {canReview && canAct && !decision ? (
         <>
-          <Textarea
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-            placeholder="Optional notes or decline reason"
-            className="min-h-[80px] resize-none text-xs"
-            disabled={isBusy}
-          />
+          <div>
+            <p className="text-muted-foreground mb-1.5 text-xs font-medium">Decline reason</p>
+            <Textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              placeholder="Required if declining — contractor comments are shown above"
+              className="min-h-[80px] resize-none text-xs"
+              disabled={isBusy}
+            />
+          </div>
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
@@ -80,9 +126,9 @@ export function MaintenanceQuotationReviewActions({
               disabled={isBusy}
               onClick={() =>
                 void run(async () => {
-                  const reason = comments.trim();
+                  const reason = declineReason.trim();
                   if (!reason) {
-                    toast.error('Enter a decline reason in the comments field');
+                    toast.error('Enter a decline reason');
                     return;
                   }
                   await onReviewDecision('declined', reason);
@@ -110,7 +156,7 @@ export function MaintenanceQuotationReviewActions({
         </>
       ) : null}
 
-      {negotiateOpen && canAct && !decision ? (
+      {canReview && negotiateOpen && canAct && !decision ? (
         <div className="bg-muted/20 space-y-2 rounded-md border p-3">
           <p className="text-xs font-semibold">Requote (counter offer)</p>
           <input
@@ -165,7 +211,7 @@ export function MaintenanceQuotationReviewActions({
         </div>
       ) : null}
 
-      {decision === 'approved' && !landlordSent ? (
+      {canReview && decision === 'approved' && !landlordSent ? (
         <div className="flex justify-end">
           <Button
             type="button"
@@ -184,15 +230,25 @@ export function MaintenanceQuotationReviewActions({
         </div>
       ) : null}
 
-      {decision === 'approved' && landlordSent ? (
+      {canReview && decision === 'approved' && landlordSent ? (
         <p className="text-muted-foreground text-xs">
           Quotation sent to landlord ·{' '}
           {new Date(review!.landlordEmailSentAt!).toLocaleString('en-AU')}
         </p>
       ) : null}
 
-      {decision === 'declined' && !feedbackSent ? (
+      {canReview && decision === 'declined' && !feedbackSent ? (
         <div className="space-y-2">
+          <div>
+            <p className="text-muted-foreground mb-1.5 text-xs font-medium">Feedback to contractor</p>
+            <Textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              placeholder="Optional — uses decline reason if empty"
+              className="min-h-[72px] resize-none text-xs"
+              disabled={isBusy}
+            />
+          </div>
           <div className="flex justify-end">
             <Button
               type="button"
@@ -202,7 +258,7 @@ export function MaintenanceQuotationReviewActions({
               disabled={isBusy}
               onClick={() =>
                 void run(async () => {
-                  await onSendFeedback(comments.trim() || review?.declineReason);
+                  await onSendFeedback(declineReason.trim() || review?.declineReason);
                   toast.success('Feedback sent to contractor');
                 })
               }
@@ -213,7 +269,7 @@ export function MaintenanceQuotationReviewActions({
         </div>
       ) : null}
 
-      {decision === 'declined' && feedbackSent ? (
+      {canReview && decision === 'declined' && feedbackSent ? (
         <p className="text-muted-foreground text-xs">
           Feedback sent to contractor ·{' '}
           {new Date(review!.contractorFeedbackSentAt!).toLocaleString('en-AU')}

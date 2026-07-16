@@ -73,6 +73,8 @@ export interface QuotationReviewRecord {
   landlordEmailSentAt?: string;
   contractorFeedbackSentAt?: string;
   counterOffers: QuotationCounterOffer[];
+  contractorRequotedAt?: string;
+  contractorRequoteQuotationId?: string;
 }
 
 export interface ApiMaintenanceParty {
