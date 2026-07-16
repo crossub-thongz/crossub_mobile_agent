@@ -16,6 +16,7 @@ import {
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
 import { resolveInvitedContractorIds, resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
+import { maintenanceSourceLabel } from '@/lib/maintenance/maintenance-source-labels';
 import type { MaintenanceWorkflowResponsibility } from '@/lib/crossub-api/maintenance-client';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -125,8 +126,31 @@ export function MaintenanceReviewPanel({
   const confirmDisabled =
     !pendingResponsibility || busy || (isLandlord && pendingContractorIds.length === 0);
 
+  const intakeEmail =
+    ctx.workspaceCase.notifications.find((n) => n.channel === 'email')?.title ??
+    ctx.workspaceCase.tenant?.email ??
+    'No email records yet';
+
   return (
     <div className="space-y-4">
+      <section className="rounded-xl border bg-card p-4">
+        <p className="mb-2 text-sm font-semibold">Case intake</p>
+        <dl className="grid gap-3 text-xs sm:grid-cols-3">
+          <div>
+            <dt className="text-muted-foreground">Created by</dt>
+            <dd className="font-medium">{maintenanceSourceLabel(ctx.workspaceCase.source)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Date &amp; time created</dt>
+            <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Email</dt>
+            <dd className="font-medium break-words">{intakeEmail}</dd>
+          </div>
+        </dl>
+      </section>
+
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Responsibility review</p>
         <p className="text-muted-foreground mb-3 text-xs">

@@ -1,6 +1,7 @@
 'use client';
 
 import { ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
+import { maintenanceSourceLabel } from '@/lib/maintenance/maintenance-source-labels';
 import {
   auditEntriesForStep,
   MAINTENANCE_AGENT_STEP,
@@ -8,15 +9,13 @@ import {
 } from '@/lib/maintenance/agent-workflow-model';
 import { formatDateTime } from '@/lib/utils';
 
-function sourceLabel(source: MaintenanceWorkflowContext['workspaceCase']['source']): string {
-  switch (source) {
-    case 'tenant_app':
-      return 'Tenant report';
-    case 'agent_submission':
-      return 'Agent report';
-    case 'email':
-      return 'Email intake';
-  }
+function emailSummary(ctx: MaintenanceWorkflowContext): string {
+  const fromNotifications = ctx.workspaceCase.notifications.find(
+    (n) => n.channel === 'email',
+  );
+  if (fromNotifications?.title) return fromNotifications.title;
+  if (ctx.workspaceCase.tenant?.email) return ctx.workspaceCase.tenant.email;
+  return 'No email records yet';
 }
 
 export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
@@ -28,12 +27,16 @@ export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowCo
         <p className="mb-2 text-sm font-semibold">Job intake</p>
         <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
-            <dt className="text-muted-foreground">Reported via</dt>
-            <dd className="font-medium">{sourceLabel(ctx.workspaceCase.source)}</dd>
+            <dt className="text-muted-foreground">Created by</dt>
+            <dd className="font-medium">{maintenanceSourceLabel(ctx.workspaceCase.source)}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Created</dt>
+            <dt className="text-muted-foreground">Date &amp; time created</dt>
             <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground">Email</dt>
+            <dd className="font-medium break-words">{emailSummary(ctx)}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Issue type</dt>

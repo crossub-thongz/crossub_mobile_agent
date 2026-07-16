@@ -168,6 +168,20 @@ export async function createAgentTerminationCase(
   });
 }
 
+export async function cancelAgentMaintenance(
+  propertyId: string,
+  requestId: string,
+  body: { reason: string },
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/maintenance/${encodeURIComponent(requestId)}/cancel`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
 export async function createAgentMaintenanceRequest(
   propertyId: string,
   body: CreateAgentMaintenanceInput,

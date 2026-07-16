@@ -11,7 +11,10 @@ export type AgentProperty = components['schemas']['AgentPropertyResponseDto'];
 export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   createdAt?: string | null;
 };
-export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'];
+export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
+  closureReason?: string | null;
+  updatedAt?: string | null;
+};
 export type AgentRentReview = components['schemas']['AgentRentReviewDto'] & {
   leaseStart?: string | null;
   leaseEnd?: string | null;

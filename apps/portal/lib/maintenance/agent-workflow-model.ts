@@ -223,22 +223,22 @@ function jobCreatedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
   return [
     {
       id: 'tenant_report',
-      label: 'Tenant reports repair',
+      label: 'Tenant Requested',
       done: tenantReport,
     },
     {
       id: 'agent_report',
-      label: 'Agent reports repair',
+      label: 'Agent Created',
       done: agentReport,
     },
     {
       id: 'datetime',
-      label: 'Date and time recorded',
+      label: 'Date and time created',
       done: hasCreatedAt,
     },
     {
       id: 'email_records',
-      label: 'Email records logged',
+      label: 'Email',
       done: hasEmailRecords,
     },
   ];

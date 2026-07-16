@@ -1,7 +1,10 @@
 import type { MaintenanceRequest } from '@/lib/types';
+import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 
 export function isDeletedMaintenance(request: MaintenanceRequest): boolean {
-  return request.status.toLowerCase().includes('cancelled');
+  if (request.apiStatus === MAINTENANCE_STATUS.CANCELLED) return true;
+  const status = request.status.toLowerCase();
+  return status.includes('cancelled') || status.includes('deleted');
 }
 
 export function isHistoryMaintenance(request: MaintenanceRequest): boolean {
@@ -12,4 +15,8 @@ export function isHistoryMaintenance(request: MaintenanceRequest): boolean {
 
 export function isActiveMaintenance(request: MaintenanceRequest): boolean {
   return !isDeletedMaintenance(request) && !isHistoryMaintenance(request);
+}
+
+export function canDeleteMaintenance(request: MaintenanceRequest): boolean {
+  return isActiveMaintenance(request);
 }

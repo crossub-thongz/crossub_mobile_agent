@@ -322,7 +322,7 @@ const MAINTENANCE_STATUS_LABEL: Record<AgentMaintenance['status'], string> = {
   [MAINTENANCE_STATUS.SCHEDULED]: 'In progress',
   [MAINTENANCE_STATUS.INVOICED]: 'Invoiced',
   [MAINTENANCE_STATUS.COMPLETED]: 'Completed',
-  [MAINTENANCE_STATUS.CANCELLED]: 'Cancelled',
+  [MAINTENANCE_STATUS.CANCELLED]: 'Deleted',
 };
 
 function splitAgentMaintenanceDescription(description: string | null | undefined): {
@@ -355,7 +355,10 @@ export function mapAgentMaintenance(
       propertyAddress: m.propertyAddress,
       title: issueType,
       description: body,
-      status: MAINTENANCE_STATUS_LABEL[m.status] ?? m.status,
+      status:
+        m.status === MAINTENANCE_STATUS.CANCELLED
+          ? 'Deleted'
+          : (MAINTENANCE_STATUS_LABEL[m.status] ?? m.status),
       apiStatus: m.status,
       priority,
       responsibility: 'pending',
@@ -363,6 +366,9 @@ export function mapAgentMaintenance(
       quoteAmount: m.quoteTotal ?? m.ourPrice ?? undefined,
       requiresApproval: m.status === MAINTENANCE_STATUS.QUOTING,
       createdAt: m.createdAt,
+      deleteReason: m.closureReason ?? undefined,
+      deletedAt:
+        m.status === MAINTENANCE_STATUS.CANCELLED ? m.updatedAt ?? m.createdAt : undefined,
       timeline: [],
       source: 'api',
     };

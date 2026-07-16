@@ -316,10 +316,11 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
       issueType: maintenanceIssueType(request),
       description: [
         maintenanceDescriptionBody(request),
-        request.responsibility !== 'pending'
+        deleted && request.deleteReason ? request.deleteReason : null,
+        !deleted && request.responsibility !== 'pending'
           ? responsibilityLabelForRow(request.responsibility)
           : null,
-        request.priority === 'urgent' || request.priority === 'high'
+        !deleted && (request.priority === 'urgent' || request.priority === 'high')
           ? request.priority
           : null,
       ]

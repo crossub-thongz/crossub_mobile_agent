@@ -2,23 +2,27 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Wrench } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyMaintenanceCaseDialog } from '@/components/agent/property-maintenance-case-dialog';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
+import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { cancelAgentMaintenance } from '@/lib/crossub-api/agent-workflow-client';
 import {
   PROPERTY_HISTORY_SCOPE_FILTERS,
   type PropertyHistoryScope,
 } from '@/lib/property-history-scope';
 import {
+  canDeleteMaintenance,
   isActiveMaintenance,
   isDeletedMaintenance,
   isHistoryMaintenance,
 } from '@/lib/property-maintenance-history';
-import { maintenanceJobRows } from '@/lib/property-job-rows';
+import { maintenanceJobRows, type PropertyJobRow } from '@/lib/property-job-rows';
 import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import type {
   Inspection,
@@ -57,9 +61,10 @@ export function PropertyMaintenanceTab({
   currentLease?: LeasingRecord;
   onRefresh?: () => void;
 }) {
-  const { refresh } = useAgentData();
+  const { apiConnected, refresh } = useAgentData();
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [dialogRequest, setDialogRequest] = useState<MaintenanceRequest | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MaintenanceRequest | null>(null);
   const [pendingOpenRequestId, setPendingOpenRequestId] = useState<string | null>(null);
   const [historyScope, setHistoryScope] = useState<PropertyHistoryScope>('completed');
 
@@ -133,6 +138,31 @@ export function PropertyMaintenanceTab({
     setSelectedCaseId(null);
   };
 
+  const canDeleteRequest = useCallback(
+    (request: MaintenanceRequest) => apiConnected && canDeleteMaintenance(request),
+    [apiConnected],
+  );
+
+  const canDeleteRow = useCallback(
+    (row: PropertyJobRow) => {
+      const request = maintenance.find((item) => item.id === row.id);
+      return request ? canDeleteRequest(request) : false;
+    },
+    [canDeleteRequest, maintenance],
+  );
+
+  const handleDeleteConfirm = async (reason: string) => {
+    if (!deleteTarget) return;
+    if (!apiConnected) {
+      throw new Error('Connect to the API to delete cases');
+    }
+    await cancelAgentMaintenance(propertyId, deleteTarget.id, { reason });
+    toast.success('Maintenance job deleted');
+    handleDialogClose();
+    await refresh();
+    onRefresh?.();
+  };
+
   const maintenanceTableProps = {
     selectedId: selectedCaseId,
     onRowClick: handleRowClick,
@@ -151,6 +181,11 @@ export function PropertyMaintenanceTab({
         <PropertyJobCasesTable
           rows={activeJobRows}
           {...maintenanceTableProps}
+          canDeleteRow={canDeleteRow}
+          onDeleteRow={(row) => {
+            const request = maintenance.find((item) => item.id === row.id) ?? null;
+            if (request) setDeleteTarget(request);
+          }}
           emptyTitle="No maintenance jobs"
           emptyDescription="Log a maintenance job for this property to begin the workflow."
         />
@@ -162,7 +197,7 @@ export function PropertyMaintenanceTab({
             <h3 className="text-sm font-semibold">History</h3>
             <p className="text-muted-foreground mt-1 text-xs">
               {historyScope === 'deleted'
-                ? 'Cancelled maintenance jobs — click a row to view the case.'
+                ? 'Deleted maintenance jobs — click a row to view the case and deletion reason.'
                 : 'Completed maintenance jobs — click a row to reopen the workflow.'}
             </p>
           </div>
@@ -183,7 +218,7 @@ export function PropertyMaintenanceTab({
             }
             description={
               historyScope === 'deleted'
-                ? 'Cancelled maintenance jobs will appear here.'
+                ? 'Deleted maintenance jobs will appear here with their reason.'
                 : 'Past maintenance jobs will appear here once completed.'
             }
           />
@@ -198,7 +233,7 @@ export function PropertyMaintenanceTab({
             }
             emptyDescription={
               historyScope === 'deleted'
-                ? 'Cancelled maintenance jobs will appear here.'
+                ? 'Deleted maintenance jobs will appear here with their reason.'
                 : 'Past maintenance jobs will appear here once completed.'
             }
           />
@@ -211,6 +246,22 @@ export function PropertyMaintenanceTab({
         request={dialogRequest}
         property={property}
         propertyId={propertyId}
+        canDelete={dialogRequest ? canDeleteRequest(dialogRequest) : false}
+        onDelete={() => {
+          if (dialogRequest) setDeleteTarget(dialogRequest);
+        }}
+      />
+
+      <WorkflowCaseDeleteDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete maintenance job"
+        description="The job moves to History (Deleted filter) with your reason recorded. This cannot be undone."
+        confirmLabel="Delete maintenance job"
+        onConfirm={handleDeleteConfirm}
+        onSuccess={() => setDeleteTarget(null)}
       />
     </div>
   );

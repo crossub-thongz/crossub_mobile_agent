@@ -396,6 +396,9 @@ export interface MaintenanceRequest {
   submittedQuotationId?: string;
   invoiceUploaded?: boolean;
   completionEvidenceUploaded?: boolean;
+  /** Recorded when the case was deleted/cancelled. */
+  deleteReason?: string;
+  deletedAt?: string;
 }
 
 export interface Inspection {
