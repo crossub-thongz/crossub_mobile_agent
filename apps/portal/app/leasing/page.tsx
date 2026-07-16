@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeftRight, Building2, FileText, History, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowLeftRight, Building2, FileText, History, UserCheck } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -24,11 +24,8 @@ import {
   propertyTransfer,
   rentReviewDetail,
   ROUTES,
-  tenantNew,
 } from '@/constants/routes';
 import { fromLeasing } from '@/lib/detail-navigation';
-import { isRentReviewPendingApproval } from '@/lib/rent-review';
-import { useAgentStore } from '@/lib/store';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
 const TABS = [
@@ -54,12 +51,6 @@ export default function LeasingPage() {
   const [tab, setTab] = useState<LeasingTab>(initialTab);
   const [search, setSearch] = useState('');
   const { tenantSelections, rentReviews, leasingRecords, leasingCycles, properties } = useAgentData();
-  const decisions = useAgentStore((s) => s.rentReviewDecisions);
-
-  const pendingApplications = tenantSelections.filter((t) => t.requiresApproval);
-  const pendingReviews = rentReviews.filter((r) =>
-    isRentReviewPendingApproval(r, decisions[r.id]),
-  );
 
   const history = useMemo(() => {
     return leasingRecords.map((l) => {
@@ -125,28 +116,6 @@ export default function LeasingPage() {
               Transfer OUT
             </Link>
           </Button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Button asChild variant="outline" className="w-full">
-            <Link href={tenantNew()}>
-              <UserPlus className="size-4" />
-              Add tenant
-            </Link>
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl border bg-card p-3 text-center">
-            <p className="text-muted-foreground text-[10px] font-medium uppercase">New leasing</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-primary">
-              {pendingApplications.length}
-            </p>
-          </div>
-          <div className="rounded-xl border bg-card p-3 text-center">
-            <p className="text-muted-foreground text-[10px] font-medium uppercase">Rent reviews</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums">{pendingReviews.length}</p>
-          </div>
         </div>
 
         <FilterChips

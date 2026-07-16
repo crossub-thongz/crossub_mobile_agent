@@ -72,11 +72,11 @@ export function ModuleSortableTableHead<T extends string>({
   return (
     <thead>
       <tr className="border-b bg-muted/30">
-        {columns.map((col) => {
+        {columns.map((col, index) => {
           if (col.kind === 'static') {
             return (
               <th
-                key={col.label || 'action'}
+                key={`static-${index}`}
                 className={cn(
                   'px-3 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
                   col.align === 'right' ? 'text-right' : 'text-left',

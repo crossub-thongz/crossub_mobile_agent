@@ -27,6 +27,7 @@ export function DashboardPropertiesMap({
   embedded = false,
   showStats,
   dashboardTile = false,
+  fillHeight = false,
   className,
 }: {
   properties: Property[];
@@ -34,8 +35,10 @@ export function DashboardPropertiesMap({
   embedded?: boolean;
   /** Show the property-count line when embedded (e.g. dashboard map row). */
   showStats?: boolean;
-  /** Centered dashboard tile: 2/3 width with a landscape aspect from md up. */
+  /** Dashboard strip: full content width with a fixed compact height. */
   dashboardTile?: boolean;
+  /** Expand map to fill available parent height. */
+  fillHeight?: boolean;
   className?: string;
 }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -186,27 +189,34 @@ export function DashboardPropertiesMap({
   return (
     <div
       className={cn(
-        embedded && !dashboardTile ? 'flex h-full min-h-0 flex-col gap-2' : 'flex flex-col gap-2',
+        fillHeight || (embedded && !dashboardTile)
+          ? 'flex h-full min-h-0 flex-col gap-2'
+          : 'flex flex-col gap-2',
         className,
       )}
     >
       <div
         className={cn(
           'overflow-hidden rounded-xl border bg-card shadow-sm',
-          embedded && !dashboardTile && 'flex min-h-0 flex-1 flex-col',
+          embedded && !dashboardTile && !fillHeight && 'flex min-h-0 flex-1 flex-col',
+          fillHeight && 'flex min-h-0 flex-1 flex-col',
           dashboardTile &&
-            'aspect-[4/3] w-full shrink-0 md:aspect-[2/1]',
+            !fillHeight &&
+            'h-[180px] w-full shrink-0 sm:h-[200px] md:h-[220px]',
+          fillHeight && 'h-full min-h-[min(calc(100dvh-14rem),720px)] w-full flex-1',
         )}
       >
         <div
           ref={mapContainerRef}
           className={cn(
             'bg-muted/30 w-full',
-            dashboardTile
-              ? 'h-full min-h-0'
-              : embedded
-                ? 'min-h-[180px] flex-1'
-                : 'h-[min(52vh,360px)] min-h-[220px]',
+            fillHeight
+              ? 'h-full min-h-0 flex-1'
+              : dashboardTile
+                ? 'h-full min-h-0'
+                : embedded
+                  ? 'min-h-[180px] flex-1'
+                  : 'h-[min(52vh,360px)] min-h-[220px]',
           )}
           aria-label="Portfolio properties map"
         />
