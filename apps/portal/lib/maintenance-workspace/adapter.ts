@@ -85,6 +85,7 @@ export function buildWorkspaceCaseFromApi(
     dueAt: req.dueAt,
     source: req.source,
     assignedContractorId: req.assignedContractorId,
+    invitedContractorIds: req.invitedContractorIds,
     quotationIds: req.quotationIds ?? [],
     completionEvidenceUploaded: req.completionEvidenceUploaded,
     tenantApprovalReceived: req.tenantApprovalReceived,

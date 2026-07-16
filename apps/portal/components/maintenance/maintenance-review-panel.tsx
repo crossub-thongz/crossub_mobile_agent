@@ -48,7 +48,7 @@ export function MaintenanceReviewPanel({
   const { apiConnected } = useAgentData();
   const [pendingResponsibility, setPendingResponsibility] =
     useState<MaintenanceWorkflowResponsibility | null>(null);
-  const [pendingContractorId, setPendingContractorId] = useState<string | null>(null);
+  const [pendingContractorIds, setPendingContractorIds] = useState<string[]>([]);
   const [emailCcInput, setEmailCcInput] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -68,8 +68,8 @@ export function MaintenanceReviewPanel({
       toast.error('Connect to the API to assign responsibility.');
       return;
     }
-    if (isLandlord && !pendingContractorId) {
-      toast.error('Select a tradesman for landlord responsibility.');
+    if (isLandlord && pendingContractorIds.length === 0) {
+      toast.error('Select at least one tradesman for landlord responsibility.');
       return;
     }
 
@@ -77,12 +77,16 @@ export function MaintenanceReviewPanel({
     try {
       const ccEmails = showCcField ? parseCcEmails(emailCcInput) : undefined;
       await confirmMaintenanceResponsibility(ctx.item.id, pendingResponsibility, {
-        preferredContractorId: isLandlord ? pendingContractorId ?? undefined : undefined,
+        preferredContractorIds: isLandlord ? pendingContractorIds : undefined,
         ccEmails,
       });
-      toast.success(`Responsibility set to ${pendingResponsibility} — notification email sent`);
+      toast.success(
+        isLandlord
+          ? `Responsibility set to landlord — RFQ sent to ${pendingContractorIds.length} contractor(s)`
+          : `Responsibility set to ${pendingResponsibility} — notification email sent`,
+      );
       setPendingResponsibility(null);
-      setPendingContractorId(null);
+      setPendingContractorIds([]);
       setEmailCcInput('');
       await onCaseUpdated?.();
     } catch {
@@ -111,11 +115,11 @@ export function MaintenanceReviewPanel({
 
   const handleSelectResponsibility = (value: MaintenanceWorkflowResponsibility) => {
     setPendingResponsibility(value);
-    if (value !== 'landlord') setPendingContractorId(null);
+    if (value !== 'landlord') setPendingContractorIds([]);
   };
 
   const confirmDisabled =
-    !pendingResponsibility || busy || (isLandlord && !pendingContractorId);
+    !pendingResponsibility || busy || (isLandlord && pendingContractorIds.length === 0);
 
   return (
     <div className="space-y-4">
@@ -185,8 +189,8 @@ export function MaintenanceReviewPanel({
                   requestId={ctx.item.id}
                   agencyId={agencyId}
                   apiConnected={apiConnected}
-                  selectedContractorId={pendingContractorId}
-                  onSelectContractor={setPendingContractorId}
+                  selectedContractorIds={pendingContractorIds}
+                  onChangeSelectedContractorIds={setPendingContractorIds}
                   disabled={busy}
                 />
               ) : null}

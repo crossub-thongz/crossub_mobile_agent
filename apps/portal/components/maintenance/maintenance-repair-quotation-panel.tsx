@@ -24,7 +24,7 @@ export function MaintenanceRepairQuotationPanel({
   onDecline?: (reason: string) => void;
 }) {
   const [selectedLineId, setSelectedLineId] = useState('1');
-  const [comments, setComments] = useState(quote.declineReason ?? '');
+  const [comments, setComments] = useState(quote.comments ?? quote.declineReason ?? '');
 
   const { lines, totals } = useMemo(
     () => buildQuotationLineItems(quote),

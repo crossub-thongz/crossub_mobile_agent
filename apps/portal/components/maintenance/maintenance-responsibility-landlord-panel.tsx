@@ -32,15 +32,15 @@ export function MaintenanceResponsibilityLandlordPanel({
   requestId,
   agencyId,
   apiConnected,
-  selectedContractorId,
-  onSelectContractor,
+  selectedContractorIds,
+  onChangeSelectedContractorIds,
   disabled = false,
 }: {
   requestId: string;
   agencyId?: string | null;
   apiConnected: boolean;
-  selectedContractorId: string | null;
-  onSelectContractor: (contractorId: string | null) => void;
+  selectedContractorIds: string[];
+  onChangeSelectedContractorIds: (ids: string[]) => void;
   disabled?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
@@ -87,28 +87,36 @@ export function MaintenanceResponsibilityLandlordPanel({
   }, [requestId, agencyId, apiConnected]);
 
   useEffect(() => {
-    if (selectedContractorId || suggestions.length === 0) return;
+    if (selectedContractorIds.length > 0 || suggestions.length === 0) return;
     const topPick = suggestions.find((row) => row.isTopPick) ?? suggestions[0];
-    if (topPick) onSelectContractor(topPick.id);
-  }, [onSelectContractor, selectedContractorId, suggestions]);
+    if (topPick) onChangeSelectedContractorIds([topPick.id]);
+  }, [onChangeSelectedContractorIds, selectedContractorIds.length, suggestions]);
 
   const preferredIds = useMemo(
     () => new Set(suggestions.filter((row) => row.isPreferred).map((row) => row.id)),
     [suggestions],
   );
 
+  const toggleContractor = (contractorId: string) => {
+    onChangeSelectedContractorIds(
+      selectedContractorIds.includes(contractorId)
+        ? selectedContractorIds.filter((id) => id !== contractorId)
+        : [...selectedContractorIds, contractorId],
+    );
+  };
+
   const handleCreated = (contractor: PreferredContractor) => {
     const mapped = mapPreferredToSuggestion(contractor);
     setSuggestions((prev) => [mapped, ...prev.filter((row) => row.id !== mapped.id)]);
-    onSelectContractor(contractor.id);
+    onChangeSelectedContractorIds([...new Set([...selectedContractorIds, contractor.id])]);
   };
 
   return (
     <>
       <div className="rounded-xl border bg-card p-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Tradesman
+          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            Tradesmen
           </p>
           <Button
             type="button"
@@ -122,8 +130,8 @@ export function MaintenanceResponsibilityLandlordPanel({
           </Button>
         </div>
         <p className="text-muted-foreground mt-1 text-xs">
-          Choose a tradesman for this landlord repair. New contractors are saved to agency preferred
-          tradies.
+          Select one or more tradesmen to send for quote review. Each selected contractor receives
+          an RFQ when you confirm responsibility.
         </p>
 
         <div className="mt-3 space-y-2">
@@ -135,8 +143,9 @@ export function MaintenanceResponsibilityLandlordPanel({
             </p>
           ) : (
             suggestions.map((contractor, index) => {
-              const active = selectedContractorId === contractor.id;
-              const isAutoPick = active && (contractor.isTopPick || index === 0);
+              const active = selectedContractorIds.includes(contractor.id);
+              const isAutoPick =
+                active && selectedContractorIds.length === 1 && (contractor.isTopPick || index === 0);
               const isClientPreferred = preferredIds.has(contractor.id);
 
               return (
@@ -144,7 +153,7 @@ export function MaintenanceResponsibilityLandlordPanel({
                   key={contractor.id}
                   type="button"
                   disabled={disabled}
-                  onClick={() => onSelectContractor(contractor.id)}
+                  onClick={() => toggleContractor(contractor.id)}
                   className={cn(
                     'w-full rounded-lg border px-3 py-2 text-left transition-colors',
                     active
@@ -153,23 +162,31 @@ export function MaintenanceResponsibilityLandlordPanel({
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{contractor.name}</p>
-                      <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                        {[contractor.email, contractor.phone].filter(Boolean).join(' · ') || '—'}
-                      </p>
-                      {contractor.serviceTypes.length > 0 ? (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {contractor.serviceTypes.slice(0, 4).map((tag) => (
-                            <span
-                              key={`${contractor.id}-${tag}`}
-                              className="text-muted-foreground rounded bg-muted/40 px-2 py-0.5 text-[10px] font-medium ring-1 ring-border"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
+                    <div className="flex min-w-0 items-start gap-3">
+                      <input
+                        type="checkbox"
+                        readOnly
+                        checked={active}
+                        className="mt-1 size-4 accent-primary"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{contractor.name}</p>
+                        <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                          {[contractor.email, contractor.phone].filter(Boolean).join(' · ') || '—'}
+                        </p>
+                        {contractor.serviceTypes.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {contractor.serviceTypes.slice(0, 4).map((tag) => (
+                              <span
+                                key={`${contractor.id}-${tag}`}
+                                className="text-muted-foreground rounded bg-muted/40 px-2 py-0.5 text-[10px] font-medium ring-1 ring-border"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       {isClientPreferred ? (
@@ -189,6 +206,13 @@ export function MaintenanceResponsibilityLandlordPanel({
             })
           )}
         </div>
+
+        {selectedContractorIds.length > 0 ? (
+          <p className="text-muted-foreground mt-3 text-[11px]">
+            {selectedContractorIds.length} contractor
+            {selectedContractorIds.length === 1 ? '' : 's'} selected for quote review.
+          </p>
+        ) : null}
       </div>
 
       <AddHandymanDialog

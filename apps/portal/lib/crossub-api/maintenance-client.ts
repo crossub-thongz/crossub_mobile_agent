@@ -150,6 +150,39 @@ export async function assignPreferredMaintenanceContractor(
   });
 }
 
+export async function inviteMaintenanceContractorsForRfq(
+  requestId: string,
+  preferredContractorIds: string[],
+): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>(`/maintenance/requests/${requestId}/invite-contractors`, {
+    preferredContractorIds,
+    actorRole: AGENT_ROLE,
+  });
+}
+
+export async function createMaintenanceQuotation(input: {
+  maintenanceRequestId: string;
+  contractorId: string;
+  price: number;
+  currency: 'AUD';
+  scope: string;
+  availableSchedule: string;
+  lineItems?: Array<{
+    id: string;
+    description: string;
+    quantity: number;
+    unitPriceExGst: number;
+    gst: number;
+    amountIncGst: number;
+  }>;
+  comments?: string;
+}): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/quotations/create', {
+    ...input,
+    actorRole: AGENT_ROLE,
+  });
+}
+
 export async function approveMaintenanceQuotation(
   quotationId: string,
   actorRole: ApiMaintenanceUserRole = 'agent',

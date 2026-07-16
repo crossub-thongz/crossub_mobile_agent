@@ -2,6 +2,7 @@ import {
   approveMaintenanceQuotation,
   assignPreferredMaintenanceContractor,
   declineMaintenanceQuotation,
+  inviteMaintenanceContractorsForRfq,
   requestMaintenanceEvidence,
   setMaintenanceCompletionEvidence,
   setMaintenanceInvoiceUploaded,
@@ -16,6 +17,7 @@ export async function confirmMaintenanceResponsibility(
   responsibility: MaintenanceWorkflowResponsibility,
   options?: {
     preferredContractorId?: string;
+    preferredContractorIds?: string[];
     ccEmails?: string[];
   },
 ) {
@@ -24,10 +26,14 @@ export async function confirmMaintenanceResponsibility(
   });
 
   if (responsibility === 'landlord') {
-    if (!options?.preferredContractorId) {
-      throw new Error('Select a tradesman before confirming landlord responsibility.');
+    const contractorIds =
+      options?.preferredContractorIds?.filter(Boolean) ??
+      (options?.preferredContractorId ? [options.preferredContractorId] : []);
+    if (contractorIds.length === 0) {
+      throw new Error('Select at least one tradesman before confirming landlord responsibility.');
     }
-    await assignPreferredMaintenanceContractor(requestId, options.preferredContractorId);
+    await assignPreferredMaintenanceContractor(requestId, contractorIds[0]!);
+    await inviteMaintenanceContractorsForRfq(requestId, contractorIds);
     await transitionMaintenanceCase(requestId, 'pending_quotation');
   }
   // Tenant/strata: setResponsibility sends the email and the backend advances to in_progress.

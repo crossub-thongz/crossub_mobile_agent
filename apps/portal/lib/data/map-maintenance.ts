@@ -56,6 +56,7 @@ export interface MappedMaintenance extends MaintenanceRequest {
   apiRequest: ApiMaintenanceRequest;
   auditEntries: ApiMaintenanceAuditLogEntry[];
   apiQuotations: ApiQuotation[];
+  invitedContractorIds?: string[];
 }
 
 export function mapApiMaintenanceRequest(
@@ -124,6 +125,7 @@ export function mapApiMaintenanceRequest(
     apiRequest: req,
     auditEntries: reqAudit,
     apiQuotations: quotations.filter((q) => q.maintenanceRequestId === req.id),
+    invitedContractorIds: req.invitedContractorIds,
   };
 }
 

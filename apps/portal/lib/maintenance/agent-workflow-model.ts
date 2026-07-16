@@ -91,6 +91,14 @@ export function getLatestMaintenanceQuotation(
   )[0];
 }
 
+export function getMaintenanceQuotationsForCase(
+  workspaceCase: MaintenanceWorkspaceCase,
+): ApiQuotation[] {
+  return [...workspaceCase.quotations].sort(
+    (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
+  );
+}
+
 export function getSubmittedMaintenanceQuotation(
   workspaceCase: MaintenanceWorkspaceCase,
 ): ApiQuotation | undefined {

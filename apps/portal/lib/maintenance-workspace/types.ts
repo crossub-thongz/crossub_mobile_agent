@@ -29,6 +29,7 @@ export interface MaintenanceWorkspaceCase {
   dueAt: string;
   source: ApiMaintenanceRequest['source'];
   assignedContractorId?: string;
+  invitedContractorIds?: string[];
   quotationIds: string[];
   completionEvidenceUploaded?: boolean;
   tenantApprovalReceived?: boolean;

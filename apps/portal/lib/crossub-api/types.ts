@@ -35,6 +35,17 @@ export interface ApiQuotation {
   submittedAt: string;
   status: 'submitted' | 'approved' | 'declined';
   declineReason?: string;
+  lineItems?: QuotationLineItem[];
+  comments?: string;
+}
+
+export interface QuotationLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPriceExGst: number;
+  gst: number;
+  amountIncGst: number;
 }
 
 export interface ApiMaintenanceRequest {
@@ -49,6 +60,7 @@ export interface ApiMaintenanceRequest {
   dueAt: string;
   source: 'tenant_app' | 'agent_submission' | 'email';
   assignedContractorId?: string;
+  invitedContractorIds?: string[];
   quotationIds: string[];
   completionEvidenceUploaded?: boolean;
   tenantApprovalReceived?: boolean;
