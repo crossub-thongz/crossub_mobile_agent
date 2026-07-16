@@ -1,17 +1,17 @@
 'use client';
 
+import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
 import {
   auditEntriesForStep,
+  getLatestMaintenanceQuotation,
   MAINTENANCE_AGENT_STEP,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 
 export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
-  const quote = ctx.workspaceCase.quotations
-    .slice()
-    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+  const quote = getLatestMaintenanceQuotation(ctx.workspaceCase);
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
   const landlordFlow = requiresContractorFlow(ctx);
 
@@ -28,37 +28,11 @@ export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowCont
   return (
     <div className="space-y-4">
       {quote ? (
-        <section className="rounded-xl border bg-card p-4">
-          <p className="mb-2 text-sm font-semibold">Handyman quotation</p>
-          <dl className="grid gap-3 text-xs sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">Contractor</dt>
-              <dd className="font-medium">{ctx.item.contractorName ?? 'Assigned handyman'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Total (inc GST)</dt>
-              <dd className="font-semibold tabular-nums">{formatCurrency(quote.price)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Status</dt>
-              <dd className="font-medium capitalize">{quote.status}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Submitted</dt>
-              <dd className="font-medium">{formatDateTime(quote.submittedAt)}</dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">Quote description</dt>
-              <dd className="mt-1 leading-relaxed whitespace-pre-wrap">{quote.scope}</dd>
-            </div>
-            {quote.declineReason ? (
-              <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">Decline reason</dt>
-                <dd className="mt-1 text-destructive">{quote.declineReason}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </section>
+        <MaintenanceRepairQuotationPanel
+          quote={quote}
+          contractorName={ctx.item.contractorName}
+          mode="readonly"
+        />
       ) : (
         <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-sm">
           Awaiting handyman quote

@@ -92,6 +92,9 @@ function MaintenanceJobHeader({
         <SummaryField label="Order number">
           <span className="text-primary tabular-nums">{orderNumber}</span>
         </SummaryField>
+        <SummaryField label="Case reference">
+          <span className="text-muted-foreground font-mono text-xs">{item.id}</span>
+        </SummaryField>
         <SummaryField label="Urgency status">
           <PriorityBadge priority={priorityForBadge(item.priority)} />
         </SummaryField>
@@ -116,6 +119,10 @@ function MaintenanceJobHeader({
       <p className="text-primary mt-3 text-xs font-semibold">
         {item.status}
         {syncing ? <span className="text-muted-foreground font-normal"> · Updating…</span> : null}
+      </p>
+      <p className="text-muted-foreground mt-2 text-[11px] leading-relaxed">
+        Same maintenance case as the admin portal — changes here sync via the shared case ID and
+        maintenance workflow API.
       </p>
     </div>
   );
@@ -167,6 +174,7 @@ export function PropertyMaintenanceJobPanel({
         ctx={workflowCtx}
         property={property}
         onCaseUpdated={onCaseUpdated}
+        apiConnected={apiConnected}
       />
     </div>
   );

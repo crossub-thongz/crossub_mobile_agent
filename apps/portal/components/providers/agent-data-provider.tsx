@@ -12,13 +12,11 @@ import {
 
 import { useAuth } from '@/components/providers/auth-provider';
 import {
-  approveMaintenance as apiApproveMaintenance,
   createProperty as apiCreateProperty,
   endPropertyManagement as apiEndPropertyManagement,
   updateProperty as apiUpdateProperty,
   createAgency as apiCreateAgency,
   createThread as apiCreateThread,
-  declineMaintenance as apiDeclineMaintenance,
   fetchAgencies,
   fetchDocuments,
   fetchMessageThreads,
@@ -81,6 +79,11 @@ import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { useAgentStore } from '@/lib/store';
 import { displayName, formatPropertyFullAddress } from '@/lib/utils';
+import { fetchMaintenanceCase } from '@/lib/maintenance/fetch-maintenance-case';
+import {
+  approveMaintenanceQuotationCase,
+  declineMaintenanceQuotationCase,
+} from '@/lib/maintenance/maintenance-case-ops';
 import {
   hasFullManagementAccess as computeFullManagementAccess,
   isInspectionOnlyAgent as computeInspectionOnlyAgent,
@@ -1201,7 +1204,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const approveMaintenanceQuote = useCallback(
     async (requestId: string) => {
-      await apiApproveMaintenance(requestId);
+      const snapshot = await fetchMaintenanceCase(requestId);
+      const quotationId = snapshot?.mapped.submittedQuotationId;
+      if (!quotationId) {
+        throw new Error('No submitted quotation on this maintenance case');
+      }
+      await approveMaintenanceQuotationCase(quotationId);
       await refresh();
     },
     [refresh],
@@ -1209,7 +1217,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const declineMaintenanceQuote = useCallback(
     async (requestId: string, reason: string) => {
-      await apiDeclineMaintenance(requestId, reason);
+      const snapshot = await fetchMaintenanceCase(requestId);
+      const quotationId = snapshot?.mapped.submittedQuotationId;
+      if (!quotationId) {
+        throw new Error('No submitted quotation on this maintenance case');
+      }
+      await declineMaintenanceQuotationCase(quotationId, reason);
       await refresh();
     },
     [refresh],

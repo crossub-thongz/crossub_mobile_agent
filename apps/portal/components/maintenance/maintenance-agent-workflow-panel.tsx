@@ -59,11 +59,13 @@ function StepContent({
   ctx,
   property,
   onCaseUpdated,
+  apiConnected,
 }: {
   stepId: MaintenanceAgentStep;
   ctx: MaintenanceWorkflowContext;
   property?: Property;
   onCaseUpdated?: () => Promise<void>;
+  apiConnected?: boolean;
 }) {
   switch (stepId) {
     case MAINTENANCE_AGENT_STEP.JOB_CREATED:
@@ -75,7 +77,13 @@ function StepContent({
     case MAINTENANCE_AGENT_STEP.GET_QUOTE:
       return <MaintenanceGetQuotePanel ctx={ctx} />;
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
-      return <MaintenanceInProgressPanel ctx={ctx} onCaseUpdated={onCaseUpdated} />;
+      return (
+        <MaintenanceInProgressPanel
+          ctx={ctx}
+          onCaseUpdated={onCaseUpdated}
+          apiConnected={apiConnected}
+        />
+      );
     case MAINTENANCE_AGENT_STEP.JOB_COMPLETED:
       return <MaintenanceJobCompletedPanel ctx={ctx} onCaseUpdated={onCaseUpdated} />;
     default:
@@ -87,10 +95,12 @@ export function MaintenanceAgentWorkflowPanel({
   ctx,
   property,
   onCaseUpdated,
+  apiConnected = true,
 }: {
   ctx: MaintenanceWorkflowContext;
   property?: Property;
   onCaseUpdated?: () => Promise<void>;
+  apiConnected?: boolean;
 }) {
   const workflow = useMemo(() => buildMaintenanceAgentWorkflow(ctx), [ctx]);
   const [viewingStepId, setViewingStepId] = useState<MaintenanceAgentStep>(workflow.liveStepId);
@@ -164,6 +174,7 @@ export function MaintenanceAgentWorkflowPanel({
             ctx={ctx}
             property={property}
             onCaseUpdated={onCaseUpdated}
+            apiConnected={apiConnected}
           />
           <JobCaseStageEmailHistory
             emails={stageEmails}

@@ -3,12 +3,17 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { ApprovalPanel } from '@/components/agent/approval-panel';
-import { useAgentData } from '@/components/providers/agent-data-provider';
+import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
 import { Button } from '@/components/ui/button';
-import { markMaintenanceWorkComplete, markTenantStrataRepairComplete } from '@/lib/maintenance/maintenance-case-ops';
+import {
+  approveMaintenanceQuotationCase,
+  declineMaintenanceQuotationCase,
+  markMaintenanceWorkComplete,
+  markTenantStrataRepairComplete,
+} from '@/lib/maintenance/maintenance-case-ops';
 import {
   auditEntriesForStep,
+  getSubmittedMaintenanceQuotation,
   MAINTENANCE_AGENT_STEP,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
@@ -18,17 +23,19 @@ import { formatCurrency, formatDateTime } from '@/lib/utils';
 export function MaintenanceInProgressPanel({
   ctx,
   onCaseUpdated,
+  apiConnected = true,
 }: {
   ctx: MaintenanceWorkflowContext;
   onCaseUpdated?: () => Promise<void>;
+  apiConnected?: boolean;
 }) {
-  const { apiConnected, approveMaintenanceQuote, declineMaintenanceQuote } = useAgentData();
   const [busy, setBusy] = useState(false);
 
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.IN_PROGRESS);
   const landlordFlow = requiresContractorFlow(ctx);
+  const submittedQuote = getSubmittedMaintenanceQuotation(ctx.workspaceCase);
   const awaitingApproval =
-    ctx.item.requiresApproval && ctx.workspaceCase.status === 'pending_approval';
+    ctx.item.requiresApproval && ctx.workspaceCase.status === 'pending_approval' && submittedQuote;
   const directPartyInProgress =
     !landlordFlow && ctx.workspaceCase.status === 'in_progress';
   const landlordWorkInProgress =
@@ -36,14 +43,14 @@ export function MaintenanceInProgressPanel({
     ctx.workspaceCase.status === 'in_progress' &&
     !ctx.workspaceCase.completionEvidenceUploaded;
 
-  const handleApprove = async () => {
+  const handleApprove = async (quotationId: string) => {
     if (!apiConnected) {
       toast.error('Connect to the API to approve this quote.');
       return;
     }
     setBusy(true);
     try {
-      await approveMaintenanceQuote(ctx.item.id);
+      await approveMaintenanceQuotationCase(quotationId);
       toast.success('Quote approved — handyman and tenant will be notified');
       await onCaseUpdated?.();
     } catch {
@@ -53,14 +60,14 @@ export function MaintenanceInProgressPanel({
     }
   };
 
-  const handleDecline = async (reason: string) => {
+  const handleDecline = async (quotationId: string, reason: string) => {
     if (!apiConnected) {
       toast.error('Connect to the API to decline this quote.');
       return;
     }
     setBusy(true);
     try {
-      await declineMaintenanceQuote(ctx.item.id, reason);
+      await declineMaintenanceQuotationCase(quotationId, reason);
       toast.success('Quote declined — workflow returns to get quote or closes per reason');
       await onCaseUpdated?.();
     } catch {
@@ -148,17 +155,13 @@ export function MaintenanceInProgressPanel({
   return (
     <div className="space-y-4">
       {awaitingApproval ? (
-        <ApprovalPanel
-          title={ctx.workspaceCase.issueType}
-          amount={ctx.item.quoteAmount}
-          contractor={ctx.item.contractorName}
-          expiry={ctx.item.quoteExpiry}
-          recommendation={ctx.item.recommendation}
-          quoteDocumentUrl={ctx.item.quoteDocumentUrl}
-          disabled={busy}
-          onApprove={() => void handleApprove()}
-          onDecline={(reason) => void handleDecline(reason)}
-          onRequote={(reason) => void handleDecline(`Requote requested: ${reason}`)}
+        <MaintenanceRepairQuotationPanel
+          quote={submittedQuote}
+          contractorName={ctx.item.contractorName}
+          mode="review"
+          busy={busy}
+          onApprove={() => void handleApprove(submittedQuote.id)}
+          onDecline={(reason) => void handleDecline(submittedQuote.id, reason)}
         />
       ) : null}
 

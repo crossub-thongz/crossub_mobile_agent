@@ -83,12 +83,23 @@ function stepIndex(step: MaintenanceAgentStep): number {
   return MAINTENANCE_AGENT_STEP_ORDER.indexOf(step);
 }
 
-function latestQuotation(
+export function getLatestMaintenanceQuotation(
   workspaceCase: MaintenanceWorkspaceCase,
 ): ApiQuotation | undefined {
   return [...workspaceCase.quotations].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
   )[0];
+}
+
+export function getSubmittedMaintenanceQuotation(
+  workspaceCase: MaintenanceWorkspaceCase,
+): ApiQuotation | undefined {
+  const quote = getLatestMaintenanceQuotation(workspaceCase);
+  return quote?.status === 'submitted' ? quote : undefined;
+}
+
+function latestQuotation(workspaceCase: MaintenanceWorkspaceCase): ApiQuotation | undefined {
+  return getLatestMaintenanceQuotation(workspaceCase);
 }
 
 function auditMatches(

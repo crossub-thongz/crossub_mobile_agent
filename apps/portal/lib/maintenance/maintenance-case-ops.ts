@@ -1,5 +1,7 @@
 import {
+  approveMaintenanceQuotation,
   assignPreferredMaintenanceContractor,
+  declineMaintenanceQuotation,
   requestMaintenanceEvidence,
   setMaintenanceCompletionEvidence,
   setMaintenanceInvoiceUploaded,
@@ -53,6 +55,15 @@ export async function markMaintenanceWorkComplete(requestId: string) {
   await transitionMaintenanceCase(requestId, 'completed', {
     completionEvidenceUploaded: true,
   });
+}
+
+/** Approve via `/maintenance/quotations/*` — same workflow board as the admin portal. */
+export async function approveMaintenanceQuotationCase(quotationId: string) {
+  await approveMaintenanceQuotation(quotationId);
+}
+
+export async function declineMaintenanceQuotationCase(quotationId: string, reason: string) {
+  await declineMaintenanceQuotation(quotationId, reason);
 }
 
 /** @deprecated Use confirmMaintenanceResponsibility */
