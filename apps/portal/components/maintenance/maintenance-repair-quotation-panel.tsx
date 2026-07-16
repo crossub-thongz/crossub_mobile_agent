@@ -42,10 +42,9 @@ export function MaintenanceRepairQuotationPanel({
         ) : null}
       </div>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div className="min-w-0">
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[520px] text-left text-xs">
+      <div className="space-y-4 p-4">
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-[#5f9f6b] text-white">
                   <th className="w-10 px-2 py-2" />
@@ -85,7 +84,7 @@ export function MaintenanceRepairQuotationPanel({
           </div>
 
           <div className="mt-3 flex justify-end">
-            <dl className="w-full max-w-xs space-y-1 text-xs">
+            <dl className="w-full max-w-sm space-y-1 text-xs">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Subtotal</dt>
                 <dd className="font-medium tabular-nums">{formatCurrency(totals.subtotalExGst)}</dd>
@@ -104,7 +103,6 @@ export function MaintenanceRepairQuotationPanel({
               </div>
             </dl>
           </div>
-        </div>
 
         <div className="min-w-0">
           <p className="mb-2 text-sm font-semibold text-[#5f9f6b]">Comments</p>
@@ -114,7 +112,7 @@ export function MaintenanceRepairQuotationPanel({
             readOnly={!showActions}
             placeholder={showActions ? 'Optional notes or decline reason' : 'No comments'}
             className={cn(
-              'min-h-[220px] resize-none rounded-lg border text-xs',
+              'min-h-[120px] w-full resize-none rounded-lg border text-xs',
               !showActions && 'bg-muted/20',
             )}
           />

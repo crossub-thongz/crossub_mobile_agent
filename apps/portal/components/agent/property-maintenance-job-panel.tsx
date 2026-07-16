@@ -13,6 +13,8 @@ import {
   buildWorkspaceCaseFromRequest,
 } from '@/lib/maintenance-workspace/adapter';
 import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync';
+import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
+import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import type { MaintenanceRequest, Priority, Property } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
@@ -51,6 +53,7 @@ function mergeMaintenanceItem(
     quoteDocumentUrl: liveMapped.quoteDocumentUrl,
     requiresApproval: liveMapped.requiresApproval,
     timeline: liveMapped.timeline,
+    invitedContractorIds: liveMapped.invitedContractorIds,
   };
 }
 
@@ -76,14 +79,17 @@ function SummaryField({
 function MaintenanceJobHeader({
   item,
   syncing,
+  workflowCtx,
 }: {
   item: MaintenanceRequest;
   syncing?: boolean;
+  workflowCtx: MaintenanceWorkflowContext;
 }) {
   const orderNumber = maintenanceOrderNumber(item);
   const jobDescription = item.description?.trim() || item.title;
   const issueType =
     item.title?.trim() && item.title.trim() !== jobDescription ? item.title.trim() : null;
+  const resolvedResponsibility = resolveMaintenanceResponsibility(workflowCtx);
 
   return (
     <div className="rounded-xl border bg-card px-4 py-4">
@@ -99,10 +105,10 @@ function MaintenanceJobHeader({
           <PriorityBadge priority={priorityForBadge(item.priority)} />
         </SummaryField>
         <SummaryField label="Responsible party">
-          {item.responsibility === 'pending' ? (
+          {!resolvedResponsibility || resolvedResponsibility === 'pending' ? (
             <span className="text-muted-foreground text-sm font-medium">Pending assignment</span>
           ) : (
-            <ResponsibilityBadge responsibility={item.responsibility} />
+            <ResponsibilityBadge responsibility={resolvedResponsibility} />
           )}
         </SummaryField>
         <SummaryField label="Job description" className="sm:col-span-2">
@@ -169,7 +175,7 @@ export function PropertyMaintenanceJobPanel({
 
   return (
     <div className="space-y-4">
-      <MaintenanceJobHeader item={displayItem} syncing={syncing && apiConnected} />
+      <MaintenanceJobHeader item={displayItem} syncing={syncing && apiConnected} workflowCtx={workflowCtx} />
       <MaintenanceAgentWorkflowPanel
         ctx={workflowCtx}
         property={property}

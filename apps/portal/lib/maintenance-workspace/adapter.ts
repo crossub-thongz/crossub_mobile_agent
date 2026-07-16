@@ -1,4 +1,8 @@
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
+import {
+  inferInvitedContractorIdsFromAudit,
+  inferResponsibilityFromAudit,
+} from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
@@ -72,6 +76,14 @@ export function buildWorkspaceCaseFromApi(
   agent?: AuthUser | null,
 ): MaintenanceWorkspaceCase {
   const req = mapped.apiRequest;
+  const responsibility =
+    (mapped.responsibility !== 'pending' ? mapped.responsibility : undefined) ??
+    req.responsibility ??
+    inferResponsibilityFromAudit(mapped.auditEntries);
+  const invitedContractorIds =
+    req.invitedContractorIds?.length
+      ? req.invitedContractorIds
+      : inferInvitedContractorIdsFromAudit(mapped.auditEntries);
   return {
     id: req.id,
     caseRef: caseRefFor(req.id, mapped.trackingNumber),
@@ -79,13 +91,13 @@ export function buildWorkspaceCaseFromApi(
     description: req.description,
     address: req.address,
     priority: req.priority,
-    responsibility: req.responsibility,
+    responsibility,
     status: req.status,
     createdAt: req.createdAt,
     dueAt: req.dueAt,
     source: req.source,
     assignedContractorId: req.assignedContractorId,
-    invitedContractorIds: req.invitedContractorIds,
+    invitedContractorIds: invitedContractorIds.length ? invitedContractorIds : undefined,
     quotationIds: req.quotationIds ?? [],
     completionEvidenceUploaded: req.completionEvidenceUploaded,
     tenantApprovalReceived: req.tenantApprovalReceived,
@@ -123,8 +135,15 @@ export function buildWorkspaceCaseFromRequest(
   agent?: AuthUser | null,
 ): MaintenanceWorkspaceCase {
   const firstTimeline = item.timeline[0]?.at ?? new Date().toISOString();
+  const auditEntries = timelineToAudit(item);
   const responsibility =
-    item.responsibility === 'pending' ? undefined : item.responsibility;
+    item.responsibility === 'pending'
+      ? inferResponsibilityFromAudit(auditEntries)
+      : item.responsibility;
+  const invitedContractorIds =
+    item.invitedContractorIds?.length
+      ? item.invitedContractorIds
+      : inferInvitedContractorIdsFromAudit(auditEntries);
 
   return {
     id: item.id,
@@ -139,6 +158,7 @@ export function buildWorkspaceCaseFromRequest(
     dueAt: item.quoteExpiry ?? firstTimeline,
     source: 'agent_submission',
     assignedContractorId: item.contractorName ? `contractor-${item.id}` : undefined,
+    invitedContractorIds: invitedContractorIds.length ? invitedContractorIds : undefined,
     quotationIds: item.submittedQuotationId ? [item.submittedQuotationId] : [],
     completionEvidenceUploaded: item.completionEvidenceUploaded,
     invoiceUploaded: item.invoiceUploaded,
@@ -156,7 +176,7 @@ export function buildWorkspaceCaseFromRequest(
           phone: agent.phone ?? undefined,
         }
       : undefined,
-    auditEntries: timelineToAudit(item),
+    auditEntries,
     quotations: item.quoteAmount
       ? [
           {

@@ -381,6 +381,7 @@ export interface MaintenanceRequest {
   apiStatus?: string;
   priority: Priority;
   responsibility: 'landlord' | 'tenant' | 'strata' | 'pending';
+  invitedContractorIds?: string[];
   contractorName?: string;
   quoteAmount?: number;
   quoteExpiry?: string;

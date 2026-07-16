@@ -8,6 +8,10 @@ import {
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import {
+  resolveInvitedContractorIds,
+  resolveMaintenanceResponsibility,
+} from '@/lib/maintenance/infer-responsibility';
 import { formatDateTime } from '@/lib/utils';
 
 function contractorLabel(
@@ -23,7 +27,7 @@ function contractorLabel(
 export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
   const quotes = getMaintenanceQuotationsForCase(ctx.workspaceCase);
   const submittedQuotes = quotes.filter((quote) => quote.status === 'submitted');
-  const invitedIds = ctx.workspaceCase.invitedContractorIds ?? [];
+  const invitedIds = resolveInvitedContractorIds(ctx);
   const awaitingIds = invitedIds.filter(
     (id) => !submittedQuotes.some((quote) => quote.contractorId === id),
   );
@@ -31,10 +35,13 @@ export function MaintenanceGetQuotePanel({ ctx }: { ctx: MaintenanceWorkflowCont
   const landlordFlow = requiresContractorFlow(ctx);
 
   if (!landlordFlow) {
+    const responsibility = resolveMaintenanceResponsibility(ctx);
     return (
       <p className="text-muted-foreground rounded-xl border bg-card p-4 text-sm">
         Contractor quotation is not required —{' '}
-        <span className="text-foreground font-medium">{ctx.workspaceCase.responsibility}</span>{' '}
+        <span className="text-foreground font-medium capitalize">
+          {responsibility ?? 'this party'}
+        </span>{' '}
         is responsible for this repair.
       </p>
     );

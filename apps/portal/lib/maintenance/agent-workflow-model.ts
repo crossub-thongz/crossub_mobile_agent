@@ -1,5 +1,9 @@
 import type { ApiQuotation } from '@/lib/crossub-api/types';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import {
+  isLandlordMaintenanceFlow,
+  resolveMaintenanceResponsibility,
+} from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import type { MaintenanceRequest } from '@/lib/types';
 
@@ -170,7 +174,7 @@ function quoteDeclinedLoopBack(ctx: MaintenanceWorkflowContext): boolean {
 }
 
 export function requiresContractorFlow(ctx: MaintenanceWorkflowContext): boolean {
-  return ctx.workspaceCase.responsibility === 'landlord';
+  return isLandlordMaintenanceFlow(ctx);
 }
 
 export function resolveMaintenanceAgentStep(
@@ -241,7 +245,7 @@ function jobCreatedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
 }
 
 function reviewSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubProgressItem[] {
-  const responsibility = ctx.workspaceCase.responsibility;
+  const responsibility = resolveMaintenanceResponsibility(ctx);
   const electrical = isElectricalIssue(ctx);
 
   return [
@@ -270,11 +274,12 @@ function getQuoteSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubPro
   const landlordFlow = requiresContractorFlow(ctx);
 
   if (!landlordFlow) {
+    const responsibility = resolveMaintenanceResponsibility(ctx);
     return [
       {
         id: 'not_required',
-        label: `Not required — ${ctx.workspaceCase.responsibility ?? 'pending'} responsible`,
-        done: Boolean(ctx.workspaceCase.responsibility),
+        label: `Not required — ${responsibility ?? 'pending'} responsible`,
+        done: Boolean(responsibility),
       },
     ];
   }

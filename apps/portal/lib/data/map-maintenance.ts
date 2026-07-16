@@ -5,6 +5,7 @@ import type {
   ApiMaintenanceRequest,
   ApiQuotation,
 } from '@/lib/crossub-api/types';
+import { inferInvitedContractorIdsFromAudit, inferResponsibilityFromAudit } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceRequest, Priority, TimelineEntry } from '@/lib/types';
 import { maintenanceDetail } from '@/constants/routes';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
@@ -85,6 +86,12 @@ export function mapApiMaintenanceRequest(
   const reqNotifications = notifications.filter(
     (n) => n.maintenanceRequestId === req.id,
   );
+  const resolvedResponsibility =
+    req.responsibility ?? inferResponsibilityFromAudit(reqAudit) ?? 'pending';
+  const resolvedInvitedContractorIds =
+    req.invitedContractorIds?.length
+      ? req.invitedContractorIds
+      : inferInvitedContractorIdsFromAudit(reqAudit);
 
   return {
     id: req.id,
@@ -95,12 +102,12 @@ export function mapApiMaintenanceRequest(
     description: req.description,
     status: STATUS_LABEL[req.status] ?? req.status,
     priority: PRIORITY_MAP[req.priority] ?? 'normal',
-    responsibility: req.responsibility ?? 'pending',
+    responsibility: resolvedResponsibility,
     contractorName: contractor?.name,
     quoteAmount: submittedQuote?.price ?? latestQuote?.price,
     quoteExpiry: submittedQuote?.availableSchedule,
     recommendation:
-      req.responsibility === 'landlord' && submittedQuote
+      resolvedResponsibility === 'landlord' && submittedQuote
         ? submittedQuote.scope
         : undefined,
     contractorStatus: contractor
@@ -113,7 +120,7 @@ export function mapApiMaintenanceRequest(
     quoteDocumentUrl: submittedQuote ? `#quote-${submittedQuote.id}` : undefined,
     requiresApproval:
       req.status === 'pending_approval' &&
-      req.responsibility === 'landlord' &&
+      resolvedResponsibility === 'landlord' &&
       !!submittedQuote,
     timeline: auditToTimeline(reqAudit),
     source: 'api',
@@ -125,7 +132,9 @@ export function mapApiMaintenanceRequest(
     apiRequest: req,
     auditEntries: reqAudit,
     apiQuotations: quotations.filter((q) => q.maintenanceRequestId === req.id),
-    invitedContractorIds: req.invitedContractorIds,
+    invitedContractorIds: resolvedInvitedContractorIds.length
+      ? resolvedInvitedContractorIds
+      : undefined,
   };
 }
 

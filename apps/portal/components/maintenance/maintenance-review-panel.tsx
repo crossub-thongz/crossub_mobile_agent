@@ -15,6 +15,7 @@ import {
   MAINTENANCE_AGENT_STEP,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { resolveInvitedContractorIds, resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceWorkflowResponsibility } from '@/lib/crossub-api/maintenance-client';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -54,7 +55,10 @@ export function MaintenanceReviewPanel({
 
   const agencyId = property?.agencyId;
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.REVIEW);
-  const responsibility = ctx.workspaceCase.responsibility;
+  const invitedContractorIds = resolveInvitedContractorIds(ctx);
+  const responsibility =
+    resolveMaintenanceResponsibility(ctx) ??
+    (ctx.workspaceCase.responsibility as MaintenanceWorkflowResponsibility | undefined);
   const isLive =
     ctx.workspaceCase.status === 'under_review' || ctx.workspaceCase.status === 'pending_evidence';
   const awaitingEvidence = ctx.workspaceCase.status === 'pending_evidence';
@@ -246,6 +250,28 @@ export function MaintenanceReviewPanel({
               </Button>
             </div>
           </div>
+        </section>
+      ) : responsibility ? (
+        <section className="rounded-xl border bg-card p-4">
+          <p className="mb-2 text-sm font-semibold">Responsibility confirmed</p>
+          <dl className="grid gap-3 text-xs sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Assigned responsibility</dt>
+              <dd className="mt-1">
+                <ResponsibilityBadge responsibility={responsibility} />
+              </dd>
+            </div>
+            {responsibility === 'landlord' && invitedContractorIds.length > 0 ? (
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Tradesmen sent for quote review</dt>
+                <dd className="mt-1 text-sm font-medium">
+                  {invitedContractorIds.length} contractor
+                  {invitedContractorIds.length === 1 ? '' : 's'} invited
+                  {ctx.item.contractorName ? ` · Primary: ${ctx.item.contractorName}` : ''}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
         </section>
       ) : null}
 
