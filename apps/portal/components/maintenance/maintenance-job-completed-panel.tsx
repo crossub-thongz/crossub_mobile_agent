@@ -35,7 +35,6 @@ export function MaintenanceJobCompletedPanel({
       {showArchive ? (
         <MaintenanceCompletedCaseArchive
           requestId={ctx.item.id}
-          attachments={attachments}
           quotations={quotations}
           contractors={contractors}
           invitedContractors={ctx.item.invitedContractors}

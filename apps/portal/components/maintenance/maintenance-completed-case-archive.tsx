@@ -1,29 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, ChevronDown, FileText, ImageIcon } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ImageIcon } from 'lucide-react';
 
 import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
-import type {
-  ApiMaintenanceAttachment,
-  ApiQuotation,
-  QuotationReviewRecord,
-} from '@/lib/crossub-api/types';
+import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
 import { resolveContractorDisplayName } from '@/lib/maintenance/resolve-contractor-display';
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
-
-type AttachmentKind = ApiMaintenanceAttachment['kind'];
-
-const ATTACHMENT_KIND_LABEL: Record<AttachmentKind, string> = {
-  initial_evidence: 'Intake photos & videos',
-  evidence: 'Completion evidence',
-  invoice: 'Invoice',
-  quote: 'Contractor quote files',
-};
-
-function attachmentPreviewUrl(att: ApiMaintenanceAttachment): string {
-  return att.previewUrl ?? `/api/maintenance/attachments/${att.id}/preview`;
-}
 
 function quoteStatusLabel(status: ApiQuotation['status']): string {
   switch (status) {
@@ -45,46 +28,6 @@ function quoteStatusClass(status: ApiQuotation['status']): string {
     default:
       return 'bg-amber-500/10 text-amber-800 dark:text-amber-200';
   }
-}
-
-function AttachmentGrid({
-  attachments,
-  onPreview,
-}: {
-  attachments: ApiMaintenanceAttachment[];
-  onPreview: (att: ApiMaintenanceAttachment) => void;
-}) {
-  if (attachments.length === 0) {
-    return <p className="text-muted-foreground text-xs">No files uploaded.</p>;
-  }
-
-  return (
-    <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
-      {attachments.map((att) => {
-        const previewUrl = attachmentPreviewUrl(att);
-        const isImage = att.mimeType.startsWith('image/');
-        return (
-          <button
-            key={att.id}
-            type="button"
-            onClick={() => onPreview(att)}
-            className="relative h-14 overflow-hidden rounded-md border bg-muted text-left hover:bg-secondary/20"
-            title={att.fileName}
-          >
-            {isImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={previewUrl} alt={att.fileName} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-0.5 px-1">
-                <FileText className="text-muted-foreground/60 size-4" />
-                <span className="text-muted-foreground line-clamp-2 text-[9px]">{att.fileName}</span>
-              </div>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
 }
 
 function ContractorQuotesCollapsible({
@@ -193,32 +136,22 @@ function ContractorQuotesCollapsible({
 
 export function MaintenanceCompletedCaseArchive({
   requestId,
-  attachments,
   quotations,
   contractors,
   invitedContractors,
   assignedContractorId,
   assignedContractorName,
   quotationReviews,
-  onPreviewAttachment,
 }: {
   requestId: string;
-  attachments: ApiMaintenanceAttachment[];
   quotations: ApiQuotation[];
   contractors: Array<{ id: string; name: string }>;
   invitedContractors?: Array<{ id: string; name: string }>;
   assignedContractorId?: string;
   assignedContractorName?: string;
   quotationReviews?: QuotationReviewRecord[];
-  onPreviewAttachment?: (att: ApiMaintenanceAttachment) => void;
 }) {
   const [expandedContractorId, setExpandedContractorId] = useState<string | null>(null);
-  const [previewAttachment, setPreviewAttachment] = useState<ApiMaintenanceAttachment | null>(null);
-
-  const caseAttachments = useMemo(
-    () => attachments.filter((a) => a.maintenanceRequestId === requestId),
-    [attachments, requestId],
-  );
 
   const caseQuotations = useMemo(
     () =>
@@ -232,19 +165,6 @@ export function MaintenanceCompletedCaseArchive({
     () => caseQuotations.find((q) => q.status === 'approved'),
     [caseQuotations],
   );
-
-  const attachmentsByKind = useMemo(() => {
-    const groups: Record<AttachmentKind, ApiMaintenanceAttachment[]> = {
-      initial_evidence: [],
-      evidence: [],
-      invoice: [],
-      quote: [],
-    };
-    for (const att of caseAttachments) {
-      groups[att.kind].push(att);
-    }
-    return groups;
-  }, [caseAttachments]);
 
   const contractorGroups = useMemo(() => {
     const ids = new Set<string>();
@@ -280,22 +200,13 @@ export function MaintenanceCompletedCaseArchive({
     quotationReviews,
   ]);
 
-  const handlePreview = (att: ApiMaintenanceAttachment) => {
-    if (onPreviewAttachment) {
-      onPreviewAttachment(att);
-      return;
-    }
-    setPreviewAttachment(att);
-  };
-
   const hasQuotes = caseQuotations.length > 0;
-  const hasAttachments = caseAttachments.length > 0;
 
-  if (!hasQuotes && !hasAttachments) {
+  if (!hasQuotes) {
     return (
       <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center">
         <ImageIcon className="text-muted-foreground/40 mx-auto size-8" />
-        <p className="text-muted-foreground mt-2 text-sm">No attachments or quotations recorded.</p>
+        <p className="text-muted-foreground mt-2 text-sm">No quotations recorded.</p>
       </div>
     );
   }
@@ -341,92 +252,37 @@ export function MaintenanceCompletedCaseArchive({
         </section>
       ) : null}
 
-      {hasQuotes ? (
-        <section className="rounded-xl border bg-card">
-          <div className="border-b px-4 py-3">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-              Contractor quotations
-            </p>
-            <p className="text-muted-foreground mt-0.5 text-xs">
-              All quotes received for this job, including declined submissions.
-            </p>
-          </div>
-          <div className="space-y-2 p-3">
-            {contractorGroups.length === 0 ? (
-              <p className="text-muted-foreground px-1 text-xs">No contractor quotes on file.</p>
-            ) : (
-              contractorGroups.map((group) => (
-                <ContractorQuotesCollapsible
-                  key={group.contractorId}
-                  contractorName={group.contractorName}
-                  quotes={group.quotes}
-                  review={group.review}
-                  expanded={expandedContractorId === group.contractorId}
-                  onToggle={() =>
-                    setExpandedContractorId((current) =>
-                      current === group.contractorId ? null : group.contractorId,
-                    )
-                  }
-                  isApprovedContractor={group.isApprovedContractor}
-                />
-              ))
-            )}
-          </div>
-        </section>
-      ) : null}
-
-      {hasAttachments ? (
-        <section className="rounded-xl border bg-card">
-          <div className="border-b px-4 py-3">
-            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-              Uploaded attachments
-            </p>
-          </div>
-          <div className="space-y-4 p-4">
-            {(Object.keys(attachmentsByKind) as AttachmentKind[]).map((kind) => {
-              const items = attachmentsByKind[kind];
-              if (items.length === 0) return null;
-              return (
-                <div key={kind}>
-                  <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-                    {ATTACHMENT_KIND_LABEL[kind]} ({items.length})
-                  </p>
-                  <AttachmentGrid attachments={items} onPreview={handlePreview} />
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      {previewAttachment ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setPreviewAttachment(null)}
-          role="presentation"
-        >
-          <div
-            className="max-h-[90vh] max-w-3xl overflow-auto rounded-lg bg-background p-2"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-          >
-            {previewAttachment.mimeType.startsWith('image/') ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={attachmentPreviewUrl(previewAttachment)}
-                alt={previewAttachment.fileName}
-                className="max-h-[80vh] w-full object-contain"
-              />
-            ) : (
-              <iframe
-                src={attachmentPreviewUrl(previewAttachment)}
-                title={previewAttachment.fileName}
-                className="h-[80vh] w-full min-w-[min(90vw,640px)]"
-              />
-            )}
-          </div>
+      <section className="rounded-xl border bg-card">
+        <div className="border-b px-4 py-3">
+          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+            Contractor quotations
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            All quotes received for this job, including declined submissions.
+          </p>
         </div>
-      ) : null}
+        <div className="space-y-2 p-3">
+          {contractorGroups.length === 0 ? (
+            <p className="text-muted-foreground px-1 text-xs">No contractor quotes on file.</p>
+          ) : (
+            contractorGroups.map((group) => (
+              <ContractorQuotesCollapsible
+                key={group.contractorId}
+                contractorName={group.contractorName}
+                quotes={group.quotes}
+                review={group.review}
+                expanded={expandedContractorId === group.contractorId}
+                onToggle={() =>
+                  setExpandedContractorId((current) =>
+                    current === group.contractorId ? null : group.contractorId,
+                  )
+                }
+                isApprovedContractor={group.isApprovedContractor}
+              />
+            ))
+          )}
+        </div>
+      </section>
     </div>
   );
 }

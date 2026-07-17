@@ -168,7 +168,7 @@ export function MaintenanceAgentWorkflowPanel({
 
       <MaintenanceJobTypeSummary item={item} workflowCtx={ctx} syncing={syncing} />
 
-      <MaintenanceJobIntakeSummary ctx={ctx} />
+      <MaintenanceJobIntakeSummary ctx={ctx} attachments={attachments} />
 
       <div className="rounded-xl border bg-card">
         <div
