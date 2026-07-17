@@ -46,6 +46,14 @@ export function WorkspacePeoplePanel({
   );
 }
 
+function isUrgentPriority(priority: string | null): boolean {
+  return (
+    priority === 'critical' ||
+    priority === 'high' ||
+    priority === 'urgent'
+  );
+}
+
 export function WorkspaceMetaPanel({
   priority,
   responsibility,
@@ -53,18 +61,19 @@ export function WorkspaceMetaPanel({
   statusBoxClassName,
   statusBoxContent,
 }: MetaProps) {
+  const urgent = isUrgentPriority(priority);
   return (
     <div className="grid grid-cols-2 gap-2">
       <div
         className={`rounded-lg border bg-background p-2 ${
-          priority === 'critical' ? 'border-destructive/40 bg-destructive/5' : 'border-border'
+          urgent ? 'border-destructive/40 bg-destructive/5' : 'border-border'
         }`}
       >
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Priority
         </p>
         <div className="mt-1.5">
-          <PriorityBadge priority={priority ?? 'low'} />
+          <PriorityBadge priority={priority ?? 'normal'} />
         </div>
       </div>
 

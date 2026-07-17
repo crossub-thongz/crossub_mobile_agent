@@ -9,17 +9,9 @@ import {
 } from '@/lib/maintenance/agent-workflow-model';
 import { formatDateTime } from '@/lib/utils';
 
-function emailSummary(ctx: MaintenanceWorkflowContext): string {
-  const fromNotifications = ctx.workspaceCase.notifications.find(
-    (n) => n.channel === 'email',
-  );
-  if (fromNotifications?.title) return fromNotifications.title;
-  if (ctx.workspaceCase.tenant?.email) return ctx.workspaceCase.tenant.email;
-  return 'No email records yet';
-}
-
 export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.JOB_CREATED);
+  const tenant = ctx.workspaceCase.tenant;
 
   return (
     <div className="space-y-4">
@@ -34,9 +26,17 @@ export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowCo
             <dt className="text-muted-foreground">Date &amp; time created</dt>
             <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
           </div>
-          <div className="sm:col-span-2">
+          <div>
+            <dt className="text-muted-foreground">Tenant contact</dt>
+            <dd className="font-medium">{tenant?.name?.trim() || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Phone</dt>
+            <dd className="font-medium">{tenant?.phone?.trim() || '—'}</dd>
+          </div>
+          <div>
             <dt className="text-muted-foreground">Email</dt>
-            <dd className="font-medium break-words">{emailSummary(ctx)}</dd>
+            <dd className="font-medium break-words">{tenant?.email?.trim() || '—'}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Issue type</dt>

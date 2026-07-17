@@ -131,6 +131,7 @@ export function WorkflowProgressRail<T extends string>({
   steps,
   labels,
   currentStep,
+  liveStep,
   getStepState,
   isStepCompleted,
   onStepClick,
@@ -145,6 +146,8 @@ export function WorkflowProgressRail<T extends string>({
   steps: readonly T[];
   labels: Record<T, string>;
   currentStep: T;
+  /** Actual workflow position — used to show a LIVE badge when browsing history. */
+  liveStep?: T;
   getStepState: (step: T) => WorkflowStepVisualState;
   isStepCompleted: (step: T) => boolean;
   onStepClick?: (step: T) => void;
@@ -207,24 +210,43 @@ export function WorkflowProgressRail<T extends string>({
           const state = getStepState(step);
           const label = labels[step];
           const isViewing = step === currentStep;
+          const isLive = liveStep != null && step === liveStep;
           const enabled = isStepEnabled?.(step) ?? true;
           const hasError = stepHasError?.(step) ?? false;
 
           const column = (
             <>
-              <StepMarker state={state} hasError={hasError} size={size} tone={tone} />
+              <span
+                className={cn(
+                  'flex flex-col items-center rounded-full',
+                  isViewing && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
+                )}
+              >
+                <StepMarker state={state} hasError={hasError} size={size} tone={tone} />
+              </span>
               <span
                 className={cn(
                   sizeStyle.label,
                   hasError
                     ? 'text-rose-600 dark:text-rose-400'
-                    : state === 'upcoming'
-                      ? 'text-muted-foreground/70'
-                      : toneStyle.labelActive,
+                    : isViewing
+                      ? 'font-bold text-primary'
+                      : state === 'upcoming'
+                        ? 'text-muted-foreground/70'
+                        : toneStyle.labelActive,
                 )}
               >
                 {label}
               </span>
+              {isViewing ? (
+                <span className="text-primary mt-0.5 text-[7px] font-bold uppercase tracking-wider">
+                  Viewing
+                </span>
+              ) : isLive ? (
+                <span className="mt-0.5 text-[7px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  Live
+                </span>
+              ) : null}
             </>
           );
 
@@ -238,6 +260,7 @@ export function WorkflowProgressRail<T extends string>({
                 className={cn(
                   'flex min-w-0 flex-1 flex-col items-center rounded-lg px-0.5 py-0.5 transition-colors',
                   enabled ? 'hover:bg-secondary/30' : 'cursor-not-allowed opacity-60',
+                  isViewing && 'bg-primary/5',
                 )}
                 aria-current={isViewing ? 'step' : undefined}
                 aria-label={label}
@@ -250,7 +273,10 @@ export function WorkflowProgressRail<T extends string>({
           return (
             <div
               key={step}
-              className="flex min-w-0 flex-1 flex-col items-center px-0.5"
+              className={cn(
+                'flex min-w-0 flex-1 flex-col items-center px-0.5',
+                isViewing && 'bg-primary/5 rounded-lg',
+              )}
               aria-current={isViewing ? 'step' : undefined}
             >
               {column}

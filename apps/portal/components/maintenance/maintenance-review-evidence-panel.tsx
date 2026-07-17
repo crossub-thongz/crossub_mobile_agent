@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, FileText, ImagePlus, Loader2, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,6 +48,12 @@ export function MaintenanceReviewEvidencePanel({
     () => attachments.filter((a) => a.maintenanceRequestId === requestId && isReviewEvidenceAttachment(a)),
     [attachments, requestId],
   );
+
+  useEffect(() => {
+    if (!canManage && evidenceAttachments.length > 0) {
+      setExpanded(true);
+    }
+  }, [canManage, evidenceAttachments.length, requestId]);
 
   const issueType =
     title?.trim() && title.trim() !== description.trim() ? title.trim() : null;

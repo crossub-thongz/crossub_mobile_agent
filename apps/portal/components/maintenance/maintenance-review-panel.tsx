@@ -134,16 +134,13 @@ export function MaintenanceReviewPanel({
   const confirmDisabled =
     !pendingResponsibility || busy || (isLandlord && pendingContractorIds.length === 0);
 
-  const intakeEmail =
-    ctx.workspaceCase.notifications.find((n) => n.channel === 'email')?.title ??
-    ctx.workspaceCase.tenant?.email ??
-    'No email records yet';
+  const tenant = ctx.workspaceCase.tenant;
 
   return (
     <div className="space-y-4">
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Case intake</p>
-        <dl className="grid gap-3 text-xs sm:grid-cols-3">
+        <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">Created by</dt>
             <dd className="font-medium">{maintenanceSourceLabel(ctx.workspaceCase.source)}</dd>
@@ -153,8 +150,16 @@ export function MaintenanceReviewPanel({
             <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
           </div>
           <div>
+            <dt className="text-muted-foreground">Tenant contact</dt>
+            <dd className="font-medium">{tenant?.name?.trim() || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Phone</dt>
+            <dd className="font-medium">{tenant?.phone?.trim() || '—'}</dd>
+          </div>
+          <div className="sm:col-span-2">
             <dt className="text-muted-foreground">Email</dt>
-            <dd className="font-medium break-words">{intakeEmail}</dd>
+            <dd className="font-medium break-words">{tenant?.email?.trim() || '—'}</dd>
           </div>
         </dl>
       </section>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
@@ -21,6 +22,7 @@ import {
   type MaintenanceAgentStep,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { cn } from '@/lib/utils';
 
 function StepContent({
   stepId,
@@ -139,13 +141,13 @@ export function MaintenanceAgentWorkflowPanel({
         steps={MAINTENANCE_AGENT_STEP_ORDER}
         labels={MAINTENANCE_AGENT_STEP_LABEL}
         currentStep={viewingStepId}
+        liveStep={workflow.liveStepId}
         progressFillIndex={isLiveStep ? workflow.progressFillIndex : undefined}
         getStepState={(stepId) => {
           const step = workflow.steps.find((s) => s.id === stepId);
           if (!step) return 'upcoming';
           if (stepId === viewingStepId) return 'current';
           if (step.status === 'done') return 'completed';
-          if (step.status === 'active') return 'current';
           return 'upcoming';
         }}
         isStepCompleted={(stepId) =>
@@ -159,14 +161,53 @@ export function MaintenanceAgentWorkflowPanel({
       />
 
       <div className="rounded-xl border bg-card">
-        <div className="border-b px-4 py-3">
-          <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-            {isLiveStep ? 'Current step' : 'Step detail'}
-          </p>
-          <p className="mt-0.5 text-sm font-semibold">{MAINTENANCE_AGENT_STEP_TITLE[viewingStepId]}</p>
-          {isLiveStep && viewingStep?.workflowName ? (
-            <p className="text-muted-foreground mt-1 text-xs">{viewingStep.workflowName}</p>
-          ) : null}
+        <div
+          className={cn(
+            'border-b px-4 py-3',
+            isLiveStep ? 'bg-primary/[0.04]' : 'bg-amber-500/[0.06]',
+          )}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p
+                className={cn(
+                  'text-[10px] font-semibold uppercase tracking-wide',
+                  isLiveStep ? 'text-primary' : 'text-amber-700 dark:text-amber-300',
+                )}
+              >
+                {isLiveStep ? 'Current step' : 'Viewing step'}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold">
+                {MAINTENANCE_AGENT_STEP_TITLE[viewingStepId]}
+              </p>
+              {!isLiveStep ? (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Live step:{' '}
+                  <span className="text-foreground font-medium">
+                    {MAINTENANCE_AGENT_STEP_TITLE[workflow.liveStepId]}
+                  </span>
+                  {' · '}
+                  read-only history
+                </p>
+              ) : viewingStep?.workflowName ? (
+                <p className="text-muted-foreground mt-1 text-xs">{viewingStep.workflowName}</p>
+              ) : null}
+            </div>
+            {!isLiveStep ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0 text-xs"
+                onClick={() => {
+                  setViewingStepId(workflow.liveStepId);
+                  followLiveStepRef.current = true;
+                }}
+              >
+                Back to live step
+              </Button>
+            ) : null}
+          </div>
         </div>
         <div className="space-y-4 p-4">
           <StepContent

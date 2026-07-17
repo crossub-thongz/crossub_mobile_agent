@@ -1,3 +1,4 @@
+import type { ApiMaintenanceParty } from '@/lib/crossub-api/types';
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
 import {
   inferInvitedContractorIdsFromAudit,
@@ -8,12 +9,7 @@ import type { AuthUser } from '@/lib/auth-types';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
-import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceStatus } from './types';
-
-function caseRefFor(id: string, orderNumber?: string | null): string {
-  if (orderNumber?.trim()) return orderNumber.trim();
-  return workflowCaseReferenceLabel(id, 'maintenance');
-}
+import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceParty, MaintenanceWorkspaceStatus } from './types';
 
 const REQUEST_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   'under review': 'under_review',
@@ -53,6 +49,27 @@ function mapRequestPriority(priority: string): MaintenanceWorkspaceCase['priorit
   return REQUEST_PRIORITY_MAP[priority] ?? 'medium';
 }
 
+function tenantFromProperty(property: Property): MaintenanceWorkspaceParty {
+  return {
+    name: property.tenantName,
+    email: property.tenantContact.email,
+    phone: property.tenantContact.phone,
+  };
+}
+
+function resolveWorkspaceTenant(
+  fromRequest?: ApiMaintenanceParty,
+  property?: Property,
+): MaintenanceWorkspaceParty | undefined {
+  const fromProperty = property ? tenantFromProperty(property) : undefined;
+  if (!fromRequest && !fromProperty) return undefined;
+  return {
+    name: fromRequest?.name?.trim() || fromProperty?.name || '—',
+    email: fromRequest?.email?.trim() || fromProperty?.email,
+    phone: fromRequest?.phone?.trim() || fromProperty?.phone,
+  };
+}
+
 function timelineToAudit(
   item: MaintenanceRequest,
 ): MaintenanceWorkspaceCase['auditEntries'] {
@@ -87,7 +104,7 @@ export function buildWorkspaceCaseFromApi(
       : inferInvitedContractorIdsFromAudit(mapped.auditEntries);
   return {
     id: req.id,
-    caseRef: caseRefFor(req.id, mapped.trackingNumber),
+    caseRef: workflowCaseReferenceLabel(req.id, 'maintenance'),
     issueType: req.issueType,
     description: req.description,
     address: req.address,
@@ -105,13 +122,7 @@ export function buildWorkspaceCaseFromApi(
     completionEvidenceUploaded: req.completionEvidenceUploaded,
     tenantApprovalReceived: req.tenantApprovalReceived,
     invoiceUploaded: req.invoiceUploaded,
-    tenant: property
-      ? {
-          name: property.tenantName,
-          email: property.tenantContact.email,
-          phone: property.tenantContact.phone,
-        }
-      : undefined,
+    tenant: resolveWorkspaceTenant(req.tenant, property),
     agent: agent
       ? {
           name: [agent.firstName, agent.lastName].filter(Boolean).join(' ') || agent.email,
@@ -150,7 +161,7 @@ export function buildWorkspaceCaseFromRequest(
 
   return {
     id: item.id,
-    caseRef: caseRefFor(item.id, item.trackingNumber),
+    caseRef: workflowCaseReferenceLabel(item.id, 'maintenance'),
     issueType: item.title,
     description: item.description,
     address: item.propertyAddress,
@@ -165,13 +176,7 @@ export function buildWorkspaceCaseFromRequest(
     quotationIds: item.submittedQuotationId ? [item.submittedQuotationId] : [],
     completionEvidenceUploaded: item.completionEvidenceUploaded,
     invoiceUploaded: item.invoiceUploaded,
-    tenant: property
-      ? {
-          name: property.tenantName,
-          email: property.tenantContact.email,
-          phone: property.tenantContact.phone,
-        }
-      : undefined,
+    tenant: resolveWorkspaceTenant(undefined, property),
     agent: agent
       ? {
           name: [agent.firstName, agent.lastName].filter(Boolean).join(' ') || agent.email,

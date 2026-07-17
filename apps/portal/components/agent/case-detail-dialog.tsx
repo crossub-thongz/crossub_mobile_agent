@@ -15,7 +15,7 @@ export function CaseDetailDialog({
   open: boolean;
   onClose: () => void;
   title: string;
-  subtitle?: string;
+      subtitle?: ReactNode;
   children: ReactNode;
   size?: 'default' | 'wide' | 'xl' | '2xl';
   headerActions?: ReactNode;
@@ -46,7 +46,7 @@ export function CaseDetailDialog({
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold">{title}</h2>
             {subtitle ? (
-              <p className="text-muted-foreground truncate text-xs">{subtitle}</p>
+              <p className="truncate text-xs">{subtitle}</p>
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-1">

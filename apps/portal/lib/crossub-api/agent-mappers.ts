@@ -356,7 +356,7 @@ export function mapAgentMaintenance(
     const body = m.categoryName ? (m.description ?? '') : parsed.body || (m.description ?? '');
     return {
       id: m.id,
-      trackingNumber: m.orderNumber ?? workflowCaseReferenceLabel(m.id, 'maintenance'),
+      trackingNumber: workflowCaseReferenceLabel(m.id, 'maintenance'),
       propertyId: m.propertyId ?? '',
       propertyAddress: m.propertyAddress,
       title: issueType,

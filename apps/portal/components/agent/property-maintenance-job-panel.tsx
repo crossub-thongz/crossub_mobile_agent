@@ -18,18 +18,7 @@ import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflo
 import type { MaintenanceRequest, Priority, Property } from '@/lib/types';
 
 function priorityForBadge(priority: Priority): string {
-  switch (priority) {
-    case 'urgent':
-      return 'critical';
-    case 'high':
-      return 'high';
-    case 'normal':
-      return 'medium';
-    case 'low':
-      return 'low';
-    default:
-      return 'medium';
-  }
+  return priority === 'urgent' || priority === 'high' ? 'urgent' : 'normal';
 }
 
 function mergeMaintenanceItem(

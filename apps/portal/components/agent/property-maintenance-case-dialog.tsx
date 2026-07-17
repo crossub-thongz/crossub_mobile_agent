@@ -28,14 +28,19 @@ export function PropertyMaintenanceCaseDialog({
 }) {
   if (!request) return null;
 
-  const name = request.trackingNumber || workflowCaseReferenceLabel(request.id, 'maintenance');
+  const orderRef = workflowCaseReferenceLabel(request.id, 'maintenance');
 
   return (
     <CaseDetailDialog
       open={open}
       onClose={onClose}
       title="Maintenance"
-      subtitle={`${name} · ${request.status}`}
+      subtitle={
+        <>
+          <span className="text-primary font-medium tabular-nums">{orderRef}</span>
+          <span className="text-muted-foreground"> · {request.status}</span>
+        </>
+      }
       size={JOB_CASE_DIALOG_SIZE}
       headerActions={
         canDelete && onDelete ? (
