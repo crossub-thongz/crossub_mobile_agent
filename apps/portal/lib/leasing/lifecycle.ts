@@ -101,6 +101,12 @@ export function hasLeasingIngoingCase(detail: LeasingPropertyDetail): boolean {
   return Boolean(ing.inspectionId || ing.scheduledTime);
 }
 
+/** Auto-created ingoing order exists but date/inspector not set yet. */
+export function isLeasingIngoingPendingSchedule(detail: LeasingPropertyDetail): boolean {
+  const ing = detail.onboarding.ingoingInspection;
+  return Boolean(ing.inspectionId) && !ing.scheduledTime;
+}
+
 export function deriveIngoingInspectionStepStatus(detail: LeasingPropertyDetail): LeasingItemStatus {
   if (!isOnboardingProceduresComplete(detail)) {
     return LEASING_ITEM_STATUS.NOT_STARTED;
@@ -133,7 +139,10 @@ export function showLeasingIngoingNextStepPanel(detail: LeasingPropertyDetail): 
 }
 
 export function isLeasingReadyForIngoingHandoff(detail: LeasingPropertyDetail): boolean {
-  return showLeasingIngoingNextStepPanel(detail) && !hasLeasingIngoingCase(detail);
+  return (
+    showLeasingIngoingNextStepPanel(detail) &&
+    (!hasLeasingIngoingCase(detail) || isLeasingIngoingPendingSchedule(detail))
+  );
 }
 
 export function deriveOnboardingStatus(detail: LeasingPropertyDetail): LeasingItemStatus {

@@ -551,8 +551,8 @@ export function PropertyWorkflowCreateDialog({
         });
         toast.success(
           crossubConductsOpen
-            ? 'Letting cycle created — open inspection queued for CROSSUB'
-            : 'Letting cycle created — you conduct the open inspection',
+            ? 'Letting cycle created — open inspection queued; ingoing order created pending schedule'
+            : 'Letting cycle created — you conduct the open inspection; ingoing order created pending schedule',
         );
         if (apiConnected) {
           try {
@@ -700,14 +700,14 @@ export function PropertyWorkflowCreateDialog({
           }
           toast.success(
             crossubConductsOpen
-              ? 'End leasing case and new leasing order created — open inspection queued for CROSSUB'
-              : 'End leasing case and new leasing order created — you conduct the open inspection',
+              ? 'End leasing and new leasing created — open inspection queued; ingoing and outgoing orders created'
+              : 'End leasing and new leasing created — you conduct open inspection; ingoing and outgoing orders created',
           );
         } catch (leasingErr) {
           toast.warning(
             leasingErr instanceof Error
-              ? `End leasing created, but new leasing order failed: ${leasingErr.message}`
-              : 'End leasing created, but new leasing order could not be created',
+              ? `End leasing created (outgoing order created), but new leasing order failed: ${leasingErr.message}`
+              : 'End leasing created (outgoing order created), but new leasing order could not be created',
           );
         }
 

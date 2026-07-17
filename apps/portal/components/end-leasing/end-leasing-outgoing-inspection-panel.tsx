@@ -94,7 +94,13 @@ export function EndLeasingOutgoingInspectionPanel({
   const attendanceLabel =
     tenantAttendance === 'yes' ? 'Yes' : tenantAttendance === 'no' ? 'No' : 'Pending';
 
-  const statusLabel = inspectionDone ? 'Completed' : inspection.inspectionDate ? 'Scheduled' : 'Not scheduled';
+  const statusLabel = inspectionDone
+    ? 'Completed'
+    : inspection.inspectionDate
+      ? 'Scheduled'
+      : inspection.inspectionId
+        ? 'Pending'
+        : 'Not scheduled';
 
   const setAttendance = async (attendance: 'yes' | 'no') => {
     if (attendance === tenantAttendance) return;
@@ -185,7 +191,31 @@ export function EndLeasingOutgoingInspectionPanel({
             </div>
           </div>
         ) : (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 space-y-3">
+            {!inspection.inspectionDate && !inspectionDone ? (
+              <div
+                className={cn(
+                  'rounded-xl border border-teal-500/30 bg-teal-500/[0.06] p-4',
+                  LEASING_UI.ingoingTabGlow,
+                )}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    Outgoing order created — schedule the inspection date and assign an inspector.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={cn('h-9 w-full shrink-0 gap-1.5 sm:w-auto', LEASING_UI.ingoingBtn)}
+                    disabled={createBusy}
+                    onClick={() => void createOutgoingInspection()}
+                  >
+                    {createBusy ? 'Scheduling…' : 'Schedule outgoing inspection'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               size="sm"
@@ -207,6 +237,7 @@ export function EndLeasingOutgoingInspectionPanel({
                 Mark inspection completed
               </Button>
             ) : null}
+            </div>
           </div>
         )}
       </section>

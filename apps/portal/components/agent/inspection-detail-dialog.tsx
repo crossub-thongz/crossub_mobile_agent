@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { IngoingInspectionAgentDetail } from '@/components/inspections/ingoing-inspection-agent-detail';
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -63,8 +64,12 @@ export function InspectionDetailDialog({
         subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
         size={size}
       >
-        <AgentFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
-        {!isOutgoing ? (
+        {isOutgoing ? (
+          <AgentFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
+        ) : (
+          <IngoingInspectionAgentDetail inspection={inspection} apiConnected={apiConnected} />
+        )}
+        {isOutgoing ? (
           <JobCaseStageEmailHistory emails={stageEmails} title={emailTitle} />
         ) : null}
       </CaseDetailDialog>

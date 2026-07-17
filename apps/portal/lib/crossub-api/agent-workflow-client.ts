@@ -212,3 +212,17 @@ export async function createAgentIngoingInspection(
     body: JSON.stringify(body),
   });
 }
+
+export async function cancelAgentIngoingInspection(
+  propertyId: string,
+  inspectionId: string,
+  body: { reason: string },
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/inspection/ingoing/${encodeURIComponent(inspectionId)}/cancel`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}

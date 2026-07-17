@@ -16,6 +16,7 @@ import {
 } from '@/lib/leasing/leasing-ingoing-handoff';
 import {
   hasLeasingIngoingCase,
+  isLeasingIngoingPendingSchedule,
   isLeasingReadyForIngoingHandoff,
   showLeasingIngoingNextStepPanel,
 } from '@/lib/leasing/lifecycle';
@@ -44,6 +45,7 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
   const cycleId = cycle?.id;
   const ing = detail.onboarding.ingoingInspection;
   const caseExists = hasLeasingIngoingCase(detail);
+  const pendingSchedule = isLeasingIngoingPendingSchedule(detail);
   const canStart = isLeasingReadyForIngoingHandoff(detail);
 
   const openJobCase = (inspectionId: string) => {
@@ -73,7 +75,8 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
           assignee: 'Task pool',
         });
         applyCycleView(detail.propertyId, view);
-        inspectionId = view.onboarding?.ingoingInspection?.inspectionId ?? null;
+        inspectionId =
+          view.onboarding?.ingoingInspection?.inspectionId ?? ing.inspectionId ?? null;
         await refresh();
       } else if (apiConnected) {
         const approved = detail.applicationsDetail.find(
@@ -156,9 +159,9 @@ export function LeasingIngoingNextStepPanel({ detail }: { detail: LeasingPropert
             </p>
             {caseExists ? (
               <p className="text-muted-foreground text-xs">
-                Ingoing inspection scheduled
-                {ing.scheduledTime ? ` for ${formatDateTime(ing.scheduledTime)}` : ''}
-                {ing.assignee ? ` — ${ing.assignee}` : ''}. Open the job case to track progress.
+                {pendingSchedule
+                  ? 'Ingoing order created — schedule the inspection date and assign an inspector from the task pool.'
+                  : `Ingoing inspection scheduled${ing.scheduledTime ? ` for ${formatDateTime(ing.scheduledTime)}` : ''}${ing.assignee ? ` — ${ing.assignee}` : ''}. Open the job case to track progress.`}
               </p>
             ) : (
               <p className="text-muted-foreground text-xs">

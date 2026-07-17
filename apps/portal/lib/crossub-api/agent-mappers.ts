@@ -43,6 +43,7 @@ import {
 } from '@/constants/api-enums';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatPropertyFullAddress } from '@/lib/utils';
+import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
 import type {
   AgentArchiveView,
   ArchivedEndLeasingCase,
@@ -289,7 +290,7 @@ function inspectionReportStatus(
 export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
   return dtos.map((i) => {
     const type = INSPECTION_TYPE_VIEW[i.type] ?? 'ROUTINE';
-    return {
+    const inspectionRow: Inspection = {
       id: i.id,
       trackingNumber: inspectionReferenceLabel(i.id, type),
       type,
@@ -308,6 +309,11 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       timeline: [],
       source: 'inspection' as const,
     };
+    if (type === 'INGOING') {
+      const gate = deriveAgentIngoingGateStatus({ inspection: inspectionRow, record: null });
+      inspectionRow.status = AGENT_INGOING_GATE_LABEL[gate];
+    }
+    return inspectionRow;
   });
 }
 
