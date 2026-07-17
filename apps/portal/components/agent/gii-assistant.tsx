@@ -6,22 +6,39 @@ import { useRouter } from 'next/navigation';
 import { Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { messageDetail } from '@/constants/routes';
+import { searchAgentSystem, type SystemSearchResult } from '@/lib/agent-system-search';
 import {
-  buildGiiReply,
-  searchAgentSystem,
-  type SystemSearchResult,
-} from '@/lib/agent-system-search';
+  sendGiiMessage,
+  type GiiAssessment,
+  type GiiContext,
+} from '@/lib/crossub-api/gii-client';
 import { cn } from '@/lib/utils';
 
-type ChatLine = { id: string; role: 'user' | 'assistant'; text: string; results?: SystemSearchResult[] };
+type ChatLine = {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  results?: SystemSearchResult[];
+  assessment?: GiiAssessment | null;
+  lodgedRef?: string | null;
+  pending?: boolean;
+};
+
+/** Only the transcript goes to the server — local search results are a client concern. */
+const MAX_HISTORY = 20;
 
 /** Composer grows with typed content so longer questions stay visible. */
 const COMPOSER_MIN_PX = 96;
 const COMPOSER_MAX_PX = 220;
+
+/** Monotonic line ids — `Date.now()` collides when two lines are pushed in one tick. */
+let lineSeq = 0;
+const idSeq = () => (lineSeq += 1);
 
 function resolveSpeechLanguage(): string {
   if (typeof navigator === 'undefined') return 'en-AU';
@@ -55,9 +72,14 @@ export function GiiAssistant({
   const data = useAgentData();
   const [query, setQuery] = useState('');
   const [listening, setListening] = useState(false);
+  const [sending, setSending] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  // The subject carried between turns. A ref: it must never be stale inside runQuery, and
+  // it does not need to trigger a render.
+  const contextRef = useRef<GiiContext | null>(null);
   const isPanel = variant === 'panel';
 
   useEffect(() => {
@@ -73,21 +95,81 @@ export function GiiAssistant({
     return last?.results ?? [];
   }, [lines]);
 
-  const runQuery = (text: string) => {
+  // Follow the conversation — a reply plus its card is taller than the viewport, so
+  // without this the assessment lands below the fold.
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [lines]);
+
+  /**
+   * A turn runs two things at once:
+   *  - `searchAgentSystem` over data the provider already holds — instant, offline, and
+   *    what powers the Open / Message / Call result cards.
+   *  - the real assistant on the API, which does the understanding and the maths.
+   *
+   * The local results render immediately so the panel never feels dead while the model
+   * thinks; the reply replaces the placeholder when it lands. `buildGiiReply` (the old
+   * template-string "brain") is retired — the reply is the model's now.
+   */
+  const runQuery = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || sending) return;
+
     const found = searchAgentSystem(trimmed, data);
+    const userLine: ChatLine = { id: `u-${idSeq()}`, role: 'user', text: trimmed };
+    const pendingId = `a-${idSeq()}`;
+
+    // Snapshot the transcript BEFORE this turn's placeholder is added, or the placeholder
+    // text ("Thinking…") is sent to the model as if it had said it.
+    const history = [...lines, userLine]
+      .filter((l) => !l.pending)
+      .slice(-MAX_HISTORY)
+      .map((l) => ({ role: l.role, content: l.text }));
+
     setLines((prev) => [
       ...prev,
-      { id: `u-${Date.now()}`, role: 'user', text: trimmed },
-      {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        text: buildGiiReply(trimmed, found),
-        results: found,
-      },
+      userLine,
+      { id: pendingId, role: 'assistant', text: 'Thinking…', results: found, pending: true },
     ]);
     setQuery('');
+    setSending(true);
+
+    try {
+      const res = await sendGiiMessage({ messages: history, context: contextRef.current });
+      if (res.assessment?.propertyId) {
+        contextRef.current = {
+          propertyId: res.assessment.propertyId,
+          moveOutDate: res.assessment.moveOutDate,
+        };
+      }
+      setLines((prev) =>
+        prev.map((l) =>
+          l.id === pendingId
+            ? {
+                ...l,
+                text: res.reply,
+                assessment: res.assessment,
+                lodgedRef: res.lodged?.caseRef ?? null,
+                pending: false,
+              }
+            : l,
+        ),
+      );
+    } catch {
+      setLines((prev) =>
+        prev.map((l) =>
+          l.id === pendingId
+            ? {
+                ...l,
+                text: "Sorry — I couldn't reach the assistant just then. Please try again.",
+                pending: false,
+              }
+            : l,
+        ),
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   const startVoice = () => {
@@ -111,7 +193,7 @@ export function GiiAssistant({
     };
     recognition.onresult = (event) => {
       const transcript = event.results[0]?.[0]?.transcript ?? '';
-      if (transcript) runQuery(transcript);
+      if (transcript) void runQuery(transcript);
     };
     recognitionRef.current = recognition;
     recognition.start();
@@ -195,16 +277,26 @@ export function GiiAssistant({
         ) : null}
 
         {lines.map((line) => (
-          <div
-            key={line.id}
-            className={cn(
-              'max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
-              line.role === 'user'
-                ? 'bg-primary text-primary-foreground ml-auto'
-                : 'bg-secondary mr-auto text-foreground',
-            )}
-          >
-            {line.text}
+          <div key={line.id} className="space-y-2">
+            <div
+              className={cn(
+                'max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
+                line.role === 'user'
+                  ? 'bg-primary text-primary-foreground ml-auto'
+                  : 'bg-secondary mr-auto text-foreground',
+                line.pending && 'text-muted-foreground animate-pulse',
+              )}
+            >
+              {line.text}
+            </div>
+
+            {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
+
+            {line.lodgedRef ? (
+              <p className="mr-auto text-xs font-medium text-primary">
+                Case <span className="tabular-nums">{line.lodgedRef}</span> created
+              </p>
+            ) : null}
           </div>
         ))}
 
@@ -252,6 +344,7 @@ export function GiiAssistant({
             ))}
           </ul>
         )}
+        <div ref={endRef} />
       </div>
 
       <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
@@ -272,7 +365,7 @@ export function GiiAssistant({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                runQuery(query);
+                void runQuery(query);
               }
             }}
             placeholder="Ask Gii anything…"
@@ -283,7 +376,7 @@ export function GiiAssistant({
           {query.trim() ? (
             <button
               type="button"
-              onClick={() => runQuery(query)}
+              onClick={() => void runQuery(query)}
               className="mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95"
               aria-label="Send message"
             >

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-07-17
+
+### Added
+- Gii answers from the real assistant. `components/agent/gii-assistant.tsx` now posts the conversation to `POST /api/v1/agent/gii/chat` via the new `lib/crossub-api/gii-client.ts` (typed off `components['schemas']['GiiChatResponseDto']` from `@crossub-thongz/api-contract@0.12.0` — no hand-rolled types), and renders the vacate breakdown in the new `components/agent/gii-assessment-card.tsx`: it classifies a tenant move-out as a break lease / end-of-fixed-term / periodic notice and shows days occupied + remaining + percent of term, the NSW break fee with its band, the daily rate, and rent owed — each money line with its working (`2 wks × $1,000.00`, `$1,000.00 ÷ 7`) because every figure comes from the server's deterministic engine, never from the model. A turn now runs both paths at once: `searchAgentSystem()` renders its Open/Message/Call result cards instantly from data the provider already holds, while the assistant's reply replaces a `Thinking…` placeholder when it lands. `ChatLine` gains `assessment` / `lodgedRef` / `pending`; the transcript (capped at 20 turns) is resent each turn with a `context` echoing the last assessment's `propertyId`, since Gii is stateless server-side and would otherwise re-ask for an address it was already given. Line ids are now a monotonic counter — `Date.now()` collided when two lines were pushed in the same tick. The message list scrolls to the newest entry, which it did not before.
+
+### Changed
+- `apps/portal/package.json` pins `@crossub-thongz/api-contract` to `^0.12.0` (from `^0.8.0` — a caret on a `0.x` pins the minor, so the old pin could never resolve the Gii paths). Requires 0.12.0 to be published from `crossub_web` (Actions → `api-contract` → run with `publish` checked) before `pnpm install` will resolve.
+
+### Removed
+- `buildGiiReply()` from `lib/agent-system-search.ts` — the template string that impersonated a reply ("Found 3 results in property, maintenance…"). Gii's answers are the model's now. `searchAgentSystem()` stays: it still powers the instant, offline result cards.
+
 ## 2026-07-04
 
 ### Changed

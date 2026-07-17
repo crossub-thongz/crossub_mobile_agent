@@ -196,16 +196,12 @@ export function searchAgentSystem(query: string, data: SearchData): SystemSearch
   return out.slice(0, 12);
 }
 
-export function buildGiiReply(query: string, results: SystemSearchResult[]): string {
-  const trimmed = query.trim();
-  if (!trimmed) {
-    return 'Ask me to find a property, maintenance job, inspection, tribunal case, or message thread.';
-  }
-  if (results.length === 0) {
-    return `I couldn't find anything matching "${trimmed}" across your portfolio. Try an address, tracking number, or tenant name.`;
-  }
-  const kinds = [...new Set(results.map((r) => r.kind))];
-  const top = results.slice(0, 3);
-  const list = top.map((r) => `• ${r.kind}: ${r.label}`).join('\n');
-  return `Found ${results.length} result${results.length === 1 ? '' : 's'} in ${kinds.join(', ')}.\n\n${list}${results.length > 3 ? '\n\nTap a result below to open, message, or call.' : '\n\nTap a result to open, message, or call.'}`;
-}
+/*
+ * `buildGiiReply` used to live here — a template string that pretended to be Gii's reply
+ * ("Found 3 results in property, maintenance…"). Gii now answers from the real assistant
+ * (`lib/crossub-api/gii-client.ts` → POST /api/v1/agent/gii/chat), so the template is gone.
+ *
+ * `searchAgentSystem` above stays: it is an instant, offline substring match over data the
+ * provider already holds, and it still powers the Open / Message / Call result cards that
+ * render alongside the assistant's answer.
+ */
