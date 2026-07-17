@@ -234,7 +234,7 @@ export function MaintenanceAgentWorkflowPanel({
             title={
               viewingStepId === MAINTENANCE_AGENT_STEP.JOB_COMPLETED
                 ? 'All e-mail'
-                : undefined
+                : 'Email / message history'
             }
           />
         </div>

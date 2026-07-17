@@ -679,6 +679,60 @@ export function buildJobCreatedEmails(ctx: MaintenanceWorkflowContext): Maintena
   ];
 }
 
+function parseGenericMaintenanceEmailFromAudit(
+  entry: MaintenanceWorkspaceCase['auditEntries'][number],
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord | null {
+  const msg = entry.message.trim();
+  const match = msg.match(/^(.+?)\s+email sent\s*\(([^)]+)\)\.(?:[^\n]*\n)*\n+([\s\S]+)$/i);
+  if (!match) return null;
+
+  const body = match[3]?.trim() ?? '';
+  if (!body) return null;
+
+  return {
+    id: entry.id,
+    subject: match[2]?.trim() || 'Maintenance email',
+    body,
+    from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+    to: inferMaintenanceEmailRecipient(entry.action, ctx),
+    at: entry.timestamp,
+    kind: entry.action,
+  };
+}
+
+function inferMaintenanceEmailRecipient(
+  action: MaintenanceWorkspaceCase['auditEntries'][number]['action'],
+  ctx: MaintenanceWorkflowContext,
+): string {
+  if (action === 'quotation_landlord_email') return 'Landlord';
+  if (
+    action === 'quotation_contractor_feedback' ||
+    action === 'quotation_counter_offer'
+  ) {
+    return ctx.item.contractorName ?? 'Contractor';
+  }
+  if (action === 'responsibility_set') {
+    return responsibilityRecipientLabel(ctx.workspaceCase.responsibility, ctx.workspaceCase);
+  }
+  return ctx.workspaceCase.tenant?.email ?? ctx.workspaceCase.tenant?.name ?? 'Recipient';
+}
+
+/** Every email captured on the maintenance audit trail (sent + responsibility notices). */
+function buildAuditTrailMaintenanceEmails(
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord[] {
+  const byId = new Map<string, MaintenanceEmailRecord>();
+  for (const entry of ctx.workspaceCase.auditEntries) {
+    const parsed =
+      parseReviewEmailFromAudit(entry, ctx) ??
+      parseQuotationWorkflowEmailFromAudit(entry, ctx) ??
+      parseGenericMaintenanceEmailFromAudit(entry, ctx);
+    if (parsed) byId.set(parsed.id, parsed);
+  }
+  return [...byId.values()];
+}
+
 function parseQuotationWorkflowEmailFromAudit(
   entry: MaintenanceWorkspaceCase['auditEntries'][number],
   ctx: MaintenanceWorkflowContext,
@@ -876,12 +930,32 @@ function accumulateEmailRecordsThroughStep(
 }
 
 export function allMaintenanceEmailRecords(ctx: MaintenanceWorkflowContext): JobCaseEmailRecord[] {
-  return accumulateEmailRecordsThroughStep(ctx, MAINTENANCE_AGENT_STEP.JOB_COMPLETED);
+  const byId = new Map<string, JobCaseEmailRecord>();
+
+  for (const record of accumulateEmailRecordsThroughStep(
+    ctx,
+    MAINTENANCE_AGENT_STEP.JOB_COMPLETED,
+  )) {
+    byId.set(record.id, record);
+  }
+
+  for (const record of buildAuditTrailMaintenanceEmails(ctx)) {
+    byId.set(record.id, record);
+  }
+
+  for (const record of emailNotifications(ctx.workspaceCase)) {
+    byId.set(record.id, record);
+  }
+
+  return dedupeJobCaseEmails([...byId.values()]);
 }
 
 export function maintenanceEmailRecordsForStep(
   ctx: MaintenanceWorkflowContext,
   step: MaintenanceAgentStep,
 ): JobCaseEmailRecord[] {
+  if (step === MAINTENANCE_AGENT_STEP.JOB_COMPLETED) {
+    return allMaintenanceEmailRecords(ctx);
+  }
   return accumulateEmailRecordsThroughStep(ctx, step);
 }
