@@ -370,9 +370,9 @@ export function MaintenanceGetQuotePanel({
         )}
       </section>
 
-      {emailRecords.length > 0 ? (
+      {/* {emailRecords.length > 0 ? (
         <JobCaseStageEmailHistory emails={emailRecords} title="Email / message history" />
-      ) : null}
+      ) : null} */}
 
       {audit.length > 0 ? (
         <div className="rounded-xl border bg-card p-3">

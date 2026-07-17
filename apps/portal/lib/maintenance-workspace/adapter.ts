@@ -2,7 +2,7 @@ import type { ApiMaintenanceParty } from '@/lib/crossub-api/types';
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
 import {
   inferInvitedContractorIdsFromAudit,
-  inferResponsibilityFromAudit,
+  resolveResponsibilityFromSources,
 } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
@@ -94,10 +94,19 @@ export function buildWorkspaceCaseFromApi(
   agent?: AuthUser | null,
 ): MaintenanceWorkspaceCase {
   const req = mapped.apiRequest;
-  const responsibility =
-    (mapped.responsibility !== 'pending' ? mapped.responsibility : undefined) ??
-    req.responsibility ??
-    inferResponsibilityFromAudit(mapped.auditEntries);
+  const responsibility = resolveResponsibilityFromSources({
+    explicit:
+      mapped.responsibility !== 'pending' ? mapped.responsibility : req.responsibility,
+    auditEntries: mapped.auditEntries,
+    notifications: mapped.apiNotifications,
+    status: req.status,
+    assignedContractorId: req.assignedContractorId,
+    invitedContractorIds: req.invitedContractorIds,
+    quotationIds: req.quotationIds,
+    quotationsCount: mapped.apiQuotations.length,
+    contractorName: mapped.contractorName,
+    requiresApproval: mapped.requiresApproval,
+  });
   const invitedContractorIds =
     req.invitedContractorIds?.length
       ? req.invitedContractorIds
@@ -150,10 +159,15 @@ export function buildWorkspaceCaseFromRequest(
 ): MaintenanceWorkspaceCase {
   const firstTimeline = item.timeline[0]?.at ?? new Date().toISOString();
   const auditEntries = timelineToAudit(item);
-  const responsibility =
-    item.responsibility === 'pending'
-      ? inferResponsibilityFromAudit(auditEntries)
-      : item.responsibility;
+  const responsibility = resolveResponsibilityFromSources({
+    explicit: item.responsibility,
+    auditEntries,
+    status: mapRequestStatus(item.status, item.apiStatus),
+    contractorName: item.contractorName,
+    invitedContractorIds: item.invitedContractorIds,
+    requiresApproval: item.requiresApproval,
+    quotationsCount: item.quoteAmount ? 1 : 0,
+  });
   const invitedContractorIds =
     item.invitedContractorIds?.length
       ? item.invitedContractorIds

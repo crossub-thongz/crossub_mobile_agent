@@ -1,54 +1,20 @@
 'use client';
 
 import { ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
-import { maintenanceSourceLabel } from '@/lib/maintenance/maintenance-source-labels';
 import {
   auditEntriesForStep,
   MAINTENANCE_AGENT_STEP,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { formatDateTime } from '@/lib/utils';
 
 export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowContext }) {
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.JOB_CREATED);
-  const tenant = ctx.workspaceCase.tenant;
+  const responsibility = resolveMaintenanceResponsibility(ctx);
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border bg-card p-4">
-        <p className="mb-2 text-sm font-semibold">Job intake</p>
-        <dl className="grid gap-3 text-xs sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Created by</dt>
-            <dd className="font-medium">{maintenanceSourceLabel(ctx.workspaceCase.source)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Date &amp; time created</dt>
-            <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Tenant contact</dt>
-            <dd className="font-medium">{tenant?.name?.trim() || '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Phone</dt>
-            <dd className="font-medium">{tenant?.phone?.trim() || '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Email</dt>
-            <dd className="font-medium break-words">{tenant?.email?.trim() || '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Issue type</dt>
-            <dd className="font-medium">{ctx.workspaceCase.issueType}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Order number</dt>
-            <dd className="text-primary font-medium tabular-nums">{ctx.workspaceCase.caseRef}</dd>
-          </div>
-        </dl>
-      </section>
-
       {audit.length > 0 ? (
         <div className="rounded-xl border bg-card p-3">
           <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
@@ -67,10 +33,10 @@ export function MaintenanceJobCreatedPanel({ ctx }: { ctx: MaintenanceWorkflowCo
         </div>
       ) : null}
 
-      {ctx.workspaceCase.responsibility ? (
+      {responsibility ? (
         <p className="text-muted-foreground text-xs">
           Responsibility later assigned:{' '}
-          <ResponsibilityBadge responsibility={ctx.workspaceCase.responsibility} />
+          <ResponsibilityBadge responsibility={responsibility} />
         </p>
       ) : null}
     </div>

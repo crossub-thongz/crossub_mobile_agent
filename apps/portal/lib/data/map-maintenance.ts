@@ -5,7 +5,7 @@ import type {
   ApiMaintenanceRequest,
   ApiQuotation,
 } from '@/lib/crossub-api/types';
-import { inferInvitedContractorIdsFromAudit, inferResponsibilityFromAudit } from '@/lib/maintenance/infer-responsibility';
+import { inferInvitedContractorIdsFromAudit, resolveResponsibilityFromSources } from '@/lib/maintenance/infer-responsibility';
 import { contractorIdsMatch } from '@/lib/maintenance/resolve-contractor-display';
 import type { MaintenanceRequest, Priority, TimelineEntry } from '@/lib/types';
 import { maintenanceDetail } from '@/constants/routes';
@@ -112,7 +112,18 @@ export function mapApiMaintenanceRequest(
     (n) => n.maintenanceRequestId === req.id,
   );
   const resolvedResponsibility =
-    req.responsibility ?? inferResponsibilityFromAudit(reqAudit) ?? 'pending';
+    resolveResponsibilityFromSources({
+      explicit: req.responsibility,
+      auditEntries: reqAudit,
+      notifications: reqNotifications,
+      status: req.status,
+      assignedContractorId: req.assignedContractorId,
+      invitedContractorIds: req.invitedContractorIds,
+      quotationIds: req.quotationIds,
+      quotationsCount: quotations.filter((q) => q.maintenanceRequestId === req.id).length,
+      contractorName: contractor?.name,
+      requiresApproval: req.status === 'pending_approval',
+    }) ?? 'pending';
   const resolvedInvitedContractorIds =
     req.invitedContractorIds?.length
       ? req.invitedContractorIds

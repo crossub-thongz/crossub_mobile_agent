@@ -17,7 +17,6 @@ import {
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
 import { resolveInvitedContractorIds, resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
-import { maintenanceSourceLabel } from '@/lib/maintenance/maintenance-source-labels';
 import type { MaintenanceWorkflowResponsibility } from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { Property } from '@/lib/types';
@@ -64,9 +63,7 @@ export function MaintenanceReviewPanel({
   const agencyId = property?.agencyId;
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.REVIEW);
   const invitedContractorIds = resolveInvitedContractorIds(ctx);
-  const responsibility =
-    resolveMaintenanceResponsibility(ctx) ??
-    (ctx.workspaceCase.responsibility as MaintenanceWorkflowResponsibility | undefined);
+  const responsibility = resolveMaintenanceResponsibility(ctx);
   const isLive =
     ctx.workspaceCase.status === 'under_review' || ctx.workspaceCase.status === 'pending_evidence';
   const canManageEvidence = isLive && apiConnected;
@@ -134,36 +131,8 @@ export function MaintenanceReviewPanel({
   const confirmDisabled =
     !pendingResponsibility || busy || (isLandlord && pendingContractorIds.length === 0);
 
-  const tenant = ctx.workspaceCase.tenant;
-
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border bg-card p-4">
-        <p className="mb-2 text-sm font-semibold">Case intake</p>
-        <dl className="grid gap-3 text-xs sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">Created by</dt>
-            <dd className="font-medium">{maintenanceSourceLabel(ctx.workspaceCase.source)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Date &amp; time created</dt>
-            <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Tenant contact</dt>
-            <dd className="font-medium">{tenant?.name?.trim() || '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Phone</dt>
-            <dd className="font-medium">{tenant?.phone?.trim() || '—'}</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-muted-foreground">Email</dt>
-            <dd className="font-medium break-words">{tenant?.email?.trim() || '—'}</dd>
-          </div>
-        </dl>
-      </section>
-
       <MaintenanceReviewEvidencePanel
         requestId={ctx.item.id}
         title={ctx.workspaceCase.issueType}

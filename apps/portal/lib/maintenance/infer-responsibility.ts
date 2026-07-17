@@ -12,12 +12,30 @@ export type MaintenanceResponsibilityContext = {
     | 'invitedContractors'
     | 'assignedContractorId'
     | 'quotations'
+    | 'quotationIds'
+    | 'notifications'
   >;
   item: Pick<
     MaintenanceRequest,
     'responsibility' | 'requiresApproval' | 'invitedContractorIds' | 'contractorName'
   >;
 };
+
+const ADVANCED_STATUSES = new Set([
+  'pending_quotation',
+  'pending_approval',
+  'in_progress',
+  'completed',
+  'closed',
+]);
+
+function parseResponsibilityToken(text: string): ApiMaintenanceResponsibility | undefined {
+  const lower = text.toLowerCase();
+  if (lower.includes('landlord')) return 'landlord';
+  if (lower.includes('strata')) return 'strata';
+  if (lower.includes('tenant')) return 'tenant';
+  return undefined;
+}
 
 /** Recover responsibility from audit when the in-memory field was lost on hydrate. */
 export function inferResponsibilityFromAudit(
@@ -27,27 +45,94 @@ export function inferResponsibilityFromAudit(
     .reverse()
     .find((entry) => entry.action === 'responsibility_set');
   if (!hit) return undefined;
+  return parseResponsibilityToken(hit.message);
+}
 
-  const message = hit.message.toLowerCase();
-  if (message.includes('landlord')) return 'landlord';
-  if (message.includes('strata')) return 'strata';
-  if (message.includes('tenant')) return 'tenant';
-  return undefined;
+/** Recover from responsibility notification emails logged on the case. */
+export function inferResponsibilityFromNotifications(
+  notifications: Array<{ title: string }>,
+): ApiMaintenanceResponsibility | undefined {
+  const hit = [...notifications]
+    .reverse()
+    .find((n) => /responsibility determined/i.test(n.title));
+  if (!hit) return undefined;
+  return parseResponsibilityToken(hit.title);
+}
+
+/** Landlord jobs advance through contractor RFQ / quote stages — infer when explicit field is missing. */
+export function inferLandlordResponsibilityFromWorkflow(input: {
+  status?: string;
+  assignedContractorId?: string;
+  invitedContractorIds?: string[];
+  quotationIds?: string[];
+  quotationsCount?: number;
+  contractorName?: string;
+  requiresApproval?: boolean;
+}): 'landlord' | undefined {
+  if (!input.status || !ADVANCED_STATUSES.has(input.status)) return undefined;
+
+  const hasLandlordSignals =
+    Boolean(input.assignedContractorId) ||
+    Boolean(input.contractorName) ||
+    (input.invitedContractorIds?.length ?? 0) > 0 ||
+    (input.quotationIds?.length ?? 0) > 0 ||
+    (input.quotationsCount ?? 0) > 0 ||
+    input.requiresApproval === true;
+
+  return hasLandlordSignals ? 'landlord' : undefined;
+}
+
+export function resolveResponsibilityFromSources(sources: {
+  explicit?: ApiMaintenanceResponsibility | 'pending' | null;
+  auditEntries?: ApiMaintenanceAuditLogEntry[];
+  notifications?: Array<{ title: string }>;
+  status?: string;
+  assignedContractorId?: string;
+  invitedContractorIds?: string[];
+  quotationIds?: string[];
+  quotationsCount?: number;
+  contractorName?: string;
+  requiresApproval?: boolean;
+}): ApiMaintenanceResponsibility | undefined {
+  if (sources.explicit && sources.explicit !== 'pending') {
+    return sources.explicit;
+  }
+
+  const fromAudit = inferResponsibilityFromAudit(sources.auditEntries ?? []);
+  if (fromAudit) return fromAudit;
+
+  const fromNotifications = inferResponsibilityFromNotifications(sources.notifications ?? []);
+  if (fromNotifications) return fromNotifications;
+
+  return inferLandlordResponsibilityFromWorkflow({
+    status: sources.status,
+    assignedContractorId: sources.assignedContractorId,
+    invitedContractorIds: sources.invitedContractorIds,
+    quotationIds: sources.quotationIds,
+    quotationsCount: sources.quotationsCount,
+    contractorName: sources.contractorName,
+    requiresApproval: sources.requiresApproval,
+  });
 }
 
 export function resolveMaintenanceResponsibility(
   ctx: MaintenanceResponsibilityContext,
 ): ApiMaintenanceResponsibility | undefined {
-  if (ctx.workspaceCase.responsibility) return ctx.workspaceCase.responsibility;
-
-  const fromAudit = inferResponsibilityFromAudit(ctx.workspaceCase.auditEntries);
-  if (fromAudit) return fromAudit;
-
-  if (ctx.item.responsibility && ctx.item.responsibility !== 'pending') {
-    return ctx.item.responsibility;
-  }
-
-  return undefined;
+  return resolveResponsibilityFromSources({
+    explicit:
+      ctx.workspaceCase.responsibility ??
+      (ctx.item.responsibility !== 'pending' ? ctx.item.responsibility : undefined),
+    auditEntries: ctx.workspaceCase.auditEntries,
+    notifications: ctx.workspaceCase.notifications,
+    status: ctx.workspaceCase.status,
+    assignedContractorId: ctx.workspaceCase.assignedContractorId,
+    invitedContractorIds:
+      ctx.workspaceCase.invitedContractorIds ?? ctx.item.invitedContractorIds,
+    quotationIds: ctx.workspaceCase.quotationIds,
+    quotationsCount: ctx.workspaceCase.quotations.length,
+    contractorName: ctx.item.contractorName,
+    requiresApproval: ctx.item.requiresApproval,
+  });
 }
 
 export function inferInvitedContractorIdsFromAudit(

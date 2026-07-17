@@ -24,6 +24,7 @@ import {
   markMaintenanceWorkComplete,
 } from '@/lib/maintenance/maintenance-case-ops';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
+import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { fileToBase64 } from '@/lib/file-upload';
 import {
   isAllowedMaintenanceInvoiceMime,
@@ -94,7 +95,7 @@ export function MaintenanceCompletionGatesPanel({
 
   const requestId = ctx.item.id;
   const status = ctx.workspaceCase.status;
-  const responsibility = ctx.workspaceCase.responsibility;
+  const responsibility = resolveMaintenanceResponsibility(ctx);
   const isClosed = status === 'closed';
   const isInProgress = status === 'in_progress';
   const isCompleted = status === 'completed';

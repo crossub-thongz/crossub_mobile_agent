@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
+import { MaintenanceJobIntakeSummary } from '@/components/maintenance/maintenance-job-intake-summary';
+import { MaintenanceJobTypeSummary } from '@/components/maintenance/maintenance-job-type-summary';
 import { MaintenanceInProgressPanel } from '@/components/maintenance/maintenance-in-progress-panel';
 import { MaintenanceJobCompletedPanel } from '@/components/maintenance/maintenance-job-completed-panel';
 import { MaintenanceJobCreatedPanel } from '@/components/maintenance/maintenance-job-created-panel';
 import { MaintenanceReviewPanel } from '@/components/maintenance/maintenance-review-panel';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
-import type { Property } from '@/lib/types';
+import type { MaintenanceRequest, Property } from '@/lib/types';
 import {
   buildMaintenanceAgentWorkflow,
   MAINTENANCE_AGENT_STEP,
@@ -89,18 +91,22 @@ function StepContent({
 
 export function MaintenanceAgentWorkflowPanel({
   ctx,
+  item,
   property,
   attachments = [],
   contractors = [],
   onCaseUpdated,
   apiConnected = true,
+  syncing = false,
 }: {
   ctx: MaintenanceWorkflowContext;
+  item: MaintenanceRequest;
   property?: Property;
   attachments?: ApiMaintenanceAttachment[];
   contractors?: Array<{ id: string; name: string }>;
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
+  syncing?: boolean;
 }) {
   const workflow = useMemo(() => buildMaintenanceAgentWorkflow(ctx), [ctx]);
   const [viewingStepId, setViewingStepId] = useState<MaintenanceAgentStep>(workflow.liveStepId);
@@ -159,6 +165,10 @@ export function MaintenanceAgentWorkflowPanel({
         }}
         onStepClick={handleStepClick}
       />
+
+      <MaintenanceJobTypeSummary item={item} workflowCtx={ctx} syncing={syncing} />
+
+      <MaintenanceJobIntakeSummary ctx={ctx} />
 
       <div className="rounded-xl border bg-card">
         <div
