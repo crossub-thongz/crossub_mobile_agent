@@ -20,7 +20,7 @@ function attachmentPreviewUrl(att: ApiMaintenanceAttachment): string {
 }
 
 function isReviewEvidenceAttachment(att: ApiMaintenanceAttachment): boolean {
-  return att.kind === 'initial_evidence' || att.kind === 'evidence';
+  return att.kind === 'initial_evidence';
 }
 
 export function MaintenanceReviewEvidencePanel({

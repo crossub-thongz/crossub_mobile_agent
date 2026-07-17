@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
@@ -8,15 +8,27 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
 import { AccountingListTable } from '@/components/agent/portfolio-module-tables';
+import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
+import { accountingToJobRow } from '@/lib/portfolio-case-dialog';
 import { formatCurrency } from '@/lib/utils';
 
 export default function AccountingPage() {
   const { accounting } = useAgentData();
+  const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
   const searchParams = useSearchParams();
   const arrearsOnly = searchParams.get('filter') === 'arrears';
+
+  const openAccounting = useCallback(
+    (item: (typeof accounting)[number]) => {
+      const job = accountingToJobRow(item);
+      if (job) openJob(job);
+    },
+    [openJob],
+  );
 
   const list = useMemo(() => {
     if (arrearsOnly) return accounting.filter((a) => a.arrearsAmount > 0);
@@ -79,8 +91,18 @@ export default function AccountingPage() {
             }
           />
         ) : (
-          <AccountingListTable items={list} />
+          <AccountingListTable
+            items={list}
+            selectedId={selectedId}
+            onItemClick={openAccounting}
+          />
         )}
+
+        <PortfolioCaseDialogHost
+          job={selectedJob}
+          onClose={closeJob}
+          onOpenJob={openJob}
+        />
 
         <ModuleCommunications
           categories={['Accounting']}

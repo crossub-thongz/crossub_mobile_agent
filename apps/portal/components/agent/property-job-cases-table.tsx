@@ -4,6 +4,7 @@ import { Check, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import {
+  ModuleInteractiveTableRow,
   ModuleListTable,
   ModuleSortableTableHead,
   type ModuleTableColumn,
@@ -567,33 +568,19 @@ export function PropertyJobCasesTable({
                   };
 
                   return (
-                    <tr
+                    <ModuleInteractiveTableRow
                       key={row.id}
-                      role={onRowClick ? 'button' : undefined}
-                      tabIndex={onRowClick ? 0 : undefined}
-                      aria-selected={onRowClick ? selected : undefined}
+                      onActivate={onRowClick ? () => onRowClick(row.id) : undefined}
+                      selected={selected}
                       className={cn(
-                        'transition-all duration-200',
-                        onRowClick && 'cursor-pointer',
                         selected
                           ? 'bg-primary/12 shadow-[inset_3px_0_0_0_hsl(var(--primary))] ring-1 ring-inset ring-primary/25'
-                          : 'hover:bg-muted/30',
+                          : undefined,
                         !selected && row.phase === 'in_progress' && 'bg-destructive/[0.02]',
                       )}
-                      onClick={onRowClick ? () => onRowClick(row.id) : undefined}
-                      onKeyDown={
-                        onRowClick
-                          ? (e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                onRowClick(row.id);
-                              }
-                            }
-                          : undefined
-                      }
                     >
                       {rowCellOrder.map((cell) => renderRowCell(cell))}
-                    </tr>
+                    </ModuleInteractiveTableRow>
                   );
                 })}
               </Fragment>

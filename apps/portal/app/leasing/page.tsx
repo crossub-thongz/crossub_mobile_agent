@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeftRight, Building2, FileText, History, UserCheck } from 'lucide-react';
 
@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
+import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import {
   LeasingCyclesTable,
   LeasingHistoryTable,
@@ -22,10 +23,10 @@ import { Input } from '@/components/ui/input';
 import {
   propertyNew,
   propertyTransfer,
-  rentReviewDetail,
   ROUTES,
 } from '@/constants/routes';
-import { fromLeasing } from '@/lib/detail-navigation';
+import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
+import { leasingCycleToJobRow, rentReviewToJobRow } from '@/lib/portfolio-case-dialog';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
 const TABS = [
@@ -51,6 +52,16 @@ export default function LeasingPage() {
   const [tab, setTab] = useState<LeasingTab>(initialTab);
   const [search, setSearch] = useState('');
   const { tenantSelections, rentReviews, leasingRecords, leasingCycles, properties } = useAgentData();
+  const { selectedJob, selectedId, openJob, closeJob, portfolioData, rentReviewDecisions } =
+    usePortfolioCaseDialog();
+
+  const openLeasingCycle = useCallback(
+    (cycle: (typeof leasingCycles)[number]) => {
+      const job = leasingCycleToJobRow(cycle, portfolioData);
+      if (job) openJob(job);
+    },
+    [openJob, portfolioData],
+  );
 
   const history = useMemo(() => {
     return leasingRecords.map((l) => {
@@ -137,7 +148,11 @@ export default function LeasingPage() {
             {filteredCycles.length > 0 ? (
               <div className="space-y-3">
                 <h2 className="text-sm font-semibold">Active leasing cycles</h2>
-                <LeasingCyclesTable items={filteredCycles} />
+                <LeasingCyclesTable
+                  items={filteredCycles}
+                  selectedCycleId={selectedId}
+                  onCycleClick={openLeasingCycle}
+                />
               </div>
             ) : (
               <EmptyState
@@ -185,7 +200,8 @@ export default function LeasingPage() {
             ) : (
               <RentReviewListTable
                 items={filteredRentReviews}
-                detailHref={(id) => rentReviewDetail(id, fromLeasing('rent-review'))}
+                selectedId={selectedId}
+                onItemClick={(item) => openJob(rentReviewToJobRow(item, rentReviewDecisions))}
               />
             )}
           </section>
@@ -208,6 +224,11 @@ export default function LeasingPage() {
           categories={['Leasing']}
           title="Leasing emails & messages"
           emptyHint="Leasing-related emails and messages across your portfolio appear here."
+        />
+        <PortfolioCaseDialogHost
+          job={selectedJob}
+          onClose={closeJob}
+          onOpenJob={openJob}
         />
       </div>
     </AgentShell>

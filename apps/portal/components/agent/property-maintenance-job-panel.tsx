@@ -60,9 +60,7 @@ export function PropertyMaintenanceJobPanel({
   const evidenceAttachmentCount = useMemo(
     () =>
       attachments.filter(
-        (a) =>
-          a.maintenanceRequestId === item.id &&
-          (a.kind === 'initial_evidence' || a.kind === 'evidence'),
+        (a) => a.maintenanceRequestId === item.id && a.kind === 'initial_evidence',
       ).length,
     [attachments, item.id],
   );

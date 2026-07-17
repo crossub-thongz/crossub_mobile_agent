@@ -1,0 +1,191 @@
+import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { isPropertyVacant, rentReviewsForProperty } from '@/lib/property-leasing';
+import {
+  accountingJobRows,
+  inspectionJobRows,
+  leasingWorkflowJobRows,
+  maintenanceJobRows,
+  rentReviewJobRows,
+  tribunalJobRows,
+  type PropertyJobRow,
+} from '@/lib/property-job-rows';
+import type { RentReviewDecision } from '@/lib/rent-review';
+import type {
+  Inspection,
+  LeasingCycle,
+  LeasingRecord,
+  MaintenanceRequest,
+  Property,
+  PropertyAccounting,
+  RentReviewCase,
+  TenantSelectionCase,
+  TribunalCase,
+  VacatingCase,
+} from '@/lib/types';
+
+export type PortfolioAgentData = {
+  properties: Property[];
+  maintenanceAll: MaintenanceRequest[];
+  inspections: Inspection[];
+  rentReviews: RentReviewCase[];
+  tenantSelections: TenantSelectionCase[];
+  tribunalCases: TribunalCase[];
+  vacating: VacatingCase[];
+  accounting: PropertyAccounting[];
+  leasingCycles: LeasingCycle[];
+  leasingRecords: LeasingRecord[];
+  rentReviewDecisions: Record<string, RentReviewDecision | null | undefined>;
+};
+
+export function resolvePortfolioCasePropertyId(
+  job: PropertyJobRow,
+  data: Pick<
+    PortfolioAgentData,
+    | 'maintenanceAll'
+    | 'inspections'
+    | 'rentReviews'
+    | 'leasingCycles'
+    | 'vacating'
+    | 'tribunalCases'
+    | 'accounting'
+  >,
+): string | null {
+  switch (job.kind) {
+    case 'maintenance':
+      return data.maintenanceAll.find((row) => row.id === job.id)?.propertyId ?? null;
+    case 'inspection':
+      return data.inspections.find((row) => row.id === job.id)?.propertyId ?? null;
+    case 'rent_review':
+      return data.rentReviews.find((row) => row.id === job.id)?.propertyId ?? null;
+    case 'leasing':
+      return data.leasingCycles.find((row) => row.id === job.id)?.propertyId ?? null;
+    case 'end_leasing':
+      return data.vacating.find((row) => row.id === job.id)?.propertyId ?? null;
+    case 'tribunal':
+      return data.tribunalCases.find((row) => row.id === job.id)?.propertyId ?? null;
+    case 'accounting':
+      if (job.id.startsWith('arrears-')) return job.id.slice('arrears-'.length);
+      return data.accounting.find((row) => `arrears-${row.propertyId}` === job.id)?.propertyId ?? null;
+    default:
+      return null;
+  }
+}
+
+export function resolvePortfolioCaseContext(
+  job: PropertyJobRow,
+  data: PortfolioAgentData,
+): {
+  property: Property;
+  propertyId: string;
+  maintenance: MaintenanceRequest[];
+  inspections: Inspection[];
+  rentReviews: RentReviewCase[];
+  leasingCases: ReturnType<typeof buildPropertyLeasingWorkflowCases>;
+  vacatingCases: VacatingCase[];
+  tribunalCases: TribunalCase[];
+  accounting: PropertyAccounting | null;
+  tenantSelections: TenantSelectionCase[];
+  currentLease?: LeasingRecord;
+  isVacant: boolean;
+} | null {
+  const propertyId = resolvePortfolioCasePropertyId(job, data);
+  if (!propertyId) return null;
+
+  const property = data.properties.find((row) => row.id === propertyId);
+  if (!property) return null;
+
+  const maintenance = data.maintenanceAll.filter(
+    (row) => row.propertyId === propertyId || row.propertyAddress.includes(property.address),
+  );
+  const inspections = data.inspections.filter((row) => row.propertyId === propertyId);
+  const rentReviews = rentReviewsForProperty(data.rentReviews, propertyId, property);
+  const vacatingCases = data.vacating.filter((row) => row.propertyId === propertyId);
+  const tribunalCases = data.tribunalCases.filter((row) => row.propertyId === propertyId);
+  const tenantSelections = data.tenantSelections.filter((row) => row.propertyId === propertyId);
+  const propertyLeasingCycles = data.leasingCycles.filter((row) => row.propertyId === propertyId);
+  const currentTenancy = data.leasingRecords.filter(
+    (row) => row.propertyId === propertyId && row.status === 'current',
+  );
+  const currentLease = currentTenancy[0];
+  const isVacant = isPropertyVacant(property, currentTenancy);
+
+  const leasingCases = buildPropertyLeasingWorkflowCases({
+    propertyId,
+    leasingCycles: propertyLeasingCycles,
+    tenantSelections,
+    vacatingCases,
+    rentReviews,
+    rentReviewDecisions: data.rentReviewDecisions,
+    currentLease,
+    isVacant,
+  });
+
+  return {
+    property,
+    propertyId,
+    maintenance,
+    inspections,
+    rentReviews,
+    leasingCases,
+    vacatingCases,
+    tribunalCases,
+    accounting: data.accounting.find((row) => row.propertyId === propertyId) ?? null,
+    tenantSelections,
+    currentLease,
+    isVacant,
+  };
+}
+
+export function maintenanceToJobRow(item: MaintenanceRequest): PropertyJobRow {
+  return maintenanceJobRows([item])[0]!;
+}
+
+export function inspectionToJobRow(item: Inspection): PropertyJobRow {
+  return inspectionJobRows([item])[0]!;
+}
+
+export function rentReviewToJobRow(
+  item: RentReviewCase,
+  decisions: PortfolioAgentData['rentReviewDecisions'],
+): PropertyJobRow {
+  return rentReviewJobRows([item], decisions)[0]!;
+}
+
+export function tribunalToJobRow(item: TribunalCase): PropertyJobRow {
+  return tribunalJobRows([item])[0]!;
+}
+
+export function accountingToJobRow(item: PropertyAccounting): PropertyJobRow | null {
+  return accountingJobRows(item)[0] ?? null;
+}
+
+export function leasingCycleToJobRow(
+  cycle: LeasingCycle,
+  data: PortfolioAgentData,
+): PropertyJobRow | null {
+  const property = data.properties.find((row) => row.id === cycle.propertyId);
+  if (!property) return null;
+
+  const propertyId = cycle.propertyId;
+  const rentReviews = rentReviewsForProperty(data.rentReviews, propertyId, property);
+  const vacatingCases = data.vacating.filter((row) => row.propertyId === propertyId);
+  const tenantSelections = data.tenantSelections.filter((row) => row.propertyId === propertyId);
+  const propertyLeasingCycles = data.leasingCycles.filter((row) => row.propertyId === propertyId);
+  const currentTenancy = data.leasingRecords.filter(
+    (row) => row.propertyId === propertyId && row.status === 'current',
+  );
+
+  const workflowCase = buildPropertyLeasingWorkflowCases({
+    propertyId,
+    leasingCycles: propertyLeasingCycles,
+    tenantSelections,
+    vacatingCases,
+    rentReviews,
+    rentReviewDecisions: data.rentReviewDecisions,
+    currentLease: currentTenancy[0],
+    isVacant: isPropertyVacant(property, currentTenancy),
+  }).find((row) => row.id === cycle.id);
+
+  if (!workflowCase) return null;
+  return leasingWorkflowJobRows([workflowCase])[0] ?? null;
+}

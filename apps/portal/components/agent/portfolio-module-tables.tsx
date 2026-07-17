@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { ChevronRight, Trash2 } from 'lucide-react';
 
 import {
+  ModuleInteractiveTableRow,
   ModuleListTable,
   ModuleSortableTableHead,
   ModuleTableChevronCell,
@@ -80,7 +81,15 @@ type MaintenanceSortKey =
   | 'responsibility'
   | 'priority';
 
-export function MaintenanceListTable({ items }: { items: MaintenanceRequest[] }) {
+export function MaintenanceListTable({
+  items,
+  onItemClick,
+  selectedId,
+}: {
+  items: MaintenanceRequest[];
+  onItemClick?: (item: MaintenanceRequest) => void;
+  selectedId?: string | null;
+}) {
   const { sortKey, sortDirection, onSort } = useClientTableSort<MaintenanceSortKey>(
     'createdAt',
     'desc',
@@ -142,13 +151,14 @@ export function MaintenanceListTable({ items }: { items: MaintenanceRequest[] })
         {sorted.map((m) => {
           const href = maintenanceDetail(m.id);
           const progress = maintenanceWorkflowProgress(m);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(m) : undefined;
           return (
-            <tr
+            <ModuleInteractiveTableRow
               key={m.id}
-              className={cn(
-                'transition-colors hover:bg-muted/20',
-                m.requiresApproval && 'bg-destructive/[0.03]',
-              )}
+              onActivate={openItem}
+              selected={selectedId === m.id}
+              className={cn(m.requiresApproval && 'bg-destructive/[0.03]')}
             >
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {m.trackingNumber}
@@ -156,9 +166,15 @@ export function MaintenanceListTable({ items }: { items: MaintenanceRequest[] })
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {formatCreatedAt(maintenanceCreatedAtIso(m))}
               </td>
-              <ModuleTableLinkCell href={href} className="max-w-[12rem]">
-                <span className="line-clamp-2">{m.title}</span>
-              </ModuleTableLinkCell>
+              {interactive ? (
+                <td className="max-w-[12rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{m.title}</span>
+                </td>
+              ) : (
+                <ModuleTableLinkCell href={href} className="max-w-[12rem]">
+                  <span className="line-clamp-2">{m.title}</span>
+                </ModuleTableLinkCell>
+              )}
               <td className="max-w-[14rem] px-3 py-3 text-muted-foreground">
                 <span className="line-clamp-2">{m.propertyAddress}</span>
               </td>
@@ -174,8 +190,14 @@ export function MaintenanceListTable({ items }: { items: MaintenanceRequest[] })
                   {m.priority}
                 </span>
               </td>
-              <ModuleTableChevronCell href={href} />
-            </tr>
+              {interactive ? (
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  <ChevronRight className="inline size-4" />
+                </td>
+              ) : (
+                <ModuleTableChevronCell href={href} />
+              )}
+            </ModuleInteractiveTableRow>
           );
         })}
       </tbody>
@@ -196,9 +218,13 @@ type RentReviewSortKey =
 export function RentReviewListTable({
   items,
   detailHref,
+  onItemClick,
+  selectedId,
 }: {
   items: RentReviewCase[];
-  detailHref: (id: string) => string;
+  detailHref?: (id: string) => string;
+  onItemClick?: (item: RentReviewCase) => void;
+  selectedId?: string | null;
 }) {
   const { sortKey, sortDirection, onSort } = useClientTableSort<RentReviewSortKey>(
     'createdAt',
@@ -260,22 +286,29 @@ export function RentReviewListTable({
       />
       <tbody className="divide-y">
         {sorted.map((r) => {
-          const href = detailHref(r.id);
+          const href = detailHref?.(r.id);
           const progress = rentReviewWorkflowProgress(r);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(r) : undefined;
           return (
-            <tr
+            <ModuleInteractiveTableRow
               key={r.id}
-              className={cn(
-                'transition-colors hover:bg-muted/20',
-                r.requiresApproval && 'bg-destructive/[0.03]',
-              )}
+              onActivate={openItem}
+              selected={selectedId === r.id}
+              className={cn(r.requiresApproval && 'bg-destructive/[0.03]')}
             >
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {workflowCaseReferenceLabel(r.id, 'rent_review')}
               </td>
-              <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                <span className="line-clamp-2">{r.propertyAddress}</span>
-              </ModuleTableLinkCell>
+              {interactive ? (
+                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{r.propertyAddress}</span>
+                </td>
+              ) : (
+                <ModuleTableLinkCell href={href!} className="max-w-[14rem]">
+                  <span className="line-clamp-2">{r.propertyAddress}</span>
+                </ModuleTableLinkCell>
+              )}
               <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
                 <span className="line-clamp-2">{r.tenantName ?? '—'}</span>
               </td>
@@ -292,8 +325,14 @@ export function RentReviewListTable({
                 {formatCurrency(r.currentRent)}/wk
               </td>
               <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
-              <ModuleTableChevronCell href={href} />
-            </tr>
+              {interactive ? (
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  <ChevronRight className="inline size-4" />
+                </td>
+              ) : (
+                <ModuleTableChevronCell href={href!} />
+              )}
+            </ModuleInteractiveTableRow>
           );
         })}
       </tbody>
@@ -301,7 +340,15 @@ export function RentReviewListTable({
   );
 }
 
-export function TribunalListTable({ items }: { items: TribunalCase[] }) {
+export function TribunalListTable({
+  items,
+  onItemClick,
+  selectedId,
+}: {
+  items: TribunalCase[];
+  onItemClick?: (item: TribunalCase) => void;
+  selectedId?: string | null;
+}) {
   return (
     <ModuleListTable minWidth={960}>
       <ModuleTableHead
@@ -311,11 +358,14 @@ export function TribunalListTable({ items }: { items: TribunalCase[] }) {
         {items.map((c) => {
           const href = tribunalDetail(c.id);
           const progress = tribunalWorkflowProgress(c);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(c) : undefined;
           return (
-            <tr
+            <ModuleInteractiveTableRow
               key={c.id}
+              onActivate={openItem}
+              selected={selectedId === c.id}
               className={cn(
-                'transition-colors hover:bg-muted/20',
                 c.requiresAction && c.status === 'active' && 'bg-destructive/[0.03]',
               )}
             >
@@ -323,10 +373,17 @@ export function TribunalListTable({ items }: { items: TribunalCase[] }) {
                 {c.caseNumber ?? workflowCaseReferenceLabel(c.id, 'tribunal')}
               </td>
               <td className="px-3 py-3 text-xs text-muted-foreground">{c.tribunalType ?? '—'}</td>
-              <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                <span className="line-clamp-2">{c.propertyAddress}</span>
-                <span className="text-muted-foreground mt-0.5 block text-xs">{c.tenantName}</span>
-              </ModuleTableLinkCell>
+              {interactive ? (
+                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{c.propertyAddress}</span>
+                  <span className="text-muted-foreground mt-0.5 block text-xs">{c.tenantName}</span>
+                </td>
+              ) : (
+                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                  <span className="line-clamp-2">{c.propertyAddress}</span>
+                  <span className="text-muted-foreground mt-0.5 block text-xs">{c.tenantName}</span>
+                </ModuleTableLinkCell>
+              )}
               <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                 {c.amountClaimed != null ? formatCurrency(c.amountClaimed) : '—'}
               </td>
@@ -334,8 +391,14 @@ export function TribunalListTable({ items }: { items: TribunalCase[] }) {
                 {c.hearingDate ? formatDateTime(c.hearingDate) : '—'}
               </td>
               <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
-              <ModuleTableChevronCell href={href} />
-            </tr>
+              {interactive ? (
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  <ChevronRight className="inline size-4" />
+                </td>
+              ) : (
+                <ModuleTableChevronCell href={href} />
+              )}
+            </ModuleInteractiveTableRow>
           );
         })}
       </tbody>
@@ -356,10 +419,14 @@ export function InspectionsListTable({
   items,
   canDeleteRow,
   onDeleteRow,
+  onItemClick,
+  selectedId,
 }: {
   items: Inspection[];
   canDeleteRow?: (inspection: Inspection) => boolean;
   onDeleteRow?: (inspection: Inspection) => void;
+  onItemClick?: (inspection: Inspection) => void;
+  selectedId?: string | null;
 }) {
   const { sortKey, sortDirection, onSort } = useClientTableSort<InspectionSortKey>(
     'createdAt',
@@ -422,14 +489,26 @@ export function InspectionsListTable({
         {sorted.map((i) => {
           const href = inspectionDetail(i.id);
           const progress = inspectionWorkflowProgress(i);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(i) : undefined;
           return (
-            <tr key={i.id} className="transition-colors hover:bg-muted/20">
+            <ModuleInteractiveTableRow
+              key={i.id}
+              onActivate={openItem}
+              selected={selectedId === i.id}
+            >
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
                 {i.trackingNumber}
               </td>
-              <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                <span className="line-clamp-2">{i.propertyAddress}</span>
-              </ModuleTableLinkCell>
+              {interactive ? (
+                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{i.propertyAddress}</span>
+                </td>
+              ) : (
+                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                  <span className="line-clamp-2">{i.propertyAddress}</span>
+                </ModuleTableLinkCell>
+              )}
               <td className="px-3 py-3 text-xs font-medium">{i.type}</td>
               <td className="max-w-[9rem] px-3 py-3 text-xs text-muted-foreground">
                 <span className="line-clamp-2">{i.inspector ?? 'Pending'}</span>
@@ -463,8 +542,14 @@ export function InspectionsListTable({
                   )}
                 </td>
               )}
-              <ModuleTableChevronCell href={href} />
-            </tr>
+              {interactive ? (
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  <ChevronRight className="inline size-4" />
+                </td>
+              ) : (
+                <ModuleTableChevronCell href={href} />
+              )}
+            </ModuleInteractiveTableRow>
           );
         })}
       </tbody>
@@ -472,7 +557,15 @@ export function InspectionsListTable({
   );
 }
 
-export function AccountingListTable({ items }: { items: PropertyAccounting[] }) {
+export function AccountingListTable({
+  items,
+  onItemClick,
+  selectedId,
+}: {
+  items: PropertyAccounting[];
+  onItemClick?: (item: PropertyAccounting) => void;
+  selectedId?: string | null;
+}) {
   return (
     <ModuleListTable minWidth={1000}>
       <ModuleTableHead
@@ -486,17 +579,25 @@ export function AccountingListTable({ items }: { items: PropertyAccounting[] }) 
               ? `${formatCurrency(a.arrearsAmount)} (${a.daysInArrears}d)`
               : 'None';
           const progress = accountingArrearsProgress(a);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(a) : undefined;
+          const rowId = `arrears-${a.propertyId}`;
           return (
-            <tr
+            <ModuleInteractiveTableRow
               key={a.propertyId}
-              className={cn(
-                'transition-colors hover:bg-muted/20',
-                a.arrearsAmount > 0 && 'bg-destructive/[0.03]',
-              )}
+              onActivate={openItem}
+              selected={selectedId === rowId}
+              className={cn(a.arrearsAmount > 0 && 'bg-destructive/[0.03]')}
             >
-              <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                <span className="line-clamp-2">{a.propertyAddress}</span>
-              </ModuleTableLinkCell>
+              {interactive ? (
+                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{a.propertyAddress}</span>
+                </td>
+              ) : (
+                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                  <span className="line-clamp-2">{a.propertyAddress}</span>
+                </ModuleTableLinkCell>
+              )}
               <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
                 <span className="line-clamp-2">{a.tenantName}</span>
               </td>
@@ -520,8 +621,14 @@ export function AccountingListTable({ items }: { items: PropertyAccounting[] }) 
                   <p className="text-primary mt-0.5 text-[11px]">{progress.currentStepLabel}</p>
                 ) : null}
               </td>
-              <ModuleTableChevronCell href={href} />
-            </tr>
+              {interactive ? (
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  <ChevronRight className="inline size-4" />
+                </td>
+              ) : (
+                <ModuleTableChevronCell href={href} />
+              )}
+            </ModuleInteractiveTableRow>
           );
         })}
       </tbody>
@@ -643,18 +750,18 @@ export function LeasingCyclesTable({
           const isSelected = selectedCycleId === cycle.id;
           const openCycle = onCycleClick ? () => onCycleClick(cycle) : undefined;
           return (
-            <tr
+            <ModuleInteractiveTableRow
               key={cycle.id}
-              className={cn(
-                'transition-colors hover:bg-muted/20',
-                onCycleClick && 'cursor-pointer',
-                isSelected && 'bg-primary/5',
-              )}
-              onClick={openCycle}
+              onActivate={openCycle}
+              selected={isSelected}
             >
               {hidePropertyColumn ? (
                 <td className="px-3 py-3 font-medium">
                   {workflowCaseReferenceLabel(cycle.id, 'leasing')}
+                </td>
+              ) : onCycleClick ? (
+                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{cycle.propertyAddress}</span>
                 </td>
               ) : (
                 <ModuleTableLinkCell href={href} className="max-w-[14rem]">
@@ -683,7 +790,7 @@ export function LeasingCyclesTable({
               ) : (
                 <ModuleTableChevronCell href={href} />
               )}
-            </tr>
+            </ModuleInteractiveTableRow>
           );
         })}
       </tbody>

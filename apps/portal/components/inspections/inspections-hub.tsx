@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { InspectionsListTable } from '@/components/agent/portfolio-module-tables';
+import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -34,8 +35,10 @@ import {
   canDeleteOpenInspection,
   cancelOpenInspectionJob,
 } from '@/lib/open-inspection-delete';
+import { inspectionToJobRow } from '@/lib/portfolio-case-dialog';
 import type { Inspection } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 
 const TYPE_FILTERS = [
   { id: 'all', label: 'All types' },
@@ -64,6 +67,7 @@ export function InspectionsHub({
   propertyLabel?: string;
 }) {
   const { apiConnected, refresh } = useAgentData();
+  const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
   const searchParams = useSearchParams();
   const typeParam = searchParams.get('type');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>(
@@ -186,8 +190,16 @@ export function InspectionsHub({
           items={filtered}
           canDeleteRow={canDeleteInspection}
           onDeleteRow={setDeleteTarget}
+          selectedId={selectedId}
+          onItemClick={(item) => openJob(inspectionToJobRow(item))}
         />
       )}
+
+      <PortfolioCaseDialogHost
+        job={selectedJob}
+        onClose={closeJob}
+        onOpenJob={openJob}
+      />
 
       <WorkflowCaseDeleteDialog
         open={deleteTarget != null}

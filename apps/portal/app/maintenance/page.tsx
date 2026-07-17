@@ -6,11 +6,14 @@ import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
+import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { MaintenanceListTable } from '@/components/agent/portfolio-module-tables';
 import { StatusBanner } from '@/components/agent/status-banner';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
+import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
+import { maintenanceToJobRow } from '@/lib/portfolio-case-dialog';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -30,6 +33,7 @@ export default function MaintenancePage() {
   });
   const [search, setSearch] = useState('');
   const { maintenanceAll, sectionStatus } = useAgentData();
+  const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
 
   const summary = sectionStatus.find((s) => s.id === 'maintenance');
 
@@ -90,8 +94,17 @@ export default function MaintenancePage() {
             }
           />
         ) : (
-          <MaintenanceListTable items={list} />
+          <MaintenanceListTable
+            items={list}
+            selectedId={selectedId}
+            onItemClick={(item) => openJob(maintenanceToJobRow(item))}
+          />
         )}
+        <PortfolioCaseDialogHost
+          job={selectedJob}
+          onClose={closeJob}
+          onOpenJob={openJob}
+        />
         <ModuleCommunications
           categories={['Maintenance']}
           title="Maintenance emails & messages"

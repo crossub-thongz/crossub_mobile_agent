@@ -1,17 +1,18 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { RentReviewListTable } from '@/components/agent/portfolio-module-tables';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { rentReviewDetail, ROUTES } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
-import type { DetailNavContext } from '@/lib/detail-navigation';
+import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
+import { rentReviewToJobRow } from '@/lib/portfolio-case-dialog';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import { useAgentStore } from '@/lib/store';
 
@@ -21,24 +22,11 @@ const VIEW_FILTERS = [
 ];
 
 export default function RentReviewPage() {
-  const searchParams = useSearchParams();
   const { rentReviews } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
+  const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
   const [view, setView] = useState('current');
   const [search, setSearch] = useState('');
-
-  const detailNav = useMemo((): DetailNavContext | undefined => {
-    const from = searchParams.get('from');
-    const propertyId = searchParams.get('propertyId');
-    if (from === 'property' && propertyId) {
-      return {
-        from: 'property',
-        propertyId,
-        tab: searchParams.get('tab') ?? undefined,
-      };
-    }
-    return undefined;
-  }, [searchParams]);
 
   const { current, completed } = useMemo(() => {
     const cur: typeof rentReviews = [];
@@ -85,9 +73,15 @@ export default function RentReviewPage() {
         ) : (
           <RentReviewListTable
             items={list}
-            detailHref={(id) => rentReviewDetail(id, detailNav)}
+            selectedId={selectedId}
+            onItemClick={(item) => openJob(rentReviewToJobRow(item, decisions))}
           />
         )}
+        <PortfolioCaseDialogHost
+          job={selectedJob}
+          onClose={closeJob}
+          onOpenJob={openJob}
+        />
       </div>
     </AgentShell>
   );
