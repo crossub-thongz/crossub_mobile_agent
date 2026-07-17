@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const SECTION_TITLE_CLASS = 'text-sm font-semibold lg:text-base';
 
 export function DashboardPortfolioMapSection({ properties }: { properties: Property[] }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <section className="space-y-2">

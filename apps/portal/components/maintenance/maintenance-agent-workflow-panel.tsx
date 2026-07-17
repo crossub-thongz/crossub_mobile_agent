@@ -76,6 +76,7 @@ function StepContent({
         <MaintenanceJobCompletedPanel
           ctx={ctx}
           attachments={attachments}
+          contractors={contractors}
           onCaseUpdated={onCaseUpdated}
         />
       );

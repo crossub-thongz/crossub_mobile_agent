@@ -87,13 +87,22 @@ export function mapApiMaintenanceRequest(
       q.status === 'submitted' &&
       (req.quotationIds ?? []).includes(q.id),
   );
+  const approvedQuote = quotations.find(
+    (q) =>
+      q.maintenanceRequestId === req.id &&
+      q.status === 'approved' &&
+      (req.quotationIds ?? []).includes(q.id),
+  );
   const latestQuote = quotations.find(
     (q) =>
       q.maintenanceRequestId === req.id &&
       (req.quotationIds ?? []).includes(q.id),
   );
   const contractorId =
-    req.assignedContractorId ?? submittedQuote?.contractorId ?? latestQuote?.contractorId;
+    req.assignedContractorId ??
+    approvedQuote?.contractorId ??
+    submittedQuote?.contractorId ??
+    latestQuote?.contractorId;
   const contractor = contractors.find((c) => contractorIdsMatch(c.id, contractorId ?? ''));
 
   const reqAudit = dedupeAuditEntries(
@@ -121,8 +130,8 @@ export function mapApiMaintenanceRequest(
     priority: PRIORITY_MAP[req.priority] ?? 'normal',
     responsibility: resolvedResponsibility,
     contractorName: contractor?.name,
-    quoteAmount: submittedQuote?.price ?? latestQuote?.price,
-    quoteExpiry: submittedQuote?.availableSchedule,
+    quoteAmount: approvedQuote?.price ?? submittedQuote?.price ?? latestQuote?.price,
+    quoteExpiry: (approvedQuote ?? submittedQuote)?.availableSchedule,
     recommendation:
       resolvedResponsibility === 'landlord' && submittedQuote
         ? submittedQuote.scope
