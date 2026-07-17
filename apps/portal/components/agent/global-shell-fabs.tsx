@@ -15,7 +15,6 @@ import {
   X,
 } from 'lucide-react';
 
-import { DraggableCollapsibleDock } from '@/components/agent/draggable-collapsible-dock';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { PhonePanel } from '@/components/agent/phone-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -73,23 +72,30 @@ function isActiveChatPath(pathname: string): boolean {
   return /^\/messages\/[^/]+$/.test(pathname) && !pathname.startsWith('/messages/new');
 }
 
-function dockButtonClass(active: boolean, activeClass: string) {
+
+function headerQuickActionClass(active: boolean, inline: boolean) {
+  if (inline) {
+    return cn(
+      'relative flex size-8 shrink-0 items-center justify-center rounded-md transition-colors',
+      active
+        ? 'bg-primary-foreground/20 text-primary-foreground'
+        : 'text-primary-foreground/90 hover:bg-primary-foreground/10',
+    );
+  }
+
   return cn(
-    'pointer-events-auto relative flex size-11 items-center justify-center rounded-full border bg-card/90 shadow-lg shadow-black/20 backdrop-blur-xl transition-all hover:-translate-y-0.5',
+    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-[10px] font-medium transition-colors',
     active
-      ? activeClass
-      : 'border-border/70 text-muted-foreground hover:border-border hover:text-foreground',
+      ? 'bg-primary-foreground/20 text-primary-foreground'
+      : 'text-primary-foreground/90 hover:bg-primary-foreground/10',
   );
 }
 
-export function GlobalShellFabs({ pathname }: { pathname: string }) {
-  const propertyId = propertyIdFromPath(pathname);
+function useShellQuickActions(pathname: string) {
   const hideCommunication = isActiveChatPath(pathname);
   const { hasFullManagementAccess } = useAgentData();
   const activePanel = useShellDockStore((s) => s.activePanel);
   const togglePanel = useShellDockStore((s) => s.togglePanel);
-  const closePanel = useShellDockStore((s) => s.closePanel);
-  const mobileGiiOpen = activePanel === 'gii';
 
   const visibleButtons = DOCK_BUTTONS.filter((button) => {
     if (button.id === 'communication' && (hideCommunication || !hasFullManagementAccess)) {
@@ -97,6 +103,81 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
     }
     return true;
   });
+
+  return { activePanel, togglePanel, visibleButtons };
+}
+
+/** Quick actions for the shell header — Messages, Calls, Quick create. */
+export function ShellHeaderQuickActions({
+  pathname,
+  inline = true,
+}: {
+  pathname: string;
+  /** Compact icon row for the header toolbar (default). */
+  inline?: boolean;
+}) {
+  const { activePanel, togglePanel, visibleButtons } = useShellQuickActions(pathname);
+
+  if (visibleButtons.length === 0) return null;
+
+  return (
+    <div
+      className={cn(
+        'bg-primary flex shrink-0 items-center',
+        inline ? 'gap-0.5 rounded-lg p-0.5' : 'gap-0.5 px-2 py-1',
+      )}
+    >
+      {visibleButtons.map((btn) => {
+        const Icon = btn.icon;
+        const isActive = activePanel === btn.id;
+        return (
+          <button
+            key={btn.id}
+            type="button"
+            title={btn.label}
+            aria-label={btn.label}
+            aria-pressed={isActive}
+            onClick={() => togglePanel(btn.id)}
+            className={headerQuickActionClass(isActive, inline)}
+          >
+            <Icon className={inline ? 'size-4' : 'size-5'} />
+            {!inline ? <span className="max-w-full truncate">{btn.label}</span> : null}
+            {btn.id === 'communication' ? <UnreadBadge variant="header" /> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Mobile-only Gii launcher — sits in the top header row, outside the quick-action pill. */
+export function ShellHeaderGiiButton() {
+  const activePanel = useShellDockStore((s) => s.activePanel);
+  const togglePanel = useShellDockStore((s) => s.togglePanel);
+  const mobileGiiOpen = activePanel === 'gii';
+
+  return (
+    <button
+      type="button"
+      title={MOBILE_GII_BUTTON.label}
+      aria-label={MOBILE_GII_BUTTON.label}
+      aria-pressed={mobileGiiOpen}
+      onClick={() => togglePanel('gii')}
+      className={cn(
+        'text-muted-foreground hover:bg-secondary flex size-9 shrink-0 items-center justify-center rounded-lg lg:hidden',
+        mobileGiiOpen && 'bg-primary/10 text-primary',
+      )}
+    >
+      <MOBILE_GII_BUTTON.icon className="size-5" />
+    </button>
+  );
+}
+
+export function GlobalShellFabs({ pathname }: { pathname: string }) {
+  const propertyId = propertyIdFromPath(pathname);
+  const activePanel = useShellDockStore((s) => s.activePanel);
+  const closePanel = useShellDockStore((s) => s.closePanel);
+  const mobileGiiOpen = activePanel === 'gii';
 
   return (
     <>
@@ -116,51 +197,23 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
           <GiiAssistant open variant="modal" onClose={closePanel} />
         </div>
       ) : null}
-
-      <DraggableCollapsibleDock
-        defaultCorner={{ kind: 'corner', right: 24, bottom: 88 }}
-        launcherLabel="Open quick actions"
-      >
-        {/* Desktop already shows Gii permanently — only expose the FAB on mobile. */}
-        <button
-          type="button"
-          title={MOBILE_GII_BUTTON.label}
-          aria-label={MOBILE_GII_BUTTON.label}
-          aria-pressed={mobileGiiOpen}
-          onClick={() => togglePanel('gii')}
-          className={cn(dockButtonClass(mobileGiiOpen, MOBILE_GII_BUTTON.activeClass), 'lg:hidden')}
-        >
-          <MOBILE_GII_BUTTON.icon className="size-5" />
-        </button>
-        {visibleButtons.map((btn) => {
-          const Icon = btn.icon;
-          const isActive = activePanel === btn.id;
-          return (
-            <button
-              key={btn.id}
-              type="button"
-              title={btn.label}
-              aria-label={btn.label}
-              aria-pressed={isActive}
-              onClick={() => togglePanel(btn.id)}
-              className={dockButtonClass(isActive, btn.activeClass)}
-            >
-              <Icon className="size-5" />
-              {btn.id === 'communication' && <UnreadBadge />}
-            </button>
-          );
-        })}
-      </DraggableCollapsibleDock>
     </>
   );
 }
 
-function UnreadBadge() {
+function UnreadBadge({ variant = 'dock' }: { variant?: 'dock' | 'header' }) {
   const { messages } = useAgentData();
   const unread = messages.reduce((sum, m) => sum + m.unread, 0);
   if (unread <= 0) return null;
   return (
-    <span className="bg-destructive absolute -top-0.5 -right-0.5 flex size-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white">
+    <span
+      className={cn(
+        'bg-destructive absolute flex min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white',
+        variant === 'header'
+          ? 'top-0 right-0 size-3.5 min-w-3.5 translate-x-1/4 -translate-y-1/4 text-[8px]'
+          : '-top-0.5 -right-0.5 size-4',
+      )}
+    >
       {unread > 9 ? '9+' : unread}
     </span>
   );

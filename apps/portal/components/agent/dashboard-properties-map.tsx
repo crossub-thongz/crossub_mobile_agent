@@ -35,7 +35,7 @@ export function DashboardPropertiesMap({
   embedded?: boolean;
   /** Show the property-count line when embedded (e.g. dashboard map row). */
   showStats?: boolean;
-  /** Dashboard strip: full content width with a fixed compact height. */
+  /** Dashboard strip: full content width with a 3:2 aspect when expanded (height = 2/3 width). */
   dashboardTile?: boolean;
   /** Expand map to fill available parent height. */
   fillHeight?: boolean;
@@ -202,7 +202,7 @@ export function DashboardPropertiesMap({
           fillHeight && 'flex min-h-0 flex-1 flex-col',
           dashboardTile &&
             !fillHeight &&
-            'h-[180px] w-full shrink-0 sm:h-[200px] md:h-[220px]',
+            'aspect-[3/2] w-full shrink-0',
           fillHeight && 'h-full min-h-[min(calc(100dvh-14rem),720px)] w-full flex-1',
         )}
       >

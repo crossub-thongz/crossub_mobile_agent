@@ -1,6 +1,6 @@
 'use client';
 
-import { CustomizableDashboard } from '@/components/agent/dashboard/customizable-dashboard';
+import { ClassicDashboard } from '@/components/agent/dashboard/classic-dashboard';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 
@@ -14,7 +14,7 @@ export default function DashboardPage() {
 
   return (
     <AgentShell title="Dashboard">
-      <CustomizableDashboard
+      <ClassicDashboard
         context={{
           properties,
           dashboardKpis,

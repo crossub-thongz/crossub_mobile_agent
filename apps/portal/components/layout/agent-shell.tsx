@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
-import { GlobalShellFabs } from '@/components/agent/global-shell-fabs';
+import { GlobalShellFabs, ShellHeaderGiiButton, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -122,7 +122,11 @@ export function AgentShell({
               <CrossubLogo size="sm" />
             )}
 
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-1">
+              {!hideGlobalFabs && !title ? (
+                <ShellHeaderQuickActions pathname={pathname} />
+              ) : null}
+              {!hideGlobalFabs ? <ShellHeaderGiiButton /> : null}
               <AgentNotificationBell unreadCount={unreadNotificationCount} />
               <ThemeToggle />
               <Link
@@ -136,11 +140,16 @@ export function AgentShell({
           </div>
 
           {title && (
-            <div className="border-border border-t px-4 py-2">
-              <h1 className="truncate text-base font-semibold">{title}</h1>
-              {user && (
-                <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
-              )}
+            <div className="border-border flex items-center gap-2 border-t px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-base font-semibold">{title}</h1>
+                {user && (
+                  <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
+                )}
+              </div>
+              {!hideGlobalFabs ? (
+                <ShellHeaderQuickActions pathname={pathname} />
+              ) : null}
             </div>
           )}
         </header>
@@ -166,15 +175,18 @@ export function AgentShell({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-              <AgentNotificationBell unreadCount={unreadNotificationCount} />
-              <Link
-                href={ROUTES.SEARCH}
-                className="text-muted-foreground flex size-9 items-center justify-center rounded-lg hover:bg-secondary"
-                aria-label="Search"
-              >
-                <Search className="size-5" />
-              </Link>
-            </div>
+                {!hideGlobalFabs ? (
+                  <ShellHeaderQuickActions pathname={pathname} />
+                ) : null}
+                <AgentNotificationBell unreadCount={unreadNotificationCount} />
+                <Link
+                  href={ROUTES.SEARCH}
+                  className="text-muted-foreground flex size-9 items-center justify-center rounded-lg hover:bg-secondary"
+                  aria-label="Search"
+                >
+                  <Search className="size-5" />
+                </Link>
+              </div>
             </div>
           </header>
         )}
