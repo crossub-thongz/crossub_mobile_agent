@@ -281,7 +281,7 @@ export function PropertyWorkflowCreateDialog({
   tenantSelections?: TenantSelectionCase[];
   onSuccess: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
-  const { refresh, apiConnected } = useAgentData();
+  const { refresh, apiConnected, endPropertyManagement } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
 
@@ -290,6 +290,11 @@ export function PropertyWorkflowCreateDialog({
   const [tenantMovedOut, setTenantMovedOut] = useState<boolean | null>(null);
   const [crossubConductsOpen, setCrossubConductsOpen] = useState<boolean | null>(true);
   const [lettingNotes, setLettingNotes] = useState('');
+  /** After End Leasing: relist (new leasing + open choice) or end agency management. */
+  const [endLeasingNextStep, setEndLeasingNextStep] = useState<'relist' | 'end_management'>(
+    'relist',
+  );
+  const [endOfManagementDate, setEndOfManagementDate] = useState('');
 
   const [tenantName, setTenantName] = useState('');
   const [leaseType, setLeaseType] = useState<'fixed' | 'periodic'>('fixed');
@@ -339,6 +344,10 @@ export function PropertyWorkflowCreateDialog({
   const maintPrefill = useMemo(
     () => buildMaintenancePrefill(property, { currentLease, tenantSelections }),
     [property, currentLease, tenantSelections],
+  );
+  const propertyIsVacant = useMemo(
+    () => isPropertyVacant(property, currentLease ? [currentLease] : []),
+    [property, currentLease],
   );
   const minAvailableFrom = useMemo(() => minLeasingCycleAvailableFrom(), [open]);
   /** Avoid re-prefilling while the dialog is open (portfolio live-poll updates `property`). */
@@ -400,6 +409,8 @@ export function PropertyWorkflowCreateDialog({
     setBreachClause('');
     setBreachConduct('');
     setTerminationNotes('');
+    setEndLeasingNextStep('relist');
+    setEndOfManagementDate('');
 
     const maintenance = buildMaintenancePrefill(property, { currentLease, tenantSelections });
     setIssueTypeSelection('');
@@ -530,7 +541,8 @@ export function PropertyWorkflowCreateDialog({
             `Available from must be at least ${LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today`,
           );
         }
-        if (tenantMovedOut === null) {
+        // Vacant / new listings have no tenant — skip the moved-out prompt.
+        if (!propertyIsVacant && tenantMovedOut === null) {
           throw new Error('Select whether the tenant has moved out');
         }
         if (crossubConductsOpen === null) {
@@ -544,7 +556,7 @@ export function PropertyWorkflowCreateDialog({
           rentPerWeek: rent,
           availableFrom: new Date(availableFrom).toISOString(),
           fixedTermWeeks,
-          tenantMovedOut,
+          tenantMovedOut: propertyIsVacant ? true : Boolean(tenantMovedOut),
           notes: lettingNotes.trim() || undefined,
           skipOpenInspection: !crossubConductsOpen,
           ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
@@ -635,21 +647,25 @@ export function PropertyWorkflowCreateDialog({
         if (terminationType === 'tenant_initiated' && !expectedVacateDate) {
           throw new Error('Expected vacate date is required');
         }
-        const rent = Number(rentPerWeek);
-        if (!rent || rent <= 0) throw new Error('Preferred rent is required');
-        if (!availableFrom) throw new Error('Lease start date is required');
-        if (availableFrom < minAvailableFrom) {
-          throw new Error(
-            `Lease start date must be at least ${LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today`,
-          );
+
+        if (endLeasingNextStep === 'end_management') {
+          if (!endOfManagementDate.trim()) {
+            throw new Error('End of management date is required');
+          }
+        } else {
+          const rent = Number(rentPerWeek);
+          if (!rent || rent <= 0) throw new Error('Preferred rent is required');
+          if (!availableFrom) throw new Error('Lease start date is required');
+          if (availableFrom < minAvailableFrom) {
+            throw new Error(
+              `Lease start date must be at least ${LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today`,
+            );
+          }
+          if (crossubConductsOpen === null) {
+            throw new Error('Select whether CROSSUB should conduct the open inspection');
+          }
+          resolveCrossubLeaseTermWeeks(crossubLeaseTermChoice, crossubCustomTermWeeks);
         }
-        if (crossubConductsOpen === null) {
-          throw new Error('Select whether CROSSUB should conduct the open inspection');
-        }
-        const newLeasingTermWeeks = resolveCrossubLeaseTermWeeks(
-          crossubLeaseTermChoice,
-          crossubCustomTermWeeks,
-        );
 
         const terminationResult = await createAgentTerminationCase(propertyId, {
           terminationType,
@@ -670,6 +686,33 @@ export function PropertyWorkflowCreateDialog({
           bondHeld: bondHeld ? Number(bondHeld) : undefined,
           terminationReason: terminationNotes.trim() || undefined,
         });
+
+        if (endLeasingNextStep === 'end_management') {
+          try {
+            await endPropertyManagement(propertyId, endOfManagementDate, {
+              archiveOnBondRelease: true,
+            });
+            toast.success(
+              'End leasing created — end of management recorded; property archives after bond release confirmation',
+            );
+          } catch (endMgmtErr) {
+            toast.warning(
+              endMgmtErr instanceof Error
+                ? `End leasing created, but end of management failed: ${endMgmtErr.message}`
+                : 'End leasing created, but end of management could not be recorded',
+            );
+          }
+          await refresh();
+          onSuccess({ kind: 'end_leasing', id: terminationResult.id });
+          return;
+        }
+
+        // Relist path: auto-create new leasing; open order only if CROSSUB Yes.
+        const rent = Number(rentPerWeek);
+        const newLeasingTermWeeks = resolveCrossubLeaseTermWeeks(
+          crossubLeaseTermChoice,
+          crossubCustomTermWeeks,
+        );
 
         try {
           const leasingResult = await createAgentLeasingCycle(propertyId, {
@@ -763,40 +806,42 @@ export function PropertyWorkflowCreateDialog({
 
         {actionId === 'start_leasing' ? (
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Tenant moved out? *</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={tenantMovedOut === true ? 'default' : 'outline'}
-                  className={cn(
-                    'h-9',
-                    tenantMovedOut === true && 'bg-teal-600 text-white hover:bg-teal-700',
-                  )}
-                  onClick={() => setTenantMovedOut(true)}
-                >
-                  Yes
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={tenantMovedOut === false ? 'default' : 'outline'}
-                  className={cn(
-                    'h-9',
-                    tenantMovedOut === false && 'bg-teal-600 text-white hover:bg-teal-700',
-                  )}
-                  onClick={() => setTenantMovedOut(false)}
-                >
-                  No
-                </Button>
+            {!propertyIsVacant ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tenant moved out? *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tenantMovedOut === true ? 'default' : 'outline'}
+                    className={cn(
+                      'h-9',
+                      tenantMovedOut === true && 'bg-teal-600 text-white hover:bg-teal-700',
+                    )}
+                    onClick={() => setTenantMovedOut(true)}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tenantMovedOut === false ? 'default' : 'outline'}
+                    className={cn(
+                      'h-9',
+                      tenantMovedOut === false && 'bg-teal-600 text-white hover:bg-teal-700',
+                    )}
+                    onClick={() => setTenantMovedOut(false)}
+                  >
+                    No
+                  </Button>
+                </div>
+                {tenantMovedOut === false ? (
+                  <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                    Contact current tenant to schedule open inspection.
+                  </p>
+                ) : null}
               </div>
-              {tenantMovedOut === false ? (
-                <p className="text-amber-700 dark:text-amber-400 text-[11px]">
-                  Contact current tenant to schedule open inspection.
-                </p>
-              ) : null}
-            </div>
+            ) : null}
             <Field label="Preferred lease term *">
               <div className="grid grid-cols-3 gap-2">
                 {(['26', '52'] as const).map((weeks) => (
@@ -1249,125 +1294,176 @@ export function PropertyWorkflowCreateDialog({
               />
             </Field>
 
-            <div className="border-t pt-4">
-              <p className="text-sm font-semibold">New leasing order</p>
-              <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
-                A new leasing cycle is created at the same time so you can confirm relist terms
-                while the vacate case runs.
-              </p>
-            </div>
-
-            <Field label="Preferred lease term *">
-              <div className="grid grid-cols-3 gap-2">
-                {(['26', '52'] as const).map((weeks) => (
-                  <Button
-                    key={weeks}
-                    type="button"
-                    size="sm"
-                    variant={crossubLeaseTermChoice === weeks ? 'default' : 'outline'}
-                    className={cn(
-                      crossubLeaseTermChoice === weeks &&
-                        'bg-teal-600 text-white hover:bg-teal-700',
-                    )}
-                    onClick={() => setCrossubLeaseTermChoice(weeks)}
-                  >
-                    {weeks} weeks
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={crossubLeaseTermChoice === 'custom' ? 'default' : 'outline'}
-                  className={cn(
-                    crossubLeaseTermChoice === 'custom' &&
-                      'bg-teal-600 text-white hover:bg-teal-700',
-                  )}
-                  onClick={() => setCrossubLeaseTermChoice('custom')}
-                >
-                  Custom
-                </Button>
-              </div>
-              {crossubLeaseTermChoice === 'custom' ? (
-                <Input
-                  type="number"
-                  min={1}
-                  max={520}
-                  className="mt-2"
-                  placeholder="Enter number of weeks"
-                  value={crossubCustomTermWeeks}
-                  onChange={(e) => setCrossubCustomTermWeeks(e.target.value)}
-                />
-              ) : null}
-            </Field>
-            <Field label="Preferred rent / week (AUD) *">
-              <Input
-                type="number"
-                min={1}
-                value={rentPerWeek}
-                onChange={(e) => setRentPerWeek(e.target.value)}
-              />
-            </Field>
-            <Field label="Lease start date *">
-              <Input
-                type="date"
-                min={minAvailableFrom}
-                value={availableFrom}
-                onChange={(e) => setAvailableFrom(e.target.value)}
-              />
-              <p className="text-muted-foreground text-[11px]">
-                Auto-suggested from the vacate date when set. Must be at least{' '}
-                {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest {minAvailableFrom}
-                ).
-              </p>
-            </Field>
-            <Field label="New leasing notes">
-              <Textarea
-                rows={2}
-                placeholder="Landlord relist requests, access notes, or other context for the new letting…"
-                value={lettingNotes}
-                onChange={(e) => setLettingNotes(e.target.value)}
-                maxLength={2000}
-              />
-            </Field>
-            <div className="space-y-1.5">
-              <Label className="text-xs">CROSSUB conducts open inspection? *</Label>
+            <div className="space-y-1.5 border-t pt-4">
+              <Label className="text-xs">After vacate *</Label>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   size="sm"
-                  variant={crossubConductsOpen === true ? 'default' : 'outline'}
+                  variant={endLeasingNextStep === 'relist' ? 'default' : 'outline'}
                   className={cn(
                     'h-9',
-                    crossubConductsOpen === true && 'bg-teal-600 text-white hover:bg-teal-700',
+                    endLeasingNextStep === 'relist' &&
+                      'bg-teal-600 text-white hover:bg-teal-700',
                   )}
-                  onClick={() => setCrossubConductsOpen(true)}
+                  onClick={() => setEndLeasingNextStep('relist')}
                 >
-                  Yes
+                  New leasing
                 </Button>
                 <Button
                   type="button"
                   size="sm"
-                  variant={crossubConductsOpen === false ? 'default' : 'outline'}
+                  variant={endLeasingNextStep === 'end_management' ? 'default' : 'outline'}
                   className={cn(
                     'h-9',
-                    crossubConductsOpen === false && 'bg-teal-600 text-white hover:bg-teal-700',
+                    endLeasingNextStep === 'end_management' &&
+                      'bg-teal-600 text-white hover:bg-teal-700',
                   )}
-                  onClick={() => setCrossubConductsOpen(false)}
+                  onClick={() => setEndLeasingNextStep('end_management')}
                 >
-                  No
+                  End management
                 </Button>
               </div>
-              {crossubConductsOpen === true ? (
-                <p className="text-muted-foreground text-[11px]">
-                  CROSSUB will arrange the open inspection for the new letting after the tenant
-                  vacates.
-                </p>
-              ) : crossubConductsOpen === false ? (
-                <p className="text-amber-700 dark:text-amber-400 text-[11px]">
-                  {SELF_OPEN_INSPECTION_DISCLAIMER}
-                </p>
-              ) : null}
+              <p className="text-muted-foreground text-[11px] leading-relaxed">
+                {endLeasingNextStep === 'relist'
+                  ? 'A new leasing order is created with this vacate case. Confirm whether CROSSUB should handle the open.'
+                  : 'Record the end of management date. The property stays active until you confirm bond release (Job completed), then it is archived.'}
+              </p>
             </div>
+
+            {endLeasingNextStep === 'end_management' ? (
+              <Field label="End of management date *">
+                <Input
+                  type="date"
+                  value={endOfManagementDate}
+                  onChange={(e) => setEndOfManagementDate(e.target.value)}
+                />
+              </Field>
+            ) : (
+              <>
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold">New leasing order</p>
+                  <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                    Created automatically with End Leasing so you can confirm relist terms while
+                    the vacate case runs.
+                  </p>
+                </div>
+
+                <Field label="Preferred lease term *">
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['26', '52'] as const).map((weeks) => (
+                      <Button
+                        key={weeks}
+                        type="button"
+                        size="sm"
+                        variant={crossubLeaseTermChoice === weeks ? 'default' : 'outline'}
+                        className={cn(
+                          crossubLeaseTermChoice === weeks &&
+                            'bg-teal-600 text-white hover:bg-teal-700',
+                        )}
+                        onClick={() => setCrossubLeaseTermChoice(weeks)}
+                      >
+                        {weeks} weeks
+                      </Button>
+                    ))}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={crossubLeaseTermChoice === 'custom' ? 'default' : 'outline'}
+                      className={cn(
+                        crossubLeaseTermChoice === 'custom' &&
+                          'bg-teal-600 text-white hover:bg-teal-700',
+                      )}
+                      onClick={() => setCrossubLeaseTermChoice('custom')}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+                  {crossubLeaseTermChoice === 'custom' ? (
+                    <Input
+                      type="number"
+                      min={1}
+                      max={520}
+                      className="mt-2"
+                      placeholder="Enter number of weeks"
+                      value={crossubCustomTermWeeks}
+                      onChange={(e) => setCrossubCustomTermWeeks(e.target.value)}
+                    />
+                  ) : null}
+                </Field>
+                <Field label="Preferred rent / week (AUD) *">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={rentPerWeek}
+                    onChange={(e) => setRentPerWeek(e.target.value)}
+                  />
+                </Field>
+                <Field label="Lease start date *">
+                  <Input
+                    type="date"
+                    min={minAvailableFrom}
+                    value={availableFrom}
+                    onChange={(e) => setAvailableFrom(e.target.value)}
+                  />
+                  <p className="text-muted-foreground text-[11px]">
+                    Auto-suggested from the vacate date when set. Must be at least{' '}
+                    {LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today (earliest{' '}
+                    {minAvailableFrom}).
+                  </p>
+                </Field>
+                <Field label="New leasing notes">
+                  <Textarea
+                    rows={2}
+                    placeholder="Landlord relist requests, access notes, or other context for the new letting…"
+                    value={lettingNotes}
+                    onChange={(e) => setLettingNotes(e.target.value)}
+                    maxLength={2000}
+                  />
+                </Field>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">CROSSUB conducts open inspection? *</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={crossubConductsOpen === true ? 'default' : 'outline'}
+                      className={cn(
+                        'h-9',
+                        crossubConductsOpen === true &&
+                          'bg-teal-600 text-white hover:bg-teal-700',
+                      )}
+                      onClick={() => setCrossubConductsOpen(true)}
+                    >
+                      Yes
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={crossubConductsOpen === false ? 'default' : 'outline'}
+                      className={cn(
+                        'h-9',
+                        crossubConductsOpen === false &&
+                          'bg-teal-600 text-white hover:bg-teal-700',
+                      )}
+                      onClick={() => setCrossubConductsOpen(false)}
+                    >
+                      No
+                    </Button>
+                  </div>
+                  {crossubConductsOpen === true ? (
+                    <p className="text-muted-foreground text-[11px]">
+                      CROSSUB will arrange the open inspection for the new letting after the tenant
+                      vacates.
+                    </p>
+                  ) : crossubConductsOpen === false ? (
+                    <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                      {SELF_OPEN_INSPECTION_DISCLAIMER}
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            )}
           </div>
         ) : null}
 

@@ -371,7 +371,10 @@ export function CreateInspectionWizard({
           setOpenConductedBy('crossub');
           setOpenAcknowledged(false);
           setOpenTenantNotified(false);
-          setOpenTenantMovedOut(null);
+          // Vacant / new listings have no tenant — treat as already moved out.
+          setOpenTenantMovedOut(
+            isPropertyVacant(propertyRow, lease ? [lease] : []) ? true : null,
+          );
         }
       }
 
@@ -411,6 +414,9 @@ export function CreateInspectionWizard({
   ]);
 
   const openListingContext = property ? getOpenListingContext(property) : null;
+  const propertyIsVacant = property
+    ? isPropertyVacant(property, currentLease ? [currentLease] : [])
+    : false;
   const manualStandaloneCrossubOpen =
     !leasingCycleIdProp && openConductedBy === 'crossub';
   const minOpenAvailableFrom = minLeasingCycleAvailableFrom();
@@ -529,7 +535,8 @@ export function CreateInspectionWizard({
         if (openConductedBy === 'crossub' && !openPreferredStartLocal) {
           throw new Error('Enter a preferred date and time for CROSSUB to schedule');
         }
-        if (manualStandaloneCrossubOpen && openTenantMovedOut === null) {
+        // Tenant-moved-out only applies when the property currently has a tenant.
+        if (manualStandaloneCrossubOpen && !propertyIsVacant && openTenantMovedOut === null) {
           throw new Error('Select whether the tenant has moved out');
         }
         if (manualStandaloneCrossubOpen) {
@@ -542,6 +549,64 @@ export function CreateInspectionWizard({
             );
           }
           resolveStandaloneOpenLeaseTermWeeks(openLeaseTermChoice, openCustomLeaseTermWeeks);
+        }
+
+        // Case 2: vacant / newly registered property — creating a CROSSUB open
+        // must also create (or attach to) a New Leasing job case.
+        if (manualStandaloneCrossubOpen && propertyIsVacant) {
+          if (!openPreferredEndLocal) {
+            throw new Error('Enter a viewing end time');
+          }
+          if (
+            openPreferredStartLocal &&
+            new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)
+          ) {
+            throw new Error('Preferred end time must be after the start time');
+          }
+          const rent = Number(openPreferredRentPerWeek);
+          const fixedTermWeeks = resolveStandaloneOpenLeaseTermWeeks(
+            openLeaseTermChoice,
+            openCustomLeaseTermWeeks,
+          );
+          let cycleId = leasingCycle?.id;
+          if (!cycleId) {
+            const created = await createAgentLeasingCycle(property.id, {
+              rentPerWeek: rent,
+              availableFrom: new Date(openPreferredAvailableFrom).toISOString(),
+              fixedTermWeeks,
+              tenantMovedOut: true,
+              // Avoid a duplicate OPEN pool job — we request open explicitly below.
+              skipOpenInspection: true,
+            });
+            cycleId = created.id;
+          }
+          const result = await requestAgentOpenInspection(property.id, cycleId, {
+            preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
+            preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
+            preferredNotes: openPreferredNotes.trim() || undefined,
+          });
+          toast.success(
+            leasingCycle?.id
+              ? 'Open inspection requested — CROSSUB will confirm the schedule'
+              : 'New leasing created and open inspection requested',
+          );
+          const inspection = await resolveCreatedOpenInspection(
+            property.id,
+            result.openInspectionId,
+          );
+          if (inspection) {
+            registerInspection(inspection);
+            onCreated?.({ inspectionId: inspection.id, inspection });
+          } else {
+            onCreated?.({});
+          }
+          await refresh();
+          if (navigateOnSuccess && !inspection) {
+            router.push(propertyLeasingWorkflow(property.id));
+          } else if (navigateOnSuccess && inspection) {
+            router.push(inspectionDetail(inspection.id));
+          }
+          return;
         }
 
         const scheduledAt = openConductedBy === 'crossub'
@@ -801,7 +866,7 @@ export function CreateInspectionWizard({
                   onAcknowledgedChange={setOpenAcknowledged}
                   tenantNotified={openTenantNotified}
                   onTenantNotifiedChange={setOpenTenantNotified}
-                  showTenantMovedOut={manualStandaloneCrossubOpen}
+                  showTenantMovedOut={manualStandaloneCrossubOpen && !propertyIsVacant}
                   tenantMovedOut={openTenantMovedOut}
                   onTenantMovedOutChange={setOpenTenantMovedOut}
                   preferredRentPerWeek={openPreferredRentPerWeek}

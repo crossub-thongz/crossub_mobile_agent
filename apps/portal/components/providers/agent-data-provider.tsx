@@ -223,7 +223,11 @@ interface AgentDataContextValue {
     state: PropertyRegistryAutosaveState,
     options?: { complete?: boolean },
   ) => Promise<Property>;
-  endPropertyManagement: (propertyId: string, endOfManagementDate: string) => Promise<void>;
+  endPropertyManagement: (
+    propertyId: string,
+    endOfManagementDate: string,
+    options?: { archiveOnBondRelease?: boolean },
+  ) => Promise<void>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   registerInspection: (inspection: Inspection) => void;
   approveMaintenanceQuote: (requestId: string) => Promise<void>;
@@ -928,12 +932,30 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const endPropertyManagement = useCallback(
-    async (propertyId: string, endOfManagementDate: string) => {
+    async (
+      propertyId: string,
+      endOfManagementDate: string,
+      options?: { archiveOnBondRelease?: boolean },
+    ) => {
       if (!apiConnected) {
         throw new Error('Connect to the API to end property management');
       }
-      await apiEndPropertyManagement(propertyId, { endOfManagementDate });
-      setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
+      const archiveOnBondRelease = options?.archiveOnBondRelease === true;
+      await apiEndPropertyManagement(propertyId, {
+        endOfManagementDate,
+        ...(archiveOnBondRelease ? { archiveOnBondRelease: true } : {}),
+      });
+      if (archiveOnBondRelease) {
+        // Keep the property active until bond release confirms archive.
+        setApiProperties(
+          (prev) =>
+            prev?.map((p) =>
+              p.id === propertyId ? { ...p, endOfManagementDate } : p,
+            ) ?? null,
+        );
+      } else {
+        setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
+      }
       await refresh();
     },
     [apiConnected, refresh],

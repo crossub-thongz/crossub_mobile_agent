@@ -209,7 +209,7 @@ export async function updateProperty(
 /** End agency management on a property (`POST /agent/properties/{propertyId}/end-management`). */
 export async function endPropertyManagement(
   propertyId: string,
-  input: { endOfManagementDate: string },
+  input: { endOfManagementDate: string; archiveOnBondRelease?: boolean },
 ): Promise<void> {
   await agentFetch<void>(`/agent/properties/${propertyId}/end-management`, {
     method: 'POST',
