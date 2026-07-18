@@ -39,6 +39,10 @@ import {
 } from '@/lib/property-registry-persist';
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, mapNetworkUploadProgress } from '@/lib/file-upload';
 import {
+  needsPasswordChange,
+  needsSystemAccessAgreement,
+} from '@/lib/system-access-agreement';
+import {
   mapAgentAccounting,
   mapAgentAgencies,
   mapAgentDocuments,
@@ -422,9 +426,15 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const postAuthReady =
+    status === 'authed' &&
+    !!user &&
+    !needsSystemAccessAgreement(user) &&
+    !needsPasswordChange(user);
+
   useEffect(() => {
     if (status === 'loading') return;
-    if (status !== 'authed') {
+    if (status !== 'authed' || !user) {
       setLoading(false);
       setApiProperties(null);
       setPortfolio(null);
@@ -433,20 +443,38 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiDocuments(null);
       setApiAgencies(null);
       setApiInspections(null);
+      setApiConnected(false);
       setApiError(null);
+      hasLoadedOnceRef.current = false;
       return;
     }
-    void refresh();
-  }, [refresh, status]);
+    // Agreement / forced password-change pages still mount this provider. Hitting
+    // portfolio APIs there returns 403 and used to sticky-set apiConnected=false,
+    // so later "Add property" failed with "Connect to the API…". Wait until both
+    // gates are clear, then load (or re-load) the book.
+    if (!postAuthReady) {
+      setLoading(false);
+      return;
+    }
+    void refresh({ force: true });
+  }, [
+    refresh,
+    status,
+    user?.id,
+    user?.systemAccessAccepted,
+    user?.systemAccessAgreementRequired,
+    user?.mustChangePassword,
+    postAuthReady,
+  ]);
 
   // Background portfolio sync — same 5s cadence as the inspector app roster poll.
   useEffect(() => {
-    if (status !== 'authed' || !apiConnected) return;
+    if (!postAuthReady || !apiConnected) return;
     const id = window.setInterval(() => {
       void refresh();
     }, LIVE_POLL_MS);
     return () => window.clearInterval(id);
-  }, [status, apiConnected, refresh]);
+  }, [postAuthReady, apiConnected, refresh]);
 
   const properties = useMemo(() => {
     const scoped = (list: Property[]) =>
