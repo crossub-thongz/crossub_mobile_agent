@@ -124,7 +124,7 @@ export function buildTenantReminderEmail(
     entry,
     index,
     subject: `Reminder: Rent review response required — ${detail.propertyAddress}`,
-    from: 'Managing Agent',
+    from: '[Agent] Managing Agent',
     to: detail.tenantName,
     body: [
       `Dear ${detail.tenantName},`,
@@ -139,7 +139,7 @@ export function buildTenantReminderEmail(
       'Please contact your property manager to accept, decline, or submit a counter-offer.',
       '',
       'Kind regards,',
-      'CROSSUB Property Management',
+      'Your managing agent',
     ].join('\n'),
   };
 }

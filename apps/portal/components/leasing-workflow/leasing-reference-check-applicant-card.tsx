@@ -124,7 +124,12 @@ export function LeasingReferenceCheckApplicantCard({
   const isChosen = chosenApplicantId === app.id;
 
   const stageEmails = useMemo(
-    () => enrichLeasingEmailRecords(applicantEmailRecords(detail, app), agentEmail),
+    () =>
+      enrichLeasingEmailRecords(
+        applicantEmailRecords(detail, app),
+        agentEmail,
+        detail.agentInfo.name,
+      ),
     [agentEmail, app, detail],
   );
   const auditEntries = useMemo(() => applicantAuditEntries(detail, app), [app, detail]);

@@ -1,4 +1,5 @@
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import { formatAgentSender } from '@/lib/job-case-email-sender';
 import { commRecordsFromAuditLog } from '@/lib/rent-review/communications';
 import {
   canResendTenantNotice,
@@ -672,7 +673,7 @@ export function buildCompletionEmail(detail: RentReviewWorkflowDetail): RentRevi
   return {
     id: hit?.id ?? `${detail.id}-completion-email`,
     subject: `Rent increase confirmed — ${detail.propertyAddress}`,
-    from: 'Managing Agent',
+    ...formatAgentSender(),
     to: detail.tenantName,
     at: hit?.at ?? detail.completedDate ?? detail.createdAt,
     kind: 'ledger_complete',
@@ -681,7 +682,8 @@ export function buildCompletionEmail(detail: RentReviewWorkflowDetail): RentRevi
       `Your rent increase has been confirmed.\n\n` +
       `New rent: $${weekly}/week\n` +
       `Effective from: ${detail.effectiveDate ?? 'as advised'}\n\n` +
-      `Thank you.`,
+      `Kind regards,\n` +
+      `Your managing agent`,
   };
 }
 
@@ -695,7 +697,7 @@ function buildTenantReminderEmail(
   return {
     id: entry.id,
     subject: 'Reminder — rent increase response',
-    from: 'Managing Agent',
+    ...formatAgentSender(),
     to: detail.tenantName,
     at: entry.at,
     kind: entry.kind,
@@ -703,7 +705,9 @@ function buildTenantReminderEmail(
       `Dear ${detail.tenantName},\n\n` +
       `We have not yet received your response to the proposed rent increase. ` +
       `Please let us know if you have any feedback or questions.\n\n` +
-      `Confirmed terms:\n${termsBlock}`,
+      `Confirmed terms:\n${termsBlock}\n\n` +
+      `Kind regards,\n` +
+      `Your managing agent`,
   };
 }
 

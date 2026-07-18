@@ -1,21 +1,11 @@
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
-
-const CROSSUB_FROM = 'leasing@crossub.com.au';
-
-function crossubSender(): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
-  return { from: CROSSUB_FROM, fromEmail: CROSSUB_FROM };
-}
+import { formatAgentSender } from '@/lib/job-case-email-sender';
 
 function agentSender(
   session: OpenInspectionSession,
 ): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
-  const name = session.agent?.name?.trim();
-  if (name && name.toLowerCase() !== 'awaiting assignment') {
-    // Bracket role so the email log formats as [Agent] …
-    return { from: `[Agent] ${name}` };
-  }
-  return { from: '[Agent] Managing Agent' };
+  return formatAgentSender({ name: session.agent?.name });
 }
 
 /** Landlord open-inspection report email sent from the Report step. */
@@ -59,6 +49,7 @@ export function openInspectionApplyLinkEmails(
 ): JobCaseEmailRecord[] {
   const propertyLabel = session.address?.trim() || session.property;
   const applyUrl = session.applyUrl?.trim();
+  const agent = agentSender(session);
 
   return session.visitors
     .filter((visitor) => visitor.applyLinkSentAt?.trim())
@@ -68,11 +59,12 @@ export function openInspectionApplyLinkEmails(
       body: [
         `Application form link and QR code sent to ${visitor.name || visitor.email}.`,
         '',
+        `Sent by: ${agent.from}`,
         applyUrl
           ? `Apply link:\n${applyUrl}\n\nThe email included the application link and an attached QR code.`
           : 'The email included the application link and an attached QR code.',
       ].join('\n'),
-      ...crossubSender(),
+      ...agent,
       to: visitor.email,
       toEmail: visitor.email,
       at: visitor.applyLinkSentAt!,

@@ -154,7 +154,7 @@ export function LeasingOnboardingSummaryPanel({ detail }: { detail: LeasingPrope
       </section>
 
       <JobCaseStageEmailHistory
-        emails={enrichLeasingEmailRecords(stageEmails, agentEmail)}
+        emails={enrichLeasingEmailRecords(stageEmails, agentEmail, detail.agentInfo.name)}
         title="Email history"
       />
 

@@ -1,11 +1,21 @@
 import type { ApiQuotation } from '@/lib/crossub-api/types';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import { formatAgentSender } from '@/lib/job-case-email-sender';
 import {
   isLandlordMaintenanceFlow,
   resolveMaintenanceResponsibility,
 } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import type { MaintenanceRequest } from '@/lib/types';
+
+function maintenanceAgentSender(
+  workspaceCase: MaintenanceWorkspaceCase,
+): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
+  return formatAgentSender({
+    name: workspaceCase.agent?.name,
+    email: workspaceCase.agent?.email,
+  });
+}
 
 /** Five-stage maintenance flow (manager Excel spec). */
 export const MAINTENANCE_AGENT_STEP = {
@@ -158,7 +168,7 @@ function mapEmailNotification(
     id: n.id,
     subject: n.title,
     body: n.message,
-    from: workspaceCase.agent?.email ?? 'Managing agent',
+    ...maintenanceAgentSender(workspaceCase),
     to:
       to ??
       (/responsibility determined/i.test(n.title)
@@ -194,7 +204,7 @@ function parseReviewEmailFromAudit(
       id: entry.id,
       subject,
       body,
-      from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+      ...maintenanceAgentSender(ctx.workspaceCase),
       to: responsibilityRecipientLabel(ctx.workspaceCase.responsibility, ctx.workspaceCase),
       at: entry.timestamp,
       kind: 'responsibility_review',
@@ -227,7 +237,7 @@ function parseReviewEmailFromAudit(
     id: `synthetic-email-responsibility-${entry.id}`,
     subject,
     body,
-    from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+    ...maintenanceAgentSender(ctx.workspaceCase),
     to: responsibilityRecipientLabel(responsibility, ctx.workspaceCase),
     at: entry.timestamp,
     kind: 'responsibility_review',
@@ -694,7 +704,7 @@ function parseGenericMaintenanceEmailFromAudit(
     id: entry.id,
     subject: match[2]?.trim() || 'Maintenance email',
     body,
-    from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+    ...maintenanceAgentSender(ctx.workspaceCase),
     to: inferMaintenanceEmailRecipient(entry.action, ctx),
     at: entry.timestamp,
     kind: entry.action,
@@ -759,7 +769,7 @@ function parseQuotationWorkflowEmailFromAudit(
       id: entry.id,
       subject,
       body,
-      from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+      ...maintenanceAgentSender(ctx.workspaceCase),
       to: kind === 'landlord_quotation' ? 'Landlord' : 'Contractor',
       at: entry.timestamp,
       kind,
@@ -834,7 +844,7 @@ export function buildAcceptanceEmails(
     {
       id: `${ctx.item.id}-handyman-accept`,
       subject: `Job approved — arrange repair`,
-      from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+      ...maintenanceAgentSender(ctx.workspaceCase),
       to: contractor,
       at:
         auditAt(ctx.workspaceCase, /approv|accept/) ??
@@ -855,7 +865,7 @@ export function buildAcceptanceEmails(
     {
       id: `${ctx.item.id}-tenant-accept`,
       subject: `Repair contractor assigned`,
-      from: ctx.workspaceCase.agent?.email ?? 'Managing agent',
+      ...maintenanceAgentSender(ctx.workspaceCase),
       to: tenant?.email ?? 'Tenant',
       at:
         auditAt(ctx.workspaceCase, /approv|accept|tenant/) ??

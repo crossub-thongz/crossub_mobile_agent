@@ -1,5 +1,6 @@
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import { formatAgentSender } from '@/lib/job-case-email-sender';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
 const CROSSUB_LEASING_FROM_EMAIL = 'leasing@crossub.com.au';
@@ -14,9 +15,10 @@ function crossubSender(): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
 }
 
 function agentSender(detail: LeasingPropertyDetail): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
-  const email = normalizeEmail(detail.agentInfo.email);
-  if (email) return { from: email, fromEmail: email };
-  return { from: 'Managing Agent' };
+  return formatAgentSender({
+    name: detail.agentInfo.name,
+    email: detail.agentInfo.email,
+  });
 }
 
 function agentRecipient(detail: LeasingPropertyDetail): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
@@ -209,17 +211,28 @@ function openInspectionPreferenceRecord(detail: LeasingPropertyDetail): JobCaseE
 export function enrichLeasingEmailRecords(
   records: JobCaseEmailRecord[],
   fallbackAgentEmail?: string | null,
+  fallbackAgentName?: string | null,
 ): JobCaseEmailRecord[] {
   const agentEmail = normalizeEmail(fallbackAgentEmail);
-  if (!agentEmail) return records;
 
   return records.map((record) => {
     const next = { ...record };
-    if (!next.fromEmail && next.from.trim().toLowerCase() === 'managing agent') {
-      next.from = agentEmail;
-      next.fromEmail = agentEmail;
+    const fromLower = next.from.trim().toLowerCase();
+    const isBareAgent =
+      fromLower === 'managing agent' ||
+      fromLower === '[agent] managing agent' ||
+      (!next.fromEmail && fromLower.startsWith('[agent]') && !next.from.includes('@'));
+
+    if (isBareAgent || (next.from.startsWith('[Agent]') && !next.fromEmail && agentEmail)) {
+      Object.assign(
+        next,
+        formatAgentSender({
+          name: fallbackAgentName ?? next.from.replace(/^\[Agent\]\s*/i, ''),
+          email: agentEmail ?? next.fromEmail,
+        }),
+      );
     }
-    if (!next.toEmail && next.to.trim().toLowerCase() === 'managing agent') {
+    if (!next.toEmail && next.to.trim().toLowerCase() === 'managing agent' && agentEmail) {
       next.to = agentEmail;
       next.toEmail = agentEmail;
     }

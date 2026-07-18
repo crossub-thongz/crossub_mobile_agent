@@ -1,5 +1,6 @@
 import { TERMINATION_TYPE, TENANT_SETTLEMENT_CONFIRMATION, TERMINATION_CASE_STATUS } from '@/constants/end-leasing';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import { formatAgentSender } from '@/lib/job-case-email-sender';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { EndLeasingOverviewEmail, TerminationCaseDetail } from '@/lib/end-leasing/types';
 
@@ -145,8 +146,13 @@ export function buildVacatingInfoReplyEmailView(
 ): TenantNoticeEmailView | null {
   const stored = caseData.overviewEmail;
   if (!stored?.body) return null;
+  const agent = formatAgentSender({ name: caseData.agentName });
   return {
-    from: stored.from ?? caseData.agentName ?? 'CROSSUB',
+    from: stored.from?.trim()
+      ? stored.from.startsWith('[Agent]')
+        ? stored.from
+        : `[Agent] ${stored.from}`
+      : agent.from,
     to: stored.to ?? caseData.tenant.email ?? '—',
     subject: stored.subject ?? `Vacating information — ${caseData.property.address}`,
     receivedAt: stored.sentAt ?? caseData.createdAt,
@@ -448,8 +454,9 @@ export function endLeasingStoredEmailToRecord(
   kind: string,
   fallbackSubject: string,
   fallbackAt: string,
+  agentName?: string | null,
 ): JobCaseEmailRecord | null {
-  return storedEmailToRecord(id, email, kind, fallbackSubject, fallbackAt);
+  return storedEmailToRecord(id, email, kind, fallbackSubject, fallbackAt, agentName);
 }
 
 function storedEmailToRecord(
@@ -458,17 +465,30 @@ function storedEmailToRecord(
   kind: string,
   fallbackSubject: string,
   fallbackAt: string,
+  agentName?: string | null,
 ): JobCaseEmailRecord | null {
   if (!email?.body && !email?.sentAt) return null;
+  const agent = formatAgentSender({ name: agentName ?? email.from });
+  const rawFrom = email.from?.trim();
   return {
     id,
     subject: email.subject ?? fallbackSubject,
     body: email.body ?? '',
-    from: email.from ?? 'Managing Agent',
+    from: rawFrom
+      ? rawFrom.startsWith('[Agent]')
+        ? rawFrom
+        : looksLikeCrossub(rawFrom)
+          ? rawFrom
+          : `[Agent] ${rawFrom}`
+      : agent.from,
     to: email.to ?? '—',
     at: email.sentAt ?? fallbackAt,
     kind,
   };
+}
+
+function looksLikeCrossub(value: string): boolean {
+  return value.toLowerCase().includes('crossub');
 }
 
 function emailRecordsForStepOnly(
@@ -514,6 +534,7 @@ function emailRecordsForStepOnly(
         'tenant_comparison',
         'Tenant responsibility summary',
         caseData.createdAt,
+        caseData.agentName,
       );
       const agentSummary = storedEmailToRecord(
         `${caseData.id}-agent-comparison`,
@@ -521,6 +542,7 @@ function emailRecordsForStepOnly(
         'agent_comparison',
         'Inspection comparison summary',
         caseData.createdAt,
+        caseData.agentName,
       );
       if (tenantSummary) records.push(tenantSummary);
       if (agentSummary) records.push(agentSummary);
@@ -534,6 +556,7 @@ function emailRecordsForStepOnly(
         'agent_repair_quote',
         'Repair quotes for agent',
         caseData.createdAt,
+        caseData.agentName,
       );
       const landlordQuote = storedEmailToRecord(
         `${caseData.id}-landlord-repair-quote`,
@@ -541,6 +564,7 @@ function emailRecordsForStepOnly(
         'landlord_repair_quote',
         'Landlord repair quote',
         caseData.createdAt,
+        caseData.agentName,
       );
       if (agentQuote) records.push(agentQuote);
       if (landlordQuote) records.push(landlordQuote);
@@ -553,6 +577,7 @@ function emailRecordsForStepOnly(
         'tenant_repair_quote',
         'Tenant repair quote',
         caseData.createdAt,
+        caseData.agentName,
       );
       return tenantQuote ? [tenantQuote] : [];
     }
@@ -564,6 +589,7 @@ function emailRecordsForStepOnly(
         'tenant_bond_summary',
         'Bond settlement summary (tenant)',
         caseData.createdAt,
+        caseData.agentName,
       );
       const landlordBond = storedEmailToRecord(
         `${caseData.id}-landlord-bond-summary`,
@@ -571,6 +597,7 @@ function emailRecordsForStepOnly(
         'landlord_bond_summary',
         'Bond settlement summary (landlord)',
         caseData.createdAt,
+        caseData.agentName,
       );
       if (tenantBond) records.push(tenantBond);
       if (landlordBond) records.push(landlordBond);

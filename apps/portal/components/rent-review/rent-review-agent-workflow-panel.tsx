@@ -123,9 +123,15 @@ export function RentReviewAgentWorkflowPanel({
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
   const workflowClosed = isRentReviewWorkflowClosed(detail);
+  const agentName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || null;
   const stageEmails = useMemo(
-    () => applyManagingAgentFromEmail(emailRecordsForStep(detail, viewingStepId), agentEmail),
-    [detail, viewingStepId, agentEmail],
+    () =>
+      applyManagingAgentFromEmail(
+        emailRecordsForStep(detail, viewingStepId),
+        agentEmail,
+        agentName,
+      ),
+    [detail, viewingStepId, agentEmail, agentName],
   );
 
   const handleCommSend = async (draft: CommSendDraft) => {

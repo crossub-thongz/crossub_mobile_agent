@@ -1,4 +1,9 @@
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import {
+  attributeAgentOutboundEmails,
+  formatAgentSender,
+  isAgentOutboundEmail,
+} from '@/lib/job-case-email-sender';
 
 /** Resolve the signed-in / agency agent email for outbound rent-review mail. */
 export function resolveRentReviewAgentEmail(input: {
@@ -13,23 +18,24 @@ export function resolveRentReviewAgentEmail(input: {
   return undefined;
 }
 
-function isManagingAgentFromParty(party: string): boolean {
-  const lower = party.trim().toLowerCase();
-  return lower.includes('managing agent') || lower === 'agent';
-}
-
 /** Fill missing sender emails on agent-authored workflow mail (synthesized + legacy audits). */
 export function applyManagingAgentFromEmail(
   records: JobCaseEmailRecord[],
   agentEmail: string | undefined,
+  agentName?: string | null,
 ): JobCaseEmailRecord[] {
   const email = agentEmail?.trim();
-  if (!email?.includes('@')) return records;
+  const attributed = attributeAgentOutboundEmails(records);
+  if (!email?.includes('@')) return attributed;
 
-  return records.map((record) => ({
-    ...record,
-    fromEmail:
-      record.fromEmail ??
-      (isManagingAgentFromParty(record.from) ? email : undefined),
-  }));
+  return attributed.map((record) => {
+    if (!isAgentOutboundEmail(record)) return record;
+    return {
+      ...record,
+      ...formatAgentSender({
+        name: agentName ?? record.from.replace(/^\[Agent\]\s*/i, ''),
+        email: record.fromEmail ?? email,
+      }),
+    };
+  });
 }

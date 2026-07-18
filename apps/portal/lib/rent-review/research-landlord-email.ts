@@ -48,7 +48,7 @@ export function buildLandlordResearchEmailDraft(
     `Kindly review the attached materials and reply to confirm whether you approve proceeding with ` +
     `this recommended rent, or let us know if you would like to discuss further.\n\n` +
     `Kind regards,\n` +
-    `Your managing agent`;
+    `Your managing agent (sent from the Agent portal)`;
 
   return {
     toEmail: landlordEmail,

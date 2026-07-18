@@ -1,6 +1,9 @@
 import { INSPECTION_STATUS } from '@/constants/api-enums';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import { formatAgentSender } from '@/lib/job-case-email-sender';
 import type { Inspection } from '@/lib/types';
+
+const agentFrom = () => formatAgentSender();
 
 export type InspectionWorkflowEmailStep =
   | 'scheduled'
@@ -70,7 +73,7 @@ function scheduledEmails(inspection: Inspection): JobCaseEmailRecord[] {
       id: `${inspection.id}-tenant-notified`,
       subject: 'Tenant notified of inspection',
       body: 'Agent confirmed the tenant was notified about the open inspection.',
-      from: 'Managing Agent',
+      ...agentFrom(),
       to: 'Tenant',
       at: inspection.agentTenantNotifiedAt,
       kind: 'tenant_notified',
@@ -91,7 +94,7 @@ function publishedEmails(inspection: Inspection): JobCaseEmailRecord[] {
       id: `${inspection.id}-report-sent`,
       subject: `Inspection report published — ${inspection.propertyAddress}`,
       body: 'Final inspection report sent to landlord and tenant.',
-      from: 'Managing Agent',
+      ...agentFrom(),
       to: 'Landlord & tenant',
       at,
       kind: 'report_published',

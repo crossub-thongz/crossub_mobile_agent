@@ -1,4 +1,5 @@
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
+import { formatAgentSender } from '@/lib/job-case-email-sender';
 import { parseRentReviewEmailSnapshot } from '@/lib/rent-review/audit-detail-display';
 import {
   resolveTenantNoticeTerms,
@@ -28,7 +29,7 @@ export function buildTenantNoticeEmailBody(
     'Please reply to confirm acceptance, submit a counter-offer, or let us know if you wish to decline.',
     '',
     'Kind regards,',
-    'Your managing agent',
+    'Your managing agent (Agent portal)',
   ].join('\n');
 }
 
@@ -55,7 +56,7 @@ export function buildTenantNoticeEmailRecord(
   return {
     id: auditEntry.id,
     subject: buildTenantNoticeEmailSubject(detail),
-    from: 'Managing Agent',
+    ...formatAgentSender(),
     to: detail.tenantName,
     at: auditEntry.at,
     kind: auditEntry.kind,

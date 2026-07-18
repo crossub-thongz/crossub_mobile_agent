@@ -107,7 +107,12 @@ function StepPanel({
     agencyContactEmail: agency?.contactEmail ?? detail.agentInfo.email,
   });
   const stageEmails = useMemo(
-    () => enrichLeasingEmailRecords(leasingEmailRecordsForStep(detail, step), agentEmail),
+    () =>
+      enrichLeasingEmailRecords(
+        leasingEmailRecordsForStep(detail, step),
+        agentEmail,
+        detail.agentInfo.name,
+      ),
     [agentEmail, detail, step],
   );
 
