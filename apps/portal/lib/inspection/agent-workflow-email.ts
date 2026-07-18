@@ -1,6 +1,7 @@
 import { INSPECTION_STATUS } from '@/constants/api-enums';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
+import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
 
 const agentFrom = () => formatAgentSender();
@@ -137,6 +138,26 @@ export function inspectionEmailRecordsForStep(
     return allInspectionEmailRecords(inspection);
   }
   return dedupeJobCaseEmails(emailRecordsForStepOnly(inspection, activeStep));
+}
+
+/** Live case emails stamped on the inspection workflow meta (accept / report blast). */
+export function inspectionCaseEmailRecords(
+  record: InspectionRecord | null | undefined,
+): JobCaseEmailRecord[] {
+  if (!record?.caseEmails?.length) return [];
+  return dedupeJobCaseEmails(
+    record.caseEmails.map((row) => ({
+      id: row.id,
+      subject: row.subject,
+      body: row.body,
+      from: row.from,
+      fromEmail: row.fromEmail ?? undefined,
+      to: row.to,
+      toEmail: row.toEmail ?? undefined,
+      at: row.at,
+      kind: row.kind,
+    })),
+  );
 }
 
 export function inspectionWorkflowEmailStep(inspection: Inspection): InspectionWorkflowEmailStep {

@@ -44,8 +44,17 @@ function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
   if (isAgentOutboundEmail(email)) return 'outbound';
   const from = email.from.toLowerCase();
   if (email.kind === 'job_created' && from.includes('tenant')) return 'inbound';
-  if (email.kind === 'tenant_notice' || email.kind === 'timeline_email') return 'inbound';
-  if (from.includes('research@') || from.includes('crossub')) return 'inbound';
+  if (
+    email.kind === 'tenant_notice' ||
+    email.kind === 'timeline_email' ||
+    email.kind === 'inspector_accepted' ||
+    email.kind === 'ingoing_report_distributed'
+  ) {
+    return 'inbound';
+  }
+  if (from.includes('(inspector)') || from.includes('research@') || from.includes('crossub')) {
+    return 'inbound';
+  }
   return 'outbound';
 }
 

@@ -4,6 +4,7 @@ import { isInspectionDone } from '@/lib/inspections/presentation';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
+import { suggestLeasingIngoingScheduledTime } from '@/lib/leasing/leasing-ingoing-handoff';
 
 /** Agent-facing ingoing gate: Pending → Scheduled → Completed */
 export type AgentIngoingGateStatus = 'pending' | 'scheduled' | 'completed';
@@ -19,19 +20,58 @@ const PENDING_INSPECTOR_LABELS = new Set([
   'unassigned',
   'pending assignment',
   'task pool',
+  'pending — task pool',
+  'pending - task pool',
 ]);
 
-function inspectorIsAssigned(name: string | null | undefined): boolean {
+export function inspectorIsAssigned(name: string | null | undefined): boolean {
   const normalized = (name ?? '').trim().toLowerCase();
   return Boolean(normalized) && !PENDING_INSPECTOR_LABELS.has(normalized);
 }
 
+/** True once the inspector has accepted the job (DRAFT → IN_PROGRESS). */
+export function inspectorHasAcceptedJob(
+  record: InspectionRecord | null,
+  inspection?: Inspection | null,
+): boolean {
+  const apiStatus = (record?.status ?? inspection?.apiStatus ?? '').toUpperCase();
+  if (
+    apiStatus === INSPECTION_RECORD_STATUS.IN_PROGRESS ||
+    apiStatus === INSPECTION_RECORD_STATUS.FIRST_REVIEW ||
+    apiStatus === INSPECTION_RECORD_STATUS.SECOND_REVIEW ||
+    apiStatus === INSPECTION_RECORD_STATUS.COMPLETED ||
+    apiStatus === INSPECTION_RECORD_STATUS.PUBLISHED ||
+    apiStatus === INSPECTION_STATUS.IN_PROGRESS ||
+    apiStatus === INSPECTION_STATUS.COMPLETED ||
+    apiStatus === INSPECTION_STATUS.PUBLISHED
+  ) {
+    return true;
+  }
+  const phase = (record?.workflowPhase ?? '').toLowerCase();
+  if (
+    phase &&
+    phase !== 'pending_acceptance' &&
+    phase !== 'overdue_acceptance'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Pending until the inspector accepts.
+ * Scheduled after accept (field work + 4 completion steps).
+ * Completed when all four post-accept steps are done.
+ */
 export function deriveAgentIngoingGateStatus(args: {
   inspection: Inspection;
   record: InspectionRecord | null;
+  stepsComplete?: boolean;
 }): AgentIngoingGateStatus {
-  const { inspection, record } = args;
+  const { inspection, record, stepsComplete } = args;
   const apiStatus = (record?.status ?? inspection.apiStatus ?? '').toUpperCase();
+
+  if (stepsComplete) return 'completed';
 
   if (
     apiStatus === INSPECTION_RECORD_STATUS.COMPLETED ||
@@ -39,30 +79,62 @@ export function deriveAgentIngoingGateStatus(args: {
     apiStatus === INSPECTION_STATUS.COMPLETED ||
     apiStatus === INSPECTION_STATUS.PUBLISHED
   ) {
-    return 'completed';
+    // Report may be done before tenant ack — stay Scheduled until all 4 steps finish.
+    if (stepsComplete === false) return 'scheduled';
+    if (stepsComplete === undefined) return 'completed';
   }
 
-  const scheduledAt = record?.scheduledDate ?? inspection.scheduledAt ?? null;
-  const inspector =
-    record?.inspectorName ?? record?.assignedInspectorId ?? inspection.inspector ?? null;
-
-  if (scheduledAt && inspectorIsAssigned(typeof inspector === 'string' ? inspector : null)) {
-    return 'scheduled';
-  }
-  if (record?.assignedInspectorId && scheduledAt) {
-    return 'scheduled';
-  }
-
+  if (inspectorHasAcceptedJob(record, inspection)) return 'scheduled';
   return 'pending';
 }
 
 export function canCancelIngoingInspection(
   inspection: Inspection,
   record: InspectionRecord | null,
+  stepsComplete?: boolean,
 ): boolean {
   if (inspection.type !== 'INGOING') return false;
   if (isDeletedInspection(inspection)) return false;
-  if (deriveAgentIngoingGateStatus({ inspection, record }) === 'completed') return false;
+  if (deriveAgentIngoingGateStatus({ inspection, record, stepsComplete }) === 'completed') {
+    return false;
+  }
   if (isInspectionDone(inspection) && !isDeletedInspection(inspection)) return false;
   return Boolean(inspection.propertyId);
+}
+
+/**
+ * Display inspection date: live scheduled time, else admin rule of 7 days before
+ * move-in (suggested target while still Pending).
+ */
+export function resolveIngoingInspectionDateDisplay(args: {
+  scheduledDate?: string | null;
+  moveInDate?: string | null;
+}): { iso: string | null; isSuggested: boolean } {
+  if (args.scheduledDate) {
+    return { iso: args.scheduledDate, isSuggested: false };
+  }
+  if (args.moveInDate) {
+    const suggested = suggestLeasingIngoingScheduledTime(args.moveInDate);
+    if (suggested) return { iso: suggested, isSuggested: true };
+  }
+  return { iso: null, isSuggested: false };
+}
+
+/** Human label for inspector field workflow phase / progression. */
+export function formatInspectorFieldStatus(args: {
+  workflowPhase?: string | null;
+  keyCollected?: boolean;
+  reportSubmitted?: boolean;
+  keyReturned?: boolean;
+  tenantAcked?: boolean;
+  accepted?: boolean;
+}): string {
+  if (args.tenantAcked) return 'Tenant acknowledgement complete';
+  if (args.keyReturned) return 'Keys returned — awaiting tenant acknowledgement';
+  if (args.reportSubmitted) return 'Report submitted — awaiting key return';
+  if (args.keyCollected) return 'Keys collected — inspection in progress';
+  if (args.accepted) return 'Accepted — awaiting key collection';
+  const phase = (args.workflowPhase ?? '').toLowerCase().replace(/_/g, ' ');
+  if (phase) return phase.charAt(0).toUpperCase() + phase.slice(1);
+  return 'Awaiting inspector acceptance';
 }

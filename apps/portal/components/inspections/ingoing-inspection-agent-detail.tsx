@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   FileText,
   Home,
@@ -22,8 +23,12 @@ import { InspectionReportDownloadActions } from '@/components/inspections/inspec
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
+import { LEASING_INGOING_SCHEDULE_WINDOW_DAYS } from '@/lib/leasing/leasing-ingoing-handoff';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
-import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
+import {
+  inspectionCaseEmailRecords,
+  inspectionEmailRecordsForStep,
+} from '@/lib/inspection/agent-workflow-email';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import {
@@ -35,6 +40,9 @@ import {
   AGENT_INGOING_GATE_LABEL,
   canCancelIngoingInspection,
   deriveAgentIngoingGateStatus,
+  formatInspectorFieldStatus,
+  inspectorHasAcceptedJob,
+  resolveIngoingInspectionDateDisplay,
 } from '@/lib/ingoing-inspection-display';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
 import type { InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
@@ -42,7 +50,7 @@ import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDate, formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Timeline } from '@/components/agent/timeline';
+import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 
 type IngoingSnapshot = {
   record: InspectionRecord | null;
@@ -123,6 +131,7 @@ export function IngoingInspectionAgentDetail({
   const [loading, setLoading] = useState(apiConnected);
   const [error, setError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [auditExpanded, setAuditExpanded] = useState(true);
 
   const refreshSnapshot = useCallback(async () => {
     if (!apiConnected) {
@@ -182,7 +191,6 @@ export function IngoingInspectionAgentDetail({
           leasingTenantApproved =
             cycleView.onboarding?.ingoingReportApproval?.tenantApproved ?? false;
         }
-        // Prefer the cycle that owns this ingoing job; otherwise use any approved tenant on the property.
         if (!linkedToThisJob && ingoingInspectionId && candidateCycleIds.length > 1) {
           continue;
         }
@@ -238,9 +246,6 @@ export function IngoingInspectionAgentDetail({
 
   const { record, progression, signName, signUrl, reportUrl, hasFindings, leasingTenantApproved } =
     snapshot;
-  const gateStatus = deriveAgentIngoingGateStatus({ inspection, record });
-  const canCancel = canCancelIngoingInspection(inspection, record);
-  const stageEmails = useMemo(() => inspectionEmailRecordsForStep(inspection), [inspection]);
 
   const custody = progression?.keyCustody;
   const collectPhotos = custody?.collectPhotos ?? [];
@@ -253,14 +258,49 @@ export function IngoingInspectionAgentDetail({
     tenantReportSigned: record?.tenantReportSigned,
     leasingTenantApproved,
   });
+  const tenantAcked = tenantAck.state === 'confirmed';
+  const accepted = inspectorHasAcceptedJob(record, inspection);
+  const stepsComplete = keyCollected && reportSubmitted && keyReturned && tenantAcked;
+
+  const gateStatus = deriveAgentIngoingGateStatus({
+    inspection,
+    record,
+    stepsComplete,
+  });
+  const canCancel = canCancelIngoingInspection(inspection, record, stepsComplete);
+
+  const stageEmails = useMemo(
+    () =>
+      dedupeJobCaseEmails([
+        ...inspectionCaseEmailRecords(record),
+        ...inspectionEmailRecordsForStep(inspection),
+      ]),
+    [inspection, record],
+  );
+
+  const auditEntries = useMemo(() => {
+    const fromApi = [...(record?.caseAudit ?? [])].sort((a, b) => b.at.localeCompare(a.at));
+    return fromApi;
+  }, [record?.caseAudit]);
 
   const tenantName = snapshot.tenantName?.trim() || '—';
   const tenantEmail = snapshot.tenantEmail?.trim() || '—';
   const tenantPhone = snapshot.tenantPhone?.trim() || '—';
   const moveInDate = snapshot.moveInDate ? formatDate(snapshot.moveInDate) : '—';
-  const inspectionDate = record?.scheduledDate ?? inspection.scheduledAt;
+  const dateDisplay = resolveIngoingInspectionDateDisplay({
+    scheduledDate: record?.scheduledDate ?? inspection.scheduledAt,
+    moveInDate: snapshot.moveInDate,
+  });
   const inspectorLabel =
     record?.inspectorName ?? inspection.inspector ?? 'Unassigned';
+  const inspectorStatus = formatInspectorFieldStatus({
+    workflowPhase: record?.workflowPhase,
+    keyCollected,
+    reportSubmitted,
+    keyReturned,
+    tenantAcked,
+    accepted,
+  });
 
   const handleCancel = async (reason: string) => {
     await cancelIngoingInspectionJob(inspection, reason);
@@ -351,14 +391,23 @@ export function IngoingInspectionAgentDetail({
       </section>
 
       <section className="rounded-2xl border bg-card p-4">
+        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+          Inspector details
+        </p>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
               Ingoing inspection date
             </dt>
             <dd className="mt-1 text-sm font-medium">
-              {inspectionDate ? formatDateTime(inspectionDate) : 'Not scheduled'}
+              {dateDisplay.iso ? formatDateTime(dateDisplay.iso) : 'Not scheduled'}
             </dd>
+            {dateDisplay.isSuggested ? (
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                Target: {LEASING_INGOING_SCHEDULE_WINDOW_DAYS} days before move-in (same rule as
+                admin portal)
+              </p>
+            ) : null}
           </div>
           <div>
             <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
@@ -366,6 +415,14 @@ export function IngoingInspectionAgentDetail({
             </dt>
             <dd className="mt-1 text-sm font-medium">{inspectorLabel}</dd>
           </div>
+          {gateStatus !== 'pending' ? (
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                Inspector status
+              </dt>
+              <dd className="mt-1 text-sm font-medium">{inspectorStatus}</dd>
+            </div>
+          ) : null}
         </dl>
       </section>
 
@@ -378,150 +435,196 @@ export function IngoingInspectionAgentDetail({
 
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-      {!loading ? (
-        <>
-          <section className="rounded-2xl border bg-card p-4">
-            <p className="mb-3 text-sm font-semibold">Ingoing report</p>
-            {reportReady ? (
-              <InspectionReportDownloadActions
-                inspectionId={inspection.id}
-                reportUrl={reportUrl}
-                propertyLabel={inspection.propertyAddress}
-                inspectionType="ingoing"
-                canDownload
-              />
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                Report will be available after the inspector submits the field report.
-              </p>
-            )}
-          </section>
-
-          <div className="space-y-3">
-            <StepCard
-              icon={KeyRound}
-              title="Key collection proof"
-              description="Photo proof uploaded by the inspector in the mobile app."
-              status={keyCollected ? LEASING_ITEM_STATUS.DONE : LEASING_ITEM_STATUS.IN_PROGRESS}
-            >
-              {collectPhotos.length > 0 ? (
-                <div className="space-y-2">
-                  {custody?.collectedAt ? (
-                    <StepFact label="Collected" value={formatCustodyTime(custody.collectedAt)} />
-                  ) : null}
-                  {custody?.collectNotes ? (
-                    <p className="text-muted-foreground text-xs">{custody.collectNotes}</p>
-                  ) : null}
-                  <ProofPhotoGrid urls={collectPhotos} label="Inspector upload" />
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  Waiting for the inspector to upload key collection proof…
-                </p>
-              )}
-            </StepCard>
-
-            <StepCard
-              icon={KeyRound}
-              title="Key return proof"
-              description="Keys returned after the ingoing report is filed."
-              status={
-                keyReturned
-                  ? LEASING_ITEM_STATUS.DONE
-                  : reportSubmitted
-                    ? LEASING_ITEM_STATUS.IN_PROGRESS
-                    : LEASING_ITEM_STATUS.NOT_STARTED
-              }
-            >
-              {returnPhotos.length > 0 ? (
-                <div className="space-y-2">
-                  {custody?.returnedAt ? (
-                    <StepFact label="Returned" value={formatCustodyTime(custody.returnedAt)} />
-                  ) : null}
-                  {custody?.returnNotes ? (
-                    <p className="text-muted-foreground text-xs">{custody.returnNotes}</p>
-                  ) : null}
-                  <ProofPhotoGrid urls={returnPhotos} label="Inspector upload" />
-                </div>
-              ) : reportSubmitted ? (
-                <p className="text-muted-foreground text-xs">
-                  Waiting for the inspector to upload key return proof…
-                </p>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  Available after the inspection report is submitted.
-                </p>
-              )}
-            </StepCard>
-
-            <StepCard
-              icon={FileText}
-              title="Report submitted"
-              description="CROSSUB processes the field report before tenant acknowledgement."
-              status={reportSubmitted ? LEASING_ITEM_STATUS.DONE : LEASING_ITEM_STATUS.IN_PROGRESS}
-            >
-              <BoolStatus
-                done={reportSubmitted}
-                doneLabel={
-                  record?.completedDate
-                    ? `Submitted ${formatDateTime(record.completedDate)}`
-                    : 'Report submitted'
-                }
-                pendingLabel="Report not yet submitted"
-              />
-            </StepCard>
-
-            <StepCard
-              icon={ClipboardCheck}
-              title="Tenant acknowledgement"
-              description="Tenant sign-off on the inspection report."
-              status={
-                tenantAck.state === 'confirmed'
-                  ? LEASING_ITEM_STATUS.DONE
-                  : tenantAck.state === 'pending' || tenantAck.state === 'expired'
-                    ? LEASING_ITEM_STATUS.WAITING
-                    : LEASING_ITEM_STATUS.NOT_STARTED
-              }
-            >
-              <div className="space-y-2">
-                <div className="flex items-start gap-2 text-xs">
-                  <User
-                    className={cn(
-                      'mt-0.5 size-4 shrink-0',
-                      tenantAck.state === 'confirmed'
-                        ? 'text-emerald-600'
-                        : 'text-muted-foreground',
-                    )}
-                  />
-                  <div>
-                    <p className="font-medium">{tenantAck.label}</p>
-                    {tenantAck.state === 'confirmed' && signUrl ? (
-                      <a
-                        href={signUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary mt-1 inline-flex items-center gap-1 text-[11px] hover:underline"
-                      >
-                        <CheckCircle2 className="size-3" />
-                        View signature
-                      </a>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            </StepCard>
-          </div>
-        </>
-      ) : null}
-
-      {inspection.timeline.length > 0 ? (
-        <section className="rounded-2xl border bg-card p-4">
-          <p className="mb-3 text-sm font-semibold">Audit history</p>
-          <Timeline entries={inspection.timeline} />
+      {!loading && gateStatus === 'pending' ? (
+        <section className="rounded-2xl border border-dashed bg-card/60 p-4">
+          <p className="text-sm font-medium">Awaiting inspector acceptance</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Once an inspector accepts this job it moves to Scheduled. Key collection proof and the
+            remaining completion steps will appear here.
+          </p>
         </section>
       ) : null}
 
-      <JobCaseStageEmailHistory emails={stageEmails} title="Message history" />
+      {!loading && gateStatus !== 'pending' ? (
+        <div className="space-y-3">
+          <StepCard
+            icon={KeyRound}
+            title="Key collection proof"
+            description="Photo proof uploaded by the inspector in the mobile app."
+            status={keyCollected ? LEASING_ITEM_STATUS.DONE : LEASING_ITEM_STATUS.IN_PROGRESS}
+          >
+            {collectPhotos.length > 0 ? (
+              <div className="space-y-2">
+                {custody?.collectedAt ? (
+                  <StepFact label="Collected" value={formatCustodyTime(custody.collectedAt)} />
+                ) : null}
+                {custody?.collectNotes ? (
+                  <p className="text-muted-foreground text-xs">{custody.collectNotes}</p>
+                ) : null}
+                <ProofPhotoGrid urls={collectPhotos} label="Inspector upload" />
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Waiting for the inspector to upload key collection proof…
+              </p>
+            )}
+          </StepCard>
+
+          <StepCard
+            icon={FileText}
+            title="Ingoing report submitted"
+            description="Inspector submits the field report; CROSSUB generates the PDF."
+            status={
+              reportSubmitted
+                ? LEASING_ITEM_STATUS.DONE
+                : keyCollected
+                  ? LEASING_ITEM_STATUS.IN_PROGRESS
+                  : LEASING_ITEM_STATUS.NOT_STARTED
+            }
+          >
+            {reportReady ? (
+              <div className="space-y-2">
+                <BoolStatus
+                  done
+                  doneLabel={
+                    record?.completedDate
+                      ? `Submitted ${formatDateTime(record.completedDate)}`
+                      : 'Report submitted'
+                  }
+                  pendingLabel="Report not yet submitted"
+                />
+                <InspectionReportDownloadActions
+                  inspectionId={inspection.id}
+                  reportUrl={reportUrl}
+                  propertyLabel={inspection.propertyAddress}
+                  inspectionType="ingoing"
+                  canDownload
+                />
+              </div>
+            ) : (
+              <BoolStatus
+                done={false}
+                doneLabel="Report submitted"
+                pendingLabel={
+                  keyCollected
+                    ? 'Waiting for the inspector to submit the field report…'
+                    : 'Available after key collection proof'
+                }
+              />
+            )}
+          </StepCard>
+
+          <StepCard
+            icon={KeyRound}
+            title="Key return proof"
+            description="Keys returned after the ingoing report is filed."
+            status={
+              keyReturned
+                ? LEASING_ITEM_STATUS.DONE
+                : reportSubmitted
+                  ? LEASING_ITEM_STATUS.IN_PROGRESS
+                  : LEASING_ITEM_STATUS.NOT_STARTED
+            }
+          >
+            {returnPhotos.length > 0 ? (
+              <div className="space-y-2">
+                {custody?.returnedAt ? (
+                  <StepFact label="Returned" value={formatCustodyTime(custody.returnedAt)} />
+                ) : null}
+                {custody?.returnNotes ? (
+                  <p className="text-muted-foreground text-xs">{custody.returnNotes}</p>
+                ) : null}
+                <ProofPhotoGrid urls={returnPhotos} label="Inspector upload" />
+              </div>
+            ) : reportSubmitted ? (
+              <p className="text-muted-foreground text-xs">
+                Waiting for the inspector to upload key return proof…
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Available after the inspection report is submitted.
+              </p>
+            )}
+          </StepCard>
+
+          <StepCard
+            icon={ClipboardCheck}
+            title="Tenant acknowledgement"
+            description="Tenant sign-off on the inspection report."
+            status={
+              tenantAcked
+                ? LEASING_ITEM_STATUS.DONE
+                : tenantAck.state === 'pending' || tenantAck.state === 'expired'
+                  ? LEASING_ITEM_STATUS.WAITING
+                  : keyReturned
+                    ? LEASING_ITEM_STATUS.IN_PROGRESS
+                    : LEASING_ITEM_STATUS.NOT_STARTED
+            }
+          >
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 text-xs">
+                <User
+                  className={cn(
+                    'mt-0.5 size-4 shrink-0',
+                    tenantAcked ? 'text-emerald-600' : 'text-muted-foreground',
+                  )}
+                />
+                <div>
+                  <p className="font-medium">{tenantAck.label}</p>
+                  {tenantAcked && signUrl ? (
+                    <a
+                      href={signUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary mt-1 inline-flex items-center gap-1 text-[11px] hover:underline"
+                    >
+                      <CheckCircle2 className="size-3" />
+                      View signature
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </StepCard>
+        </div>
+      ) : null}
+
+      <JobCaseStageEmailHistory emails={stageEmails} title="Email history" defaultOpen />
+
+      <div className="rounded-xl border bg-card">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+          onClick={() => setAuditExpanded((value) => !value)}
+          aria-expanded={auditExpanded}
+        >
+          <span className="text-sm font-medium">Audit</span>
+          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+            {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
+            <ChevronDown
+              className={cn('size-4 transition-transform', auditExpanded && 'rotate-180')}
+            />
+          </span>
+        </button>
+        {auditExpanded ? (
+          <ul className="divide-y border-t px-4 py-1">
+            {auditEntries.length === 0 ? (
+              <li className="text-muted-foreground py-3 text-xs">
+                No audit events yet. Acceptance and report emails will appear here.
+              </li>
+            ) : (
+              auditEntries.map((entry) => (
+                <li key={entry.id} className="py-2.5 text-xs">
+                  <p className="font-medium">{entry.label}</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    {entry.actor} · {formatDateTime(entry.at)}
+                  </p>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : null}
+      </div>
 
       {inspection.propertyId ? (
         <CaseContactActions

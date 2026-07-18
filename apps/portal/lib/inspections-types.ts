@@ -31,6 +31,23 @@ export interface InspectionRecord {
   tenantEmail?: string | null
   tenantPhone?: string | null
   moveInDate: string | null
+  caseEmails?: Array<{
+    id: string
+    subject: string
+    body: string
+    from: string
+    fromEmail?: string | null
+    to: string
+    toEmail?: string | null
+    at: string
+    kind: string
+  }>
+  caseAudit?: Array<{
+    id: string
+    label: string
+    actor: string
+    at: string
+  }>
   areaCount: number
   photoCount: number
   createdAt: string
