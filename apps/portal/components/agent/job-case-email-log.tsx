@@ -27,7 +27,7 @@ import {
   attributeAgentOutboundEmails,
   isAgentOutboundEmail,
 } from '@/lib/job-case-email-sender';
-import { cn, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatDateTime } from '@/lib/utils';
 
 export type CommComposeMode = 'view' | 'reply' | 'forward';
 
@@ -50,14 +50,8 @@ function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
 }
 
 function emailPartyLine(email: JobCaseEmailRecord): string {
-  const direction = emailDirection(email);
   const channel = email.channel === 'message' ? 'Message' : 'Email';
-  // Agent-authored portal mail — always show From Agent (not only To recipient).
-  if (isAgentOutboundEmail(email)) {
-    return `${channel} · From ${email.from}`;
-  }
-  const party = direction === 'inbound' ? `From ${email.from}` : `To ${email.to}`;
-  return `${channel} · ${party}`;
+  return `${channel} · From ${email.from} · To ${email.to}`;
 }
 
 function EmailListRow({
@@ -87,7 +81,7 @@ function EmailListRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{email.subject}</p>
         <p className="text-muted-foreground mt-0.5 truncate text-xs">{emailPartyLine(email)}</p>
-        <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{formatDate(email.at)}</p>
+        <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{formatDateTime(email.at)}</p>
       </div>
       <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />
     </button>

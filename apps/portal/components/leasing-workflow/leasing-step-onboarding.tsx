@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   Banknote,
-  ClipboardCheck,
   FileDown,
   FileSignature,
   KeyRound,
@@ -12,11 +11,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { LeasingOnboardingSummaryPanel } from '@/components/leasing-workflow/leasing-onboarding-summary-panel';
-import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import {
+  LeasingOnboardingEmailAuditPanel,
+  LeasingOnboardingSummaryPanel,
+} from '@/components/leasing-workflow/leasing-onboarding-summary-panel';
+import { StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { LeasingAgreementSignedDocumentPanel, LeasingAgreementActionGroup } from '@/components/leasing-workflow/leasing-agreement-signed-document';
 import { LeasingContractDialog } from '@/components/leasing-workflow/leasing-contract-dialog';
-import { LeasingIngoingNextStepPanel } from '@/components/leasing-workflow/leasing-ingoing-next-step';
 import { LeasingKeyCollectionEvidencePanel } from '@/components/leasing-workflow/leasing-key-collection-evidence';
 import { LeasingKeyCollectionSchedule } from '@/components/leasing-workflow/leasing-key-collection-schedule';
 import { Button } from '@/components/ui/button';
@@ -492,19 +493,7 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         </div>
       </StepCard>
 
-      <StepCard
-        icon={ClipboardCheck}
-        title="Ingoing report approval"
-        status={o.ingoingReportApproval.status}
-      >
-        <BoolStatus
-          done={o.ingoingReportApproval.tenantApproved}
-          doneLabel="Tenant approved ingoing report"
-          pendingLabel="Awaiting tenant approval"
-        />
-      </StepCard>
-
-      <LeasingIngoingNextStepPanel detail={detail} />
+      <LeasingOnboardingEmailAuditPanel detail={detail} />
 
       <LeasingContractDialog detail={detail} readOnly cycleId={cycleId} apiConnected={apiConnected} />
     </div>

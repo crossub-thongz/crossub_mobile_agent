@@ -10,6 +10,8 @@ const CROSSUB_INBOUND_KINDS = new Set([
   'agent_confirmation_reminder',
   'statutory_notice_alert',
   'agent_research_email',
+  'lease_agreement_signed',
+  'tenant_login',
 ]);
 
 /** Emails the agent portal authors / sends outbound. */

@@ -64,6 +64,17 @@ export function onboardingAuditEntries(detail: LeasingPropertyDetail): LeasingTi
     'ingoing',
     'tenant login',
     'lease terms',
+    'contract',
+    'signed',
+    'emailed',
+    'email',
+    'proof',
+    'credentials',
+    'approved',
+    'feedback',
+    'handover',
+    'e-signature',
+    'esign',
   ];
   return detail.timeline.filter((entry) => {
     const haystack = `${entry.label} ${entry.kind}`.toLowerCase();

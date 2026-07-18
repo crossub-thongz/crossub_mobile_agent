@@ -1,7 +1,12 @@
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
-import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import {
+  dedupeJobCaseEmails,
+  mimeTypeForAttachmentFilename,
+  type JobCaseEmailRecord,
+} from '@/lib/job-case-email';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
-import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
+import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
 
 const CROSSUB_LEASING_FROM_EMAIL = 'leasing@crossub.com.au';
 
@@ -50,15 +55,45 @@ function viewerInviteRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[
 
 function openReportToAgentRecord(detail: LeasingPropertyDetail): JobCaseEmailRecord | null {
   if (!detail.openReport.sentToAgent || !detail.openReport.sentToAgentAt) return null;
+  const attendeeCount = detail.openReport.attendeeCount ?? 0;
   return {
     id: `${detail.propertyId}-open-report-agent`,
     subject: `Open inspection report — ${detail.propertyAddress}`,
-    body: `Open inspection report sent to agent for review.\n\nAttendees: ${detail.openReport.attendeeCount ?? 0}`,
+    body: [
+      'CROSSUB has completed the open inspection report for your review.',
+      '',
+      'Property',
+      `Address: ${detail.propertyAddress}`,
+      `Attendees recorded: ${attendeeCount}`,
+      '',
+      'Please open the agent portal → Open Report to review attendee notes and continue with applications.',
+      'Reply to this thread if you need CROSSUB to follow up with any attendees.',
+    ].join('\n'),
     ...crossubSender(),
     ...agentRecipient(detail),
     at: detail.openReport.sentToAgentAt,
     kind: 'open_report_agent',
   };
+}
+
+function tenantRecipient(
+  tenant: LeasingApplicationDetail | null,
+): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+  if (!tenant) return { to: '[Tenant] Tenant' };
+  const email = normalizeEmail(tenant.email);
+  const name = tenant.applicant?.trim() || 'Tenant';
+  if (email) {
+    return { to: `[Tenant] ${name}`, toEmail: email };
+  }
+  return { to: `[Tenant] ${name}` };
+}
+
+function formatMoneyAud(value?: number | null): string | null {
+  if (value == null || Number.isNaN(value)) return null;
+  return `$${value.toLocaleString('en-AU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 }
 
 function applicationFeedbackRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
@@ -75,30 +110,157 @@ function applicationFeedbackRecords(detail: LeasingPropertyDetail): JobCaseEmail
     }));
 }
 
+function buildBondLinkEmailBody(detail: LeasingPropertyDetail, tenant: LeasingApplicationDetail | null): string {
+  const who = tenant?.applicant?.trim() || 'there';
+  const bond = detail.onboarding.bond;
+  const amount = formatMoneyAud(bond.amount ?? detail.rental.bond);
+  const lines = [
+    `Hi ${who},`,
+    '',
+    `Please pay the bond for ${detail.propertyAddress} to continue onboarding.`,
+  ];
+  if (amount) lines.push('', `Bond amount: ${amount}`);
+  if (bond.agentLink?.trim()) {
+    lines.push('', 'Secure payment link:', bond.agentLink.trim());
+  } else {
+    lines.push('', 'Your managing agent has sent a bond payment link — open it from this email or the tenant portal.');
+  }
+  if (bond.lodgementRef?.trim()) {
+    lines.push('', `Bond reference: ${bond.lodgementRef.trim()}`);
+  }
+  lines.push(
+    '',
+    'After paying, upload your payment proof in the CROSSUB tenant portal so we can confirm receipt.',
+    '',
+    '— Your managing agent',
+  );
+  return lines.join('\n');
+}
+
+function buildLeaseAgreementSentBody(
+  detail: LeasingPropertyDetail,
+  tenant: LeasingApplicationDetail | null,
+): string {
+  const who = tenant?.applicant?.trim() || 'there';
+  const agreement = detail.onboarding.agreement;
+  const contract = agreement.contract;
+  const lines = [
+    `Hi ${who},`,
+    '',
+    `Your lease agreement for ${detail.propertyAddress} is ready for signing.`,
+    '',
+    'Lease summary',
+  ];
+  const rent = formatMoneyAud(contract.weeklyRent ?? detail.rental.rentPerWeek);
+  if (rent) lines.push(`Weekly rent: ${rent}`);
+  if (contract.leaseTerm?.trim() || detail.rental.leaseTerm?.trim()) {
+    lines.push(`Lease term: ${(contract.leaseTerm || detail.rental.leaseTerm || '').trim()}`);
+  }
+  if (contract.startDate) lines.push(`Start date: ${formatAuDate(contract.startDate)}`);
+  const bond = formatMoneyAud(contract.bond ?? detail.rental.bond);
+  if (bond) lines.push(`Bond: ${bond}`);
+  lines.push(
+    '',
+    'Please sign in to the CROSSUB tenant portal → Onboarding → Lease agreement to review and sign.',
+    agreement.uploadedFileName
+      ? `Document on file: ${agreement.uploadedFileName}`
+      : 'The agreement PDF is available in the portal once you open the signing step.',
+    '',
+    '— Your managing agent',
+  );
+  return lines.join('\n');
+}
+
+function buildSignedLeaseAgreementBody(
+  detail: LeasingPropertyDetail,
+  tenant: LeasingApplicationDetail | null,
+): string {
+  const who = tenant?.applicant?.trim() || 'there';
+  const agreement = detail.onboarding.agreement;
+  const fileName = agreement.signedProofFileName?.trim() || 'signed-tenancy-agreement.pdf';
+  return [
+    `Hi ${who},`,
+    '',
+    `Thank you — your lease agreement for ${detail.propertyAddress} has been signed.`,
+    '',
+    'A copy of the signed agreement is attached to this email for your records.',
+    `Attached: ${fileName}`,
+    '',
+    'You can also download the signed PDF anytime from the CROSSUB tenant portal (Onboarding → Lease agreement).',
+    '',
+    'Next steps: complete any outstanding deposit/bond proofs and confirm key collection details in the portal.',
+    '',
+    '— CROSSUB Leasing',
+  ].join('\n');
+}
+
 function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
   const records: JobCaseEmailRecord[] = [];
+  const tenant = resolveOnboardingTenant(detail);
+  const tenantTo = tenantRecipient(tenant);
+
   if (detail.onboarding.bond.sentToTenantAt) {
     records.push({
       id: `${detail.propertyId}-bond-link`,
       subject: `Bond lodgement — ${detail.propertyAddress}`,
-      body: 'Bond payment link sent to tenant.',
+      body: buildBondLinkEmailBody(detail, tenant),
       ...agentSender(detail),
-      to: 'Tenant',
+      ...tenantTo,
       at: detail.onboarding.bond.sentToTenantAt,
       kind: 'bond_link',
     });
   }
-  if (detail.onboarding.agreement.signingStatus !== 'not_sent') {
+
+  const signing = detail.onboarding.agreement.signingStatus;
+  if (signing !== 'not_sent') {
+    const sentAt =
+      detail.timeline.find((e) => /contract sent for e-signature|agreement sent|contract uploaded/i.test(e.label))
+        ?.at ??
+      detail.onboarding.bond.sentToTenantAt ??
+      detail.onboarding.agreement.signedAt ??
+      '';
     records.push({
-      id: `${detail.propertyId}-lease-agreement`,
+      id: `${detail.propertyId}-lease-agreement-sent`,
       subject: `Lease agreement — ${detail.propertyAddress}`,
-      body: `Lease agreement signing status: ${detail.onboarding.agreement.signingStatus}.`,
+      body: buildLeaseAgreementSentBody(detail, tenant),
       ...agentSender(detail),
-      to: 'Tenant',
-      at: detail.onboarding.agreement.signedAt ?? detail.onboarding.bond.sentToTenantAt ?? '',
+      ...tenantTo,
+      at: sentAt,
       kind: 'lease_agreement',
     });
   }
+
+  const signedAt =
+    detail.onboarding.agreement.signedAt ||
+    detail.timeline.find((e) => /signed lease agreement emailed|recorded lease agreement signing|uploaded signed lease/i.test(e.label))
+      ?.at ||
+    '';
+  if (
+    (signing === 'signed' || signing === 'viewed' || Boolean(detail.onboarding.agreement.signedProofUrl)) &&
+    signedAt
+  ) {
+    const fileName =
+      detail.onboarding.agreement.signedProofFileName?.trim() || 'signed-tenancy-agreement.pdf';
+    records.push({
+      id: `${detail.propertyId}-lease-agreement-signed`,
+      subject: `Signed lease agreement — ${detail.propertyAddress}`,
+      body: buildSignedLeaseAgreementBody(detail, tenant),
+      ...crossubSender(),
+      ...tenantTo,
+      at: signedAt,
+      kind: 'lease_agreement_signed',
+      attachments: detail.onboarding.agreement.signedProofUrl
+        ? [
+            {
+              name: fileName,
+              mimeType: mimeTypeForAttachmentFilename(fileName),
+              url: detail.onboarding.agreement.signedProofUrl,
+            },
+          ]
+        : undefined,
+    });
+  }
+
   return records.filter((record) => record.at);
 }
 
