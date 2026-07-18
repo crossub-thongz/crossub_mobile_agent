@@ -10,6 +10,8 @@ import { enrichLeasingEmailRecords, leasingEmailRecordsForStep } from '@/lib/lea
 import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import {
   confirmedLeaseTerms,
+  formatOnboardingAuditActor,
+  formatOnboardingAuditLabel,
   onboardingAuditEntries,
   paymentConfirmationLabel,
   resolveOnboardingTenant,
@@ -151,9 +153,9 @@ export function LeasingOnboardingEmailAuditPanel({ detail }: { detail: LeasingPr
             ) : (
               auditEntries.map((entry) => (
                 <li key={entry.id} className="py-2.5 text-xs">
-                  <p className="font-medium">{entry.label}</p>
+                  <p className="font-medium">{formatOnboardingAuditLabel(entry, detail)}</p>
                   <p className="text-muted-foreground mt-0.5">
-                    {entry.actor} · {formatDateTime(entry.at)}
+                    {formatOnboardingAuditActor(entry, detail)} · {formatDateTime(entry.at)}
                   </p>
                 </li>
               ))

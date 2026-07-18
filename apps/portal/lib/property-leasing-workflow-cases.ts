@@ -82,11 +82,12 @@ export function buildPropertyLeasingWorkflowCases(input: {
 
   for (const cycle of activeCycles) {
     const progress = leasingLifecycleProgress(cycle);
+    const completed = cycle.onboardingStepId === 'completed';
     cases.push({
       id: cycle.id,
       category: 'leasing',
       label: workflowCaseReferenceLabel(cycle.id, 'leasing'),
-      status: cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
+      status: completed ? 'completed' : cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
       currentStep: progress.currentStepLabel,
       detail: cycle.propertyAddress,
       sortAt: cycle.availableFrom,
@@ -167,11 +168,12 @@ export function buildPropertyLeasingHistoryCases(input: {
 
   for (const cycle of historicalCycles) {
     const progress = leasingLifecycleProgress(cycle);
+    const completed = cycle.onboardingStepId === 'completed';
     cases.push({
       id: cycle.id,
       category: 'leasing',
       label: workflowCaseReferenceLabel(cycle.id, 'leasing'),
-      status: cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
+      status: completed ? 'completed' : cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
       currentStep: progress.currentStepLabel,
       detail: cycle.propertyAddress,
       sortAt: cycle.availableFrom,

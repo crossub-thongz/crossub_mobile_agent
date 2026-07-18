@@ -76,10 +76,64 @@ export function onboardingAuditEntries(detail: LeasingPropertyDetail): LeasingTi
     'e-signature',
     'esign',
   ];
-  return detail.timeline.filter((entry) => {
-    const haystack = `${entry.label} ${entry.kind}`.toLowerCase();
-    return needles.some((needle) => haystack.includes(needle));
-  });
+  return detail.timeline
+    .filter((entry) => {
+      const haystack = `${entry.label} ${entry.kind}`.toLowerCase();
+      return needles.some((needle) => haystack.includes(needle));
+    })
+    .sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/** Display label for onboarding audit — enriches open-report summaries when needed. */
+export function formatOnboardingAuditLabel(
+  entry: LeasingTimelineEvent,
+  detail: LeasingPropertyDetail,
+): string {
+  if (!/^open report generated/i.test(entry.label.trim())) return entry.label;
+  if (/checked in/i.test(entry.label)) return entry.label;
+
+  const approvedMatch = entry.label.match(/(\d+)\s+approved/i);
+  const approvedCount = approvedMatch ? Number(approvedMatch[1]) : 0;
+  const checkedInCount = detail.openReport.attendeeCount ?? 0;
+  return `Open report generated — ${approvedCount} approved, ${checkedInCount} checked in`;
+}
+
+/** Display actor for onboarding audit — maps stored roles to Name (Role). */
+export function formatOnboardingAuditActor(
+  entry: LeasingTimelineEvent,
+  detail: LeasingPropertyDetail,
+): string {
+  const actor = entry.actor.trim();
+  const actorLower = actor.toLowerCase();
+  const labelLower = entry.label.trim().toLowerCase();
+
+  if (
+    labelLower === 'applicant approved' ||
+    actorLower === 'agent / property manager' ||
+    actorLower === 'property manager'
+  ) {
+    return 'Property Manager';
+  }
+
+  if (
+    actorLower === 'leasing officer' ||
+    actorLower === 'agent' ||
+    actorLower.endsWith('(agent)')
+  ) {
+    const agentName = detail.agentInfo.name?.trim();
+    if (agentName && !/^awaiting assignment$/i.test(agentName)) {
+      return `${agentName} (Agent)`;
+    }
+    return 'Agent';
+  }
+
+  if (actorLower === 'tenant' || actorLower.endsWith('(tenant)')) {
+    const tenantName = resolveOnboardingTenant(detail)?.applicant?.trim();
+    if (tenantName) return `${tenantName} (Tenant)`;
+    return 'Tenant';
+  }
+
+  return actor;
 }
 
 export function confirmedLeaseTerms(detail: LeasingPropertyDetail) {

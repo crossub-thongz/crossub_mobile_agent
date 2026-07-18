@@ -2,7 +2,7 @@ import { LEASING_LIFECYCLE_STEP, LEASING_ONBOARDING_STEP } from '@/constants/api
 import type { LeasingCycle } from '@/lib/types';
 
 import { buildCaseWorkflowProgress } from './build-progress';
-import type { CaseWorkflowProgress } from './types';
+import type { CaseWorkflowProgress, CaseWorkflowStep } from './types';
 
 const LEASING_LIFECYCLE_STEPS = [
   { id: LEASING_LIFECYCLE_STEP.OPEN_INSPECTION, label: 'Open inspection' },
@@ -16,8 +16,6 @@ const LEASING_ONBOARDING_STEPS = [
   { id: LEASING_ONBOARDING_STEP.BOND, label: 'Bond' },
   { id: LEASING_ONBOARDING_STEP.AGREEMENT, label: 'Agreement' },
   { id: LEASING_ONBOARDING_STEP.KEY_COLLECTION, label: 'Key collection' },
-  { id: LEASING_ONBOARDING_STEP.INGOING_INSPECTION, label: 'Ingoing inspection' },
-  { id: LEASING_ONBOARDING_STEP.INGOING_REPORT_APPROVAL, label: 'Ingoing report approval' },
 ] as const;
 
 function lifecycleStepToId(step: string): string {
@@ -35,7 +33,32 @@ function lifecycleStepToId(step: string): string {
   }
 }
 
+function isLeasingCaseCompleted(cycle: LeasingCycle): boolean {
+  return cycle.onboardingStepId === 'completed';
+}
+
+function buildAllDoneProgress(
+  title: string,
+  stepDefs: readonly { id: string; label: string }[],
+): CaseWorkflowProgress {
+  const steps: CaseWorkflowStep[] = stepDefs.map((step) => ({
+    id: step.id,
+    label: step.label,
+    status: 'done',
+  }));
+  const last = stepDefs[stepDefs.length - 1]!;
+  return {
+    title,
+    steps,
+    currentStepId: last.id,
+    currentStepLabel: 'Completed',
+  };
+}
+
 export function leasingLifecycleProgress(cycle: LeasingCycle): CaseWorkflowProgress {
+  if (isLeasingCaseCompleted(cycle)) {
+    return buildAllDoneProgress('New leasing workflow', LEASING_LIFECYCLE_STEPS);
+  }
   return buildCaseWorkflowProgress(
     'New leasing workflow',
     LEASING_LIFECYCLE_STEPS,
@@ -45,6 +68,9 @@ export function leasingLifecycleProgress(cycle: LeasingCycle): CaseWorkflowProgr
 
 export function leasingOnboardingProgress(cycle: LeasingCycle): CaseWorkflowProgress | null {
   if (cycle.lifecycleStep !== 'ONBOARDING' || !cycle.onboardingStepId) return null;
+  if (isLeasingCaseCompleted(cycle)) {
+    return buildAllDoneProgress('Onboarding procedures', LEASING_ONBOARDING_STEPS);
+  }
   return buildCaseWorkflowProgress(
     'Onboarding procedures',
     LEASING_ONBOARDING_STEPS,

@@ -27,8 +27,10 @@ export function applicantAuditEntries(
   app: LeasingApplicationDetail,
 ) {
   const needles = [app.applicant.trim().toLowerCase(), app.id.toLowerCase()].filter(Boolean);
-  return detail.timeline.filter((entry) => {
-    const haystack = `${entry.label} ${entry.actor}`.toLowerCase();
-    return needles.some((needle) => haystack.includes(needle));
-  });
+  return detail.timeline
+    .filter((entry) => {
+      const haystack = `${entry.label} ${entry.actor}`.toLowerCase();
+      return needles.some((needle) => haystack.includes(needle));
+    })
+    .sort((a, b) => b.at.localeCompare(a.at));
 }

@@ -26,6 +26,7 @@ import {
   LEASING_TONE,
   LEASING_UI,
 } from '@/lib/leasing/constants';
+import { formatOnboardingAuditActor } from '@/lib/leasing/onboarding-display';
 import type { ReferenceCheckRecommendation } from '@/lib/leasing/reference-check-draft';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
@@ -353,7 +354,7 @@ export function LeasingReferenceCheckApplicantCard({
                 <li key={entry.id} className="py-2.5 text-xs">
                   <p className="font-medium">{entry.label}</p>
                   <p className="text-muted-foreground mt-0.5">
-                    {entry.actor} · {formatDateTime(entry.at)}
+                    {formatOnboardingAuditActor(entry, detail)} · {formatDateTime(entry.at)}
                   </p>
                 </li>
               ))
