@@ -16,7 +16,6 @@ import {
   RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE,
   resolveCurrentTenancyLeaseEnd,
 } from '@/lib/rent-review/scheduling';
-import { leasingCycleApprovalRef } from '@/lib/workflow-case-reference';
 import { resolveRentPaidTo } from '@/lib/property-overview';
 import { fetchProperty } from '@/lib/crossub-api/agent-client';
 import { propertyRegistryApi } from '@/lib/property-registry-api';
@@ -67,21 +66,34 @@ function formatWeeklyRent(weekly: number): string {
   return String(Math.round(weekly));
 }
 
+function preferredCycleApplicant(
+  cycleView: ServerLeasingCycleView | null | undefined,
+): ServerLeasingCycleView['applications'][number] | null {
+  if (!cycleView?.applications?.length) return null;
+  return (
+    cycleView.applications.find(
+      (a) =>
+        a.agentDecision === LEASING_AGENT_DECISION.APPROVED &&
+        isUsableTenantLabel(a.applicantName),
+    ) ??
+    cycleView.applications.find((a) => isUsableTenantLabel(a.applicantName)) ??
+    null
+  );
+}
+
 function tenantNameFromCycleView(
   cycleView: ServerLeasingCycleView | null | undefined,
 ): { name: string; hint?: string } | null {
   if (!cycleView) return null;
-  const approved = cycleView.applications.find(
-    (a) =>
-      a.agentDecision === LEASING_AGENT_DECISION.APPROVED &&
-      isUsableTenantLabel(a.applicantName),
-  );
+  const approved = preferredCycleApplicant(cycleView);
   if (approved?.applicantName) {
-    return { name: approved.applicantName.trim(), hint: 'From approved leasing applicant' };
-  }
-  const applicant = cycleView.applications.find((a) => isUsableTenantLabel(a.applicantName));
-  if (applicant?.applicantName) {
-    return { name: applicant.applicantName.trim(), hint: 'From leasing applicant' };
+    return {
+      name: approved.applicantName.trim(),
+      hint:
+        approved.agentDecision === LEASING_AGENT_DECISION.APPROVED
+          ? 'From approved leasing applicant'
+          : 'From leasing applicant',
+    };
   }
   const contractTenant = cycleView.onboarding?.agreement?.contractDraft?.jointTenants?.[0]?.name;
   if (isUsableTenantLabel(contractTenant)) {
@@ -131,16 +143,19 @@ export function resolvePropertyTenantContact(input: {
     cycleView: input.cycleView,
     tenantSelections: input.tenantSelections,
   });
+  const applicant = preferredCycleApplicant(input.cycleView);
   const draft = input.cycleView?.onboarding?.agreement?.contractDraft;
   const joint = draft?.jointTenants?.[0];
   return {
     name: nameBlock.name,
     email:
+      applicant?.applicantEmail?.trim() ||
       joint?.email?.trim() ||
       input.recordTenant?.email?.trim() ||
       input.property.tenantContact?.email?.trim() ||
       '',
     phone:
+      applicant?.applicantPhone?.trim() ||
       joint?.phone?.trim() ||
       input.recordTenant?.phone?.trim() ||
       input.property.tenantContact?.phone?.trim() ||
@@ -665,11 +680,7 @@ export function buildIngoingInspectionPrefill(
     moveInDate,
     scheduledTime: suggestIngoingScheduledTime(moveInDate),
     accessInstructions: '',
-    leaseApprovalRef: leasingCycleApprovalRef(
-      options?.cycleView?.id ?? leasingCycle?.id,
-      options?.cycleView?.onboarding?.agreement?.contractDraft?.paymentReference ??
-        leasingCycle?.tenancyAgreementId,
-    ),
+    leaseApprovalRef: '',
     priority: 'normal',
     notes: '',
   };

@@ -657,7 +657,6 @@ export function CreateInspectionWizard({
           priority: ingoing.priority,
           accessInstructions: ingoing.accessInstructions.trim() || undefined,
           notes: ingoing.notes?.trim() || undefined,
-          leaseApprovalRef: ingoing.leaseApprovalRef.trim() || undefined,
         });
         let view: Inspection;
         try {
@@ -1238,12 +1237,6 @@ function IngoingInspectionForm({
           />
         </Field>
       </div>
-      <Field label="Lease approval reference">
-        <Input
-          value={ingoing.leaseApprovalRef}
-          onChange={(e) => onChange({ ...ingoing, leaseApprovalRef: e.target.value })}
-        />
-      </Field>
       <Field label="Access instructions">
         <Textarea
           value={ingoing.accessInstructions}
