@@ -692,11 +692,9 @@ export function PropertyWorkflowCreateDialog({
 
         if (endLeasingNextStep === 'end_management') {
           try {
-            await endPropertyManagement(propertyId, endOfManagementDate, {
-              archiveOnBondRelease: true,
-            });
+            await endPropertyManagement(propertyId, endOfManagementDate);
             toast.success(
-              'End leasing created — end of management recorded; property archives after bond release confirmation',
+              'End leasing created — end of management date recorded; property stays on your portfolio',
             );
           } catch (endMgmtErr) {
             toast.warning(
@@ -1332,7 +1330,7 @@ export function PropertyWorkflowCreateDialog({
               <p className="text-muted-foreground text-[11px] leading-relaxed">
                 {endLeasingNextStep === 'relist'
                   ? 'A new leasing order is created with this vacate case. Confirm whether CROSSUB should handle the open.'
-                  : 'Record the end of management date. The property stays active until you confirm bond release (Job completed), then it is archived.'}
+                  : 'Record the end of management date. The property stays on your portfolio after Job completed.'}
               </p>
             </div>
 

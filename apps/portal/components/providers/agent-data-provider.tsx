@@ -1010,27 +1010,19 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     async (
       propertyId: string,
       endOfManagementDate: string,
-      options?: { archiveOnBondRelease?: boolean },
+      _options?: { archiveOnBondRelease?: boolean },
     ) => {
       if (!apiConnected) {
         throw new Error('Connect to the API to end property management');
       }
-      const archiveOnBondRelease = options?.archiveOnBondRelease === true;
-      await apiEndPropertyManagement(propertyId, {
-        endOfManagementDate,
-        ...(archiveOnBondRelease ? { archiveOnBondRelease: true } : {}),
-      });
-      if (archiveOnBondRelease) {
-        // Keep the property active until bond release confirms archive.
-        setApiProperties(
-          (prev) =>
-            prev?.map((p) =>
-              p.id === propertyId ? { ...p, endOfManagementDate } : p,
-            ) ?? null,
-        );
-      } else {
-        setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
-      }
+      // Soft-archive is disabled — only record the end-of-management date.
+      await apiEndPropertyManagement(propertyId, { endOfManagementDate });
+      setApiProperties(
+        (prev) =>
+          prev?.map((p) =>
+            p.id === propertyId ? { ...p, endOfManagementDate } : p,
+          ) ?? null,
+      );
       await refresh();
     },
     [apiConnected, refresh],
