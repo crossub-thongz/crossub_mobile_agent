@@ -768,7 +768,9 @@ export function PropertyWorkflowCreateDialog({
           description: description.trim(),
           address: maintPrefill.address,
           urgent: maintPriority === 'urgent',
-          ...(maintMediaUrls.length ? { photos: maintMediaUrls } : {}),
+          ...(maintMediaUrls.length
+            ? { photos: [...new Set(maintMediaUrls)] }
+            : {}),
           tenant: maintTenantName.trim()
             ? {
                 name: maintTenantName.trim(),

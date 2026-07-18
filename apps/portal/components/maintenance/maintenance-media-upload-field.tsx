@@ -61,7 +61,8 @@ export function MaintenanceMediaUploadField({
         urls.push(url);
       }
       if (urls.length) {
-        onPhotosChange([...photos, ...urls]);
+        // Dedupe in case the picker / a double-fire yields the same object twice.
+        onPhotosChange([...new Set([...photos, ...urls])]);
         toast.success(
           `${urls.length} file${urls.length === 1 ? '' : 's'} uploaded`,
         );

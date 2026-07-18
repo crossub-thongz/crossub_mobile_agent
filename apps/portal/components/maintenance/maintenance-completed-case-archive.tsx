@@ -5,7 +5,10 @@ import { CheckCircle2, ChevronDown, ImageIcon } from 'lucide-react';
 
 import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
 import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
-import { resolveContractorDisplayName } from '@/lib/maintenance/resolve-contractor-display';
+import {
+  contractorIdsMatch,
+  resolveContractorDisplayName,
+} from '@/lib/maintenance/resolve-contractor-display';
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
 
 function quoteStatusLabel(status: ApiQuotation['status']): string {
@@ -167,36 +170,62 @@ export function MaintenanceCompletedCaseArchive({
   );
 
   const contractorGroups = useMemo(() => {
-    const ids = new Set<string>();
-    for (const q of caseQuotations) ids.add(q.contractorId);
-    invitedContractors?.forEach((c) => ids.add(c.id));
-    if (assignedContractorId) ids.add(assignedContractorId);
+    const displayName = (contractorId: string) =>
+      resolveContractorDisplayName(contractorId, {
+        contractors,
+        invitedContractors,
+        fallbackName:
+          contractorId === assignedContractorId ? assignedContractorName : undefined,
+      });
 
-    return Array.from(ids).map((contractorId) => {
-      const quotes = caseQuotations.filter((q) => q.contractorId === contractorId);
-      const review = quotationReviews?.find(
-        (r) => r.contractorId === contractorId || quotes.some((q) => q.id === r.quotationId),
-      );
-      return {
-        contractorId,
-        contractorName: resolveContractorDisplayName(contractorId, {
-          contractors,
-          invitedContractors,
-          fallbackName:
-            contractorId === assignedContractorId ? assignedContractorName : undefined,
-        }),
-        quotes,
-        review,
-        isApprovedContractor: approvedQuotation?.contractorId === contractorId,
-      };
-    });
+    const ids: string[] = [];
+    const addId = (id: string | undefined) => {
+      if (!id) return;
+      if (ids.some((existing) => contractorIdsMatch(existing, id))) return;
+      const name = displayName(id).trim().toLowerCase();
+      if (
+        name &&
+        name !== id.toLowerCase() &&
+        ids.some((existing) => displayName(existing).trim().toLowerCase() === name)
+      ) {
+        return;
+      }
+      ids.push(id);
+    };
+
+    for (const q of caseQuotations) addId(q.contractorId);
+    invitedContractors?.forEach((c) => addId(c.id));
+    addId(assignedContractorId);
+
+    return ids
+      .map((contractorId) => {
+        const quotes = caseQuotations.filter((q) =>
+          contractorIdsMatch(q.contractorId, contractorId),
+        );
+        const review = quotationReviews?.find(
+          (r) =>
+            contractorIdsMatch(r.contractorId, contractorId) ||
+            quotes.some((q) => q.id === r.quotationId),
+        );
+        return {
+          contractorId,
+          contractorName: displayName(contractorId),
+          quotes,
+          review,
+          isApprovedContractor: Boolean(
+            approvedQuotation &&
+              contractorIdsMatch(approvedQuotation.contractorId, contractorId),
+          ),
+        };
+      })
+      .filter((group) => group.quotes.length > 0);
   }, [
     assignedContractorId,
     assignedContractorName,
     caseQuotations,
     contractors,
     invitedContractors,
-    approvedQuotation?.contractorId,
+    approvedQuotation,
     quotationReviews,
   ]);
 

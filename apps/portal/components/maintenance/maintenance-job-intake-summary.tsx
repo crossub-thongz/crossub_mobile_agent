@@ -111,13 +111,18 @@ export function MaintenanceJobIntakeSummary({
   const tenant = ctx.workspaceCase.tenant;
   const description = ctx.workspaceCase.description.trim();
 
-  const intakeAttachments = useMemo(
-    () =>
-      attachments.filter(
-        (att) => att.maintenanceRequestId === ctx.item.id && att.kind === 'initial_evidence',
-      ),
-    [attachments, ctx.item.id],
-  );
+  const intakeAttachments = useMemo(() => {
+    const seen = new Set<string>();
+    return attachments.filter((att) => {
+      if (att.maintenanceRequestId !== ctx.item.id || att.kind !== 'initial_evidence') {
+        return false;
+      }
+      const key = (att.previewUrl ?? att.id).split('?')[0] ?? att.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [attachments, ctx.item.id]);
 
   return (
     <section className="rounded-xl border bg-card p-4">
