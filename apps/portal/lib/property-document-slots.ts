@@ -10,6 +10,7 @@ export const TENANCY_DOCUMENT_SLOTS: DocumentSlot[] = [
   { id: 'key_handover_form', label: 'Key Handover Form' },
   { id: 'tenancy_ledger', label: 'Tenancy Ledger' },
   { id: 'ingoing_report', label: 'Ingoing Inspection report' },
+  { id: 'outgoing_report', label: 'Outgoing Inspection report' },
 ];
 
 export const MANAGEMENT_AGREEMENT_DOC_SLOT = {
@@ -56,6 +57,7 @@ export const OTHER_LEASING_DOCUMENT_OPTIONS = [
   { id: 'paper_bond', label: 'Paper Bond' },
   { id: 'key_handover_form', label: 'Key Handover Form' },
   { id: 'ingoing_report', label: 'Ingoing Inspection report' },
+  { id: 'outgoing_report', label: 'Outgoing Inspection report' },
   { id: 'bond_lodgement', label: 'Bond lodgement' },
   { id: 'rent_ledger', label: 'Rent ledger' },
   { id: 'other', label: 'Other' },

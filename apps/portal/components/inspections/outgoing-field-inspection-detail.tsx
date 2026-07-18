@@ -4,33 +4,57 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   FileText,
+  Home,
   KeyRound,
   Loader2,
   User,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
+import {
+  WorkflowProgressRail,
+  resolveWorkflowStepState,
+} from '@/components/agent/workflow-progress-rail';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
-import { OutgoingInspectionCaseSection } from '@/components/inspections/outgoing-inspection-case-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
 import { propertyDetail } from '@/constants/routes';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { TenantOutgoingAttendanceStatus } from '@/lib/end-leasing/types';
-import { inspectionEmailRecordsForStep } from '@/lib/inspection/agent-workflow-email';
+import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
+import {
+  inspectionCaseEmailRecords,
+  inspectionEmailRecordsForStep,
+} from '@/lib/inspection/agent-workflow-email';
+import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
+import { inspectionsApi } from '@/lib/inspections-api';
 import {
   canViewInspectionReport,
   deriveTenantAckState,
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
-import { inspectionsApi } from '@/lib/inspections-api';
+import {
+  AGENT_OUTGOING_GATE_HINT,
+  AGENT_OUTGOING_GATE_LABEL,
+  AGENT_OUTGOING_GATE_STEPS,
+  agentOutgoingGateIndex,
+  deriveAgentOutgoingGateStatus,
+  formatInspectorFieldStatus,
+  inspectorHasAcceptedJob,
+  type AgentOutgoingGateStatus,
+} from '@/lib/outgoing-inspection-display';
 import type { InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
 import { terminationApi } from '@/lib/termination-case-api';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
+import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 
 type OutgoingSnapshot = {
   record: InspectionRecord | null;
@@ -41,6 +65,9 @@ type OutgoingSnapshot = {
   hasFindings: boolean;
   tenantAttendance: TenantOutgoingAttendanceStatus;
   terminationCaseId: string | null;
+  tenantName: string | null;
+  tenantEmail: string | null;
+  tenantPhone: string | null;
 };
 
 function formatCustodyTime(iso: string): string {
@@ -72,17 +99,13 @@ function ProofPhotoGrid({ urls, label }: { urls: string[]; label: string }) {
   );
 }
 
-function isOutgoingJobCompleted(
-  inspection: Inspection,
-  record: InspectionRecord | null,
-  reportSubmitted: boolean,
-): boolean {
-  if (reportSubmitted || record?.completedDate) return true;
-  const status = (record?.status ?? inspection.apiStatus ?? '').toUpperCase();
-  return ['COMPLETED', 'PUBLISHED', 'FIRST_REVIEW', 'SECOND_REVIEW'].includes(status);
+function gateStatusTone(status: ReturnType<typeof deriveAgentOutgoingGateStatus>): string {
+  if (status === 'completed') return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+  if (status === 'scheduled') return 'bg-sky-500/10 text-sky-700 dark:text-sky-300';
+  return 'bg-amber-500/10 text-amber-800 dark:text-amber-200';
 }
 
-/** Outgoing inspection job case — manager layout + field workflow status. */
+/** Outgoing inspection job case — Pending → Scheduled → Completed (mirrors ingoing). */
 export function OutgoingFieldInspectionDetail({
   inspection,
   apiConnected,
@@ -102,15 +125,15 @@ export function OutgoingFieldInspectionDetail({
     hasFindings: false,
     tenantAttendance: 'pending',
     terminationCaseId: linkedVacating?.id ?? null,
+    tenantName: null,
+    tenantEmail: null,
+    tenantPhone: null,
   });
   const [loading, setLoading] = useState(apiConnected);
   const [error, setError] = useState<string | null>(null);
-
-  const stageEmails = useMemo(() => inspectionEmailRecordsForStep(inspection), [inspection]);
-  const emailTitle =
-    inspection.apiStatus === 'PUBLISHED' || inspection.reportStatus === 'sent'
-      ? 'All e-mail'
-      : 'Email history';
+  const [auditExpanded, setAuditExpanded] = useState(false);
+  const [viewingGateStep, setViewingGateStep] = useState<AgentOutgoingGateStatus | null>(null);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!apiConnected) {
@@ -152,7 +175,7 @@ export function OutgoingFieldInspectionDetail({
       const terminationCaseId =
         terminationCase?.inspection.inspectionId === inspection.id
           ? terminationCase.id
-          : terminationCase?.id ?? linkedVacating?.id ?? null;
+          : (terminationCase?.id ?? linkedVacating?.id ?? null);
 
       setSnapshot({
         record,
@@ -163,6 +186,9 @@ export function OutgoingFieldInspectionDetail({
         hasFindings,
         tenantAttendance: terminationCase?.inspection.tenantAttendance ?? 'pending',
         terminationCaseId,
+        tenantName: record?.tenantName?.trim() || null,
+        tenantEmail: record?.tenantEmail?.trim() || null,
+        tenantPhone: record?.tenantPhone?.trim() || null,
       });
       setError(null);
     } catch (err) {
@@ -196,52 +222,158 @@ export function OutgoingFieldInspectionDetail({
   const keyReturned = custody?.returnComplete ?? returnPhotos.length > 0;
   const reportSubmitted = isReportSubmitted(record, progression);
   const reportReady = canViewInspectionReport(record, progression, { reportUrl, hasFindings });
-  const statusCompleted = isOutgoingJobCompleted(inspection, record, reportSubmitted);
   const tenantAck = deriveTenantAckState(record, signName, signUrl, {
     tenantReportSigned: record?.tenantReportSigned,
     leasingTenantApproved: false,
   });
+  const tenantAcked = tenantAck.state === 'confirmed';
+  const accepted = inspectorHasAcceptedJob(record, inspection);
+  const stepsComplete = keyCollected && reportSubmitted && keyReturned && tenantAcked;
 
+  const gateStatus = deriveAgentOutgoingGateStatus({
+    inspection,
+    record,
+    stepsComplete,
+  });
+  const liveGateIndex = agentOutgoingGateIndex(gateStatus);
+  const viewingStep = viewingGateStep ?? gateStatus;
+
+  useEffect(() => {
+    setViewingGateStep((current) => {
+      if (current == null) return null;
+      return agentOutgoingGateIndex(current) > liveGateIndex ? null : current;
+    });
+  }, [liveGateIndex]);
+
+  const stageEmails = useMemo(
+    () =>
+      dedupeJobCaseEmails([
+        ...inspectionCaseEmailRecords(record),
+        ...inspectionEmailRecordsForStep(inspection),
+      ]),
+    [inspection, record],
+  );
+
+  const auditEntries = useMemo(
+    () =>
+      mergeInspectionCaseAudit({
+        record,
+        progression,
+        leasingTenantApproved: false,
+        tenantName: snapshot.tenantName,
+      }),
+    [record, progression, snapshot.tenantName],
+  );
+
+  const tenantName = snapshot.tenantName?.trim() || '—';
+  const tenantEmail = snapshot.tenantEmail?.trim() || '—';
+  const tenantPhone = snapshot.tenantPhone?.trim() || '—';
   const inspectionDate =
-    inspection.scheduledAt ?? record?.scheduledDate ?? record?.inspectionDate ?? null;
-  const inspectorName = record?.inspectorName ?? inspection.inspector ?? 'Unassigned';
+    record?.scheduledDate ?? inspection.scheduledAt ?? record?.inspectionDate ?? null;
+  const inspectorLabel = record?.inspectorName ?? inspection.inspector ?? 'Unassigned';
+  const inspectorStatus = formatInspectorFieldStatus({
+    workflowPhase: record?.workflowPhase,
+    keyCollected,
+    reportSubmitted,
+    keyReturned,
+    tenantAcked,
+    accepted,
+  });
+
+  const setAttendance = async (attendance: 'yes' | 'no') => {
+    if (attendance === tenantAttendance) return;
+    if (!terminationCaseId) {
+      toast.error('No end-leasing case is linked to this property');
+      return;
+    }
+    setAttendanceBusy(true);
+    try {
+      const updated = await terminationApi.setTenantOutgoingAttendance(
+        terminationCaseId,
+        attendance,
+      );
+      const next = updated.inspection.tenantAttendance;
+      setSnapshot((current) => ({
+        ...current,
+        tenantAttendance: next === 'yes' || next === 'no' ? next : 'pending',
+      }));
+      toast.success(`Tenant attendance set to ${attendance === 'yes' ? 'Yes' : 'No'}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update tenant attendance');
+    } finally {
+      setAttendanceBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <p className="text-base font-semibold leading-snug">{inspection.propertyAddress}</p>
-        <p className="text-muted-foreground text-xs">Case ref {inspection.trackingNumber}</p>
-        {inspection.propertyId ? (
-          <Link
-            href={propertyDetail(inspection.propertyId)}
-            className="text-primary inline-flex text-xs font-medium hover:underline"
-          >
-            View property
-          </Link>
-        ) : null}
-      </div>
+      <section className="rounded-2xl border bg-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-xl">
+              <Home className="size-5" />
+            </span>
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                  {INSPECTION_TYPE_LABEL[inspection.type]}
+                </span>
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                    gateStatusTone(gateStatus),
+                  )}
+                >
+                  {AGENT_OUTGOING_GATE_LABEL[gateStatus]}
+                </span>
+              </div>
+              <h1 className="text-base font-semibold leading-snug">{inspection.propertyAddress}</h1>
+              <p className="text-muted-foreground text-xs">Case ref {inspection.trackingNumber}</p>
+              {inspection.propertyId ? (
+                <Link
+                  href={propertyDetail(inspection.propertyId)}
+                  className="text-primary inline-flex text-xs font-medium hover:underline"
+                >
+                  View property
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <OutgoingInspectionCaseSection
-        inspectionDate={inspectionDate}
-        inspectorName={inspectorName}
-        tenantAttendance={tenantAttendance}
-        statusCompleted={statusCompleted}
-        terminationCaseId={terminationCaseId}
-        onAttendanceChange={(attendance) =>
-          setSnapshot((current) => ({ ...current, tenantAttendance: attendance }))
-        }
-        emails={stageEmails}
-        emailTitle={emailTitle}
-      />
-
-      {!apiConnected ? (
-        <p className="text-muted-foreground text-xs">
-          Connect to the API to see live key proof and acknowledgement status.
+      <section className="rounded-2xl border bg-card p-3">
+        <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+          Outgoing progress
         </p>
-      ) : null}
+        <WorkflowProgressRail
+          steps={AGENT_OUTGOING_GATE_STEPS}
+          labels={AGENT_OUTGOING_GATE_LABEL}
+          currentStep={viewingStep}
+          liveStep={gateStatus}
+          progressFillIndex={liveGateIndex}
+          isStepCompleted={(step) => agentOutgoingGateIndex(step) < liveGateIndex}
+          isStepEnabled={(step) => agentOutgoingGateIndex(step) <= liveGateIndex}
+          getStepState={(step) => {
+            const index = agentOutgoingGateIndex(step);
+            const isDone =
+              index < liveGateIndex || (gateStatus === 'completed' && step === 'completed');
+            const isViewing = step === viewingStep;
+            return resolveWorkflowStepState(isDone, isViewing);
+          }}
+          onStepClick={(step) => setViewingGateStep(step)}
+        />
+        <p className="text-muted-foreground px-1 pb-1 text-xs leading-relaxed">
+          <span className="font-medium text-foreground">
+            {AGENT_OUTGOING_GATE_LABEL[viewingStep]}
+          </span>
+          {' — '}
+          {AGENT_OUTGOING_GATE_HINT[viewingStep]}
+        </p>
+      </section>
 
-      {loading ? (
-        <div className="text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm">
+      {loading && apiConnected ? (
+        <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
           <Loader2 className="size-4 animate-spin" />
           Syncing inspection status…
         </div>
@@ -249,8 +381,114 @@ export function OutgoingFieldInspectionDetail({
 
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-      {!loading ? (
-        <div className="space-y-3 border-t pt-4">
+      <section className="rounded-2xl border bg-card p-4">
+        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+          Vacating tenant
+        </p>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Name
+            </dt>
+            <dd className="mt-1 text-sm font-medium">{tenantName}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Phone
+            </dt>
+            <dd className="mt-1 text-sm font-medium">{tenantPhone}</dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Email
+            </dt>
+            <dd className="mt-1 text-sm font-medium break-all">{tenantEmail}</dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Tenant attend
+            </dt>
+            <dd className="mt-2">
+              {terminationCaseId && gateStatus !== 'completed' ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tenantAttendance === 'yes' ? 'default' : 'outline'}
+                    disabled={attendanceBusy}
+                    onClick={() => void setAttendance('yes')}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={tenantAttendance === 'no' ? 'default' : 'outline'}
+                    disabled={attendanceBusy}
+                    onClick={() => void setAttendance('no')}
+                  >
+                    No
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm font-medium">
+                  {tenantAttendance === 'yes'
+                    ? 'Yes'
+                    : tenantAttendance === 'no'
+                      ? 'No'
+                      : '—'}
+                </p>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="rounded-2xl border bg-card p-4">
+        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+          Inspector details
+        </p>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Outgoing inspection date
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {inspectionDate ? formatDateTime(inspectionDate) : 'Not scheduled'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Inspector name
+            </dt>
+            <dd className="mt-1 text-sm font-medium">{inspectorLabel}</dd>
+          </div>
+          {gateStatus !== 'pending' ? (
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                Inspector status
+              </dt>
+              <dd className="mt-1 text-sm font-medium">{inspectorStatus}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </section>
+
+      {!loading && viewingStep === 'pending' && gateStatus === 'pending' ? (
+        <section className="rounded-2xl border border-dashed bg-card/60 p-4">
+          <p className="text-sm font-medium">Awaiting inspector acceptance</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Once an inspector accepts this job it moves to Scheduled. Key collection proof and the
+            remaining completion steps will appear under Scheduled.
+          </p>
+        </section>
+      ) : null}
+
+      {!loading && viewingStep !== 'pending' && liveGateIndex >= 1 ? (
+        <div className="space-y-3">
+          <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+            {viewingStep === 'completed' ? 'Completion steps' : 'Scheduled — completion steps'}
+          </p>
           <StepCard
             icon={KeyRound}
             title="Key collection proof"
@@ -271,6 +509,50 @@ export function OutgoingFieldInspectionDetail({
               <p className="text-muted-foreground text-xs">
                 Waiting for the inspector to upload key collection proof…
               </p>
+            )}
+          </StepCard>
+
+          <StepCard
+            icon={FileText}
+            title="Outgoing report submitted"
+            description="Inspector submits the field report; CROSSUB generates the comparative PDF."
+            status={
+              reportSubmitted
+                ? LEASING_ITEM_STATUS.DONE
+                : keyCollected
+                  ? LEASING_ITEM_STATUS.IN_PROGRESS
+                  : LEASING_ITEM_STATUS.NOT_STARTED
+            }
+          >
+            {reportReady ? (
+              <div className="space-y-2">
+                <BoolStatus
+                  done
+                  doneLabel={
+                    record?.completedDate
+                      ? `Submitted ${formatDateTime(record.completedDate)}`
+                      : 'Report submitted'
+                  }
+                  pendingLabel="Report not yet submitted"
+                />
+                <InspectionReportDownloadActions
+                  inspectionId={inspection.id}
+                  reportUrl={reportUrl}
+                  propertyLabel={inspection.propertyAddress}
+                  inspectionType="outgoing"
+                  canDownload
+                />
+              </div>
+            ) : (
+              <BoolStatus
+                done={false}
+                doneLabel="Report submitted"
+                pendingLabel={
+                  keyCollected
+                    ? 'Waiting for the inspector to submit the field report…'
+                    : 'Available after key collection proof'
+                }
+              />
             )}
           </StepCard>
 
@@ -308,43 +590,17 @@ export function OutgoingFieldInspectionDetail({
           </StepCard>
 
           <StepCard
-            icon={FileText}
-            title="Report submitted"
-            description="CROSSUB processes the field report before tenant acknowledgement."
-            status={reportSubmitted ? LEASING_ITEM_STATUS.DONE : LEASING_ITEM_STATUS.IN_PROGRESS}
-          >
-            <BoolStatus
-              done={reportSubmitted}
-              doneLabel={
-                record?.completedDate
-                  ? `Submitted ${formatDateTime(record.completedDate)}`
-                  : 'Report submitted'
-              }
-              pendingLabel="Report not yet submitted"
-            />
-            {reportReady ? (
-              <div className="mt-3">
-                <InspectionReportDownloadActions
-                  inspectionId={inspection.id}
-                  reportUrl={reportUrl}
-                  propertyLabel={inspection.propertyAddress}
-                  inspectionType="outgoing"
-                  canDownload
-                />
-              </div>
-            ) : null}
-          </StepCard>
-
-          <StepCard
             icon={ClipboardCheck}
             title="Tenant acknowledgement"
-            description="Tenant sign-off on the inspection report."
+            description="Tenant sign-off on the outgoing inspection report."
             status={
-              tenantAck.state === 'confirmed'
+              tenantAcked
                 ? LEASING_ITEM_STATUS.DONE
                 : tenantAck.state === 'pending' || tenantAck.state === 'expired'
                   ? LEASING_ITEM_STATUS.WAITING
-                  : LEASING_ITEM_STATUS.NOT_STARTED
+                  : keyReturned
+                    ? LEASING_ITEM_STATUS.IN_PROGRESS
+                    : LEASING_ITEM_STATUS.NOT_STARTED
             }
           >
             <div className="space-y-2">
@@ -352,14 +608,12 @@ export function OutgoingFieldInspectionDetail({
                 <User
                   className={cn(
                     'mt-0.5 size-4 shrink-0',
-                    tenantAck.state === 'confirmed'
-                      ? 'text-emerald-600'
-                      : 'text-muted-foreground',
+                    tenantAcked ? 'text-emerald-600' : 'text-muted-foreground',
                   )}
                 />
                 <div>
                   <p className="font-medium">{tenantAck.label}</p>
-                  {tenantAck.state === 'confirmed' && signUrl ? (
+                  {tenantAcked && signUrl ? (
                     <a
                       href={signUrl}
                       target="_blank"
@@ -372,19 +626,60 @@ export function OutgoingFieldInspectionDetail({
                   ) : null}
                 </div>
               </div>
-              {record?.tenantName ? (
-                <StepFact label="Tenant" value={record.tenantName} className="col-span-2" />
-              ) : null}
             </div>
           </StepCard>
         </div>
       ) : null}
+
+      <JobCaseStageEmailHistory emails={stageEmails} title="Email history" defaultOpen />
+
+      <div className="rounded-xl border bg-card">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+          onClick={() => setAuditExpanded((value) => !value)}
+          aria-expanded={auditExpanded}
+        >
+          <span className="text-sm font-medium">Audit</span>
+          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+            {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
+            <ChevronDown
+              className={cn('size-4 transition-transform', auditExpanded && 'rotate-180')}
+            />
+          </span>
+        </button>
+        {auditExpanded ? (
+          <ul className="divide-y border-t px-4 py-1">
+            {auditEntries.length === 0 ? (
+              <li className="text-muted-foreground py-3 text-xs">
+                No audit events yet. Acceptance, key proof, report, and tenant acknowledgement will
+                appear here.
+              </li>
+            ) : (
+              auditEntries.map((entry) => (
+                <li key={entry.id} className="py-2.5 text-xs">
+                  <p className="font-medium">{entry.label}</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    {entry.actor} · {formatDateTime(entry.at)}
+                  </p>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : null}
+      </div>
 
       {inspection.propertyId ? (
         <CaseContactActions
           propertyId={inspection.propertyId}
           caseLabel="Outgoing inspection"
         />
+      ) : null}
+
+      {!apiConnected ? (
+        <p className="text-muted-foreground text-xs">
+          Connect to the API to see live key proof and acknowledgement status.
+        </p>
       ) : null}
     </div>
   );

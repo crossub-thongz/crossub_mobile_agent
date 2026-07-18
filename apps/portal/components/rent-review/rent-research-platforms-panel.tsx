@@ -35,6 +35,15 @@ function FileTypeBadge({ type }: { type: 'jpg' | 'pdf' }) {
   );
 }
 
+function isCredentialGateStatus(status: string | undefined): boolean {
+  return status === 'pending_credentials';
+}
+
+function isCredentialError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /api[_ ]credentials|RP_DATA_|REA_PROPTRACK_/i.test(message);
+}
+
 function PlatformResearchRow({
   index,
   label,
@@ -50,7 +59,15 @@ function PlatformResearchRow({
   loading?: boolean;
   readOnly?: boolean;
 }) {
-  const status = loading ? 'loading' : (platform?.status ?? 'pending');
+  // Agent UI: never surface provider credential/config errors for RP Data / REA —
+  // treat them as a normal pending research row.
+  const hideCredentialNoise =
+    isCredentialGateStatus(platform?.status) || isCredentialError(platform?.error);
+  const status = loading
+    ? 'loading'
+    : hideCredentialNoise
+      ? 'pending'
+      : (platform?.status ?? 'pending');
   const meta = STATUS_META[status];
   const Icon = meta.icon;
 
@@ -94,7 +111,7 @@ function PlatformResearchRow({
         </p>
       ) : null}
 
-      {platform?.summary ? (
+      {platform?.summary && !hideCredentialNoise ? (
         <p className="text-muted-foreground mt-2 text-xs leading-relaxed">{platform.summary}</p>
       ) : loading ? (
         <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
@@ -108,7 +125,7 @@ function PlatformResearchRow({
         </p>
       ) : null}
 
-      {platform?.error ? (
+      {platform?.error && !hideCredentialNoise ? (
         <p className="text-destructive mt-2 text-xs leading-relaxed">{platform.error}</p>
       ) : null}
     </li>

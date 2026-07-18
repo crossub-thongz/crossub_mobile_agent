@@ -31,6 +31,10 @@ import {
   filterUploadableFiles,
   MAX_UPLOAD_LABEL,
 } from '@/lib/file-upload';
+import {
+  inspectionReportDisplayName,
+  inspectionReportDownloadType,
+} from '@/lib/property-portal-documents';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
 import type { AgentDocument, Property } from '@/lib/types';
 import { formatPropertyFullAddress } from '@/lib/utils';
@@ -314,9 +318,13 @@ export function PropertyDocumentsTab({
   readOnlyGroups?: CreatePropertyDocumentGroup[];
   readOnlyHint?: string;
 }) {
-  const { apiConnected, uploadDocument, deleteDocument } = useAgentData();
+  const { apiConnected, uploadDocument, deleteDocument, inspections } = useAgentData();
   const { detail, refresh } = usePropertyPortalDetail(propertyId, apiConnected);
   const portalDocuments = detail?.documents ?? [];
+  const propertyInspections = useMemo(
+    () => inspections.filter((row) => row.propertyId === propertyId),
+    [inspections, propertyId],
+  );
 
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -432,9 +440,27 @@ export function PropertyDocumentsTab({
     const byId = new Map<string, DisplayDoc>();
 
     for (const doc of portalDocuments) {
+      let title = doc.title;
+      if (doc.category === 'inspection_report') {
+        const displayName = inspectionReportDisplayName(
+          property,
+          propertyInspections,
+          doc,
+        );
+        const category = inspectionReportDownloadType(propertyInspections, doc);
+        if (category === 'ingoing') {
+          title = `Ingoing Inspection report — ${displayName}`;
+        } else if (category === 'outgoing') {
+          title = `Outgoing Inspection report — ${displayName}`;
+        } else if (category === 'routine') {
+          title = `Routine Inspection report — ${displayName}`;
+        } else {
+          title = `Open Inspection report — ${displayName}`;
+        }
+      }
       byId.set(doc.id, {
         id: doc.id,
-        title: doc.title,
+        title,
         uploadedAt: doc.uploadedAt,
         href: doc.url,
       });
@@ -451,7 +477,7 @@ export function PropertyDocumentsTab({
     }
 
     return [...byId.values()];
-  }, [portalDocuments, fallbackDocuments]);
+  }, [portalDocuments, fallbackDocuments, property, propertyInspections]);
 
   const checklist = useMemo(
     () => buildDocumentChecklistByGroup(displayDocs),

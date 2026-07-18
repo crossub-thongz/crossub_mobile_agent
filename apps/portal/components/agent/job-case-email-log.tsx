@@ -48,7 +48,8 @@ function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
     email.kind === 'tenant_notice' ||
     email.kind === 'timeline_email' ||
     email.kind === 'inspector_accepted' ||
-    email.kind === 'ingoing_report_distributed'
+    email.kind === 'ingoing_report_distributed' ||
+    email.kind === 'outgoing_report_distributed'
   ) {
     return 'inbound';
   }

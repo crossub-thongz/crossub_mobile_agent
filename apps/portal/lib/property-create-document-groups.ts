@@ -127,7 +127,11 @@ export function classifyCreatePropertyDocument(title: string): CreatePropertyDoc
   ) {
     return 'landlord';
   }
-  if (/paper\s*bond|bond\s*lodgement|key\s*handover|ingoing\s*inspection|tenancy\s*ledger/.test(base)) {
+  if (
+    /paper\s*bond|bond\s*lodgement|key\s*handover|ingoing\s*inspection|outgoing\s*inspection|tenancy\s*ledger/.test(
+      base,
+    )
+  ) {
     return 'tenancy';
   }
   return 'tenancy';
@@ -286,7 +290,12 @@ function titlesMatch(slotLabel: string, docTitle: string): boolean {
   if (slot === 'landlord insurance' && /landlord\s*insurance/.test(base)) return true;
   if (slot === 'paper bond' && /paper\s*bond|bond\s*lodgement/.test(base)) return true;
   if (slot === 'key handover form' && /key\s*handover/.test(base)) return true;
-  if (slot === 'ingoing inspection report' && /ingoing\s*inspection/.test(base)) return true;
+  if (slot === 'ingoing inspection report' && /ingoing\s*inspection|^ig-/.test(base)) {
+    return true;
+  }
+  if (slot === 'outgoing inspection report' && /outgoing\s*inspection|^oi-/.test(base)) {
+    return true;
+  }
   if (slot === 'tenancy ledger' && /tenancy\s*ledger|rent\s*ledger/.test(base)) return true;
   if (slot === 'supporting documents' && /supporting\s*documents?/.test(base)) return true;
 

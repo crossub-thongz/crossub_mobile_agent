@@ -6,6 +6,12 @@ import {
   type AgentIngoingGateStatus,
   deriveAgentIngoingGateStatus,
 } from '@/lib/ingoing-inspection-display';
+import {
+  AGENT_OUTGOING_GATE_LABEL,
+  AGENT_OUTGOING_GATE_STEPS,
+  type AgentOutgoingGateStatus,
+  deriveAgentOutgoingGateStatus,
+} from '@/lib/outgoing-inspection-display';
 import type { Inspection } from '@/lib/types';
 
 import { buildCaseWorkflowProgress } from './build-progress';
@@ -29,6 +35,11 @@ const OPEN_AGENT_STEPS = [
 const INGOING_AGENT_STEPS = AGENT_INGOING_GATE_STEPS.map((id) => ({
   id,
   label: AGENT_INGOING_GATE_LABEL[id],
+}));
+
+const OUTGOING_AGENT_STEPS = AGENT_OUTGOING_GATE_STEPS.map((id) => ({
+  id,
+  label: AGENT_OUTGOING_GATE_LABEL[id],
 }));
 
 function resolveInspectionStepId(apiStatus?: string): string {
@@ -79,10 +90,27 @@ export function ingoingInspectionWorkflowProgress(
   );
 }
 
+/** Pending → Scheduled → Completed for the agent outgoing job case. */
+export function outgoingInspectionWorkflowProgress(
+  gateStatus: AgentOutgoingGateStatus,
+): CaseWorkflowProgress {
+  return buildCaseWorkflowProgress(
+    'Outgoing inspection progress',
+    OUTGOING_AGENT_STEPS,
+    gateStatus,
+  );
+}
+
 export function inspectionWorkflowProgress(inspection: Inspection): CaseWorkflowProgress {
   if (inspection.type === 'INGOING') {
     return ingoingInspectionWorkflowProgress(
       deriveAgentIngoingGateStatus({ inspection, record: null }),
+    );
+  }
+
+  if (inspection.type === 'OUTGOING') {
+    return outgoingInspectionWorkflowProgress(
+      deriveAgentOutgoingGateStatus({ inspection, record: null }),
     );
   }
 
@@ -94,11 +122,9 @@ export function inspectionWorkflowProgress(inspection: Inspection): CaseWorkflow
     );
   }
 
-  const currentStepId = resolveInspectionStepId(inspection.apiStatus);
-  const title =
-    inspection.type === 'OUTGOING'
-      ? 'Outgoing inspection workflow'
-      : 'Routine inspection workflow';
-
-  return buildCaseWorkflowProgress(title, INSPECTION_AGENT_STEPS, currentStepId);
+  return buildCaseWorkflowProgress(
+    'Routine inspection workflow',
+    INSPECTION_AGENT_STEPS,
+    resolveInspectionStepId(inspection.apiStatus),
+  );
 }
