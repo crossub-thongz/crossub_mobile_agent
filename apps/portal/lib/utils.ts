@@ -21,14 +21,21 @@ export function displayName(user: {
   return name || user.email;
 }
 
+/** en-AU can render meridiem as am/pm or Am/Pm — always show AM/PM. */
+function withUppercaseMeridiem(value: string): string {
+  return value.replace(/\b(am|pm)\b/gi, (match) => match.toUpperCase());
+}
+
 export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return withUppercaseMeridiem(
+    new Date(iso).toLocaleString('en-AU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+  );
 }
 
 export function formatDate(iso: string): string {
@@ -40,10 +47,12 @@ export function formatDate(iso: string): string {
 }
 
 export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-AU', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return withUppercaseMeridiem(
+    new Date(iso).toLocaleTimeString('en-AU', {
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+  );
 }
 
 export function formatScheduledAt(iso?: string | null): string {
@@ -70,7 +79,9 @@ export function formatOpenInspectionWindow(
     hour: 'numeric',
     minute: '2-digit',
   };
-  const startTime = start.toLocaleTimeString('en-AU', timeFmt);
+  const startTime = withUppercaseMeridiem(
+    start.toLocaleTimeString('en-AU', timeFmt),
+  );
 
   if (!endIso) {
     return `${datePart} · ${startTime}`;
@@ -82,7 +93,9 @@ export function formatOpenInspectionWindow(
   }
 
   const sameDay = start.toDateString() === end.toDateString();
-  const endTime = end.toLocaleTimeString('en-AU', timeFmt);
+  const endTime = withUppercaseMeridiem(
+    end.toLocaleTimeString('en-AU', timeFmt),
+  );
   if (sameDay) {
     return `${datePart} · ${startTime} – ${endTime}`;
   }
