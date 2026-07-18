@@ -419,6 +419,7 @@ function CompareResponsibilitySection({
   onChange,
   onEmail,
   emailHint,
+  emailSent = false,
   actionBusy = false,
   readOnly = false,
 }: {
@@ -428,6 +429,8 @@ function CompareResponsibilitySection({
   onChange: (items: ReportComparisonRepairItem[]) => void;
   onEmail: () => void;
   emailHint: string;
+  /** True once the comparison summary email for this section has been sent. */
+  emailSent?: boolean;
   /** Disables email/actions only — not row inputs (avoids flicker during autosave). */
   actionBusy?: boolean;
   readOnly?: boolean;
@@ -541,14 +544,18 @@ function CompareResponsibilitySection({
           <Button
             type="button"
             size="sm"
-            variant="secondary"
-            className="h-8 gap-1.5 text-xs"
-            disabled={actionBusy}
+            variant={emailSent ? 'default' : 'secondary'}
+            className={
+              emailSent
+                ? 'h-8 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
+                : 'h-8 gap-1.5 text-xs'
+            }
+            disabled={actionBusy || emailSent}
             onClick={onEmail}
-            title={emailHint}
+            title={emailSent ? 'Email already sent' : emailHint}
           >
             <Mail className="size-3.5" />
-            Email
+            {emailSent ? 'Email sent' : 'Email'}
           </Button>
         </div>
       </div>
@@ -1350,6 +1357,7 @@ export function EndLeasingReportComparisonPanel({
           onChange={setTenantItems}
           actionBusy={busy}
           emailHint="Send to tenant"
+          emailSent={Boolean(rc.tenantComparisonSummaryEmail?.sentAt)}
           onEmail={() => void sendComparisonSummary('tenant')}
         />
         <CompareResponsibilitySection
@@ -1358,6 +1366,7 @@ export function EndLeasingReportComparisonPanel({
           onChange={setLandlordItems}
           actionBusy={busy}
           emailHint="Send to tenant + landlord"
+          emailSent={Boolean(rc.agentComparisonSummaryEmail?.sentAt)}
           onEmail={() => void sendComparisonSummary('agent')}
         />
       </div>
