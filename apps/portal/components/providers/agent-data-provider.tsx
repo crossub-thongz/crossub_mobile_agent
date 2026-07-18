@@ -583,20 +583,30 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       filterByPropertyIds(addedInspections, propertyIds),
       properties,
     );
-    const live = enrichPropertyAddresses(
+    // Portfolio is the unpaginated agency book; live open-viewings / staff list
+    // overlay fresher rows. Never replace the book with a single page of /inspections.
+    const portfolioRows = portfolio
+      ? enrichPropertyAddresses(
+          filterByPropertyIds(mapAgentInspections(portfolio.inspections), propertyIds),
+          properties,
+        )
+      : [];
+    const liveRows =
       apiConnected && apiInspections
-        ? filterByPropertyIds(apiInspections, propertyIds)
-        : portfolio
-          ? mapAgentInspections(portfolio.inspections)
-          : [],
-      properties,
-    );
+        ? enrichPropertyAddresses(
+            filterByPropertyIds(apiInspections, propertyIds),
+            properties,
+          )
+        : [];
     const byId = new Map<string, Inspection>();
-    // Live API wins. Optimistic OPEN rows from create are dropped once live
-    // inspections are loaded so admin-deleted cases don't stick in the agent list.
-    for (const row of live) {
+    for (const row of portfolioRows) {
       byId.set(row.id, row);
     }
+    for (const row of liveRows) {
+      byId.set(row.id, row);
+    }
+    // Optimistic OPEN rows from create are dropped once live inspections are
+    // loaded so admin-deleted cases don't stick in the agent list.
     for (const row of added) {
       if (byId.has(row.id)) continue;
       if (apiInspections != null && row.type === 'OPEN') continue;

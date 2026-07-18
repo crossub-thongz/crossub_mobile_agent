@@ -6,6 +6,7 @@ import {
   vacatingWorkflowProgress,
 } from '@/lib/case-workflows';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
+import { isInspectionDone } from '@/lib/inspections/presentation';
 import { isDeletedInspection } from '@/lib/property-inspection-history';
 import { isDeletedMaintenance } from '@/lib/property-maintenance-history';
 import { isDeletedRentReview } from '@/lib/property-rent-review-history';
@@ -241,8 +242,7 @@ function isCompletedMaintenance(request: MaintenanceRequest): boolean {
 }
 
 function isCompletedInspection(inspection: Inspection): boolean {
-  const status = inspection.status.toLowerCase();
-  return status.includes('complete') || status.includes('published') || status.includes('cancelled');
+  return isInspectionDone(inspection);
 }
 
 const INSPECTION_JOB_TYPE: Record<Inspection['type'], string> = {

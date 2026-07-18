@@ -107,7 +107,7 @@ export function mapOpenSessionToInspection(
         ? OPEN_DELETED_LABEL
         : session.openReportGenerated ||
             session.sessionStatus === SessionStatusEnum.CLOSED
-          ? SESSION_STATUS_LABEL[SessionStatusEnum.CLOSED]
+          ? 'Completed'
           : openSessionStatusLabel(session.sessionStatus),
     apiStatus:
       session.sessionStatus === SessionStatusEnum.CANCELLED

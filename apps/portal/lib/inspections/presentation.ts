@@ -41,6 +41,13 @@ export function isInspectionDone(inspection: Inspection): boolean {
   if (api === INSPECTION_STATUS.PUBLISHED.toLowerCase()) return true;
   if (api === INSPECTION_STATUS.COMPLETED.toLowerCase()) return true;
   if (api === 'completed') return true;
+  // Open report generated ⇒ case is done even if session status lagging.
+  if (
+    (inspection.type === 'OPEN' || inspection.source === 'open_viewing') &&
+    (inspection.reportStatus === 'sent' || Boolean(inspection.reportUrl))
+  ) {
+    return true;
+  }
   return isDoneStatus(inspection.status);
 }
 

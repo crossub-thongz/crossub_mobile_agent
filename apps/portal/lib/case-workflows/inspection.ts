@@ -1,4 +1,5 @@
 import { INSPECTION_STATUS } from '@/constants/api-enums';
+import { SessionStatusEnum } from '@/constants/open-inspection-ops';
 import {
   AGENT_INGOING_GATE_LABEL,
   AGENT_INGOING_GATE_STEPS,
@@ -16,6 +17,13 @@ const INSPECTION_AGENT_STEPS = [
   { id: 'review', label: 'Report review' },
   { id: 'completed', label: 'Completed' },
   { id: 'published', label: 'Published' },
+] as const;
+
+const OPEN_AGENT_STEPS = [
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'staff_en_route', label: 'Staff en route' },
+  { id: 'open', label: 'Open now' },
+  { id: 'completed', label: 'Completed' },
 ] as const;
 
 const INGOING_AGENT_STEPS = AGENT_INGOING_GATE_STEPS.map((id) => ({
@@ -43,6 +51,23 @@ function resolveInspectionStepId(apiStatus?: string): string {
   }
 }
 
+/** Open-viewing sessions use SessionStatusEnum, not InspectionStatus. */
+function resolveOpenInspectionStepId(inspection: Inspection): string {
+  const api = (inspection.apiStatus ?? '').toLowerCase();
+  if (
+    api === SessionStatusEnum.CLOSED ||
+    api === INSPECTION_STATUS.COMPLETED.toLowerCase() ||
+    api === INSPECTION_STATUS.PUBLISHED.toLowerCase() ||
+    inspection.reportStatus === 'sent' ||
+    Boolean(inspection.reportUrl)
+  ) {
+    return 'completed';
+  }
+  if (api === SessionStatusEnum.OPEN) return 'open';
+  if (api === SessionStatusEnum.STAFF_EN_ROUTE) return 'staff_en_route';
+  return 'scheduled';
+}
+
 /** Pending → Scheduled → Completed for the agent ingoing job case. */
 export function ingoingInspectionWorkflowProgress(
   gateStatus: AgentIngoingGateStatus,
@@ -61,13 +86,19 @@ export function inspectionWorkflowProgress(inspection: Inspection): CaseWorkflow
     );
   }
 
+  if (inspection.type === 'OPEN' || inspection.source === 'open_viewing') {
+    return buildCaseWorkflowProgress(
+      'Open inspection workflow',
+      OPEN_AGENT_STEPS,
+      resolveOpenInspectionStepId(inspection),
+    );
+  }
+
   const currentStepId = resolveInspectionStepId(inspection.apiStatus);
   const title =
-    inspection.type === 'OPEN'
-      ? 'Open inspection workflow'
-      : inspection.type === 'OUTGOING'
-        ? 'Outgoing inspection workflow'
-        : 'Routine inspection workflow';
+    inspection.type === 'OUTGOING'
+      ? 'Outgoing inspection workflow'
+      : 'Routine inspection workflow';
 
   return buildCaseWorkflowProgress(title, INSPECTION_AGENT_STEPS, currentStepId);
 }

@@ -33,6 +33,7 @@ import {
   inspectionCaseEmailRecords,
   inspectionEmailRecordsForStep,
 } from '@/lib/inspection/agent-workflow-email';
+import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import {
@@ -297,10 +298,16 @@ export function IngoingInspectionAgentDetail({
     [inspection, record],
   );
 
-  const auditEntries = useMemo(() => {
-    const fromApi = [...(record?.caseAudit ?? [])].sort((a, b) => b.at.localeCompare(a.at));
-    return fromApi;
-  }, [record?.caseAudit]);
+  const auditEntries = useMemo(
+    () =>
+      mergeInspectionCaseAudit({
+        record,
+        progression,
+        leasingTenantApproved,
+        tenantName: snapshot.tenantName,
+      }),
+    [record, progression, leasingTenantApproved, snapshot.tenantName],
+  );
 
   const tenantName = snapshot.tenantName?.trim() || '—';
   const tenantEmail = snapshot.tenantEmail?.trim() || '—';
@@ -664,7 +671,8 @@ export function IngoingInspectionAgentDetail({
           <ul className="divide-y border-t px-4 py-1">
             {auditEntries.length === 0 ? (
               <li className="text-muted-foreground py-3 text-xs">
-                No audit events yet. Acceptance and report emails will appear here.
+                No audit events yet. Acceptance, key proof, report, and tenant
+                acknowledgement will appear here.
               </li>
             ) : (
               auditEntries.map((entry) => (
