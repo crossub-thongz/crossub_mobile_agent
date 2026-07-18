@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -27,16 +26,20 @@ import {
   type AgentInvoiceDetail,
 } from '@/lib/crossub-api/agent-client';
 import {
+  calendarDaysInclusive,
   computeInvoiceTotals,
   defaultInvoicePeriod,
+  formatInvoiceDate,
   managementFeeAmount,
   periodRentFromWeekly,
 } from '@/lib/invoice-math';
 import type { Agency, Property } from '@/lib/types';
-import { formatPropertyFullAddress } from '@/lib/utils';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 const selectClass =
-  'border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
+  'border-input bg-background flex h-9 w-full min-w-0 rounded-md border px-2.5 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50';
+
+const cellInputClass = 'h-9 text-sm';
 
 type ManagementLine = {
   propertyId: string;
@@ -79,6 +82,17 @@ function num(value: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function formatMoney(amount: number): string {
+  return `$${amount.toLocaleString('en-AU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function asOptionalId(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 export function InvoiceEditorDialog({
   open,
   onOpenChange,
@@ -117,7 +131,6 @@ export function InvoiceEditorDialog({
   ]);
   const [lettingTribunal, setLettingTribunal] = useState<SimpleLine[]>([]);
   const [otherService, setOtherService] = useState<SimpleLine[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
 
   const propertyOptions = useMemo(
     () =>
@@ -154,7 +167,6 @@ export function InvoiceEditorDialog({
       setManagementFee([emptyManagementLine()]);
       setLettingTribunal([]);
       setOtherService([]);
-      setShowPreview(false);
       return;
     }
 
@@ -280,6 +292,8 @@ export function InvoiceEditorDialog({
     [managementFee, lettingTribunal, otherService],
   );
 
+  const periodDays = calendarDaysInclusive(periodStart, periodEnd);
+
   const previewModel: InvoiceDocumentModel = {
     invoiceNumber: invoiceNumber.trim() || 'Draft',
     invoiceDate,
@@ -342,17 +356,6 @@ export function InvoiceEditorDialog({
       return;
     }
 
-    const managementPayload = managementFee
-      .filter((l) => l.propertyId)
-      .map((l) => ({
-        propertyId: l.propertyId,
-        propertyAddress: l.propertyAddress,
-        rent: num(l.rent),
-        pmFeeGst: l.pmFeeGst,
-        serviceRate: num(l.serviceRate),
-        amount: num(l.amount),
-      }));
-
     const body: AgentCreateInvoiceInput = {
       agencyId: agency.id,
       invoiceNumber: invoiceNumber.trim() || undefined,
@@ -368,7 +371,16 @@ export function InvoiceEditorDialog({
       bankAccountName: bankAccountName.trim() || undefined,
       bankBsb: bankBsb.trim() || undefined,
       bankAccountNumber: bankAccountNumber.trim() || undefined,
-      managementFee: managementPayload,
+      managementFee: managementFee
+        .filter((l) => l.propertyId)
+        .map((l) => ({
+          propertyId: l.propertyId,
+          propertyAddress: l.propertyAddress,
+          rent: num(l.rent),
+          pmFeeGst: l.pmFeeGst,
+          serviceRate: num(l.serviceRate),
+          amount: num(l.amount),
+        })),
       lettingTribunal: lettingTribunal
         .filter((l) => l.description.trim() || num(l.amount) > 0)
         .map((l) => ({
@@ -409,342 +421,449 @@ export function InvoiceEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         elevated
-        className="flex max-h-[92vh] w-[min(96vw,56rem)] max-w-4xl flex-col gap-0 overflow-hidden p-0"
+        className="flex h-[min(96vh,920px)] w-[min(98vw,90rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none"
       >
-        <DialogHeader className="shrink-0 border-b px-4 py-3 text-left">
-          <DialogTitle>{mode === 'edit' ? 'Edit invoice' : 'Create invoice'}</DialogTitle>
-          <DialogDescription>
-            Crossub tax invoice template with management fee, letting & tribunal, and other
-            service lines.
-          </DialogDescription>
+        <DialogHeader className="shrink-0 border-b px-5 py-4 text-left sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3 pr-8">
+            <div>
+              <DialogTitle className="text-lg">
+                {mode === 'edit' ? 'Edit tax invoice' : 'Create tax invoice'}
+              </DialogTitle>
+              <DialogDescription className="mt-1">
+                {agency?.name ?? 'Agency'} · Crossub management fee invoice
+              </DialogDescription>
+            </div>
+            {periodDays > 0 ? (
+              <div className="rounded-lg border bg-muted/40 px-3 py-2 text-right">
+                <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                  Service period
+                </p>
+                <p className="mt-0.5 text-sm font-medium tabular-nums">
+                  {formatInvoiceDate(periodStart)} – {formatInvoiceDate(periodEnd)}
+                </p>
+                <p className="text-muted-foreground text-xs">{periodDays} days</p>
+              </div>
+            ) : null}
+          </div>
         </DialogHeader>
 
         {loading ? (
-          <div className="text-muted-foreground flex items-center justify-center gap-2 py-16 text-sm">
+          <div className="text-muted-foreground flex flex-1 items-center justify-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" />
             Loading invoice…
           </div>
         ) : (
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Invoice Number">
-                <Input
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                  placeholder="Auto-generated if blank"
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="Invoice Date">
-                <Input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="Agency Name">
-                <Input value={agency?.name ?? ''} disabled />
-              </Field>
-              <Field label="Licence Number">
-                <Input
-                  value={licenceNumber}
-                  onChange={(e) => setLicenceNumber(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="From">
-                <Input
-                  type="date"
-                  value={periodStart}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setPeriodStart(next);
-                    recomputeManagementAmounts(next, periodEnd);
-                  }}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="To">
-                <Input
-                  type="date"
-                  value={periodEnd}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setPeriodEnd(next);
-                    recomputeManagementAmounts(periodStart, next);
-                  }}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="Reference">
-                <Input
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="Due Date">
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="Email">
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="ABN">
-                <Input value={abn} onChange={(e) => setAbn(e.target.value)} disabled={saving} />
-              </Field>
-            </div>
+          <>
+            <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
+              {/* Editor */}
+              <div className="min-h-0 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
+                <Section title="Invoice details">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <Field label="Invoice number">
+                      <Input
+                        className={cellInputClass}
+                        value={invoiceNumber}
+                        onChange={(e) => setInvoiceNumber(e.target.value)}
+                        placeholder="Auto if blank"
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="Invoice date">
+                      <Input
+                        className={cellInputClass}
+                        type="date"
+                        value={invoiceDate}
+                        onChange={(e) => setInvoiceDate(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="Due date">
+                      <Input
+                        className={cellInputClass}
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="Reference">
+                      <Input
+                        className={cellInputClass}
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="From">
+                      <Input
+                        className={cellInputClass}
+                        type="date"
+                        value={periodStart}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setPeriodStart(next);
+                          recomputeManagementAmounts(next, periodEnd);
+                        }}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="To">
+                      <Input
+                        className={cellInputClass}
+                        type="date"
+                        value={periodEnd}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setPeriodEnd(next);
+                          recomputeManagementAmounts(periodStart, next);
+                        }}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="Agency">
+                      <Input className={cellInputClass} value={agency?.name ?? ''} disabled />
+                    </Field>
+                    <Field label="Licence number">
+                      <Input
+                        className={cellInputClass}
+                        value={licenceNumber}
+                        onChange={(e) => setLicenceNumber(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="ABN" className="sm:col-span-1 xl:col-span-2">
+                      <Input
+                        className={cellInputClass}
+                        value={abn}
+                        onChange={(e) => setAbn(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="Email" className="sm:col-span-1 xl:col-span-2">
+                      <Input
+                        className={cellInputClass}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                  </div>
+                </Section>
 
-            <LineSection
-              title="Crossub Management Fee"
-              onAdd={() => setManagementFee((prev) => [...prev, emptyManagementLine()])}
-            >
-              {managementFee.map((line, index) => (
-                <div
-                  key={`mf-${index}`}
-                  className="grid gap-2 rounded-lg border p-3 sm:grid-cols-6"
-                >
-                  <Field label="#" className="sm:col-span-1">
-                    <Input value={String(index + 1)} disabled />
-                  </Field>
-                  <Field label="Property Address" className="sm:col-span-5">
-                    <select
-                      className={selectClass}
-                      value={line.propertyId}
-                      disabled={saving}
-                      onChange={(e) =>
-                        fillManagementFromProperty(index, e.target.value)
-                      }
-                    >
-                      <option value="">Select property</option>
-                      {propertyOptions.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Rent ($AUD)">
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={line.rent}
-                      disabled={saving}
-                      onChange={(e) => {
-                        const rent = e.target.value;
-                        setManagementFee((prev) =>
-                          prev.map((l, i) =>
-                            i === index
-                              ? {
-                                  ...l,
-                                  rent,
-                                  amount: String(
-                                    managementFeeAmount(num(rent), num(l.serviceRate)),
-                                  ),
-                                }
-                              : l,
-                          ),
-                        );
-                      }}
-                    />
-                  </Field>
-                  <Field label="PM Fee">
-                    <select
-                      className={selectClass}
-                      value={line.pmFeeGst}
-                      disabled={saving}
-                      onChange={(e) =>
-                        setManagementFee((prev) =>
-                          prev.map((l, i) =>
-                            i === index
-                              ? {
-                                  ...l,
-                                  pmFeeGst: e.target.value as 'include' | 'exclude',
-                                }
-                              : l,
-                          ),
-                        )
-                      }
-                    >
-                      <option value="include">Include GST</option>
-                      <option value="exclude">Exclude GST</option>
-                    </select>
-                  </Field>
-                  <Field label="Service Rate %">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.01}
-                      value={line.serviceRate}
-                      disabled={saving}
-                      onChange={(e) => {
-                        const serviceRate = e.target.value;
-                        setManagementFee((prev) =>
-                          prev.map((l, i) =>
-                            i === index
-                              ? {
-                                  ...l,
-                                  serviceRate,
-                                  amount: String(
-                                    managementFeeAmount(num(l.rent), num(serviceRate)),
-                                  ),
-                                }
-                              : l,
-                          ),
-                        );
-                      }}
-                    />
-                  </Field>
-                  <Field label="Amount AUD">
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={line.amount}
-                      disabled={saving}
-                      onChange={(e) =>
-                        setManagementFee((prev) =>
-                          prev.map((l, i) =>
-                            i === index ? { ...l, amount: e.target.value } : l,
-                          ),
-                        )
-                      }
-                    />
-                  </Field>
-                  <div className="sm:col-span-6 flex justify-end">
+                <Section
+                  title="Management fee"
+                  action={
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="text-destructive"
-                      disabled={saving || managementFee.length <= 1}
+                      disabled={saving}
                       onClick={() =>
-                        setManagementFee((prev) => prev.filter((_, i) => i !== index))
+                        setManagementFee((prev) => [...prev, emptyManagementLine()])
                       }
                     >
-                      <Trash2 className="mr-1 size-3.5" />
-                      Remove
+                      <Plus className="size-3.5" />
+                      Add property
                     </Button>
+                  }
+                >
+                  <div className="overflow-x-auto rounded-lg border">
+                    <table className="w-full min-w-[720px] border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-muted/50 text-muted-foreground border-b text-left text-[11px] font-semibold uppercase tracking-wide">
+                          <th className="w-10 px-2 py-2.5">#</th>
+                          <th className="px-2 py-2.5">Property</th>
+                          <th className="w-28 px-2 py-2.5">Rent</th>
+                          <th className="w-32 px-2 py-2.5">PM fee</th>
+                          <th className="w-24 px-2 py-2.5">Rate %</th>
+                          <th className="w-28 px-2 py-2.5">Amount</th>
+                          <th className="w-10 px-2 py-2.5" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {managementFee.map((line, index) => (
+                          <tr key={`mf-${index}`} className="border-b last:border-b-0">
+                            <td className="text-muted-foreground px-2 py-2 tabular-nums">
+                              {index + 1}
+                            </td>
+                            <td className="px-2 py-2">
+                              <select
+                                className={selectClass}
+                                value={line.propertyId}
+                                disabled={saving}
+                                onChange={(e) =>
+                                  fillManagementFromProperty(index, e.target.value)
+                                }
+                              >
+                                <option value="">Select property</option>
+                                {propertyOptions.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-2 py-2">
+                              <Input
+                                className={cellInputClass}
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={line.rent}
+                                disabled={saving}
+                                onChange={(e) => {
+                                  const rent = e.target.value;
+                                  setManagementFee((prev) =>
+                                    prev.map((l, i) =>
+                                      i === index
+                                        ? {
+                                            ...l,
+                                            rent,
+                                            amount: String(
+                                              managementFeeAmount(
+                                                num(rent),
+                                                num(l.serviceRate),
+                                              ),
+                                            ),
+                                          }
+                                        : l,
+                                    ),
+                                  );
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <select
+                                className={selectClass}
+                                value={line.pmFeeGst}
+                                disabled={saving}
+                                onChange={(e) =>
+                                  setManagementFee((prev) =>
+                                    prev.map((l, i) =>
+                                      i === index
+                                        ? {
+                                            ...l,
+                                            pmFeeGst: e.target.value as
+                                              | 'include'
+                                              | 'exclude',
+                                          }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                              >
+                                <option value="include">Inc. GST</option>
+                                <option value="exclude">Ex. GST</option>
+                              </select>
+                            </td>
+                            <td className="px-2 py-2">
+                              <Input
+                                className={cellInputClass}
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={0.01}
+                                value={line.serviceRate}
+                                disabled={saving}
+                                onChange={(e) => {
+                                  const serviceRate = e.target.value;
+                                  setManagementFee((prev) =>
+                                    prev.map((l, i) =>
+                                      i === index
+                                        ? {
+                                            ...l,
+                                            serviceRate,
+                                            amount: String(
+                                              managementFeeAmount(
+                                                num(l.rent),
+                                                num(serviceRate),
+                                              ),
+                                            ),
+                                          }
+                                        : l,
+                                    ),
+                                  );
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <Input
+                                className={cellInputClass}
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={line.amount}
+                                disabled={saving}
+                                onChange={(e) =>
+                                  setManagementFee((prev) =>
+                                    prev.map((l, i) =>
+                                      i === index
+                                        ? { ...l, amount: e.target.value }
+                                        : l,
+                                    ),
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className="px-1 py-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive size-8"
+                                disabled={saving || managementFee.length <= 1}
+                                onClick={() =>
+                                  setManagementFee((prev) =>
+                                    prev.filter((_, i) => i !== index),
+                                  )
+                                }
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <SectionTotal
+                    label="Total management fee"
+                    amount={totals.managementFee}
+                  />
+                </Section>
+
+                <SimpleLinesTable
+                  title="Letting & tribunal"
+                  lines={lettingTribunal}
+                  setLines={setLettingTribunal}
+                  propertyOptions={propertyOptions}
+                  saving={saving}
+                  totalLabel="Total letting & tribunal"
+                  total={totals.lettingTribunal}
+                />
+
+                <SimpleLinesTable
+                  title="Other service fees"
+                  lines={otherService}
+                  setLines={setOtherService}
+                  propertyOptions={propertyOptions}
+                  saving={saving}
+                  totalLabel="Total other services"
+                  total={totals.otherService}
+                />
+
+                <Section title="Bank details">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Bank name">
+                      <Input
+                        className={cellInputClass}
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="Account name">
+                      <Input
+                        className={cellInputClass}
+                        value={bankAccountName}
+                        onChange={(e) => setBankAccountName(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="BSB">
+                      <Input
+                        className={cellInputClass}
+                        value={bankBsb}
+                        onChange={(e) => setBankBsb(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                    <Field label="Account number">
+                      <Input
+                        className={cellInputClass}
+                        value={bankAccountNumber}
+                        onChange={(e) => setBankAccountNumber(e.target.value)}
+                        disabled={saving}
+                      />
+                    </Field>
+                  </div>
+                </Section>
+              </div>
+
+              {/* Live preview */}
+              <aside className="border-border bg-muted/20 hidden min-h-0 flex-col border-l lg:flex">
+                <div className="border-border shrink-0 border-b px-4 py-3">
+                  <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+                    Live preview
+                  </p>
+                  <p className="mt-0.5 text-sm font-medium">Tax invoice</p>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                  <div className="rounded-lg border bg-white p-5 shadow-sm">
+                    <InvoiceDocument invoice={previewModel} />
                   </div>
                 </div>
-              ))}
-              <p className="text-sm font-medium">
-                Total Management Fee {formatMoney(totals.managementFee)}
-              </p>
-            </LineSection>
-
-            <SimpleLineEditor
-              title="Letting & Tribunal Cost"
-              lines={lettingTribunal}
-              setLines={setLettingTribunal}
-              propertyOptions={propertyOptions}
-              saving={saving}
-              totalLabel="Total Letting and Tribunal Cost"
-              total={totals.lettingTribunal}
-            />
-
-            <SimpleLineEditor
-              title="Other Service Fee"
-              lines={otherService}
-              setLines={setOtherService}
-              propertyOptions={propertyOptions}
-              saving={saving}
-              totalLabel="Total Other Service Fee"
-              total={totals.otherService}
-            />
-
-            <div className="ml-auto w-full max-w-xs space-y-1 rounded-lg border p-3 text-sm">
-              <Row label="Subtotal" value={formatMoney(totals.subtotal)} />
-              <Row label="Total GST" value={formatMoney(totals.gst)} />
-              <Row label="Total AUD" value={formatMoney(totals.total)} strong />
+              </aside>
             </div>
 
-            <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
-              <p className="sm:col-span-2 text-sm font-semibold">Bank Details</p>
-              <Field label="Bank Name">
-                <Input
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="Account Name">
-                <Input
-                  value={bankAccountName}
-                  onChange={(e) => setBankAccountName(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="BSB">
-                <Input
-                  value={bankBsb}
-                  onChange={(e) => setBankBsb(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-              <Field label="Account Number">
-                <Input
-                  value={bankAccountNumber}
-                  onChange={(e) => setBankAccountNumber(e.target.value)}
-                  disabled={saving}
-                />
-              </Field>
-            </div>
-
-            {showPreview ? (
-              <div className="rounded-lg border p-4">
-                <InvoiceDocument invoice={previewModel} />
+            <footer className="border-border flex shrink-0 flex-wrap items-center justify-between gap-3 border-t bg-card px-5 py-3 sm:px-6">
+              <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm">
+                <TotalChip label="Subtotal" value={formatMoney(totals.subtotal)} />
+                <TotalChip label="GST" value={formatMoney(totals.gst)} />
+                <TotalChip label="Total AUD" value={formatMoney(totals.total)} emphasize />
               </div>
-            ) : null}
-          </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={loading || saving || !agency}
+                  onClick={() => void handleSave()}
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : mode === 'edit' ? (
+                    'Save changes'
+                  ) : (
+                    'Create invoice'
+                  )}
+                </Button>
+              </div>
+            </footer>
+          </>
         )}
-
-        <DialogFooter className="shrink-0 border-t px-4 py-3 sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading || saving}
-            onClick={() => setShowPreview((v) => !v)}
-          >
-            {showPreview ? 'Hide preview' : 'Preview'}
-          </Button>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={saving}
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="button" disabled={loading || saving || !agency} onClick={() => void handleSave()}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Saving…
-                </>
-              ) : mode === 'edit' ? (
-                'Save changes'
-              ) : (
-                'Create invoice'
-              )}
-            </Button>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+        {action}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -754,41 +873,53 @@ function Field({
   className,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
     <div className={className}>
-      <Label className="text-muted-foreground mb-1.5 text-xs">{label}</Label>
+      <Label className="text-muted-foreground mb-1.5 text-xs font-medium">{label}</Label>
       {children}
     </div>
   );
 }
 
-function LineSection({
-  title,
-  onAdd,
-  children,
-}: {
-  title: string;
-  onAdd: () => void;
-  children: React.ReactNode;
-}) {
+function SectionTotal({ label, amount }: { label: string; amount: number }) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold uppercase tracking-wide">{title}</h3>
-        <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-          <Plus className="mr-1 size-3.5" />
-          Add line
-        </Button>
-      </div>
-      {children}
-    </section>
+    <div className="flex justify-end">
+      <p className="text-sm">
+        <span className="text-muted-foreground">{label}</span>{' '}
+        <span className="font-semibold tabular-nums">{formatMoney(amount)}</span>
+      </p>
+    </div>
   );
 }
 
-function SimpleLineEditor({
+function TotalChip({
+  label,
+  value,
+  emphasize,
+}: {
+  label: string;
+  value: string;
+  emphasize?: boolean;
+}) {
+  return (
+    <div>
+      <span className="text-muted-foreground text-xs">{label}</span>{' '}
+      <span
+        className={cn(
+          'tabular-nums',
+          emphasize ? 'text-base font-bold' : 'font-medium',
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function SimpleLinesTable({
   title,
   lines,
   setLines,
@@ -806,121 +937,124 @@ function SimpleLineEditor({
   total: number;
 }) {
   return (
-    <LineSection title={title} onAdd={() => setLines((prev) => [...prev, emptySimpleLine()])}>
+    <Section
+      title={title}
+      action={
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={saving}
+          onClick={() => setLines((prev) => [...prev, emptySimpleLine()])}
+        >
+          <Plus className="size-3.5" />
+          Add line
+        </Button>
+      }
+    >
       {lines.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No lines yet.</p>
+        <p className="text-muted-foreground rounded-lg border border-dashed px-4 py-6 text-center text-sm">
+          No lines yet — optional for this invoice.
+        </p>
       ) : (
-        lines.map((line, index) => (
-          <div key={`${title}-${index}`} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-6">
-            <Field label="#" className="sm:col-span-1">
-              <Input value={String(index + 1)} disabled />
-            </Field>
-            <Field label="Property Address" className="sm:col-span-5">
-              <select
-                className={selectClass}
-                value={line.propertyId}
-                disabled={saving}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  const prop = propertyOptions.find((p) => p.id === id);
-                  setLines((prev) =>
-                    prev.map((l, i) =>
-                      i === index
-                        ? {
-                            ...l,
-                            propertyId: id,
-                            propertyAddress: prop?.label ?? '',
-                          }
-                        : l,
-                    ),
-                  );
-                }}
-              >
-                <option value="">Select property</option>
-                {propertyOptions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Description" className="sm:col-span-4">
-              <Input
-                value={line.description}
-                disabled={saving}
-                onChange={(e) =>
-                  setLines((prev) =>
-                    prev.map((l, i) =>
-                      i === index ? { ...l, description: e.target.value } : l,
-                    ),
-                  )
-                }
-              />
-            </Field>
-            <Field label="Amount ($AUD)" className="sm:col-span-2">
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={line.amount}
-                disabled={saving}
-                onChange={(e) =>
-                  setLines((prev) =>
-                    prev.map((l, i) =>
-                      i === index ? { ...l, amount: e.target.value } : l,
-                    ),
-                  )
-                }
-              />
-            </Field>
-            <div className="sm:col-span-6 flex justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-destructive"
-                disabled={saving}
-                onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))}
-              >
-                <Trash2 className="mr-1 size-3.5" />
-                Remove
-              </Button>
-            </div>
-          </div>
-        ))
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="bg-muted/50 text-muted-foreground border-b text-left text-[11px] font-semibold uppercase tracking-wide">
+                <th className="w-10 px-2 py-2.5">#</th>
+                <th className="px-2 py-2.5">Property</th>
+                <th className="px-2 py-2.5">Description</th>
+                <th className="w-28 px-2 py-2.5">Amount</th>
+                <th className="w-10 px-2 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line, index) => (
+                <tr key={`${title}-${index}`} className="border-b last:border-b-0">
+                  <td className="text-muted-foreground px-2 py-2 tabular-nums">
+                    {index + 1}
+                  </td>
+                  <td className="px-2 py-2">
+                    <select
+                      className={selectClass}
+                      value={line.propertyId}
+                      disabled={saving}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        const prop = propertyOptions.find((p) => p.id === id);
+                        setLines((prev) =>
+                          prev.map((l, i) =>
+                            i === index
+                              ? {
+                                  ...l,
+                                  propertyId: id,
+                                  propertyAddress: prop?.label ?? '',
+                                }
+                              : l,
+                          ),
+                        );
+                      }}
+                    >
+                      <option value="">Select property</option>
+                      {propertyOptions.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-2 py-2">
+                    <Input
+                      className={cellInputClass}
+                      value={line.description}
+                      disabled={saving}
+                      onChange={(e) =>
+                        setLines((prev) =>
+                          prev.map((l, i) =>
+                            i === index ? { ...l, description: e.target.value } : l,
+                          ),
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <Input
+                      className={cellInputClass}
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={line.amount}
+                      disabled={saving}
+                      onChange={(e) =>
+                        setLines((prev) =>
+                          prev.map((l, i) =>
+                            i === index ? { ...l, amount: e.target.value } : l,
+                          ),
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-1 py-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-8"
+                      disabled={saving}
+                      onClick={() =>
+                        setLines((prev) => prev.filter((_, i) => i !== index))
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      <p className="text-sm font-medium">
-        {totalLabel} {formatMoney(total)}
-      </p>
-    </LineSection>
+      <SectionTotal label={totalLabel} amount={total} />
+    </Section>
   );
-}
-
-function Row({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) {
-  return (
-    <div className={`flex justify-between gap-3 ${strong ? 'font-bold' : ''}`}>
-      <span>{label}</span>
-      <span className="tabular-nums">{value}</span>
-    </div>
-  );
-}
-
-function formatMoney(amount: number): string {
-  return `$${amount.toLocaleString('en-AU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-/** Contract sometimes types nullable UUID fields as `Record<string, never>`. */
-function asOptionalId(value: unknown): string {
-  return typeof value === 'string' ? value : '';
 }

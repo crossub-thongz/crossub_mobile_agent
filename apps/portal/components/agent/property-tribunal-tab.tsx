@@ -84,6 +84,10 @@ export function PropertyTribunalTab({
         onClose={() => setSelectedCaseId(null)}
         caseId={selectedCaseId}
         tribunalCase={selectedCase}
+        onDeleted={async () => {
+          setSelectedCaseId(null);
+          await onRefresh?.();
+        }}
       />
     </div>
   );

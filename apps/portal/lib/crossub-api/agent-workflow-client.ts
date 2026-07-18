@@ -264,3 +264,13 @@ export async function updateAgentTribunalRentChasing(
     body: JSON.stringify(body),
   });
 }
+
+export async function deleteAgentTribunalCase(
+  caseId: string,
+  reason: string,
+): Promise<void> {
+  await agentFetch(`/agent/tribunal/${encodeURIComponent(caseId)}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ reason }),
+  });
+}

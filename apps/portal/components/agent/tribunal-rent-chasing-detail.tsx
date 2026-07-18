@@ -14,7 +14,9 @@ import { toast } from 'sonner';
 
 import { EvictionRequiredDialog } from '@/components/agent/eviction-required-dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   fetchAgentTribunalRentChasingDetail,
   updateAgentTribunalRentChasing,
@@ -61,14 +63,22 @@ function cycleLabel(cycle: string | null | undefined): string {
 function DaysSince({
   dueDate,
   fallbackDays,
+  createdAt,
 }: {
   dueDate?: string | null;
   fallbackDays?: number | null;
+  createdAt?: string | null;
 }) {
-  const days = daysSinceDate(dueDate) ?? fallbackDays ?? null;
+  const days =
+    daysSinceDate(dueDate) ??
+    fallbackDays ??
+    daysSinceDate(createdAt?.slice(0, 10)) ??
+    null;
   if (days == null) {
     return <span className="text-muted-foreground">—</span>;
   }
+
+  const anchor = dueDate || createdAt?.slice(0, 10) || null;
 
   return (
     <span
@@ -77,9 +87,7 @@ function DaysSince({
         days > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground',
       )}
       title={
-        dueDate
-          ? `Days from ${formatDate(dueDate)} through today`
-          : undefined
+        anchor ? `Days from ${formatDate(anchor)} through today` : undefined
       }
     >
       <CalendarDays className="size-3.5 shrink-0" aria-hidden />
@@ -88,22 +96,18 @@ function DaysSince({
   );
 }
 
-function arrearsDateCaption(kind: ArrearKind, dueDate: string): string {
-  const label =
-    kind === 'rent' ? 'Paid to' : kind === 'bond' ? 'Lease start' : 'Due';
-  return `${label} ${formatDate(dueDate)}`;
-}
-
 function ArrearsSection({
   title,
   empty,
   icon: Icon,
   rows,
+  createdAt,
 }: {
   title: string;
   empty: string;
   icon: typeof CircleDollarSign;
   rows: ArrearRow[];
+  createdAt?: string | null;
 }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-xl border bg-card shadow-sm">
@@ -139,20 +143,21 @@ function ArrearsSection({
                 <tr key={`${row.kind}-${row.name}-${index}`}>
                   <td className="px-3 py-2.5 align-top">
                     <p className="font-medium leading-snug">{row.name}</p>
-                    {row.dueDate ? (
-                      <p className="text-muted-foreground mt-0.5 text-[11px]">
-                        {arrearsDateCaption(row.kind, row.dueDate)}
-                      </p>
-                    ) : null}
                   </td>
                   <td className="px-3 py-2.5 align-top text-muted-foreground">
-                    {row.tenantName || '—'}
+                    {row.tenantName && row.tenantName !== 'Tenant'
+                      ? row.tenantName
+                      : '—'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right align-top tabular-nums font-medium">
                     {row.amount != null ? formatCurrency(row.amount) : '—'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 align-top">
-                    <DaysSince dueDate={row.dueDate} fallbackDays={row.daysOverdue} />
+                    <DaysSince
+                      dueDate={row.dueDate}
+                      fallbackDays={row.daysOverdue}
+                      createdAt={createdAt}
+                    />
                   </td>
                 </tr>
               ))}
@@ -165,6 +170,7 @@ function ArrearsSection({
 }
 
 export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
+  const { properties } = useAgentData();
   const [detail, setDetail] = useState<AgentTribunalRentChasingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +178,9 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
   const [notesDirty, setNotesDirty] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [evictionDialogOpen, setEvictionDialogOpen] = useState(false);
+  const [rentPaidToEdit, setRentPaidToEdit] = useState('');
+  const [leaseStartEdit, setLeaseStartEdit] = useState('');
+  const [savingDates, setSavingDates] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -180,6 +189,8 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       setDetail(next);
       setNotes(next.agentNotes ?? '');
       setNotesDirty(false);
+      setRentPaidToEdit(next.rentPaidTo?.slice(0, 10) ?? '');
+      setLeaseStartEdit(next.leaseStart?.slice(0, 10) ?? '');
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load tribunal case');
@@ -192,6 +203,24 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
     void refresh();
   }, [refresh]);
 
+  const property = useMemo(
+    () => properties.find((p) => p.id === detail?.propertyId) ?? null,
+    [properties, detail?.propertyId],
+  );
+
+  const tenantName =
+    detail?.tenantName?.trim() ||
+    (property?.tenantName && property.tenantName !== '—'
+      ? property.tenantName
+      : '') ||
+    '';
+  const tenantPhone =
+    detail?.tenantPhone?.trim() || property?.tenantContact?.phone?.trim() || '';
+  const tenantEmail =
+    detail?.tenantEmail?.trim() || property?.tenantContact?.email?.trim() || '';
+  const leaseStart =
+    detail?.leaseStart?.slice(0, 10) || property?.leaseStart?.slice(0, 10) || '';
+
   const arrearsByKind = useMemo(() => {
     const grouped: Record<ArrearKind, ArrearRow[]> = {
       rent: [],
@@ -199,10 +228,13 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       bond: [],
     };
     for (const row of detail?.arrears ?? []) {
-      grouped[row.kind].push(row);
+      grouped[row.kind].push({
+        ...row,
+        tenantName: row.tenantName === 'Tenant' ? tenantName || row.tenantName : row.tenantName,
+      });
     }
     return grouped;
-  }, [detail?.arrears]);
+  }, [detail?.arrears, tenantName]);
 
   const saveNotes = async () => {
     setSavingNotes(true);
@@ -216,6 +248,28 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       toast.error(err instanceof Error ? err.message : 'Could not save notes');
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const saveArrearsDates = async () => {
+    setSavingDates(true);
+    try {
+      const next = await updateAgentTribunalRentChasing(caseId, {
+        rentArrears: {
+          rentPaidTo: rentPaidToEdit.trim() || undefined,
+        },
+        bondArrears: {
+          leaseStartDate: leaseStartEdit.trim() || undefined,
+        },
+      });
+      setDetail(next);
+      setRentPaidToEdit(next.rentPaidTo?.slice(0, 10) ?? '');
+      setLeaseStartEdit(next.leaseStart?.slice(0, 10) ?? '');
+      toast.success('Arrears dates updated — days recalculated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update dates');
+    } finally {
+      setSavingDates(false);
     }
   };
 
@@ -234,6 +288,10 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
 
   if (!detail) return null;
 
+  const datesDirty =
+    rentPaidToEdit !== (detail.rentPaidTo?.slice(0, 10) ?? '') ||
+    leaseStartEdit !== (leaseStart || '');
+
   return (
     <div className="space-y-4">
       <section className="rounded-xl border bg-card p-4">
@@ -247,7 +305,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </h2>
             <p className="text-muted-foreground mt-1 text-xs">
               {detail.caseNumber}
-              {detail.tenantName ? ` · ${detail.tenantName}` : ''}
+              {tenantName ? ` · ${tenantName}` : ''}
             </p>
           </div>
           {detail.evictionRequired ? (
@@ -291,22 +349,26 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
               Tenant
             </dt>
-            <dd className="mt-1 text-sm font-medium">{detail.tenantName || '—'}</dd>
+            <dd className="mt-1 text-sm font-medium">{tenantName || '—'}</dd>
           </div>
           <div>
             <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
               Contact
             </dt>
-            <dd className="mt-1 text-sm font-medium">
-              {detail.tenantPhone || '—'}
-            </dd>
+            <dd className="mt-1 text-sm font-medium">{tenantPhone || '—'}</dd>
           </div>
           <div className="sm:col-span-2">
             <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
               Email
             </dt>
-            <dd className="mt-1 text-sm font-medium break-all">
-              {detail.tenantEmail || '—'}
+            <dd className="mt-1 text-sm font-medium break-all">{tenantEmail || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Lease start
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {leaseStart ? formatDate(leaseStart) : '—'}
             </dd>
           </div>
           <div>
@@ -342,6 +404,58 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
         </dl>
       </section>
 
+      <section className="rounded-xl border bg-card p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold">Arrears dates</p>
+            <p className="text-muted-foreground text-xs">
+              Set rent paid-to and lease start — days overdue recalculate automatically.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!datesDirty || savingDates}
+            onClick={() => void saveArrearsDates()}
+          >
+            {savingDates ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              'Update dates'
+            )}
+          </Button>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs" htmlFor="tribunal-rent-paid-to">
+              Last rent paid to
+            </Label>
+            <Input
+              id="tribunal-rent-paid-to"
+              type="date"
+              value={rentPaidToEdit}
+              onChange={(e) => setRentPaidToEdit(e.target.value)}
+              disabled={savingDates}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs" htmlFor="tribunal-lease-start">
+              Lease start
+            </Label>
+            <Input
+              id="tribunal-lease-start"
+              type="date"
+              value={leaseStartEdit}
+              onChange={(e) => setLeaseStartEdit(e.target.value)}
+              disabled={savingDates}
+            />
+          </div>
+        </div>
+      </section>
+
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-start">
         {ARREARS_SECTIONS.map((section) => (
           <ArrearsSection
@@ -350,6 +464,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             empty={section.empty}
             icon={section.icon}
             rows={arrearsByKind[section.kind]}
+            createdAt={detail.createdAt}
           />
         ))}
       </div>

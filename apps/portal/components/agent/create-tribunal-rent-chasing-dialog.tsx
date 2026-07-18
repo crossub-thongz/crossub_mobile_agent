@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -156,6 +156,11 @@ export function CreateTribunalRentChasingDialog({
     [properties],
   );
 
+  // Keep a stable ref so portfolio refreshes don't re-trigger prefill (that was
+  // flipping `loading` and making the dialog flicker).
+  const propertiesRef = useRef(properties);
+  propertiesRef.current = properties;
+
   useEffect(() => {
     if (!open) return;
     setPropertyId(initialPropertyId ?? '');
@@ -201,10 +206,11 @@ export function CreateTribunalRentChasingDialog({
             ? cycleRaw
             : 'weekly';
 
+        const listed = propertiesRef.current.find((p) => p.id === propertyId);
         const weekly =
           agentProperty?.rentWeekly ??
           record?.rentWeekly ??
-          properties.find((p) => p.id === propertyId)?.rentWeekly ??
+          listed?.rentWeekly ??
           null;
 
         setPaymentCycle(cycle);
@@ -218,7 +224,7 @@ export function CreateTribunalRentChasingDialog({
         const bond =
           agentProperty?.bondAmount ??
           record?.bondAmount ??
-          properties.find((p) => p.id === propertyId)?.bondAmount ??
+          listed?.bondAmount ??
           null;
         setBondAmount(bond != null && bond > 0 ? String(bond) : '');
         setBondNotes('');
@@ -231,7 +237,7 @@ export function CreateTribunalRentChasingDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, propertyId, properties]);
+  }, [open, propertyId]);
 
   const lockedProperty = Boolean(initialPropertyId);
 

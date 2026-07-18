@@ -86,6 +86,10 @@ export default function TribunalPage() {
           onClose={() => setSelectedCaseId(null)}
           caseId={selectedCaseId}
           tribunalCase={selectedCase}
+          onDeleted={async () => {
+            setSelectedCaseId(null);
+            await refresh();
+          }}
         />
       </div>
     </AgentShell>
