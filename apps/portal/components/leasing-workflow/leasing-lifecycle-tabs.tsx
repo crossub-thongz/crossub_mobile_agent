@@ -27,10 +27,12 @@ import { useLivePoll } from '@/lib/use-live-poll';
 
 export function LeasingLifecycleTabs({
   detail,
+  leasingCycleId,
   onCaseClosed,
   onOpenInspectionCreated,
 }: {
   detail: LeasingPropertyDetail;
+  leasingCycleId?: string;
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
@@ -75,6 +77,7 @@ export function LeasingLifecycleTabs({
       <StepPanel
         step={contentStep}
         detail={liveDetail}
+        leasingCycleId={leasingCycleId}
         onCaseClosed={onCaseClosed}
         onOpenInspectionCreated={onOpenInspectionCreated}
       />
@@ -85,11 +88,13 @@ export function LeasingLifecycleTabs({
 function StepPanel({
   step,
   detail,
+  leasingCycleId,
   onCaseClosed,
   onOpenInspectionCreated,
 }: {
   step: LeasingLifecycleStep;
   detail: LeasingPropertyDetail;
+  leasingCycleId?: string;
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
@@ -111,6 +116,7 @@ function StepPanel({
       <StepPanelContent
         step={step}
         detail={detail}
+        leasingCycleId={leasingCycleId}
         onCaseClosed={onCaseClosed}
         onOpenInspectionCreated={onOpenInspectionCreated}
       />
@@ -125,11 +131,13 @@ function StepPanel({
 function StepPanelContent({
   step,
   detail,
+  leasingCycleId,
   onCaseClosed,
   onOpenInspectionCreated,
 }: {
   step: LeasingLifecycleStep;
   detail: LeasingPropertyDetail;
+  leasingCycleId?: string;
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
@@ -138,6 +146,7 @@ function StepPanelContent({
       return (
         <LeasingStepOpenInspection
           detail={detail}
+          leasingCycleId={leasingCycleId}
           onOpenInspectionCreated={onOpenInspectionCreated}
         />
       );

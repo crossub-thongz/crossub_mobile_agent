@@ -398,7 +398,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Unable to reach CROSSUB API';
-      if (showBlockingLoad) {
+      // Only wipe the connected book on the first load failure. A later force
+      // refresh blip must not sticky-disable mutations ("Connect to the API…")
+      // while the user still has a live session and in-memory case data.
+      if (showBlockingLoad && !hasLoadedOnceRef.current) {
         setApiConnected(false);
         setApiProperties(null);
         setPortfolio(null);

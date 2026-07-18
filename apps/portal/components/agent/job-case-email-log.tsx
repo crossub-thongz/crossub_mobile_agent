@@ -37,6 +37,7 @@ export interface CommSendDraft {
 }
 
 function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
+  if (email.kind === 'open_report_landlord') return 'outbound';
   const from = email.from.toLowerCase();
   if (email.kind === 'job_created' && from.includes('tenant')) return 'inbound';
   if (email.kind === 'tenant_notice' || email.kind === 'timeline_email') return 'inbound';
@@ -47,6 +48,10 @@ function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
 function emailPartyLine(email: JobCaseEmailRecord): string {
   const direction = emailDirection(email);
   const channel = email.channel === 'message' ? 'Message' : 'Email';
+  // Landlord open-report is sent by the managing agent — surface From, not only To.
+  if (email.kind === 'open_report_landlord') {
+    return `${channel} · From ${email.from}`;
+  }
   const party = direction === 'inbound' ? `From ${email.from}` : `To ${email.to}`;
   return `${channel} · ${party}`;
 }

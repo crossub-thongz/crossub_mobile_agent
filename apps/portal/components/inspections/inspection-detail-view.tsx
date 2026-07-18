@@ -42,6 +42,7 @@ import {
   inspectionEmailRecordsForStep,
 } from '@/lib/inspection/agent-workflow-email';
 import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 import { openInspectionJobCaseEmails } from '@/lib/leasing/agent-workflow-email';
 import { openInspectionSessionEmails } from '@/lib/open-inspection/open-inspection-session-email';
 import {
@@ -187,7 +188,19 @@ export function InspectionDetailView({
       if (isStandaloneOpenViewing && openSession) {
         return openInspectionSessionEmails(openSession);
       }
-      if (leasingDetail) return openInspectionJobCaseEmails(leasingDetail);
+      if (leasingDetail) {
+        const leasingEmails = openInspectionJobCaseEmails(leasingDetail);
+        // Landlord report is tracked on the viewing session — merge so the job
+        // case history shows it as sent by the managing agent.
+        if (openSession) {
+          return dedupeJobCaseEmails([
+            ...leasingEmails,
+            ...openInspectionSessionEmails(openSession),
+          ]);
+        }
+        return leasingEmails;
+      }
+      if (openSession) return openInspectionSessionEmails(openSession);
       if (activeLeasingCycle) return [];
       return inspectionEmailRecordsForStep(insp);
     }
@@ -456,6 +469,12 @@ export function InspectionDetailView({
         </div>
       ) : null}
 
+      {showSessionRail && openSession && !isStandaloneOpenViewing ? (
+        <section className="rounded-2xl border bg-card px-2 py-1">
+          <OpenInspectionSessionRail session={openSession} />
+        </section>
+      ) : null}
+
       {insp.type === 'OPEN' && leasingDetail?.openInspection.preferredScheduledTime && !isOpenResultsStep ? (
         <InfoSection title="Preferred schedule">
           <InfoRow
@@ -511,10 +530,6 @@ export function InspectionDetailView({
 
       {!isOpenLeasingCase && !isStandaloneOpenViewing ? (
         <CaseWorkflowProgressCard progress={workflow} />
-      ) : null}
-
-      {!isOpenReportVisibleStep && !isStandaloneOpenViewing ? (
-        <JobCaseStageEmailHistory emails={stageEmails} />
       ) : null}
 
       {isSelfOpen && !isOpenResultsStep && !isStandaloneOpenViewing && (
@@ -586,24 +601,11 @@ export function InspectionDetailView({
         </InfoSection>
       )}
 
-      {showSessionRail && openSession && !isStandaloneOpenViewing ? (
-        <section className="rounded-2xl border bg-card px-2 py-1">
-          <OpenInspectionSessionRail session={openSession} />
-        </section>
-      ) : null}
-
       {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (
         <OpenInspectionWorkflowView
           session={openSession}
           propertyLabel={insp.propertyAddress}
           onSessionChange={setOpenSession}
-        />
-      ) : null}
-
-      {isStandaloneOpenViewing ? (
-        <JobCaseStageEmailHistory
-          emails={stageEmails}
-          title="Email/message history"
         />
       ) : null}
 
@@ -730,8 +732,6 @@ export function InspectionDetailView({
         />
       ) : null}
 
-      {isOpenReportVisibleStep ? <JobCaseStageEmailHistory emails={stageEmails} /> : null}
-
       {hasReport && insp.type !== 'OPEN' && (
         <section className="space-y-3">
           {!showReport ? (
@@ -750,6 +750,12 @@ export function InspectionDetailView({
           )}
         </section>
       )}
+
+      {insp.type === 'OPEN' ? (
+        <JobCaseStageEmailHistory emails={stageEmails} title="Email/message history" />
+      ) : !isStandaloneOpenViewing ? (
+        <JobCaseStageEmailHistory emails={stageEmails} />
+      ) : null}
 
       <section className="rounded-2xl border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold">Activity</h2>

@@ -46,9 +46,12 @@ import { cn, formatDate } from '@/lib/utils';
 
 export function LeasingStepOpenInspection({
   detail,
+  leasingCycleId,
   onOpenInspectionCreated,
 }: {
   detail: LeasingPropertyDetail;
+  /** Known server cycle id from the case row / timeline (preferred over portfolio lookup). */
+  leasingCycleId?: string;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
   const { inspections, leasingCycles, apiConnected, refresh } = useAgentData();
@@ -74,7 +77,7 @@ export function LeasingStepOpenInspection({
     isLeasingOpenReportReady(detail) || openSession?.openReportGenerated === true;
 
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
-  const cycleId = detail.cycleId ?? cycle?.id;
+  const cycleId = leasingCycleId ?? detail.cycleId ?? cycle?.id;
 
   const oi = detail.openInspection;
   const { rental } = detail;
@@ -178,15 +181,15 @@ export function LeasingStepOpenInspection({
       toast.error('Please enter a reason for cancelling');
       return;
     }
-    if (!apiConnected || !cycleId) {
-      toast.error('Connect to the API to cancel this letting');
+    if (!cycleId) {
+      toast.error('Could not find this letting to cancel. Refresh and try again.');
       return;
     }
     setCancelling(true);
     try {
-      await cancelAgentLeasingCycle(detail.propertyId, cycleId, { reason });
+      await cancelAgentLeasingCycle(detail.propertyId, cycleId, { reason, force: true });
       clearDetail(detail.propertyId);
-      await refresh();
+      await refresh({ force: true }).catch(() => undefined);
       setCancelOpen(false);
       setCancelReason('');
       toast.success('Letting cancelled');

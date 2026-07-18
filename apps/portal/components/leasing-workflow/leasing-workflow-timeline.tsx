@@ -126,6 +126,7 @@ export function LeasingWorkflowTimeline({
       ) : null}
       <LeasingLifecycleTabs
         detail={detail}
+        leasingCycleId={resolvedCycleId}
         onCaseClosed={onCaseClosed}
         onOpenInspectionCreated={onOpenInspectionCreated}
       />

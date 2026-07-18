@@ -7,6 +7,17 @@ function crossubSender(): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
   return { from: CROSSUB_FROM, fromEmail: CROSSUB_FROM };
 }
 
+function agentSender(
+  session: OpenInspectionSession,
+): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
+  const name = session.agent?.name?.trim();
+  if (name && name.toLowerCase() !== 'awaiting assignment') {
+    // Bracket role so the email log formats as [Agent] …
+    return { from: `[Agent] ${name}` };
+  }
+  return { from: '[Agent] Managing Agent' };
+}
+
 /** Landlord open-inspection report email sent from the Report step. */
 export function openInspectionLandlordReportEmail(
   session: OpenInspectionSession,
@@ -15,18 +26,20 @@ export function openInspectionLandlordReportEmail(
   const propertyLabel = session.address?.trim() || session.property;
   const recipientEmail =
     session.landlordReportEmailedTo?.trim() || session.landlord?.email?.trim() || '';
+  const agent = agentSender(session);
   return {
     id: `${session.id}-landlord-report`,
     subject: `Open inspection report — ${propertyLabel}`,
     body: [
       'Open inspection PDF report emailed to the property landlord.',
       '',
+      `Sent by: ${agent.from}`,
       recipientEmail ? `Sent to: ${recipientEmail}` : '',
       `Attached: open-report-${session.id.slice(0, 8)}.pdf`,
     ]
       .filter(Boolean)
       .join('\n'),
-    ...crossubSender(),
+    ...agent,
     to: session.landlord?.name?.trim() || recipientEmail || 'Landlord',
     toEmail: recipientEmail || undefined,
     at: session.landlordReportEmailedAt,
