@@ -16,6 +16,10 @@ import {
 import { toast } from 'sonner';
 
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
+import {
+  WorkflowProgressRail,
+  resolveWorkflowStepState,
+} from '@/components/agent/workflow-progress-rail';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
@@ -37,12 +41,16 @@ import {
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
 import {
+  AGENT_INGOING_GATE_HINT,
   AGENT_INGOING_GATE_LABEL,
+  AGENT_INGOING_GATE_STEPS,
+  agentIngoingGateIndex,
   canCancelIngoingInspection,
   deriveAgentIngoingGateStatus,
   formatInspectorFieldStatus,
   inspectorHasAcceptedJob,
   resolveIngoingInspectionDateDisplay,
+  type AgentIngoingGateStatus,
 } from '@/lib/ingoing-inspection-display';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
 import type { InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
@@ -132,6 +140,7 @@ export function IngoingInspectionAgentDetail({
   const [error, setError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [auditExpanded, setAuditExpanded] = useState(true);
+  const [viewingGateStep, setViewingGateStep] = useState<AgentIngoingGateStatus | null>(null);
 
   const refreshSnapshot = useCallback(async () => {
     if (!apiConnected) {
@@ -267,7 +276,17 @@ export function IngoingInspectionAgentDetail({
     record,
     stepsComplete,
   });
+  const liveGateIndex = agentIngoingGateIndex(gateStatus);
+  const viewingStep = viewingGateStep ?? gateStatus;
   const canCancel = canCancelIngoingInspection(inspection, record, stepsComplete);
+
+  useEffect(() => {
+    // Keep the rail on the live gate when progress advances.
+    setViewingGateStep((current) => {
+      if (current == null) return null;
+      return agentIngoingGateIndex(current) > liveGateIndex ? null : current;
+    });
+  }, [liveGateIndex]);
 
   const stageEmails = useMemo(
     () =>
@@ -358,6 +377,46 @@ export function IngoingInspectionAgentDetail({
         </div>
       </section>
 
+      <section className="rounded-2xl border bg-card p-3">
+        <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+          Ingoing progress
+        </p>
+        <WorkflowProgressRail
+          steps={AGENT_INGOING_GATE_STEPS}
+          labels={AGENT_INGOING_GATE_LABEL}
+          currentStep={viewingStep}
+          liveStep={gateStatus}
+          progressFillIndex={liveGateIndex}
+          isStepCompleted={(step) => agentIngoingGateIndex(step) < liveGateIndex}
+          isStepEnabled={(step) => agentIngoingGateIndex(step) <= liveGateIndex}
+          getStepState={(step) => {
+            const index = agentIngoingGateIndex(step);
+            const isDone =
+              index < liveGateIndex || (gateStatus === 'completed' && step === 'completed');
+            const isViewing = step === viewingStep;
+            return resolveWorkflowStepState(isDone, isViewing);
+          }}
+          onStepClick={(step) => setViewingGateStep(step)}
+        />
+        <p className="text-muted-foreground px-1 pb-1 text-xs leading-relaxed">
+          <span className="font-medium text-foreground">
+            {AGENT_INGOING_GATE_LABEL[viewingStep]}
+          </span>
+          {' — '}
+          {AGENT_INGOING_GATE_HINT[viewingStep]}
+        </p>
+      </section>
+
+      {loading && apiConnected ? (
+        <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
+          <Loader2 className="size-4 animate-spin" />
+          Syncing inspection status…
+        </div>
+      ) : null}
+
+      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+
+      {/* Pending content: New tenant + inspector details (kept on later steps for context). */}
       <section className="rounded-2xl border bg-card p-4">
         <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
           New tenant
@@ -426,27 +485,22 @@ export function IngoingInspectionAgentDetail({
         </dl>
       </section>
 
-      {loading && apiConnected ? (
-        <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
-          <Loader2 className="size-4 animate-spin" />
-          Syncing inspection status…
-        </div>
-      ) : null}
-
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-
-      {!loading && gateStatus === 'pending' ? (
+      {!loading && viewingStep === 'pending' && gateStatus === 'pending' ? (
         <section className="rounded-2xl border border-dashed bg-card/60 p-4">
           <p className="text-sm font-medium">Awaiting inspector acceptance</p>
           <p className="text-muted-foreground mt-1 text-xs">
             Once an inspector accepts this job it moves to Scheduled. Key collection proof and the
-            remaining completion steps will appear here.
+            remaining completion steps will appear under Scheduled.
           </p>
         </section>
       ) : null}
 
-      {!loading && gateStatus !== 'pending' ? (
+      {/* Scheduled / Completed: four post-accept steps */}
+      {!loading && viewingStep !== 'pending' && liveGateIndex >= 1 ? (
         <div className="space-y-3">
+          <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
+            {viewingStep === 'completed' ? 'Completion steps' : 'Scheduled — completion steps'}
+          </p>
           <StepCard
             icon={KeyRound}
             title="Key collection proof"

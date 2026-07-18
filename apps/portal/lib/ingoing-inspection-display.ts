@@ -9,11 +9,29 @@ import { suggestLeasingIngoingScheduledTime } from '@/lib/leasing/leasing-ingoin
 /** Agent-facing ingoing gate: Pending → Scheduled → Completed */
 export type AgentIngoingGateStatus = 'pending' | 'scheduled' | 'completed';
 
+export const AGENT_INGOING_GATE_STEPS = [
+  'pending',
+  'scheduled',
+  'completed',
+] as const satisfies readonly AgentIngoingGateStatus[];
+
 export const AGENT_INGOING_GATE_LABEL: Record<AgentIngoingGateStatus, string> = {
   pending: 'Pending',
   scheduled: 'Scheduled',
   completed: 'Completed',
 };
+
+export const AGENT_INGOING_GATE_HINT: Record<AgentIngoingGateStatus, string> = {
+  pending:
+    'New tenant details and inspector details. Inspection date targets 7 days before move-in until an inspector accepts.',
+  scheduled:
+    'Inspector has accepted. Track key collection proof, report submission, key return, and tenant acknowledgement.',
+  completed: 'All four post-accept steps are done — this ingoing job case is complete.',
+};
+
+export function agentIngoingGateIndex(status: AgentIngoingGateStatus): number {
+  return AGENT_INGOING_GATE_STEPS.indexOf(status);
+}
 
 const PENDING_INSPECTOR_LABELS = new Set([
   '',

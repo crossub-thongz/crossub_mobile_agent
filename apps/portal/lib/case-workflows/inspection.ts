@@ -1,4 +1,10 @@
 import { INSPECTION_STATUS } from '@/constants/api-enums';
+import {
+  AGENT_INGOING_GATE_LABEL,
+  AGENT_INGOING_GATE_STEPS,
+  type AgentIngoingGateStatus,
+  deriveAgentIngoingGateStatus,
+} from '@/lib/ingoing-inspection-display';
 import type { Inspection } from '@/lib/types';
 
 import { buildCaseWorkflowProgress } from './build-progress';
@@ -11,6 +17,11 @@ const INSPECTION_AGENT_STEPS = [
   { id: 'completed', label: 'Completed' },
   { id: 'published', label: 'Published' },
 ] as const;
+
+const INGOING_AGENT_STEPS = AGENT_INGOING_GATE_STEPS.map((id) => ({
+  id,
+  label: AGENT_INGOING_GATE_LABEL[id],
+}));
 
 function resolveInspectionStepId(apiStatus?: string): string {
   switch (apiStatus) {
@@ -32,16 +43,31 @@ function resolveInspectionStepId(apiStatus?: string): string {
   }
 }
 
+/** Pending → Scheduled → Completed for the agent ingoing job case. */
+export function ingoingInspectionWorkflowProgress(
+  gateStatus: AgentIngoingGateStatus,
+): CaseWorkflowProgress {
+  return buildCaseWorkflowProgress(
+    'Ingoing inspection progress',
+    INGOING_AGENT_STEPS,
+    gateStatus,
+  );
+}
+
 export function inspectionWorkflowProgress(inspection: Inspection): CaseWorkflowProgress {
+  if (inspection.type === 'INGOING') {
+    return ingoingInspectionWorkflowProgress(
+      deriveAgentIngoingGateStatus({ inspection, record: null }),
+    );
+  }
+
   const currentStepId = resolveInspectionStepId(inspection.apiStatus);
   const title =
     inspection.type === 'OPEN'
       ? 'Open inspection workflow'
-      : inspection.type === 'INGOING'
-        ? 'Ingoing inspection workflow'
-        : inspection.type === 'OUTGOING'
-          ? 'Outgoing inspection workflow'
-          : 'Routine inspection workflow';
+      : inspection.type === 'OUTGOING'
+        ? 'Outgoing inspection workflow'
+        : 'Routine inspection workflow';
 
   return buildCaseWorkflowProgress(title, INSPECTION_AGENT_STEPS, currentStepId);
 }
