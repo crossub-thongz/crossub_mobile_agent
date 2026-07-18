@@ -867,6 +867,7 @@ export function CreateInspectionWizard({
                   tenantNotified={openTenantNotified}
                   onTenantNotifiedChange={setOpenTenantNotified}
                   showTenantMovedOut={manualStandaloneCrossubOpen && !propertyIsVacant}
+                  showListingFields={manualStandaloneCrossubOpen}
                   tenantMovedOut={openTenantMovedOut}
                   onTenantMovedOutChange={setOpenTenantMovedOut}
                   preferredRentPerWeek={openPreferredRentPerWeek}
@@ -954,6 +955,7 @@ function OpenInspectionForm({
   tenantNotified,
   onTenantNotifiedChange,
   showTenantMovedOut = false,
+  showListingFields = false,
   tenantMovedOut,
   onTenantMovedOutChange,
   preferredRentPerWeek,
@@ -984,6 +986,8 @@ function OpenInspectionForm({
   tenantNotified: boolean;
   onTenantNotifiedChange: (v: boolean) => void;
   showTenantMovedOut?: boolean;
+  /** Standalone CROSSUB open — rent / term / available-from (independent of tenant-moved-out). */
+  showListingFields?: boolean;
   tenantMovedOut: boolean | null;
   onTenantMovedOutChange: (v: boolean) => void;
   preferredRentPerWeek: string;
@@ -1057,7 +1061,7 @@ function OpenInspectionForm({
               ) : null}
             </div>
           ) : null}
-          {showTenantMovedOut ? (
+          {showListingFields ? (
             <>
               <Field label="Preferred rent / week (AUD) *">
                 <Input

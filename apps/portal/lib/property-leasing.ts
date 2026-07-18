@@ -1,20 +1,42 @@
 import type { Inspection, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
+/** True when the property profile has a real tenant name (not vacant placeholders). */
+export function hasRealTenantName(name: string | null | undefined): boolean {
+  const normalized = (name ?? '').trim().toLowerCase();
+  if (!normalized) return false;
+  return !(
+    normalized === 'vacant' ||
+    normalized === '—' ||
+    normalized === '-' ||
+    normalized === '–' ||
+    normalized === 'n/a' ||
+    normalized === 'na' ||
+    normalized === 'none' ||
+    normalized === 'nil' ||
+    normalized === 'tbc' ||
+    normalized === 'unknown'
+  );
+}
+
+/**
+ * Whether the property currently has a tenant on file.
+ * Used to show/hide “Tenant moved out?” — only relevant when a tenant exists.
+ */
+export function propertyHasCurrentTenant(
+  property: Property,
+  currentTenancy: LeasingRecord[] = [],
+): boolean {
+  if (currentTenancy.length > 0) return true;
+  if (property.leaseStatus === 'vacant') return false;
+  return hasRealTenantName(property.tenantName);
+}
+
 export function isPropertyVacant(
   property: Property,
   currentTenancy: LeasingRecord[] = [],
 ): boolean {
-  if (property.leaseStatus === 'vacant') return true;
-  if (property.tenantName.trim().toLowerCase() === 'vacant') return true;
-  if (
-    property.leaseStatus === 'active' ||
-    property.leaseStatus === 'periodic' ||
-    property.leaseStatus === 'vacating'
-  ) {
-    return false;
-  }
-  return currentTenancy.length === 0;
+  return !propertyHasCurrentTenant(property, currentTenancy);
 }
 
 /** Match portfolio rent reviews to a property by id, with address fallback when id is missing. */

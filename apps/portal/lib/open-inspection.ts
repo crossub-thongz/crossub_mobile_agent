@@ -1,13 +1,11 @@
 import type { Property } from '@/lib/types';
+import { isPropertyVacant } from '@/lib/property-leasing';
 
 export type OpenListingContext = 'occupied' | 'new_listing';
 export type OpenConductedBy = 'agent' | 'crossub';
 
 export function getOpenListingContext(property: Property): OpenListingContext {
-  const vacant =
-    property.leaseStatus === 'vacant' ||
-    property.tenantName.trim().toLowerCase() === 'vacant';
-  return vacant ? 'new_listing' : 'occupied';
+  return isPropertyVacant(property) ? 'new_listing' : 'occupied';
 }
 
 export function openListingContextFromTenantMovedOut(
