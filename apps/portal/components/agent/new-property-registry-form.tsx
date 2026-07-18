@@ -442,7 +442,7 @@ export function NewPropertyRegistryForm({
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [form, step, furthestStepIndex, onAutosave, apiConnected, submitting]);
+  }, [form, step, furthestStepIndex, onAutosave, apiConnected, submitting, completing]);
 
   useEffect(() => {
     return () => {

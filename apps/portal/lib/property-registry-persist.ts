@@ -322,7 +322,7 @@ export function buildRegistryApiBody(
         ? managementSynced.managementRateGst
         : undefined,
     managementFees: management.fees.filter((f) => f.feeType || f.amount.trim()),
-    registryIntakeComplete: options.complete,
+    registryIntakeComplete: options.complete ? true : undefined,
     registryDraft: options.complete
       ? null
       : (buildRegistryDraftPayload({

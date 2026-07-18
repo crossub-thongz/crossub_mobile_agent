@@ -883,6 +883,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         }),
       );
 
+      // Autosave must never downgrade a completed property back to draft. Only send
+      // registryIntakeComplete on create (false) or explicit complete (true).
+      if (propertyId && !complete) {
+        delete (body as { registryIntakeComplete?: boolean }).registryIntakeComplete;
+      } else if (!propertyId && !complete) {
+        body.registryIntakeComplete = false;
+      }
+
       if (!apiAgencies?.length && state.form.agencyName?.trim()) {
         await apiCreateAgency({
           name: state.form.agencyName.trim(),
