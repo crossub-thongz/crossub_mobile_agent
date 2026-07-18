@@ -298,6 +298,12 @@ export interface TribunalCase {
   requiresAction: boolean;
   orders?: string;
   evidence?: string[];
+  rentArrearsAmount?: number | null;
+  rentArrearsDaysOverdue?: number | null;
+  billArrearsAmount?: number | null;
+  billArrearsDaysOverdue?: number | null;
+  bondArrearsAmount?: number | null;
+  bondArrearsDaysOverdue?: number | null;
 }
 
 export interface DashboardKpis {

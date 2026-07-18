@@ -1,13 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { PropertyTribunalCasesTable } from '@/components/agent/property-tribunal-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { tribunalDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
-import { tribunalJobRows } from '@/lib/property-job-rows';
 import {
   isWorkflowCreatedCase,
   type PropertyWorkflowCreatedResult,
@@ -50,7 +48,6 @@ export function PropertyTribunalTab({
   onRefresh?: () => void;
 }) {
   const router = useRouter();
-  const jobRows = useMemo(() => tribunalJobRows(tribunalCases), [tribunalCases]);
 
   return (
     <div className="space-y-4">
@@ -75,14 +72,11 @@ export function PropertyTribunalTab({
         actionsOnly
       />
 
-      <PropertyJobCasesTable
-        rows={jobRows}
-        onRowClick={(id) =>
-          router.push(tribunalDetail(id, fromProperty(propertyId, 'Tribunal')))
+      <PropertyTribunalCasesTable
+        items={tribunalCases}
+        onItemClick={(item) =>
+          router.push(tribunalDetail(item.id, fromProperty(propertyId, 'Tribunal')))
         }
-        showKeyDateColumn={false}
-        emptyTitle="No tribunal cases"
-        emptyDescription="NCAT / tribunal matters for this property will appear here."
       />
     </div>
   );

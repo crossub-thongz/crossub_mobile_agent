@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { EvictionRequiredDialog } from '@/components/agent/eviction-required-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -33,7 +34,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
   const [notes, setNotes] = useState('');
   const [notesDirty, setNotesDirty] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
-  const [markingEviction, setMarkingEviction] = useState(false);
+  const [evictionDialogOpen, setEvictionDialogOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -69,22 +70,6 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
     }
   };
 
-  const markEvictionRequired = async () => {
-    if (detail?.evictionRequired) return;
-    setMarkingEviction(true);
-    try {
-      const next = await updateAgentTribunalRentChasing(caseId, {
-        evictionRequired: true,
-      });
-      setDetail(next);
-      toast.success('Eviction marked as required');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update case');
-    } finally {
-      setMarkingEviction(false);
-    }
-  };
-
   if (loading && !detail) {
     return (
       <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
@@ -117,29 +102,110 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </p>
           </div>
           {detail.evictionRequired ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300"
+              onClick={() => setEvictionDialogOpen(true)}
+            >
               <CheckCircle2 className="size-3.5" />
               Eviction required
-            </span>
+            </button>
           ) : (
             <Button
               type="button"
               variant="destructive"
               size="sm"
               className="gap-1.5"
-              disabled={markingEviction}
-              onClick={() => void markEvictionRequired()}
+              onClick={() => setEvictionDialogOpen(true)}
             >
-              {markingEviction ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <AlertTriangle className="size-3.5" />
-              )}
+              <AlertTriangle className="size-3.5" />
               Eviction is Required
             </Button>
           )}
         </div>
       </section>
+
+      <EvictionRequiredDialog
+        open={evictionDialogOpen}
+        onOpenChange={setEvictionDialogOpen}
+        caseId={caseId}
+        detail={detail}
+        onSaved={setDetail}
+      />
+
+      {detail.evictionRequired ? (
+        <section className="rounded-xl border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Eviction details
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEvictionDialogOpen(true)}
+            >
+              Edit
+            </Button>
+          </div>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                Lodgement date
+              </dt>
+              <dd className="mt-1 text-sm font-medium">
+                {detail.lodgementDate ? formatDate(detail.lodgementDate) : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                Hearing date
+              </dt>
+              <dd className="mt-1 text-sm font-medium">
+                {detail.hearingDate ? formatDate(detail.hearingDate) : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                Hearing notice
+              </dt>
+              <dd className="mt-1 text-sm font-medium">
+                {detail.hearingNoticeUrl ? (
+                  <a
+                    href={detail.hearingNoticeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline-offset-2 hover:underline"
+                  >
+                    {detail.hearingNoticeName ?? 'View file'}
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                Member&apos;s order
+              </dt>
+              <dd className="mt-1 text-sm font-medium">
+                {detail.membersOrderUrl ? (
+                  <a
+                    href={detail.membersOrderUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline-offset-2 hover:underline"
+                  >
+                    {detail.membersOrderName ?? 'View file'}
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
 
       <section className="rounded-xl border bg-card p-4">
         <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
