@@ -1,7 +1,6 @@
 import { INSPECTION_RECORD_STATUS } from '@/constants/inspection-records';
 import { SessionStatusEnum } from '@/constants/open-inspection-ops';
 import { cancelAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
-import { isInspectionDone } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { Inspection } from '@/lib/types';
 
@@ -14,19 +13,15 @@ export function isDeletedInspection(inspection: Inspection): boolean {
   );
 }
 
-/** Active open inspection job cases the agent may delete (cancel). */
+/** Open inspection job cases the agent may delete (including completed ones). */
 export function canDeleteOpenInspection(inspection: Inspection): boolean {
   if (inspection.type !== 'OPEN') return false;
-  if (isInspectionDone(inspection) && !isDeletedInspection(inspection)) return false;
   if (isDeletedInspection(inspection)) return false;
-
-  if (inspection.source === 'open_viewing') {
-    const status = (inspection.apiStatus ?? '').toLowerCase();
-    if (status === SessionStatusEnum.CLOSED) return false;
-    return true;
-  }
-
-  return inspection.source === 'inspection' || inspection.source == null;
+  return (
+    inspection.source === 'open_viewing' ||
+    inspection.source === 'inspection' ||
+    inspection.source == null
+  );
 }
 
 export async function cancelOpenInspectionJob(
@@ -34,7 +29,8 @@ export async function cancelOpenInspectionJob(
   reason: string,
 ): Promise<void> {
   if (inspection.source === 'open_viewing') {
-    await openViewingsApi.cancel(inspection.id, reason);
+    // force: CLOSED (report-complete) sessions need archive-cancel, not a lifecycle skip.
+    await openViewingsApi.cancel(inspection.id, reason, { force: true });
     return;
   }
   if (!inspection.propertyId) {

@@ -35,10 +35,12 @@ function isDoneStatus(status: string): boolean {
 }
 
 export function isInspectionDone(inspection: Inspection): boolean {
-  if (inspection.apiStatus === SessionStatusEnum.CLOSED) return true;
-  if (inspection.apiStatus === SessionStatusEnum.CANCELLED) return true;
-  if (inspection.apiStatus === INSPECTION_STATUS.PUBLISHED) return true;
-  if (inspection.apiStatus === INSPECTION_STATUS.COMPLETED) return true;
+  const api = (inspection.apiStatus ?? '').toLowerCase();
+  if (api === SessionStatusEnum.CLOSED) return true;
+  if (api === SessionStatusEnum.CANCELLED) return true;
+  if (api === INSPECTION_STATUS.PUBLISHED.toLowerCase()) return true;
+  if (api === INSPECTION_STATUS.COMPLETED.toLowerCase()) return true;
+  if (api === 'completed') return true;
   return isDoneStatus(inspection.status);
 }
 

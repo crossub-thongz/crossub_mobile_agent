@@ -87,10 +87,11 @@ export const openViewingsApi = {
     unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/open`, {})),
   close: (id: string) =>
     unwrap(api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/close`, {})),
-  cancel: (id: string, reason?: string) =>
+  cancel: (id: string, reason?: string, options?: { force?: boolean }) =>
     unwrap(
       api.patch<{ session: OpenInspectionSession }>(`${BASE}/sessions/${id}/cancel`, {
         reason,
+        force: options?.force === true,
       }),
     ),
 

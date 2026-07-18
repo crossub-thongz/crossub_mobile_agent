@@ -109,9 +109,13 @@ export function mapOpenSessionToInspection(
             session.sessionStatus === SessionStatusEnum.CLOSED
           ? SESSION_STATUS_LABEL[SessionStatusEnum.CLOSED]
           : openSessionStatusLabel(session.sessionStatus),
-    apiStatus: session.openReportGenerated
-      ? 'completed'
-      : session.sessionStatus,
+    apiStatus:
+      session.sessionStatus === SessionStatusEnum.CANCELLED
+        ? SessionStatusEnum.CANCELLED
+        : session.openReportGenerated ||
+            session.sessionStatus === SessionStatusEnum.CLOSED
+          ? SessionStatusEnum.CLOSED
+          : session.sessionStatus,
     reportStatus: session.openReportGenerated ? 'sent' : 'pending',
     openConductedBy: session.agent?.role === 'leasing_agent' ? 'agent' : 'crossub',
     openListingContext,
