@@ -52,6 +52,7 @@ type IngoingSnapshot = {
   reportUrl: string | null;
   hasFindings: boolean;
   leasingTenantApproved: boolean;
+  tenantName: string | null;
   tenantEmail: string | null;
   tenantPhone: string | null;
   moveInDate: string | null;
@@ -114,6 +115,7 @@ export function IngoingInspectionAgentDetail({
     reportUrl: null,
     hasFindings: false,
     leasingTenantApproved: false,
+    tenantName: null,
     tenantEmail: null,
     tenantPhone: null,
     moveInDate: null,
@@ -154,30 +156,50 @@ export function IngoingInspectionAgentDetail({
       }
 
       let leasingTenantApproved = false;
-      let tenantEmail: string | null = null;
-      let tenantPhone: string | null = null;
+      let tenantName: string | null = record?.tenantName?.trim() || null;
+      let tenantEmail: string | null = record?.tenantEmail?.trim() || null;
+      let tenantPhone: string | null = record?.tenantPhone?.trim() || null;
       let moveInDate: string | null = record?.moveInDate ?? null;
 
-      if (propertyLeasingCycle?.id) {
-        const cycleView = await leasingOpsApi.get(propertyLeasingCycle.id).catch(() => null);
+      const candidateCycleIds = [
+        ...new Set(
+          leasingCycles
+            .filter((cycle) => cycle.propertyId === inspection.propertyId)
+            .map((cycle) => cycle.id),
+        ),
+      ];
+      if (propertyLeasingCycle?.id && !candidateCycleIds.includes(propertyLeasingCycle.id)) {
+        candidateCycleIds.unshift(propertyLeasingCycle.id);
+      }
+
+      for (const cycleId of candidateCycleIds) {
+        const cycleView = await leasingOpsApi.get(cycleId).catch(() => null);
+        if (!cycleView) continue;
         const ingoingInspectionId =
-          cycleView?.onboarding?.ingoingInspection?.inspectionId ?? null;
-        if (ingoingInspectionId === inspection.id) {
+          cycleView.onboarding?.ingoingInspection?.inspectionId ?? null;
+        const linkedToThisJob = ingoingInspectionId === inspection.id;
+        if (linkedToThisJob) {
           leasingTenantApproved =
-            cycleView?.onboarding?.ingoingReportApproval?.tenantApproved ?? false;
+            cycleView.onboarding?.ingoingReportApproval?.tenantApproved ?? false;
+        }
+        // Prefer the cycle that owns this ingoing job; otherwise use any approved tenant on the property.
+        if (!linkedToThisJob && ingoingInspectionId && candidateCycleIds.length > 1) {
+          continue;
         }
         moveInDate =
           moveInDate ??
-          cycleView?.rental?.moveInDate ??
-          cycleView?.rental?.availableFrom ??
+          cycleView.rental?.moveInDate ??
+          cycleView.rental?.availableFrom ??
           null;
-        const approved = cycleView?.applicationsDetail?.find(
+        const approved = cycleView.applications.find(
           (a) => a.agentDecision === LEASING_AGENT_DECISION.APPROVED,
         );
         if (approved) {
-          tenantEmail = approved.email?.trim() || null;
-          tenantPhone = approved.phone?.trim() || null;
+          tenantName = tenantName || approved.applicantName?.trim() || null;
+          tenantEmail = tenantEmail || approved.applicantEmail?.trim() || null;
+          tenantPhone = tenantPhone || approved.applicantPhone?.trim() || null;
         }
+        if (linkedToThisJob) break;
       }
 
       setSnapshot({
@@ -188,6 +210,7 @@ export function IngoingInspectionAgentDetail({
         reportUrl,
         hasFindings,
         leasingTenantApproved,
+        tenantName,
         tenantEmail,
         tenantPhone,
         moveInDate,
@@ -203,6 +226,7 @@ export function IngoingInspectionAgentDetail({
     inspection.id,
     inspection.propertyId,
     inspection.reportUrl,
+    leasingCycles,
     propertyLeasingCycle?.id,
   ]);
 
@@ -230,9 +254,9 @@ export function IngoingInspectionAgentDetail({
     leasingTenantApproved,
   });
 
-  const tenantName = record?.tenantName ?? '—';
-  const tenantEmail = snapshot.tenantEmail ?? '—';
-  const tenantPhone = snapshot.tenantPhone ?? '—';
+  const tenantName = snapshot.tenantName?.trim() || '—';
+  const tenantEmail = snapshot.tenantEmail?.trim() || '—';
+  const tenantPhone = snapshot.tenantPhone?.trim() || '—';
   const moveInDate = snapshot.moveInDate ? formatDate(snapshot.moveInDate) : '—';
   const inspectionDate = record?.scheduledDate ?? inspection.scheduledAt;
   const inspectorLabel =

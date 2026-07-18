@@ -28,6 +28,8 @@ export interface InspectionRecord {
   urgent: boolean
   reportUrl: string | null
   tenantName: string | null
+  tenantEmail?: string | null
+  tenantPhone?: string | null
   moveInDate: string | null
   areaCount: number
   photoCount: number
