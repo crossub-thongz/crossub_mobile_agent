@@ -164,9 +164,17 @@ export default function PropertyDetailPage() {
     inspections: inspections.filter((i) => i.propertyId === id),
     rentReviews: rentReviewsForProperty(rentReviews, id, property),
   };
-  const propertyDocs = documents.filter((d) =>
-    d.propertyAddress.includes(property.address.split(',')[0]),
-  );
+  // Prefer exact address match — substring-on-street leaked other properties' docs into
+  // this property's Documents checklist and inflated per-slot counts.
+  const propertyFullAddress = formatPropertyFullAddress(property);
+  const propertyStreet = property.address.split(',')[0]?.trim() ?? '';
+  const propertyDocs = documents.filter((d) => {
+    const addr = d.propertyAddress.trim();
+    if (!addr || addr === 'Portfolio') return false;
+    if (addr === propertyFullAddress || addr === property.address) return true;
+    // Aggregated rows sometimes omit suburb/state; allow street-only equality, not substring.
+    return Boolean(propertyStreet) && addr === propertyStreet;
+  });
   const leasing = leasingRecords.filter((l) => l.propertyId === id);
   const acct = accounting.find((a) => a.propertyId === id);
   const propertyLeasingCases = tenantSelections.filter((t) => t.propertyId === id);

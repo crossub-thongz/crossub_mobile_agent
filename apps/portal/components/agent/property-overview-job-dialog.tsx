@@ -3,14 +3,16 @@
 import Link from 'next/link';
 
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
-import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
-import { PropertyLeasingCaseWorkflowContent } from '@/components/agent/property-leasing-case-workflow-dialog';
-import { PropertyMaintenanceJobPanel } from '@/components/agent/property-maintenance-job-panel';
-import { RentReviewWorkflowTimeline } from '@/components/rent-review/rent-review-workflow-timeline';
+import {
+  PropertyLeasingCaseWorkflowDialog,
+} from '@/components/agent/property-leasing-case-workflow-dialog';
+import { PropertyMaintenanceCaseDialog } from '@/components/agent/property-maintenance-case-dialog';
+import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
+import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
 import { Button } from '@/components/ui/button';
-import { VacatingWorkflowTimeline } from '@/components/vacating-workflow/vacating-workflow-timeline';
 import { tribunalDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
@@ -27,7 +29,24 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { JOB_CASE_DIALOG_SIZE, END_LEASING_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
+
+function profileTabForJobKind(kind: PropertyJobRow['kind']): string {
+  switch (kind) {
+    case 'maintenance':
+      return 'Maintenance';
+    case 'inspection':
+      return 'Inspection';
+    case 'rent_review':
+      return 'RentReview';
+    case 'leasing':
+    case 'end_leasing':
+      return 'Leasing';
+    case 'tribunal':
+      return 'Tribunal';
+    default:
+      return 'Overview';
+  }
+}
 
 export function PropertyOverviewJobDialog({
   job,
@@ -35,7 +54,6 @@ export function PropertyOverviewJobDialog({
   property,
   propertyId,
   maintenance,
-  inspections,
   rentReviews,
   rentReviewDecisions,
   leasingCases,
@@ -72,28 +90,22 @@ export function PropertyOverviewJobDialog({
 
   if (job.kind === 'rent_review') {
     const review = rentReviews.find((item) => item.id === job.id) ?? null;
-    if (!review) return null;
     return (
-      <CaseDetailDialog
+      <PropertyRentReviewCaseWorkflowDialog
         open={open}
         onClose={onClose}
-        title="Rent review"
-        subtitle={`${job.name} · ${job.status}`}
-        size={JOB_CASE_DIALOG_SIZE}
-      >
-        <RentReviewWorkflowTimeline review={review} />
-      </CaseDetailDialog>
+        review={review}
+      />
     );
   }
 
   if (job.kind === 'inspection') {
-    const inspection = inspections.find((item) => item.id === job.id) ?? null;
     return (
-      <InspectionDetailDialog
+      <InspectionCaseDetailDialog
         open={open}
         onClose={onClose}
-        inspection={inspection}
-        navContext={fromProperty(propertyId, 'Overview')}
+        inspectionId={job.id}
+        navContext={fromProperty(propertyId, profileTabForJobKind(job.kind))}
         size={JOB_CASE_DIALOG_SIZE}
       />
     );
@@ -101,25 +113,18 @@ export function PropertyOverviewJobDialog({
 
   if (job.kind === 'maintenance') {
     const request = maintenance.find((item) => item.id === job.id) ?? null;
-    if (!request) return null;
     return (
-      <CaseDetailDialog
+      <PropertyMaintenanceCaseDialog
         open={open}
         onClose={onClose}
-        title="Maintenance"
-        subtitle={`${job.name} · ${job.status}`}
-        size={JOB_CASE_DIALOG_SIZE}
-      >
-        <PropertyMaintenanceJobPanel
-          item={request}
-          property={property}
-          propertyId={propertyId}
-        />
-      </CaseDetailDialog>
+        request={request}
+        property={property}
+        propertyId={propertyId}
+      />
     );
   }
 
-  if (job.kind === 'leasing') {
+  if (job.kind === 'leasing' || job.kind === 'end_leasing') {
     const workflowCase = leasingCases.find((item) => item.id === job.id) ?? null;
     if (!workflowCase) return null;
 
@@ -130,41 +135,19 @@ export function PropertyOverviewJobDialog({
     });
 
     return (
-      <CaseDetailDialog
+      <PropertyLeasingCaseWorkflowDialog
         open={open}
         onClose={onClose}
-        title={job.jobType}
-        subtitle={`${job.name} · ${job.status}`}
-        size={JOB_CASE_DIALOG_SIZE}
-      >
-        <PropertyLeasingCaseWorkflowContent
-          item={workflowCase}
-          property={property}
-          propertyId={propertyId}
-          rentReviews={rentReviews}
-          rentReviewDecisions={rentReviewDecisions}
-          vacatingCases={vacatingCases}
-          rentWeekly={rentWeekly}
-          onViewRentReview={onViewRentReview}
-          onOpenInspectionCreated={onOpenInspectionCreated}
-        />
-      </CaseDetailDialog>
-    );
-  }
-
-  if (job.kind === 'end_leasing') {
-    const vacatingCase = vacatingCases.find((item) => item.id === job.id) ?? null;
-    if (!vacatingCase) return null;
-    return (
-      <CaseDetailDialog
-        open={open}
-        onClose={onClose}
-        title="End leasing"
-        subtitle={`${job.name} · ${job.status}`}
-        size={END_LEASING_CASE_DIALOG_SIZE}
-      >
-        <VacatingWorkflowTimeline vacatingCase={vacatingCase} />
-      </CaseDetailDialog>
+        item={workflowCase}
+        property={property}
+        propertyId={propertyId}
+        rentReviews={rentReviews}
+        rentReviewDecisions={rentReviewDecisions}
+        vacatingCases={vacatingCases}
+        rentWeekly={rentWeekly}
+        onViewRentReview={onViewRentReview}
+        onOpenInspectionCreated={onOpenInspectionCreated}
+      />
     );
   }
 
@@ -186,7 +169,7 @@ export function PropertyOverviewJobDialog({
           </p>
           <Button asChild variant="outline" size="sm" className="w-full">
             <Link
-              href={tribunalDetail(tribunalCase.id, fromProperty(propertyId, 'Overview'))}
+              href={tribunalDetail(tribunalCase.id, fromProperty(propertyId, 'Tribunal'))}
               onClick={onClose}
             >
               Open tribunal case

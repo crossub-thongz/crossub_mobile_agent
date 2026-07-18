@@ -28,12 +28,13 @@ export const LANDLORD_DOCUMENT_SLOTS: DocumentSlot[] = [
   { id: 'smoke_alarm_compliance', label: 'Smoke alarm Compliance' },
 ];
 
-/** Wizard tenant-application step (unchanged). */
+/** Wizard tenant-application step / Documents tab. */
 export const TENANT_APPLICATION_DOCUMENT_SLOTS: DocumentSlot[] = [
   { id: 'application_form', label: 'Application Form' },
   { id: 'photo_id', label: 'Photo ID' },
   { id: 'bank_statement', label: 'Bank Statement' },
-  { id: 'tenancy_ledger', label: 'Supporting Documents' },
+  // Must be unique — previously reused `tenancy_ledger`, which remapped uploads to Tenancy Ledger.
+  { id: 'supporting_documents', label: 'Supporting Documents' },
   { id: 'visa', label: 'Visa' },
   { id: 'payslip', label: 'Payslip' },
 ];
@@ -42,7 +43,7 @@ export const TENANT_APPLICATION_DOCUMENT_SLOTS: DocumentSlot[] = [
 export const LEASING_FIXED_DOC_SLOTS = [
   { id: 'lease_agreement', label: 'Lease Agreement' },
   { id: 'lease_extension', label: 'Lease Extension Agreement' },
-  ...TENANT_APPLICATION_DOCUMENT_SLOTS.filter((s) => s.id === 'tenancy_ledger'),
+  ...TENANT_APPLICATION_DOCUMENT_SLOTS.filter((s) => s.id === 'supporting_documents'),
 ] as const;
 
 /** @deprecated */

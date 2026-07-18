@@ -76,9 +76,20 @@ function normalizeTitle(title: string): string {
   return title.trim().toLowerCase();
 }
 
+/** Slot label / type prefix — ignores the ` — filename` suffix used on upload. */
+function documentTitleBase(docTitle: string): string {
+  const title = docTitle.trim();
+  for (const sep of [' — ', ' - ']) {
+    const idx = title.indexOf(sep);
+    if (idx > 0) return title.slice(0, idx).trim();
+  }
+  return title;
+}
+
 /** Classify a create-property / portal document into one of the three Documents tables. */
 export function classifyCreatePropertyDocument(title: string): CreatePropertyDocumentGroup {
   const key = normalizeTitle(title);
+  const base = normalizeTitle(documentTitleBase(title));
   if (!key) return 'tenancy';
 
   if (key.startsWith('landlord —') || key.startsWith('landlord -')) return 'landlord';
@@ -89,31 +100,34 @@ export function classifyCreatePropertyDocument(title: string): CreatePropertyDoc
     return 'tenant_application';
   }
 
-  if (/^lease\s*(agreement|extension)/.test(key) || /lease\s*extension\s*agreement/.test(key)) {
+  if (TENANCY_LABELS.has(base) || TENANCY_LABELS.has(key)) return 'tenancy';
+  if (TENANT_APPLICATION_LABELS.has(base) || TENANT_APPLICATION_LABELS.has(key)) {
+    return 'tenant_application';
+  }
+  if (LANDLORD_LABELS.has(base) || LANDLORD_LABELS.has(key)) return 'landlord';
+
+  if (/^lease\s*(agreement|extension)/.test(base) || /lease\s*extension\s*agreement/.test(base)) {
     return 'tenancy';
   }
-  if (TENANCY_LABELS.has(key)) return 'tenancy';
-  if (TENANT_APPLICATION_LABELS.has(key)) return 'tenant_application';
-  if (LANDLORD_LABELS.has(key)) return 'landlord';
 
   if (
-    /photo\s*id|passport|visa|payslip|bank\s*statement|application\s*form|application\s*documents?/.test(
-      key,
+    /photo\s*id|passport|visa|payslip|bank\s*statement|application\s*form|application\s*documents?|supporting\s*documents?/.test(
+      base,
     )
   ) {
     return 'tenant_application';
   }
-  if (/management\s*agreement|property\s*management\s*agreement/.test(key)) {
+  if (/management\s*agreement|property\s*management\s*agreement/.test(base)) {
     return 'landlord';
   }
   if (
     /certificate\s*of\s*insurance|landlord\s*insurance|council\s*rate|strata|water\s*bill|water\s*efficiency|smoke\s*alarm/.test(
-      key,
+      base,
     )
   ) {
     return 'landlord';
   }
-  if (/paper\s*bond|bond\s*lodgement|key\s*handover|ingoing/.test(key)) {
+  if (/paper\s*bond|bond\s*lodgement|key\s*handover|ingoing\s*inspection|tenancy\s*ledger/.test(base)) {
     return 'tenancy';
   }
   return 'tenancy';
@@ -142,12 +156,39 @@ function groupFromExtraSlotId(slotId: string): CreatePropertyDocumentGroup | nul
   return null;
 }
 
+/**
+ * Resolve a create-property slot. Prefer the staged slot label so legacy duplicate
+ * ids (Supporting Documents previously reused `tenancy_ledger`) still flush correctly.
+ */
+function findExpectedSlot(input: {
+  slotId: string;
+  title?: string;
+}): ExpectedDocumentSlot | undefined {
+  const trimmed = input.title?.trim() ?? '';
+  if (trimmed) {
+    const byLabel = EXPECTED_PROPERTY_DOCUMENT_SLOTS.find(
+      (s) => normalizeTitle(s.label) === normalizeTitle(trimmed),
+    );
+    if (byLabel) return byLabel;
+  }
+
+  // Legacy queued uploads: Supporting Documents was stored under tenancy_ledger.
+  if (
+    input.slotId === 'tenancy_ledger' &&
+    /supporting\s*documents?/i.test(trimmed)
+  ) {
+    return EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === 'supporting_documents');
+  }
+
+  return EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === input.slotId);
+}
+
 /** Resolve the document group for a staged wizard upload (fixed slot or extra row). */
 export function resolvePendingUploadGroup(input: {
   slotId: string;
   title: string;
 }): CreatePropertyDocumentGroup {
-  const slot = EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === input.slotId);
+  const slot = findExpectedSlot(input);
   if (slot) return slot.group;
   return groupFromExtraSlotId(input.slotId) ?? classifyCreatePropertyDocument(input.title);
 }
@@ -158,7 +199,7 @@ export function resolvePendingUploadDisplayLabel(input: {
   title: string;
   fileName: string;
 }): string {
-  const slot = EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === input.slotId);
+  const slot = findExpectedSlot(input);
   if (slot) return slot.label;
   return input.title.trim() || input.fileName;
 }
@@ -172,7 +213,7 @@ export function resolvePendingUploadTitle(input: {
   title: string;
   fileName: string;
 }): string {
-  const slot = EXPECTED_PROPERTY_DOCUMENT_SLOTS.find((s) => s.id === input.slotId);
+  const slot = findExpectedSlot(input);
   const baseTitle = slot
     ? ensureGroupDocumentTitle(slot.group, slot.label)
     : ensureGroupDocumentTitle(
@@ -221,27 +262,33 @@ export function findPropertyDocument(
 function titlesMatch(slotLabel: string, docTitle: string): boolean {
   const slot = normalizeTitle(slotLabel);
   const doc = normalizeTitle(docTitle);
+  const base = normalizeTitle(documentTitleBase(docTitle));
   if (!slot || !doc) return false;
-  if (doc === slot) return true;
+
+  // Structured / exact matches (full title or type prefix before ` — filename`)
+  if (doc === slot || base === slot) return true;
   if (doc.endsWith(`— ${slot}`) || doc.endsWith(`- ${slot}`)) return true;
   if (doc.startsWith(`${slot} —`) || doc.startsWith(`${slot} -`)) return true;
   if (doc.startsWith(`${slot} (`)) return true;
 
-  if (slot === 'lease agreement' && /lease\s*agreement/.test(doc) && !/extension/.test(doc)) {
+  // Keyword aliases — match the type prefix only, never the filename (avoids
+  // "Property Management Agreement — Lease Agreement.pdf" counting as both).
+  if (slot === 'lease agreement' && /lease\s*agreement/.test(base) && !/extension/.test(base)) {
     return true;
   }
-  if (slot === 'lease extension agreement' && /lease\s*extension/.test(doc)) return true;
+  if (slot === 'lease extension agreement' && /lease\s*extension/.test(base)) return true;
   if (
     slot === 'property management agreement' &&
-    /property\s*management\s*agreement|management\s*agreement/.test(doc)
+    /property\s*management\s*agreement|management\s*agreement/.test(base)
   ) {
     return true;
   }
-  if (slot === 'landlord insurance' && /landlord\s*insurance/.test(doc)) return true;
-  if (slot === 'paper bond' && (/paper\s*bond|bond\s*lodgement/.test(doc))) return true;
-  if (slot === 'key handover form' && /key\s*handover/.test(doc)) return true;
-  if (slot === 'ingoing inspection report' && /ingoing/.test(doc)) return true;
-  if (slot === 'tenancy ledger' && /tenancy\s*ledger|rent\s*ledger/.test(doc)) return true;
+  if (slot === 'landlord insurance' && /landlord\s*insurance/.test(base)) return true;
+  if (slot === 'paper bond' && /paper\s*bond|bond\s*lodgement/.test(base)) return true;
+  if (slot === 'key handover form' && /key\s*handover/.test(base)) return true;
+  if (slot === 'ingoing inspection report' && /ingoing\s*inspection/.test(base)) return true;
+  if (slot === 'tenancy ledger' && /tenancy\s*ledger|rent\s*ledger/.test(base)) return true;
+  if (slot === 'supporting documents' && /supporting\s*documents?/.test(base)) return true;
 
   return false;
 }
@@ -298,8 +345,9 @@ export function buildDocumentChecklistByGroup(
   for (const group of CREATE_PROPERTY_DOCUMENT_GROUP_ORDER) {
     const slots = EXPECTED_PROPERTY_DOCUMENT_SLOTS.filter((s) => s.group === group);
     for (const slot of slots) {
+      // Exclusive: each file maps to at most one checklist slot (prevents inflated counts).
       const matches = documents
-        .filter((d) => titlesMatch(slot.label, d.title))
+        .filter((d) => !matchedIds.has(d.id) && titlesMatch(slot.label, d.title))
         .sort(
           (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
         );

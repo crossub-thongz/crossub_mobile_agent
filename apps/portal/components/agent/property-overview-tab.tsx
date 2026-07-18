@@ -397,11 +397,6 @@ export function PropertyOverviewTab({
     ],
   );
 
-  const leasingOnlyCases = useMemo(
-    () => leasingWorkflowCases.filter((item) => item.category === 'leasing'),
-    [leasingWorkflowCases],
-  );
-
   const inProgressJobs = useMemo(
     () =>
       buildPropertyOverviewJobRows({
@@ -591,7 +586,7 @@ export function PropertyOverviewTab({
         inspections={inspections}
         rentReviews={tenancyRentReviews}
         rentReviewDecisions={rentReviewDecisions}
-        leasingCases={leasingOnlyCases}
+        leasingCases={leasingWorkflowCases}
         vacatingCases={vacatingCases}
         tribunalCases={tribunalCases}
         accounting={accounting}
