@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { CalendarDays, ChevronRight, Trash2 } from 'lucide-react';
 
 import {
   ModuleInteractiveTableRow,
@@ -20,7 +20,6 @@ import {
   leasingOnboardingProgress,
   maintenanceWorkflowProgress,
   rentReviewWorkflowProgress,
-  tribunalWorkflowProgress,
 } from '@/lib/case-workflows';
 import {
   applySortDirection,
@@ -340,6 +339,39 @@ export function RentReviewListTable({
   );
 }
 
+function TribunalArrearsCell({
+  amount,
+  daysOverdue,
+}: {
+  amount?: number | null;
+  daysOverdue?: number | null;
+}) {
+  if (amount == null && daysOverdue == null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="tabular-nums font-medium">
+        {amount != null ? formatCurrency(amount) : '—'}
+      </span>
+      {daysOverdue != null ? (
+        <span
+          className={cn(
+            'inline-flex items-center gap-1 text-[11px] font-medium',
+            daysOverdue > 0
+              ? 'text-rose-600 dark:text-rose-400'
+              : 'text-muted-foreground',
+          )}
+        >
+          <CalendarDays className="size-3.5 shrink-0" aria-hidden />
+          {daysOverdue} day{daysOverdue === 1 ? '' : 's'}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function TribunalListTable({
   items,
   onItemClick,
@@ -350,14 +382,21 @@ export function TribunalListTable({
   selectedId?: string | null;
 }) {
   return (
-    <ModuleListTable minWidth={960}>
+    <ModuleListTable minWidth={1180}>
       <ModuleTableHead
-        columns={['Case', 'Type', 'Property / tenant', 'Claimed', 'Hearing', 'Status', '']}
+        columns={[
+          'Order Number',
+          'Created Date',
+          'Property Address',
+          'Tenant',
+          'Rent Arrears',
+          'Bill Arrears',
+          'Bond Arrears',
+          '',
+        ]}
       />
       <tbody className="divide-y">
         {items.map((c) => {
-          const href = tribunalDetail(c.id);
-          const progress = tribunalWorkflowProgress(c);
           const interactive = Boolean(onItemClick);
           const openItem = onItemClick ? () => onItemClick(c) : undefined;
           return (
@@ -369,34 +408,42 @@ export function TribunalListTable({
                 c.requiresAction && c.status === 'active' && 'bg-destructive/[0.03]',
               )}
             >
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+              <td className="whitespace-nowrap px-3 py-3 text-xs font-medium tabular-nums">
                 {c.caseNumber ?? workflowCaseReferenceLabel(c.id, 'tribunal')}
               </td>
-              <td className="px-3 py-3 text-xs text-muted-foreground">{c.tribunalType ?? '—'}</td>
-              {interactive ? (
-                <td className="max-w-[14rem] px-3 py-3 font-medium">
-                  <span className="line-clamp-2">{c.propertyAddress}</span>
-                  <span className="text-muted-foreground mt-0.5 block text-xs">{c.tenantName}</span>
-                </td>
-              ) : (
-                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                  <span className="line-clamp-2">{c.propertyAddress}</span>
-                  <span className="text-muted-foreground mt-0.5 block text-xs">{c.tenantName}</span>
-                </ModuleTableLinkCell>
-              )}
-              <td className="whitespace-nowrap px-3 py-3 tabular-nums">
-                {c.amountClaimed != null ? formatCurrency(c.amountClaimed) : '—'}
-              </td>
               <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {c.hearingDate ? formatDateTime(c.hearingDate) : '—'}
+                {c.createdAt ? formatDate(c.createdAt) : '—'}
               </td>
-              <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
+              <td className="max-w-[14rem] px-3 py-3 text-sm font-medium">
+                <span className="line-clamp-2">{c.propertyAddress || '—'}</span>
+              </td>
+              <td className="max-w-[10rem] px-3 py-3 text-sm">
+                <span className="line-clamp-2">{c.tenantName || '—'}</span>
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-sm">
+                <TribunalArrearsCell
+                  amount={c.rentArrearsAmount}
+                  daysOverdue={c.rentArrearsDaysOverdue}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-sm">
+                <TribunalArrearsCell
+                  amount={c.billArrearsAmount}
+                  daysOverdue={c.billArrearsDaysOverdue}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-sm">
+                <TribunalArrearsCell
+                  amount={c.bondArrearsAmount}
+                  daysOverdue={c.bondArrearsDaysOverdue}
+                />
+              </td>
               {interactive ? (
                 <td className="px-3 py-3 text-right text-muted-foreground">
                   <ChevronRight className="inline size-4" />
                 </td>
               ) : (
-                <ModuleTableChevronCell href={href} />
+                <ModuleTableChevronCell href={tribunalDetail(c.id)} />
               )}
             </ModuleInteractiveTableRow>
           );
