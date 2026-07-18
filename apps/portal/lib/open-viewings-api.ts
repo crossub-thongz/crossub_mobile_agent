@@ -2,6 +2,7 @@ import type {
   InterestLevel,
   OpenInspectionSession,
   SessionCycle,
+  SessionStatus,
 } from "@/constants/open-inspection-ops"
 
 import { api } from "./api"
@@ -63,9 +64,17 @@ export interface ViewingKpiSummary {
  * the dashboard with no extra mapping. Mutations echo back the full session.
  */
 export const openViewingsApi = {
-  async list(): Promise<OpenInspectionSession[]> {
+  async list(params?: {
+    sessionStatus?: SessionStatus
+    pageSize?: number
+    propertyId?: string
+  }): Promise<OpenInspectionSession[]> {
+    const sp = new URLSearchParams()
+    sp.set("pageSize", String(params?.pageSize ?? 100))
+    if (params?.sessionStatus) sp.set("sessionStatus", params.sessionStatus)
+    if (params?.propertyId) sp.set("propertyId", params.propertyId)
     const r = await api.get<{ sessions: OpenInspectionSession[]; total: number }>(
-      `${BASE}/sessions?pageSize=100`,
+      `${BASE}/sessions?${sp.toString()}`,
     )
     return r.sessions
   },

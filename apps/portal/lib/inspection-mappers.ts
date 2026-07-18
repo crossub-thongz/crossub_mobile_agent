@@ -147,8 +147,19 @@ export function mergeInspectionRows(
       )
       .filter(Boolean),
   );
+
+  const isCancelledOpenRecord = (r: Inspection) =>
+    (r.apiStatus ?? r.status).toLowerCase() === INSPECTION_RECORD_STATUS.CANCELLED.toLowerCase() ||
+    r.status.toLowerCase() === 'deleted';
+
+  // Deleted OPEN pool jobs stay visible under History → Deleted.
+  const deletedOpenRecords = fromOpenRecords.filter(isCancelledOpenRecord);
+
+  // Pool-only OPEN rows (no viewing session yet). Never surface a cancelled pool
+  // job as an active case when another open session exists on the property.
   const orphanOpenRecords = fromOpenRecords.filter(
     (r) =>
+      !isCancelledOpenRecord(r) &&
       r.propertyId &&
       !sessionIds.has(r.id) &&
       !propertiesWithOpenSessions.has(r.propertyId),
@@ -164,7 +175,12 @@ export function mergeInspectionRows(
       return mapOpenSessionToInspection(s, propertyId);
     });
 
-  const merged = [...fromSessions, ...orphanOpenRecords, ...fromRecords];
+  const merged = [
+    ...fromSessions,
+    ...orphanOpenRecords,
+    ...deletedOpenRecords,
+    ...fromRecords,
+  ];
   merged.sort((a, b) => {
     const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
     const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;

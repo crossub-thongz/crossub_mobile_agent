@@ -592,7 +592,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       properties,
     );
     const byId = new Map<string, Inspection>();
-    for (const row of [...added, ...live]) {
+    // Live API wins. Optimistic OPEN rows from create are dropped once live
+    // inspections are loaded so admin-deleted cases don't stick in the agent list.
+    for (const row of live) {
+      byId.set(row.id, row);
+    }
+    for (const row of added) {
+      if (byId.has(row.id)) continue;
+      if (apiInspections != null && row.type === 'OPEN') continue;
       byId.set(row.id, row);
     }
     return [...byId.values()].sort((a, b) => {

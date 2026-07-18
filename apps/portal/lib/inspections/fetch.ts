@@ -1,8 +1,11 @@
+import {
+  SessionStatusEnum,
+  type OpenInspectionSession,
+} from '@/constants/open-inspection-ops';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mergeInspectionRows } from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { InspectionDetail } from '@/lib/inspections-types';
-import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import type { Inspection } from '@/lib/types';
 import type { Property } from '@/lib/types';
 
@@ -28,11 +31,18 @@ export async function fetchAgentInspections(
   properties: Property[] = [],
 ): Promise<Inspection[]> {
   const addressMap = propertyIdByAddress(properties);
-  const [recordResult, sessions] = await Promise.all([
+  const [recordResult, liveSessions, cancelledSessions] = await Promise.all([
     inspectionsApi.list({ pageSize: WORKING_SET_SIZE }),
     openViewingsApi.list().catch(() => [] as OpenInspectionSession[]),
+    openViewingsApi
+      .list({ sessionStatus: SessionStatusEnum.CANCELLED })
+      .catch(() => [] as OpenInspectionSession[]),
   ]);
-  return mergeInspectionRows(recordResult.inspections, sessions, addressMap);
+  const byId = new Map<string, OpenInspectionSession>();
+  for (const session of [...liveSessions, ...cancelledSessions]) {
+    byId.set(session.id, session);
+  }
+  return mergeInspectionRows(recordResult.inspections, [...byId.values()], addressMap);
 }
 
 export async function fetchInspectionDetail(
