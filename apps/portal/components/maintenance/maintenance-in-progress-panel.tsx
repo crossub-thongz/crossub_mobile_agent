@@ -3,12 +3,10 @@
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import {
-  auditEntriesForStep,
-  MAINTENANCE_AGENT_STEP,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 export function MaintenanceInProgressPanel({
   ctx,
@@ -21,10 +19,10 @@ export function MaintenanceInProgressPanel({
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
 }) {
-  const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.IN_PROGRESS);
   const landlordFlow = requiresContractorFlow(ctx);
-  const showCompletionGates =
-    ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status);
+  const showCompletionGates = ['in_progress', 'completed', 'closed'].includes(
+    ctx.workspaceCase.status,
+  );
 
   if (!landlordFlow) {
     return (
@@ -42,24 +40,6 @@ export function MaintenanceInProgressPanel({
             apiConnected={apiConnected}
             onUpdated={onCaseUpdated}
           />
-        ) : null}
-
-        {audit.length > 0 ? (
-          <div className="rounded-xl border bg-card p-3">
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-              Progress events
-            </p>
-            <ol className="space-y-2">
-              {audit.map((entry) => (
-                <li key={entry.id} className="text-xs">
-                  <p className="font-medium">{entry.message}</p>
-                  <p className="text-muted-foreground mt-0.5">
-                    {formatDateTime(entry.timestamp)} · {entry.actor}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </div>
         ) : null}
       </div>
     );
@@ -95,24 +75,6 @@ export function MaintenanceInProgressPanel({
           apiConnected={apiConnected}
           onUpdated={onCaseUpdated}
         />
-      ) : null}
-
-      {audit.length > 0 ? (
-        <div className="rounded-xl border bg-card p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-            Progress events
-          </p>
-          <ol className="space-y-2">
-            {audit.map((entry) => (
-              <li key={entry.id} className="text-xs">
-                <p className="font-medium">{entry.message}</p>
-                <p className="text-muted-foreground mt-0.5">
-                  {formatDateTime(entry.timestamp)} · {entry.actor}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </div>
       ) : null}
     </div>
   );

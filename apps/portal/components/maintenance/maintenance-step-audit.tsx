@@ -12,8 +12,21 @@ export type MaintenanceStepAuditEntry = {
   timestamp: string;
 };
 
+function humanizeAuditMessage(message: string): string {
+  // Strip internal agency-pref / UUID keys from legacy audit copy.
+  return message
+    .replace(/\s*\(agency-pref-[0-9a-f-]+\)/gi, '')
+    .replace(/\bagency-pref-[0-9a-f-]+\b/gi, 'contractor')
+    .replace(
+      /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+      'contractor',
+    );
+}
+
 function auditLabel(message: string): string {
-  const firstLine = message.split('\n').find((line) => line.trim())?.trim() ?? message;
+  const firstLine =
+    humanizeAuditMessage(message).split('\n').find((line) => line.trim())?.trim() ??
+    message;
   return firstLine.length > 160 ? `${firstLine.slice(0, 157)}…` : firstLine;
 }
 

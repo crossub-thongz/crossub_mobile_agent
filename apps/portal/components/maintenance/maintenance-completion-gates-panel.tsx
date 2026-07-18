@@ -102,7 +102,6 @@ export function MaintenanceCompletionGatesPanel({
 
   const evidenceApproved = Boolean(ctx.workspaceCase.completionEvidenceUploaded);
   const tenantSignOff = Boolean(ctx.workspaceCase.tenantApprovalReceived);
-  const invoiceUploaded = Boolean(ctx.workspaceCase.invoiceUploaded);
 
   const evidenceAttachments = useMemo(
     () =>
@@ -118,6 +117,9 @@ export function MaintenanceCompletionGatesPanel({
       ),
     [attachments, requestId],
   );
+  // Gate is checked by upload itself — no manual checkbox for agents.
+  const invoiceUploaded =
+    Boolean(ctx.workspaceCase.invoiceUploaded) || invoiceAttachments.length > 0;
 
   const runGateUpdate = async (action: () => Promise<unknown>, success: string) => {
     if (!canEdit) return;
@@ -164,7 +166,7 @@ export function MaintenanceCompletionGatesPanel({
       });
       await setMaintenanceInvoiceUploaded(requestId, true);
       setPendingInvoiceFile(null);
-      toast.success('Invoice uploaded');
+      toast.success('Invoice uploaded — task marked checked');
       await onUpdated?.();
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Invoice upload failed'));
@@ -267,92 +269,74 @@ export function MaintenanceCompletionGatesPanel({
         <p className="text-muted-foreground text-xs">View only — admin records tenant sign-off.</p>
       </section>
 
-      {/* Invoice Uploaded */}
+      {/* Invoice Uploaded — uploading the file marks this gate automatically. */}
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Invoice Uploaded" checked={invoiceUploaded} />
         <p className="text-muted-foreground text-xs">
-          Upload the contractor invoice (PDF or image, up to {MAX_MAINTENANCE_ATTACHMENT_LABEL}). Tap a
-          file to preview or download.
+          Upload the contractor invoice (PDF or image, up to {MAX_MAINTENANCE_ATTACHMENT_LABEL}). The
+          task is marked checked when the upload succeeds. Tap a file to preview or download.
         </p>
 
         {canEdit ? (
-          <>
-            <label className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary/40">
+              <Upload className="size-3.5" />
+              Choose invoice
               <input
-                type="checkbox"
-                className="rounded"
-                checked={invoiceUploaded}
-                disabled={busy}
-                onChange={(e) =>
-                  void runGateUpdate(
-                    () => setMaintenanceInvoiceUploaded(requestId, e.target.checked),
-                    e.target.checked ? 'Invoice marked uploaded' : 'Invoice unchecked',
-                  )
-                }
+                type="file"
+                accept="application/pdf,image/*"
+                className="hidden"
+                disabled={uploadingInvoice}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  e.target.value = '';
+                  if (!file) return;
+                  if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
+                    toast.error(`File exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
+                    return;
+                  }
+                  const mime = file.type || 'application/pdf';
+                  if (!isAllowedMaintenanceInvoiceMime(mime)) {
+                    toast.error(
+                      'Unsupported invoice file type. Use PDF or image (PNG, JPEG, WebP, HEIC).',
+                    );
+                    return;
+                  }
+                  setPendingInvoiceFile(file);
+                }}
               />
-              <span className="text-muted-foreground">Mark invoice gate as uploaded</span>
             </label>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary/40">
-                <Upload className="size-3.5" />
-                Choose invoice
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  className="hidden"
+            {pendingInvoiceFile ? (
+              <>
+                <span className="text-muted-foreground max-w-[140px] truncate text-xs">
+                  {pendingInvoiceFile.name}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
                   disabled={uploadingInvoice}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    e.target.value = '';
-                    if (!file) return;
-                    if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
-                      toast.error(`File exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
-                      return;
-                    }
-                    const mime = file.type || 'application/pdf';
-                    if (!isAllowedMaintenanceInvoiceMime(mime)) {
-                      toast.error(
-                        'Unsupported invoice file type. Use PDF or image (PNG, JPEG, WebP, HEIC).',
-                      );
-                      return;
-                    }
-                    setPendingInvoiceFile(file);
-                  }}
-                />
-              </label>
-              {pendingInvoiceFile ? (
-                <>
-                  <span className="text-muted-foreground max-w-[140px] truncate text-xs">
-                    {pendingInvoiceFile.name}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={uploadingInvoice}
-                    onClick={() => void handleInvoiceUpload()}
-                  >
-                    {uploadingInvoice ? (
-                      <>
-                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                        {invoiceUploadPhase === 'reading' ? 'Reading file…' : 'Uploading…'}
-                      </>
-                    ) : (
-                      'Upload'
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPendingInvoiceFile(null)}
-                  >
-                    Remove
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          </>
+                  onClick={() => void handleInvoiceUpload()}
+                >
+                  {uploadingInvoice ? (
+                    <>
+                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      {invoiceUploadPhase === 'reading' ? 'Reading file…' : 'Uploading…'}
+                    </>
+                  ) : (
+                    'Upload'
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPendingInvoiceFile(null)}
+                >
+                  Remove
+                </Button>
+              </>
+            ) : null}
+          </div>
         ) : null}
 
         {invoiceAttachments.length === 0 ? (

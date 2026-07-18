@@ -11,16 +11,11 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { confirmMaintenanceResponsibility, requestMoreMaintenanceEvidence } from '@/lib/maintenance/maintenance-case-ops';
-import {
-  auditEntriesForStep,
-  MAINTENANCE_AGENT_STEP,
-  type MaintenanceWorkflowContext,
-} from '@/lib/maintenance/agent-workflow-model';
+import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import { resolveInvitedContractorIds, resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceWorkflowResponsibility } from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { Property } from '@/lib/types';
-import { MaintenanceStepAudit } from '@/components/maintenance/maintenance-step-audit';
 import { cn } from '@/lib/utils';
 
 const RESPONSIBILITY_OPTIONS: {
@@ -62,7 +57,6 @@ export function MaintenanceReviewPanel({
   const [busy, setBusy] = useState(false);
 
   const agencyId = property?.agencyId;
-  const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.REVIEW);
   const invitedContractorIds = resolveInvitedContractorIds(ctx);
   const responsibility = resolveMaintenanceResponsibility(ctx);
   const isLive =
@@ -288,12 +282,6 @@ export function MaintenanceReviewPanel({
           </dl>
         </section>
       ) : null}
-
-      <MaintenanceStepAudit
-        entries={audit}
-        title="Audit"
-        emptyLabel="No review audit events yet. Responsibility and evidence actions will appear here."
-      />
     </div>
   );
 }

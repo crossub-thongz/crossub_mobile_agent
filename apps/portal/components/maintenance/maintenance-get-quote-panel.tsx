@@ -8,9 +8,7 @@ import { ContractorPreviousQuotationPanel } from '@/components/maintenance/contr
 import { MaintenanceRepairQuotationPanel } from '@/components/maintenance/maintenance-repair-quotation-panel';
 import { RequotedQuotationBadge } from '@/components/maintenance/requoted-quotation-badge';
 import {
-  auditEntriesForStep,
   getMaintenanceQuotationsForCase,
-  MAINTENANCE_AGENT_STEP,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
@@ -41,7 +39,6 @@ import {
 } from '@/lib/maintenance/resolve-contractor-display';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
-import { MaintenanceStepAudit } from '@/components/maintenance/maintenance-step-audit';
 
 function reviewForContractor(
   reviews: QuotationReviewRecord[] | undefined,
@@ -269,7 +266,6 @@ export function MaintenanceGetQuotePanel({
   const quotes = getMaintenanceQuotationsForCase(ctx.workspaceCase);
   const invitedIds = resolveInvitedContractorIds(ctx);
   const landlordFlow = requiresContractorFlow(ctx);
-  const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
   const canReview = apiConnected;
 
   useEffect(() => {
@@ -366,11 +362,6 @@ export function MaintenanceGetQuotePanel({
         )}
       </section>
 
-      <MaintenanceStepAudit
-        entries={audit}
-        title="Audit"
-        emptyLabel="No quote audit events yet. Submissions, requotes, and approvals will appear here."
-      />
     </div>
   );
 }

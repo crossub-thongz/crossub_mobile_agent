@@ -661,32 +661,44 @@ export function buildMaintenanceAgentWorkflow(
   };
 }
 
-export function buildJobCreatedEmails(ctx: MaintenanceWorkflowContext): MaintenanceEmailRecord[] {
-  const sourceLabel =
-    ctx.workspaceCase.source === 'tenant_app'
-      ? 'Tenant'
-      : ctx.workspaceCase.source === 'agent_submission'
-        ? 'Agent'
-        : 'Email';
+/** Job-created is in-app only — do not invent a fake outbound email for history. */
+export function buildJobCreatedEmails(
+  _ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord[] {
+  return [];
+}
 
-  return [
-    {
-      id: `${ctx.item.id}-created`,
-      subject: `Maintenance job created — ${ctx.workspaceCase.caseRef}`,
-      from: sourceLabel,
-      to: ctx.workspaceCase.agent?.email ?? 'Managing agent',
-      at: ctx.workspaceCase.createdAt,
-      kind: 'job_created',
-      body: [
-        `A new maintenance job has been logged.`,
-        ``,
-        `Issue: ${ctx.workspaceCase.issueType}`,
-        `Description: ${ctx.workspaceCase.description}`,
-        `Priority: ${ctx.workspaceCase.priority}`,
-        `Property: ${ctx.workspaceCase.address}`,
-      ].join('\n'),
-    },
-  ];
+const IMPORTANT_MAINTENANCE_EMAIL_KINDS = new Set([
+  'responsibility_review',
+  'responsibility_set',
+  'rfq',
+  'contractor_assigned',
+  'quotation_submitted',
+  'requote',
+  'counter_offer',
+  'quotation_approved',
+  'quotation_declined',
+  'landlord_quotation',
+  'contractor_feedback',
+  'quotation_landlord_email',
+  'quotation_contractor_feedback',
+  'quotation_counter_offer',
+  'quotation_resubmitted',
+  'quotation_created',
+  'quotation_review_decision',
+]);
+
+function isImportantMaintenanceEmail(record: MaintenanceEmailRecord): boolean {
+  if (IMPORTANT_MAINTENANCE_EMAIL_KINDS.has(record.kind)) return true;
+  const hay = `${record.subject} ${record.body}`.toLowerCase();
+  if (/status updated|attachment|evidence received|invoice received|job created/i.test(hay)) {
+    return false;
+  }
+  return (
+    /responsibility|rfq|quotation|quote|requote|counter offer|declin|approv|landlord|contractor feedback/i.test(
+      hay,
+    )
+  );
 }
 
 function parseGenericMaintenanceEmailFromAudit(
@@ -776,6 +788,29 @@ function parseQuotationWorkflowEmailFromAudit(
       from: (c) => ({
         from: c.item.contractorName ?? 'Contractor',
       }),
+    },
+    {
+      pattern: /^Contractor quotation email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'quotation_submitted',
+      to: (c) => c.workspaceCase.agent?.email ?? 'Managing agent',
+      from: (c) => ({
+        from: c.item.contractorName ?? 'Contractor',
+      }),
+    },
+    {
+      pattern: /^RFQ email sent to .+? \(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'rfq',
+      to: () => 'Contractor',
+    },
+    {
+      pattern: /^Quotation approved email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'quotation_approved',
+      to: (c) => c.workspaceCase.agent?.email ?? 'Managing agent',
+    },
+    {
+      pattern: /^Quotation declined email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'quotation_declined',
+      to: (c) => c.workspaceCase.agent?.email ?? 'Managing agent',
     },
   ];
   for (const { pattern, kind, to, from } of patterns) {
@@ -947,13 +982,14 @@ function emailRecordsForStepOnly(
     case MAINTENANCE_AGENT_STEP.JOB_CREATED:
       return buildJobCreatedEmails(ctx);
     case MAINTENANCE_AGENT_STEP.REVIEW:
-      return buildResponsibilityReviewEmails(ctx);
+      return buildResponsibilityReviewEmails(ctx).filter(isImportantMaintenanceEmail);
     case MAINTENANCE_AGENT_STEP.GET_QUOTE:
-      return buildQuotationWorkflowEmails(ctx);
+      return buildQuotationWorkflowEmails(ctx).filter(isImportantMaintenanceEmail);
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
-      return buildAcceptanceEmails(ctx);
+      // Acceptance synthetics (handyman/tenant notified) are not real sends — skip.
+      return [];
     case MAINTENANCE_AGENT_STEP.JOB_COMPLETED:
-      return emailNotifications(ctx.workspaceCase);
+      return emailNotifications(ctx.workspaceCase).filter(isImportantMaintenanceEmail);
     default:
       return [];
   }
@@ -981,15 +1017,15 @@ export function allMaintenanceEmailRecords(ctx: MaintenanceWorkflowContext): Job
     ctx,
     MAINTENANCE_AGENT_STEP.JOB_COMPLETED,
   )) {
-    byId.set(record.id, record);
+    if (isImportantMaintenanceEmail(record)) byId.set(record.id, record);
   }
 
   for (const record of buildAuditTrailMaintenanceEmails(ctx)) {
-    byId.set(record.id, record);
+    if (isImportantMaintenanceEmail(record)) byId.set(record.id, record);
   }
 
   for (const record of emailNotifications(ctx.workspaceCase)) {
-    byId.set(record.id, record);
+    if (isImportantMaintenanceEmail(record)) byId.set(record.id, record);
   }
 
   return dedupeJobCaseEmails([...byId.values()]);

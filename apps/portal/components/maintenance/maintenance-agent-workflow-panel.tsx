@@ -12,6 +12,7 @@ import { MaintenanceInProgressPanel } from '@/components/maintenance/maintenance
 import { MaintenanceJobCompletedPanel } from '@/components/maintenance/maintenance-job-completed-panel';
 import { MaintenanceJobCreatedPanel } from '@/components/maintenance/maintenance-job-created-panel';
 import { MaintenanceReviewPanel } from '@/components/maintenance/maintenance-review-panel';
+import { MaintenanceStepAudit } from '@/components/maintenance/maintenance-step-audit';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import {
@@ -165,7 +166,12 @@ export function MaintenanceAgentWorkflowPanel({
 
       <MaintenanceJobTypeSummary item={item} workflowCtx={ctx} syncing={syncing} />
 
-      <MaintenanceJobIntakeSummary ctx={ctx} attachments={attachments} />
+      <MaintenanceJobIntakeSummary
+        ctx={ctx}
+        attachments={attachments}
+        // Review step has its own evidence panel — avoid showing the same photos twice.
+        hideEvidence={viewingStepId === MAINTENANCE_AGENT_STEP.REVIEW}
+      />
 
       <div className="rounded-xl border bg-card">
         <div
@@ -233,6 +239,11 @@ export function MaintenanceAgentWorkflowPanel({
                 ? 'All e-mail'
                 : 'Email / message history'
             }
+          />
+          <MaintenanceStepAudit
+            entries={ctx.workspaceCase.auditEntries}
+            title="Audit"
+            emptyLabel="No audit events yet. Workflow actions from job created through completion will appear here."
           />
         </div>
       </div>

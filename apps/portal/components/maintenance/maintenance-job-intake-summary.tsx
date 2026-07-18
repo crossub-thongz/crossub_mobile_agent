@@ -101,9 +101,12 @@ function IntakeEvidenceGrid({
 export function MaintenanceJobIntakeSummary({
   ctx,
   attachments = [],
+  hideEvidence = false,
 }: {
   ctx: MaintenanceWorkflowContext;
   attachments?: ApiMaintenanceAttachment[];
+  /** When true, omit the intake photo grid (e.g. review step shows it separately). */
+  hideEvidence?: boolean;
 }) {
   const tenant = ctx.workspaceCase.tenant;
   const description = ctx.workspaceCase.description.trim();
@@ -156,13 +159,15 @@ export function MaintenanceJobIntakeSummary({
         </div>
       </dl>
 
-      <div className="mt-4 border-t pt-4">
-        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-          Intake photos &amp; videos
-          {intakeAttachments.length > 0 ? ` (${intakeAttachments.length})` : ''}
-        </p>
-        <IntakeEvidenceGrid attachments={intakeAttachments} />
-      </div>
+      {!hideEvidence ? (
+        <div className="mt-4 border-t pt-4">
+          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            Intake photos &amp; videos
+            {intakeAttachments.length > 0 ? ` (${intakeAttachments.length})` : ''}
+          </p>
+          <IntakeEvidenceGrid attachments={intakeAttachments} />
+        </div>
+      ) : null}
     </section>
   );
 }

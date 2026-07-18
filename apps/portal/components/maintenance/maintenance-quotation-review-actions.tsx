@@ -23,7 +23,7 @@ function CounterOfferHistory({
   return (
     <div className="rounded-xl border bg-card">
       <div className="flex items-center justify-between gap-2 px-4 py-3">
-        <span className="text-sm font-medium">Audit</span>
+        <span className="text-sm font-medium">Counter offers</span>
         <span className="text-muted-foreground text-[11px]">
           {sorted.length} event{sorted.length === 1 ? '' : 's'}
         </span>
@@ -32,7 +32,7 @@ function CounterOfferHistory({
         {sorted.map((offer) => (
           <li key={offer.id} className="py-2.5 text-xs">
             <p className="font-medium tabular-nums">
-              Counter offer {formatCurrency(offer.counterPrice)}
+              {formatCurrency(offer.counterPrice)}
               {offer.message ? ` — ${offer.message}` : ''}
             </p>
             <p className="text-muted-foreground mt-0.5">
