@@ -29,6 +29,8 @@ import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-di
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyRegistryResume, ROUTES } from '@/constants/routes';
+import { fetchProperty } from '@/lib/crossub-api/agent-client';
+import { mapAgentProperty } from '@/lib/crossub-api/agent-mappers';
 import { fromProperty } from '@/lib/detail-navigation';
 import {
   filterTenancyRentReviews,
@@ -50,6 +52,7 @@ import {
   readPropertyInspectionFocusId,
 } from '@/lib/property-inspection-navigation';
 import { useAgentStore } from '@/lib/store';
+import type { Property } from '@/lib/types';
 import { formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
 import { useRecordRecentPropertyVisit } from '@/hooks/use-record-recent-visit';
 import { formatCarSpaces } from '@/lib/property-overview';
@@ -92,9 +95,42 @@ export default function PropertyDetailPage() {
     archive,
     getPropertyActions,
     refresh,
+    agentPortfolioId,
   } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
-  const property = properties.find((p) => p.id === id);
+  const listProperty = properties.find((p) => p.id === id);
+  const [fetchedProperty, setFetchedProperty] = useState<Property | null>(null);
+  const [propertyLoadState, setPropertyLoadState] = useState<'idle' | 'loading' | 'missing'>(
+    'idle',
+  );
+  const property = listProperty ?? fetchedProperty;
+
+  // After end-leasing Job completed, the property may be archived and drop out of
+  // the active portfolio list — still load it by id so the detail page doesn't 404.
+  useEffect(() => {
+    if (listProperty) {
+      setFetchedProperty(null);
+      setPropertyLoadState('idle');
+      return;
+    }
+    let cancelled = false;
+    setPropertyLoadState('loading');
+    void fetchProperty(id)
+      .then((dto) => {
+        if (cancelled) return;
+        setFetchedProperty(mapAgentProperty(dto, agentPortfolioId));
+        setPropertyLoadState('idle');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFetchedProperty(null);
+        setPropertyLoadState('missing');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [agentPortfolioId, id, listProperty]);
+
   useRecordRecentPropertyVisit(property);
   const propertyTabs = useMemo(
     () =>
@@ -155,6 +191,14 @@ export default function PropertyDetailPage() {
     () => (property ? getPropertyActions(property.id) : []),
     [property, getPropertyActions],
   );
+
+  if (!property && propertyLoadState === 'loading') {
+    return (
+      <AgentShell>
+        <p className="text-muted-foreground py-16 text-center text-sm">Loading property…</p>
+      </AgentShell>
+    );
+  }
 
   if (!property) notFound();
 
