@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileText, ImagePlus, Loader2, Play, Upload, X } from 'lucide-react';
+import { CheckCircle2, Download, FileText, Loader2, Play, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -85,7 +85,6 @@ export function MaintenanceCompletionGatesPanel({
   onUpdated?: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
-  const [uploadingEvidence, setUploadingEvidence] = useState(false);
   const [uploadingInvoice, setUploadingInvoice] = useState(false);
   const [invoiceUploadPhase, setInvoiceUploadPhase] = useState<'idle' | 'reading' | 'uploading'>('idle');
   const [pendingInvoiceFile, setPendingInvoiceFile] = useState<File | null>(null);
@@ -131,42 +130,6 @@ export function MaintenanceCompletionGatesPanel({
       toast.error('Could not update — try again');
     } finally {
       setBusy(false);
-    }
-  };
-
-  const handleEvidenceUpload = async (files: FileList | null) => {
-    if (!files?.length || !canEdit) return;
-    const remaining = MAX_COMPLETION_EVIDENCE - evidenceAttachments.length;
-    if (remaining <= 0) {
-      toast.error(`Maximum ${MAX_COMPLETION_EVIDENCE} completion uploads`);
-      return;
-    }
-
-    setUploadingEvidence(true);
-    try {
-      for (const file of Array.from(files).slice(0, remaining)) {
-        if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
-          toast.error(`${file.name} exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
-          continue;
-        }
-        const mime = file.type || 'image/jpeg';
-        const contentBase64 = await fileToBase64(file);
-        await uploadMaintenanceAttachment({
-          maintenanceRequestId: requestId,
-          kind: 'evidence',
-          fileName: file.name,
-          mimeType: mime,
-          sizeBytes: file.size,
-          contentBase64,
-        });
-      }
-      await setMaintenanceCompletionEvidence(requestId, true);
-      toast.success('Completion evidence uploaded');
-      await onUpdated?.();
-    } catch {
-      toast.error('Upload failed');
-    } finally {
-      setUploadingEvidence(false);
     }
   };
 
@@ -253,11 +216,12 @@ export function MaintenanceCompletionGatesPanel({
 
   return (
     <div className="space-y-4">
-      {/* Completion Evidence Uploaded */}
+      {/* Completion Evidence Uploaded — agents view + approve only (contractor/admin upload). */}
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Completion Evidence Uploaded" checked={evidenceApproved} />
         <p className="text-muted-foreground text-xs">
-          Upload completion photos, then approve the evidence to unlock Mark work complete.
+          View completion photos uploaded by the contractor, then approve to unlock Mark work
+          complete.
         </p>
 
         {canEdit ? (
@@ -280,40 +244,18 @@ export function MaintenanceCompletionGatesPanel({
           </label>
         ) : null}
 
-        {isInProgress && canEdit ? (
-          <div className="flex items-center justify-between gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary/40">
-              {uploadingEvidence ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <ImagePlus className="size-3.5" />
-              )}
-              Add photo / video
-              <input
-                type="file"
-                multiple
-                accept="application/pdf,image/*,video/*"
-                className="hidden"
-                disabled={uploadingEvidence || evidenceAttachments.length >= MAX_COMPLETION_EVIDENCE}
-                onChange={(e) => {
-                  void handleEvidenceUpload(e.target.files);
-                  e.target.value = '';
-                }}
-              />
-            </label>
+        <div className="rounded-lg border bg-background p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+              Uploaded evidence
+            </p>
             <span className="text-muted-foreground text-[10px] tabular-nums">
               {evidenceAttachments.length}/{MAX_COMPLETION_EVIDENCE}
             </span>
           </div>
-        ) : null}
-
-        <div className="rounded-lg border bg-background p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-            Uploaded evidence
-          </p>
           <EvidenceGallery
             attachments={evidenceAttachments}
-            canDelete={canEdit && !busy}
+            canDelete={false}
             onDelete={onUpdated}
           />
         </div>
