@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { TRIBUNAL_CASE_STATUS } from '@/constants/api-enums';
 import {
   fetchAgentTribunalRentChasingDetail,
   updateAgentTribunalRentChasing,
@@ -29,6 +30,7 @@ import {
   daysSinceVacate,
   formatCurrency,
   formatDate,
+  formatPropertyFullAddress,
 } from '@/lib/utils';
 
 type ArrearRow = AgentTribunalRentChasingDetail['arrears'][number];
@@ -39,6 +41,25 @@ function cycleLabel(cycle: string | null | undefined): string {
   if (cycle === 'monthly') return 'Monthly';
   if (cycle === 'weekly') return 'Weekly';
   return '—';
+}
+
+function tribunalStatusLabel(status: string | null | undefined): string {
+  switch (status) {
+    case TRIBUNAL_CASE_STATUS.DRAFT:
+      return 'Draft';
+    case TRIBUNAL_CASE_STATUS.SUBMITTED:
+      return 'Submitted';
+    case TRIBUNAL_CASE_STATUS.AWAITING_HEARING:
+      return 'Awaiting hearing';
+    case TRIBUNAL_CASE_STATUS.HEARING_SCHEDULED:
+      return 'Hearing scheduled';
+    case TRIBUNAL_CASE_STATUS.COMPLETED:
+      return 'Completed';
+    case TRIBUNAL_CASE_STATUS.CLOSED:
+      return 'Closed';
+    default:
+      return status?.trim() || '—';
+  }
 }
 
 function DaysSince({
@@ -277,7 +298,7 @@ function ArrearsSection({
 }
 
 export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
-  const { properties } = useAgentData();
+  const { properties, refresh: refreshPortfolio } = useAgentData();
   const [detail, setDetail] = useState<AgentTribunalRentChasingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -326,6 +347,9 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
     detail?.agreementEnd?.slice(0, 10) ||
     property?.leaseEnd?.slice(0, 10) ||
     '';
+  const fullAddress = property
+    ? formatPropertyFullAddress(property)
+    : (detail?.propertyAddress ?? '');
 
   const arrearsByKind = useMemo(() => {
     const grouped: Record<ArrearKind, ArrearRow[]> = {
@@ -399,6 +423,11 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
 
   if (!detail) return null;
 
+  const handleEvictionSaved = (next: AgentTribunalRentChasingDetail) => {
+    setDetail(next);
+    void refreshPortfolio({ force: true });
+  };
+
   return (
     <div className="space-y-4">
       <section className="rounded-xl border bg-card p-4">
@@ -408,12 +437,11 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
               Rent Chasing
             </p>
             <h2 className="mt-1 text-base font-semibold leading-snug">
-              {detail.propertyAddress}
+              {fullAddress || detail.propertyAddress}
             </h2>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {detail.caseNumber}
-              {tenantName ? ` · ${tenantName}` : ''}
-            </p>
+            {tenantName ? (
+              <p className="text-muted-foreground mt-1 text-xs">{tenantName}</p>
+            ) : null}
           </div>
           {detail.evictionRequired ? (
             <button
@@ -444,8 +472,60 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
         onOpenChange={setEvictionDialogOpen}
         caseId={caseId}
         detail={detail}
-        onSaved={setDetail}
+        onSaved={handleEvictionSaved}
       />
+
+      <section className="rounded-xl border bg-card p-4">
+        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+          Tribunal details
+        </p>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Case number
+            </dt>
+            <dd className="mt-1 text-sm font-medium">{detail.caseNumber || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Status
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {tribunalStatusLabel(detail.status)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Matter
+            </dt>
+            <dd className="mt-1 text-sm font-medium">{detail.matter || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Eviction required
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {detail.evictionRequired ? 'Yes' : 'No'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Lodgement date
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {detail.lodgementDate ? formatDate(detail.lodgementDate) : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Hearing date
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {detail.hearingDate ? formatDate(detail.hearingDate) : '—'}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       <section className="rounded-xl border bg-card p-4">
         <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">

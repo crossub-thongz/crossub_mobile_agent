@@ -824,7 +824,11 @@ export async function agentFetch<T>(path: string, init?: RequestInit): Promise<T
       return await apiV1.patch<T>(route, body);
     }
     if (method === 'DELETE') {
-      return await apiV1.delete<T>(route);
+      const body =
+        typeof init?.body === 'string'
+          ? (JSON.parse(init.body) as unknown)
+          : init?.body;
+      return await apiV1.delete<T>(route, body);
     }
     const res = await fetch(`${API_BASE}${route}`, {
       ...init,

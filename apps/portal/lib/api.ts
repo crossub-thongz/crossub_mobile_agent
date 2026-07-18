@@ -164,7 +164,11 @@ export const api = {
     }),
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  delete: <T>(path: string, body?: unknown) =>
+    request<T>(path, {
+      method: 'DELETE',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
 };
 
 /** Versioned mobile facades (`/api/v1/*`) with the same cookie session + 401 refresh as `api`. */
@@ -180,6 +184,9 @@ export const apiV1 = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
-  delete: <T>(path: string) =>
-    request<T>(`/v1${path.startsWith('/') ? path : `/${path}`}`, { method: 'DELETE' }),
+  delete: <T>(path: string, body?: unknown) =>
+    request<T>(`/v1${path.startsWith('/') ? path : `/${path}`}`, {
+      method: 'DELETE',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    }),
 };

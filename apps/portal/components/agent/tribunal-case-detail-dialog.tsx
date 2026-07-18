@@ -8,6 +8,7 @@ import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { deleteAgentTribunalCase } from '@/lib/crossub-api/agent-workflow-client';
@@ -37,6 +38,7 @@ export function TribunalCaseDetailDialog({
   onDeleted?: () => void;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const { refresh: refreshPortfolio } = useAgentData();
 
   if (!open || !caseId) return null;
 
@@ -47,9 +49,6 @@ export function TribunalCaseDetailDialog({
   const titleRef =
     tribunalCase?.caseNumber ??
     workflowCaseReferenceLabel(caseId, 'tribunal');
-  const subtitle = tribunalCase
-    ? `${titleRef} · ${tribunalCase.propertyAddress}`
-    : titleRef;
 
   return (
     <>
@@ -57,7 +56,7 @@ export function TribunalCaseDetailDialog({
         open={open}
         onClose={onClose}
         title="Tribunal case"
-        subtitle={subtitle}
+        subtitle={titleRef}
         size="2xl"
       >
         <div className="space-y-4">
@@ -152,6 +151,7 @@ export function TribunalCaseDetailDialog({
         confirmLabel="Delete case"
         onConfirm={async (reason) => {
           await deleteAgentTribunalCase(caseId, reason);
+          await refreshPortfolio({ force: true });
           toast.success('Tribunal case deleted');
         }}
         onSuccess={() => {
