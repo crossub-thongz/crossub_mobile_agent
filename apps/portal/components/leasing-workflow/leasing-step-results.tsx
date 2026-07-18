@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Users } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { LeasingReferenceCheckApplicantCard } from '@/components/leasing-workflow/leasing-reference-check-applicant-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspection-session';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import { openViewingsApi } from '@/lib/open-viewings-api';
 
 export function LeasingStepResults({
   detail,
@@ -19,6 +22,33 @@ export function LeasingStepResults({
   const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
   const cycleId = detail.cycleId ?? cycle?.id;
   const [chosenApplicantId, setChosenApplicantId] = useState<string | null>(null);
+  const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!apiConnected) {
+      setOpenSession(null);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const sessionId = await resolveOpenInspectionSessionId(detail, { cycleId });
+        if (!sessionId || cancelled) {
+          if (!cancelled) setOpenSession(null);
+          return;
+        }
+        const session = await openViewingsApi.get(sessionId);
+        if (!cancelled) setOpenSession(session);
+      } catch {
+        if (!cancelled) setOpenSession(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, cycleId, detail]);
 
   const applicants = [...detail.applicationsDetail].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
@@ -53,6 +83,7 @@ export function LeasingStepResults({
               key={app.id}
               app={app}
               detail={detail}
+              openSession={openSession}
               cycleId={cycleId}
               propertyId={detail.propertyId}
               apiConnected={apiConnected}

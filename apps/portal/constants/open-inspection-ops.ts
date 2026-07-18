@@ -131,9 +131,19 @@ export interface OpenInspectionCurrentTenant {
   phone?: string;
 }
 
+export interface OpenInspectionTimelineEvent {
+  id: string;
+  label: string;
+  kind: string;
+  actor: string;
+  at: string;
+}
+
 export interface OpenInspectionSession {
   id: string;
   propertyId?: string;
+  /** Linked new-leasing cycle when this open was created with / for a letting. */
+  leasingCycleId?: string;
   property: string;
   address: string;
   suburb: string;
@@ -169,6 +179,8 @@ export interface OpenInspectionSession {
     totalWithApplication: number;
   };
   visitors: OpenInspectionVisitor[];
+  /** Session activity (check-ins, apply-link emails, decisions). */
+  timeline?: OpenInspectionTimelineEvent[];
   /** Agent-declared on standalone open inspections (not via new-leasing workflow). */
   tenantMovedOut?: boolean;
   /** Populated when tenantMovedOut is false and the property has a current tenant on file. */

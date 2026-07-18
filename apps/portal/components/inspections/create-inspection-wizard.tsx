@@ -25,6 +25,7 @@ import {
   defaultOpenInspectionSchedule,
   toDatetimeLocalValue,
 } from '@/lib/inspections/outgoing-schedule';
+import { SessionStatusEnum } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import {
   buildAgentContactPrefill,
@@ -126,6 +127,21 @@ async function resolveCreatedOpenInspection(
   propertyId: string,
   openInspectionId?: string,
 ): Promise<Inspection | null> {
+  // Prefer the ViewingSession row — requestAgentOpenInspection also spawns an OPEN
+  // pool Inspection for inspectors; registering that twin duplicates the case list.
+  try {
+    const sessions = await openViewingsApi.list({ propertyId });
+    const latest = [...sessions]
+      .filter((s) => s.sessionStatus !== SessionStatusEnum.CANCELLED)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt ?? b.startTime).getTime() -
+          new Date(a.createdAt ?? a.startTime).getTime(),
+      )[0];
+    if (latest) return mapOpenSessionToInspection(latest, propertyId);
+  } catch {
+    /* fall through */
+  }
   if (openInspectionId) {
     try {
       const record = await inspectionsApi.get(openInspectionId);

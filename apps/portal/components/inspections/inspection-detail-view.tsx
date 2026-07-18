@@ -42,9 +42,10 @@ import {
   inspectionEmailRecordsForStep,
 } from '@/lib/inspection/agent-workflow-email';
 import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
-import { dedupeJobCaseEmails } from '@/lib/job-case-email';
-import { openInspectionJobCaseEmails } from '@/lib/leasing/agent-workflow-email';
-import { openInspectionSessionEmails } from '@/lib/open-inspection/open-inspection-session-email';
+import {
+  linkedOpenLeasingEmails,
+  mergeOpenAndLeasingTimeline,
+} from '@/lib/open-inspection/linked-case-history';
 import {
   isLettingOpenReportVisibleStep,
   isLettingResultsStep,
@@ -139,6 +140,22 @@ export function InspectionDetailView({
   const isOpenViewingSource = base?.type === 'OPEN' && base?.source === 'open_viewing';
   const liveInsp = useInspectionDetailLiveSync(base, apiConnected && !isOpenViewingSource);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
+
+  const leasingDetail = useLeasingWorkflowStore((s) =>
+    base?.propertyId ? s.getDetail(base.propertyId) : undefined,
+  );
+  const ensureLeasingDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
+  const activeLeasingCycle = useMemo(
+    () =>
+      base?.propertyId
+        ? leasingCycles.find((cycle) => cycle.propertyId === base.propertyId)
+        : undefined,
+    [base?.propertyId, leasingCycles],
+  );
+  const linkedLeasingCycleId = openSession?.leasingCycleId ?? activeLeasingCycle?.id;
+
+  const isStandaloneOpenViewing = isOpenViewingSource;
+
   const insp = useMemo(() => {
     const row = liveInsp ?? base;
     if (!row) return row;
@@ -148,64 +165,55 @@ export function InspectionDetailView({
         ...row,
         ...mapped,
         propertyAddress: row.propertyAddress || mapped.propertyAddress,
-        timeline: row.timeline.length > 0 ? row.timeline : mapped.timeline,
+        timeline: mergeOpenAndLeasingTimeline({
+          openSession,
+          leasingDetail,
+          fallback: row.timeline.length > 0 ? row.timeline : mapped.timeline,
+        }),
+      };
+    }
+    if (row.type === 'OPEN' && (openSession || leasingDetail)) {
+      return {
+        ...row,
+        timeline: mergeOpenAndLeasingTimeline({
+          openSession,
+          leasingDetail,
+          fallback: row.timeline,
+        }),
       };
     }
     return row;
-  }, [liveInsp, base, isOpenViewingSource, openSession]);
-
-  const leasingDetail = useLeasingWorkflowStore((s) =>
-    insp?.propertyId ? s.getDetail(insp.propertyId) : undefined,
-  );
-  const ensureLeasingDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
-  const activeLeasingCycle = useMemo(
-    () =>
-      insp?.propertyId
-        ? leasingCycles.find((cycle) => cycle.propertyId === insp.propertyId)
-        : undefined,
-    [insp?.propertyId, leasingCycles],
-  );
-
-  const isStandaloneOpenViewing = isOpenViewingSource;
+  }, [liveInsp, base, isOpenViewingSource, openSession, leasingDetail]);
 
   useEffect(() => {
-    if (!insp || insp.type !== 'OPEN' || !activeLeasingCycle || isStandaloneOpenViewing) return;
+    if (!insp || insp.type !== 'OPEN' || !linkedLeasingCycleId) return;
     ensureLeasingDetail(
       insp.propertyId,
       insp.propertyAddress,
-      activeLeasingCycle.rentPerWeek,
+      activeLeasingCycle?.rentPerWeek,
     );
-  }, [activeLeasingCycle, ensureLeasingDetail, insp, isStandaloneOpenViewing]);
+  }, [
+    activeLeasingCycle?.rentPerWeek,
+    ensureLeasingDetail,
+    insp,
+    linkedLeasingCycleId,
+  ]);
 
   useLeasingCycleLiveSync(
     insp?.propertyId ?? '',
-    activeLeasingCycle?.id,
-    Boolean(insp?.type === 'OPEN' && activeLeasingCycle && !isStandaloneOpenViewing),
+    linkedLeasingCycleId,
+    Boolean(insp?.type === 'OPEN' && linkedLeasingCycleId),
   );
   const stageEmails = useMemo(() => {
     if (!insp) return [];
     if (insp.type === 'OPEN') {
-      if (isStandaloneOpenViewing && openSession) {
-        return openInspectionSessionEmails(openSession);
-      }
-      if (leasingDetail) {
-        const leasingEmails = openInspectionJobCaseEmails(leasingDetail);
-        // Landlord report is tracked on the viewing session — merge so the job
-        // case history shows it as sent by the managing agent.
-        if (openSession) {
-          return dedupeJobCaseEmails([
-            ...leasingEmails,
-            ...openInspectionSessionEmails(openSession),
-          ]);
-        }
-        return leasingEmails;
-      }
-      if (openSession) return openInspectionSessionEmails(openSession);
-      if (activeLeasingCycle) return [];
+      const merged = linkedOpenLeasingEmails({ openSession, leasingDetail });
+      if (merged.length > 0) return merged;
+      if (linkedLeasingCycleId) return [];
       return inspectionEmailRecordsForStep(insp);
     }
     return inspectionEmailRecordsForStep(insp);
-  }, [activeLeasingCycle, insp, isStandaloneOpenViewing, leasingDetail, openSession]);
+  }, [insp, linkedLeasingCycleId, leasingDetail, openSession]);
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);

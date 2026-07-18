@@ -4,11 +4,15 @@ import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 export function openInspectionSessionSyncKey(session: OpenInspectionSession): string {
   return JSON.stringify({
     id: session.id,
+    leasingCycleId: session.leasingCycleId,
     startTime: session.startTime,
     endTime: session.endTime,
     sessionStatus: session.sessionStatus,
     openReportGenerated: session.openReportGenerated,
     reviewCompletedAt: session.reviewCompletedAt,
+    landlordReportEmailedAt: session.landlordReportEmailedAt,
+    timelineCount: session.timeline?.length ?? 0,
+    timelineHead: session.timeline?.[0]?.id,
     visitors: session.visitors.map((visitor) => ({
       id: visitor.id,
       attendanceStatus: visitor.attendanceStatus,
@@ -16,7 +20,7 @@ export function openInspectionSessionSyncKey(session: OpenInspectionSession): st
       application: visitor.application
         ? {
             agentDecision: visitor.application.agentDecision,
-            feedbackSentAt: visitor.application.feedbackSentAt,
+            resultsSentAt: visitor.application.resultsSentAt,
             feedback: visitor.application.feedback,
             rejectReason: visitor.application.rejectReason,
           }

@@ -7,8 +7,10 @@ import {
   SESSION_STATUS_LABEL,
   SessionStatusEnum,
   type OpenInspectionSession,
+  type SessionStatus,
 } from '@/constants/open-inspection-ops';
 import type { InspectionRecord } from '@/lib/inspections-types';
+import { workflowEventToTimelineEntry } from '@/lib/open-inspection/linked-case-history';
 import type { Inspection } from '@/lib/types';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
@@ -121,7 +123,7 @@ export function mapOpenSessionToInspection(
     openListingContext,
     tenantMovedOut: session.tenantMovedOut,
     visitorCount: session.visitors?.length ?? 0,
-    timeline: [],
+    timeline: (session.timeline ?? []).map(workflowEventToTimelineEntry),
     source: 'open_viewing',
   };
 }

@@ -79,6 +79,7 @@ import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
 import { enrichPropertyAddresses, resolvePropertyDisplayAddress } from '@/lib/property-address';
 import { fetchAgentInspections } from '@/lib/inspections/fetch';
+import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
@@ -598,11 +599,34 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
             properties,
           )
         : [];
+
+    // New-leasing OPEN creates both a ViewingSession (agent case) and an OPEN
+    // Inspection pool job (inspector task pool). Prefer the session row and hide
+    // the pool twin so Inspection cases don't show two opens for one create.
+    const propertiesWithOpenSessions = new Set(
+      [...portfolioRows, ...liveRows, ...added]
+        .filter(
+          (row) =>
+            row.type === 'OPEN' &&
+            row.source === 'open_viewing' &&
+            !isDeletedInspection(row) &&
+            row.propertyId,
+        )
+        .map((row) => row.propertyId),
+    );
+    const isHiddenOpenPoolTwin = (row: Inspection) =>
+      row.type === 'OPEN' &&
+      row.source !== 'open_viewing' &&
+      Boolean(row.propertyId) &&
+      propertiesWithOpenSessions.has(row.propertyId);
+
     const byId = new Map<string, Inspection>();
     for (const row of portfolioRows) {
+      if (isHiddenOpenPoolTwin(row)) continue;
       byId.set(row.id, row);
     }
     for (const row of liveRows) {
+      if (isHiddenOpenPoolTwin(row)) continue;
       byId.set(row.id, row);
     }
     // Optimistic OPEN rows from create are dropped once live inspections are
@@ -610,6 +634,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     for (const row of added) {
       if (byId.has(row.id)) continue;
       if (apiInspections != null && row.type === 'OPEN') continue;
+      if (isHiddenOpenPoolTwin(row)) continue;
       byId.set(row.id, row);
     }
     return [...byId.values()].sort((a, b) => {

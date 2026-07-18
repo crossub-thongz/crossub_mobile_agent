@@ -30,6 +30,7 @@ import { formatOnboardingAuditActor } from '@/lib/leasing/onboarding-display';
 import type { ReferenceCheckRecommendation } from '@/lib/leasing/reference-check-draft';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { resolveRentReviewAgentEmail } from '@/lib/rent-review/agent-email';
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
@@ -66,6 +67,7 @@ function ChoiceButton({
 export function LeasingReferenceCheckApplicantCard({
   app,
   detail,
+  openSession,
   cycleId,
   propertyId,
   apiConnected,
@@ -75,6 +77,8 @@ export function LeasingReferenceCheckApplicantCard({
 }: {
   app: LeasingApplicationDetail;
   detail: LeasingPropertyDetail;
+  /** Linked open-inspection session — merges apply-link emails + viewing audit. */
+  openSession?: OpenInspectionSession | null;
   cycleId?: string;
   propertyId: string;
   apiConnected: boolean;
@@ -127,13 +131,16 @@ export function LeasingReferenceCheckApplicantCard({
   const stageEmails = useMemo(
     () =>
       enrichLeasingEmailRecords(
-        applicantEmailRecords(detail, app),
+        applicantEmailRecords(detail, app, openSession),
         agentEmail,
         detail.agentInfo.name,
       ),
-    [agentEmail, app, detail],
+    [agentEmail, app, detail, openSession],
   );
-  const auditEntries = useMemo(() => applicantAuditEntries(detail, app), [app, detail]);
+  const auditEntries = useMemo(
+    () => applicantAuditEntries(detail, app, openSession),
+    [app, detail, openSession],
+  );
 
   const saveDraft = async (
     nextNotes: string,
