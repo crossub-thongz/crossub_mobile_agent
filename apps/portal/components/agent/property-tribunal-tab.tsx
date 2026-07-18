@@ -8,6 +8,10 @@ import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-pane
 import { tribunalDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import { tribunalJobRows } from '@/lib/property-job-rows';
+import {
+  isWorkflowCreatedCase,
+  type PropertyWorkflowCreatedResult,
+} from '@/lib/property-workflow-created';
 import type {
   Inspection,
   LeasingCycle,
@@ -62,7 +66,12 @@ export function PropertyTribunalTab({
         tribunalCases={tribunalCases}
         tenantSelections={tenantSelections}
         currentLease={currentLease}
-        onCreated={() => onRefresh?.()}
+        onCreated={async (result?: PropertyWorkflowCreatedResult) => {
+          await onRefresh?.();
+          if (result && isWorkflowCreatedCase(result) && result.kind === 'tribunal') {
+            router.push(tribunalDetail(result.id, fromProperty(propertyId, 'Tribunal')));
+          }
+        }}
         actionsOnly
       />
 

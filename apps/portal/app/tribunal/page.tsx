@@ -3,8 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Gavel, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 
+import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { PageIntro } from '@/components/agent/page-intro';
@@ -25,12 +25,13 @@ export default function TribunalPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlFilter = searchParams.get('filter');
-  const { tribunalCases } = useAgentData();
+  const { tribunalCases, properties, refresh } = useAgentData();
   const [filter, setFilter] = useState(() => {
     if (urlFilter === 'closed') return 'closed';
     if (urlFilter === 'all') return 'all';
     return 'active';
   });
+  const [createOpen, setCreateOpen] = useState(false);
 
   const list = useMemo(() => {
     if (filter === 'all') return tribunalCases;
@@ -45,13 +46,21 @@ export default function TribunalPage() {
         <Button
           type="button"
           className="w-full rounded-xl"
-          onClick={() =>
-            toast.info('Add Tribunal Case — workflow to be confirmed with Leasing team')
-          }
+          onClick={() => setCreateOpen(true)}
         >
           <Plus className="size-4" />
           Add tribunal case
         </Button>
+
+        <CreateTribunalRentChasingDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          properties={properties}
+          onCreated={async (caseId) => {
+            await refresh();
+            router.push(tribunalDetail(caseId));
+          }}
+        />
 
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 

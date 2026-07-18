@@ -1,6 +1,11 @@
+import type { components } from '@crossub-thongz/api-contract';
+
 import { agentFetch } from './agent-client';
 
 export type AgentWorkflowCreateResult = { id: string; openInspectionId?: string };
+
+export type CreateAgentTribunalRentChasingInput =
+  components['schemas']['AgentCreateTribunalRentChasingDto'];
 
 const base = (propertyId: string) =>
   `/agent/properties/${encodeURIComponent(propertyId)}/workflows`;
@@ -225,4 +230,37 @@ export async function cancelAgentIngoingInspection(
       body: JSON.stringify(body),
     },
   );
+}
+
+/** Open a Rent Chasing tribunal case and sync rent/bond/bill fields to the property profile. */
+export async function createAgentTribunalRentChasing(
+  propertyId: string,
+  body: CreateAgentTribunalRentChasingInput,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(`${base(propertyId)}/tribunal/rent-chasing`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export type AgentTribunalRentChasingDetail =
+  components['schemas']['AgentTribunalRentChasingDetailDto'];
+
+export type AgentUpdateTribunalRentChasingInput =
+  components['schemas']['AgentUpdateTribunalRentChasingDto'];
+
+export async function fetchAgentTribunalRentChasingDetail(
+  caseId: string,
+): Promise<AgentTribunalRentChasingDetail> {
+  return agentFetch(`/agent/tribunal/${encodeURIComponent(caseId)}`);
+}
+
+export async function updateAgentTribunalRentChasing(
+  caseId: string,
+  body: AgentUpdateTribunalRentChasingInput,
+): Promise<AgentTribunalRentChasingDetail> {
+  return agentFetch(`/agent/tribunal/${encodeURIComponent(caseId)}/rent-chasing`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
 }

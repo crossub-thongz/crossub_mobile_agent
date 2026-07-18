@@ -4,7 +4,8 @@ export type PropertyWorkflowCreatedCase =
   | { kind: 'leasing'; id: string }
   | { kind: 'rent_review'; id: string }
   | { kind: 'end_leasing'; id: string }
-  | { kind: 'maintenance'; id: string };
+  | { kind: 'maintenance'; id: string }
+  | { kind: 'tribunal'; id: string };
 
 export type PropertyWorkflowCreatedResult =
   | PropertyWorkflowCreatedCase

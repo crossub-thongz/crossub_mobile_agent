@@ -88,10 +88,6 @@ function hasActiveRentReview(ctx: PropertyWorkflowContext): boolean {
   );
 }
 
-function hasTribunalCase(ctx: PropertyWorkflowContext): boolean {
-  return ctx.tribunalCases.some((t) => t.propertyId === ctx.propertyId);
-}
-
 /** Mirror crossub_web Property 360° `tabActionsFor` for the agent property hub. */
 export function tabActionsFor(
   tab: PropertyWorkflowTab,
@@ -160,12 +156,11 @@ export function tabActionsFor(
         },
       ];
     case 'tribunal':
-      if (hasTribunalCase(ctx)) return [];
       return [
         {
           id: 'open_tribunal',
-          label: 'Open tribunal case',
-          description: 'NCAT / tribunal workflow',
+          label: 'Rent Chasing',
+          description: 'Open a Rent Chasing tribunal case for rent, bill, or bond arrears',
           primary: true,
         },
       ];

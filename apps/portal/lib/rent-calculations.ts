@@ -14,6 +14,14 @@ export function weeklyRentFromAmount(amount: number, period: RentPeriodChoice): 
   return (amount * 12) / 52;
 }
 
+/** Convert stored weekly rent into the selected payment-cycle display amount. */
+export function amountFromWeekly(weekly: number, period: RentPeriodChoice): number {
+  if (!weekly || weekly <= 0 || !period) return 0;
+  if (period === 'weekly') return weekly;
+  if (period === 'fortnightly') return Math.round(weekly * 2 * 100) / 100;
+  return Math.round(((weekly * 52) / 12) * 100) / 100;
+}
+
 export function bondFromWeekly(weekly: number): number {
   if (!weekly || weekly <= 0) return 0;
   return Math.round(weekly * LEASING_CYCLE_BOND_RENT_MULTIPLIER);

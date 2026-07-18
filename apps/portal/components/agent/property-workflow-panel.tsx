@@ -5,6 +5,7 @@ import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
+import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -153,6 +154,7 @@ export function PropertyWorkflowPanel({
 
   const actions = tabActionsFor(tab, ctx);
   const [activeAction, setActiveAction] = useState<PropertyWorkflowActionId | null>(null);
+  const { properties } = useAgentData();
 
   if (actions.length === 0) return null;
 
@@ -164,7 +166,7 @@ export function PropertyWorkflowPanel({
         ? 'Log a maintenance job for this property.'
         : tab === 'inspection'
           ? 'Schedule open, ingoing, outgoing, or routine inspections for this property.'
-          : 'Open a tribunal case when escalated from maintenance or rent review.');
+          : 'Open a Rent Chasing tribunal case for rent, bill, or bond arrears.');
 
   return (
     <>
@@ -176,12 +178,6 @@ export function PropertyWorkflowPanel({
               action={action}
               onClick={() => {
                 if (action.disabled) return;
-                if (action.id === 'open_tribunal') {
-                  toast.info(
-                    'New tribunal cases are opened from Maintenance or Rent Review triggers.',
-                  );
-                  return;
-                }
                 setActiveAction(action.id);
               }}
             />
@@ -200,12 +196,6 @@ export function PropertyWorkflowPanel({
                 action={action}
                 onClick={() => {
                   if (action.disabled) return;
-                  if (action.id === 'open_tribunal') {
-                    toast.info(
-                      'New tribunal cases are opened from Maintenance or Rent Review triggers.',
-                    );
-                    return;
-                  }
                   setActiveAction(action.id);
                 }}
               />
@@ -229,6 +219,19 @@ export function PropertyWorkflowPanel({
         onSuccess={(result) => {
           setActiveAction(null);
           onCreated?.(result);
+        }}
+      />
+
+      <CreateTribunalRentChasingDialog
+        open={activeAction === 'open_tribunal'}
+        onOpenChange={(open) => {
+          if (!open) setActiveAction(null);
+        }}
+        propertyId={propertyId}
+        properties={properties}
+        onCreated={(caseId) => {
+          setActiveAction(null);
+          onCreated?.({ kind: 'tribunal', id: caseId });
         }}
       />
     </>
@@ -520,7 +523,7 @@ export function PropertyWorkflowCreateDialog({
     schedule_ingoing_inspection: 'Schedule ingoing inspection',
     schedule_outgoing_inspection: 'Schedule outgoing inspection',
     schedule_routine_inspection: 'Schedule routine inspection',
-    open_tribunal: 'Open tribunal case',
+    open_tribunal: 'Rent Chasing',
   };
 
   const inspectionCreateType =
