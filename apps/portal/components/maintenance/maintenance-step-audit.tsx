@@ -35,7 +35,7 @@ export function MaintenanceStepAudit({
   entries,
   title = 'Audit',
   emptyLabel = 'No audit events for this step yet.',
-  defaultOpen = true,
+  defaultOpen = false,
 }: {
   entries: MaintenanceStepAuditEntry[];
   title?: string;

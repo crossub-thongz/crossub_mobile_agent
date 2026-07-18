@@ -105,6 +105,13 @@ export function MaintenanceRepairQuotationPanel({
             </dl>
           </div>
 
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold text-muted-foreground">Available schedule</p>
+          <p className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
+            {quote.availableSchedule?.trim() || '—'}
+          </p>
+        </div>
+
         <div className="min-w-0">
           <p className="mb-2 text-sm font-semibold text-[#5f9f6b]">Comments</p>
           <Textarea

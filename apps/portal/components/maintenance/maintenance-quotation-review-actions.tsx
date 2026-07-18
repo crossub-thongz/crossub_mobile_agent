@@ -72,7 +72,10 @@ export function MaintenanceQuotationReviewActions({
 
   const isBusy = busy || acting;
   const canAct = canReview && quote.status === 'submitted';
-  const decision = review?.decision;
+  // After approve, the board may expose an `approved` quote row before review.decision
+  // rehydrates — still treat that as approved so Send to landlord remains available.
+  const decision =
+    review?.decision ?? (quote.status === 'approved' ? 'approved' : undefined);
   const landlordSent = Boolean(review?.landlordEmailSentAt);
   const feedbackSent = Boolean(review?.contractorFeedbackSentAt);
   const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, quote);

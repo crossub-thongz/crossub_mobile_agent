@@ -34,6 +34,7 @@ import {
   REQUOTED_STATUS_CLASS,
 } from '@/lib/maintenance/quotation-review-state';
 import {
+  contractorIdsMatch,
   latestSubmittedQuoteForContractor,
   resolveContractorDisplayName,
 } from '@/lib/maintenance/resolve-contractor-display';
@@ -47,7 +48,7 @@ function reviewForContractor(
 ) {
   return reviews?.find(
     (r) =>
-      r.contractorId === contractorId ||
+      contractorIdsMatch(r.contractorId, contractorId) ||
       (quotationId != null && r.quotationId === quotationId),
   );
 }
