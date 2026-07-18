@@ -9,7 +9,9 @@ import {
   FileText,
   Loader2,
   Pencil,
+  Plus,
   Receipt,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,6 +37,31 @@ import {
 
 type ArrearRow = AgentTribunalRentChasingDetail['arrears'][number];
 type ArrearKind = ArrearRow['kind'];
+
+type DraftBill = {
+  id: string;
+  name: string;
+  amount: string;
+  dueDate: string;
+};
+
+function newDraftBill(): DraftBill {
+  return {
+    id: `bill-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: '',
+    amount: '',
+    dueDate: '',
+  };
+}
+
+function draftsFromBillRows(rows: ArrearRow[]): DraftBill[] {
+  return rows.map((row, index) => ({
+    id: `existing-${index}-${row.name}`,
+    name: row.name,
+    amount: row.amount != null ? String(row.amount) : '',
+    dueDate: row.dueDate?.slice(0, 10) ?? '',
+  }));
+}
 
 function cycleLabel(cycle: string | null | undefined): string {
   if (cycle === 'fortnightly') return 'Fortnightly';
@@ -106,8 +133,7 @@ function ArrearsSection({
   dateLabel,
   dateValue,
   onSaveDate,
-  billDates,
-  onSaveBillDates,
+  onSaveBills,
 }: {
   kind: ArrearKind;
   title: string;
@@ -117,24 +143,27 @@ function ArrearsSection({
   dateLabel: string;
   dateValue: string;
   onSaveDate?: (date: string) => Promise<void>;
-  billDates?: string[];
-  onSaveBillDates?: (dates: string[]) => Promise<void>;
+  onSaveBills?: (bills: DraftBill[]) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftDate, setDraftDate] = useState(dateValue);
-  const [draftBillDates, setDraftBillDates] = useState<string[]>(billDates ?? []);
+  const [draftBills, setDraftBills] = useState<DraftBill[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!editing) {
       setDraftDate(dateValue);
-      setDraftBillDates(billDates ?? []);
+      setDraftBills(draftsFromBillRows(rows));
     }
-  }, [dateValue, billDates, editing]);
+  }, [dateValue, rows, editing]);
 
   const startEdit = () => {
     setDraftDate(dateValue);
-    setDraftBillDates(billDates ?? rows.map((r) => r.dueDate?.slice(0, 10) ?? ''));
+    setDraftBills(
+      kind === 'bill' && rows.length === 0
+        ? [newDraftBill()]
+        : draftsFromBillRows(rows),
+    );
     setEditing(true);
   };
 
@@ -142,13 +171,20 @@ function ArrearsSection({
     setSaving(true);
     try {
       if (kind === 'bill') {
-        await onSaveBillDates?.(draftBillDates);
+        const incomplete = draftBills.some(
+          (b) => !b.name.trim() && (b.amount.trim() || b.dueDate.trim()),
+        );
+        if (incomplete) {
+          toast.error('Enter a bill name for each bill with an amount or due date');
+          return;
+        }
+        await onSaveBills?.(draftBills);
       } else {
         await onSaveDate?.(draftDate);
       }
       setEditing(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update date');
+      toast.error(err instanceof Error ? err.message : 'Could not update arrears');
     } finally {
       setSaving(false);
     }
@@ -187,31 +223,91 @@ function ArrearsSection({
       {editing ? (
         <div className="space-y-3 border-b px-3 py-3">
           {kind === 'bill' ? (
-            rows.length === 0 ? (
-              <p className="text-muted-foreground text-xs">
-                Add bills when creating the case to set due dates here.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {rows.map((row, index) => (
-                  <div key={`bill-date-${index}`} className="space-y-1">
-                    <Label className="text-xs">{row.name} — due date</Label>
+            <div className="space-y-3">
+              {draftBills.map((bill) => (
+                <div
+                  key={bill.id}
+                  className="space-y-2 rounded-lg border bg-muted/20 p-2.5"
+                >
+                  <div className="space-y-1">
+                    <Label className="text-xs">Bill name</Label>
+                    <Input
+                      value={bill.name}
+                      onChange={(e) =>
+                        setDraftBills((prev) =>
+                          prev.map((b) =>
+                            b.id === bill.id ? { ...b, name: e.target.value } : b,
+                          ),
+                        )
+                      }
+                      placeholder="e.g. Water rates"
+                      disabled={saving}
+                    />
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Amount</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={bill.amount}
+                        onChange={(e) =>
+                          setDraftBills((prev) =>
+                            prev.map((b) =>
+                              b.id === bill.id ? { ...b, amount: e.target.value } : b,
+                            ),
+                          )
+                        }
+                        placeholder="0.00"
+                        disabled={saving}
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        className="size-9 shrink-0"
+                        onClick={() =>
+                          setDraftBills((prev) => prev.filter((b) => b.id !== bill.id))
+                        }
+                        disabled={saving}
+                        aria-label="Remove bill"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Due date</Label>
                     <Input
                       type="date"
-                      value={draftBillDates[index] ?? ''}
+                      value={bill.dueDate}
                       onChange={(e) =>
-                        setDraftBillDates((prev) => {
-                          const next = [...prev];
-                          next[index] = e.target.value;
-                          return next;
-                        })
+                        setDraftBills((prev) =>
+                          prev.map((b) =>
+                            b.id === bill.id ? { ...b, dueDate: e.target.value } : b,
+                          ),
+                        )
                       }
                       disabled={saving}
                     />
                   </div>
-                ))}
-              </div>
-            )
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setDraftBills((prev) => [...prev, newDraftBill()])}
+                disabled={saving}
+              >
+                <Plus className="size-3.5" />
+                Add bill
+              </Button>
+            </div>
           ) : (
             <div className="space-y-1.5">
               <Label className="text-xs">{dateLabel}</Label>
@@ -243,7 +339,7 @@ function ArrearsSection({
             <Button
               type="button"
               size="sm"
-              disabled={saving || (kind === 'bill' && rows.length === 0)}
+              disabled={saving}
               onClick={() => void save()}
             >
               {saving ? (
@@ -394,18 +490,30 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
     toast.success('Agreement end updated');
   };
 
-  const saveBillDueDates = async (dates: string[]) => {
-    const bills = arrearsByKind.bill;
+  const saveBills = async (bills: DraftBill[]) => {
+    const payload = bills
+      .map((bill) => {
+        const name = bill.name.trim();
+        if (!name) return null;
+        const amountRaw = bill.amount.trim();
+        const amount = amountRaw === '' ? undefined : Number(amountRaw);
+        if (amount != null && (!Number.isFinite(amount) || amount < 0)) {
+          throw new Error(`Enter a valid amount for “${name}”`);
+        }
+        return {
+          billType: name,
+          billName: name,
+          dueDate: bill.dueDate.trim() || undefined,
+          amount,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row != null);
+
     const next = await updateAgentTribunalRentChasing(caseId, {
-      billArrears: bills.map((row, index) => ({
-        billType: row.name,
-        billName: row.name,
-        dueDate: dates[index]?.trim() || undefined,
-        amount: row.amount ?? undefined,
-      })),
+      billArrears: payload,
     });
     setDetail(next);
-    toast.success('Bill due dates updated');
+    toast.success(payload.length > 0 ? 'Bill arrears updated' : 'Bill arrears cleared');
   };
 
   if (loading && !detail) {
@@ -610,8 +718,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
           rows={arrearsByKind.bill}
           dateLabel="Due date"
           dateValue=""
-          billDates={arrearsByKind.bill.map((r) => r.dueDate?.slice(0, 10) ?? '')}
-          onSaveBillDates={saveBillDueDates}
+          onSaveBills={saveBills}
         />
         <ArrearsSection
           kind="bond"
@@ -624,7 +731,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
           onSaveDate={saveAgreementEnd}
         />
       </div>
-
+{/* 
       {detail.evictionRequired ? (
         <section className="rounded-xl border bg-card p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -697,7 +804,7 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             </div>
           </dl>
         </section>
-      ) : null}
+      ) : null} */}
 
       <section className="rounded-xl border bg-card p-4">
         <div className="mb-3 flex items-center justify-between gap-2">

@@ -113,8 +113,9 @@ export function OutgoingFieldInspectionDetail({
   inspection: Inspection;
   apiConnected: boolean;
 }) {
-  const { vacating } = useAgentData();
+  const { vacating, properties } = useAgentData();
   const linkedVacating = vacating.find((v) => v.propertyId === inspection.propertyId);
+  const property = properties.find((p) => p.id === inspection.propertyId);
 
   const [snapshot, setSnapshot] = useState<OutgoingSnapshot>({
     record: null,
@@ -177,6 +178,32 @@ export function OutgoingFieldInspectionDetail({
           ? terminationCase.id
           : (terminationCase?.id ?? linkedVacating?.id ?? null);
 
+      // Inspection tenantSnapshot is often empty for outgoing jobs spawned from
+      // end-leasing — fall back to the termination case / property profile.
+      const propertyTenantName =
+        property?.tenantName && property.tenantName !== '—'
+          ? property.tenantName.trim()
+          : '';
+      const caseTenantName =
+        terminationCase?.tenant?.name && terminationCase.tenant.name !== '—'
+          ? terminationCase.tenant.name.trim()
+          : '';
+      const tenantName =
+        record?.tenantName?.trim() ||
+        caseTenantName ||
+        propertyTenantName ||
+        null;
+      const tenantEmail =
+        record?.tenantEmail?.trim() ||
+        terminationCase?.tenant?.email?.trim() ||
+        property?.tenantContact?.email?.trim() ||
+        null;
+      const tenantPhone =
+        record?.tenantPhone?.trim() ||
+        terminationCase?.tenant?.phone?.trim() ||
+        property?.tenantContact?.phone?.trim() ||
+        null;
+
       setSnapshot({
         record,
         progression,
@@ -186,9 +213,9 @@ export function OutgoingFieldInspectionDetail({
         hasFindings,
         tenantAttendance: terminationCase?.inspection.tenantAttendance ?? 'pending',
         terminationCaseId,
-        tenantName: record?.tenantName?.trim() || null,
-        tenantEmail: record?.tenantEmail?.trim() || null,
-        tenantPhone: record?.tenantPhone?.trim() || null,
+        tenantName,
+        tenantEmail,
+        tenantPhone,
       });
       setError(null);
     } catch (err) {
@@ -196,7 +223,15 @@ export function OutgoingFieldInspectionDetail({
     } finally {
       setLoading(false);
     }
-  }, [apiConnected, inspection.id, inspection.reportUrl, linkedVacating?.id]);
+  }, [
+    apiConnected,
+    inspection.id,
+    inspection.reportUrl,
+    linkedVacating?.id,
+    property?.tenantName,
+    property?.tenantContact?.email,
+    property?.tenantContact?.phone,
+  ]);
 
   useEffect(() => {
     void refresh();
