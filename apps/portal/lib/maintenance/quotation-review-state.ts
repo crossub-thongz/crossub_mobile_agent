@@ -26,6 +26,7 @@ export function getContractorQuotationHistory<T extends QuotationHistoryRow>(
   const current =
     (currentQuoteId ? matches.find((quote) => quote.id === currentQuoteId) : undefined) ??
     matches.find((quote) => quote.status === 'submitted') ??
+    matches.find((quote) => quote.status === 'approved') ??
     matches[0];
 
   const previous = current ? matches.filter((quote) => quote.id !== current.id) : matches.slice(1);

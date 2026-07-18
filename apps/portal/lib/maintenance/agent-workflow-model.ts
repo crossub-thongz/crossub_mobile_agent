@@ -748,29 +748,48 @@ function parseQuotationWorkflowEmailFromAudit(
   ctx: MaintenanceWorkflowContext,
 ): MaintenanceEmailRecord | null {
   const msg = entry.message;
-  const patterns = [
-    /^Landlord quotation email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
-    /^Contractor feedback email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
-    /^Counter offer sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+  const patterns: Array<{
+    pattern: RegExp;
+    kind: string;
+    to: (ctx: MaintenanceWorkflowContext) => string;
+    from?: (ctx: MaintenanceWorkflowContext) => { from: string; fromEmail?: string };
+  }> = [
+    {
+      pattern: /^Landlord quotation email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'landlord_quotation',
+      to: () => 'Landlord',
+    },
+    {
+      pattern: /^Contractor feedback email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'contractor_feedback',
+      to: () => 'Contractor',
+    },
+    {
+      pattern: /^Counter offer sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'counter_offer',
+      to: () => 'Contractor',
+    },
+    {
+      pattern: /^Revised quotation email sent\s*\(([^)]+)\)\.\s*\n\n([\s\S]+)$/i,
+      kind: 'requote',
+      to: (c) => c.workspaceCase.agent?.email ?? 'Managing agent',
+      from: (c) => ({
+        from: c.item.contractorName ?? 'Contractor',
+      }),
+    },
   ];
-  for (const pattern of patterns) {
+  for (const { pattern, kind, to, from } of patterns) {
     const match = msg.match(pattern);
     if (!match) continue;
     const subject = match[1]?.trim() ?? 'Maintenance quotation';
     const body = match[2]?.trim() ?? '';
     if (!body) return null;
-    const kind =
-      /landlord quotation/i.test(msg)
-        ? 'landlord_quotation'
-        : /contractor feedback/i.test(msg)
-          ? 'contractor_feedback'
-          : 'counter_offer';
     return {
       id: entry.id,
       subject,
       body,
-      ...maintenanceAgentSender(ctx.workspaceCase),
-      to: kind === 'landlord_quotation' ? 'Landlord' : 'Contractor',
+      ...(from?.(ctx) ?? maintenanceAgentSender(ctx.workspaceCase)),
+      to: to(ctx),
       at: entry.timestamp,
       kind,
     };
@@ -785,19 +804,35 @@ export function buildQuotationWorkflowEmails(
 
   for (const n of ctx.workspaceCase.notifications) {
     if (n.channel !== 'email') continue;
-    if (/counter offer/i.test(`${n.title} ${n.message}`)) continue;
     if (
-      /landlord|quotation feedback|repair quotation/i.test(
+      /landlord|quotation feedback|repair quotation|counter offer|revised quotation|requote/i.test(
         `${n.title} ${n.message}`,
       )
     ) {
-      byId.set(n.id, mapEmailNotification(n, ctx.workspaceCase, 'quotation_submitted'));
+      const kind = /counter offer/i.test(`${n.title} ${n.message}`)
+        ? 'counter_offer'
+        : /revised quotation|requote/i.test(`${n.title} ${n.message}`)
+          ? 'requote'
+          : 'quotation_submitted';
+      const to =
+        kind === 'counter_offer'
+          ? ctx.item.contractorName ?? 'Contractor'
+          : kind === 'requote'
+            ? ctx.workspaceCase.agent?.email ?? 'Managing agent'
+            : /landlord/i.test(`${n.title} ${n.message}`)
+              ? 'Landlord'
+              : undefined;
+      const mapped = mapEmailNotification(n, ctx.workspaceCase, kind, to);
+      if (kind === 'requote') {
+        mapped.from = ctx.item.contractorName ?? 'Contractor';
+      }
+      byId.set(n.id, mapped);
     }
   }
 
   for (const entry of ctx.workspaceCase.auditEntries) {
     const parsed = parseQuotationWorkflowEmailFromAudit(entry, ctx);
-    if (parsed && parsed.kind !== 'counter_offer') byId.set(parsed.id, parsed);
+    if (parsed) byId.set(parsed.id, parsed);
   }
 
   const quote = buildQuoteSentToAgentEmail(ctx);

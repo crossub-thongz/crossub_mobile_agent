@@ -43,12 +43,18 @@ export function latestSubmittedQuoteForContractor(
   requestId: string,
   contractorId: string,
 ): ApiQuotation | undefined {
-  return quotations
+  const matches = quotations
     .filter(
       (quote) =>
         quote.maintenanceRequestId === requestId &&
-        contractorIdsMatch(quote.contractorId, contractorId) &&
-        quote.status === 'submitted',
+        contractorIdsMatch(quote.contractorId, contractorId),
     )
-    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  // Prefer live submitted quotes; fall back to approved so post-approve
+  // "Send quotation to landlord" still has a quote row to bind to.
+  return (
+    matches.find((quote) => quote.status === 'submitted') ??
+    matches.find((quote) => quote.status === 'approved') ??
+    matches[0]
+  );
 }

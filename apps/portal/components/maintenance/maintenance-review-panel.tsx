@@ -20,7 +20,8 @@ import { resolveInvitedContractorIds, resolveMaintenanceResponsibility } from '@
 import type { MaintenanceWorkflowResponsibility } from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { Property } from '@/lib/types';
-import { cn, formatDateTime } from '@/lib/utils';
+import { MaintenanceStepAudit } from '@/components/maintenance/maintenance-step-audit';
+import { cn } from '@/lib/utils';
 
 const RESPONSIBILITY_OPTIONS: {
   value: MaintenanceWorkflowResponsibility;
@@ -288,23 +289,11 @@ export function MaintenanceReviewPanel({
         </section>
       ) : null}
 
-      {audit.length > 0 ? (
-        <div className="rounded-xl border bg-card p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-            Review events
-          </p>
-          <ol className="space-y-2">
-            {audit.map((entry) => (
-              <li key={entry.id} className="text-xs">
-                <p className="font-medium">{entry.message}</p>
-                <p className="text-muted-foreground mt-0.5">
-                  {formatDateTime(entry.timestamp)} · {entry.actor}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
+      <MaintenanceStepAudit
+        entries={audit}
+        title="Audit"
+        emptyLabel="No review audit events yet. Responsibility and evidence actions will appear here."
+      />
     </div>
   );
 }

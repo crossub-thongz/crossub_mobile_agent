@@ -16,22 +16,28 @@ function CounterOfferHistory({
 }) {
   if (offers.length === 0) return null;
 
+  const sorted = [...offers].sort(
+    (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
+  );
+
   return (
-    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-        Counter offer history
-      </p>
-      <ul className="mt-2 space-y-2">
-        {offers.map((offer) => (
-          <li key={offer.id} className="text-xs">
+    <div className="rounded-xl border bg-card">
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <span className="text-sm font-medium">Audit</span>
+        <span className="text-muted-foreground text-[11px]">
+          {sorted.length} event{sorted.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <ul className="divide-y border-t px-4 py-1">
+        {sorted.map((offer) => (
+          <li key={offer.id} className="py-2.5 text-xs">
             <p className="font-medium tabular-nums">
-              {formatCurrency(offer.counterPrice)} ·{' '}
-              {new Date(offer.sentAt).toLocaleString('en-AU')}
-              {offer.sentBy ? ` · ${offer.sentBy}` : ''}
+              Counter offer {formatCurrency(offer.counterPrice)}
+              {offer.message ? ` — ${offer.message}` : ''}
             </p>
-            {offer.message ? (
-              <p className="text-muted-foreground mt-0.5 whitespace-pre-wrap">{offer.message}</p>
-            ) : null}
+            <p className="text-muted-foreground mt-0.5">
+              {offer.sentBy ?? 'agent'} · {new Date(offer.sentAt).toLocaleString('en-AU')}
+            </p>
           </li>
         ))}
       </ul>

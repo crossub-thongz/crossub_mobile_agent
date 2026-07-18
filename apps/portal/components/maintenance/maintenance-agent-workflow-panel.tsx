@@ -134,10 +134,7 @@ export function MaintenanceAgentWorkflowPanel({
   const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
   const isLiveStep = viewingStepId === workflow.liveStepId;
   const stageEmails = useMemo(
-    () =>
-      maintenanceEmailRecordsForStep(ctx, viewingStepId).filter(
-        (record) => record.kind !== 'counter_offer',
-      ),
+    () => maintenanceEmailRecordsForStep(ctx, viewingStepId),
     [ctx, viewingStepId],
   );
 

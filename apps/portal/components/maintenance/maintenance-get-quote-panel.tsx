@@ -11,7 +11,6 @@ import {
   auditEntriesForStep,
   getMaintenanceQuotationsForCase,
   MAINTENANCE_AGENT_STEP,
-  maintenanceEmailRecordsForStep,
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
@@ -42,7 +41,7 @@ import {
 } from '@/lib/maintenance/resolve-contractor-display';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
-import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
+import { MaintenanceStepAudit } from '@/components/maintenance/maintenance-step-audit';
 
 function reviewForContractor(
   reviews: QuotationReviewRecord[] | undefined,
@@ -271,9 +270,6 @@ export function MaintenanceGetQuotePanel({
   const invitedIds = resolveInvitedContractorIds(ctx);
   const landlordFlow = requiresContractorFlow(ctx);
   const audit = auditEntriesForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE);
-  const emailRecords = maintenanceEmailRecordsForStep(ctx, MAINTENANCE_AGENT_STEP.GET_QUOTE).filter(
-    (record) => record.kind !== 'counter_offer',
-  );
   const canReview = apiConnected;
 
   useEffect(() => {
@@ -370,27 +366,11 @@ export function MaintenanceGetQuotePanel({
         )}
       </section>
 
-      {/* {emailRecords.length > 0 ? (
-        <JobCaseStageEmailHistory emails={emailRecords} title="Email / message history" />
-      ) : null} */}
-
-      {audit.length > 0 ? (
-        <div className="rounded-xl border bg-card p-3">
-          <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-            Quote events
-          </p>
-          <ol className="space-y-2">
-            {audit.map((entry) => (
-              <li key={entry.id} className="text-xs">
-                <p className="font-medium">{entry.message}</p>
-                <p className="text-muted-foreground mt-0.5">
-                  {formatDateTime(entry.timestamp)} · {entry.actor}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
+      <MaintenanceStepAudit
+        entries={audit}
+        title="Audit"
+        emptyLabel="No quote audit events yet. Submissions, requotes, and approvals will appear here."
+      />
     </div>
   );
 }
