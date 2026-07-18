@@ -60,6 +60,17 @@ export function daysSinceDate(isoDate: string | null | undefined): number | null
   return Math.max(0, Math.floor(diffMs / 86_400_000));
 }
 
+/** Bond vacate days — null when agreement end is still in the future. */
+export function daysSinceVacate(isoDate: string | null | undefined): number | null {
+  if (!isoDate?.trim()) return null;
+  const key = isoDate.trim().slice(0, 10);
+  const end = new Date(`${key}T00:00:00`);
+  if (Number.isNaN(end.getTime())) return null;
+  const todayStart = new Date(`${localDateKey()}T00:00:00`);
+  if (end.getTime() > todayStart.getTime()) return null;
+  return Math.floor((todayStart.getTime() - end.getTime()) / 86_400_000);
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-AU', {
     day: 'numeric',

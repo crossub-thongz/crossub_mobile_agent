@@ -144,7 +144,7 @@ export function CreateTribunalRentChasingDialog({
   const [paymentCycle, setPaymentCycle] = useState<RentPeriodChoice>('weekly');
   const [rentPaidTo, setRentPaidTo] = useState('');
   const [bills, setBills] = useState<BillRow[]>([]);
-  const [leaseStartDate, setLeaseStartDate] = useState('');
+  const [agreementEndDate, setAgreementEndDate] = useState('');
   const [bondAmount, setBondAmount] = useState('');
   const [bondNotes, setBondNotes] = useState('');
 
@@ -173,7 +173,7 @@ export function CreateTribunalRentChasingDialog({
         setPaymentCycle('weekly');
         setRentPaidTo('');
         setBills([]);
-        setLeaseStartDate('');
+        setAgreementEndDate('');
         setBondAmount('');
         setBondNotes('');
       }
@@ -218,8 +218,15 @@ export function CreateTribunalRentChasingDialog({
           weekly != null && weekly > 0 ? String(amountFromWeekly(weekly, cycle)) : '',
         );
         setRentPaidTo(paidTo ?? '');
-        setLeaseStartDate(
-          (agentProperty?.leaseStart ?? record?.leaseStartDate ?? '').toString().slice(0, 10),
+        setAgreementEndDate(
+          (
+            agentProperty?.leaseEnd ??
+            record?.leaseEndDate ??
+            listed?.leaseEnd ??
+            ''
+          )
+            .toString()
+            .slice(0, 10),
         );
         const bond =
           agentProperty?.bondAmount ??
@@ -269,7 +276,7 @@ export function CreateTribunalRentChasingDialog({
     const hasBills = billRows.length > 0;
     const hasBond =
       (bondValue != null && Number.isFinite(bondValue)) ||
-      Boolean(leaseStartDate.trim()) ||
+      Boolean(agreementEndDate.trim()) ||
       Boolean(bondNotes.trim());
 
     if (!hasRent && !hasBills && !hasBond) {
@@ -301,7 +308,7 @@ export function CreateTribunalRentChasingDialog({
     if (hasBills) body.billArrears = billRows;
     if (hasBond) {
       body.bondArrears = {
-        leaseStartDate: leaseStartDate.trim() || undefined,
+        agreementEndDate: agreementEndDate.trim() || undefined,
         bondAmount: bondValue,
         notes: bondNotes.trim() || undefined,
       };
@@ -529,14 +536,14 @@ export function CreateTribunalRentChasingDialog({
 
               <Section
                 title="Bond Arrears"
-                description="Lease start and bond sync to the property profile. Notes stay on the case."
+                description="Agreement end drives days overdue once the tenant has vacated. Bond syncs to the property profile."
               >
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Lease agreement start date">
+                  <Field label="Agreement end date">
                     <Input
                       type="date"
-                      value={leaseStartDate}
-                      onChange={(e) => setLeaseStartDate(e.target.value)}
+                      value={agreementEndDate}
+                      onChange={(e) => setAgreementEndDate(e.target.value)}
                       disabled={saving || !propertyId}
                     />
                   </Field>

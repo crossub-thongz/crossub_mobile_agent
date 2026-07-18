@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   FileText,
   Loader2,
+  Pencil,
   Receipt,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,36 +23,16 @@ import {
   updateAgentTribunalRentChasing,
   type AgentTribunalRentChasingDetail,
 } from '@/lib/crossub-api/agent-workflow-client';
-import { cn, daysSinceDate, formatCurrency, formatDate } from '@/lib/utils';
+import {
+  cn,
+  daysSinceDate,
+  daysSinceVacate,
+  formatCurrency,
+  formatDate,
+} from '@/lib/utils';
 
 type ArrearRow = AgentTribunalRentChasingDetail['arrears'][number];
 type ArrearKind = ArrearRow['kind'];
-
-const ARREARS_SECTIONS: {
-  kind: ArrearKind;
-  title: string;
-  empty: string;
-  icon: typeof CircleDollarSign;
-}[] = [
-  {
-    kind: 'rent',
-    title: 'Rent Arrears',
-    empty: 'No rent arrears recorded on this case.',
-    icon: CircleDollarSign,
-  },
-  {
-    kind: 'bill',
-    title: 'Bill Arrears',
-    empty: 'No bill arrears recorded on this case.',
-    icon: Receipt,
-  },
-  {
-    kind: 'bond',
-    title: 'Bond Arrears',
-    empty: 'No bond arrears recorded on this case.',
-    icon: FileText,
-  },
-];
 
 function cycleLabel(cycle: string | null | undefined): string {
   if (cycle === 'fortnightly') return 'Fortnightly';
@@ -61,24 +42,23 @@ function cycleLabel(cycle: string | null | undefined): string {
 }
 
 function DaysSince({
+  kind,
   dueDate,
   fallbackDays,
-  createdAt,
 }: {
+  kind: ArrearKind;
   dueDate?: string | null;
   fallbackDays?: number | null;
-  createdAt?: string | null;
 }) {
-  const days =
-    daysSinceDate(dueDate) ??
-    fallbackDays ??
-    daysSinceDate(createdAt?.slice(0, 10)) ??
-    null;
+  // Rent / bill: paid-to or due date → today.
+  // Bond: agreement end → today, only once the tenant has vacated.
+  // Never fall back to case created-at.
+  const fromDate =
+    kind === 'bond' ? daysSinceVacate(dueDate) : daysSinceDate(dueDate);
+  const days = fromDate ?? fallbackDays ?? null;
   if (days == null) {
     return <span className="text-muted-foreground">—</span>;
   }
-
-  const anchor = dueDate || createdAt?.slice(0, 10) || null;
 
   return (
     <span
@@ -87,7 +67,7 @@ function DaysSince({
         days > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground',
       )}
       title={
-        anchor ? `Days from ${formatDate(anchor)} through today` : undefined
+        dueDate ? `Days from ${formatDate(dueDate)} through today` : undefined
       }
     >
       <CalendarDays className="size-3.5 shrink-0" aria-hidden />
@@ -97,43 +77,175 @@ function DaysSince({
 }
 
 function ArrearsSection({
+  kind,
   title,
   empty,
   icon: Icon,
   rows,
-  createdAt,
+  dateLabel,
+  dateValue,
+  onSaveDate,
+  billDates,
+  onSaveBillDates,
 }: {
+  kind: ArrearKind;
   title: string;
   empty: string;
   icon: typeof CircleDollarSign;
   rows: ArrearRow[];
-  createdAt?: string | null;
+  dateLabel: string;
+  dateValue: string;
+  onSaveDate?: (date: string) => Promise<void>;
+  billDates?: string[];
+  onSaveBillDates?: (dates: string[]) => Promise<void>;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draftDate, setDraftDate] = useState(dateValue);
+  const [draftBillDates, setDraftBillDates] = useState<string[]>(billDates ?? []);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setDraftDate(dateValue);
+      setDraftBillDates(billDates ?? []);
+    }
+  }, [dateValue, billDates, editing]);
+
+  const startEdit = () => {
+    setDraftDate(dateValue);
+    setDraftBillDates(billDates ?? rows.map((r) => r.dueDate?.slice(0, 10) ?? ''));
+    setEditing(true);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      if (kind === 'bill') {
+        await onSaveBillDates?.(draftBillDates);
+      } else {
+        await onSaveDate?.(draftDate);
+      }
+      setEditing(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update date');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-xl border bg-card shadow-sm">
       <div className="border-b px-3 py-3">
-        <div className="flex items-start gap-2">
-          <Icon className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight">{title}</p>
-            <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
-              {rows.length > 0
-                ? `${rows.length} item${rows.length === 1 ? '' : 's'}`
-                : 'No items'}
-            </p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <Icon className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold leading-tight">{title}</p>
+              <p className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
+                {rows.length > 0
+                  ? `${rows.length} item${rows.length === 1 ? '' : 's'}`
+                  : 'No items'}
+              </p>
+            </div>
           </div>
+          {!editing ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 gap-1 px-2 text-xs"
+              onClick={startEdit}
+            >
+              <Pencil className="size-3" />
+              Edit
+            </Button>
+          ) : null}
         </div>
       </div>
+
+      {editing ? (
+        <div className="space-y-3 border-b px-3 py-3">
+          {kind === 'bill' ? (
+            rows.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                Add bills when creating the case to set due dates here.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {rows.map((row, index) => (
+                  <div key={`bill-date-${index}`} className="space-y-1">
+                    <Label className="text-xs">{row.name} — due date</Label>
+                    <Input
+                      type="date"
+                      value={draftBillDates[index] ?? ''}
+                      onChange={(e) =>
+                        setDraftBillDates((prev) => {
+                          const next = [...prev];
+                          next[index] = e.target.value;
+                          return next;
+                        })
+                      }
+                      disabled={saving}
+                    />
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-xs">{dateLabel}</Label>
+              <Input
+                type="date"
+                value={draftDate}
+                onChange={(e) => setDraftDate(e.target.value)}
+                disabled={saving}
+              />
+              <p className="text-muted-foreground text-[11px]">
+                {kind === 'rent'
+                  ? 'Days overdue = today minus last rent paid to.'
+                  : kind === 'bond'
+                    ? 'Days overdue = today minus agreement end (once vacated).'
+                    : 'Days overdue update automatically from this date.'}
+              </p>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={saving}
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={saving || (kind === 'bill' && rows.length === 0)}
+              onClick={() => void save()}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {rows.length === 0 ? (
         <p className="text-muted-foreground px-3 py-6 text-center text-xs">{empty}</p>
       ) : (
         <div className="max-h-[min(70vh,640px)] flex-1 overflow-x-auto overflow-y-auto">
-          <table className="w-full min-w-[280px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[220px] border-collapse text-left text-sm">
             <thead className="bg-muted/40 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Tenant</th>
                 <th className="px-3 py-2 text-right">Amount</th>
                 <th className="px-3 py-2">Days</th>
               </tr>
@@ -144,19 +256,14 @@ function ArrearsSection({
                   <td className="px-3 py-2.5 align-top">
                     <p className="font-medium leading-snug">{row.name}</p>
                   </td>
-                  <td className="px-3 py-2.5 align-top text-muted-foreground">
-                    {row.tenantName && row.tenantName !== 'Tenant'
-                      ? row.tenantName
-                      : '—'}
-                  </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right align-top tabular-nums font-medium">
                     {row.amount != null ? formatCurrency(row.amount) : '—'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 align-top">
                     <DaysSince
+                      kind={kind}
                       dueDate={row.dueDate}
                       fallbackDays={row.daysOverdue}
-                      createdAt={createdAt}
                     />
                   </td>
                 </tr>
@@ -178,9 +285,6 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
   const [notesDirty, setNotesDirty] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [evictionDialogOpen, setEvictionDialogOpen] = useState(false);
-  const [rentPaidToEdit, setRentPaidToEdit] = useState('');
-  const [leaseStartEdit, setLeaseStartEdit] = useState('');
-  const [savingDates, setSavingDates] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -189,8 +293,6 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       setDetail(next);
       setNotes(next.agentNotes ?? '');
       setNotesDirty(false);
-      setRentPaidToEdit(next.rentPaidTo?.slice(0, 10) ?? '');
-      setLeaseStartEdit(next.leaseStart?.slice(0, 10) ?? '');
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load tribunal case');
@@ -220,6 +322,10 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
     detail?.tenantEmail?.trim() || property?.tenantContact?.email?.trim() || '';
   const leaseStart =
     detail?.leaseStart?.slice(0, 10) || property?.leaseStart?.slice(0, 10) || '';
+  const agreementEnd =
+    detail?.agreementEnd?.slice(0, 10) ||
+    property?.leaseEnd?.slice(0, 10) ||
+    '';
 
   const arrearsByKind = useMemo(() => {
     const grouped: Record<ArrearKind, ArrearRow[]> = {
@@ -228,13 +334,10 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
       bond: [],
     };
     for (const row of detail?.arrears ?? []) {
-      grouped[row.kind].push({
-        ...row,
-        tenantName: row.tenantName === 'Tenant' ? tenantName || row.tenantName : row.tenantName,
-      });
+      grouped[row.kind].push(row);
     }
     return grouped;
-  }, [detail?.arrears, tenantName]);
+  }, [detail?.arrears]);
 
   const saveNotes = async () => {
     setSavingNotes(true);
@@ -251,26 +354,34 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
     }
   };
 
-  const saveArrearsDates = async () => {
-    setSavingDates(true);
-    try {
-      const next = await updateAgentTribunalRentChasing(caseId, {
-        rentArrears: {
-          rentPaidTo: rentPaidToEdit.trim() || undefined,
-        },
-        bondArrears: {
-          leaseStartDate: leaseStartEdit.trim() || undefined,
-        },
-      });
-      setDetail(next);
-      setRentPaidToEdit(next.rentPaidTo?.slice(0, 10) ?? '');
-      setLeaseStartEdit(next.leaseStart?.slice(0, 10) ?? '');
-      toast.success('Arrears dates updated — days recalculated');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update dates');
-    } finally {
-      setSavingDates(false);
-    }
+  const saveRentPaidTo = async (date: string) => {
+    const next = await updateAgentTribunalRentChasing(caseId, {
+      rentArrears: { rentPaidTo: date.trim() || undefined },
+    });
+    setDetail(next);
+    toast.success('Rent paid-to updated');
+  };
+
+  const saveAgreementEnd = async (date: string) => {
+    const next = await updateAgentTribunalRentChasing(caseId, {
+      bondArrears: { agreementEndDate: date.trim() || undefined },
+    });
+    setDetail(next);
+    toast.success('Agreement end updated');
+  };
+
+  const saveBillDueDates = async (dates: string[]) => {
+    const bills = arrearsByKind.bill;
+    const next = await updateAgentTribunalRentChasing(caseId, {
+      billArrears: bills.map((row, index) => ({
+        billType: row.name,
+        billName: row.name,
+        dueDate: dates[index]?.trim() || undefined,
+        amount: row.amount ?? undefined,
+      })),
+    });
+    setDetail(next);
+    toast.success('Bill due dates updated');
   };
 
   if (loading && !detail) {
@@ -287,10 +398,6 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
   }
 
   if (!detail) return null;
-
-  const datesDirty =
-    rentPaidToEdit !== (detail.rentPaidTo?.slice(0, 10) ?? '') ||
-    leaseStartEdit !== (leaseStart || '');
 
   return (
     <div className="space-y-4">
@@ -404,69 +511,38 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
         </dl>
       </section>
 
-      <section className="rounded-xl border bg-card p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-semibold">Arrears dates</p>
-            <p className="text-muted-foreground text-xs">
-              Set rent paid-to and lease start — days overdue recalculate automatically.
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            disabled={!datesDirty || savingDates}
-            onClick={() => void saveArrearsDates()}
-          >
-            {savingDates ? (
-              <>
-                <Loader2 className="size-3.5 animate-spin" />
-                Saving…
-              </>
-            ) : (
-              'Update dates'
-            )}
-          </Button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs" htmlFor="tribunal-rent-paid-to">
-              Last rent paid to
-            </Label>
-            <Input
-              id="tribunal-rent-paid-to"
-              type="date"
-              value={rentPaidToEdit}
-              onChange={(e) => setRentPaidToEdit(e.target.value)}
-              disabled={savingDates}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs" htmlFor="tribunal-lease-start">
-              Lease start
-            </Label>
-            <Input
-              id="tribunal-lease-start"
-              type="date"
-              value={leaseStartEdit}
-              onChange={(e) => setLeaseStartEdit(e.target.value)}
-              disabled={savingDates}
-            />
-          </div>
-        </div>
-      </section>
-
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-start">
-        {ARREARS_SECTIONS.map((section) => (
-          <ArrearsSection
-            key={section.kind}
-            title={section.title}
-            empty={section.empty}
-            icon={section.icon}
-            rows={arrearsByKind[section.kind]}
-            createdAt={detail.createdAt}
-          />
-        ))}
+        <ArrearsSection
+          kind="rent"
+          title="Rent Arrears"
+          empty="No rent arrears recorded on this case."
+          icon={CircleDollarSign}
+          rows={arrearsByKind.rent}
+          dateLabel="Last rent paid to"
+          dateValue={detail.rentPaidTo?.slice(0, 10) ?? ''}
+          onSaveDate={saveRentPaidTo}
+        />
+        <ArrearsSection
+          kind="bill"
+          title="Bill Arrears"
+          empty="No bill arrears recorded on this case."
+          icon={Receipt}
+          rows={arrearsByKind.bill}
+          dateLabel="Due date"
+          dateValue=""
+          billDates={arrearsByKind.bill.map((r) => r.dueDate?.slice(0, 10) ?? '')}
+          onSaveBillDates={saveBillDueDates}
+        />
+        <ArrearsSection
+          kind="bond"
+          title="Bond Arrears"
+          empty="No bond arrears recorded on this case."
+          icon={FileText}
+          rows={arrearsByKind.bond}
+          dateLabel="Agreement end"
+          dateValue={agreementEnd}
+          onSaveDate={saveAgreementEnd}
+        />
       </div>
 
       {detail.evictionRequired ? (
