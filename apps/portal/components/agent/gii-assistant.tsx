@@ -7,11 +7,14 @@ import { Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
+import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { messageDetail } from '@/constants/routes';
 import { searchAgentSystem, type SystemSearchResult } from '@/lib/agent-system-search';
+import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
+import type { PropertyNeedAction } from '@/lib/types';
 import {
   sendGiiMessage,
   type GiiAssessment,
@@ -25,6 +28,7 @@ type ChatLine = {
   text: string;
   results?: SystemSearchResult[];
   assessment?: GiiAssessment | null;
+  briefing?: GiiBriefing | null;
   lodgedRef?: string | null;
   pending?: boolean;
 };
@@ -101,6 +105,26 @@ export function GiiAssistant({
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [lines]);
 
+  // Proactive briefing: when Gii opens onto an empty thread, greet and list what needs action
+  // today. Every count and row comes from the provider's data — the model states nothing here.
+  // Guarded on `lines.length === 0` so it never clobbers an in-progress conversation, and on
+  // `!data.loading` so it waits for the first data load instead of flashing "all caught up".
+  useEffect(() => {
+    if (!open || data.loading || lines.length > 0) return;
+    const briefing = buildGiiBriefing(data.needActionItems, data.needActionGroups, new Date());
+    const text = briefing.subtitle
+      ? `${briefing.greeting}\n\n${briefing.subtitle}`
+      : briefing.greeting;
+    setLines([
+      {
+        id: `a-${idSeq()}`,
+        role: 'assistant',
+        text,
+        briefing: briefing.isEmpty ? null : briefing,
+      },
+    ]);
+  }, [open, data.loading, data.needActionItems, data.needActionGroups, lines.length]);
+
   /**
    * A turn runs two things at once:
    *  - `searchAgentSystem` over data the provider already holds — instant, offline, and
@@ -170,6 +194,11 @@ export function GiiAssistant({
     } finally {
       setSending(false);
     }
+  };
+
+  /** Ask Gii conversationally about a briefing row — it resolves the property and lists its cases. */
+  const askAboutRow = (row: PropertyNeedAction) => {
+    void runQuery(`Give me an update on ${row.propertyAddress} — ${row.label}.`);
   };
 
   const startVoice = () => {
@@ -291,6 +320,14 @@ export function GiiAssistant({
             </div>
 
             {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
+
+            {line.briefing ? (
+              <GiiBriefingCard
+                briefing={line.briefing}
+                onNavigate={onClose}
+                onAsk={askAboutRow}
+              />
+            ) : null}
 
             {line.lodgedRef ? (
               <p className="mr-auto text-xs font-medium text-primary">

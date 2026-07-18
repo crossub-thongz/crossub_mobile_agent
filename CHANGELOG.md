@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-07-18
+
+### Added
+- Gii briefing rows are conversational (Phase 2). Each row gains an "Ask Gii" action alongside "Open" — `components/agent/gii-briefing-card.tsx` takes an `onAsk` callback and renders per-row Ask Gii / Open buttons; `gii-assistant.tsx` wires `onAsk` through `runQuery`, seeding a natural question about that case ("Give me an update on {address} — {label}."). The backend resolves the property and answers from the new `list_actionable_cases` tool, so tapping Ask Gii on the rent-review / maintenance / inspection rows starts a real conversation rather than only deep-linking.
+- Gii opens with a proactive briefing. When the Gii panel opens onto an empty thread it now greets the agent and lists today's actionable cases instead of a blank "Ask Gii anything" — new `components/agent/gii-briefing-card.tsx` renders the list (greeting + count, priority-sorted rows with a category icon, address and an Open deep-link, a one-line group summary that leads by priority, and a "View all" footer to `/tasks`). The list and every count come from the data the provider already holds (`needActionItems` / `needActionGroups`), never the model — the same discipline as the vacate card. New pure selector `lib/gii-briefing.ts` (`buildGiiBriefing(items, groups, now)`, with `now` injected so it stays testable) and `constants/gii-briefing.ts` (greeting bands, priority rank, shared category-icon map, group nouns). Wired in `gii-assistant.tsx` via a `briefing` field on `ChatLine` and an on-open effect guarded on `lines.length === 0` (never clobbers a live conversation) and `!data.loading` (waits for the first load rather than flashing "all caught up"); fires for both the always-open desktop panel and the mobile modal. Rows are Open-only for now — conversational "Ask Gii" on each row is the next phase. No backend or contract change.
+
+### Changed
+- `components/agent/dashboard-need-action-preview.tsx` imports the shared `CATEGORY_ICON` from `constants/gii-briefing.ts` instead of its own copy, so the dashboard preview and the Gii briefing render category icons from one source.
+
 ## 2026-07-17
 
 ### Added

@@ -2,34 +2,15 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import type { LucideIcon } from 'lucide-react';
-import {
-  AlertTriangle,
-  Building2,
-  ChevronRight,
-  ClipboardList,
-  FileText,
-  Gavel,
-  ListTodo,
-  Wallet,
-  Wrench,
-} from 'lucide-react';
+import { AlertTriangle, ChevronRight, ListTodo } from 'lucide-react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { CATEGORY_ICON } from '@/constants/gii-briefing';
 import { ROUTES } from '@/constants/routes';
 import type { PropertyNeedAction } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const MAX_ITEMS = 6;
-
-const CATEGORY_ICON: Record<PropertyNeedAction['category'], LucideIcon> = {
-  Leasing: FileText,
-  Maintenance: Wrench,
-  Inspection: ClipboardList,
-  Accounting: Wallet,
-  Tribunal: Gavel,
-  Others: Building2,
-};
 
 export function DashboardNeedActionPreview({
   showTitle = true,
