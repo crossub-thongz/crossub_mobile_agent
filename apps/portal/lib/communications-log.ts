@@ -63,3 +63,46 @@ export function channelLabel(channel: MessageThread['channel']): string {
   if (channel === 'mixed') return 'App & email';
   return channel === 'email' ? 'Email' : 'App';
 }
+
+export type PropertyMessageGroup = {
+  propertyId: string | null;
+  propertyAddress: string;
+  unreadTotal: number;
+  threads: MessageThread[];
+};
+
+/** Group threads by property (newest activity first within each group). */
+export function groupThreadsByProperty(threads: MessageThread[]): PropertyMessageGroup[] {
+  const groups = new Map<string, PropertyMessageGroup>();
+  for (const thread of threads) {
+    const key = thread.propertyId ?? `__unassigned__:${thread.propertyAddress || 'none'}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.threads.push(thread);
+      existing.unreadTotal += thread.unread > 0 ? thread.unread : 0;
+      continue;
+    }
+    groups.set(key, {
+      propertyId: thread.propertyId ?? null,
+      propertyAddress: thread.propertyAddress?.trim() || 'Unassigned',
+      unreadTotal: thread.unread > 0 ? thread.unread : 0,
+      threads: [thread],
+    });
+  }
+
+  const sorted = [...groups.values()].map((group) => ({
+    ...group,
+    threads: [...group.threads].sort((a, b) =>
+      (b.lastAt ?? '').localeCompare(a.lastAt ?? ''),
+    ),
+  }));
+
+  sorted.sort((a, b) => {
+    if (b.unreadTotal !== a.unreadTotal) return b.unreadTotal - a.unreadTotal;
+    const aLatest = a.threads[0]?.lastAt ?? '';
+    const bLatest = b.threads[0]?.lastAt ?? '';
+    return bLatest.localeCompare(aLatest);
+  });
+
+  return sorted;
+}

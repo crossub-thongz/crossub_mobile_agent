@@ -25,6 +25,7 @@ import {
   fetchProperties,
   markAllNotificationsRead as apiMarkAllNotificationsRead,
   markNotificationRead as apiMarkNotificationRead,
+  markThreadRead as apiMarkThreadRead,
   replyToThread as apiReplyToThread,
   uploadDocument as apiUploadDocument,
   uploadAgentDocumentFileWithProgress as apiUploadAgentDocumentFileWithProgress,
@@ -200,6 +201,7 @@ interface AgentDataContextValue {
   getPropertyActions: (propertyId: string) => PropertyNeedAction[];
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  markThreadRead: (threadId: string) => void;
   uploadDocument: (
     file: File,
     category: AgentDocument['category'],
@@ -1136,6 +1138,29 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [notifications, apiConnected, apiNotifications, refresh]);
 
+  const markThreadRead = useCallback(
+    (threadId: string) => {
+      const thread = messages.find((m) => m.id === threadId);
+      const serverThreadId = thread?.serverThreadId ?? createdThreadIds[threadId] ?? threadId;
+
+      // Optimistic: clear unread badge immediately in the local list.
+      setApiMessages((prev) =>
+        prev
+          ? prev.map((t) =>
+              t.id === serverThreadId || t.id === threadId ? { ...t, unread: 0 } : t,
+            )
+          : prev,
+      );
+
+      if (apiConnected && serverThreadId) {
+        void apiMarkThreadRead(serverThreadId)
+          .then(() => refresh())
+          .catch(() => {});
+      }
+    },
+    [messages, createdThreadIds, apiConnected, refresh],
+  )
+
   const dashboardItems = useMemo(() => {
     const maintDash = buildMaintenanceDashboard(maintenanceAll);
     const tenantDash: DashboardItem[] = tenantSelections
@@ -1297,6 +1322,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     getPropertyActions,
     markNotificationRead,
     markAllNotificationsRead,
+    markThreadRead,
     sendMessage,
     ensureMessageThread,
     addProperty,

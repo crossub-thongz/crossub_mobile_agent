@@ -403,6 +403,14 @@ export async function replyInMessageCenter(
   );
 }
 
+/** Mark a message thread read (`PATCH /agent/messages/{threadId}/read`). */
+export async function markThreadRead(threadId: string): Promise<AgentMessageThread> {
+  return agentFetch<AgentMessageThread>(
+    `/agent/messages/${encodeURIComponent(threadId)}/read`,
+    { method: 'PATCH' },
+  );
+}
+
 /** Append a reply to one thread (`POST /agent/messages/{threadId}/reply`). */
 export async function replyToThread(
   threadId: string,

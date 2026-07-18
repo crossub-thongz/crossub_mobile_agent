@@ -25,11 +25,12 @@ export default function MessageDetailPage() {
   const partyParam = searchParams.get('party');
   const highlightParty =
     partyParam === 'tenant' || partyParam === 'owner' ? partyParam : undefined;
-  const { messages, sendMessage } = useAgentData();
+  const { messages, sendMessage, markThreadRead } = useAgentData();
   const thread = messages.find((m) => m.id === threadId);
   const [reply, setReply] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageCount = thread?.messages.length ?? 0;
+  const markedReadRef = useRef<string | null>(null);
 
   const mentionCandidates = useMemo(
     () =>
@@ -45,6 +46,14 @@ export default function MessageDetailPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messageCount]);
+
+  useEffect(() => {
+    if (!thread || markedReadRef.current === thread.id) return;
+    if (thread.unread > 0) {
+      markedReadRef.current = thread.id;
+      markThreadRead(thread.id);
+    }
+  }, [thread, markThreadRead]);
 
   if (!thread) notFound();
 
