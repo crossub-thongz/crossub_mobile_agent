@@ -81,6 +81,13 @@ export default function ChangePasswordPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      // Keep the access cookie fresh before the authenticated change-password call.
+      try {
+        await api.post('/auth/refresh');
+      } catch {
+        /* request layer will refresh again on 401 if needed */
+      }
+
       await api.post<{ user: AuthUser }>('/auth/change-password', {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,

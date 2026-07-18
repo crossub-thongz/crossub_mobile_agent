@@ -2,16 +2,46 @@ import { ROUTES } from '@/constants/routes';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
+function extractApiErrorMessage(status: number, body: unknown): string {
+  if (typeof body === 'string' && body.trim()) return body.trim();
+  if (body && typeof body === 'object') {
+    const message = (body as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message.trim();
+    if (Array.isArray(message) && typeof message[0] === 'string') {
+      return message[0].trim();
+    }
+  }
+  return `API ${status}`;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     public body: unknown,
   ) {
-    super(`API ${status}`);
+    super(extractApiErrorMessage(status, body));
   }
 }
 
-const isAuthPath = (path: string): boolean => path.startsWith('/auth/');
+/**
+ * Auth routes that must not trigger a refresh-retry loop.
+ * Authenticated `/auth/*` routes (e.g. change-password, me, system-access-agreement)
+ * still refresh on 401 like the rest of the app.
+ */
+const AUTH_NO_REFRESH_PATHS = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/register-agent',
+  '/auth/register-inspector',
+];
+
+const shouldSkipAuthRefresh = (path: string): boolean => {
+  const bare = path.split('?')[0] ?? path;
+  return AUTH_NO_REFRESH_PATHS.some((p) => bare === p || bare.startsWith(`${p}/`));
+};
 
 let refreshInFlight: Promise<boolean> | null = null;
 
@@ -88,7 +118,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (
     res.status === 401 &&
     typeof window !== 'undefined' &&
-    !isAuthPath(path)
+    !shouldSkipAuthRefresh(path)
   ) {
     if (await tryRefreshSession()) {
       res = await doFetch(path, init);
@@ -109,7 +139,7 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
   if (
     res.status === 401 &&
     typeof window !== 'undefined' &&
-    !isAuthPath(path)
+    !shouldSkipAuthRefresh(path)
   ) {
     if (await tryRefreshSession()) {
       res = await doFetch(path, init);
