@@ -20,7 +20,6 @@ import {
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
-import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -746,13 +745,6 @@ export function OutgoingFieldInspectionDetail({
           </ul>
         ) : null}
       </div>
-
-      {inspection.propertyId ? (
-        <CaseContactActions
-          propertyId={inspection.propertyId}
-          caseLabel="Outgoing inspection"
-        />
-      ) : null}
 
       {!apiConnected ? (
         <p className="text-muted-foreground text-xs">

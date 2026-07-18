@@ -35,6 +35,7 @@ import {
   mergeInspectionResponsibilityItems,
   responsibilityItemsEqual,
 } from '@/lib/end-leasing/outgoing-inspection-sync';
+import { resolveCompareIngoingDetail } from '@/lib/end-leasing/resolve-compare-ingoing';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { ReportComparisonRepairItemInput } from '@/lib/termination-case-types';
 import { terminationApi } from '@/lib/termination-case-api';
@@ -1060,14 +1061,17 @@ export function EndLeasingReportComparisonPanel({
     try {
       const [outgoing, ingoing] = await Promise.all([
         outgoingId ? inspectionsApi.getDetail(outgoingId).catch(() => null) : Promise.resolve(null),
-        ingoingId ? inspectionsApi.getDetail(ingoingId).catch(() => null) : Promise.resolve(null),
+        resolveCompareIngoingDetail({
+          ingoingInspectionId: ingoingId,
+          propertyId: caseData.propertyId,
+        }),
       ]);
       setOutgoingDetail(outgoing);
       setIngoingDetail(ingoing);
     } finally {
       setLoadingReports(false);
     }
-  }, [apiConnected, outgoingId, ingoingId]);
+  }, [apiConnected, caseData.propertyId, outgoingId, ingoingId]);
 
   useEffect(() => {
     void refreshReports();
