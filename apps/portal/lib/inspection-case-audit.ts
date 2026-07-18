@@ -16,6 +16,10 @@ export function mergeInspectionCaseAudit(input: {
   progression: OnSiteProgression | null;
   leasingTenantApproved?: boolean;
   tenantName?: string | null;
+  /** Outgoing cases record agent acknowledgement instead of tenant sign-off. */
+  agentAcknowledged?: boolean;
+  agentAcknowledgedAt?: string | null;
+  ackParty?: 'tenant' | 'agent';
 }): InspectionCaseAuditEntry[] {
   const byId = new Map<string, InspectionCaseAuditEntry>();
   for (const entry of input.record?.caseAudit ?? []) {
@@ -61,16 +65,31 @@ export function mergeInspectionCaseAudit(input: {
     });
   }
 
-  const tenantAcked =
-    Boolean(input.record?.tenantReportSigned) || Boolean(input.leasingTenantApproved);
-  if (tenantAcked && !hasLabel(/tenant acknowledgement/i)) {
-    const tenantLabel = input.tenantName?.trim() || input.record?.tenantName?.trim() || 'Tenant';
-    byId.set(`audit-tenant-ack-${inspectionId}`, {
-      id: `audit-tenant-ack-${inspectionId}`,
-      label: 'Tenant acknowledgement recorded',
-      actor: `${tenantLabel} (Tenant)`,
-      at: input.record?.completedDate ?? input.record?.updatedAt ?? new Date().toISOString(),
-    });
+  if (input.ackParty === 'agent') {
+    if (input.agentAcknowledged && !hasLabel(/agent acknowledgement/i)) {
+      byId.set(`audit-agent-ack-${inspectionId}`, {
+        id: `audit-agent-ack-${inspectionId}`,
+        label: 'Agent acknowledgement recorded',
+        actor: 'Agent',
+        at:
+          input.agentAcknowledgedAt ??
+          input.record?.completedDate ??
+          input.record?.updatedAt ??
+          new Date().toISOString(),
+      });
+    }
+  } else {
+    const tenantAcked =
+      Boolean(input.record?.tenantReportSigned) || Boolean(input.leasingTenantApproved);
+    if (tenantAcked && !hasLabel(/tenant acknowledgement/i)) {
+      const tenantLabel = input.tenantName?.trim() || input.record?.tenantName?.trim() || 'Tenant';
+      byId.set(`audit-tenant-ack-${inspectionId}`, {
+        id: `audit-tenant-ack-${inspectionId}`,
+        label: 'Tenant acknowledgement recorded',
+        actor: `${tenantLabel} (Tenant)`,
+        at: input.record?.completedDate ?? input.record?.updatedAt ?? new Date().toISOString(),
+      });
+    }
   }
 
   return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));

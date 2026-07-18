@@ -145,10 +145,15 @@ export function formatInspectorFieldStatus(args: {
   reportSubmitted?: boolean;
   keyReturned?: boolean;
   tenantAcked?: boolean;
+  /** When set, acknowledgement copy uses agent (outgoing) instead of tenant (ingoing). */
+  ackParty?: 'tenant' | 'agent';
   accepted?: boolean;
 }): string {
-  if (args.tenantAcked) return 'Tenant acknowledgement complete';
-  if (args.keyReturned) return 'Keys returned — awaiting tenant acknowledgement';
+  const ackParty = args.ackParty ?? 'tenant';
+  const ackNoun = ackParty === 'agent' ? 'Agent' : 'Tenant';
+  const ackLower = ackParty === 'agent' ? 'agent' : 'tenant';
+  if (args.tenantAcked) return `${ackNoun} acknowledgement complete`;
+  if (args.keyReturned) return `Keys returned — awaiting ${ackLower} acknowledgement`;
   if (args.reportSubmitted) return 'Report submitted — awaiting key return';
   if (args.keyCollected) return 'Keys collected — inspection in progress';
   if (args.accepted) return 'Accepted — awaiting key collection';

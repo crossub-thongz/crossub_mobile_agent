@@ -118,3 +118,29 @@ export function deriveTenantAckState(
 
   return { state: 'not_available', label: 'Not started' };
 }
+
+/** Outgoing job-case step: agent confirms the comparative report (not tenant sign-off). */
+export function deriveAgentAckState(
+  record: InspectionRecord | null,
+  options?: {
+    agentAcknowledged?: boolean;
+    agentAcknowledgedAt?: string | null;
+  },
+): { state: AgentTenantAckState; label: string } {
+  if (!record) {
+    return { state: 'not_available', label: '—' };
+  }
+
+  if (options?.agentAcknowledged) {
+    return {
+      state: 'confirmed',
+      label: 'Agent acknowledged',
+    };
+  }
+
+  if (!isReportSubmitted(record, null)) {
+    return { state: 'awaiting_report', label: 'Available after report is submitted' };
+  }
+
+  return { state: 'pending', label: 'Report submitted — agent review pending' };
+}

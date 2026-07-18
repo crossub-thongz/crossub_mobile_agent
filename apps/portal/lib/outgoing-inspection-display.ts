@@ -25,7 +25,7 @@ export const AGENT_OUTGOING_GATE_HINT: Record<AgentOutgoingGateStatus, string> =
   pending:
     'Vacating tenant details and inspector details. Waiting for an inspector to accept the outgoing job.',
   scheduled:
-    'Inspector has accepted. Track key collection proof, report submission, key return, and tenant acknowledgement.',
+    'Inspector has accepted. Track key collection proof, report submission, key return, and agent acknowledgement.',
   completed: 'All four post-accept steps are done — this outgoing job case is complete.',
 };
 
@@ -54,7 +54,7 @@ export function deriveAgentOutgoingGateStatus(args: {
     apiStatus === INSPECTION_STATUS.COMPLETED ||
     apiStatus === INSPECTION_STATUS.PUBLISHED
   ) {
-    // Report may be done before tenant ack — stay Scheduled until all 4 steps finish.
+    // Report may be done before agent ack — stay Scheduled until all 4 steps finish.
     if (stepsComplete === false) return 'scheduled';
     if (stepsComplete === undefined) return 'completed';
   }

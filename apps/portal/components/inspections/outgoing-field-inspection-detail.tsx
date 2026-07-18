@@ -36,7 +36,7 @@ import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
 import { inspectionsApi } from '@/lib/inspections-api';
 import {
   canViewInspectionReport,
-  deriveTenantAckState,
+  deriveAgentAckState,
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
 import {
@@ -59,12 +59,12 @@ import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 type OutgoingSnapshot = {
   record: InspectionRecord | null;
   progression: OnSiteProgression | null;
-  signName: string | null;
-  signUrl: string | null;
   reportUrl: string | null;
   hasFindings: boolean;
   tenantAttendance: TenantOutgoingAttendanceStatus;
   terminationCaseId: string | null;
+  agentAcknowledged: boolean;
+  agentAcknowledgedAt: string | null;
   tenantName: string | null;
   tenantEmail: string | null;
   tenantPhone: string | null;
@@ -120,12 +120,12 @@ export function OutgoingFieldInspectionDetail({
   const [snapshot, setSnapshot] = useState<OutgoingSnapshot>({
     record: null,
     progression: null,
-    signName: null,
-    signUrl: null,
     reportUrl: null,
     hasFindings: false,
     tenantAttendance: 'pending',
     terminationCaseId: linkedVacating?.id ?? null,
+    agentAcknowledged: false,
+    agentAcknowledgedAt: null,
     tenantName: null,
     tenantEmail: null,
     tenantPhone: null,
@@ -135,6 +135,7 @@ export function OutgoingFieldInspectionDetail({
   const [auditExpanded, setAuditExpanded] = useState(false);
   const [viewingGateStep, setViewingGateStep] = useState<AgentOutgoingGateStatus | null>(null);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [ackBusy, setAckBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!apiConnected) {
@@ -151,8 +152,6 @@ export function OutgoingFieldInspectionDetail({
           : Promise.resolve(null),
       ]);
 
-      const signName = detail?.signName ?? null;
-      const signUrl = detail?.signUrl ?? null;
       const reportUrl =
         detail?.reportUrl ??
         progression?.reportUrl ??
@@ -207,12 +206,12 @@ export function OutgoingFieldInspectionDetail({
       setSnapshot({
         record,
         progression,
-        signName,
-        signUrl,
         reportUrl,
         hasFindings,
         tenantAttendance: terminationCase?.inspection.tenantAttendance ?? 'pending',
         terminationCaseId,
+        agentAcknowledged: terminationCase?.reportComparison.agentAcknowledged ?? false,
+        agentAcknowledgedAt: terminationCase?.reportComparison.agentAcknowledgedAt ?? null,
         tenantName,
         tenantEmail,
         tenantPhone,
@@ -242,12 +241,12 @@ export function OutgoingFieldInspectionDetail({
   const {
     record,
     progression,
-    signName,
-    signUrl,
     reportUrl,
     hasFindings,
     tenantAttendance,
     terminationCaseId,
+    agentAcknowledged,
+    agentAcknowledgedAt,
   } = snapshot;
 
   const custody = progression?.keyCustody;
@@ -257,13 +256,13 @@ export function OutgoingFieldInspectionDetail({
   const keyReturned = custody?.returnComplete ?? returnPhotos.length > 0;
   const reportSubmitted = isReportSubmitted(record, progression);
   const reportReady = canViewInspectionReport(record, progression, { reportUrl, hasFindings });
-  const tenantAck = deriveTenantAckState(record, signName, signUrl, {
-    tenantReportSigned: record?.tenantReportSigned,
-    leasingTenantApproved: false,
+  const agentAck = deriveAgentAckState(record, {
+    agentAcknowledged,
+    agentAcknowledgedAt,
   });
-  const tenantAcked = tenantAck.state === 'confirmed';
+  const agentAcked = agentAck.state === 'confirmed';
   const accepted = inspectorHasAcceptedJob(record, inspection);
-  const stepsComplete = keyCollected && reportSubmitted && keyReturned && tenantAcked;
+  const stepsComplete = keyCollected && reportSubmitted && keyReturned && agentAcked;
 
   const gateStatus = deriveAgentOutgoingGateStatus({
     inspection,
@@ -296,8 +295,11 @@ export function OutgoingFieldInspectionDetail({
         progression,
         leasingTenantApproved: false,
         tenantName: snapshot.tenantName,
+        ackParty: 'agent',
+        agentAcknowledged,
+        agentAcknowledgedAt,
       }),
-    [record, progression, snapshot.tenantName],
+    [record, progression, snapshot.tenantName, agentAcknowledged, agentAcknowledgedAt],
   );
 
   const tenantName = snapshot.tenantName?.trim() || '—';
@@ -311,9 +313,30 @@ export function OutgoingFieldInspectionDetail({
     keyCollected,
     reportSubmitted,
     keyReturned,
-    tenantAcked,
+    tenantAcked: agentAcked,
+    ackParty: 'agent',
     accepted,
   });
+
+  const confirmAgentAcknowledgement = async () => {
+    if (!terminationCaseId || agentAcked) return;
+    setAckBusy(true);
+    try {
+      const updated = await terminationApi.updateReportComparison(terminationCaseId, {
+        agentAcknowledged: true,
+      });
+      setSnapshot((prev) => ({
+        ...prev,
+        agentAcknowledged: updated.reportComparison.agentAcknowledged,
+        agentAcknowledgedAt: updated.reportComparison.agentAcknowledgedAt ?? null,
+      }));
+      toast.success('Outgoing report acknowledged');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not record acknowledgement');
+    } finally {
+      setAckBusy(false);
+    }
+  };
 
   const setAttendance = async (attendance: 'yes' | 'no') => {
     if (attendance === tenantAttendance) return;
@@ -626,12 +649,12 @@ export function OutgoingFieldInspectionDetail({
 
           <StepCard
             icon={ClipboardCheck}
-            title="Tenant acknowledgement"
-            description="Tenant sign-off on the outgoing inspection report."
+            title="Agent acknowledgement"
+            description="Agent sign-off on the outgoing comparative inspection report."
             status={
-              tenantAcked
+              agentAcked
                 ? LEASING_ITEM_STATUS.DONE
-                : tenantAck.state === 'pending' || tenantAck.state === 'expired'
+                : agentAck.state === 'pending'
                   ? LEASING_ITEM_STATUS.WAITING
                   : keyReturned
                     ? LEASING_ITEM_STATUS.IN_PROGRESS
@@ -643,24 +666,44 @@ export function OutgoingFieldInspectionDetail({
                 <User
                   className={cn(
                     'mt-0.5 size-4 shrink-0',
-                    tenantAcked ? 'text-emerald-600' : 'text-muted-foreground',
+                    agentAcked ? 'text-emerald-600' : 'text-muted-foreground',
                   )}
                 />
-                <div>
-                  <p className="font-medium">{tenantAck.label}</p>
-                  {tenantAcked && signUrl ? (
-                    <a
-                      href={signUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary mt-1 inline-flex items-center gap-1 text-[11px] hover:underline"
-                    >
-                      <CheckCircle2 className="size-3" />
-                      View signature
-                    </a>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{agentAck.label}</p>
+                  {agentAcked && agentAcknowledgedAt ? (
+                    <p className="text-muted-foreground mt-0.5 text-[11px]">
+                      Confirmed {formatDateTime(agentAcknowledgedAt)}
+                    </p>
                   ) : null}
                 </div>
               </div>
+              {!agentAcked && reportSubmitted && terminationCaseId ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs"
+                  disabled={ackBusy}
+                  onClick={() => void confirmAgentAcknowledgement()}
+                >
+                  {ackBusy ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      Confirming…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="size-3.5" />
+                      Confirm report
+                    </>
+                  )}
+                </Button>
+              ) : null}
+              {!agentAcked && reportSubmitted && !terminationCaseId ? (
+                <p className="text-muted-foreground text-[11px]">
+                  Link an end-leasing case to record agent acknowledgement.
+                </p>
+              ) : null}
             </div>
           </StepCard>
         </div>
@@ -687,7 +730,7 @@ export function OutgoingFieldInspectionDetail({
           <ul className="divide-y border-t px-4 py-1">
             {auditEntries.length === 0 ? (
               <li className="text-muted-foreground py-3 text-xs">
-                No audit events yet. Acceptance, key proof, report, and tenant acknowledgement will
+                No audit events yet. Acceptance, key proof, report, and agent acknowledgement will
                 appear here.
               </li>
             ) : (
