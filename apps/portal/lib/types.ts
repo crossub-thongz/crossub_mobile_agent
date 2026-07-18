@@ -91,6 +91,14 @@ export interface Property {
   administrationFee?: number;
   documentationFee?: number;
   lettingFee?: number;
+  /** Full fee rows from intake / Fees tab. */
+  managementFees?: Array<{
+    id: string;
+    feeType: string;
+    valueMode: 'rate' | 'amount';
+    amount: string;
+    gst: '' | 'include' | 'exclude';
+  }>;
   handoverDate?: string;
   previousAgentName?: string;
   previousAgentEmail?: string;

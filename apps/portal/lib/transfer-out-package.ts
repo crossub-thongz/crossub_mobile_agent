@@ -120,9 +120,14 @@ function buildSummaryHtml({
     line('Management GST', property.managementRateGst),
     line('Insurance provider', property.insuranceProvider),
     line('Insurance expiry', property.landlordInsuranceExpiry ? formatDate(property.landlordInsuranceExpiry) : undefined),
-    line('Administration fee', property.administrationFee != null ? formatCurrency(property.administrationFee) : undefined),
-    line('Documentation fee', property.documentationFee != null ? formatCurrency(property.documentationFee) : undefined),
-    line('Letting fee', property.lettingFee != null ? formatCurrency(property.lettingFee) : undefined),
+    line('Administration fee', property.administrationFee != null ? `${property.administrationFee}%` : undefined),
+    line('Documentation fee', property.documentationFee != null ? `${property.documentationFee}%` : undefined),
+    line(
+      'Letting fee',
+      property.lettingFee != null
+        ? `${property.lettingFee} week${property.lettingFee === 1 ? '' : 's'}`
+        : undefined,
+    ),
     line('Outstanding rent', financial?.outstandingRent ? formatCurrency(financial.outstandingRent) : portal?.accounting?.outstandingRentAmount ? formatCurrency(portal.accounting.outstandingRentAmount) : undefined),
     line('Receiving agent email', receivingAgentEmail),
     line('Package generated', formatDate(new Date().toISOString())),

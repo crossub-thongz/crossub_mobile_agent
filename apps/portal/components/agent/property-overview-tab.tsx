@@ -28,6 +28,7 @@ import {
 } from '@/lib/property-overview';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { isTenancyArchived } from '@/lib/property-archive';
+import { resolvePropertyManagementFees } from '@/lib/management-fees';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
   AgentDocument,
@@ -285,16 +286,27 @@ export function PropertyOverviewTab({
 
   const registry = useMemo(() => {
     const record = sync.record;
+    const fromFees = resolvePropertyManagementFees(property).find(
+      (f) => f.feeType === 'management_fee',
+    );
+    const feeRate = fromFees?.amount.trim()
+      ? Number(fromFees.amount.replace(/,/g, ''))
+      : undefined;
+    const gstFromFees =
+      fromFees?.gst === 'include' || fromFees?.gst === 'exclude' ? fromFees.gst : undefined;
     const gst =
       overview?.managementRateGst ??
       (record?.managementRateGst === 'include' || record?.managementRateGst === 'exclude'
         ? record.managementRateGst
-        : property.managementRateGst);
+        : property.managementRateGst) ??
+      gstFromFees;
+    const rate =
+      overview?.managementRatePercent ??
+      record?.managementRatePercent ??
+      property.managementRatePercent ??
+      (feeRate != null && Number.isFinite(feeRate) ? feeRate : undefined);
     return {
-      managementRatePercent:
-        overview?.managementRatePercent ??
-        record?.managementRatePercent ??
-        property.managementRatePercent,
+      managementRatePercent: rate,
       managementRateGst: gst,
     };
   }, [overview, property, sync.record]);

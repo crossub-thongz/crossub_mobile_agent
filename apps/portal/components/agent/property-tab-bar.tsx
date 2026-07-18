@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   Gavel,
+  Percent,
   RefreshCw,
   Wallet,
   Wrench,
@@ -17,6 +18,7 @@ import { cn } from '@/lib/utils';
 const TAB_ICONS: Record<string, LucideIcon> = {
   Overview: Building2,
   Documents: FileText,
+  Fees: Percent,
   'Rent Review': RefreshCw,
   Leasing: FileText,
   Maintenance: Wrench,

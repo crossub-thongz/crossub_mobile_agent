@@ -43,10 +43,10 @@ export interface ExtraManagementDocumentRow {
 /** Fee types agents can pick when adding a management fee row. */
 export const MANAGEMENT_FEE_OPTIONS = [
   { id: 'management_fee', label: 'Management Fee', unit: 'percent' as const },
-  { id: 'letting_fee', label: 'Letting Fee', unit: 'currency' as const },
+  { id: 'letting_fee', label: 'Letting Fee', unit: 'weeks' as const },
   { id: 'advertising_fee', label: 'Advertising Fee', unit: 'currency' as const },
   { id: 'lease_renewal_fee', label: 'Lease Renewal Fee', unit: 'currency' as const },
-  { id: 'administration_fee', label: 'Administration Fee', unit: 'currency' as const },
+  { id: 'administration_fee', label: 'Administration Fee', unit: 'percent' as const },
   { id: 'additional_services_fees', label: 'Additional Services Fees', unit: 'currency' as const },
   {
     id: 'statements_annual_reports',
@@ -61,7 +61,7 @@ export const MANAGEMENT_FEE_OPTIONS = [
   {
     id: 'tenancy_agreement_preparation_fee',
     label: 'Tenancy Agreement Preparation Fee',
-    unit: 'currency' as const,
+    unit: 'percent' as const,
   },
   {
     id: 'determination_review_of_rent',
@@ -101,7 +101,8 @@ export type ManagementFeeValueMode = 'rate' | 'amount';
 
 export interface ManagementFeeRow {
   id: string;
-  feeType: ManagementFeeOptionId | '';
+  /** Known option id or a custom fee name entered by the user. */
+  feeType: string;
   valueMode: ManagementFeeValueMode;
   amount: string;
   gst: ManagementRateGst;
@@ -130,7 +131,7 @@ export const EMPTY_MANAGEMENT_DETAILS: ManagementDetailsValues = {
   fees: [
     { id: 'fee-management', feeType: 'management_fee', valueMode: 'rate', amount: '', gst: '' },
     { id: 'fee-letting', feeType: 'letting_fee', valueMode: 'amount', amount: '', gst: '' },
-    { id: 'fee-admin', feeType: 'administration_fee', valueMode: 'amount', amount: '', gst: '' },
+    { id: 'fee-admin', feeType: 'administration_fee', valueMode: 'rate', amount: '', gst: '' },
   ],
   uploads: {},
   extraDocuments: [],
@@ -147,9 +148,11 @@ const VALUE_MODE_OPTIONS: { value: ManagementFeeValueMode; label: string }[] = [
   { value: 'amount', label: '$' },
 ];
 
-function defaultValueModeForFeeType(feeType: ManagementFeeOptionId | ''): ManagementFeeValueMode {
+function defaultValueModeForFeeType(feeType: string): ManagementFeeValueMode {
   const option = feeOption(feeType);
-  return option?.unit === 'percent' ? 'rate' : 'amount';
+  if (option?.unit === 'percent') return 'rate';
+  // Letting fee / week-based fees use amount mode; percent fees use rate.
+  return 'amount';
 }
 
 function FormField({
@@ -270,9 +273,10 @@ export function PropertyManagementFeesSection({
         ) : (
           <div className="space-y-2">
             {values.fees.map((row) => {
-              const isRate = row.valueMode === 'rate';
-              const isLettingFee = row.feeType === 'letting_fee';
-              const amountLabel = isLettingFee ? 'Week' : 'Rate or amount';
+              const option = feeOption(row.feeType);
+              const isLettingFee = row.feeType === 'letting_fee' || option?.unit === 'weeks';
+              const isRate = !isLettingFee && row.valueMode === 'rate';
+              const amountLabel = isLettingFee ? 'Week' : isRate ? 'Rate (%)' : 'Amount ($)';
               return (
                 <div
                   key={row.id}
@@ -282,7 +286,7 @@ export function PropertyManagementFeesSection({
                     <select
                       value={row.feeType}
                       onChange={(e) => {
-                        const feeType = e.target.value as ManagementFeeOptionId | '';
+                        const feeType = e.target.value;
                         updateFee(row.id, {
                           feeType,
                           valueMode: defaultValueModeForFeeType(feeType),
@@ -305,7 +309,7 @@ export function PropertyManagementFeesSection({
                         type="number"
                         min={0}
                         max={isRate ? 100 : undefined}
-                        step={isRate ? 0.1 : 0.01}
+                        step={isRate || isLettingFee ? 0.1 : 0.01}
                         value={row.amount}
                         onChange={(e) => updateFee(row.id, { amount: e.target.value })}
                         placeholder={isRate ? 'e.g. 5.5' : isLettingFee ? 'e.g. 1' : '0.00'}
@@ -320,6 +324,15 @@ export function PropertyManagementFeesSection({
                           )}
                         >
                           week
+                        </span>
+                      ) : option?.unit === 'percent' ? (
+                        <span
+                          className={cn(
+                            selectClass,
+                            'flex w-[4.25rem] shrink-0 items-center justify-center px-2 text-center text-xs',
+                          )}
+                        >
+                          %
                         </span>
                       ) : (
                         <select

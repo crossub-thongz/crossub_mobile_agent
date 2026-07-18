@@ -84,6 +84,13 @@ type ExtendedAgentProperty = AgentProperty & {
   lettingFee?: number | null;
   managementRatePercent?: number | null;
   managementRateGst?: 'include' | 'exclude' | null;
+  managementFees?: Array<{
+    id: string;
+    feeType: string;
+    valueMode: 'rate' | 'amount';
+    amount: string;
+    gst: '' | 'include' | 'exclude';
+  }> | null;
   buildingManagerName?: string | null;
   buildingManagerEmail?: string | null;
   buildingManagerPhone?: string | null;
@@ -176,6 +183,7 @@ export function mapAgentProperty(
     administrationFee: ext.administrationFee ?? undefined,
     documentationFee: ext.documentationFee ?? undefined,
     lettingFee: ext.lettingFee ?? undefined,
+    managementFees: Array.isArray(ext.managementFees) ? ext.managementFees : undefined,
     managementRatePercent: ext.managementRatePercent ?? undefined,
     managementRateGst:
       ext.managementRateGst === 'include' || ext.managementRateGst === 'exclude'

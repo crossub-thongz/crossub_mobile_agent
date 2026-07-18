@@ -162,6 +162,13 @@ export type CreateAgentPropertyInput = {
   lettingFee?: number;
   managementRatePercent?: number;
   managementRateGst?: 'include' | 'exclude';
+  managementFees?: Array<{
+    id: string;
+    feeType: string;
+    valueMode: 'rate' | 'amount';
+    amount: string;
+    gst?: '' | 'include' | 'exclude';
+  }>;
   replaceLandlord?: boolean;
   registryIntakeComplete?: boolean;
   registryDraft?: Record<string, unknown> | null;

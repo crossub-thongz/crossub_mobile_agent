@@ -321,6 +321,7 @@ export function buildRegistryApiBody(
       managementSynced.managementRateGst === 'exclude'
         ? managementSynced.managementRateGst
         : undefined,
+    managementFees: management.fees.filter((f) => f.feeType || f.amount.trim()),
     registryIntakeComplete: options.complete,
     registryDraft: options.complete
       ? null
