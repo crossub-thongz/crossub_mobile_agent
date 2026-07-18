@@ -12,8 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
+import type { AuthUser } from '@/lib/auth-types';
 import {
   needsSystemAccessAgreement,
+  postAuthDestination,
   type SystemAccessAgreementView,
 } from '@/lib/system-access-agreement';
 
@@ -34,7 +36,14 @@ export default function SystemAccessAgreementPage() {
     if (status !== 'authed' || !user) return;
 
     if (!needsSystemAccessAgreement(user)) {
-      router.replace(ROUTES.DASHBOARD);
+      router.replace(
+        postAuthDestination(
+          user,
+          ROUTES.DASHBOARD,
+          ROUTES.SYSTEM_ACCESS_AGREEMENT,
+          ROUTES.CHANGE_PASSWORD,
+        ),
+      );
       return;
     }
 
@@ -71,8 +80,19 @@ export default function SystemAccessAgreementPage() {
       });
       await api.post('/auth/refresh');
       await refresh();
-      toast.success('Agreement accepted. Welcome to the CROSSUB Agent portal.');
-      router.replace(ROUTES.DASHBOARD);
+      const me = await api.get<{ user: AuthUser }>('/auth/me');
+      const next = postAuthDestination(
+        me.user,
+        ROUTES.DASHBOARD,
+        ROUTES.SYSTEM_ACCESS_AGREEMENT,
+        ROUTES.CHANGE_PASSWORD,
+      );
+      toast.success(
+        next === ROUTES.CHANGE_PASSWORD
+          ? 'Agreement accepted — please set a new password.'
+          : 'Agreement accepted. Welcome to the CROSSUB Agent portal.',
+      );
+      router.replace(next);
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(err.message || 'Unable to record your agreement.');

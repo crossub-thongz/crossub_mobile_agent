@@ -4,6 +4,7 @@ import Script from 'next/script';
 
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { SystemAccessAgreementGate } from '@/components/auth/system-access-agreement-gate';
+import { MustChangePasswordGate } from '@/components/auth/must-change-password-gate';
 import { PortalServiceLevelGate } from '@/components/auth/portal-service-level-gate';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { AgentNotificationLiveAlert } from '@/components/agent/agent-notification-live-alert';
@@ -50,13 +51,15 @@ export default function RootLayout({
           <AuthProvider>
             <ProviderErrorBoundary>
               <SystemAccessAgreementGate>
-                <AgentDataProvider>
-                  <PortalServiceLevelGate>
-                    <AgentNotificationLiveAlert />
-                    {children}
-                    <WelcomeOnboarding />
-                  </PortalServiceLevelGate>
-                </AgentDataProvider>
+                <MustChangePasswordGate>
+                  <AgentDataProvider>
+                    <PortalServiceLevelGate>
+                      <AgentNotificationLiveAlert />
+                      {children}
+                      <WelcomeOnboarding />
+                    </PortalServiceLevelGate>
+                  </AgentDataProvider>
+                </MustChangePasswordGate>
               </SystemAccessAgreementGate>
             </ProviderErrorBoundary>
           </AuthProvider>

@@ -85,7 +85,12 @@ export default function RegisterPage() {
         'Agent account created — your agency is in crossub_web Clients and you are signed in.',
       );
       router.replace(
-        postAuthDestination(user, ROUTES.DASHBOARD, ROUTES.SYSTEM_ACCESS_AGREEMENT),
+        postAuthDestination(
+          user,
+          ROUTES.DASHBOARD,
+          ROUTES.SYSTEM_ACCESS_AGREEMENT,
+          ROUTES.CHANGE_PASSWORD,
+        ),
       );
       return;
     } catch (err) {

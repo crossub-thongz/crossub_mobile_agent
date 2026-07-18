@@ -126,10 +126,10 @@ export default function SettingsPage() {
             <ChevronRight className="text-muted-foreground size-4" />
           </Link>
           <Link
-            href={ROUTES.FORGOT_PASSWORD}
+            href={`${ROUTES.CHANGE_PASSWORD}?from=settings`}
             className="flex items-center justify-between px-4 py-3 text-sm"
           >
-            Password help
+            Change password
             <ChevronRight className="text-muted-foreground size-4" />
           </Link>
         </section>

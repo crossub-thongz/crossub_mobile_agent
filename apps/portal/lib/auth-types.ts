@@ -11,6 +11,8 @@ export interface AuthUser {
   systemAccessAccepted?: boolean;
   systemAccessAcceptedAt?: string | null;
   systemAccessAgreementVersion?: string | null;
+  /** True when the account must set a new password before using the app. */
+  mustChangePassword?: boolean;
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;

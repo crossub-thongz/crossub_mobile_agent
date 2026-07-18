@@ -46,7 +46,12 @@ export default function LoginPage() {
   useLayoutEffect(() => {
     if (status !== 'authed' || !user) return;
     window.location.replace(
-      postAuthDestination(user, ROUTES.DASHBOARD, ROUTES.SYSTEM_ACCESS_AGREEMENT),
+      postAuthDestination(
+        user,
+        ROUTES.DASHBOARD,
+        ROUTES.SYSTEM_ACCESS_AGREEMENT,
+        ROUTES.CHANGE_PASSWORD,
+      ),
     );
   }, [status, user]);
 
@@ -76,6 +81,7 @@ export default function LoginPage() {
           result.user,
           ROUTES.DASHBOARD,
           ROUTES.SYSTEM_ACCESS_AGREEMENT,
+          ROUTES.CHANGE_PASSWORD,
         ),
       );
       return;
