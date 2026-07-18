@@ -1,11 +1,10 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { PropertyTribunalCasesTable } from '@/components/agent/property-tribunal-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
-import { tribunalDetail } from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
+import { TribunalCaseDetailDialog } from '@/components/agent/tribunal-case-detail-dialog';
 import {
   isWorkflowCreatedCase,
   type PropertyWorkflowCreatedResult,
@@ -47,7 +46,9 @@ export function PropertyTribunalTab({
   currentLease?: LeasingRecord;
   onRefresh?: () => void;
 }) {
-  const router = useRouter();
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const selectedCase =
+    tribunalCases.find((row) => row.id === selectedCaseId) ?? null;
 
   return (
     <div className="space-y-4">
@@ -66,7 +67,7 @@ export function PropertyTribunalTab({
         onCreated={async (result?: PropertyWorkflowCreatedResult) => {
           await onRefresh?.();
           if (result && isWorkflowCreatedCase(result) && result.kind === 'tribunal') {
-            router.push(tribunalDetail(result.id, fromProperty(propertyId, 'Tribunal')));
+            setSelectedCaseId(result.id);
           }
         }}
         actionsOnly
@@ -74,9 +75,15 @@ export function PropertyTribunalTab({
 
       <PropertyTribunalCasesTable
         items={tribunalCases}
-        onItemClick={(item) =>
-          router.push(tribunalDetail(item.id, fromProperty(propertyId, 'Tribunal')))
-        }
+        selectedId={selectedCaseId}
+        onItemClick={(item) => setSelectedCaseId(item.id)}
+      />
+
+      <TribunalCaseDetailDialog
+        open={selectedCaseId != null}
+        onClose={() => setSelectedCaseId(null)}
+        caseId={selectedCaseId}
+        tribunalCase={selectedCase}
       />
     </div>
   );

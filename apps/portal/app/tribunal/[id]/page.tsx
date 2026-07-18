@@ -5,7 +5,6 @@ import { FileText, Gavel } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
-import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -13,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES, tribunalDetail } from '@/constants/routes';
 import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
-import { tribunalWorkflowProgress } from '@/lib/case-workflows';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import { formatDateTime } from '@/lib/utils';
@@ -48,8 +46,6 @@ export default function TribunalDetailPage() {
   return (
     <AgentShell title="Tribunal case" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
-        <CaseWorkflowProgressCard progress={tribunalWorkflowProgress(c)} />
-
         {rentChasing ? (
           <TribunalRentChasingDetail caseId={c.id} />
         ) : (

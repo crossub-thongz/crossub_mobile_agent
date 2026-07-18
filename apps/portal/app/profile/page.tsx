@@ -1,14 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Building2, ChevronRight, History, LogOut, Mail, Phone, Settings, User } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { AgentShell } from '@/components/layout/agent-shell';
 import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { updateAgencyBilling } from '@/lib/crossub-api/agent-client';
 import { buildProfileHistory } from '@/lib/profile-history';
 import { buildPhonebook } from '@/lib/phonebook';
 import { ROUTES } from '@/constants/routes';
@@ -20,10 +24,33 @@ type ProfileTab = 'history' | 'contacts';
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
-  const { properties, messages, rentReviews, primaryAgency, portalAccessReady } = useAgentData();
+  const {
+    properties,
+    messages,
+    rentReviews,
+    primaryAgency,
+    portalAccessReady,
+    refresh,
+  } = useAgentData();
   const sentThreadMessages = useAgentStore((s) => s.sentThreadMessages);
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [tab, setTab] = useState<ProfileTab>('contacts');
+  const [billingSaving, setBillingSaving] = useState(false);
+  const [abn, setAbn] = useState('');
+  const [licenceNumber, setLicenceNumber] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
+  const [bankBsb, setBankBsb] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+
+  useEffect(() => {
+    setAbn(primaryAgency?.abn ?? '');
+    setLicenceNumber(primaryAgency?.licenceNumber ?? '');
+    setBankName(primaryAgency?.bankName ?? '');
+    setBankAccountName(primaryAgency?.bankAccountName ?? '');
+    setBankBsb(primaryAgency?.bankBsb ?? '');
+    setBankAccountNumber(primaryAgency?.bankAccountNumber ?? '');
+  }, [primaryAgency]);
 
   const phonebook = buildPhonebook(properties);
   const history = buildProfileHistory({
@@ -101,6 +128,86 @@ export default function ProfilePage() {
             )}
           </dl>
         </section>
+
+        {primaryAgency ? (
+          <section className="rounded-xl border bg-card p-4">
+            <h2 className="text-sm font-semibold">Invoice billing details</h2>
+            <p className="text-muted-foreground mt-1 text-xs">
+              ABN, licence, and bank details used on Crossub tax invoices.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <BillingField label="ABN">
+                <Input value={abn} onChange={(e) => setAbn(e.target.value)} disabled={billingSaving} />
+              </BillingField>
+              <BillingField label="Licence number">
+                <Input
+                  value={licenceNumber}
+                  onChange={(e) => setLicenceNumber(e.target.value)}
+                  disabled={billingSaving}
+                />
+              </BillingField>
+              <BillingField label="Bank name">
+                <Input
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  disabled={billingSaving}
+                />
+              </BillingField>
+              <BillingField label="Account name">
+                <Input
+                  value={bankAccountName}
+                  onChange={(e) => setBankAccountName(e.target.value)}
+                  disabled={billingSaving}
+                />
+              </BillingField>
+              <BillingField label="BSB">
+                <Input
+                  value={bankBsb}
+                  onChange={(e) => setBankBsb(e.target.value)}
+                  disabled={billingSaving}
+                />
+              </BillingField>
+              <BillingField label="Account number">
+                <Input
+                  value={bankAccountNumber}
+                  onChange={(e) => setBankAccountNumber(e.target.value)}
+                  disabled={billingSaving}
+                />
+              </BillingField>
+            </div>
+            <Button
+              type="button"
+              className="mt-3"
+              size="sm"
+              disabled={billingSaving}
+              onClick={() => {
+                void (async () => {
+                  setBillingSaving(true);
+                  try {
+                    await updateAgencyBilling(primaryAgency.id, {
+                      abn: abn.trim() || undefined,
+                      licenceNumber: licenceNumber.trim() || undefined,
+                      bankName: bankName.trim() || undefined,
+                      bankAccountName: bankAccountName.trim() || undefined,
+                      bankBsb: bankBsb.trim() || undefined,
+                      bankAccountNumber: bankAccountNumber.trim() || undefined,
+                    });
+                    await refresh({ force: true });
+                    toast.success('Billing details saved');
+                  } catch (err) {
+                    toast.error(
+                      err instanceof Error ? err.message : 'Could not save billing details',
+                    );
+                  } finally {
+                    setBillingSaving(false);
+                  }
+                })();
+              }}
+            >
+              {billingSaving ? 'Saving…' : 'Save billing details'}
+            </Button>
+          </section>
+        ) : null}
 
         <Link
           href={ROUTES.SETTINGS}
@@ -204,6 +311,21 @@ export default function ProfilePage() {
         </Button>
       </div>
     </AgentShell>
+  );
+}
+
+function BillingField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <Label className="text-muted-foreground mb-1.5 text-xs">{label}</Label>
+      {children}
+    </div>
   );
 }
 

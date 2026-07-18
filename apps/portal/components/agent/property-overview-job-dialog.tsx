@@ -8,9 +8,9 @@ import {
 } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { PropertyMaintenanceCaseDialog } from '@/components/agent/property-maintenance-case-dialog';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
+import { TribunalCaseDetailDialog } from '@/components/agent/tribunal-case-detail-dialog';
 import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
 import { Button } from '@/components/ui/button';
-import { tribunalDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
@@ -153,30 +153,13 @@ export function PropertyOverviewJobDialog({
 
   if (job.kind === 'tribunal') {
     const tribunalCase = tribunalCases.find((item) => item.id === job.id) ?? null;
-    if (!tribunalCase) return null;
     return (
-      <CaseDetailDialog
+      <TribunalCaseDetailDialog
         open={open}
         onClose={onClose}
-        title="Tribunal"
-        subtitle={`${job.name} · ${job.status}`}
-        size={JOB_CASE_DIALOG_SIZE}
-      >
-        <div className="space-y-3 rounded-xl border bg-card p-4 text-sm">
-          <p className="font-semibold">{tribunalCase.matter}</p>
-          <p className="text-muted-foreground text-xs">
-            {tribunalCase.tenantName} · {tribunalCase.status}
-          </p>
-          <Button asChild variant="outline" size="sm" className="w-full">
-            <Link
-              href={tribunalDetail(tribunalCase.id, fromProperty(propertyId, 'Tribunal'))}
-              onClick={onClose}
-            >
-              Open tribunal case
-            </Link>
-          </Button>
-        </div>
-      </CaseDetailDialog>
+        caseId={job.id}
+        tribunalCase={tribunalCase}
+      />
     );
   }
 

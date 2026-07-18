@@ -233,6 +233,57 @@ export async function createAgency(body: CreateAgentAgencyInput): Promise<AgentA
   });
 }
 
+export type AgentInvoiceListItem = components['schemas']['AgentInvoiceListItemDto'];
+export type AgentInvoiceDetail = components['schemas']['AgentInvoiceDetailDto'];
+export type AgentCreateInvoiceInput = components['schemas']['AgentCreateInvoiceDto'];
+export type AgentUpdateInvoiceInput = components['schemas']['AgentUpdateInvoiceDto'];
+export type AgentUpdateAgencyBillingInput =
+  components['schemas']['AgentUpdateAgencyBillingDto'];
+
+/** Agency ABN / licence / bank details for tax invoices. */
+export async function updateAgencyBilling(
+  agencyId: string,
+  body: AgentUpdateAgencyBillingInput,
+): Promise<AgentAgency> {
+  return agentFetch<AgentAgency>(`/agent/agencies/${agencyId}/billing`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+/** Tax invoices for assigned agencies (`GET /api/v1/agent/invoices`). */
+export async function fetchInvoices(): Promise<AgentInvoiceListItem[]> {
+  const data = await agentFetch<{ items: AgentInvoiceListItem[] }>('/agent/invoices');
+  return data.items;
+}
+
+export async function fetchInvoice(invoiceId: string): Promise<AgentInvoiceDetail> {
+  return agentFetch<AgentInvoiceDetail>(`/agent/invoices/${invoiceId}`);
+}
+
+export async function createInvoice(
+  body: AgentCreateInvoiceInput,
+): Promise<AgentInvoiceDetail> {
+  return agentFetch<AgentInvoiceDetail>('/agent/invoices', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateInvoice(
+  invoiceId: string,
+  body: AgentUpdateInvoiceInput,
+): Promise<AgentInvoiceDetail> {
+  return agentFetch<AgentInvoiceDetail>(`/agent/invoices/${invoiceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteInvoice(invoiceId: string): Promise<void> {
+  await agentFetch<void>(`/agent/invoices/${invoiceId}`, { method: 'DELETE' });
+}
+
 /** One property by id (`GET /api/v1/agent/properties/{propertyId}`). */
 export async function fetchProperty(propertyId: string): Promise<AgentProperty> {
   const { data, error } = await crossub.GET('/agent/properties/{propertyId}', {

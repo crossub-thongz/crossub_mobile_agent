@@ -143,6 +143,13 @@ export interface Agency {
   portalServiceLevel?: AgentPortalServiceLevel;
   /** Properties under this agency in the agent's book — derived from the live `properties`. */
   propertyCount: number;
+  /** Billing fields used on tax invoices. */
+  abn?: string;
+  licenceNumber?: string;
+  bankName?: string;
+  bankAccountName?: string;
+  bankBsb?: string;
+  bankAccountNumber?: string;
 }
 
 export interface LeasingRecord {

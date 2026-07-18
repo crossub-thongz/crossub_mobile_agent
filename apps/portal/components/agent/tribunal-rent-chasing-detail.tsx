@@ -20,7 +20,7 @@ import {
   updateAgentTribunalRentChasing,
   type AgentTribunalRentChasingDetail,
 } from '@/lib/crossub-api/agent-workflow-client';
-import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { cn, daysSinceDate, formatCurrency, formatDate } from '@/lib/utils';
 
 type ArrearRow = AgentTribunalRentChasingDetail['arrears'][number];
 type ArrearKind = ArrearRow['kind'];
@@ -58,7 +58,14 @@ function cycleLabel(cycle: string | null | undefined): string {
   return '—';
 }
 
-function DaysOverdue({ days }: { days: number | null | undefined }) {
+function DaysSince({
+  dueDate,
+  fallbackDays,
+}: {
+  dueDate?: string | null;
+  fallbackDays?: number | null;
+}) {
+  const days = daysSinceDate(dueDate) ?? fallbackDays ?? null;
   if (days == null) {
     return <span className="text-muted-foreground">—</span>;
   }
@@ -69,6 +76,11 @@ function DaysOverdue({ days }: { days: number | null | undefined }) {
         'inline-flex items-center gap-1 text-[11px] font-medium',
         days > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground',
       )}
+      title={
+        dueDate
+          ? `Days from ${formatDate(dueDate)} through today`
+          : undefined
+      }
     >
       <CalendarDays className="size-3.5 shrink-0" aria-hidden />
       {days} day{days === 1 ? '' : 's'}
@@ -76,18 +88,22 @@ function DaysOverdue({ days }: { days: number | null | undefined }) {
   );
 }
 
+function arrearsDateCaption(kind: ArrearKind, dueDate: string): string {
+  const label =
+    kind === 'rent' ? 'Paid to' : kind === 'bond' ? 'Lease start' : 'Due';
+  return `${label} ${formatDate(dueDate)}`;
+}
+
 function ArrearsSection({
   title,
   empty,
   icon: Icon,
   rows,
-  footer,
 }: {
   title: string;
   empty: string;
   icon: typeof CircleDollarSign;
   rows: ArrearRow[];
-  footer?: React.ReactNode;
 }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-xl border bg-card shadow-sm">
@@ -125,7 +141,7 @@ function ArrearsSection({
                     <p className="font-medium leading-snug">{row.name}</p>
                     {row.dueDate ? (
                       <p className="text-muted-foreground mt-0.5 text-[11px]">
-                        Due {formatDate(row.dueDate)}
+                        {arrearsDateCaption(row.kind, row.dueDate)}
                       </p>
                     ) : null}
                   </td>
@@ -136,7 +152,7 @@ function ArrearsSection({
                     {row.amount != null ? formatCurrency(row.amount) : '—'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 align-top">
-                    <DaysOverdue days={row.daysOverdue} />
+                    <DaysSince dueDate={row.dueDate} fallbackDays={row.daysOverdue} />
                   </td>
                 </tr>
               ))}
@@ -144,8 +160,6 @@ function ArrearsSection({
           </table>
         </div>
       )}
-
-      {footer ? <div className="border-t px-3 py-3">{footer}</div> : null}
     </div>
   );
 }
@@ -268,6 +282,66 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
         onSaved={setDetail}
       />
 
+      <section className="rounded-xl border bg-card p-4">
+        <p className="text-muted-foreground mb-3 text-[10px] font-semibold uppercase tracking-wide">
+          Tenancy details
+        </p>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Tenant
+            </dt>
+            <dd className="mt-1 text-sm font-medium">{detail.tenantName || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Contact
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {detail.tenantPhone || '—'}
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Email
+            </dt>
+            <dd className="mt-1 text-sm font-medium break-all">
+              {detail.tenantEmail || '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Agreement end
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {detail.agreementEnd ? formatDate(detail.agreementEnd) : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Current rent
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {detail.currentRent != null ? formatCurrency(detail.currentRent) : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Payment cycle
+            </dt>
+            <dd className="mt-1 text-sm font-medium">{cycleLabel(detail.paymentCycle)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+              Rent paid to
+            </dt>
+            <dd className="mt-1 text-sm font-medium">
+              {detail.rentPaidTo ? formatDate(detail.rentPaidTo) : '—'}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:items-start">
         {ARREARS_SECTIONS.map((section) => (
           <ArrearsSection
@@ -276,46 +350,6 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
             empty={section.empty}
             icon={section.icon}
             rows={arrearsByKind[section.kind]}
-            footer={
-              section.kind === 'rent' ? (
-                <dl className="grid gap-2 text-xs sm:grid-cols-2">
-                  <div>
-                    <dt className="text-muted-foreground font-medium uppercase tracking-wide">
-                      Agreement end
-                    </dt>
-                    <dd className="mt-0.5 font-medium">
-                      {detail.agreementEnd ? formatDate(detail.agreementEnd) : '—'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium uppercase tracking-wide">
-                      Current rent
-                    </dt>
-                    <dd className="mt-0.5 font-medium">
-                      {detail.currentRent != null
-                        ? formatCurrency(detail.currentRent)
-                        : '—'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium uppercase tracking-wide">
-                      Payment cycle
-                    </dt>
-                    <dd className="mt-0.5 font-medium">
-                      {cycleLabel(detail.paymentCycle)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground font-medium uppercase tracking-wide">
-                      Rent paid to
-                    </dt>
-                    <dd className="mt-0.5 font-medium">
-                      {detail.rentPaidTo ? formatDate(detail.rentPaidTo) : '—'}
-                    </dd>
-                  </div>
-                </dl>
-              ) : undefined
-            }
           />
         ))}
       </div>

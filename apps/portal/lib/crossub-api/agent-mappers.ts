@@ -260,6 +260,12 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
         ? (a.portalServiceLevel as Agency['portalServiceLevel'])
         : 'LEVEL_2_FULL_MANAGEMENT',
     propertyCount: 0,
+    abn: asString(a.abn),
+    licenceNumber: asString(a.licenceNumber),
+    bankName: asString(a.bankName),
+    bankAccountName: asString(a.bankAccountName),
+    bankBsb: asString(a.bankBsb),
+    bankAccountNumber: asString(a.bankAccountNumber),
   }));
 }
 

@@ -38,6 +38,28 @@ export function formatDateTime(iso: string): string {
   );
 }
 
+/** Local calendar YYYY-MM-DD (avoids UTC day-shift from `toISOString()`). */
+function localDateKey(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Calendar days from `isoDate` through today (local).
+ * Past dates → positive; today/future → 0; unknown → null.
+ */
+export function daysSinceDate(isoDate: string | null | undefined): number | null {
+  if (!isoDate?.trim()) return null;
+  const key = isoDate.trim().slice(0, 10);
+  const start = new Date(`${key}T00:00:00`);
+  if (Number.isNaN(start.getTime())) return null;
+  const todayStart = new Date(`${localDateKey()}T00:00:00`);
+  const diffMs = todayStart.getTime() - start.getTime();
+  return Math.max(0, Math.floor(diffMs / 86_400_000));
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-AU', {
     day: 'numeric',

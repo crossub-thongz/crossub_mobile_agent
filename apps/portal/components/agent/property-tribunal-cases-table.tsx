@@ -6,9 +6,11 @@ import type { TribunalCase } from '@/lib/types';
 export function PropertyTribunalCasesTable({
   items,
   onItemClick,
+  selectedId,
 }: {
   items: TribunalCase[];
   onItemClick?: (item: TribunalCase) => void;
+  selectedId?: string | null;
 }) {
   if (items.length === 0) {
     return (
@@ -21,5 +23,11 @@ export function PropertyTribunalCasesTable({
     );
   }
 
-  return <TribunalListTable items={items} onItemClick={onItemClick} />;
+  return (
+    <TribunalListTable
+      items={items}
+      selectedId={selectedId}
+      onItemClick={onItemClick}
+    />
+  );
 }

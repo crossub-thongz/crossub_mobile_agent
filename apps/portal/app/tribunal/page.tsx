@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Gavel, Plus } from 'lucide-react';
 
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
@@ -9,11 +9,11 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { PageIntro } from '@/components/agent/page-intro';
 import { TribunalListTable } from '@/components/agent/portfolio-module-tables';
+import { TribunalCaseDetailDialog } from '@/components/agent/tribunal-case-detail-dialog';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { tribunalDetail, ROUTES } from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
+import { ROUTES } from '@/constants/routes';
 
 const FILTERS = [
   { id: 'active', label: 'Active' },
@@ -22,7 +22,6 @@ const FILTERS = [
 ];
 
 export default function TribunalPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const urlFilter = searchParams.get('filter');
   const { tribunalCases, properties, refresh } = useAgentData();
@@ -32,11 +31,15 @@ export default function TribunalPage() {
     return 'active';
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
 
   const list = useMemo(() => {
     if (filter === 'all') return tribunalCases;
     return tribunalCases.filter((c) => c.status === filter);
   }, [tribunalCases, filter]);
+
+  const selectedCase =
+    tribunalCases.find((row) => row.id === selectedCaseId) ?? null;
 
   return (
     <AgentShell title="Tribunal" backHref={ROUTES.DASHBOARD}>
@@ -58,7 +61,7 @@ export default function TribunalPage() {
           properties={properties}
           onCreated={async (caseId) => {
             await refresh();
-            router.push(tribunalDetail(caseId));
+            setSelectedCaseId(caseId);
           }}
         />
 
@@ -73,11 +76,17 @@ export default function TribunalPage() {
         ) : (
           <TribunalListTable
             items={list}
-            onItemClick={(item) =>
-              router.push(tribunalDetail(item.id, fromProperty(item.propertyId, 'Tribunal')))
-            }
+            selectedId={selectedCaseId}
+            onItemClick={(item) => setSelectedCaseId(item.id)}
           />
         )}
+
+        <TribunalCaseDetailDialog
+          open={selectedCaseId != null}
+          onClose={() => setSelectedCaseId(null)}
+          caseId={selectedCaseId}
+          tribunalCase={selectedCase}
+        />
       </div>
     </AgentShell>
   );
