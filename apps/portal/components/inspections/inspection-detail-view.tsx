@@ -82,6 +82,7 @@ import { useLivePoll } from '@/lib/use-live-poll';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import type { Inspection } from '@/lib/types';
+import { cn, formatDateTime } from '@/lib/utils';
 
 export function InspectionDetailView({
   inspectionId,
