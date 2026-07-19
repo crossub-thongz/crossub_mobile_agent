@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-19
+
+### Changed
+- Gii's proactive briefing now greets the agent **by name** with a warmer tone. `buildGiiBriefing` (`lib/gii-briefing.ts`) takes an optional `agentName` and leads with "Good morning, {name} 👋 …", falling back to the plain salutation when no name is on file; `GiiAssistant` passes the signed-in agent's first name from `useAuth()`. The empty state reads "You're all caught up — nothing needs you right now. Enjoy the calm." (`constants/gii-briefing.ts`), instead of the flat "nothing needs action right now." Requested by the boss ("add a greeting with a bit of emotional value"). Counts and rows still come from the provider's data, never the model.
+
 ## 2026-07-18
 
 ### Added

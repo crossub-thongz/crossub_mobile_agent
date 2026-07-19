@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { messageDetail } from '@/constants/routes';
@@ -74,6 +75,7 @@ export function GiiAssistant({
 }) {
   const router = useRouter();
   const data = useAgentData();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [listening, setListening] = useState(false);
   const [sending, setSending] = useState(false);
@@ -111,7 +113,12 @@ export function GiiAssistant({
   // `!data.loading` so it waits for the first data load instead of flashing "all caught up".
   useEffect(() => {
     if (!open || data.loading || lines.length > 0) return;
-    const briefing = buildGiiBriefing(data.needActionItems, data.needActionGroups, new Date());
+    const briefing = buildGiiBriefing(
+      data.needActionItems,
+      data.needActionGroups,
+      new Date(),
+      user?.firstName,
+    );
     const text = briefing.subtitle
       ? `${briefing.greeting}\n\n${briefing.subtitle}`
       : briefing.greeting;
@@ -123,7 +130,14 @@ export function GiiAssistant({
         briefing: briefing.isEmpty ? null : briefing,
       },
     ]);
-  }, [open, data.loading, data.needActionItems, data.needActionGroups, lines.length]);
+  }, [
+    open,
+    data.loading,
+    data.needActionItems,
+    data.needActionGroups,
+    lines.length,
+    user?.firstName,
+  ]);
 
   /**
    * A turn runs two things at once:

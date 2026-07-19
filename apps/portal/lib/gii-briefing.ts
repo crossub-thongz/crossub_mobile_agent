@@ -40,6 +40,16 @@ function salutation(now: Date): string {
   return 'Good evening';
 }
 
+/**
+ * The personal greeting lead — time of day plus the agent's first name when we have it.
+ * The name is the warmth the briefing opens with; without one it degrades to the plain
+ * salutation rather than an awkward trailing comma.
+ */
+function greetingLead(now: Date, agentName?: string | null): string {
+  const name = agentName?.trim();
+  return name ? `${salutation(now)}, ${name}` : salutation(now);
+}
+
 function sortByPriority(items: PropertyNeedAction[]): PropertyNeedAction[] {
   return [...items].sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
 }
@@ -69,13 +79,14 @@ export function buildGiiBriefing(
   items: PropertyNeedAction[],
   groups: NeedActionGroup[],
   now: Date,
+  agentName?: string | null,
 ): GiiBriefing {
-  const hello = salutation(now);
+  const lead = greetingLead(now, agentName);
   const total = items.length;
 
   if (total === 0) {
     return {
-      greeting: `${hello}. ${BRIEFING_EMPTY_COPY}`,
+      greeting: `${lead} 👋 ${BRIEFING_EMPTY_COPY}`,
       subtitle: null,
       groupSummary: null,
       total: 0,
@@ -91,7 +102,7 @@ export function buildGiiBriefing(
   const verb = total === 1 ? 'thing needs' : 'things need';
 
   return {
-    greeting: `${hello} — ${total} ${verb} you today.`,
+    greeting: `${lead} 👋 ${total} ${verb} you today.`,
     subtitle: `First up: ${top.label} · ${top.propertyAddress}.`,
     groupSummary: groupSummary(groups),
     total,

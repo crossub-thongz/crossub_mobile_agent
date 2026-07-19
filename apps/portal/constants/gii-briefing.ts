@@ -65,6 +65,6 @@ export const GROUP_SUMMARY_NOUN: Record<string, string> = {
   other: 'other',
 };
 
-/** Empty-state line — a friendly caught-up message, never a blank card. */
+/** Empty-state line — a warm caught-up message, never a blank card. */
 export const BRIEFING_EMPTY_COPY =
-  "You're all caught up — nothing needs action right now.";
+  "You're all caught up — nothing needs you right now. Enjoy the calm.";
