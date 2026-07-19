@@ -219,6 +219,13 @@ export async function endPropertyManagement(
   });
 }
 
+/** Discard an incomplete registry draft (`DELETE /agent/properties/{propertyId}`). */
+export async function deleteDraftProperty(propertyId: string): Promise<void> {
+  await agentFetch<void>(`/agent/properties/${propertyId}`, {
+    method: 'DELETE',
+  });
+}
+
 /** Onboard a client agency (`POST /api/v1/agent/agencies`). */
 export type CreateAgentAgencyInput = {
   name: string;

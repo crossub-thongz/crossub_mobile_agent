@@ -17,11 +17,13 @@ import type {
   MaintenanceRequest,
   Property,
   PropertyAccounting,
+  PropertyNeedAction,
   RentReviewCase,
   TenantSelectionCase,
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+import type { SystemSearchResult } from '@/lib/agent-system-search';
 
 export type PortfolioAgentData = {
   properties: Property[];
@@ -157,6 +159,132 @@ export function tribunalToJobRow(item: TribunalCase): PropertyJobRow {
 
 export function accountingToJobRow(item: PropertyAccounting): PropertyJobRow | null {
   return accountingJobRows(item)[0] ?? null;
+}
+
+function leasingCasesForProperty(
+  propertyId: string,
+  data: PortfolioAgentData,
+): ReturnType<typeof buildPropertyLeasingWorkflowCases> {
+  const property = data.properties.find((row) => row.id === propertyId);
+  if (!property) return [];
+
+  const currentTenancy = data.leasingRecords.filter(
+    (row) => row.propertyId === propertyId && row.status === 'current',
+  );
+
+  return buildPropertyLeasingWorkflowCases({
+    propertyId,
+    leasingCycles: data.leasingCycles.filter((row) => row.propertyId === propertyId),
+    tenantSelections: data.tenantSelections.filter((row) => row.propertyId === propertyId),
+    vacatingCases: data.vacating.filter((row) => row.propertyId === propertyId),
+    rentReviews: rentReviewsForProperty(data.rentReviews, propertyId, property),
+    rentReviewDecisions: data.rentReviewDecisions,
+    currentLease: currentTenancy[0],
+    isVacant: isPropertyVacant(property, currentTenancy),
+  });
+}
+
+/** Map a need-action row onto the portfolio job popup (instead of the legacy full-page workflow). */
+export function needActionToJobRow(
+  action: PropertyNeedAction,
+  data: PortfolioAgentData,
+): PropertyJobRow | null {
+  if (action.id.startsWith('mnt-')) {
+    const item = data.maintenanceAll.find((row) => row.id === action.id.slice(4));
+    return item ? maintenanceToJobRow(item) : null;
+  }
+
+  if (action.id.startsWith('rr-')) {
+    const item = data.rentReviews.find((row) => row.id === action.id.slice(3));
+    return item ? rentReviewToJobRow(item, data.rentReviewDecisions) : null;
+  }
+
+  if (action.id.startsWith('insp-report-')) {
+    const item = data.inspections.find((row) => row.id === action.id.slice('insp-report-'.length));
+    return item ? inspectionToJobRow(item) : null;
+  }
+
+  if (action.id.startsWith('insp-')) {
+    const item = data.inspections.find((row) => row.id === action.id.slice(5));
+    return item ? inspectionToJobRow(item) : null;
+  }
+
+  if (action.id.startsWith('ts-')) {
+    const selectionId = action.id.slice(3);
+    const workflowCase = leasingCasesForProperty(action.propertyId, data).find(
+      (row) => row.id === selectionId,
+    );
+    return workflowCase ? leasingWorkflowJobRows([workflowCase])[0] ?? null : null;
+  }
+
+  if (action.id.startsWith('trib-')) {
+    const item = data.tribunalCases.find((row) => row.id === action.id.slice(5));
+    return item ? tribunalToJobRow(item) : null;
+  }
+
+  if (action.id.startsWith('arrears-')) {
+    const item = data.accounting.find((row) => row.propertyId === action.propertyId);
+    return item ? accountingToJobRow(item) : null;
+  }
+
+  if (action.id.startsWith('vacant-')) {
+    const workflowCase =
+      leasingCasesForProperty(action.propertyId, data).find((row) => row.category === 'leasing') ??
+      null;
+    return workflowCase ? leasingWorkflowJobRows([workflowCase])[0] ?? null : null;
+  }
+
+  if (action.id.startsWith('lease-expiry-')) {
+    const workflowCase =
+      leasingCasesForProperty(action.propertyId, data).find(
+        (row) => row.category === 'rent_review',
+      ) ?? null;
+    if (workflowCase) return leasingWorkflowJobRows([workflowCase])[0] ?? null;
+    const review = data.rentReviews.find((row) => row.propertyId === action.propertyId);
+    return review ? rentReviewToJobRow(review, data.rentReviewDecisions) : null;
+  }
+
+  return null;
+}
+
+/** Map a Gii local-search hit onto the portfolio job popup when it references a case row. */
+export function searchResultToJobRow(
+  result: SystemSearchResult,
+  data: PortfolioAgentData,
+): PropertyJobRow | null {
+  if (result.id.startsWith('maint-')) {
+    const item = data.maintenanceAll.find((row) => row.id === result.id.slice(6));
+    return item ? maintenanceToJobRow(item) : null;
+  }
+  if (result.id.startsWith('insp-')) {
+    const item = data.inspections.find((row) => row.id === result.id.slice(5));
+    return item ? inspectionToJobRow(item) : null;
+  }
+  if (result.id.startsWith('rr-')) {
+    const item = data.rentReviews.find((row) => row.id === result.id.slice(3));
+    return item ? rentReviewToJobRow(item, data.rentReviewDecisions) : null;
+  }
+  if (result.id.startsWith('vac-')) {
+    const item = data.vacating.find((row) => row.id === result.id.slice(4));
+    if (!item) return null;
+    const workflowCase = leasingCasesForProperty(item.propertyId, data).find(
+      (row) => row.id === item.id && row.category === 'end_leasing',
+    );
+    return workflowCase ? leasingWorkflowJobRows([workflowCase])[0] ?? null : null;
+  }
+  if (result.id.startsWith('ts-')) {
+    const item = data.tenantSelections.find((row) => row.id === result.id.slice(3));
+    if (!item?.propertyId) return null;
+    const workflowCase = leasingCasesForProperty(item.propertyId, data).find(
+      (row) => row.id === item.id,
+    );
+    return workflowCase ? leasingWorkflowJobRows([workflowCase])[0] ?? null : null;
+  }
+  if (result.id.startsWith('tri-')) {
+    const item = data.tribunalCases.find((row) => row.id === result.id.slice(4));
+    return item ? tribunalToJobRow(item) : null;
+  }
+  return null;
 }
 
 export function leasingCycleToJobRow(

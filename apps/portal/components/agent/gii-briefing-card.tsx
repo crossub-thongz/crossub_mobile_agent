@@ -21,10 +21,13 @@ export function GiiBriefingCard({
   briefing,
   onNavigate,
   onAsk,
+  onOpen,
 }: {
   briefing: GiiBriefing;
   onNavigate?: () => void;
   onAsk?: (row: PropertyNeedAction) => void;
+  /** Open the portfolio job popup instead of navigating to the legacy workflow page. */
+  onOpen?: (row: PropertyNeedAction) => void;
 }) {
   if (briefing.isEmpty || briefing.rows.length === 0) return null;
 
@@ -82,13 +85,23 @@ export function GiiBriefingCard({
                     Ask Gii
                   </button>
                 ) : null}
-                <Link
-                  href={row.href}
-                  onClick={() => onNavigate?.()}
-                  className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium text-foreground/80 transition hover:bg-muted/40"
-                >
-                  Open
-                </Link>
+                {onOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpen(row)}
+                    className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium text-foreground/80 transition hover:bg-muted/40"
+                  >
+                    Open
+                  </button>
+                ) : (
+                  <Link
+                    href={row.href}
+                    onClick={() => onNavigate?.()}
+                    className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium text-foreground/80 transition hover:bg-muted/40"
+                  >
+                    Open
+                  </Link>
+                )}
               </div>
             </li>
           );

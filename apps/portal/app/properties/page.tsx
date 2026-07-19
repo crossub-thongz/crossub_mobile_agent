@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { PageIntro } from '@/components/agent/page-intro';
+import { PropertyDiscardDraftDialog } from '@/components/agent/property-discard-draft-dialog';
 import { PropertyEndManagementDialog } from '@/components/agent/property-end-management-dialog';
 import { PropertyListTable } from '@/components/agent/property-list-table';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -37,6 +38,7 @@ export default function PropertiesPage() {
     hasFullManagementAccess,
     apiConnected,
     endPropertyManagement,
+    deleteDraftProperty,
   } = useAgentData();
   const [filter, setFilter] = useState(
     urlFilter && FILTERS.some((f) => f.id === urlFilter) ? urlFilter : 'all',
@@ -44,6 +46,9 @@ export default function PropertiesPage() {
   const [search, setSearch] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Property | null>(null);
   const [endingManagement, setEndingManagement] = useState(false);
+  const [discardingDraft, setDiscardingDraft] = useState(false);
+
+  const pendingDraftDelete = pendingDelete?.registryIntakeComplete === false;
 
   const list = useMemo(() => {
     let items = [...properties];
@@ -75,6 +80,20 @@ export default function PropertiesPage() {
   }, [properties, filter, search, accounting]);
 
   const needActionCount = properties.filter((p) => getPropertyActions(p.id).length > 0).length;
+
+  const confirmDiscardDraft = async () => {
+    if (!pendingDelete) return;
+    setDiscardingDraft(true);
+    try {
+      await deleteDraftProperty(pendingDelete.id);
+      toast.success('Draft property deleted');
+      setPendingDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete draft property');
+    } finally {
+      setDiscardingDraft(false);
+    }
+  };
 
   const confirmEndManagement = async (endOfManagementDate: string) => {
     if (!pendingDelete) return;
@@ -157,9 +176,19 @@ export default function PropertiesPage() {
         )}
       </div>
 
+      <PropertyDiscardDraftDialog
+        property={pendingDraftDelete ? pendingDelete : null}
+        open={pendingDelete != null && pendingDraftDelete}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        onConfirm={confirmDiscardDraft}
+        saving={discardingDraft}
+      />
+
       <PropertyEndManagementDialog
-        property={pendingDelete}
-        open={pendingDelete != null}
+        property={!pendingDraftDelete ? pendingDelete : null}
+        open={pendingDelete != null && !pendingDraftDelete}
         onOpenChange={(open) => {
           if (!open) setPendingDelete(null);
         }}

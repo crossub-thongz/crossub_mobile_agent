@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
+import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,11 @@ import { messageDetail } from '@/constants/routes';
 import { searchAgentSystem, type SystemSearchResult } from '@/lib/agent-system-search';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
 import type { PropertyNeedAction } from '@/lib/types';
+import {
+  needActionToJobRow,
+  searchResultToJobRow,
+} from '@/lib/portfolio-case-dialog';
+import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   sendGiiMessage,
   type GiiAssessment,
@@ -76,6 +81,7 @@ export function GiiAssistant({
   const router = useRouter();
   const data = useAgentData();
   const { user } = useAuth();
+  const { selectedJob, openJob, closeJob, portfolioData } = usePortfolioCaseDialog();
   const [query, setQuery] = useState('');
   const [listening, setListening] = useState(false);
   const [sending, setSending] = useState(false);
@@ -215,6 +221,26 @@ export function GiiAssistant({
     void runQuery(`Give me an update on ${row.propertyAddress} — ${row.label}.`);
   };
 
+  const openNeedAction = (row: PropertyNeedAction) => {
+    const job = needActionToJobRow(row, portfolioData);
+    if (job) {
+      openJob(job);
+      return;
+    }
+    router.push(row.href);
+    onClose?.();
+  };
+
+  const openSearchResult = (result: SystemSearchResult) => {
+    const job = searchResultToJobRow(result, portfolioData);
+    if (job) {
+      openJob(job);
+      return;
+    }
+    router.push(result.href);
+    onClose?.();
+  };
+
   const startVoice = () => {
     const SpeechRecognitionCtor =
       typeof window !== 'undefined'
@@ -340,6 +366,7 @@ export function GiiAssistant({
                 briefing={line.briefing}
                 onNavigate={onClose}
                 onAsk={askAboutRow}
+                onOpen={openNeedAction}
               />
             ) : null}
 
@@ -361,10 +388,14 @@ export function GiiAssistant({
                 <p className="text-sm font-medium">{r.label}</p>
                 <p className="text-muted-foreground text-xs">{r.sub}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <Button asChild size="sm" variant="outline" className="h-7 text-xs">
-                    <Link href={r.href} onClick={() => onClose?.()}>
-                      Open
-                    </Link>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => openSearchResult(r)}
+                  >
+                    Open
                   </Button>
                   {r.propertyId && (
                     <Button
@@ -464,12 +495,20 @@ export function GiiAssistant({
   );
 
   if (isPanel) {
-    return shell;
+    return (
+      <>
+        {shell}
+        <PortfolioCaseDialogHost job={selectedJob} onClose={closeJob} onOpenJob={openJob} />
+      </>
+    );
   }
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:p-4">
-      {shell}
-    </div>
+    <>
+      <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:p-4">
+        {shell}
+      </div>
+      <PortfolioCaseDialogHost job={selectedJob} onClose={closeJob} onOpenJob={openJob} />
+    </>
   );
 }

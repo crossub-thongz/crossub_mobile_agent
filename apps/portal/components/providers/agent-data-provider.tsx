@@ -14,6 +14,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import {
   createProperty as apiCreateProperty,
   endPropertyManagement as apiEndPropertyManagement,
+  deleteDraftProperty as apiDeleteDraftProperty,
   updateProperty as apiUpdateProperty,
   createAgency as apiCreateAgency,
   createThread as apiCreateThread,
@@ -235,6 +236,7 @@ interface AgentDataContextValue {
     endOfManagementDate: string,
     options?: { archiveOnBondRelease?: boolean },
   ) => Promise<void>;
+  deleteDraftProperty: (propertyId: string) => Promise<void>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   registerInspection: (inspection: Inspection) => void;
   approveMaintenanceQuote: (requestId: string) => Promise<void>;
@@ -1015,14 +1017,21 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       if (!apiConnected) {
         throw new Error('Connect to the API to end property management');
       }
-      // Soft-archive is disabled — only record the end-of-management date.
+      // Record end-of-management and archive — property leaves the active list on refresh.
       await apiEndPropertyManagement(propertyId, { endOfManagementDate });
-      setApiProperties(
-        (prev) =>
-          prev?.map((p) =>
-            p.id === propertyId ? { ...p, endOfManagementDate } : p,
-          ) ?? null,
-      );
+      setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
+      await refresh();
+    },
+    [apiConnected, refresh],
+  );
+
+  const deleteDraftProperty = useCallback(
+    async (propertyId: string) => {
+      if (!apiConnected) {
+        throw new Error('Connect to the API to delete this draft');
+      }
+      await apiDeleteDraftProperty(propertyId);
+      setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
       await refresh();
     },
     [apiConnected, refresh],
@@ -1393,6 +1402,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     addProperty,
     savePropertyRegistryDraft,
     endPropertyManagement,
+    deleteDraftProperty,
     addOpenInspection,
     registerInspection,
     uploadDocument,
