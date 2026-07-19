@@ -120,6 +120,14 @@ export async function fetchProperties(): Promise<AgentProperty[]> {
   return data.items;
 }
 
+/** Archived properties whose management has ended (`GET /api/v1/agent/properties?archived=true`). */
+export async function fetchArchivedProperties(): Promise<AgentProperty[]> {
+  const data = await agentFetch<{ items: AgentProperty[] }>(
+    '/agent/properties?archived=true&pageSize=100',
+  );
+  return data.items;
+}
+
 /** Register a property under the agent's profile agency (`POST /api/v1/agent/properties`). */
 export type CreateAgentPropertyInput = {
   address: string;

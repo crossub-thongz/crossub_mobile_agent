@@ -24,6 +24,7 @@ import {
   fetchNotifications,
   fetchPortfolio,
   fetchProperties,
+  fetchArchivedProperties,
   markAllNotificationsRead as apiMarkAllNotificationsRead,
   markNotificationRead as apiMarkNotificationRead,
   markThreadRead as apiMarkThreadRead,
@@ -175,6 +176,10 @@ interface AgentDataContextValue {
   maintenanceAll: MaintenanceRequest[];
   maintenanceKpis: { total: number; overdue: number; breachRate: number } | null;
   properties: Property[];
+  /** Properties whose management has ended — excluded from the active portfolio list. */
+  archivedProperties: Property[];
+  /** Reload archived properties (e.g. after ending management or opening the Archived filter). */
+  refreshArchivedProperties: () => Promise<void>;
   agencies: Agency[];
   /** The agent's profile agency — earliest AccountManagerAssignment, not user-selectable. */
   primaryAgency: Agency | null;
@@ -292,6 +297,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   // They are fetched together so real properties + real domains stay
   // coherently keyed by the same real property ids.
   const [apiProperties, setApiProperties] = useState<Property[] | null>(null);
+  const [apiArchivedProperties, setApiArchivedProperties] = useState<Property[] | null>(null);
   const [portfolio, setPortfolio] = useState<AgentPortfolio | null>(null);
   // Live message threads (mapped). null = not loaded / failed → optimistic store only.
   // of the portfolio so a messaging hiccup never blanks the rest.
@@ -424,6 +430,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [status, agentPortfolioId]);
 
+  const refreshArchivedProperties = useCallback(async () => {
+    if (status !== 'authed') return;
+    try {
+      const rows = await fetchArchivedProperties();
+      setApiArchivedProperties(mapAgentProperties(rows, agentPortfolioId));
+    } catch {
+      // Archived list is optional — keep the last loaded snapshot on failure.
+    }
+  }, [status, agentPortfolioId]);
+
   useEffect(() => {
     void Promise.resolve(useAgentStore.persist.rehydrate()).catch(() => {
       try {
@@ -494,6 +510,17 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
     return scoped(addedProperties);
   }, [apiConnected, apiProperties, agentPortfolioId, addedProperties]);
+
+  const archivedProperties = useMemo(() => {
+    const scoped = (list: Property[]) =>
+      list.filter((p) => p.assignedAgentId === agentPortfolioId);
+
+    if (apiConnected) {
+      return scoped(apiArchivedProperties ?? []);
+    }
+
+    return [];
+  }, [apiConnected, apiArchivedProperties, agentPortfolioId]);
 
   const propertyIds = useMemo(
     () => new Set(properties.map((p) => p.id)),
@@ -1022,9 +1049,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       // Record end-of-management and archive — property leaves the active list on refresh.
       await apiEndPropertyManagement(propertyId, { endOfManagementDate });
       setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
+      await refreshArchivedProperties();
       await refresh();
     },
-    [apiConnected, refresh],
+    [apiConnected, refresh, refreshArchivedProperties],
   );
 
   const deleteDraftProperty = useCallback(
@@ -1370,6 +1398,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     maintenanceAll,
     maintenanceKpis,
     properties,
+    archivedProperties,
+    refreshArchivedProperties,
     agencies,
     primaryAgency,
     portalAccessReady,

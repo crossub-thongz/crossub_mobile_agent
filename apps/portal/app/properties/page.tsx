@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Search } from 'lucide-react';
@@ -25,6 +25,7 @@ const FILTERS = [
   { id: 'vacating', label: 'Vacating' },
   { id: 'vacant', label: 'Vacant' },
   { id: 'arrears', label: 'Arrears' },
+  { id: 'archived', label: 'Archived' },
 ];
 
 export default function PropertiesPage() {
@@ -32,6 +33,7 @@ export default function PropertiesPage() {
   const urlFilter = searchParams.get('filter');
   const {
     properties,
+    archivedProperties,
     agencies,
     getPropertyActions,
     accounting,
@@ -39,6 +41,7 @@ export default function PropertiesPage() {
     apiConnected,
     endPropertyManagement,
     deleteDraftProperty,
+    refreshArchivedProperties,
   } = useAgentData();
   const [filter, setFilter] = useState(
     urlFilter && FILTERS.some((f) => f.id === urlFilter) ? urlFilter : 'all',
@@ -50,18 +53,28 @@ export default function PropertiesPage() {
 
   const pendingDraftDelete = pendingDelete?.registryIntakeComplete === false;
 
+  const isArchivedView = filter === 'archived';
+
+  useEffect(() => {
+    if (isArchivedView && apiConnected) {
+      void refreshArchivedProperties();
+    }
+  }, [isArchivedView, apiConnected, refreshArchivedProperties]);
+
   const list = useMemo(() => {
-    let items = [...properties];
-    if (filter === 'occupied') {
+    let items = isArchivedView ? [...archivedProperties] : [...properties];
+    if (!isArchivedView && filter === 'occupied') {
       items = items.filter(
         (p) => p.leaseStatus === 'active' || p.leaseStatus === 'periodic',
       );
     }
-    if (filter === 'vacating') {
+    if (!isArchivedView && filter === 'vacating') {
       items = items.filter((p) => p.leaseStatus === 'vacating');
     }
-    if (filter === 'vacant') items = items.filter((p) => p.leaseStatus === 'vacant');
-    if (filter === 'arrears') {
+    if (!isArchivedView && filter === 'vacant') {
+      items = items.filter((p) => p.leaseStatus === 'vacant');
+    }
+    if (!isArchivedView && filter === 'arrears') {
       items = items.filter((p) => (accounting.find((a) => a.propertyId === p.id)?.arrearsAmount ?? 0) > 0);
     }
     if (search.trim()) {
@@ -77,7 +90,7 @@ export default function PropertiesPage() {
       );
     }
     return items;
-  }, [properties, filter, search, accounting]);
+  }, [properties, archivedProperties, filter, isArchivedView, search, accounting]);
 
   const needActionCount = properties.filter((p) => getPropertyActions(p.id).length > 0).length;
 
@@ -112,7 +125,13 @@ export default function PropertiesPage() {
   return (
     <AgentShell title="Properties">
       <div className="space-y-4">
-        <PageIntro description="Table view of your managed properties. Rows needing action are highlighted." />
+        <PageIntro
+          description={
+            isArchivedView
+              ? 'Properties whose management has ended. These records are kept for reference.'
+              : 'Table view of your managed properties. Rows needing action are highlighted.'
+          }
+        />
 
         {/* {needActionCount > 0 && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
@@ -135,7 +154,7 @@ export default function PropertiesPage() {
         </div>
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
-        {hasFullManagementAccess && (
+        {hasFullManagementAccess && !isArchivedView && (
           <Button className="w-full rounded-xl sm:w-auto" size="lg" asChild>
             <Link href={propertyNew()}>
               <Plus className="size-4" />
@@ -146,11 +165,21 @@ export default function PropertiesPage() {
 
         {list.length === 0 ? (
           <EmptyState
-            title={search || filter !== 'all' ? 'No matching properties' : 'No properties yet'}
+            title={
+              search || filter !== 'all'
+                ? isArchivedView
+                  ? 'No matching archived properties'
+                  : 'No matching properties'
+                : isArchivedView
+                  ? 'No archived properties'
+                  : 'No properties yet'
+            }
             description={
               search || filter !== 'all'
                 ? 'Try a different search or filter.'
-                : 'Add a property to start managing landlords and tenants.'
+                : isArchivedView
+                  ? 'Properties appear here after you end management on them.'
+                  : 'Add a property to start managing landlords and tenants.'
             }
             action={
               hasFullManagementAccess && !search && filter === 'all' ? (
@@ -164,14 +193,17 @@ export default function PropertiesPage() {
           <PropertyListTable
             properties={list}
             agencies={agencies}
+            variant={isArchivedView ? 'archived' : 'active'}
             actionCountFor={(id) => getPropertyActions(id).length}
             rowHref={(property) =>
-              property.registryIntakeComplete === false
-                ? propertyRegistryResume(property.id)
-                : propertyDetail(property.id)
+              isArchivedView
+                ? propertyDetail(property.id)
+                : property.registryIntakeComplete === false
+                  ? propertyRegistryResume(property.id)
+                  : propertyDetail(property.id)
             }
             onDelete={setPendingDelete}
-            canManage={hasFullManagementAccess && apiConnected}
+            canManage={hasFullManagementAccess && apiConnected && !isArchivedView}
           />
         )}
       </div>

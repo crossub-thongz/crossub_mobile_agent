@@ -44,11 +44,13 @@ type PropertySortKey =
   | 'agency'
   | 'pm'
   | 'createdAt'
-  | 'reminder';
+  | 'reminder'
+  | 'endOfManagement';
 
 export function PropertyListTable({
   properties,
   agencies,
+  variant = 'active',
   actionCountFor,
   rowHref,
   onDelete,
@@ -56,13 +58,15 @@ export function PropertyListTable({
 }: {
   properties: Property[];
   agencies: Agency[];
+  variant?: 'active' | 'archived';
   actionCountFor: (propertyId: string) => number;
   rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
   canManage?: boolean;
 }) {
+  const isArchived = variant === 'archived';
   const { sortKey, sortDirection, onSort } = useClientTableSort<PropertySortKey>(
-    'createdAt',
+    isArchived ? 'endOfManagement' : 'createdAt',
     'desc',
   );
 
@@ -94,6 +98,9 @@ export function PropertyListTable({
           break;
         case 'reminder':
           cmp = compareNumbers(actionCountFor(a.id), actionCountFor(b.id));
+          break;
+        case 'endOfManagement':
+          cmp = compareSortTime(a.endOfManagementDate, b.endOfManagementDate);
           break;
       }
       return applySortDirection(cmp, sortDirection);
@@ -156,16 +163,26 @@ export function PropertyListTable({
                 direction={sortDirection}
                 onSort={onSort}
               />
-              <SortableTableHeader
-                label="Reminder"
-                sortKey="reminder"
-                activeKey={sortKey}
-                direction={sortDirection}
-                onSort={onSort}
-                align="right"
-              />
+              {isArchived ? (
+                <SortableTableHeader
+                  label="End of management"
+                  sortKey="endOfManagement"
+                  activeKey={sortKey}
+                  direction={sortDirection}
+                  onSort={onSort}
+                />
+              ) : (
+                <SortableTableHeader
+                  label="Reminder"
+                  sortKey="reminder"
+                  activeKey={sortKey}
+                  direction={sortDirection}
+                  onSort={onSort}
+                  align="right"
+                />
+              )}
               <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Actions
+                {isArchived ? 'View' : 'Actions'}
               </th>
             </tr>
           </thead>
@@ -185,7 +202,8 @@ export function PropertyListTable({
                   key={property.id}
                   className={cn(
                     'transition-colors hover:bg-muted/20',
-                    actionCount > 0 && 'bg-destructive/[0.03]',
+                    !isArchived && actionCount > 0 && 'bg-destructive/[0.03]',
+                    isArchived && 'bg-muted/10',
                   )}
                 >
                   <td className="max-w-[16rem] px-3 py-3">
@@ -232,20 +250,35 @@ export function PropertyListTable({
                       ? formatDateTime(createdIso)
                       : '—'}
                   </td>
-                  <td className="px-3 py-3 text-center">
-                    <span
-                      className={cn(
-                        'text-xs font-semibold tabular-nums',
-                        actionCount > 0 ? 'text-destructive' : 'text-muted-foreground',
-                      )}
-                    >
-                      {actionCount}
-                    </span>
-                  </td>
+                  {isArchived ? (
+                    <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                      {property.endOfManagementDate
+                        ? formatDate(property.endOfManagementDate)
+                        : '—'}
+                    </td>
+                  ) : (
+                    <td className="px-3 py-3 text-center">
+                      <span
+                        className={cn(
+                          'text-xs font-semibold tabular-nums',
+                          actionCount > 0 ? 'text-destructive' : 'text-muted-foreground',
+                        )}
+                      >
+                        {actionCount}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-3 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" className="size-8" asChild>
-                        <Link href={rowHref(property)} aria-label={`Edit ${property.address}`}>
+                        <Link
+                          href={rowHref(property)}
+                          aria-label={
+                            isArchived
+                              ? `View ${property.address}`
+                              : `Edit ${property.address}`
+                          }
+                        >
                           <Pencil className="size-3.5" />
                         </Link>
                       </Button>
