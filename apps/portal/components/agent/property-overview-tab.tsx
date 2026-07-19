@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Archive } from 'lucide-react';
 
 import { ContactTile } from '@/components/agent/property-contact-tile';
@@ -16,6 +16,8 @@ import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-e
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { isViewableDocumentUrl } from '@/lib/document-preview';
+import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
+import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { buildPropertyOverviewJobRows, type PropertyJobRow } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
@@ -198,6 +200,22 @@ export function PropertyOverviewTab({
   const [docPreview, setDocPreview] = useState<DocumentPreviewItem | null>(null);
   const [selectedJob, setSelectedJob] = useState<PropertyJobRow | null>(null);
 
+  const openVacatingCaseId = useMemo(
+    () =>
+      vacatingCases.find((c) => c.apiStatus !== 'CANCELLED' && c.apiStatus !== 'COMPLETED')?.id ??
+      null,
+    [vacatingCases],
+  );
+  const loadEndLeasingCase = useEndLeasingStore((s) => s.loadCase);
+  const openEndLeasingCase = useEndLeasingStore((s) =>
+    openVacatingCaseId ? s.cases[openVacatingCaseId] : undefined,
+  );
+
+  useEffect(() => {
+    if (!apiConnected || !openVacatingCaseId) return;
+    void loadEndLeasingCase(openVacatingCaseId);
+  }, [apiConnected, openVacatingCaseId, loadEndLeasingCase]);
+
   const fullAddress = formatPropertyFullAddress(property);
 
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
@@ -254,9 +272,12 @@ export function PropertyOverviewTab({
       : null;
 
   const tenancyDates = useMemo(() => {
-    const caseVacate =
+    const caseVacateFromList =
       vacatingCases.find((c) => c.apiStatus !== 'CANCELLED' && c.vacateDate)?.vacateDate ??
       null;
+    const caseVacateFromDetail = openEndLeasingCase
+      ? endLeasingVacateDate(openEndLeasingCase)
+      : null;
     const archiveVacate =
       parseTenancyArchiveSnapshots(property.registryDraft)[0]?.vacateDate ?? null;
     return {
@@ -270,18 +291,19 @@ export function PropertyOverviewTab({
         overview?.nextRentReviewDate ??
         sliceDate(sync.record?.nextRentReviewAt) ??
         property.nextRentReview,
-      // End-leasing holds the source of truth; property.vacateDate can be cleared
-      // after Job completed until the API re-syncs from the completed case.
+      // End-leasing holds the source of truth (incl. landlord proposedTerminationDate
+      // on the case notice when vacateDate columns were never seeded).
       vacateDate:
         overview?.vacateDate ??
         sliceDate(sync.record?.vacateDate) ??
         sliceDate(property.vacateDate) ??
-        sliceDate(caseVacate) ??
+        sliceDate(caseVacateFromDetail) ??
+        sliceDate(caseVacateFromList) ??
         sliceDate(archiveVacate),
       nextRoutine:
         overview?.nextRoutineInspectionDate ?? sliceDate(sync.record?.nextInspectionAt),
     };
-  }, [overview, sync.record, property, leaseStart, vacatingCases]);
+  }, [overview, sync.record, property, leaseStart, vacatingCases, openEndLeasingCase]);
 
   const rentPaidTo = resolveRentPaidTo(
     sync.record?.rentPaidUntil ?? sync.overview?.rentPaidUntilDate,
