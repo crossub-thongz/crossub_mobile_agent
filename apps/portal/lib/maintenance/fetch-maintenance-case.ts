@@ -37,18 +37,24 @@ export async function fetchMaintenanceCase(
   caseId: string,
   propertyId?: string,
 ): Promise<MaintenanceCaseSnapshot | null> {
+  // Hydrate the job on the API first — `/maintenance/requests/:id` rebuilds
+  // quotations/audit from Postgres. A preceding `/maintenance/state` call would
+  // miss quotes that only exist in the DB until that hydrate runs.
+  let req: ApiMaintenanceState['maintenanceRequests'][number] | null = null;
+  try {
+    req = await fetchMaintenanceRequest(caseId);
+  } catch {
+    // Fall through — the case may still exist on the workflow board snapshot.
+  }
+
   const state = await fetchMaintenanceState();
   const workflowReq = state.maintenanceRequests.find((r) => r.id === caseId);
-
-  let req = workflowReq ?? null;
-  try {
-    const prismaReq = await fetchMaintenanceRequest(caseId);
-    req = workflowReq
-      ? mergeMaintenanceCaseForLiveSync(prismaReq, workflowReq)
-      : prismaReq;
-  } catch {
-    if (!req) return null;
+  if (req && workflowReq) {
+    req = mergeMaintenanceCaseForLiveSync(req, workflowReq);
+  } else if (!req) {
+    req = workflowReq ?? null;
   }
+  if (!req) return null;
 
   const mapped = mapApiMaintenanceRequest(
     req,
