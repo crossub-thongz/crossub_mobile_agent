@@ -384,7 +384,12 @@ export function mapAgentMaintenance(
       priority,
       responsibility: 'pending',
       contractorName: m.contractorName ?? undefined,
-      quoteAmount: m.quoteTotal ?? m.ourPrice ?? undefined,
+      quoteAmount: (() => {
+        const amount = m.quoteTotal ?? m.ourPrice;
+        if (amount == null) return undefined;
+        const n = typeof amount === 'number' ? amount : Number(amount);
+        return Number.isFinite(n) ? n : undefined;
+      })(),
       requiresApproval: m.status === MAINTENANCE_STATUS.QUOTING,
       createdAt: m.createdAt,
       deleteReason: m.closureReason ?? undefined,
@@ -619,8 +624,8 @@ export function mapAgentAccounting(
     propertyId: a.propertyId,
     propertyAddress: a.propertyAddress,
     tenantName: a.tenantName ?? '—',
-    rentPaidYtd: a.rentPaidYtd,
-    rentOutstanding: a.rentOutstanding,
+    rentPaidYtd: a.rentPaidYtd ?? 0,
+    rentOutstanding: a.rentOutstanding ?? 0,
     currentBalance: a.arrearsAmount > 0 ? -a.arrearsAmount : 0,
     daysInArrears: a.daysInArrears,
     arrearsAmount: a.arrearsAmount,

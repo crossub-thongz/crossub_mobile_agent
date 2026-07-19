@@ -7,6 +7,7 @@ import {
 } from '@/lib/maintenance/infer-responsibility';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import type { MaintenanceRequest } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 function maintenanceAgentSender(
   workspaceCase: MaintenanceWorkspaceCase,
@@ -919,7 +920,7 @@ export function buildQuoteSentToAgentEmail(
     body: [
       `Quotation submitted for review.`,
       ``,
-      `Total: $${quote.price.toLocaleString()} AUD`,
+      `Total: ${formatCurrency(quote.price)} AUD`,
       `Scope: ${quote.scope}`,
       `Available: ${quote.availableSchedule}`,
       ``,
@@ -972,7 +973,7 @@ export function buildAcceptanceEmails(
         `A contractor has been approved for your maintenance request.`,
         ``,
         `Contractor: ${contractor}`,
-        `Approved quote: $${quote.price.toLocaleString()} AUD`,
+        `Approved quote: ${formatCurrency(quote.price)} AUD`,
         ``,
         `They will contact you to arrange access.`,
       ].join('\n'),

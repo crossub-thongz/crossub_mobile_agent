@@ -151,8 +151,17 @@ export function formatRelative(iso: string): string {
   return formatDate(iso);
 }
 
-export function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-AU')}`;
+/** Parse API/Prisma money fields that may arrive as strings or odd JSON shapes. */
+export function coerceMoney(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function formatCurrency(amount: number | null | undefined): string {
+  const n = coerceMoney(amount);
+  if (n == null) return '—';
+  return `$${n.toLocaleString('en-AU')}`;
 }
 
 /** Street + suburb + state + postcode for display and document matching. */

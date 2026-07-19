@@ -27,13 +27,16 @@ const CASE_TONE: Record<string, string> = {
   PERIODIC_NOTICE: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
 };
 
-const money = (n: number) =>
-  n.toLocaleString('en-AU', {
+const money = (n: number | null | undefined) => {
+  const value = n == null ? null : typeof n === 'number' ? n : Number(n);
+  if (value == null || !Number.isFinite(value)) return '—';
+  return value.toLocaleString('en-AU', {
     style: 'currency',
     currency: 'AUD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+};
 
 function Row({
   label,

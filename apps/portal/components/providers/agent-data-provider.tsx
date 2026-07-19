@@ -85,7 +85,7 @@ import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { useAgentStore } from '@/lib/store';
-import { displayName, formatPropertyFullAddress } from '@/lib/utils';
+import { displayName, formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
 import { fetchMaintenanceCase } from '@/lib/maintenance/fetch-maintenance-case';
 import {
   approveMaintenanceQuotationCase,
@@ -256,7 +256,9 @@ function buildMaintenanceDashboard(items: MaintenanceRequest[]): DashboardItem[]
       propertyAddress: m.propertyAddress,
       title: `Approve ${m.title} quote`,
       subtitle: m.contractorName
-        ? `${m.contractorName}${m.quoteAmount ? ` — $${m.quoteAmount.toLocaleString()}` : ''}`
+        ? `${m.contractorName}${
+            m.quoteAmount != null ? ` — ${formatCurrency(m.quoteAmount)}` : ''
+          }`
         : 'Quote pending',
       priority: m.priority,
       status: m.status,

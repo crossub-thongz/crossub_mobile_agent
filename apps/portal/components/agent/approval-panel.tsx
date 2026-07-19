@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatCurrency } from '@/lib/utils';
 
 export function ApprovalPanel({
   title,
@@ -73,7 +74,7 @@ export function ApprovalPanel({
           {amount != null && (
             <div>
               <dt className="text-muted-foreground">Quote</dt>
-              <dd className="font-medium">${amount.toLocaleString()} inc GST</dd>
+              <dd className="font-medium">{formatCurrency(amount)} inc GST</dd>
             </div>
           )}
           {expiry && (
