@@ -32,6 +32,7 @@ export function RentReviewTenantDecisionPanel({
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
+  const [viewingAgreement, setViewingAgreement] = useState(false);
 
   const accepted = isTenantAccepted(detail);
   const declined = isTenantDeclined(detail);
@@ -51,6 +52,20 @@ export function RentReviewTenantDecisionPanel({
       toast.error(apiErrorMessage(err));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const viewLeaseAgreement = async () => {
+    setViewingAgreement(true);
+    try {
+      const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setViewingAgreement(false);
     }
   };
 
@@ -103,7 +118,11 @@ export function RentReviewTenantDecisionPanel({
       ) : null}
 
       {accepted && fixedRenewal ? (
-        <RentReviewLeaseAgreementAudit steps={leaseAgreement} />
+        <RentReviewLeaseAgreementAudit
+          steps={leaseAgreement}
+          onViewAgreement={leaseAudit.sentDone ? () => void viewLeaseAgreement() : undefined}
+          viewingAgreement={viewingAgreement}
+        />
       ) : null}
 
       {accepted && detail.workflowState === 'tenant_accepted' && !readOnly ? (

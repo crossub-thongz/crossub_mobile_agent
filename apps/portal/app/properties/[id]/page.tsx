@@ -224,8 +224,11 @@ export default function PropertyDetailPage() {
   const acct = accounting.find((a) => a.propertyId === id);
   const propertyLeasingCases = tenantSelections.filter((t) => t.propertyId === id);
   const propertyVacatingCases = vacating.filter((v) => v.propertyId === id);
-  const currentTenancy = leasing.filter((l) => l.status === 'current');
-  const currentLease = currentTenancy[0];
+  const currentTenancy = leasing.filter(
+    (l) => l.status === 'current' || l.status === 'upcoming',
+  );
+  const currentLease =
+    currentTenancy.find((l) => l.status === 'current') ?? currentTenancy[0];
   const isVacant = isPropertyVacant(property, currentTenancy);
   const tenancyArchived = isTenancyArchived({
     property,

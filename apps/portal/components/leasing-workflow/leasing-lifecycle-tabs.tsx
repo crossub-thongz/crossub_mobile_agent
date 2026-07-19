@@ -125,6 +125,7 @@ function StepPanel({
         onCaseClosed={onCaseClosed}
         onOpenInspectionCreated={onOpenInspectionCreated}
       />
+      {/* Onboarding embeds its own history; RESULTS shows mail under each applicant. */}
       {step !== LEASING_LIFECYCLE_STEP.RESULTS &&
       step !== LEASING_LIFECYCLE_STEP.ONBOARDING ? (
         <JobCaseStageEmailHistory emails={stageEmails} />

@@ -43,20 +43,18 @@ function applicantSessionEmails(
   });
 }
 
+/**
+ * Email history under a reference-check applicant.
+ * Includes the full leasing progress to date (open inspection → report → feedback),
+ * not only mail addressed to this applicant — otherwise agent-facing schedule/report
+ * emails disappear when viewing Reference Check.
+ */
 export function applicantEmailRecords(
   detail: LeasingPropertyDetail,
   app: LeasingApplicationDetail,
   openSession?: OpenInspectionSession | null,
 ): JobCaseEmailRecord[] {
-  const applicantNeedle = app.applicant.trim().toLowerCase();
-  const fromLeasing = allLeasingEmailRecords(detail).filter((record) => {
-    if (record.id.includes(app.id)) return true;
-    if (matchesApplicantEmail(record, app)) return true;
-    if (record.kind === 'application_feedback' && record.body && applicantNeedle) {
-      return record.subject.toLowerCase().includes(applicantNeedle);
-    }
-    return false;
-  });
+  const fromLeasing = allLeasingEmailRecords(detail);
   const fromOpen = openSession ? applicantSessionEmails(openSession, app) : [];
   return dedupeJobCaseEmails([...fromLeasing, ...fromOpen]);
 }

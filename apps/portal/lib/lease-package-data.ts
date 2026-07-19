@@ -54,9 +54,35 @@ function parseTime(iso: string): number {
   return new Date(iso).getTime();
 }
 
+function normalizePersonName(value?: string | null): string {
+  return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Match case tenant to this lease's tenant when a name is available. */
+export function belongsToLeaseTenant(
+  lease: LeasingRecord,
+  tenantName?: string | null,
+): boolean {
+  const caseName = normalizePersonName(tenantName);
+  const leaseName = normalizePersonName(lease.approvedTenant);
+  if (!caseName || !leaseName || leaseName === '—') return true;
+  return caseName === leaseName || caseName.includes(leaseName) || leaseName.includes(caseName);
+}
+
 export function isWithinLeasePeriod(date: string, lease: LeasingRecord): boolean {
   const t = parseTime(date);
-  return t >= parseTime(lease.leaseStart) && t <= parseTime(lease.leaseEnd);
+  const start = parseTime(lease.leaseStart);
+  const end = parseTime(lease.leaseEnd);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+  return t >= start && t <= end;
+}
+
+function caseDateInLease(
+  date: string | undefined,
+  lease: LeasingRecord,
+): boolean {
+  if (!date) return false;
+  return isWithinLeasePeriod(date, lease);
 }
 
 function overlapsLease(lease: LeasingRecord, start: string, end: string): boolean {
@@ -76,9 +102,13 @@ export function buildRentPayments(
   accounting?: PropertyAccounting,
 ): RentPaymentRecord[] {
   const payments: RentPaymentRecord[] = [];
+  const accountingForTenant =
+    accounting && belongsToLeaseTenant(lease, accounting.tenantName)
+      ? accounting
+      : undefined;
 
-  if (accounting) {
-    for (const c of accounting.collectionActivity) {
+  if (accountingForTenant) {
+    for (const c of accountingForTenant.collectionActivity) {
       if (!isWithinLeasePeriod(c.at, lease)) continue;
       if (c.type === 'email' || c.type === 'sms') continue;
       payments.push({
@@ -89,6 +119,11 @@ export function buildRentPayments(
         reference: c.summary,
       });
     }
+  }
+
+  // Synthetic month rows only for this lease's tenant ledger.
+  if (!accountingForTenant && accounting) {
+    return payments.sort((a, b) => parseTime(b.at) - parseTime(a.at));
   }
 
   const start = new Date(lease.leaseStart);
@@ -163,10 +198,15 @@ function buildDocuments(
   const ingoing = inspections.find(
     (i) =>
       i.id === lease.ingoingInspectionId ||
-      (i.type === 'INGOING' && i.propertyId === lease.propertyId),
+      (i.type === 'INGOING' &&
+        i.propertyId === lease.propertyId &&
+        caseDateInLease(i.scheduledAt ?? i.createdAt, lease)),
   );
   const outgoing = inspections.find(
-    (i) => i.type === 'OUTGOING' && i.propertyId === lease.propertyId,
+    (i) =>
+      i.type === 'OUTGOING' &&
+      i.propertyId === lease.propertyId &&
+      caseDateInLease(i.scheduledAt ?? i.createdAt, lease),
   );
   const openInspection = findOpenInspectionForLease(lease, inspections);
   const openDoc = findDoc(['open inspection', 'open report']);
@@ -261,33 +301,37 @@ export function buildLeasePackageData(
 ): LeasePackageData {
   const maintenance = input.maintenance
     .filter((m) => m.propertyId === lease.propertyId)
-    .filter((m) => {
-      const d = itemDateFromMaintenance(m);
-      return d ? isWithinLeasePeriod(d, lease) : lease.status === 'current';
-    })
+    .filter((m) =>
+      caseDateInLease(itemDateFromMaintenance(m) ?? m.createdAt, lease),
+    )
     .map((m) => ({
       id: m.id,
       label: m.title,
       sublabel: m.status,
       href: maintenanceDetail(m.id),
-      date: itemDateFromMaintenance(m),
+      date: itemDateFromMaintenance(m) ?? m.createdAt,
       messageCategory: 'Maintenance' as const,
     }));
 
   const inspections = input.inspections
     .filter((i) => i.propertyId === lease.propertyId)
-    .filter((i) => !i.scheduledAt || isWithinLeasePeriod(i.scheduledAt, lease))
+    .filter(
+      (i) =>
+        i.id === lease.ingoingInspectionId ||
+        caseDateInLease(i.scheduledAt ?? i.createdAt, lease),
+    )
     .map((i) => ({
       id: i.id,
       label: `${i.type} inspection`,
       sublabel: i.status,
       href: inspectionDetail(i.id),
-      date: i.scheduledAt,
+      date: i.scheduledAt ?? i.createdAt,
       messageCategory: 'Inspection' as const,
     }));
 
   const rentReviews = input.rentReviews
     .filter((r) => r.propertyId === lease.propertyId)
+    .filter((r) => belongsToLeaseTenant(lease, r.tenantName))
     .filter((r) => overlapsLease(lease, r.leaseStart, r.leaseEnd))
     .map((r) => ({
       id: r.id,
@@ -300,18 +344,17 @@ export function buildLeasePackageData(
 
   const tribunal = input.tribunalCases
     .filter((t) => t.propertyId === lease.propertyId)
-    .filter(
-      (t) =>
-        !t.hearingDate ||
-        isWithinLeasePeriod(t.hearingDate, lease) ||
-        t.tenantName === lease.approvedTenant,
-    )
+    .filter((t) => belongsToLeaseTenant(lease, t.tenantName))
+    .filter((t) => {
+      const at = t.hearingDate ?? t.createdAt;
+      return !at || caseDateInLease(at, lease);
+    })
     .map((t) => ({
       id: t.id,
       label: t.matter,
       sublabel: t.status,
       href: tribunalDetail(t.id),
-      date: t.hearingDate,
+      date: t.hearingDate ?? t.createdAt,
       messageCategory: 'Tribunal' as const,
     }));
 

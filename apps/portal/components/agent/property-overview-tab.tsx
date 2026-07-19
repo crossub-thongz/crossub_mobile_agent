@@ -27,7 +27,11 @@ import {
   resolveLeaseDates,
 } from '@/lib/property-overview';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import { isTenancyArchived, parseTenancyArchiveSnapshots } from '@/lib/property-archive';
+import {
+  resolveTenancyArchiveReason,
+  tenancyArchiveBanner,
+  parseTenancyArchiveSnapshots,
+} from '@/lib/property-archive';
 import { resolvePropertyManagementFees } from '@/lib/management-fees';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
@@ -197,11 +201,13 @@ export function PropertyOverviewTab({
   const fullAddress = formatPropertyFullAddress(property);
 
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
-  const tenancyArchived = isTenancyArchived({
+  const tenancyArchiveReason = resolveTenancyArchiveReason({
     property,
     vacatingCases,
     currentLease,
   });
+  const tenancyArchived = tenancyArchiveReason != null;
+  const archiveBanner = tenancyArchiveBanner(tenancyArchiveReason);
   const canEditTenancy = apiConnected && !tenancyArchived;
   const currentRent = resolveCurrentRent(property, currentLease);
   const financialRent = sync.financial?.currentRentWeekly;
@@ -455,10 +461,10 @@ export function PropertyOverviewTab({
         title="Tenancy"
         onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
       >
-        {tenancyArchived ? (
+        {archiveBanner ? (
           <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
             <Archive className="size-3.5 shrink-0" />
-            Archived — vacate date reached. Tenancy details and tenancy documents are read-only.
+            {archiveBanner}
           </p>
         ) : null}
         <ContactTile

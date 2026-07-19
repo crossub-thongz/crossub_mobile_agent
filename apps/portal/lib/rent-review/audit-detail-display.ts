@@ -8,6 +8,7 @@ interface RentReviewEmailSnapshot {
   toEmail?: string;
   fromEmail?: string;
   channel?: 'email' | 'message';
+  attachments?: Array<{ name: string; mimeType?: string }>;
 }
 
 /** Parse JSON email snapshot stored on comms audit entries (e.g. tenant notice dispatch). */

@@ -531,7 +531,10 @@ export function mapAgentTenantSelections(
 // ---------------------------------------------------------------------------
 
 function leasingStatus(status: AgentLeasing['status']): LeasingRecord['status'] {
-  if (status === LEASE_STATUS.ACTIVE) return 'current';
+  // SIGNED and ACTIVE are the live tenancy for agent overview / archive rules.
+  if (status === LEASE_STATUS.ACTIVE || status === LEASE_STATUS.SIGNED) {
+    return 'current';
+  }
   if (status === LEASE_STATUS.ENDED) return 'ended';
   return 'upcoming';
 }

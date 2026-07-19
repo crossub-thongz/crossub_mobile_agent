@@ -158,10 +158,16 @@ export function activeVacatingCases(vacatingCases: VacatingCase[]): VacatingCase
 }
 
 /**
- * Tenancy is archived (read-only) once the vacate date has passed while end-leasing is
- * active, or when the lease has ended / end-leasing completed.
+ * Why the overview marks tenancy read-only — used for banner copy.
+ * A live current/upcoming lease is never archived by a prior completed end-leasing.
  */
-export function isTenancyArchived({
+export type TenancyArchiveReason =
+  | 'lease_ended'
+  | 'vacate_date_reached'
+  | 'end_leasing_complete'
+  | null;
+
+export function resolveTenancyArchiveReason({
   property,
   vacatingCases,
   currentLease,
@@ -169,21 +175,55 @@ export function isTenancyArchived({
   property: Property;
   vacatingCases: VacatingCase[];
   currentLease?: LeasingRecord;
-}): boolean {
+}): TenancyArchiveReason {
+  if (currentLease?.status === 'ended') return 'lease_ended';
+
+  const openCases = vacatingCases.filter((c) => c.apiStatus === 'OPEN');
+  const completedCases = vacatingCases.filter((c) => c.apiStatus === 'COMPLETED');
   const today = todayIsoDate();
-  const active = activeVacatingCases(vacatingCases);
+
+  // Live tenancy: only archive while an OPEN end-leasing case exists and vacate has hit.
+  if (currentLease?.status === 'current' || currentLease?.status === 'upcoming') {
+    const vacateDate =
+      sliceDate(openCases[0]?.vacateDate) || sliceDate(property.vacateDate);
+    if (openCases.length > 0 && vacateDate && vacateDate <= today) {
+      return 'vacate_date_reached';
+    }
+    return null;
+  }
+
+  // No live lease — vacant / between tenants.
+  if (completedCases.length > 0) return 'end_leasing_complete';
   const vacateDate =
-    sliceDate(active[0]?.vacateDate) ||
+    sliceDate(openCases[0]?.vacateDate) ||
     sliceDate(property.vacateDate) ||
     sliceDate(currentLease?.leaseEnd);
+  if (openCases.length > 0 && vacateDate && vacateDate <= today) {
+    return 'vacate_date_reached';
+  }
+  return null;
+}
 
-  const vacateDateReached = Boolean(vacateDate && vacateDate <= today);
-  const completedEndLeasing = active.some((c) => c.apiStatus === 'COMPLETED');
-  const leaseEnded = currentLease?.status === 'ended';
+/** Tenancy is archived (read-only) for the reasons in `resolveTenancyArchiveReason`. */
+export function isTenancyArchived(input: {
+  property: Property;
+  vacatingCases: VacatingCase[];
+  currentLease?: LeasingRecord;
+}): boolean {
+  return resolveTenancyArchiveReason(input) != null;
+}
 
-  if (completedEndLeasing || leaseEnded) return true;
-  if (vacateDateReached && active.length > 0) return true;
-  return false;
+export function tenancyArchiveBanner(reason: TenancyArchiveReason): string | null {
+  switch (reason) {
+    case 'vacate_date_reached':
+      return 'Archived — vacate date reached. Tenancy details and tenancy documents are read-only.';
+    case 'end_leasing_complete':
+      return 'Archived — end leasing completed. Tenancy details and tenancy documents are read-only.';
+    case 'lease_ended':
+      return 'Archived — lease ended. Tenancy details and tenancy documents are read-only.';
+    default:
+      return null;
+  }
 }
 
 export function archivedDocumentGroups(tenancyArchived: boolean): CreatePropertyDocumentGroup[] {

@@ -450,15 +450,19 @@ function priorPhaseEmailRecords(
   detail: LeasingPropertyDetail,
   step: LeasingLifecycleStep,
 ): JobCaseEmailRecord[] {
+  const order = [
+    LEASING_LIFECYCLE_STEP.OPEN_INSPECTION,
+    LEASING_LIFECYCLE_STEP.OPEN_REPORT,
+    LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL,
+    LEASING_LIFECYCLE_STEP.RESULTS,
+    LEASING_LIFECYCLE_STEP.ONBOARDING,
+  ];
+  const stepIndex = order.indexOf(step);
+  if (stepIndex <= 0) return [];
+
   const records: JobCaseEmailRecord[] = [];
-  if (step !== LEASING_LIFECYCLE_STEP.OPEN_INSPECTION) {
-    records.push(...openInspectionArrangementEmailRecords(detail));
-  }
-  if (
-    step === LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL ||
-    step === LEASING_LIFECYCLE_STEP.RESULTS
-  ) {
-    records.push(...openReportPhaseEmailRecords(detail));
+  for (let i = 0; i < stepIndex; i += 1) {
+    records.push(...emailRecordsForStepOnly(detail, order[i]!));
   }
   return records;
 }
@@ -471,6 +475,7 @@ export function allLeasingEmailRecords(detail: LeasingPropertyDetail): JobCaseEm
   return dedupeJobCaseEmails(records);
 }
 
+/** Cumulative email history for a lifecycle step (this step + every earlier phase). */
 export function leasingEmailRecordsForStep(
   detail: LeasingPropertyDetail,
   step: LeasingLifecycleStep,

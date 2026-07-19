@@ -60,8 +60,9 @@ export function LeasingStepResults({
         <p className="text-sm font-semibold">Reference check</p>
         <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
           For each applicant, add reference-check notes and mark Recommend or Reject. Select one
-          applicant to approve, confirm rent / lease start / lease term, and notify them. Email
-          history and audit are shown under each applicant.
+          applicant to approve, confirm rent / lease start / lease term, and notify them. Under each
+          applicant you will see email history from this leasing case so far (open inspection through
+          reference check), plus that applicant's audit trail.
         </p>
         {detail.cycleActive === false ? (
           <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">

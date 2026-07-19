@@ -108,7 +108,7 @@ export function LeasingOnboardingSummaryPanel({ detail }: { detail: LeasingPrope
 export function LeasingOnboardingEmailAuditPanel({ detail }: { detail: LeasingPropertyDetail }) {
   const { properties, agencies } = useAgentData();
   const { user } = useAuth();
-  const [auditExpanded, setAuditExpanded] = useState(true);
+  const [auditExpanded, setAuditExpanded] = useState(false);
 
   const property = properties.find((p) => p.id === detail.propertyId);
   const agency = agencies.find((a) => a.id === property?.agencyId);
@@ -128,7 +128,6 @@ export function LeasingOnboardingEmailAuditPanel({ detail }: { detail: LeasingPr
       <JobCaseStageEmailHistory
         emails={enrichLeasingEmailRecords(stageEmails, agentEmail, detail.agentInfo.name)}
         title="Email history"
-        defaultOpen
       />
 
       <div className="rounded-xl border">

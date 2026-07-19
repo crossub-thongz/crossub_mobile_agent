@@ -10,6 +10,7 @@ import {
   isPreferredRenewalFixed,
   isTenantVacatePathComplete,
 } from '@/lib/rent-review/tenant-decision-display';
+import { parseRentReviewEmailSnapshot } from '@/lib/rent-review/audit-detail-display';
 import {
   buildTenantNoticeEmailRecord,
 } from '@/lib/rent-review/tenant-notice-email';
@@ -723,6 +724,61 @@ function tenantNoticeAndReminderEmails(detail: RentReviewWorkflowDetail): RentRe
   return records;
 }
 
+function buildLeaseAgreementSentEmail(
+  detail: RentReviewWorkflowDetail,
+  entry: RentReviewAuditEntry,
+): RentReviewEmailRecord {
+  const snapshot = parseRentReviewEmailSnapshot(entry.detail);
+  const fileName = `lease-extension-agreement-${detail.id.slice(0, 8)}.pdf`;
+  if (snapshot) {
+    return {
+      id: entry.id,
+      subject: snapshot.subject,
+      body: snapshot.body,
+      from: snapshot.from,
+      to: snapshot.to,
+      toEmail: snapshot.toEmail,
+      fromEmail: snapshot.fromEmail,
+      at: entry.at,
+      kind: entry.kind,
+      channel: snapshot.channel ?? 'email',
+      attachments:
+        snapshot.attachments?.map((a) => ({
+          name: a.name,
+          mimeType: a.mimeType ?? 'application/pdf',
+        })) ?? [{ name: fileName, mimeType: 'application/pdf' }],
+    };
+  }
+
+  return {
+    id: entry.id,
+    subject: `Lease extension agreement — ${detail.propertyAddress}`,
+    ...formatAgentSender(),
+    to: detail.tenantName,
+    at: entry.at,
+    kind: entry.kind,
+    body: [
+      `Dear ${detail.tenantName},`,
+      '',
+      'Please find attached your lease extension agreement for signature.',
+      '',
+      `Property: ${detail.propertyAddress}`,
+      '',
+      'Sign in to the CROSSUB tenant portal to review and sign, or return the signed agreement to your managing agent.',
+      '',
+      'Kind regards,',
+      'Your managing agent',
+    ].join('\n'),
+    attachments: [{ name: fileName, mimeType: 'application/pdf' }],
+  };
+}
+
+function tenantDecisionEmails(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
+  return detail.auditLog
+    .filter((entry) => entry.kind === 'lease_agreement_sent')
+    .map((entry) => buildLeaseAgreementSentEmail(detail, entry));
+}
+
 function agentConfirmedEmails(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
   return detail.auditLog
     .filter((entry) =>
@@ -767,7 +823,7 @@ function emailRecordsForStepOnly(
     case RENT_REVIEW_AGENT_STEP.NEGOTIATION:
       return [];
     case RENT_REVIEW_AGENT_STEP.TENANT_DECISION:
-      return [];
+      return tenantDecisionEmails(detail);
     case RENT_REVIEW_AGENT_STEP.COMPLETED: {
       const completion = buildCompletionEmail(detail);
       return completion ? [completion] : [];
