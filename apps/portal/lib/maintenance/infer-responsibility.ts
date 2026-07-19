@@ -31,6 +31,14 @@ const ADVANCED_STATUSES = new Set([
 
 function parseResponsibilityToken(text: string): ApiMaintenanceResponsibility | undefined {
   const lower = text.toLowerCase();
+  // Prefer explicit phrases — email bodies can mention other parties incidentally.
+  const explicit =
+    lower.match(
+      /(?:responsibility\s+(?:set\s+to|determined\s*[·.•-]\s*|classified\s+as)\s+)(tenant|landlord|strata)/i,
+    ) ?? lower.match(/\b(tenant|landlord|strata)\s+responsibility\b/i);
+  if (explicit?.[1]) {
+    return explicit[1].toLowerCase() as ApiMaintenanceResponsibility;
+  }
   if (lower.includes('landlord')) return 'landlord';
   if (lower.includes('strata')) return 'strata';
   if (lower.includes('tenant')) return 'tenant';
@@ -71,13 +79,14 @@ export function inferLandlordResponsibilityFromWorkflow(input: {
 }): 'landlord' | undefined {
   if (!input.status || !ADVANCED_STATUSES.has(input.status)) return undefined;
 
+  // requiresApproval / completed gates alone are not landlord signals — tenant jobs
+  // also reach completed/closed with sign-off style flags.
   const hasLandlordSignals =
     Boolean(input.assignedContractorId) ||
     Boolean(input.contractorName) ||
     (input.invitedContractorIds?.length ?? 0) > 0 ||
     (input.quotationIds?.length ?? 0) > 0 ||
-    (input.quotationsCount ?? 0) > 0 ||
-    input.requiresApproval === true;
+    (input.quotationsCount ?? 0) > 0;
 
   return hasLandlordSignals ? 'landlord' : undefined;
 }
@@ -94,15 +103,17 @@ export function resolveResponsibilityFromSources(sources: {
   contractorName?: string;
   requiresApproval?: boolean;
 }): ApiMaintenanceResponsibility | undefined {
-  if (sources.explicit && sources.explicit !== 'pending') {
-    return sources.explicit;
-  }
-
+  // Durable audit/notifications first — a stale explicit "landlord" inference from
+  // an earlier hydrate must not win over "Responsibility set to tenant".
   const fromAudit = inferResponsibilityFromAudit(sources.auditEntries ?? []);
   if (fromAudit) return fromAudit;
 
   const fromNotifications = inferResponsibilityFromNotifications(sources.notifications ?? []);
   if (fromNotifications) return fromNotifications;
+
+  if (sources.explicit && sources.explicit !== 'pending') {
+    return sources.explicit;
+  }
 
   return inferLandlordResponsibilityFromWorkflow({
     status: sources.status,
