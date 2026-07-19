@@ -26,6 +26,11 @@ const DEFAULT_LAYOUTS: ResponsiveLayouts = {
     x: 0,
     w: 6,
   })),
+  xs: layoutForWidgets(DEFAULT_DASHBOARD_WIDGETS).map((item) => ({
+    ...item,
+    x: 0,
+    w: 1,
+  })),
 };
 
 function defaultGridSnapshot(): Pick<DashboardLayoutSnapshot, 'widgets' | 'layouts'> {
@@ -35,6 +40,7 @@ function defaultGridSnapshot(): Pick<DashboardLayoutSnapshot, 'widgets' | 'layou
       lg: [...DEFAULT_LAYOUTS.lg!],
       md: [...DEFAULT_LAYOUTS.md!],
       sm: [...DEFAULT_LAYOUTS.sm!],
+      xs: [...DEFAULT_LAYOUTS.xs!],
     },
   };
 }
@@ -79,6 +85,14 @@ function parseStoredSnapshot(raw: string): DashboardLayoutSnapshot | null {
         ...item,
         x: 0,
         w: 6,
+      })),
+      xs: layoutForWidgets(
+        widgets,
+        parsed.layouts.xs ?? parsed.layouts.sm ?? parsed.layouts.lg,
+      ).map((item) => ({
+        ...item,
+        x: 0,
+        w: 1,
       })),
     },
   };

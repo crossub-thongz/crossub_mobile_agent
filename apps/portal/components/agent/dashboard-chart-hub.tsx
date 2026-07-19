@@ -35,7 +35,12 @@ function DonutChart({
   let offset = 0;
 
   return (
-    <svg width={chartSize} height={chartSize} viewBox={`0 0 ${chartSize} ${chartSize}`} className="shrink-0">
+    <svg
+      width={chartSize}
+      height={chartSize}
+      viewBox={`0 0 ${chartSize} ${chartSize}`}
+      className="mx-auto shrink-0 sm:mx-0"
+    >
       <circle
         cx={chartSize / 2}
         cy={chartSize / 2}
@@ -93,26 +98,27 @@ function ChartCard({
   segments: Segment[];
   className?: string;
 }) {
-  const active = segments.filter((s) => s.value > 0);
+  // Include zero segments in the legend; only draw positive slices on the donut.
+  const donutSegments = segments.filter((s) => s.value > 0);
 
   return (
     <Link
       href={href}
       className={cn(
-        'flex h-full gap-3 rounded-2xl border bg-card p-3 transition active:scale-[0.98] hover:border-primary/30 hover:shadow-sm lg:gap-4 lg:p-4',
+        'flex h-full flex-col gap-3 rounded-2xl border bg-card p-3 transition active:scale-[0.98] hover:border-primary/30 hover:shadow-sm sm:flex-row sm:items-start lg:gap-4 lg:p-4',
         className,
       )}
     >
-      <DonutChart segments={active} large />
+      <DonutChart segments={donutSegments.length ? donutSegments : segments} large />
       <div className="min-w-0 flex-1">
-        <div className="mb-1.5 flex items-center gap-1.5">
+        <div className="mb-1.5 flex items-center justify-center gap-1.5 sm:justify-start">
           <Icon className="text-primary size-4 shrink-0" />
           <p className="truncate text-sm font-semibold lg:text-base">{title}</p>
         </div>
         <ul className="space-y-1">
           {segments.map((s) => (
             <li key={s.label} className="flex items-center justify-between gap-1 text-xs lg:text-sm">
-              <span className="text-muted-foreground flex items-center gap-1 truncate">
+              <span className="text-muted-foreground flex min-w-0 items-center gap-1 truncate">
                 <span className="size-1.5 shrink-0 rounded-full" style={{ background: s.color }} />
                 {s.label}
               </span>
@@ -131,7 +137,74 @@ const CHART_COLORS = {
   amber: 'var(--chart-3)',
   red: 'var(--chart-4)',
   violet: 'var(--chart-5)',
+  muted: 'color-mix(in oklab, var(--muted-foreground) 45%, var(--border))',
 };
+
+function inspectionCompletedTotal(k: DashboardKpis['inspection']): number {
+  return (
+    k.openCompleted +
+    k.ingoingCompleted +
+    k.outgoingCompleted +
+    k.routineCompleted
+  );
+}
+
+function propertiesSegments(k: DashboardKpis): Segment[] {
+  return [
+    { label: 'Occupied', value: k.properties.occupied, color: CHART_COLORS.primary },
+    { label: 'Vacant', value: k.properties.vacant, color: CHART_COLORS.amber },
+  ];
+}
+
+function maintenanceSegments(k: DashboardKpis): Segment[] {
+  return [
+    { label: 'Approval', value: k.maintenance.pendingApproval, color: CHART_COLORS.red },
+    { label: 'In progress', value: k.maintenance.inProgress, color: CHART_COLORS.blue },
+    { label: 'Completed', value: k.maintenance.completed, color: CHART_COLORS.primary },
+  ];
+}
+
+function inspectionSegments(k: DashboardKpis): Segment[] {
+  return [
+    { label: 'Open', value: k.inspection.openPending, color: CHART_COLORS.violet },
+    { label: 'Ingoing', value: k.inspection.ingoingPending, color: CHART_COLORS.blue },
+    { label: 'Outgoing', value: k.inspection.outgoingPending, color: CHART_COLORS.amber },
+    { label: 'Routine', value: k.inspection.routinePending, color: CHART_COLORS.primary },
+    {
+      label: 'Completed',
+      value: inspectionCompletedTotal(k.inspection),
+      color: CHART_COLORS.muted,
+    },
+  ];
+}
+
+function tribunalSegments(k: DashboardKpis): Segment[] {
+  return [
+    { label: 'Active', value: k.tribunal.active, color: CHART_COLORS.red },
+    { label: 'Action', value: k.tribunal.actionRequired, color: CHART_COLORS.amber },
+    { label: 'Closed', value: k.tribunal.closed, color: CHART_COLORS.primary },
+  ];
+}
+
+function leasingSegments(k: DashboardKpis): Segment[] {
+  return [
+    { label: 'New', value: k.leasing.newLeasing, color: CHART_COLORS.violet },
+    { label: 'Rent review', value: k.leasing.upcomingRentReviews, color: CHART_COLORS.blue },
+    { label: 'Renewals', value: k.leasing.leaseRenewals, color: CHART_COLORS.amber },
+    { label: 'Completed', value: k.leasing.completed, color: CHART_COLORS.primary },
+  ];
+}
+
+function accountingSegments(k: DashboardKpis): Segment[] {
+  return [
+    { label: 'In arrears', value: k.accounting.propertiesInArrears, color: CHART_COLORS.red },
+    {
+      label: 'Paid up',
+      value: Math.max(k.properties.total - k.accounting.propertiesInArrears, 0),
+      color: CHART_COLORS.primary,
+    },
+  ];
+}
 
 export type DashboardKpiWidgetKey =
   | 'kpi_properties'
@@ -158,10 +231,7 @@ export function DashboardKpiWidget({
           icon={Building2}
           href={k.properties.href}
           className={className}
-          segments={[
-            { label: 'Occupied', value: k.properties.occupied, color: CHART_COLORS.primary },
-            { label: 'Vacant', value: k.properties.vacant, color: CHART_COLORS.amber },
-          ]}
+          segments={propertiesSegments(k)}
         />
       );
     case 'kpi_maintenance':
@@ -171,11 +241,7 @@ export function DashboardKpiWidget({
           icon={Wrench}
           href={k.maintenance.href}
           className={className}
-          segments={[
-            { label: 'Approval', value: k.maintenance.pendingApproval, color: CHART_COLORS.red },
-            { label: 'In progress', value: k.maintenance.inProgress, color: CHART_COLORS.blue },
-            { label: 'Done', value: k.maintenance.completed, color: CHART_COLORS.primary },
-          ]}
+          segments={maintenanceSegments(k)}
         />
       );
     case 'kpi_inspections':
@@ -185,12 +251,7 @@ export function DashboardKpiWidget({
           icon={ClipboardList}
           href={k.inspection.href}
           className={className}
-          segments={[
-            { label: 'Open', value: k.inspection.openPending, color: CHART_COLORS.violet },
-            { label: 'Ingoing', value: k.inspection.ingoingPending, color: CHART_COLORS.blue },
-            { label: 'Outgoing', value: k.inspection.outgoingPending, color: CHART_COLORS.amber },
-            { label: 'Routine', value: k.inspection.routinePending, color: CHART_COLORS.primary },
-          ]}
+          segments={inspectionSegments(k)}
         />
       );
     case 'kpi_tribunal':
@@ -200,11 +261,7 @@ export function DashboardKpiWidget({
           icon={Gavel}
           href={k.tribunal.href}
           className={className}
-          segments={[
-            { label: 'Active', value: k.tribunal.active, color: CHART_COLORS.red },
-            { label: 'Action', value: k.tribunal.actionRequired, color: CHART_COLORS.amber },
-            { label: 'Closed', value: k.tribunal.closed, color: CHART_COLORS.primary },
-          ]}
+          segments={tribunalSegments(k)}
         />
       );
     case 'kpi_leasing':
@@ -214,11 +271,7 @@ export function DashboardKpiWidget({
           icon={FileText}
           href={k.leasing.href}
           className={className}
-          segments={[
-            { label: 'New', value: k.leasing.newLeasing, color: CHART_COLORS.violet },
-            { label: 'Rent review', value: k.leasing.upcomingRentReviews, color: CHART_COLORS.blue },
-            { label: 'Renewals', value: k.leasing.leaseRenewals, color: CHART_COLORS.primary },
-          ]}
+          segments={leasingSegments(k)}
         />
       );
     case 'kpi_accounting':
@@ -228,14 +281,7 @@ export function DashboardKpiWidget({
           icon={Wallet}
           href={k.accounting.href}
           className={className}
-          segments={[
-            { label: 'In arrears', value: k.accounting.propertiesInArrears, color: CHART_COLORS.red },
-            {
-              label: 'Paid up',
-              value: Math.max(k.properties.total - k.accounting.propertiesInArrears, 0),
-              color: CHART_COLORS.primary,
-            },
-          ]}
+          segments={accountingSegments(k)}
         />
       );
     default:
@@ -247,89 +293,42 @@ export function DashboardChartHub({ k }: { k: DashboardKpis }) {
   return (
     <section className="space-y-3">
       <h2 className="text-base font-semibold lg:text-lg">Portfolio overview</h2>
-      <div className="grid grid-cols-2 gap-2 lg:gap-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:gap-3">
         <ChartCard
           title="Properties"
           icon={Building2}
           href={k.properties.href}
-          segments={[
-            { label: 'Occupied', value: k.properties.occupied, color: CHART_COLORS.primary },
-            { label: 'Vacant', value: k.properties.vacant, color: CHART_COLORS.amber },
-          ]}
+          segments={propertiesSegments(k)}
         />
         <ChartCard
           title="Maintenance"
           icon={Wrench}
           href={k.maintenance.href}
-          segments={[
-            {
-              label: 'Approval',
-              value: k.maintenance.pendingApproval,
-              color: CHART_COLORS.red,
-            },
-            {
-              label: 'In progress',
-              value: k.maintenance.inProgress,
-              color: CHART_COLORS.blue,
-            },
-            {
-              label: 'Done',
-              value: k.maintenance.completed,
-              color: CHART_COLORS.primary,
-            },
-          ]}
+          segments={maintenanceSegments(k)}
         />
         <ChartCard
           title="Inspections"
           icon={ClipboardList}
           href={k.inspection.href}
-          segments={[
-            { label: 'Open', value: k.inspection.openPending, color: CHART_COLORS.violet },
-            { label: 'Ingoing', value: k.inspection.ingoingPending, color: CHART_COLORS.blue },
-            { label: 'Outgoing', value: k.inspection.outgoingPending, color: CHART_COLORS.amber },
-            { label: 'Routine', value: k.inspection.routinePending, color: CHART_COLORS.primary },
-          ]}
+          segments={inspectionSegments(k)}
         />
         <ChartCard
           title="Tribunal"
           icon={Gavel}
           href={k.tribunal.href}
-          segments={[
-            { label: 'Active', value: k.tribunal.active, color: CHART_COLORS.red },
-            {
-              label: 'Action',
-              value: k.tribunal.actionRequired,
-              color: CHART_COLORS.amber,
-            },
-            { label: 'Closed', value: k.tribunal.closed, color: CHART_COLORS.primary },
-          ]}
+          segments={tribunalSegments(k)}
         />
         <ChartCard
           title="Leasing"
           icon={FileText}
           href={k.leasing.href}
-          segments={[
-            { label: 'New', value: k.leasing.newLeasing, color: CHART_COLORS.violet },
-            { label: 'Rent review', value: k.leasing.upcomingRentReviews, color: CHART_COLORS.blue },
-            { label: 'Renewals', value: k.leasing.leaseRenewals, color: CHART_COLORS.primary },
-          ]}
+          segments={leasingSegments(k)}
         />
         <ChartCard
           title="Accounting"
           icon={Wallet}
           href={k.accounting.href}
-          segments={[
-            {
-              label: 'In arrears',
-              value: k.accounting.propertiesInArrears,
-              color: CHART_COLORS.red,
-            },
-            {
-              label: 'Paid up',
-              value: Math.max(k.properties.total - k.accounting.propertiesInArrears, 0),
-              color: CHART_COLORS.primary,
-            },
-          ]}
+          segments={accountingSegments(k)}
         />
       </div>
     </section>

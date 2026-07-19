@@ -324,10 +324,12 @@ export interface DashboardKpis {
     upcomingRentReviews: number;
     newLeasing: number;
     leaseRenewals: number;
+    completed: number;
     href: string;
     rentReviewHref: string;
     newLeasingHref: string;
     leaseRenewalHref: string;
+    completedHref: string;
   };
   maintenance: {
     inProgress: number;

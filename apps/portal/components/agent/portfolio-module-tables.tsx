@@ -130,77 +130,152 @@ export function MaintenanceListTable({
   }, [items, sortDirection, sortKey]);
 
   return (
-    <ModuleListTable minWidth={1080}>
-      <ModuleSortableTableHead
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSort={onSort}
-        columns={[
-          { kind: 'sortable', label: 'ID', sortKey: 'id' },
-          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
-          { kind: 'sortable', label: 'Subject', sortKey: 'subject' },
-          { kind: 'sortable', label: 'Address', sortKey: 'address' },
-          { kind: 'sortable', label: 'Status', sortKey: 'status' },
-          { kind: 'sortable', label: 'Responsibility', sortKey: 'responsibility' },
-          { kind: 'sortable', label: 'Priority', sortKey: 'priority' },
-          { kind: 'static', label: '' },
-        ]}
-      />
-      <tbody className="divide-y">
+    <>
+      {/* Mobile: stacked cards — table is too wide for phones */}
+      <div className="space-y-2 md:hidden">
         {sorted.map((m) => {
           const href = maintenanceDetail(m.id);
           const progress = maintenanceWorkflowProgress(m);
-          const interactive = Boolean(onItemClick);
           const openItem = onItemClick ? () => onItemClick(m) : undefined;
-          return (
-            <ModuleInteractiveTableRow
-              key={m.id}
-              onActivate={openItem}
-              selected={selectedId === m.id}
-              className={cn(m.requiresApproval && 'bg-destructive/[0.03]')}
-            >
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {m.trackingNumber}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {formatCreatedAt(maintenanceCreatedAtIso(m))}
-              </td>
-              {interactive ? (
-                <td className="max-w-[12rem] px-3 py-3 font-medium">
-                  <span className="line-clamp-2">{m.title}</span>
-                </td>
-              ) : (
-                <ModuleTableLinkCell href={href} className="max-w-[12rem]">
-                  <span className="line-clamp-2">{m.title}</span>
-                </ModuleTableLinkCell>
-              )}
-              <td className="max-w-[14rem] px-3 py-3 text-muted-foreground">
-                <span className="line-clamp-2">{m.propertyAddress}</span>
-              </td>
-              <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
-              <td className="px-3 py-3 text-xs text-muted-foreground">{capitalize(m.responsibility)}</td>
-              <td className="px-3 py-3">
+          const selected = selectedId === m.id;
+          const body = (
+            <>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{m.title}</p>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                    {m.propertyAddress}
+                  </p>
+                </div>
+                <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="text-muted-foreground tabular-nums">{m.trackingNumber}</span>
+                <span className="text-primary font-medium">{progress.currentStepLabel}</span>
                 <span
                   className={cn(
-                    'text-xs font-semibold uppercase',
+                    'font-semibold uppercase',
                     m.priority === 'urgent' ? 'text-destructive' : 'text-muted-foreground',
                   )}
                 >
                   {m.priority}
                 </span>
-              </td>
-              {interactive ? (
-                <td className="px-3 py-3 text-right text-muted-foreground">
-                  <ChevronRight className="inline size-4" />
-                </td>
-              ) : (
-                <ModuleTableChevronCell href={href} />
-              )}
-            </ModuleInteractiveTableRow>
+                <span className="text-muted-foreground">
+                  {formatCreatedAt(maintenanceCreatedAtIso(m))}
+                </span>
+              </div>
+            </>
+          );
+          const className = cn(
+            'block rounded-xl border bg-card p-3 shadow-sm transition active:scale-[0.99]',
+            m.requiresApproval && 'border-destructive/30 bg-destructive/[0.03]',
+            selected && 'border-primary ring-primary/20 ring-2',
+          );
+          if (openItem) {
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={openItem}
+                className={cn(className, 'w-full text-left')}
+              >
+                {body}
+              </button>
+            );
+          }
+          return (
+            <a key={m.id} href={href} className={className}>
+              {body}
+            </a>
           );
         })}
-      </tbody>
-    </ModuleListTable>
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={1080}>
+          <ModuleSortableTableHead
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={onSort}
+            columns={[
+              { kind: 'sortable', label: 'ID', sortKey: 'id' },
+              {
+                kind: 'sortable',
+                label: 'Date created',
+                sortKey: 'createdAt',
+                defaultDirection: 'desc',
+              },
+              { kind: 'sortable', label: 'Subject', sortKey: 'subject' },
+              { kind: 'sortable', label: 'Address', sortKey: 'address' },
+              { kind: 'sortable', label: 'Status', sortKey: 'status' },
+              { kind: 'sortable', label: 'Responsibility', sortKey: 'responsibility' },
+              { kind: 'sortable', label: 'Priority', sortKey: 'priority' },
+              { kind: 'static', label: '' },
+            ]}
+          />
+          <tbody className="divide-y">
+            {sorted.map((m) => {
+              const href = maintenanceDetail(m.id);
+              const progress = maintenanceWorkflowProgress(m);
+              const interactive = Boolean(onItemClick);
+              const openItem = onItemClick ? () => onItemClick(m) : undefined;
+              return (
+                <ModuleInteractiveTableRow
+                  key={m.id}
+                  onActivate={openItem}
+                  selected={selectedId === m.id}
+                  className={cn(m.requiresApproval && 'bg-destructive/[0.03]')}
+                >
+                  <td className="text-muted-foreground whitespace-nowrap px-3 py-3 text-xs tabular-nums">
+                    {m.trackingNumber}
+                  </td>
+                  <td className="text-muted-foreground whitespace-nowrap px-3 py-3 text-xs tabular-nums">
+                    {formatCreatedAt(maintenanceCreatedAtIso(m))}
+                  </td>
+                  {interactive ? (
+                    <td className="max-w-[12rem] px-3 py-3 font-medium">
+                      <span className="line-clamp-2">{m.title}</span>
+                    </td>
+                  ) : (
+                    <ModuleTableLinkCell href={href} className="max-w-[12rem]">
+                      <span className="line-clamp-2">{m.title}</span>
+                    </ModuleTableLinkCell>
+                  )}
+                  <td className="text-muted-foreground max-w-[14rem] px-3 py-3">
+                    <span className="line-clamp-2">{m.propertyAddress}</span>
+                  </td>
+                  <td className="text-primary px-3 py-3 text-xs font-medium">
+                    {progress.currentStepLabel}
+                  </td>
+                  <td className="text-muted-foreground px-3 py-3 text-xs">
+                    {capitalize(m.responsibility)}
+                  </td>
+                  <td className="px-3 py-3">
+                    <span
+                      className={cn(
+                        'text-xs font-semibold uppercase',
+                        m.priority === 'urgent'
+                          ? 'text-destructive'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {m.priority}
+                    </span>
+                  </td>
+                  {interactive ? (
+                    <td className="text-muted-foreground px-3 py-3 text-right">
+                      <ChevronRight className="inline size-4" />
+                    </td>
+                  ) : (
+                    <ModuleTableChevronCell href={href} />
+                  )}
+                </ModuleInteractiveTableRow>
+              );
+            })}
+          </tbody>
+        </ModuleListTable>
+      </div>
+    </>
   );
 }
 

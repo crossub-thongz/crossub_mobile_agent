@@ -39,20 +39,24 @@ export function getPropertyNeedActions(
   const addr = formatPropertyFullAddress(property);
   const vacant = isPropertyVacant(property);
 
-  for (const m of data.maintenance.filter(
-    (x) => x.propertyId === property.id || x.propertyAddress.includes(property.address),
-  )) {
-    if (m.requiresApproval) {
-      actions.push({
-        id: `mnt-${m.id}`,
-        propertyId: property.id,
-        propertyAddress: addr,
-        label: 'Maintenance approval required',
-        category: 'Maintenance',
-        href: maintenanceDetail(m.id, fromProperty(property.id, 'Maintenance')),
-        priority: m.priority === 'urgent' ? 'urgent' : 'high',
-      });
-    }
+  for (const m of data.maintenance) {
+    // Prefer propertyId. Address fallback only when the case has no propertyId — never
+    // `includes`, which can attach one job to multiple properties and duplicate React keys.
+    const matchesProperty =
+      m.propertyId === property.id ||
+      (!m.propertyId &&
+        Boolean(property.address) &&
+        m.propertyAddress.trim().toLowerCase() === property.address.trim().toLowerCase());
+    if (!matchesProperty || !m.requiresApproval) continue;
+    actions.push({
+      id: `mnt-${m.id}`,
+      propertyId: property.id,
+      propertyAddress: addr,
+      label: 'Maintenance approval required',
+      category: 'Maintenance',
+      href: maintenanceDetail(m.id, fromProperty(property.id, 'Maintenance')),
+      priority: m.priority === 'urgent' ? 'urgent' : 'high',
+    });
   }
 
   if (!vacant) {
@@ -189,7 +193,13 @@ export function buildRemindingQueue(
   properties: Property[],
   getActions: (p: Property) => PropertyNeedAction[],
 ): PropertyNeedAction[] {
-  return properties.flatMap(getActions).sort((a, b) => {
+  const seen = new Set<string>();
+  const items = properties.flatMap(getActions).filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+  return items.sort((a, b) => {
     const order = { urgent: 0, high: 1, normal: 2, low: 3 };
     return order[a.priority] - order[b.priority];
   });

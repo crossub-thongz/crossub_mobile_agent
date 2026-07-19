@@ -27,7 +27,7 @@ import {
   resolveLeaseDates,
 } from '@/lib/property-overview';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import { isTenancyArchived } from '@/lib/property-archive';
+import { isTenancyArchived, parseTenancyArchiveSnapshots } from '@/lib/property-archive';
 import { resolvePropertyManagementFees } from '@/lib/management-fees';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
@@ -247,8 +247,13 @@ export function PropertyOverviewTab({
       ? `Updated ${formatDateTime(sync.record.updatedAt)}`
       : null;
 
-  const tenancyDates = useMemo(
-    () => ({
+  const tenancyDates = useMemo(() => {
+    const caseVacate =
+      vacatingCases.find((c) => c.apiStatus !== 'CANCELLED' && c.vacateDate)?.vacateDate ??
+      null;
+    const archiveVacate =
+      parseTenancyArchiveSnapshots(property.registryDraft)[0]?.vacateDate ?? null;
+    return {
       leaseStart:
         overview?.leaseStartDate ??
         sliceDate(sync.record?.leaseStartDate) ??
@@ -259,12 +264,18 @@ export function PropertyOverviewTab({
         overview?.nextRentReviewDate ??
         sliceDate(sync.record?.nextRentReviewAt) ??
         property.nextRentReview,
-      vacateDate: overview?.vacateDate ?? sliceDate(sync.record?.vacateDate),
+      // End-leasing holds the source of truth; property.vacateDate can be cleared
+      // after Job completed until the API re-syncs from the completed case.
+      vacateDate:
+        overview?.vacateDate ??
+        sliceDate(sync.record?.vacateDate) ??
+        sliceDate(property.vacateDate) ??
+        sliceDate(caseVacate) ??
+        sliceDate(archiveVacate),
       nextRoutine:
         overview?.nextRoutineInspectionDate ?? sliceDate(sync.record?.nextInspectionAt),
-    }),
-    [overview, sync.record, property, leaseStart, leaseEnd],
-  );
+    };
+  }, [overview, sync.record, property, leaseStart, vacatingCases]);
 
   const rentPaidTo = resolveRentPaidTo(
     sync.record?.rentPaidUntil ?? sync.overview?.rentPaidUntilDate,

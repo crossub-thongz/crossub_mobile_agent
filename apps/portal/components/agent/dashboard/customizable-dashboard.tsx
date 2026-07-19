@@ -36,8 +36,8 @@ import { cn } from '@/lib/utils';
 
 import './dashboard-grid.css';
 
-const BREAKPOINTS = { lg: 1200, md: 996, sm: 768 } as const;
-const COLS = { lg: 12, md: 10, sm: 6 } as const;
+const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 0 } as const;
+const COLS = { lg: 12, md: 10, sm: 6, xs: 1 } as const;
 
 function syncLayoutsForWidgets(
   snapshot: DashboardLayoutSnapshot,
@@ -49,6 +49,7 @@ function syncLayoutsForWidgets(
   let lg: Layout = filterLayout(snapshot.layouts.lg);
   let md: Layout = filterLayout(snapshot.layouts.md ?? snapshot.layouts.lg);
   let sm: Layout = filterLayout(snapshot.layouts.sm ?? snapshot.layouts.lg);
+  let xs: Layout = filterLayout(snapshot.layouts.xs ?? snapshot.layouts.sm ?? snapshot.layouts.lg);
 
   for (const id of widgets) {
     if (!lg.some((item) => item.i === id)) lg = appendWidgetToLayout(lg, id);
@@ -57,9 +58,15 @@ function syncLayoutsForWidgets(
       const appended = appendWidgetToLayout(sm, id);
       sm = appended.map((item) => ({ ...item, x: 0, w: COLS.sm }));
     }
+    if (!xs.some((item) => item.i === id)) {
+      const appended = appendWidgetToLayout(xs, id);
+      xs = appended.map((item) => ({ ...item, x: 0, w: COLS.xs }));
+    } else {
+      xs = xs.map((item) => ({ ...item, x: 0, w: Math.min(item.w, COLS.xs) }));
+    }
   }
 
-  return { lg, md, sm };
+  return { lg, md, sm, xs };
 }
 
 export function CustomizableDashboard({ context }: { context: DashboardWidgetRenderContext }) {
@@ -200,8 +207,8 @@ export function CustomizableDashboard({ context }: { context: DashboardWidgetRen
             layouts={layouts}
             breakpoints={BREAKPOINTS}
             cols={COLS}
-            rowHeight={72}
-            margin={[12, 12] as const}
+            rowHeight={width < 768 ? 88 : 72}
+            margin={width < 768 ? ([8, 8] as const) : ([12, 12] as const)}
             containerPadding={[0, 0] as const}
             compactor={verticalCompactor}
             dragConfig={{

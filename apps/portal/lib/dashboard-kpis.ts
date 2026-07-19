@@ -1,3 +1,4 @@
+import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import { ROUTES } from '@/constants/routes';
 import type {
   DashboardKpis,
@@ -15,15 +16,31 @@ function isCompleted(status: string): boolean {
   return s.includes('complete') || s.includes('closed') || s.includes('sent');
 }
 
-function isInProgress(status: string): boolean {
+function isCancelled(status: string): boolean {
   const s = status.toLowerCase();
-  return (
-    s.includes('progress') ||
-    s.includes('approval') ||
-    s.includes('scheduled') ||
-    s.includes('pending') ||
-    s.includes('quote')
-  );
+  return s.includes('cancel') || s.includes('deleted');
+}
+
+/** Mutually exclusive buckets so pie segments do not double-count. */
+function maintenanceBucket(
+  m: MaintenanceRequest,
+): 'approval' | 'progress' | 'completed' | 'other' {
+  if (
+    m.apiStatus === MAINTENANCE_STATUS.COMPLETED ||
+    isCompleted(m.status)
+  ) {
+    return 'completed';
+  }
+  if (
+    m.apiStatus === MAINTENANCE_STATUS.CANCELLED ||
+    isCancelled(m.status)
+  ) {
+    return 'other';
+  }
+  if (m.requiresApproval || m.apiStatus === MAINTENANCE_STATUS.QUOTING) {
+    return 'approval';
+  }
+  return 'progress';
 }
 
 export function buildDashboardKpis(input: {
@@ -60,9 +77,21 @@ export function buildDashboardKpis(input: {
     return days <= 90 && days >= 0;
   }).length;
 
-  const maintenanceInProgress = maintenance.filter((m) => isInProgress(m.status)).length;
-  const maintenanceCompleted = maintenance.filter((m) => isCompleted(m.status)).length;
-  const pendingApproval = maintenance.filter((m) => m.requiresApproval).length;
+  const maintenanceBuckets = { approval: 0, progress: 0, completed: 0 };
+  for (const m of maintenance) {
+    const bucket = maintenanceBucket(m);
+    if (bucket === 'approval') maintenanceBuckets.approval += 1;
+    else if (bucket === 'progress') maintenanceBuckets.progress += 1;
+    else if (bucket === 'completed') maintenanceBuckets.completed += 1;
+  }
+  const maintenanceInProgress = maintenanceBuckets.progress;
+  const maintenanceCompleted = maintenanceBuckets.completed;
+  const pendingApproval = maintenanceBuckets.approval;
+  const completedRentReviews = rentReviews.filter((r) => isCompleted(r.status)).length;
+  const completedTenantSelections = tenantSelections.filter((t) =>
+    isCompleted(t.status),
+  ).length;
+  const leasingCompleted = completedRentReviews + completedTenantSelections;
 
   const openInspections = inspections.filter((i) => i.type === 'OPEN');
   const ingoing = inspections.filter((i) => i.type === 'INGOING');
@@ -84,10 +113,12 @@ export function buildDashboardKpis(input: {
       upcomingRentReviews,
       newLeasing,
       leaseRenewals,
+      completed: leasingCompleted,
       href: ROUTES.LEASING,
       rentReviewHref: `${ROUTES.LEASING}?tab=rent-review`,
       newLeasingHref: `${ROUTES.LEASING}?tab=new-leasing`,
       leaseRenewalHref: `${ROUTES.LEASING}?tab=rent-review`,
+      completedHref: `${ROUTES.LEASING}?tab=rent-review`,
     },
     maintenance: {
       inProgress: maintenanceInProgress,

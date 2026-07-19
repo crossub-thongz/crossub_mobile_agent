@@ -81,8 +81,13 @@ export default function MaintenancePage() {
           placeholder="Search by address or issue…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="h-11"
         />
-        <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
+        <FilterChips
+          options={[...FILTERS]}
+          value={filter}
+          onChange={setFilter}
+        />
 
         {list.length === 0 ? (
           <EmptyState

@@ -310,7 +310,15 @@ export function LeasingStepOnboarding({ detail }: { detail: LeasingPropertyDetai
         <div className="grid grid-cols-2 gap-3">
           <StepFact
             label="Amount"
-            value={o.deposit.amount ? formatCurrency(o.deposit.amount) : '—'}
+            value={
+              o.deposit.amount != null
+                ? formatCurrency(o.deposit.amount)
+                : detail.rental.deposit != null
+                  ? formatCurrency(detail.rental.deposit)
+                  : detail.rental.rentPerWeek != null
+                    ? formatCurrency(detail.rental.rentPerWeek)
+                    : '—'
+            }
           />
           <StepFact
             label="Paid"
