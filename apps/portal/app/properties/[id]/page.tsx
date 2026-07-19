@@ -53,7 +53,7 @@ import {
 } from '@/lib/property-inspection-navigation';
 import { useAgentStore } from '@/lib/store';
 import type { Property } from '@/lib/types';
-import { formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
+import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
 import { useRecordRecentPropertyVisit } from '@/hooks/use-record-recent-visit';
 import { formatCarSpaces } from '@/lib/property-overview';
 import {
@@ -81,6 +81,7 @@ export default function PropertyDetailPage() {
   const id = params.id as string;
   const {
     properties,
+    archivedProperties,
     agencies,
     maintenanceAll,
     inspections,
@@ -98,19 +99,24 @@ export default function PropertyDetailPage() {
     agentPortfolioId,
   } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
-  const listProperty = properties.find((p) => p.id === id);
+  const listProperty =
+    properties.find((p) => p.id === id) ?? archivedProperties.find((p) => p.id === id);
   const [fetchedProperty, setFetchedProperty] = useState<Property | null>(null);
-  const [propertyLoadState, setPropertyLoadState] = useState<'idle' | 'loading' | 'missing'>(
-    'idle',
+  const [propertyLoadState, setPropertyLoadState] = useState<'loading' | 'ready' | 'missing'>(() =>
+    listProperty ? 'ready' : 'loading',
   );
   const property = listProperty ?? fetchedProperty;
+  const isArchivedProperty = Boolean(
+    property?.endOfManagementDate ||
+      archivedProperties.some((p) => p.id === id),
+  );
 
-  // After end-leasing Job completed, the property may be archived and drop out of
-  // the active portfolio list — still load it by id so the detail page doesn't 404.
+  // Properties archived after end-leasing or end-of-management drop out of the active
+  // portfolio list — load by id so the detail page does not 404 on first paint.
   useEffect(() => {
     if (listProperty) {
       setFetchedProperty(null);
-      setPropertyLoadState('idle');
+      setPropertyLoadState('ready');
       return;
     }
     let cancelled = false;
@@ -119,7 +125,7 @@ export default function PropertyDetailPage() {
       .then((dto) => {
         if (cancelled) return;
         setFetchedProperty(mapAgentProperty(dto, agentPortfolioId));
-        setPropertyLoadState('idle');
+        setPropertyLoadState('ready');
       })
       .catch(() => {
         if (cancelled) return;
@@ -200,7 +206,7 @@ export default function PropertyDetailPage() {
     );
   }
 
-  if (!property) notFound();
+  if (!property && propertyLoadState === 'missing') notFound();
 
   const tasks = {
     maintenance: maintenanceAll.filter(
@@ -285,6 +291,18 @@ export default function PropertyDetailPage() {
   return (
     <AgentShell title={fullAddress} backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <div className="space-y-4 pb-8">
+        {isArchivedProperty ? (
+          <div className="rounded-xl border border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm">
+            <p className="font-medium text-foreground">Archived property</p>
+            <p className="text-muted-foreground mt-1">
+              Management ended
+              {property.endOfManagementDate
+                ? ` on ${formatDate(property.endOfManagementDate)}`
+                : ''}
+              . This record is read-only for reference.
+            </p>
+          </div>
+        ) : null}
         {property.registryIntakeComplete === false ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
             <p className="text-amber-950 dark:text-amber-100">
