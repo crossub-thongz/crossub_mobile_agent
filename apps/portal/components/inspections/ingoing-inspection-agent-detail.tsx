@@ -140,7 +140,7 @@ export function IngoingInspectionAgentDetail({
   const [loading, setLoading] = useState(apiConnected);
   const [error, setError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [auditExpanded, setAuditExpanded] = useState(true);
+  const [auditExpanded, setAuditExpanded] = useState(false);
   const [viewingGateStep, setViewingGateStep] = useState<AgentIngoingGateStatus | null>(null);
 
   const refreshSnapshot = useCallback(async () => {
@@ -650,7 +650,7 @@ export function IngoingInspectionAgentDetail({
         </div>
       ) : null}
 
-      <JobCaseStageEmailHistory emails={stageEmails} title="Email history" defaultOpen />
+      <JobCaseStageEmailHistory emails={stageEmails} title="Email history" />
 
       <div className="rounded-xl border bg-card">
         <button

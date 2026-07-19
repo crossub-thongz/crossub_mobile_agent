@@ -55,7 +55,6 @@ export function InspectionDetailDialog({
     inspection.type === 'INGOING' || inspection.type === 'OUTGOING';
 
   if (isFieldInspection) {
-    const isOutgoing = inspection.type === 'OUTGOING';
     return (
       <CaseDetailDialog
         open={open}
@@ -64,14 +63,11 @@ export function InspectionDetailDialog({
         subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
         size={size}
       >
-        {isOutgoing ? (
+        {inspection.type === 'OUTGOING' ? (
           <AgentFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
         ) : (
           <IngoingInspectionAgentDetail inspection={inspection} apiConnected={apiConnected} />
         )}
-        {isOutgoing ? (
-          <JobCaseStageEmailHistory emails={stageEmails} title={emailTitle} />
-        ) : null}
       </CaseDetailDialog>
     );
   }

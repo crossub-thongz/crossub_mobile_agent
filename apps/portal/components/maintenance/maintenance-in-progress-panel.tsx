@@ -1,6 +1,7 @@
 'use client';
 
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
+import { MaintenanceTenantAcknowledgementPanel } from '@/components/maintenance/maintenance-tenant-acknowledgement-panel';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import {
   requiresContractorFlow,
@@ -24,13 +25,21 @@ export function MaintenanceInProgressPanel({
     ctx.workspaceCase.status,
   );
 
+  if (ctx.workspaceCase.responsibility === 'tenant') {
+    return (
+      <MaintenanceTenantAcknowledgementPanel
+        ctx={ctx}
+        onCaseUpdated={onCaseUpdated}
+        apiConnected={apiConnected}
+      />
+    );
+  }
+
   if (!landlordFlow) {
     return (
       <div className="space-y-4">
         <p className="text-muted-foreground rounded-xl border bg-card p-4 text-sm">
-          {ctx.workspaceCase.responsibility === 'tenant'
-            ? 'Tenant is responsible for arranging and completing this repair.'
-            : 'Strata is responsible for this repair.'}
+          Strata is responsible for this repair.
         </p>
 
         {showCompletionGates ? (

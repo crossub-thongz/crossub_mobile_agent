@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
-import { formatDateTime } from '@/lib/utils';
+import { cn, formatDateTime } from '@/lib/utils';
 
 export function RentReviewTenantNotifiedPanel({
   detail,
@@ -38,6 +38,7 @@ export function RentReviewTenantNotifiedPanel({
   const [busy, setBusy] = useState(false);
   const [effectiveDate, setEffectiveDate] = useState('');
   const [remindersOpen, setRemindersOpen] = useState(false);
+  const [auditExpanded, setAuditExpanded] = useState(false);
 
   useEffect(() => {
     setEffectiveDate(detail.effectiveDate ?? '');
@@ -145,27 +146,48 @@ export function RentReviewTenantNotifiedPanel({
 
       {auditEntries.length > 0 ? (
         <section className="rounded-xl border bg-muted/20 p-4">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold">Audit</p>
+          <div className="flex items-start justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setAuditExpanded((open) => !open)}
+              className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left"
+              aria-expanded={auditExpanded}
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Audit</p>
+                <p className="text-muted-foreground text-xs">
+                  {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'} ·{' '}
+                  {auditExpanded ? 'Click to collapse' : 'Click to expand'}
+                </p>
+              </div>
+              <ChevronDown
+                className={cn(
+                  'text-muted-foreground mt-0.5 size-5 shrink-0 transition-transform',
+                  auditExpanded && 'rotate-180',
+                )}
+              />
+            </button>
             {noticeSent ? <RentReviewTenantReminderCountdownBadge detail={detail} /> : null}
           </div>
-          <ul className="space-y-2 text-xs">
-            {auditEntries.map((e) => {
-              const auditDetail = formatRentReviewAuditDetail(e);
-              return (
-                <li
-                  key={e.id}
-                  className="rounded-lg border border-border/60 bg-background px-3 py-2.5"
-                >
-                  <p className="text-muted-foreground tabular-nums">{formatDateTime(e.at)}</p>
-                  <p className="mt-0.5 font-medium">{e.message}</p>
-                  {auditDetail ? (
-                    <p className="text-muted-foreground mt-0.5">{auditDetail}</p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
+          {auditExpanded ? (
+            <ul className="mt-3 space-y-2 text-xs">
+              {auditEntries.map((e) => {
+                const auditDetail = formatRentReviewAuditDetail(e);
+                return (
+                  <li
+                    key={e.id}
+                    className="rounded-lg border border-border/60 bg-background px-3 py-2.5"
+                  >
+                    <p className="text-muted-foreground tabular-nums">{formatDateTime(e.at)}</p>
+                    <p className="mt-0.5 font-medium">{e.message}</p>
+                    {auditDetail ? (
+                      <p className="text-muted-foreground mt-0.5">{auditDetail}</p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
           {noticeSent ? (
             <div className="mt-3 space-y-2">
               <p className="text-muted-foreground text-xs">

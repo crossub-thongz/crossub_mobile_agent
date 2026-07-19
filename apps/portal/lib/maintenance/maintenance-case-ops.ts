@@ -62,6 +62,14 @@ export async function markTenantStrataRepairComplete(requestId: string) {
   await transitionMaintenanceCase(requestId, 'closed');
 }
 
+/** Tenant-responsibility path: acknowledgement only — no evidence / invoice gates. */
+export async function recordTenantAcknowledgementAndClose(requestId: string) {
+  await setMaintenanceTenantApproval(requestId, true);
+  await transitionMaintenanceCase(requestId, 'closed', {
+    tenantApprovalReceived: true,
+  });
+}
+
 /** All completion gates checked — advance to the completed step (matches admin portal). */
 export async function confirmMaintenanceGatesComplete(requestId: string) {
   await transitionMaintenanceCase(requestId, 'completed', {

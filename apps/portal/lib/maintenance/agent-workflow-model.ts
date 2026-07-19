@@ -457,6 +457,17 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
   const awaitingDecision = ctx.item.requiresApproval;
 
   if (!landlordFlow) {
+    if (ctx.workspaceCase.responsibility === 'tenant') {
+      return [
+        {
+          id: 'tenant_acknowledgement',
+          label: 'Tenant acknowledgement received',
+          done:
+            Boolean(ctx.workspaceCase.tenantApprovalReceived) ||
+            ctx.workspaceCase.status === 'closed',
+        },
+      ];
+    }
     return [
       {
         id: 'direct_resolution',
@@ -550,6 +561,22 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
 
   const landlordFlow = requiresContractorFlow(ctx);
   if (!landlordFlow) {
+    if (ctx.workspaceCase.responsibility === 'tenant') {
+      return [
+        {
+          id: 'tenant_acknowledgement',
+          label: 'Tenant acknowledgement received',
+          done:
+            Boolean(ctx.workspaceCase.tenantApprovalReceived) ||
+            ctx.workspaceCase.status === 'closed',
+        },
+        {
+          id: 'closed',
+          label: 'Job closed',
+          done: ctx.workspaceCase.status === 'closed',
+        },
+      ];
+    }
     return [
       {
         id: 'completion_evidence',

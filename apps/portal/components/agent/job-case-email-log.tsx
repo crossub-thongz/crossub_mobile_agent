@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, Forward, Mail, Paperclip, Reply, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -520,6 +520,10 @@ export function JobCaseStageEmailHistory({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  // Keep collapsed when switching steps / reopening a case popup.
+  useEffect(() => {
+    setOpen(defaultOpen);
+  }, [defaultOpen, title]);
   const attributedEmails = useMemo(
     () => attributeAgentOutboundEmails(emails),
     [emails],

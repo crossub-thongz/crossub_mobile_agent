@@ -123,6 +123,10 @@ export function canCancelIngoingInspection(
 /**
  * Display inspection date: live scheduled time, else admin rule of 7 days before
  * move-in (suggested target while still Pending).
+ *
+ * Uses an early reference date so History still shows the target after the
+ * move-in window has passed (suggest otherwise returns null once "today" is
+ * past the pre-move-in window).
  */
 export function resolveIngoingInspectionDateDisplay(args: {
   scheduledDate?: string | null;
@@ -132,7 +136,10 @@ export function resolveIngoingInspectionDateDisplay(args: {
     return { iso: args.scheduledDate, isSuggested: false };
   }
   if (args.moveInDate) {
-    const suggested = suggestLeasingIngoingScheduledTime(args.moveInDate);
+    const suggested = suggestLeasingIngoingScheduledTime(
+      args.moveInDate,
+      new Date(0),
+    );
     if (suggested) return { iso: suggested, isSuggested: true };
   }
   return { iso: null, isSuggested: false };

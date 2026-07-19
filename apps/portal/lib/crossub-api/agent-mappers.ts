@@ -312,6 +312,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       propertyAddress: i.propertyAddress,
       inspector: i.inspectorName ?? undefined,
       scheduledAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
+      moveInDate: i.moveInDate ?? undefined,
       status:
         type === 'OPEN' && i.status === INSPECTION_STATUS.CANCELLED
           ? 'Deleted'

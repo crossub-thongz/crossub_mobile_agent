@@ -65,6 +65,7 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     propertyAddress: record.propertyAddress ?? '—',
     inspector: record.inspectorName ?? undefined,
     scheduledAt: record.scheduledDate ?? record.inspectionDate ?? undefined,
+    moveInDate: record.moveInDate ?? undefined,
     status: openInspectionStatusLabel(
       type,
       STATUS_LABEL[record.status] ?? record.status,

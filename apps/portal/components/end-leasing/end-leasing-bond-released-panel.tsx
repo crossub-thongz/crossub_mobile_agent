@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Check, ExternalLink, Loader2 } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import { NSW_BOND_RELEASE_URL, jobCompletedAuditTimelineEntries } from '@/lib/en
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { terminationApi } from '@/lib/termination-case-api';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 
@@ -86,6 +86,7 @@ export function EndLeasingBondReleasedPanel({
   const setSettlementOpen = useEndLeasingStore((s) => s.setSettlementDialogOpen);
   const { properties } = useAgentData();
   const [busy, setBusy] = useState(false);
+  const [auditExpanded, setAuditExpanded] = useState(false);
 
   const property = useMemo(
     () => properties.find((p) => p.id === caseData.propertyId) ?? null,
@@ -317,16 +318,31 @@ export function EndLeasingBondReleasedPanel({
               managing agent every 2 days.
             </p>
             {auditEntries.length > 0 ? (
-              <div className="mt-3 rounded-lg border bg-card p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide">Audit</p>
-                <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
-                  {auditEntries.map((e) => (
-                    <li key={e.id}>
-                      {formatDateTime(e.timestamp)} · {e.label}
-                      {e.actor ? ` · ${e.actor}` : ''}
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-3 rounded-lg border bg-card">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
+                  onClick={() => setAuditExpanded((value) => !value)}
+                  aria-expanded={auditExpanded}
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-wide">Audit</p>
+                  <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+                    {auditEntries.length} event{auditEntries.length === 1 ? '' : 's'}
+                    <ChevronDown
+                      className={cn('size-3.5 transition-transform', auditExpanded && 'rotate-180')}
+                    />
+                  </span>
+                </button>
+                {auditExpanded ? (
+                  <ul className="text-muted-foreground space-y-1 border-t px-3 py-2 text-xs">
+                    {auditEntries.map((e) => (
+                      <li key={e.id}>
+                        {formatDateTime(e.timestamp)} · {e.label}
+                        {e.actor ? ` · ${e.actor}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             ) : null}
             <Button

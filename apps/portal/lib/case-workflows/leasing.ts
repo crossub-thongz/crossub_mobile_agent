@@ -1,4 +1,5 @@
 import { LEASING_LIFECYCLE_STEP, LEASING_ONBOARDING_STEP } from '@/constants/api-enums';
+import { isCompletedLeasingCycle } from '@/lib/property-leasing-history';
 import type { LeasingCycle } from '@/lib/types';
 
 import { buildCaseWorkflowProgress } from './build-progress';
@@ -33,9 +34,7 @@ function lifecycleStepToId(step: string): string {
   }
 }
 
-function isLeasingCaseCompleted(cycle: LeasingCycle): boolean {
-  return cycle.onboardingStepId === 'completed';
-}
+const isLeasingCaseCompleted = isCompletedLeasingCycle;
 
 function buildAllDoneProgress(
   title: string,

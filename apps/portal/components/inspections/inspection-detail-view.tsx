@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Calendar,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
   DoorOpen,
   FileText,
@@ -81,7 +82,6 @@ import { useLivePoll } from '@/lib/use-live-poll';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import type { Inspection } from '@/lib/types';
-import { cn, formatDateTime } from '@/lib/utils';
 
 export function InspectionDetailView({
   inspectionId,
@@ -217,6 +217,7 @@ export function InspectionDetailView({
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
   const syncOpenSession = useCallback(async () => {
@@ -765,9 +766,26 @@ export function InspectionDetailView({
         <JobCaseStageEmailHistory emails={stageEmails} />
       ) : null}
 
-      <section className="rounded-2xl border bg-card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Activity</h2>
-        <Timeline entries={insp.timeline} />
+      <section className="rounded-2xl border bg-card">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+          onClick={() => setActivityExpanded((value) => !value)}
+          aria-expanded={activityExpanded}
+        >
+          <span className="text-sm font-semibold">Activity</span>
+          <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
+            {insp.timeline.length} event{insp.timeline.length === 1 ? '' : 's'}
+            <ChevronDown
+              className={cn('size-4 transition-transform', activityExpanded && 'rotate-180')}
+            />
+          </span>
+        </button>
+        {activityExpanded ? (
+          <div className="border-t px-4 py-3">
+            <Timeline entries={insp.timeline} />
+          </div>
+        ) : null}
       </section>
 
       <WorkflowCaseDeleteDialog

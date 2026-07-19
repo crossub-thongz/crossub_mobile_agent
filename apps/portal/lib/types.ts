@@ -433,6 +433,8 @@ export interface Inspection {
   propertyAddress: string;
   inspector?: string;
   scheduledAt?: string;
+  /** Ingoing: tenant move-in — used to show the 7-day-before target when not yet formally scheduled. */
+  moveInDate?: string;
   status: string;
   /** Raw InspectionStatus from the API — drives workflow step mapping. */
   apiStatus?: string;

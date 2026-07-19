@@ -7,6 +7,7 @@ import {
 } from '@/lib/case-workflows';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { isInspectionDone } from '@/lib/inspections/presentation';
+import { resolveIngoingInspectionDateDisplay } from '@/lib/ingoing-inspection-display';
 import { isDeletedInspection } from '@/lib/property-inspection-history';
 import { isDeletedMaintenance } from '@/lib/property-maintenance-history';
 import { isDeletedRentReview } from '@/lib/property-rent-review-history';
@@ -341,6 +342,14 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
     const createdIso = inspectionCreatedAtIso(inspection);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);
     const deleted = isDeletedInspection(inspection);
+    const scheduledIso =
+      inspection.type === 'INGOING'
+        ? resolveIngoingInspectionDateDisplay({
+            scheduledDate: inspection.scheduledAt,
+            moveInDate: inspection.moveInDate,
+          }).iso
+        : (inspection.scheduledAt ?? null);
+    const scheduledLabel = scheduledIso ? formatScheduledAt(scheduledIso) : null;
     return {
       id: inspection.id,
       kind: 'inspection',
@@ -349,12 +358,12 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
         inspection.trackingNumber || inspectionReferenceLabel(inspection.id, inspection.type),
       description: [
         inspection.inspector ? inspection.inspector : null,
-        inspection.scheduledAt ? formatScheduledAt(inspection.scheduledAt) : null,
+        scheduledLabel,
         inspection.reportStatus !== 'pending' ? `Report: ${inspection.reportStatus}` : null,
       ]
         .filter(Boolean)
         .join(' · ') || '—',
-      date: inspection.scheduledAt ? formatScheduledAt(inspection.scheduledAt) : '—',
+      date: scheduledLabel ?? '—',
       createdAt,
       createdAtMs,
       status: deleted ? 'Deleted' : progress.currentStepLabel,

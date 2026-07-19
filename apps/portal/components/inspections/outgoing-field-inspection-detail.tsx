@@ -708,7 +708,7 @@ export function OutgoingFieldInspectionDetail({
         </div>
       ) : null}
 
-      <JobCaseStageEmailHistory emails={stageEmails} title="Email history" defaultOpen />
+      <JobCaseStageEmailHistory emails={stageEmails} title="Email history" />
 
       <div className="rounded-xl border bg-card">
         <button

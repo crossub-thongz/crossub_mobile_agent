@@ -224,7 +224,7 @@ export function EndLeasingOutgoingInspectionPanel({
               onClick={() => openInspection(inspection.inspectionId!)}
             >
               <ExternalLink className="size-3.5" />
-              Open inspection job case
+              Outgoing inspection job case
             </Button>
             {!inspectionDone ? (
               <Button

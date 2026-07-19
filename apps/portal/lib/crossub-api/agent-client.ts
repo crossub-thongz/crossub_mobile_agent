@@ -10,6 +10,8 @@ export type AgentProperty = components['schemas']['AgentPropertyResponseDto'];
 
 export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   createdAt?: string | null;
+  /** From ingoing workflow meta — target schedule when scheduledDate is null. */
+  moveInDate?: string | null;
 };
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
   closureReason?: string | null;
