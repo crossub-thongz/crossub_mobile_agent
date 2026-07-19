@@ -55,6 +55,59 @@ export function totalsFromLineItems(lines: QuotationLineItem[]): QuotationTotals
   return { subtotalExGst, totalGst, totalIncGst };
 }
 
+function normalizeLineItem(
+  raw: Partial<QuotationLineItem> & { amount?: number },
+  index: number,
+): QuotationLineItem | null {
+  const description = raw.description?.trim();
+  if (!description) return null;
+
+  const quantity = raw.quantity && raw.quantity > 0 ? raw.quantity : 1;
+  const gstMode = raw.gstMode === 'include' ? 'include' : 'exclude';
+  const gstPercent = resolveLineGstPercent(raw);
+
+  if (
+    typeof raw.unitPriceExGst === 'number' &&
+    typeof raw.gst === 'number' &&
+    typeof raw.amountIncGst === 'number' &&
+    raw.amountIncGst > 0
+  ) {
+    return {
+      id: raw.id ?? String(index + 1),
+      description,
+      quantity,
+      gstMode,
+      gstPercent,
+      unitPriceExGst: raw.unitPriceExGst,
+      gst: raw.gst,
+      amountIncGst: raw.amountIncGst,
+    };
+  }
+
+  const amountIncGst = raw.amountIncGst ?? raw.amount ?? 0;
+  if (!amountIncGst || amountIncGst <= 0) return null;
+
+  const unitPriceExGst =
+    typeof raw.unitPriceExGst === 'number' && raw.unitPriceExGst > 0
+      ? raw.unitPriceExGst
+      : round2(amountIncGst / (1 + gstPercent / 100) / quantity);
+  const gst =
+    typeof raw.gst === 'number' && raw.gst > 0
+      ? raw.gst
+      : round2(amountIncGst - unitPriceExGst * quantity);
+
+  return {
+    id: raw.id ?? String(index + 1),
+    description,
+    quantity,
+    gstMode,
+    gstPercent,
+    unitPriceExGst,
+    gst,
+    amountIncGst: round2(unitPriceExGst * quantity + gst),
+  };
+}
+
 /** Build table rows from stored line items or fall back to scope + price. */
 export function buildQuotationLineItems(
   quote: Pick<ApiQuotation, 'price' | 'scope' | 'lineItems'>,
@@ -63,7 +116,12 @@ export function buildQuotationLineItems(
   totals: QuotationTotals;
 } {
   if (quote.lineItems?.length) {
-    return { lines: quote.lineItems, totals: totalsFromLineItems(quote.lineItems) };
+    const lines = quote.lineItems
+      .map((line, index) => normalizeLineItem(line, index))
+      .filter((line): line is QuotationLineItem => line != null);
+    if (lines.length > 0) {
+      return { lines, totals: totalsFromLineItems(lines) };
+    }
   }
 
   const totalIncGst = quote.price;
