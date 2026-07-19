@@ -271,7 +271,12 @@ export function mapTerminationCase(
     cancellationReason: s.cancellationReason ?? undefined,
     cancelledAt: s.cancelledAt ?? undefined,
     cancelledBy: s.cancelledBy ?? undefined,
-    vacateDate: s.vacateDate,
+    vacateDate:
+      s.vacateDate ??
+      undef(vacate.expectedVacateDate) ??
+      undef(s.terminationNotice?.tenantVacateDate) ??
+      undef(s.terminationNotice?.terminationDate) ??
+      null,
     initialVacateDate: s.initialVacateDate ?? undefined,
     vacateDateChanged: s.vacateDateChanged,
     vacateDateChangedAt: s.vacateDateChangedAt ?? undefined,

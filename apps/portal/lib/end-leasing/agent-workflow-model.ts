@@ -432,12 +432,16 @@ export function endOfAgreementExpiredLabel(caseData: TerminationCaseDetail): str
 }
 
 export function endLeasingVacateDate(caseData: TerminationCaseDetail): string | null {
-  return (
+  // Landlord notices often only have proposed/statutory terminationDate until the
+  // tenant confirms — still surface that for property overview Vacate date.
+  const raw =
     caseData.vacate.expectedVacateDate ??
     caseData.vacateDate ??
     caseData.terminationNotice?.tenantVacateDate ??
-    null
-  );
+    caseData.terminationNotice?.terminationDate ??
+    caseData.terminationDate ??
+    null;
+  return raw?.slice(0, 10) || null;
 }
 
 export function endLeasingKeyReturnDate(caseData: TerminationCaseDetail): string | null {
