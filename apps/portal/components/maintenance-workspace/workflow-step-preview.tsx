@@ -7,7 +7,7 @@ import {
   type QuickJumpTarget,
 } from '@/lib/maintenance-workspace/quick-jump';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
-import { formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 export function WorkflowStepPreview({
   target,
@@ -62,7 +62,7 @@ export function WorkflowStepPreview({
           {workspaceCase.quotations.map((q) => (
             <div key={q.id} className="mt-2 border-t border-border pt-2 first:mt-0 first:border-0 first:pt-0">
               <p className="font-medium">
-                ${q.price.toLocaleString()} AUD · {q.status}
+                {formatCurrency(q.price)} AUD · {q.status}
               </p>
               <p className="text-muted-foreground mt-1">{q.scope}</p>
               <p className="text-muted-foreground mt-1">{formatDateTime(q.submittedAt)}</p>
