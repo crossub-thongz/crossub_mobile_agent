@@ -66,7 +66,9 @@ export function PropertyLandlordOverviewEditDialog({
     if (!open) return;
     setForm(initial);
     setReplacingLandlord(false);
-  }, [open, initial]);
+    // Only re-seed when the dialog opens. Parent `initial` churns every live poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [open]);
 
   const startNewLandlord = () => {
     setReplacingLandlord(true);

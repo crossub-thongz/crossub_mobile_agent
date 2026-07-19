@@ -29,6 +29,7 @@ import {
   resolveLeaseDates,
 } from '@/lib/property-overview';
 import { isPropertyVacant } from '@/lib/property-leasing';
+import { isActiveEndLeasingCase } from '@/lib/property-leasing-history';
 import {
   resolveTenancyArchiveReason,
   tenancyArchiveBanner,
@@ -145,6 +146,15 @@ function sliceDate(value?: string | null): string {
   return value?.slice(0, 10) ?? '';
 }
 
+/** First non-empty YYYY-MM-DD (treats "" / whitespace as missing). */
+function firstDate(...values: Array<string | null | undefined>): string {
+  for (const value of values) {
+    const day = sliceDate(value);
+    if (day) return day;
+  }
+  return '';
+}
+
 export function PropertyOverviewTab({
   property,
   propertyId,
@@ -201,9 +211,7 @@ export function PropertyOverviewTab({
   const [selectedJob, setSelectedJob] = useState<PropertyJobRow | null>(null);
 
   const openVacatingCaseId = useMemo(
-    () =>
-      vacatingCases.find((c) => c.apiStatus !== 'CANCELLED' && c.apiStatus !== 'COMPLETED')?.id ??
-      null,
+    () => vacatingCases.find(isActiveEndLeasingCase)?.id ?? null,
     [vacatingCases],
   );
   const loadEndLeasingCase = useEndLeasingStore((s) => s.loadCase);
@@ -273,35 +281,41 @@ export function PropertyOverviewTab({
 
   const tenancyDates = useMemo(() => {
     const caseVacateFromList =
-      vacatingCases.find((c) => c.apiStatus !== 'CANCELLED' && c.vacateDate)?.vacateDate ??
-      null;
+      vacatingCases.find((c) => isActiveEndLeasingCase(c) && c.vacateDate)?.vacateDate ?? null;
     const caseVacateFromDetail = openEndLeasingCase
       ? endLeasingVacateDate(openEndLeasingCase)
       : null;
     const archiveVacate =
       parseTenancyArchiveSnapshots(property.registryDraft)[0]?.vacateDate ?? null;
     return {
-      leaseStart:
-        overview?.leaseStartDate ??
-        sliceDate(sync.record?.leaseStartDate) ??
+      leaseStart: firstDate(
+        overview?.leaseStartDate,
+        sync.record?.leaseStartDate,
         leaseStart,
-      leaseEnd:
-        overview?.leaseEndDate ?? sliceDate(sync.record?.leaseEndDate) ?? property.leaseEnd,
-      nextRentReview:
-        overview?.nextRentReviewDate ??
-        sliceDate(sync.record?.nextRentReviewAt) ??
+      ),
+      leaseEnd: firstDate(
+        overview?.leaseEndDate,
+        sync.record?.leaseEndDate,
+        property.leaseEnd,
+      ),
+      nextRentReview: firstDate(
+        overview?.nextRentReviewDate,
+        sync.record?.nextRentReviewAt,
         property.nextRentReview,
-      // End-leasing holds the source of truth (incl. landlord proposedTerminationDate
-      // on the case notice when vacateDate columns were never seeded).
-      vacateDate:
-        overview?.vacateDate ??
-        sliceDate(sync.record?.vacateDate) ??
-        sliceDate(property.vacateDate) ??
-        sliceDate(caseVacateFromDetail) ??
-        sliceDate(caseVacateFromList) ??
-        sliceDate(archiveVacate),
-      nextRoutine:
-        overview?.nextRoutineInspectionDate ?? sliceDate(sync.record?.nextInspectionAt),
+      ),
+      // Prefer end-leasing proposed/confirmed dates over empty property rows.
+      vacateDate: firstDate(
+        caseVacateFromDetail,
+        caseVacateFromList,
+        overview?.vacateDate,
+        sync.record?.vacateDate,
+        property.vacateDate,
+        archiveVacate,
+      ),
+      nextRoutine: firstDate(
+        overview?.nextRoutineInspectionDate,
+        sync.record?.nextInspectionAt,
+      ),
     };
   }, [overview, sync.record, property, leaseStart, vacatingCases, openEndLeasingCase]);
 

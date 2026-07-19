@@ -49,12 +49,28 @@ export function PropertyTenancyEditDialog({
   onSaved?: () => void;
 }) {
   const [form, setForm] = useState<TenancyForm>(initial);
+  /** Snapshot at open — ignore live poll refreshes while editing. */
+  const [baseline, setBaseline] = useState<TenancyForm>(initial);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setForm(initial);
-  }, [open, initial]);
+    setBaseline(initial);
+    // Only re-seed when the dialog opens. Parent `initial` churns every live poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [open]);
+
+  // Late-arriving end-leasing vacate date: fill only if the field is still empty.
+  useEffect(() => {
+    if (!open) return;
+    const incoming = dateOnly(initial.vacateDate);
+    if (!incoming) return;
+    setForm((prev) => (dateOnly(prev.vacateDate) ? prev : { ...prev, vacateDate: incoming }));
+    setBaseline((prev) =>
+      dateOnly(prev.vacateDate) ? prev : { ...prev, vacateDate: incoming },
+    );
+  }, [open, initial.vacateDate]);
 
   const set = <K extends keyof TenancyForm>(key: K, value: TenancyForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -76,35 +92,35 @@ export function PropertyTenancyEditDialog({
     setIfChanged(
       'tenantName',
       form.tenantName.trim() || undefined,
-      initial.tenantName.trim() || undefined,
+      baseline.tenantName.trim() || undefined,
     );
     setIfChanged(
       'tenantEmail',
       form.tenantEmail.trim() || undefined,
-      initial.tenantEmail.trim() || undefined,
+      baseline.tenantEmail.trim() || undefined,
     );
     setIfChanged(
       'tenantPhone',
       form.tenantPhone.trim() || undefined,
-      initial.tenantPhone.trim() || undefined,
+      baseline.tenantPhone.trim() || undefined,
     );
 
-    setIfChanged('leaseStartDate', dateOnly(form.leaseStartDate), dateOnly(initial.leaseStartDate));
-    setIfChanged('leaseEndDate', dateOnly(form.leaseEndDate), dateOnly(initial.leaseEndDate));
+    setIfChanged('leaseStartDate', dateOnly(form.leaseStartDate), dateOnly(baseline.leaseStartDate));
+    setIfChanged('leaseEndDate', dateOnly(form.leaseEndDate), dateOnly(baseline.leaseEndDate));
     setIfChanged(
       'nextRentReviewAt',
       dateOnly(form.nextRentReviewAt),
-      dateOnly(initial.nextRentReviewAt),
+      dateOnly(baseline.nextRentReviewAt),
     );
-    setIfChanged('rentPaidUntil', dateOnly(form.rentPaidUntil), dateOnly(initial.rentPaidUntil));
-    setIfChanged('vacateDate', dateOnly(form.vacateDate), dateOnly(initial.vacateDate));
+    setIfChanged('rentPaidUntil', dateOnly(form.rentPaidUntil), dateOnly(baseline.rentPaidUntil));
+    setIfChanged('vacateDate', dateOnly(form.vacateDate), dateOnly(baseline.vacateDate));
     if (patch.vacateDate !== undefined) {
       patch.vacateDateChangeReason = form.vacateDateChangeReason.trim();
     }
     setIfChanged(
       'nextInspectionAt',
       dateOnly(form.nextInspectionAt),
-      dateOnly(initial.nextInspectionAt),
+      dateOnly(baseline.nextInspectionAt),
     );
 
     return patch;
@@ -112,7 +128,7 @@ export function PropertyTenancyEditDialog({
 
   const submit = async () => {
     if (
-      vacateDateChangeInvalid(form.vacateDate, initial.vacateDate, form.vacateDateChangeReason)
+      vacateDateChangeInvalid(form.vacateDate, baseline.vacateDate, form.vacateDateChangeReason)
     ) {
       toast.error('Provide a reason when changing the vacate date');
       return;
@@ -216,7 +232,7 @@ export function PropertyTenancyEditDialog({
             </div>
             <PropertyVacateDateField
               date={form.vacateDate}
-              initialDate={initial.vacateDate}
+              initialDate={baseline.vacateDate}
               reason={form.vacateDateChangeReason}
               onDateChange={(value) => set('vacateDate', value)}
               onReasonChange={(value) => set('vacateDateChangeReason', value)}
