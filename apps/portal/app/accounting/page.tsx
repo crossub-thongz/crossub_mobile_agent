@@ -30,7 +30,7 @@ import {
   parseAccountingSection,
   type AccountingSectionId,
 } from '@/constants/accounting-sections';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, propertyDetail } from '@/constants/routes';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   deleteInvoice,
@@ -94,12 +94,16 @@ export default function AccountingPage() {
     if (section === 'invoices') void loadInvoices();
   }, [section, loadInvoices]);
 
-  const openAccounting = useCallback(
+  const openArrearsCase = useCallback(
     (item: (typeof accounting)[number]) => {
       const job = accountingToJobRow(item);
-      if (job) openJob(job);
+      if (job) {
+        openJob(job);
+        return;
+      }
+      router.push(`${propertyDetail(item.propertyId)}?tab=Accounting#rent-arrears`);
     },
-    [openJob],
+    [openJob, router],
   );
 
   const arrearsItems = useMemo(() => filterArrearsItems(accounting), [accounting]);
@@ -166,18 +170,8 @@ export default function AccountingPage() {
                 description="Rent reconciliation will appear when portfolio accounting data is available."
               />
             ) : (
-              <RentReconciliationListTable
-                items={accounting}
-                selectedId={selectedId}
-                onItemClick={openAccounting}
-              />
+              <RentReconciliationListTable items={accounting} />
             )}
-
-            <PortfolioCaseDialogHost
-              job={selectedJob}
-              onClose={closeJob}
-              onOpenJob={openJob}
-            />
 
             <ModuleCommunications
               categories={['Accounting']}
@@ -272,7 +266,7 @@ export default function AccountingPage() {
               <ArrearsListTable
                 items={arrearsItems}
                 selectedId={selectedId}
-                onItemClick={openAccounting}
+                onItemClick={openArrearsCase}
               />
             )}
 

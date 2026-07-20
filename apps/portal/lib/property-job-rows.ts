@@ -552,14 +552,39 @@ export function vacatingJobRows(cases: VacatingCase[]): PropertyJobRow[] {
 }
 
 export function accountingJobRows(accounting?: PropertyAccounting | null): PropertyJobRow[] {
-  if (!accounting || accounting.arrearsAmount <= 0) return [];
+  if (!accounting) return [];
+
+  const billArrears =
+    accounting.bills
+      ?.filter((bill) => bill.status === 'outstanding')
+      .reduce((sum, bill) => sum + bill.amount, 0) ?? 0;
+
+  if (accounting.arrearsAmount <= 0 && billArrears <= 0) return [];
+
+  if (accounting.arrearsAmount > 0) {
+    return [
+      {
+        id: `arrears-${accounting.propertyId}`,
+        kind: 'accounting',
+        jobType: 'Accounting',
+        name: 'Rent arrears',
+        description: `${accounting.tenantName} · ${accounting.daysInArrears} days outstanding`,
+        date: '—',
+        createdAt: '—',
+        createdAtMs: 0,
+        status: 'Collection in progress',
+        phase: 'in_progress',
+      },
+    ];
+  }
+
   return [
     {
       id: `arrears-${accounting.propertyId}`,
       kind: 'accounting',
       jobType: 'Accounting',
-      name: 'Rent arrears',
-      description: `${accounting.tenantName} · ${accounting.daysInArrears} days outstanding`,
+      name: 'Invoice arrears',
+      description: `${accounting.tenantName} · outstanding invoices`,
       date: '—',
       createdAt: '—',
       createdAtMs: 0,
