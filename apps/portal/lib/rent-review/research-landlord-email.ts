@@ -16,7 +16,8 @@ export function resolveLandlordContact(
   landlordEmail?: string | null,
 ): { name: string; email: string } {
   return {
-    name: landlordName?.trim() || 'Landlord',
+    name:
+      landlordName?.trim() && landlordName.trim() !== '—' ? landlordName.trim() : 'Landlord',
     email: landlordEmail?.trim() || '',
   };
 }

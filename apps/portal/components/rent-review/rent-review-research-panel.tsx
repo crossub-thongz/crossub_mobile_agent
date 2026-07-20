@@ -33,11 +33,18 @@ export function RentReviewResearchPanel({
   const [requesting, setRequesting] = useState(false);
 
   const property = properties.find((p) => p.id === detail.propertyId);
-  const landlordEmail = property?.homeOwnerContact?.email?.trim() || undefined;
-  const landlordName = property?.homeOwnerName;
   const recipientContacts = buildPropertyWorkflowEmailContacts(property, {
     tenantName: detail.tenantName,
   });
+  const landlordFromContacts = recipientContacts.find((c) =>
+    c.role.toLowerCase().startsWith('landlord'),
+  );
+  const landlordEmail =
+    property?.homeOwnerContact?.email?.trim() || landlordFromContacts?.email;
+  const landlordName =
+    property?.homeOwnerName && property.homeOwnerName !== '—'
+      ? property.homeOwnerName
+      : landlordFromContacts?.name;
 
   const researchRequested = hasResearchRequested(detail);
   const researchComplete = hasMarketResearchComplete(detail);

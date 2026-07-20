@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileText, Loader2, Paperclip, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,9 +58,16 @@ export function RentReviewEmailToLandlordDialog({
   );
   const [loadingAttachments, setLoadingAttachments] = useState(false);
   const [sending, setSending] = useState(false);
+  const seededForOpenRef = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      seededForOpenRef.current = false;
+      return;
+    }
+    if (seededForOpenRef.current) return;
+    seededForOpenRef.current = true;
+
     const draft = buildLandlordResearchEmailDraft(detail, contact.name, contact.email);
     setToEmail(draft.toEmail);
     setSubject(draft.subject);
