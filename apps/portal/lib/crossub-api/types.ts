@@ -114,6 +114,10 @@ export interface ApiMaintenanceRequest {
   invoiceUploaded?: boolean;
   deleteReason?: string;
   deletedAt?: string;
+  buildingName?: string;
+  strataPlanNumber?: string;
+  buildingManager?: ApiMaintenanceParty;
+  strataContact?: ApiMaintenanceParty;
   timeline: { status: ApiMaintenanceStatus; enteredAt: string; exitedAt?: string }[];
 }
 

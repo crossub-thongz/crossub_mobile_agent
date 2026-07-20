@@ -81,6 +81,9 @@ export interface Property {
   longitude?: number;
   buildingName?: string;
   strataPlanNumber?: string;
+  buildingManagerName?: string;
+  buildingManagerEmail?: string;
+  buildingManagerPhone?: string;
   strataContactName?: string;
   strataContactEmail?: string;
   strataContactPhone?: string;

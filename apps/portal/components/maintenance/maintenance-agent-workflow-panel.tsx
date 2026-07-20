@@ -71,6 +71,7 @@ function StepContent({
       return (
         <MaintenanceInProgressPanel
           ctx={ctx}
+          property={property}
           attachments={attachments}
           onCaseUpdated={onCaseUpdated}
           apiConnected={apiConnected}
@@ -164,7 +165,12 @@ export function MaintenanceAgentWorkflowPanel({
         onStepClick={handleStepClick}
       />
 
-      <MaintenanceJobTypeSummary item={item} workflowCtx={ctx} syncing={syncing} />
+      <MaintenanceJobTypeSummary
+        item={item}
+        workflowCtx={ctx}
+        property={property}
+        syncing={syncing}
+      />
 
       <MaintenanceJobIntakeSummary
         ctx={ctx}

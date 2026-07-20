@@ -39,6 +39,10 @@ export interface MaintenanceWorkspaceCase {
   invoiceUploaded?: boolean;
   tenant?: MaintenanceWorkspaceParty;
   agent?: MaintenanceWorkspaceParty;
+  buildingName?: string | null;
+  strataPlanNumber?: string | null;
+  buildingManager?: MaintenanceWorkspaceParty;
+  strataContact?: MaintenanceWorkspaceParty;
   auditEntries: ApiMaintenanceAuditLogEntry[];
   quotations: ApiQuotation[];
   notifications: {

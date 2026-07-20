@@ -3,9 +3,11 @@
 import type { ReactNode } from 'react';
 
 import { PriorityBadge, ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
+import { MaintenanceStrataContactsPanel } from '@/components/maintenance/maintenance-strata-contacts-panel';
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
+import { resolveMaintenanceStrataContacts } from '@/lib/maintenance/resolve-strata-contacts';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
-import type { MaintenanceRequest, Priority } from '@/lib/types';
+import type { MaintenanceRequest, Priority, Property } from '@/lib/types';
 
 function priorityForBadge(priority: Priority): string {
   return priority === 'urgent' || priority === 'high' ? 'urgent' : 'normal';
@@ -33,13 +35,19 @@ function SummaryField({
 export function MaintenanceJobTypeSummary({
   item,
   workflowCtx,
+  property,
   syncing,
 }: {
   item: MaintenanceRequest;
   workflowCtx: MaintenanceWorkflowContext;
+  property?: Property;
   syncing?: boolean;
 }) {
   const resolvedResponsibility = resolveMaintenanceResponsibility(workflowCtx);
+  const showStrataContacts = resolvedResponsibility === 'strata';
+  const strataContacts = showStrataContacts
+    ? resolveMaintenanceStrataContacts(workflowCtx.workspaceCase, property)
+    : null;
 
   return (
     <div className="rounded-xl border bg-card px-4 py-4">
@@ -56,6 +64,11 @@ export function MaintenanceJobTypeSummary({
           )}
         </SummaryField>
       </dl>
+      {strataContacts ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <MaintenanceStrataContactsPanel {...strataContacts} />
+        </div>
+      ) : null}
       <p className="text-primary mt-3 text-xs font-semibold">
         {item.status}
         {syncing ? <span className="text-muted-foreground font-normal"> · Updating…</span> : null}

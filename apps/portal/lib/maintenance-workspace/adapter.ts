@@ -88,6 +88,53 @@ function timelineToAudit(
   }));
 }
 
+function readStrataParty(contact?: ApiMaintenanceParty): MaintenanceWorkspaceParty | undefined {
+  if (!contact) return undefined;
+  const name = contact.name?.trim();
+  const email = contact.email?.trim();
+  const phone = contact.phone?.trim();
+  if (!name && !email && !phone) return undefined;
+  return {
+    name: name || '—',
+    email: email || undefined,
+    phone: phone || undefined,
+  };
+}
+
+function strataFieldsFromProperty(property?: Property): Pick<
+  MaintenanceWorkspaceCase,
+  'buildingName' | 'strataPlanNumber' | 'buildingManager' | 'strataContact'
+> {
+  if (!property) return {};
+  return {
+    buildingName: property.buildingName ?? null,
+    strataPlanNumber: property.strataPlanNumber ?? null,
+    buildingManager: readStrataParty({
+      name: property.buildingManagerName ?? '',
+      email: property.buildingManagerEmail,
+      phone: property.buildingManagerPhone,
+    }),
+    strataContact: readStrataParty({
+      name: property.strataContactName ?? '',
+      email: property.strataContactEmail,
+      phone: property.strataContactPhone,
+    }),
+  };
+}
+
+function strataFieldsFromRequest(
+  req: { buildingName?: string; strataPlanNumber?: string; buildingManager?: ApiMaintenanceParty; strataContact?: ApiMaintenanceParty },
+  property?: Property,
+): Pick<MaintenanceWorkspaceCase, 'buildingName' | 'strataPlanNumber' | 'buildingManager' | 'strataContact'> {
+  const fromProperty = strataFieldsFromProperty(property);
+  return {
+    buildingName: req.buildingName?.trim() || fromProperty.buildingName || null,
+    strataPlanNumber: req.strataPlanNumber?.trim() || fromProperty.strataPlanNumber || null,
+    buildingManager: readStrataParty(req.buildingManager) ?? fromProperty.buildingManager,
+    strataContact: readStrataParty(req.strataContact) ?? fromProperty.strataContact,
+  };
+}
+
 export function buildWorkspaceCaseFromApi(
   mapped: MappedMaintenance,
   property?: Property,
@@ -139,6 +186,7 @@ export function buildWorkspaceCaseFromApi(
           phone: agent.phone ?? undefined,
         }
       : undefined,
+    ...strataFieldsFromRequest(req, property),
     auditEntries: mapped.auditEntries,
     quotations: mapped.apiQuotations,
     notifications: mapped.apiNotifications.map((n) => ({
@@ -198,6 +246,7 @@ export function buildWorkspaceCaseFromRequest(
           phone: agent.phone ?? undefined,
         }
       : undefined,
+    ...strataFieldsFromProperty(property),
     auditEntries,
     quotations: item.quoteAmount
       ? [

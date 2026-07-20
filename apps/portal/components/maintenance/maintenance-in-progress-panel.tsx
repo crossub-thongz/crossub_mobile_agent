@@ -1,21 +1,26 @@
 'use client';
 
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
+import { MaintenanceStrataContactsPanel } from '@/components/maintenance/maintenance-strata-contacts-panel';
 import { MaintenanceTenantAcknowledgementPanel } from '@/components/maintenance/maintenance-tenant-acknowledgement-panel';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import {
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { resolveMaintenanceStrataContacts } from '@/lib/maintenance/resolve-strata-contacts';
+import type { Property } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 
 export function MaintenanceInProgressPanel({
   ctx,
+  property,
   attachments = [],
   onCaseUpdated,
   apiConnected = true,
 }: {
   ctx: MaintenanceWorkflowContext;
+  property?: Property;
   attachments?: ApiMaintenanceAttachment[];
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
@@ -36,11 +41,15 @@ export function MaintenanceInProgressPanel({
   }
 
   if (!landlordFlow) {
+    const strataContacts = resolveMaintenanceStrataContacts(ctx.workspaceCase, property);
     return (
       <div className="space-y-4">
-        <p className="text-muted-foreground rounded-xl border bg-card p-4 text-sm">
-          Strata is responsible for this repair.
-        </p>
+        <div className="rounded-xl border bg-card p-4">
+          <p className="text-muted-foreground mb-3 text-sm">
+            Strata is responsible for this repair. CROSSUB will coordinate with the strata body.
+          </p>
+          <MaintenanceStrataContactsPanel {...strataContacts} />
+        </div>
 
         {showCompletionGates ? (
           <MaintenanceCompletionGatesPanel
