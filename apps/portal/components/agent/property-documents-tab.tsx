@@ -35,6 +35,7 @@ import {
   inspectionReportDisplayName,
   inspectionReportDownloadType,
 } from '@/lib/property-portal-documents';
+import { dedupePropertyDocumentsForChecklist } from '@/lib/property-document-merge';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
 import type { AgentDocument, Property } from '@/lib/types';
 import { formatPropertyFullAddress } from '@/lib/utils';
@@ -437,9 +438,7 @@ export function PropertyDocumentsTab({
   }, [apiConnected, propertyId]);
 
   const displayDocs = useMemo<DisplayDoc[]>(() => {
-    const byId = new Map<string, DisplayDoc>();
-
-    for (const doc of portalDocuments) {
+    const mapPortalDoc = (doc: (typeof portalDocuments)[number]): DisplayDoc => {
       let title = doc.title;
       if (doc.category === 'inspection_report') {
         const displayName = inspectionReportDisplayName(
@@ -458,26 +457,38 @@ export function PropertyDocumentsTab({
           title = `Open Inspection report — ${displayName}`;
         }
       }
-      byId.set(doc.id, {
+      return {
         id: doc.id,
         title,
         uploadedAt: doc.uploadedAt,
         href: doc.url,
-      });
+      };
+    };
+
+    const portalMapped = portalDocuments.map(mapPortalDoc);
+
+    // Portal detail is the source of truth when loaded — fallback `/agent/documents`
+    // re-introduces aggregated `inspection:*` rows the portal API already deduped.
+    if (apiConnected && detail) {
+      return dedupePropertyDocumentsForChecklist(portalMapped);
     }
 
-    for (const doc of fallbackDocuments) {
-      if (byId.has(doc.id)) continue;
-      byId.set(doc.id, {
-        id: doc.id,
-        title: doc.title,
-        uploadedAt: doc.uploadedAt,
-        href: doc.downloadUrl ?? doc.href,
-      });
-    }
+    const fallbackMapped = fallbackDocuments.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      uploadedAt: doc.uploadedAt,
+      href: doc.downloadUrl ?? doc.href,
+    }));
 
-    return [...byId.values()];
-  }, [portalDocuments, fallbackDocuments, property, propertyInspections]);
+    return dedupePropertyDocumentsForChecklist([...portalMapped, ...fallbackMapped]);
+  }, [
+    portalDocuments,
+    fallbackDocuments,
+    property,
+    propertyInspections,
+    apiConnected,
+    detail,
+  ]);
 
   const checklist = useMemo(
     () => buildDocumentChecklistByGroup(displayDocs),

@@ -1,5 +1,6 @@
 import type { PropertyPortalDocument } from '@/lib/property-registry-api';
 import type { Inspection } from '@/lib/types';
+import { markSystemGeneratedReportName } from '@/lib/property-document-merge';
 
 export const PORTAL_DOCUMENT_GROUP_LABELS: Record<string, string> = {
   management_agreement: 'Property documents',
@@ -72,7 +73,7 @@ export function formatInspectionReportDisplayName(
   jobName: string,
   category: keyof typeof INSPECTION_REPORT_TYPE_SUFFIX,
 ): string {
-  return `${INSPECTION_REPORT_TYPE_SUFFIX[category]}-${jobName}`;
+  return markSystemGeneratedReportName(`${INSPECTION_REPORT_TYPE_SUFFIX[category]}-${jobName}`);
 }
 
 export function inspectionReportDisplayName(
