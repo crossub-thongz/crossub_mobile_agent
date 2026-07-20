@@ -174,8 +174,8 @@ export function MaintenanceCompletedCaseArchive({
       resolveContractorDisplayName(contractorId, {
         contractors,
         invitedContractors,
-        fallbackName:
-          contractorId === assignedContractorId ? assignedContractorName : undefined,
+        assignedContractorId,
+        assignedContractorName,
       });
 
     const ids: string[] = [];
@@ -254,10 +254,8 @@ export function MaintenanceCompletedCaseArchive({
                 {resolveContractorDisplayName(approvedQuotation.contractorId, {
                   contractors,
                   invitedContractors,
-                  fallbackName:
-                    approvedQuotation.contractorId === assignedContractorId
-                      ? assignedContractorName
-                      : undefined,
+                  assignedContractorId,
+                  assignedContractorName,
                 })}{' '}
                 · {formatCurrency(approvedQuotation.price)}
               </p>

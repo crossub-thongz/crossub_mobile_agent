@@ -9,13 +9,41 @@ export function contractorIdsMatch(a: string, b: string): boolean {
   return norm(a) === norm(b);
 }
 
+/** Pair RFQ audit copy with invited ids when names are stored without contractor ids. */
+export function resolveInvitedContractorNameFromAudit(
+  contractorId: string,
+  auditEntries?: Array<{ action: string; message: string }>,
+  invitedContractorIds?: string[],
+): string | undefined {
+  if (!auditEntries?.length || !invitedContractorIds?.length) return undefined;
+
+  const rfqNames: string[] = [];
+  for (const entry of auditEntries) {
+    if (entry.action !== 'contractor_assigned') continue;
+    const match = entry.message.match(/RFQ sent to (.+?) for quote review/i);
+    if (match?.[1]) rfqNames.push(match[1].trim());
+  }
+  if (rfqNames.length === 0) return undefined;
+
+  // Audit is newest-first; invites are oldest-first.
+  rfqNames.reverse();
+  const index = invitedContractorIds.findIndex((id) => contractorIdsMatch(id, contractorId));
+  if (index < 0 || index >= rfqNames.length) return undefined;
+  return rfqNames[index];
+}
+
 export function resolveContractorDisplayName(
   contractorId: string,
   args: {
     contractors?: Array<{ id: string; name: string }>;
     suggestions?: MaintenanceContractorSuggestion[];
     invitedContractors?: Array<{ id: string; name: string }>;
+    assignedContractorId?: string;
+    assignedContractorName?: string;
+    /** @deprecated Prefer assignedContractorId + assignedContractorName */
     fallbackName?: string;
+    auditEntries?: Array<{ action: string; message: string }>;
+    invitedContractorIds?: string[];
   },
 ): string {
   const snapshot = args.invitedContractors?.find((row) =>
@@ -26,14 +54,28 @@ export function resolveContractorDisplayName(
   const suggestion = args.suggestions?.find(
     (row) =>
       contractorIdsMatch(maintenanceContractorSelectionKey(row), contractorId) ||
-      contractorIdsMatch(row.id, contractorId),
+      contractorIdsMatch(row.id, contractorId) ||
+      (row.contractorId ? contractorIdsMatch(row.contractorId, contractorId) : false),
   );
   if (suggestion?.name) return suggestion.name;
 
   const contractor = args.contractors?.find((row) => contractorIdsMatch(row.id, contractorId));
   if (contractor?.name) return contractor.name;
 
-  if (args.fallbackName) return args.fallbackName;
+  const assignedName =
+    args.assignedContractorName ??
+    (args.assignedContractorId &&
+    contractorIdsMatch(args.assignedContractorId, contractorId)
+      ? args.fallbackName
+      : undefined);
+  if (assignedName) return assignedName;
+
+  const fromAudit = resolveInvitedContractorNameFromAudit(
+    contractorId,
+    args.auditEntries,
+    args.invitedContractorIds,
+  );
+  if (fromAudit) return fromAudit;
 
   return snapshot?.name ?? contractorId;
 }

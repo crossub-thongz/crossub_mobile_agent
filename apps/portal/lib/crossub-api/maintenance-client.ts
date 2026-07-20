@@ -139,7 +139,7 @@ export async function fetchMaintenanceContractorSuggestions(
   }>(`/maintenance/requests/${requestId}/contractor-recommendations`);
 
   return (result.recommendations ?? []).map((row) => ({
-    id: row.contractorId ?? `agency-pref-${row.id}`,
+    id: row.id,
     contractorId: row.contractorId,
     name: row.name,
     email: row.email,

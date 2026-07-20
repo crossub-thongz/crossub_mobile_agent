@@ -38,6 +38,7 @@ import {
   latestSubmittedQuoteForContractor,
   resolveContractorDisplayName,
 } from '@/lib/maintenance/resolve-contractor-display';
+import { maintenanceContractorSelectionKey } from '@/lib/maintenance/maintenance-contractor-key';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -51,6 +52,33 @@ function reviewForContractor(
       contractorIdsMatch(r.contractorId, contractorId) ||
       (quotationId != null && r.quotationId === quotationId),
   );
+}
+
+function normalizeInvitedContractorId(
+  contractorId: string,
+  suggestions: MaintenanceContractorSuggestion[],
+): string {
+  const hit = suggestions.find(
+    (row) =>
+      contractorIdsMatch(maintenanceContractorSelectionKey(row), contractorId) ||
+      contractorIdsMatch(row.id, contractorId) ||
+      (row.contractorId ? contractorIdsMatch(row.contractorId, contractorId) : false),
+  );
+  return hit ? maintenanceContractorSelectionKey(hit) : contractorId;
+}
+
+function dedupeInvitedContractorIds(
+  ids: string[],
+  suggestions: MaintenanceContractorSuggestion[],
+): string[] {
+  const unique: string[] = [];
+  for (const rawId of ids) {
+    const id = normalizeInvitedContractorId(rawId, suggestions);
+    if (!unique.some((existing) => contractorIdsMatch(existing, id))) {
+      unique.push(id);
+    }
+  }
+  return unique;
 }
 
 function ContractorQuoteCollapsible({
@@ -265,27 +293,27 @@ export function MaintenanceGetQuotePanel({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
   const quotes = getMaintenanceQuotationsForCase(ctx.workspaceCase);
-  const invitedIds = useMemo(
-    () =>
-      resolveRfqContractorIds({
-        requestId: ctx.workspaceCase.id,
-        invitedContractors: ctx.workspaceCase.invitedContractors,
-        invitedContractorIds:
-          ctx.workspaceCase.invitedContractorIds ?? ctx.item.invitedContractorIds,
-        quotations: quotes,
-        auditEntries: ctx.workspaceCase.auditEntries,
-        assignedContractorId: ctx.workspaceCase.assignedContractorId,
-      }),
-    [
-      ctx.item.invitedContractorIds,
-      ctx.workspaceCase.assignedContractorId,
-      ctx.workspaceCase.auditEntries,
-      ctx.workspaceCase.id,
-      ctx.workspaceCase.invitedContractorIds,
-      ctx.workspaceCase.invitedContractors,
-      quotes,
-    ],
-  );
+  const invitedIds = useMemo(() => {
+    const resolved = resolveRfqContractorIds({
+      requestId: ctx.workspaceCase.id,
+      invitedContractors: ctx.workspaceCase.invitedContractors,
+      invitedContractorIds:
+        ctx.workspaceCase.invitedContractorIds ?? ctx.item.invitedContractorIds,
+      quotations: quotes,
+      auditEntries: ctx.workspaceCase.auditEntries,
+      assignedContractorId: ctx.workspaceCase.assignedContractorId,
+    });
+    return dedupeInvitedContractorIds(resolved, suggestions);
+  }, [
+    ctx.item.invitedContractorIds,
+    ctx.workspaceCase.assignedContractorId,
+    ctx.workspaceCase.auditEntries,
+    ctx.workspaceCase.id,
+    ctx.workspaceCase.invitedContractorIds,
+    ctx.workspaceCase.invitedContractors,
+    quotes,
+    suggestions,
+  ]);
   const landlordFlow = requiresContractorFlow(ctx);
   const canReview = apiConnected;
 
@@ -309,9 +337,20 @@ export function MaintenanceGetQuotePanel({
       contractors,
       suggestions,
       invitedContractors: ctx.workspaceCase.invitedContractors,
-      fallbackName: ctx.item.contractorName,
+      assignedContractorId: ctx.workspaceCase.assignedContractorId,
+      assignedContractorName: ctx.item.contractorName,
+      auditEntries: ctx.workspaceCase.auditEntries,
+      invitedContractorIds: invitedIds,
     }),
-    [contractors, ctx.item.contractorName, ctx.workspaceCase.invitedContractors, suggestions],
+    [
+      contractors,
+      ctx.item.contractorName,
+      ctx.workspaceCase.assignedContractorId,
+      ctx.workspaceCase.auditEntries,
+      ctx.workspaceCase.invitedContractors,
+      invitedIds,
+      suggestions,
+    ],
   );
 
   const contractorLabel = (contractorId: string) =>
