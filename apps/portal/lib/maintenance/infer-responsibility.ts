@@ -1,6 +1,7 @@
 import type { ApiMaintenanceAuditLogEntry, ApiMaintenanceResponsibility } from '@/lib/crossub-api/types';
 import type { MaintenanceRequest } from '@/lib/types';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
+import { resolveRfqContractorIds } from '@/lib/maintenance/resolve-rfq-contractor-ids';
 
 export type MaintenanceResponsibilityContext = {
   workspaceCase: Pick<
@@ -164,16 +165,15 @@ export function inferInvitedContractorIdsFromAudit(
 export function resolveInvitedContractorIds(
   ctx: MaintenanceResponsibilityContext,
 ): string[] {
-  const fromSnapshot = ctx.workspaceCase.invitedContractors?.map((row) => row.id) ?? [];
-  if (fromSnapshot.length > 0) return fromSnapshot;
-
-  const fromCase = ctx.workspaceCase.invitedContractorIds ?? [];
-  if (fromCase.length > 0) return fromCase;
-
-  const fromItem = ctx.item.invitedContractorIds ?? [];
-  if (fromItem.length > 0) return fromItem;
-
-  return inferInvitedContractorIdsFromAudit(ctx.workspaceCase.auditEntries);
+  return resolveRfqContractorIds({
+    requestId: ctx.workspaceCase.id,
+    invitedContractors: ctx.workspaceCase.invitedContractors,
+    invitedContractorIds:
+      ctx.workspaceCase.invitedContractorIds ?? ctx.item.invitedContractorIds,
+    quotations: ctx.workspaceCase.quotations,
+    auditEntries: ctx.workspaceCase.auditEntries,
+    assignedContractorId: ctx.workspaceCase.assignedContractorId,
+  });
 }
 
 export function isLandlordMaintenanceFlow(ctx: MaintenanceResponsibilityContext): boolean {

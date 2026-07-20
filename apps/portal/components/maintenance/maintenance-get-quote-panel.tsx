@@ -13,9 +13,9 @@ import {
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
 import {
-  resolveInvitedContractorIds,
   resolveMaintenanceResponsibility,
 } from '@/lib/maintenance/infer-responsibility';
+import { resolveRfqContractorIds } from '@/lib/maintenance/resolve-rfq-contractor-ids';
 import {
   fetchMaintenanceContractorSuggestions,
   type MaintenanceContractorSuggestion,
@@ -265,7 +265,27 @@ export function MaintenanceGetQuotePanel({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
   const quotes = getMaintenanceQuotationsForCase(ctx.workspaceCase);
-  const invitedIds = resolveInvitedContractorIds(ctx);
+  const invitedIds = useMemo(
+    () =>
+      resolveRfqContractorIds({
+        requestId: ctx.workspaceCase.id,
+        invitedContractors: ctx.workspaceCase.invitedContractors,
+        invitedContractorIds:
+          ctx.workspaceCase.invitedContractorIds ?? ctx.item.invitedContractorIds,
+        quotations: quotes,
+        auditEntries: ctx.workspaceCase.auditEntries,
+        assignedContractorId: ctx.workspaceCase.assignedContractorId,
+      }),
+    [
+      ctx.item.invitedContractorIds,
+      ctx.workspaceCase.assignedContractorId,
+      ctx.workspaceCase.auditEntries,
+      ctx.workspaceCase.id,
+      ctx.workspaceCase.invitedContractorIds,
+      ctx.workspaceCase.invitedContractors,
+      quotes,
+    ],
+  );
   const landlordFlow = requiresContractorFlow(ctx);
   const canReview = apiConnected;
 

@@ -1,4 +1,8 @@
 import type { ApiMaintenanceRequest, ApiMaintenanceStatus, QuotationReviewRecord } from '@/lib/crossub-api/types';
+import {
+  unionInvitedContractorIds,
+  unionInvitedContractorSnapshots,
+} from '@/lib/maintenance/resolve-rfq-contractor-ids';
 
 const STATUS_RANK: Record<string, number> = {
   under_review: 1,
@@ -53,12 +57,14 @@ export function mergeMaintenanceCaseForLiveSync(
     responsibility: workflow.responsibility ?? prisma.responsibility,
     assignedContractorId: workflow.assignedContractorId ?? prisma.assignedContractorId,
     assignedContractor: prisma.assignedContractor ?? workflow.assignedContractor,
-    invitedContractorIds: workflow.invitedContractorIds?.length
-      ? workflow.invitedContractorIds
-      : prisma.invitedContractorIds,
-    invitedContractors: workflow.invitedContractors?.length
-      ? workflow.invitedContractors
-      : prisma.invitedContractors,
+    invitedContractorIds: unionInvitedContractorIds(
+      prisma.invitedContractorIds,
+      workflow.invitedContractorIds,
+    ),
+    invitedContractors: unionInvitedContractorSnapshots(
+      prisma.invitedContractors,
+      workflow.invitedContractors,
+    ),
     quotationReviews: mergeQuotationReviews(prisma.quotationReviews, workflow.quotationReviews),
     quotationIds: workflow.quotationIds?.length ? workflow.quotationIds : prisma.quotationIds,
     completionEvidenceUploaded:

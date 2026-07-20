@@ -48,7 +48,9 @@ export async function confirmMaintenanceResponsibility(
     if (assignRowId) {
       await assignPreferredMaintenanceContractor(requestId, assignRowId);
     }
-    await inviteMaintenanceContractorsForRfq(requestId, contractorIds);
+    await inviteMaintenanceContractorsForRfq(requestId, contractorIds, {
+      replaceExisting: true,
+    });
     await transitionMaintenanceCase(requestId, 'pending_quotation');
   }
   // Tenant/strata: setResponsibility sends the email and the backend advances to in_progress.

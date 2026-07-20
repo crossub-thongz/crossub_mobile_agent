@@ -163,10 +163,12 @@ export async function assignPreferredMaintenanceContractor(
 export async function inviteMaintenanceContractorsForRfq(
   requestId: string,
   preferredContractorIds: string[],
+  options?: { replaceExisting?: boolean },
 ): Promise<ApiMaintenanceState> {
   return api.post<ApiMaintenanceState>(`/maintenance/requests/${requestId}/invite-contractors`, {
     preferredContractorIds,
     actorRole: AGENT_ROLE,
+    ...(options?.replaceExisting ? { replaceExisting: true } : {}),
   });
 }
 
