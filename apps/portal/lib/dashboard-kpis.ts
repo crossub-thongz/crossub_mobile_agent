@@ -150,8 +150,8 @@ export function buildDashboardKpis(input: {
       totalArrearsAmount: totalArrears,
       outstandingBills: accounting.reduce((s, a) => s + Math.max(0, a.rentOutstanding), 0),
       href: ROUTES.ACCOUNTING,
-      incomeHref: ROUTES.ACCOUNTING,
-      arrearsHref: `${ROUTES.ACCOUNTING}?filter=arrears`,
+      incomeHref: `${ROUTES.ACCOUNTING}?section=rent_reconciliation`,
+      arrearsHref: `${ROUTES.ACCOUNTING}?section=arrears`,
     },
     tribunal: {
       active: tribunalCases.filter((c) => c.status === 'active').length,

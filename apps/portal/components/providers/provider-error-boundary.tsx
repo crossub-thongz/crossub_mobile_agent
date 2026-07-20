@@ -3,6 +3,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { isChunkLoadError, reloadOnceForStaleChunks } from '@/lib/chunk-reload';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -16,6 +17,10 @@ class ProviderErrorBoundaryInner extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    if (isChunkLoadError(error)) {
+      reloadOnceForStaleChunks();
+      return;
+    }
     console.error(
       '[Agent portal] provider crash',
       error?.message ?? error,
@@ -33,12 +38,16 @@ class ProviderErrorBoundaryInner extends Component<Props, State> {
 
   render() {
     if (this.state.error) {
+      const staleBuild = isChunkLoadError(this.state.error);
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
-          <h1 className="text-lg font-semibold">Something went wrong</h1>
+          <h1 className="text-lg font-semibold">
+            {staleBuild ? 'App update available' : 'Something went wrong'}
+          </h1>
           <p className="text-muted-foreground mt-2 max-w-sm text-sm">
-            The app hit an unexpected error while loading. Clearing saved data on
-            this device often fixes it after an update.
+            {staleBuild
+              ? 'Your browser cached an older version of the app. Reload to fetch the latest build.'
+              : 'The app hit an unexpected error while loading. Clearing saved data on this device often fixes it after an update.'}
           </p>
           <p className="text-destructive mt-3 max-w-md font-mono text-[11px] break-words">
             {this.state.error.message}
@@ -46,11 +55,15 @@ class ProviderErrorBoundaryInner extends Component<Props, State> {
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button
               onClick={() => {
+                if (staleBuild) {
+                  window.location.reload();
+                  return;
+                }
                 this.clearLocalState();
                 window.location.href = '/login';
               }}
             >
-              Clear saved data & reload
+              {staleBuild ? 'Reload app' : 'Clear saved data & reload'}
             </Button>
             <Button
               variant="outline"

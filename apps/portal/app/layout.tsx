@@ -9,6 +9,7 @@ import { PortalServiceLevelGate } from '@/components/auth/portal-service-level-g
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { AgentNotificationLiveAlert } from '@/components/agent/agent-notification-live-alert';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
+import { ChunkReloadGuard } from '@/components/providers/chunk-reload-guard';
 import { ThemeProvider } from '@/components/theme-provider';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
@@ -47,6 +48,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
+        <ChunkReloadGuard />
         <ThemeProvider>
           <AuthProvider>
             <ProviderErrorBoundary>

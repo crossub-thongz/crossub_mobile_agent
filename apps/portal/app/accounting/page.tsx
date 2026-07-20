@@ -1,21 +1,35 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FilePlus2, TrendingDown, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  ArrearsListTable,
+  filterArrearsItems,
+  RentReconciliationListTable,
+  StatementsListTable,
+  sumOutstandingBills,
+} from '@/components/accounting/accounting-portfolio-tables';
+import { AccountingSettingsSection } from '@/components/accounting/accounting-settings-section';
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
 import { InvoiceListTable } from '@/components/accounting/invoice-list-table';
 import { InvoicePreviewDialog } from '@/components/accounting/invoice-preview-dialog';
 import { EmptyState } from '@/components/agent/empty-state';
+import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
-import { AccountingListTable } from '@/components/agent/portfolio-module-tables';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
+import {
+  ACCOUNTING_SECTION_DESCRIPTION,
+  ACCOUNTING_SECTIONS,
+  parseAccountingSection,
+  type AccountingSectionId,
+} from '@/constants/accounting-sections';
 import { ROUTES } from '@/constants/routes';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
@@ -24,17 +38,19 @@ import {
   type AgentInvoiceListItem,
 } from '@/lib/crossub-api/agent-client';
 import { accountingToJobRow } from '@/lib/portfolio-case-dialog';
-import { cn, formatCurrency } from '@/lib/utils';
-
-type AccountingTab = 'rent' | 'invoices';
+import { formatCurrency } from '@/lib/utils';
 
 export default function AccountingPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { accounting, properties, primaryAgency } = useAgentData();
   const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
-  const searchParams = useSearchParams();
-  const arrearsOnly = searchParams.get('filter') === 'arrears';
-  const [tab, setTab] = useState<AccountingTab>(
-    searchParams.get('tab') === 'invoices' ? 'invoices' : 'rent',
+
+  const [section, setSection] = useState<AccountingSectionId>(() =>
+    parseAccountingSection(searchParams.get('section'), {
+      tab: searchParams.get('tab'),
+      filter: searchParams.get('filter'),
+    }),
   );
 
   const [invoices, setInvoices] = useState<AgentInvoiceListItem[]>([]);
@@ -44,6 +60,24 @@ export default function AccountingPage() {
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const next = parseAccountingSection(searchParams.get('section'), {
+      tab: searchParams.get('tab'),
+      filter: searchParams.get('filter'),
+    });
+    setSection(next);
+  }, [searchParams]);
+
+  const changeSection = useCallback(
+    (next: AccountingSectionId) => {
+      setSection(next);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('section', next);
+      router.replace(`${ROUTES.ACCOUNTING}?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams],
+  );
 
   const loadInvoices = useCallback(async () => {
     setInvoicesLoading(true);
@@ -57,8 +91,8 @@ export default function AccountingPage() {
   }, []);
 
   useEffect(() => {
-    if (tab === 'invoices') void loadInvoices();
-  }, [tab, loadInvoices]);
+    if (section === 'invoices') void loadInvoices();
+  }, [section, loadInvoices]);
 
   const openAccounting = useCallback(
     (item: (typeof accounting)[number]) => {
@@ -68,20 +102,10 @@ export default function AccountingPage() {
     [openJob],
   );
 
-  const list = useMemo(() => {
-    if (arrearsOnly) return accounting.filter((a) => a.arrearsAmount > 0);
-    return accounting;
-  }, [accounting, arrearsOnly]);
-
+  const arrearsItems = useMemo(() => filterArrearsItems(accounting), [accounting]);
   const totalIncome = accounting.reduce((s, a) => s + a.rentPaidYtd, 0);
-  const totalArrears = accounting.reduce((s, a) => s + a.arrearsAmount, 0);
-  const totalBills = accounting.reduce(
-    (s, a) =>
-      s +
-      (a.bills?.filter((b) => b.status === 'outstanding').reduce((t, b) => t + b.amount, 0) ??
-        0),
-    0,
-  );
+  const totalRentArrears = accounting.reduce((s, a) => s + a.arrearsAmount, 0);
+  const totalBillArrears = sumOutstandingBills(accounting);
 
   async function handleDelete(invoiceId: string) {
     const invoice = invoices.find((i) => i.id === invoiceId);
@@ -101,53 +125,16 @@ export default function AccountingPage() {
   return (
     <AgentShell title="Accounting" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
-        <PageIntro
-          description={
-            tab === 'invoices'
-              ? 'Create and manage Crossub management fee tax invoices.'
-              : arrearsOnly
-                ? 'Properties with outstanding rent and collection history.'
-                : 'Rental income and arrears across your portfolio.'
-          }
+        <PageIntro description={ACCOUNTING_SECTION_DESCRIPTION[section]} />
+
+        <FilterChips
+          options={[...ACCOUNTING_SECTIONS]}
+          value={section}
+          onChange={(id) => changeSection(id as AccountingSectionId)}
         />
 
-        <div className="flex rounded-lg border bg-card p-1">
-          {(
-            [
-              { id: 'rent' as const, label: 'Rent & arrears' },
-              { id: 'invoices' as const, label: 'Invoices' },
-            ] as const
-          ).map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={cn(
-                'flex-1 rounded-md py-2 text-sm font-medium transition-colors',
-                tab === id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'rent' ? (
+        {section === 'rent_reconciliation' ? (
           <>
-            {totalBills > 0 && (
-              <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm">
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  {formatCurrency(totalBills)}
-                </span>
-                <span className="text-muted-foreground">
-                  {' '}
-                  outstanding bills across portfolio
-                </span>
-              </div>
-            )}
-
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border bg-gradient-to-br from-primary/10 to-card p-4">
                 <div className="flex items-center gap-2">
@@ -163,26 +150,24 @@ export default function AccountingPage() {
               <div className="rounded-2xl border border-destructive/25 bg-gradient-to-br from-destructive/10 to-card p-4">
                 <div className="flex items-center gap-2">
                   <TrendingDown className="text-destructive size-4" />
-                  <p className="text-destructive text-[10px] font-medium uppercase">Arrears</p>
+                  <p className="text-destructive text-[10px] font-medium uppercase">
+                    Outstanding
+                  </p>
                 </div>
                 <p className="text-destructive mt-2 text-xl font-bold tabular-nums">
-                  {formatCurrency(totalArrears)}
+                  {formatCurrency(totalRentArrears + totalBillArrears)}
                 </p>
               </div>
             </div>
 
-            {list.length === 0 ? (
+            {accounting.length === 0 ? (
               <EmptyState
-                title={arrearsOnly ? 'No arrears' : 'No accounting records'}
-                description={
-                  arrearsOnly
-                    ? 'All tenants are up to date on rent.'
-                    : 'Payment records will appear when connected to crossub_web.'
-                }
+                title="No accounting records"
+                description="Rent reconciliation will appear when portfolio accounting data is available."
               />
             ) : (
-              <AccountingListTable
-                items={list}
+              <RentReconciliationListTable
+                items={accounting}
                 selectedId={selectedId}
                 onItemClick={openAccounting}
               />
@@ -196,15 +181,17 @@ export default function AccountingPage() {
 
             <ModuleCommunications
               categories={['Accounting']}
-              title="Rent reminders, invoices & receipts"
+              title="Rent receipts & reconciliation"
               emptyHint="No accounting emails or messages yet."
             />
           </>
-        ) : (
+        ) : null}
+
+        {section === 'invoices' ? (
           <>
             <div className="flex items-center justify-between gap-3">
               <p className="text-muted-foreground text-sm">
-                Invoice Number, period, invoice date, and due date.
+                Invoice number, period, invoice date, and due date.
               </p>
               <Button
                 type="button"
@@ -251,7 +238,70 @@ export default function AccountingPage() {
               />
             )}
           </>
-        )}
+        ) : null}
+
+        {section === 'arrears' ? (
+          <>
+            {(totalRentArrears > 0 || totalBillArrears > 0) && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-destructive/25 bg-gradient-to-br from-destructive/10 to-card p-4">
+                  <p className="text-destructive text-[10px] font-medium uppercase">
+                    Rent arrears
+                  </p>
+                  <p className="text-destructive mt-2 text-xl font-bold tabular-nums">
+                    {formatCurrency(totalRentArrears)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-card p-4">
+                  <p className="text-[10px] font-medium uppercase text-amber-600 dark:text-amber-400">
+                    Invoice arrears
+                  </p>
+                  <p className="mt-2 text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                    {formatCurrency(totalBillArrears)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {arrearsItems.length === 0 ? (
+              <EmptyState
+                title="No arrears"
+                description="All tenants are up to date on rent and invoices."
+              />
+            ) : (
+              <ArrearsListTable
+                items={arrearsItems}
+                selectedId={selectedId}
+                onItemClick={openAccounting}
+              />
+            )}
+
+            <PortfolioCaseDialogHost
+              job={selectedJob}
+              onClose={closeJob}
+              onOpenJob={openJob}
+            />
+
+            <ModuleCommunications
+              categories={['Accounting']}
+              title="Rent reminders, invoices & receipts"
+              emptyHint="No accounting emails or messages yet."
+            />
+          </>
+        ) : null}
+
+        {section === 'statements' ? (
+          accounting.length === 0 ? (
+            <EmptyState
+              title="No properties"
+              description="Owner statements will appear once properties are assigned to your portfolio."
+            />
+          ) : (
+            <StatementsListTable items={accounting} />
+          )
+        ) : null}
+
+        {section === 'settings' ? <AccountingSettingsSection /> : null}
       </div>
 
       <InvoiceEditorDialog
