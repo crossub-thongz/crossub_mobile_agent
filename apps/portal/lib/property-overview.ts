@@ -1,9 +1,16 @@
-import type { AgentDocument, Inspection, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
+import type {
+  AgentDocument,
+  Inspection,
+  LeasingRecord,
+  Property,
+  RentReviewCase,
+  RentReviewWorkflowState,
+} from '@/lib/types';
 import type { PropertyPortalAccounting } from '@/lib/property-registry-api';
 import type { PropertyBondSnapshot } from '@/lib/use-property-overview-sync';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { inspectionDetail } from '@/constants/routes';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 
 export interface PropertyReportLink {
   label: string;
@@ -312,6 +319,61 @@ export function resolveBondId(
   lease?: LeasingRecord,
 ): string {
   return resolveBondReference(property, null, documents, lease).label;
+}
+
+const TENANT_ACCEPTED_WORKFLOW_STATES: RentReviewWorkflowState[] = [
+  'TENANT_ACCEPTED',
+  'ACCOUNTING',
+  'COMPLETED',
+];
+
+function isPortfolioTenantAccepted(review: RentReviewCase): boolean {
+  if (review.tenantResponse === 'accepted') return true;
+  return (
+    review.workflowState != null &&
+    TENANT_ACCEPTED_WORKFLOW_STATES.includes(review.workflowState)
+  );
+}
+
+function isFutureCalendarDate(iso: string): boolean {
+  const day = iso.slice(0, 10);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(`${day}T12:00:00`);
+  return start.getTime() > today.getTime();
+}
+
+/** Tenant-approved rent review where the new weekly rent has not started yet. */
+export function resolveUpcomingAcceptedRentChange(
+  reviews: RentReviewCase[],
+  currentDisplayRent?: number | null,
+): PendingRentChange | null {
+  const candidates = reviews
+    .filter(isPortfolioTenantAccepted)
+    .flatMap((review) => {
+      const startDate = review.dateStarted;
+      if (!startDate || !isFutureCalendarDate(startDate)) return [];
+
+      const newRent = review.agreedRent ?? review.suggestedRent;
+      if (!newRent || newRent <= 0) return [];
+
+      if (
+        currentDisplayRent != null &&
+        currentDisplayRent > 0 &&
+        Math.abs(newRent - currentDisplayRent) < 0.01
+      ) {
+        return [];
+      }
+
+      return [{ newRent, startDate }];
+    })
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
+  return candidates[0] ?? null;
+}
+
+export function formatUpcomingRentChangeHint(change: PendingRentChange): string {
+  return `${formatCurrency(change.newRent)}/wk from ${formatDate(change.startDate)}`;
 }
 
 export function resolvePendingRentChange(

@@ -12,24 +12,33 @@ import {
 import { PropertyTenancyManagementSections } from '@/components/agent/property-tenancy-management-sections';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
+import {
+  formatUpcomingRentChangeHint,
+  resolveCurrentRent,
+  resolveUpcomingAcceptedRentChange,
+} from '@/lib/property-overview';
 import type {
   AgentDocument,
   Inspection,
   LeasingCycle,
   LeasingRecord,
   Property,
+  RentReviewCase,
   TenantSelectionCase,
   VacatingCase,
 } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 
 function StatCell({
   label,
   value,
+  hint,
   onClick,
   onEdit,
 }: {
   label: string;
   value: string;
+  hint?: string;
   onClick?: () => void;
   onEdit?: () => void;
 }) {
@@ -60,6 +69,11 @@ function StatCell({
       ) : (
         <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
       )}
+      {hint ? (
+        <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug tabular-nums">
+          → {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -79,6 +93,7 @@ export function PropertyProfileDetails({
   leasingCycles,
   tenantSelections,
   vacatingCases = [],
+  rentReviews = [],
   onViewBondLodgement: _onViewBondLodgement,
   onRefresh,
 }: {
@@ -90,6 +105,7 @@ export function PropertyProfileDetails({
   leasingCycles?: LeasingCycle[];
   tenantSelections?: TenantSelectionCase[];
   vacatingCases?: VacatingCase[];
+  rentReviews?: RentReviewCase[];
   onViewBondLodgement?: () => void;
   onRefresh?: () => void;
 }) {
@@ -128,6 +144,25 @@ export function PropertyProfileDetails({
     [property.propertyType, furnished],
   );
 
+  const currentRent = resolveCurrentRent(property, currentLease);
+  const financialRent = sync.financial?.currentRentWeekly;
+  const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
+  const displayRent =
+    financialRent != null && financialRent > 0
+      ? financialRent
+      : registryRent != null && registryRent > 0
+        ? registryRent
+        : currentRent;
+  const weeklyRentLabel =
+    displayRent != null && displayRent > 0 ? `${formatCurrency(displayRent)}/wk` : '—';
+  const upcomingRentChange = useMemo(
+    () => resolveUpcomingAcceptedRentChange(rentReviews, displayRent),
+    [rentReviews, displayRent],
+  );
+  const upcomingRentHint = upcomingRentChange
+    ? formatUpcomingRentChangeHint(upcomingRentChange)
+    : undefined;
+
   const handleSaved = () => {
     onRefresh?.();
   };
@@ -158,6 +193,11 @@ export function PropertyProfileDetails({
             />
             <StatCell label="Property type" value={registry.propertyType ?? '—'} />
             <StatCell label="Key fob" value={formatKeyFobCount(sync.keyFobCount)} />
+            <StatCell
+              label="Weekly rent"
+              value={weeklyRentLabel}
+              hint={upcomingRentHint}
+            />
           </div>
 
           <div className="space-y-2">

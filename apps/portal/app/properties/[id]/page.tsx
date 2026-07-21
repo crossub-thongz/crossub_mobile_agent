@@ -383,6 +383,7 @@ export default function PropertyDetailPage() {
             leasingCycles={propertyLeasingCycles}
             tenantSelections={propertyLeasingCases}
             vacatingCases={propertyVacatingCases}
+            rentReviews={tasks.rentReviews}
             onViewBondLodgement={viewBondLodgement}
             onRefresh={() => void refresh()}
           />
