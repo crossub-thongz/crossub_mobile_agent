@@ -221,9 +221,11 @@ export function buildLeaseAgreementProgress(detail: RentReviewWorkflowDetail): L
   const K = RENT_REVIEW_LEASE_AGREEMENT_AUDIT_KIND;
   const preparingAt =
     auditAt(detail, K.PREPARING) ??
+    auditAt(detail, 'tenant_notices_dispatched') ??
     auditAt(detail, 'tenant_accepted_response') ??
     auditAt(detail, 'agent_accepted_tenant_counter');
-  const sentAt = auditAt(detail, K.SENT);
+  const sentAt =
+    auditAt(detail, K.SENT) ?? auditAt(detail, 'tenant_notices_dispatched');
   const signedAt = auditAt(detail, K.SIGNED);
 
   return [
@@ -235,13 +237,13 @@ export function buildLeaseAgreementProgress(detail: RentReviewWorkflowDetail): L
     },
     {
       id: 'sent',
-      label: 'Lease extension agreement sent',
+      label: 'Lease extension agreement sent with notice',
       done: sentAt != null,
       at: sentAt,
     },
     {
       id: 'signed',
-      label: 'Lease extension agreement signed',
+      label: 'Virtually signed on tenant acceptance',
       done: signedAt != null,
       at: signedAt,
     },

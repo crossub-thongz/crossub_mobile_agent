@@ -67,17 +67,17 @@ export function RentReviewTenantNotifiedPanel({
   const downloadNotice = async () => {
     setBusy(true);
     try {
-      const blob = await rentReviewApi.downloadNoticeOfRentIncrease(detail.id, {
+      const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id, {
         weekly: detail.proposedWeeklyRent ?? undefined,
-        effectiveDate: effectiveDate || undefined,
+        draft: true,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `notice-of-rent-increase-${detail.id.slice(0, 8)}.pdf`;
+      a.download = `lease-extension-agreement-${detail.id.slice(0, 8)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Notice of Rent Increase downloaded');
+      toast.success('Lease extension agreement downloaded');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {

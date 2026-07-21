@@ -3,10 +3,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewLeaseAgreementAudit } from '@/components/rent-review/rent-review-lease-agreement-audit';
-import { RentReviewLeaseAgreementTermsField } from '@/components/rent-review/rent-review-lease-agreement-terms-field';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
 import {
   buildLeaseAgreementProgress,
@@ -17,7 +15,6 @@ import {
   leaseAgreementAuditState,
 } from '@/lib/rent-review/tenant-decision-display';
 import { rentReviewApi } from '@/lib/rent-review-api';
-import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { formatDate } from '@/lib/utils';
@@ -31,10 +28,8 @@ export function RentReviewTenantDecisionPanel({
   onUpdated?: (detail: RentReviewWorkflowDetail) => void;
   readOnly?: boolean;
 }) {
-  const runMutation = useRentReviewStore((s) => s.runMutation);
   const [busy, setBusy] = useState(false);
   const [viewingAgreement, setViewingAgreement] = useState(false);
-
   const accepted = isTenantAccepted(detail);
   const declined = isTenantDeclined(detail);
   const acceptance = buildTenantAcceptanceSummary(detail);
@@ -42,19 +37,6 @@ export function RentReviewTenantDecisionPanel({
   const leaseAudit = leaseAgreementAuditState(detail);
   const fixedRenewal = isPreferredRenewalFixed(detail);
   const awaiting = !accepted && !declined;
-
-  const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
-    setBusy(true);
-    try {
-      const updated = await runMutation(detail.id, action());
-      onUpdated?.(updated);
-      toast.success(success);
-    } catch (err) {
-      toast.error(apiErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const viewLeaseAgreement = async () => {
     setViewingAgreement(true);
@@ -125,111 +107,14 @@ export function RentReviewTenantDecisionPanel({
             leaseAudit.preparingDone ? () => void viewLeaseAgreement() : undefined
           }
           viewingAgreement={viewingAgreement}
-          viewLabel={leaseAudit.sentDone ? 'View agreement' : 'Preview agreement'}
+          viewLabel={leaseAudit.signedDone ? 'View signed agreement' : 'View agreement'}
         />
       ) : null}
 
-      {accepted && fixedRenewal && leaseAudit.preparingDone && !leaseAudit.sentDone && !readOnly ? (
-        <RentReviewLeaseAgreementTermsField
-          detail={detail}
-          disabled={busy}
-          previewing={viewingAgreement}
-          onPreview={() => void viewLeaseAgreement()}
-          onSave={async (input) => {
-            const updated = await runMutation(
-              detail.id,
-              rentReviewApi.updateLeaseAgreementTerms(
-                detail.id,
-                input,
-                detail.propertyId ?? undefined,
-                detail.leaseEndDate,
-              ),
-            );
-            onUpdated?.(updated);
-            return updated;
-          }}
-        />
-      ) : null}
-
-      {accepted && detail.workflowState === 'tenant_accepted' && !readOnly ? (
-        <div className="space-y-2">
-          {fixedRenewal && leaseAudit.preparingDone && !leaseAudit.sentDone ? (
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={busy || !detail.propertyId}
-              onClick={() => {
-                if (!detail.propertyId) {
-                  toast.error('No property linked to this rent review');
-                  return;
-                }
-                void run(
-                  () => rentReviewApi.sendLeaseAgreement(detail.id, detail.propertyId!),
-                  'Lease agreement sent to tenant',
-                );
-              }}
-            >
-              Send lease agreement to tenant
-            </Button>
-          ) : null}
-          {fixedRenewal && leaseAudit.sentDone && !leaseAudit.signedDone ? (
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={busy || !detail.propertyId}
-              onClick={() => {
-                if (!detail.propertyId) {
-                  toast.error('No property linked to this rent review');
-                  return;
-                }
-                void run(
-                  () => rentReviewApi.recordLeaseAgreementSigned(detail.id, detail.propertyId!),
-                  'Lease agreement marked signed',
-                );
-              }}
-            >
-              Record lease agreement signed
-            </Button>
-          ) : null}
-          <Button
-            className="w-full"
-            disabled={busy || !detail.propertyId || (fixedRenewal && !leaseAudit.signedDone)}
-            onClick={() => {
-              if (!detail.propertyId) {
-                toast.error('No property linked to this rent review');
-                return;
-              }
-              void run(
-                () => rentReviewApi.submitAccounting(detail.id, detail.propertyId!),
-                'Submitted to accounting for rent sync',
-              );
-            }}
-          >
-            Submit to accounting
-          </Button>
-          {fixedRenewal && !leaseAudit.signedDone ? (
-            <p className="text-muted-foreground text-center text-[11px]">
-              Complete the lease agreement flow (preparing → sent → signed) before accounting.
-            </p>
-          ) : null}
-        </div>
-      ) : detail.workflowState === 'accounting' && !readOnly ? (
-        <Button
-          className="w-full"
-          disabled={busy || !detail.propertyId}
-          onClick={() => {
-            if (!detail.propertyId) {
-              toast.error('No property linked to this rent review');
-              return;
-            }
-            void run(
-              () => rentReviewApi.complete(detail.id, detail.propertyId!),
-              'Rent review completed & system synced',
-            );
-          }}
-        >
-          Complete rent review & sync system
-        </Button>
+      {accepted && detail.workflowState === 'completed' ? (
+        <p className="text-muted-foreground text-center text-xs">
+          Rent review completed and system synced automatically after tenant acceptance.
+        </p>
       ) : null}
     </div>
   );

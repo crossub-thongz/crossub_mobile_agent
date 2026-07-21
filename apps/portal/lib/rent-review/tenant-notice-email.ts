@@ -8,7 +8,7 @@ import {
 import type { RentReviewAuditEntry, RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 
 export function buildTenantNoticeEmailSubject(detail: RentReviewWorkflowDetail): string {
-  return `Notice of rent increase — ${detail.propertyAddress}`;
+  return `Lease extension agreement — ${detail.propertyAddress}`;
 }
 
 export function buildTenantNoticeEmailBody(
@@ -21,7 +21,7 @@ export function buildTenantNoticeEmailBody(
   return [
     `Dear ${detail.tenantName},`,
     '',
-    'Please find attached your formal Notice of Rent Increase.',
+    'Please find attached your lease extension agreement for review.',
     '',
     'Confirmed terms:',
     termsBlock,
@@ -39,6 +39,7 @@ export function buildTenantNoticeEmailRecord(
 ): JobCaseEmailRecord {
   const snapshot = parseRentReviewEmailSnapshot(auditEntry.detail);
   if (snapshot) {
+    const fileName = `lease-extension-agreement-${detail.id.slice(0, 8)}.pdf`;
     return {
       id: auditEntry.id,
       subject: snapshot.subject,
@@ -50,6 +51,11 @@ export function buildTenantNoticeEmailRecord(
       at: auditEntry.at,
       kind: auditEntry.kind,
       channel: snapshot.channel ?? 'email',
+      attachments:
+        snapshot.attachments?.map((a) => ({
+          name: a.name,
+          mimeType: a.mimeType ?? 'application/pdf',
+        })) ?? [{ name: fileName, mimeType: 'application/pdf' }],
     };
   }
 
