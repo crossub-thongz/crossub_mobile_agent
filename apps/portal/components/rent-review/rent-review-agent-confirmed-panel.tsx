@@ -185,7 +185,7 @@ export function RentReviewAgentConfirmedPanel({
           detail.propertyId,
           detail.leaseEndDate,
         ),
-      'Agent decision saved',
+      'Agent decision saved — formal notice sent to tenant',
     );
   };
 

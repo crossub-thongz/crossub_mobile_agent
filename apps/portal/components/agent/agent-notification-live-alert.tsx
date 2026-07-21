@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle2, FileText, X } from 'lucide-react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import {
@@ -28,6 +29,7 @@ export function AgentNotificationLiveAlert() {
   const router = useRouter();
   const { status } = useAuth();
   const { notifications, loading, markNotificationRead } = useAgentData();
+  const { openNotification } = useAgentNotificationDialog();
   const prefs = useAgentStore((s) => s.notificationPrefs);
 
   const seededRef = useRef(false);
@@ -96,7 +98,8 @@ export function AgentNotificationLiveAlert() {
     setVisible(false);
     window.setTimeout(() => {
       setQueue((prev) => prev.filter((n) => n.id !== current.id));
-      router.push(current.href);
+      const opened = openNotification(current);
+      if (!opened) router.push(current.href);
     }, 150);
   };
 

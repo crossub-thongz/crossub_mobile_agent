@@ -8,6 +8,7 @@ import { MustChangePasswordGate } from '@/components/auth/must-change-password-g
 import { PortalServiceLevelGate } from '@/components/auth/portal-service-level-gate';
 import { AgentDataProvider } from '@/components/providers/agent-data-provider';
 import { AgentNotificationLiveAlert } from '@/components/agent/agent-notification-live-alert';
+import { AgentNotificationDialogProvider } from '@/components/providers/agent-notification-dialog-provider';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
 import { ChunkReloadGuard } from '@/components/providers/chunk-reload-guard';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -60,9 +61,11 @@ export default function RootLayout({
                 <MustChangePasswordGate>
                   <AgentDataProvider>
                     <PortalServiceLevelGate>
-                      <AgentNotificationLiveAlert />
-                      {children}
-                      <WelcomeOnboarding />
+                      <AgentNotificationDialogProvider>
+                        <AgentNotificationLiveAlert />
+                        {children}
+                        <WelcomeOnboarding />
+                      </AgentNotificationDialogProvider>
                     </PortalServiceLevelGate>
                   </AgentDataProvider>
                 </MustChangePasswordGate>

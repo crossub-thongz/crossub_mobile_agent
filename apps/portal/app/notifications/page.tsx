@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { DataSourceBadge } from '@/components/agent/data-source-badge';
 import { EmptyState } from '@/components/agent/empty-state';
@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
 import { formatDateTime } from '@/lib/utils';
 
 const FILTERS = [
@@ -22,8 +23,16 @@ const FILTERS = [
 
 export default function NotificationsPage() {
   const [filter, setFilter] = useState('all');
+  const router = useRouter();
   const { notifications, markNotificationRead, markAllNotificationsRead, apiConnected } =
     useAgentData();
+  const { openNotification } = useAgentNotificationDialog();
+
+  const handleOpen = (notification: (typeof notifications)[number]) => {
+    markNotificationRead(notification.id);
+    const opened = openNotification(notification);
+    if (!opened) router.push(notification.href);
+  };
 
   const list = useMemo(() => {
     let items = [...notifications];
@@ -64,11 +73,11 @@ export default function NotificationsPage() {
         ) : (
           <div className="space-y-2">
             {list.map((n) => (
-              <Link
+              <button
                 key={n.id}
-                href={n.href}
-                onClick={() => markNotificationRead(n.id)}
-                className="block rounded-xl border bg-card p-4 active:bg-secondary/50"
+                type="button"
+                onClick={() => handleOpen(n)}
+                className="block w-full rounded-xl border bg-card p-4 text-left active:bg-secondary/50"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 space-y-1">
@@ -97,7 +106,7 @@ export default function NotificationsPage() {
                   </div>
                   <ChevronRight className="text-muted-foreground size-4 shrink-0" />
                 </div>
-              </Link>
+              </button>
             ))}
           </div>
         )}
