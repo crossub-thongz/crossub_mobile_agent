@@ -248,8 +248,23 @@ export const rentReviewApi = {
     return api.getBlob(`${BASE}/${id}/notice-of-rent-increase.pdf${qs ? `?${qs}` : ''}`);
   },
 
-  downloadLeaseExtensionAgreement: (id: string): Promise<Blob> =>
-    api.getBlob(`${BASE}/${id}/lease-extension-agreement.pdf`),
+  downloadLeaseExtensionAgreement: (
+    id: string,
+    params?: { weekly?: number; draft?: boolean; propertyId?: string },
+  ): Promise<Blob> => {
+    const q = new URLSearchParams();
+    if (params?.weekly != null && Number.isFinite(params.weekly)) {
+      q.set('weekly', String(params.weekly));
+    }
+    if (params?.draft) q.set('draft', '1');
+    const qs = q.toString();
+    if (params?.propertyId) {
+      return apiV1.getBlob(
+        `${agentRentReviewWorkflowPath(params.propertyId, id)}/lease-extension-agreement.pdf${qs ? `?${qs}` : ''}`,
+      );
+    }
+    return api.getBlob(`${BASE}/${id}/lease-extension-agreement.pdf${qs ? `?${qs}` : ''}`);
+  },
 
   tenantResponse: (
     id: string,

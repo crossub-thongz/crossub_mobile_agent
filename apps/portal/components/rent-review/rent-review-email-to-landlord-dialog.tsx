@@ -23,7 +23,6 @@ import {
   researchPackDraftAttachmentUrls,
   resolveLandlordContact,
 } from '@/lib/rent-review/research-landlord-email';
-import { resolveNoticePayableFromDate } from '@/lib/rent-review/scheduling';
 import {
   formatWorkflowEmailContact,
   type WorkflowEmailContact,
@@ -86,38 +85,30 @@ export function RentReviewEmailToLandlordDialog({
     void (async () => {
       try {
         const reportBlob = new Blob([buildResearchReportHtml(detail)], { type: 'text/html' });
-        let fairTradingSize = '~85 KB';
+        let leaseAgreementSize = '~200 KB';
         try {
-          const payableFrom = resolveNoticePayableFromDate({
-            leaseEndDate: detail.leaseEndDate,
-            storedEffectiveDate: detail.effectiveDate,
-          });
-          const noticeBlob = await rentReviewApi.downloadNoticeOfRentIncrease(detail.id, {
+          const leaseBlob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id, {
             weekly: detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
-            effectiveDate: payableFrom,
+            draft: true,
+            propertyId: detail.propertyId ?? undefined,
           });
-          fairTradingSize = `${Math.max(1, Math.round(noticeBlob.size / 1024))} KB`;
+          leaseAgreementSize = `${Math.max(1, Math.round(leaseBlob.size / 1024))} KB`;
         } catch {
-          /* notice PDF optional at research stage */
+          /* lease agreement PDF optional at research stage */
         }
         if (!active || !detail.propertyId) return;
-        const payableFrom = resolveNoticePayableFromDate({
-          leaseEndDate: detail.leaseEndDate,
-          storedEffectiveDate: detail.effectiveDate,
-        });
         const urls = researchPackDraftAttachmentUrls(
           detail.propertyId,
           detail.id,
           detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
-          payableFrom,
         );
         setAttachments(
-          defaultResearchAttachments().map((file) => ({
+          defaultResearchAttachments(detail.id).map((file) => ({
             ...file,
             sizeLabel:
               file.name === 'CROSSUB-Rent-Review-Report.html'
                 ? `${Math.max(1, Math.round(reportBlob.size / 1024))} KB`
-                : fairTradingSize,
+                : leaseAgreementSize,
             url: urls[file.name],
           })),
         );

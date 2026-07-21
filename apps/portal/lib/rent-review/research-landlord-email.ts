@@ -11,6 +11,11 @@ export interface LandlordResearchEmailDraft {
   attachments: JobCaseEmailAttachment[];
 }
 
+/** Research-pack attachment filename for the NSW RTA lease extension draft. */
+export function leaseExtensionAgreementAttachmentName(reviewId: string): string {
+  return `lease-extension-agreement-${reviewId.slice(0, 8)}.pdf`;
+}
+
 export function resolveLandlordContact(
   landlordName?: string | null,
   landlordEmail?: string | null,
@@ -46,7 +51,7 @@ export function buildLandlordResearchEmailDraft(
     `${detail.ai.rationale ?? 'Comparable lettings in the area support the recommended figure.'}\n\n` +
     `Please find attached:\n` +
     `• CROSSUB Rent Review Report\n` +
-    `• NSW Fair Trading rent increase reference\n\n` +
+    `• NSW lease extension agreement (draft)\n\n` +
     `Kindly review the attached materials and reply to confirm whether you approve proceeding with ` +
     `this recommended rent, or let us know if you would like to discuss further.\n\n` +
     `Kind regards,\n` +
@@ -57,14 +62,14 @@ export function buildLandlordResearchEmailDraft(
     toName: landlordName,
     subject: `Rent review research — ${detail.propertyAddress}`,
     body,
-    attachments: defaultResearchAttachments(),
+    attachments: defaultResearchAttachments(detail.id),
   };
 }
 
-export function defaultResearchAttachments(): JobCaseEmailAttachment[] {
+export function defaultResearchAttachments(reviewId: string): JobCaseEmailAttachment[] {
   return [
     { name: 'CROSSUB-Rent-Review-Report.html', sizeLabel: '~120 KB' },
-    { name: 'NSW-Fair-Trading-Notice.pdf', sizeLabel: '~85 KB' },
+    { name: leaseExtensionAgreementAttachmentName(reviewId), sizeLabel: '~200 KB' },
   ];
 }
 
@@ -98,20 +103,16 @@ export function researchPackDraftAttachmentUrls(
   propertyId: string,
   reviewId: string,
   suggestedWeekly?: number | null,
-  effectiveDate?: string | null,
 ): Record<string, string> {
   const base = `/api/v1/agent/properties/${propertyId}/workflows/rent-review/${reviewId}`;
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ draft: '1' });
   if (suggestedWeekly != null && Number.isFinite(suggestedWeekly)) {
     params.set('weekly', String(suggestedWeekly));
   }
-  if (effectiveDate?.trim()) {
-    params.set('effectiveDate', effectiveDate.trim());
-  }
-  const noticeQs = params.toString();
+  const leaseName = leaseExtensionAgreementAttachmentName(reviewId);
   return {
     'CROSSUB-Rent-Review-Report.html': `${base}/research-report.html`,
-    'NSW-Fair-Trading-Notice.pdf': `${base}/notice-of-rent-increase.pdf${noticeQs ? `?${noticeQs}` : ''}`,
+    [leaseName]: `${base}/lease-extension-agreement.pdf?${params.toString()}`,
   };
 }
 
