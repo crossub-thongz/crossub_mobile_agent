@@ -133,9 +133,9 @@ function ContractorQuoteCollapsible({
     ? 'Contractor requoted — review revised quotation'
     : review?.decision
     ? review.decision === 'approved'
-      ? review.landlordEmailSentAt
+        ? review.landlordEmailSentAt
         ? 'Sent to landlord'
-        : 'Approved — send to landlord'
+        : 'Approved — sending to landlord'
       : review.contractorFeedbackSentAt
         ? 'Feedback sent'
         : 'Declined — send feedback'

@@ -19,10 +19,6 @@ import {
   uploadMaintenanceAttachment,
 } from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
-import {
-  closeMaintenanceCase,
-  markMaintenanceWorkComplete,
-} from '@/lib/maintenance/maintenance-case-ops';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { fileToBase64 } from '@/lib/file-upload';
@@ -176,45 +172,8 @@ export function MaintenanceCompletionGatesPanel({
     }
   };
 
-  const handleMarkWorkComplete = async () => {
-    if (!evidenceApproved || !isInProgress) return;
-    setBusy(true);
-    try {
-      await markMaintenanceWorkComplete(requestId);
-      toast.success('Work marked complete');
-      await onUpdated?.();
-    } catch {
-      toast.error('Could not mark work complete');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleDoneClosed = async () => {
-    if (!isCompleted || isClosed) return;
-    setBusy(true);
-    try {
-      await closeMaintenanceCase(requestId);
-      toast.success('Job closed');
-      await onUpdated?.();
-    } catch {
-      toast.error('Could not close job — ensure invoice and tenant sign-off are recorded');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const canMarkWorkComplete = isInProgress && evidenceApproved && canEdit;
-  const closeBlockedReason =
-    responsibility === 'tenant'
-      ? null
-      : !tenantSignOff
-        ? 'Waiting for admin to record tenant sign-off'
-        : !invoiceUploaded
-          ? 'Upload the contractor invoice first'
-          : null;
-  const canDoneClosed =
-    isCompleted && !isClosed && canEdit && (responsibility === 'tenant' || (!closeBlockedReason));
+  const allGatesCleared =
+    evidenceApproved && tenantSignOff && invoiceUploaded && responsibility !== 'tenant';
 
   return (
     <div className="space-y-4">
@@ -222,8 +181,7 @@ export function MaintenanceCompletionGatesPanel({
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Completion Evidence Uploaded" checked={evidenceApproved} />
         <p className="text-muted-foreground text-xs">
-          View completion photos uploaded by the contractor, then approve to unlock Mark work
-          complete.
+          View completion photos uploaded by the contractor, then approve when ready.
         </p>
 
         {canEdit ? (
@@ -356,38 +314,14 @@ export function MaintenanceCompletionGatesPanel({
         )}
       </section>
 
-      {/* Workflow actions */}
-      {isInProgress && canEdit ? (
+      {/* Auto-close when all gates are checked */}
+      {!isClosed && canEdit && responsibility !== 'tenant' ? (
         <section className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <Button
-            type="button"
-            className="w-full"
-            disabled={!canMarkWorkComplete || busy}
-            onClick={() => void handleMarkWorkComplete()}
-          >
-            Mark work complete
-          </Button>
-          {!evidenceApproved ? (
-            <p className="text-muted-foreground text-center text-xs">
-              Approve completion evidence above to enable this action.
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {isCompleted && !isClosed && canEdit ? (
-        <section className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <Button
-            type="button"
-            className="w-full"
-            disabled={!canDoneClosed || busy}
-            onClick={() => void handleDoneClosed()}
-          >
-            Done (Closed)
-          </Button>
-          {closeBlockedReason ? (
-            <p className="text-muted-foreground text-center text-xs">{closeBlockedReason}</p>
-          ) : null}
+          <p className="text-muted-foreground text-center text-xs">
+            {allGatesCleared
+              ? 'All gates cleared — the case closes automatically.'
+              : 'Mark all completion gates — the case closes automatically once they are checked.'}
+          </p>
         </section>
       ) : null}
 

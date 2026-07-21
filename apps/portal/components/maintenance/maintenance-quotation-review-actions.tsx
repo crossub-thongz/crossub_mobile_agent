@@ -155,7 +155,7 @@ export function MaintenanceQuotationReviewActions({
               onClick={() =>
                 void run(async () => {
                   await onReviewDecision('approved');
-                  toast.success('Quote approved — send quotation to landlord when ready');
+                  toast.success('Quote approved — quotation sent to landlord');
                 })
               }
             >
