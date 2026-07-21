@@ -57,35 +57,6 @@ function formatNegotiationLeaseTerm(detail: RentReviewWorkflowDetail): string {
   return '—';
 }
 
-function ChoiceButton({
-  active,
-  children,
-  disabled,
-  onClick,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
-        active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border bg-background text-foreground hover:bg-muted/60',
-        disabled && 'pointer-events-none opacity-50',
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function RentReviewNegotiationPanel({
   detail,
   onUpdated,
@@ -281,22 +252,25 @@ export function RentReviewNegotiationPanel({
         {pending && !readOnly ? (
           <div className="mt-4 space-y-3 border-t pt-4">
             <Label>Agent&apos;s feedback</Label>
-            <div className="flex gap-2">
-              <ChoiceButton active={!declineOpen} disabled={busy} onClick={() => setDeclineOpen(false)}>
-                Accept
-              </ChoiceButton>
-              <ChoiceButton active={declineOpen} disabled={busy} onClick={() => setDeclineOpen(true)}>
-                Decline
-              </ChoiceButton>
-            </div>
 
             {!declineOpen ? (
-              <Button className="w-full" disabled={busy} onClick={acceptOffer}>
-                Accept tenant offer
-                {detail.tenantCounterWeekly != null
-                  ? ` (${formatCurrency(detail.tenantCounterWeekly)}/wk)`
-                  : ''}
-              </Button>
+              <div className="space-y-2">
+                <Button className="w-full" disabled={busy} onClick={acceptOffer}>
+                  Accept tenant offer
+                  {detail.tenantCounterWeekly != null
+                    ? ` (${formatCurrency(detail.tenantCounterWeekly)}/wk)`
+                    : ''}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={busy}
+                  onClick={() => setDeclineOpen(true)}
+                >
+                  Decline
+                </Button>
+              </div>
             ) : (
               <div className="space-y-3 rounded-lg border border-dashed bg-muted/20 p-3">
                 <p className="text-muted-foreground text-xs">
@@ -335,6 +309,15 @@ export function RentReviewNegotiationPanel({
                   onClick={markNonNegotiable}
                 >
                   Mark non-negotiable
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  disabled={busy}
+                  onClick={() => setDeclineOpen(false)}
+                >
+                  Back
                 </Button>
               </div>
             )}
