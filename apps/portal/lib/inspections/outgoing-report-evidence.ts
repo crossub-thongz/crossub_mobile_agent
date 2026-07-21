@@ -10,8 +10,13 @@ export interface OutgoingAreaPhotoPair {
   outgoingPhotos: InspectionDetailPhoto[];
 }
 
-const INGOING_SUFFIX = / \(Ingoing\)$/;
-const OUTGOING_SUFFIX = / \(Outgoing\)$/;
+export type ReferenceIngoingAreas = ReadonlyArray<{
+  name: string;
+  photos: InspectionDetailPhoto[];
+}>;
+
+const INGOING_SUFFIX = /\s*\(Ingoing\)\s*$/i;
+const OUTGOING_SUFFIX = /\s*\(Outgoing\)\s*$/i;
 
 export function isReportPhotoUrl(url: string): boolean {
   return /^https?:\/\//i.test(url.trim());
@@ -21,53 +26,117 @@ function reportPhotos(photos: InspectionDetailPhoto[]): InspectionDetailPhoto[] 
   return photos.filter((photo) => isReportPhotoUrl(photo.url));
 }
 
+function normalizeKey(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function bucketForAreaName(name: string): {
   room: string;
   side: 'ingoing' | 'outgoing';
 } | null {
   const trimmed = name.trim();
+  if (!trimmed) return null;
   if (INGOING_SUFFIX.test(trimmed)) {
     return {
-      room: trimmed.replace(INGOING_SUFFIX, ''),
+      room: trimmed.replace(INGOING_SUFFIX, '').trim(),
       side: 'ingoing',
     };
   }
   if (OUTGOING_SUFFIX.test(trimmed)) {
     return {
-      room: trimmed.replace(OUTGOING_SUFFIX, ''),
+      room: trimmed.replace(OUTGOING_SUFFIX, '').trim(),
       side: 'outgoing',
     };
   }
-  return null;
+  return { room: trimmed, side: 'outgoing' };
 }
 
-/** Group inspector-app area uploads into ingoing/outgoing pairs per room. */
+function emptyPair(room: string): OutgoingAreaPhotoPair {
+  return { room, ingoingPhotos: [], outgoingPhotos: [] };
+}
+
+function matchReferencePhotos(
+  room: string,
+  referenceAreas: ReferenceIngoingAreas | undefined,
+): InspectionDetailPhoto[] {
+  if (!referenceAreas?.length) return [];
+  const target = normalizeKey(room);
+  const exact = referenceAreas.find((a) => normalizeKey(a.name) === target);
+  if (exact) return reportPhotos(exact.photos);
+
+  const starts = referenceAreas.find((a) => {
+    const key = normalizeKey(a.name);
+    return key.startsWith(target) || target.startsWith(key);
+  });
+  if (starts) return reportPhotos(starts.photos);
+
+  const roomOnly = target.split(' · ')[0]?.trim();
+  if (roomOnly && roomOnly !== target) {
+    const roomMatch = referenceAreas.find((a) => normalizeKey(a.name) === roomOnly);
+    if (roomMatch) return reportPhotos(roomMatch.photos);
+  }
+  return [];
+}
+
+/** Group inspector uploads into before/after pairs; seed empty ingoing from reference. */
 export function buildOutgoingAreaPhotoPairs(
   areas: readonly InspectionDetailArea[],
+  referenceAreas?: ReferenceIngoingAreas,
 ): OutgoingAreaPhotoPair[] {
   const map = new Map<string, OutgoingAreaPhotoPair>();
 
   for (const room of OUTGOING_COMPARISON_AREAS) {
-    map.set(room, { room, ingoingPhotos: [], outgoingPhotos: [] });
+    map.set(normalizeKey(room), emptyPair(room));
   }
 
   for (const area of areas) {
     const parsed = bucketForAreaName(area.name ?? '');
     if (!parsed) continue;
-
-    const bucket =
-      map.get(parsed.room) ??
-      ({ room: parsed.room, ingoingPhotos: [], outgoingPhotos: [] } satisfies OutgoingAreaPhotoPair);
-
+    const key = normalizeKey(parsed.room);
+    const bucket = map.get(key) ?? emptyPair(parsed.room);
+    const photos = reportPhotos([
+      ...area.photos,
+      ...area.items.flatMap((item) => item.photos),
+    ]);
     if (parsed.side === 'ingoing') {
-      bucket.ingoingPhotos = [...bucket.ingoingPhotos, ...reportPhotos(area.photos)];
+      bucket.ingoingPhotos = [...bucket.ingoingPhotos, ...photos];
     } else {
-      bucket.outgoingPhotos = [...bucket.outgoingPhotos, ...reportPhotos(area.photos)];
+      bucket.outgoingPhotos = [...bucket.outgoingPhotos, ...photos];
     }
-    map.set(parsed.room, bucket);
+    map.set(key, bucket);
   }
 
-  return OUTGOING_COMPARISON_AREAS.map((room) => map.get(room)!);
+  for (const [key, bucket] of map) {
+    if (bucket.ingoingPhotos.length > 0) continue;
+    const seeded = matchReferencePhotos(bucket.room, referenceAreas);
+    if (seeded.length === 0) continue;
+    map.set(key, { ...bucket, ingoingPhotos: seeded });
+  }
+
+  for (const ref of referenceAreas ?? []) {
+    const key = normalizeKey(ref.name);
+    if (map.has(key)) continue;
+    const photos = reportPhotos(ref.photos);
+    if (photos.length === 0) continue;
+    map.set(key, {
+      room: ref.name,
+      ingoingPhotos: photos,
+      outgoingPhotos: [],
+    });
+  }
+
+  const preferred = OUTGOING_COMPARISON_AREAS.map((room) =>
+    map.get(normalizeKey(room)),
+  ).filter((p): p is OutgoingAreaPhotoPair => Boolean(p));
+
+  const extras = [...map.values()].filter(
+    (pair) =>
+      !OUTGOING_COMPARISON_AREAS.some(
+        (room) => normalizeKey(room) === normalizeKey(pair.room),
+      ),
+  );
+
+  return [...preferred, ...extras];
 }
 
 export function countOutgoingReportPhotos(

@@ -104,6 +104,12 @@ export interface InspectionDetail extends InspectionRecord {
   areas: InspectionDetailArea[]
   inspectionPhotos: InspectionDetailPhoto[]
   checkIns: InspectionCheckInRecord[]
+  /** Latest completed INGOING for the same property (OUTGOING / ROUTINE). */
+  referenceIngoing?: {
+    inspectionId: string
+    propertyId: string
+    areas: Array<{ name: string; photos: InspectionDetailPhoto[] }>
+  } | null
 }
 
 export interface KeyCustodyProgress {

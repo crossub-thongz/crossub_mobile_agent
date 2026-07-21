@@ -1,4 +1,4 @@
-/** Room list mirrored from the inspector mobile app (`INGOING_AREAS`). */
+/** Room / section list mirrored from the inspector mobile app. */
 export const OUTGOING_COMPARISON_AREAS = [
   'Entry',
   'Living Room',
@@ -8,6 +8,8 @@ export const OUTGOING_COMPARISON_AREAS = [
   'Bathroom',
   'Balcony',
   'Garage',
+  'Security',
+  'General & Exterior',
 ] as const;
 
 export type OutgoingComparisonArea = (typeof OUTGOING_COMPARISON_AREAS)[number];

@@ -21,6 +21,7 @@ import {
 } from '@/components/agent/workflow-progress-rail';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { InspectionCompareEvidenceSection } from '@/components/inspections/inspection-compare-evidence-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { propertyDetail } from '@/constants/routes';
@@ -33,6 +34,11 @@ import {
 } from '@/lib/inspection/agent-workflow-email';
 import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
 import { inspectionsApi } from '@/lib/inspections-api';
+import type {
+  InspectionDetail,
+  InspectionRecord,
+  OnSiteProgression,
+} from '@/lib/inspections-types';
 import {
   canViewInspectionReport,
   deriveAgentAckState,
@@ -48,7 +54,6 @@ import {
   inspectorHasAcceptedJob,
   type AgentOutgoingGateStatus,
 } from '@/lib/outgoing-inspection-display';
-import type { InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
 import { terminationApi } from '@/lib/termination-case-api';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
@@ -58,6 +63,7 @@ import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 type OutgoingSnapshot = {
   record: InspectionRecord | null;
   progression: OnSiteProgression | null;
+  detail: InspectionDetail | null;
   reportUrl: string | null;
   hasFindings: boolean;
   tenantAttendance: TenantOutgoingAttendanceStatus;
@@ -119,6 +125,7 @@ export function OutgoingFieldInspectionDetail({
   const [snapshot, setSnapshot] = useState<OutgoingSnapshot>({
     record: null,
     progression: null,
+    detail: null,
     reportUrl: null,
     hasFindings: false,
     tenantAttendance: 'pending',
@@ -205,6 +212,7 @@ export function OutgoingFieldInspectionDetail({
       setSnapshot({
         record,
         progression,
+        detail,
         reportUrl,
         hasFindings,
         tenantAttendance: terminationCase?.inspection.tenantAttendance ?? 'pending',
@@ -598,6 +606,11 @@ export function OutgoingFieldInspectionDetail({
                   propertyLabel={inspection.propertyAddress}
                   inspectionType="outgoing"
                   canDownload
+                />
+                <InspectionCompareEvidenceSection
+                  detail={snapshot.detail}
+                  currentLabel="Outgoing"
+                  title="Outgoing vs latest ingoing"
                 />
               </div>
             ) : (

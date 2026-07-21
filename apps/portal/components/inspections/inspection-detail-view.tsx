@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { InspectionCompareEvidenceSection } from '@/components/inspections/inspection-compare-evidence-section';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
@@ -81,6 +82,7 @@ import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sy
 import { useLivePoll } from '@/lib/use-live-poll';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
+import type { InspectionDetail } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -219,6 +221,26 @@ export function InspectionDetailView({
   const [showReport, setShowReport] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
+  const [routineDetail, setRoutineDetail] = useState<InspectionDetail | null>(null);
+
+  useEffect(() => {
+    if (!apiConnected || !insp || insp.type !== 'ROUTINE') {
+      setRoutineDetail(null);
+      return;
+    }
+    let cancelled = false;
+    void inspectionsApi
+      .getDetail(insp.id)
+      .then((detail) => {
+        if (!cancelled) setRoutineDetail(detail);
+      })
+      .catch(() => {
+        if (!cancelled) setRoutineDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, insp?.id, insp?.type]);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
   const syncOpenSession = useCallback(async () => {
@@ -739,6 +761,14 @@ export function InspectionDetailView({
         <OpenLeasingInspectionReportPanel
           detail={leasingDetail}
           openSession={openSession}
+        />
+      ) : null}
+
+      {insp.type === 'ROUTINE' && routineDetail ? (
+        <InspectionCompareEvidenceSection
+          detail={routineDetail}
+          currentLabel="Routine"
+          title="Routine vs latest ingoing"
         />
       ) : null}
 
