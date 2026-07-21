@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Building2, Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
@@ -13,6 +13,10 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { messageDetail } from '@/constants/routes';
+import {
+  PORTFOLIO_GII_PROMPTS,
+  PROPERTY_GII_PROMPTS,
+} from '@/constants/gii-prompts';
 import { searchAgentSystem, type SystemSearchResult } from '@/lib/agent-system-search';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
 import type { PropertyNeedAction } from '@/lib/types';
@@ -26,7 +30,28 @@ import {
   type GiiAssessment,
   type GiiContext,
 } from '@/lib/crossub-api/gii-client';
-import { cn } from '@/lib/utils';
+import { useShellDockStore } from '@/lib/shell-dock-store';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
+
+function propertyIdFromPath(pathname: string): string | undefined {
+  const match = pathname.match(/^\/properties\/([^/]+)$/);
+  const id = match?.[1];
+  if (!id || id === 'new') return undefined;
+  return id;
+}
+
+function buildPropertyManagerGreeting(
+  address: string,
+  actionCount: number,
+  agentName?: string | null,
+): string {
+  const name = agentName?.trim();
+  const lead = name ? `Hi ${name}` : 'Hi';
+  if (actionCount > 0) {
+    return `${lead} — I'm your Property Manager for ${address}. ${actionCount} item${actionCount === 1 ? '' : 's'} need attention here. Ask me to create jobs or check status.`;
+  }
+  return `${lead} — I'm your Property Manager for ${address}. Ask me to log maintenance, schedule inspections, start leasing, or check what's happening.`;
+}
 
 type ChatLine = {
   id: string;
@@ -79,8 +104,11 @@ export function GiiAssistant({
   variant?: 'modal' | 'panel';
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const data = useAgentData();
   const { user } = useAuth();
+  const giiLaunch = useShellDockStore((s) => s.giiLaunch);
+  const clearGiiLaunch = useShellDockStore((s) => s.clearGiiLaunch);
   const { selectedJob, openJob, closeJob, portfolioData } = usePortfolioCaseDialog();
   const [query, setQuery] = useState('');
   const [listening, setListening] = useState(false);
@@ -89,10 +117,45 @@ export function GiiAssistant({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const initialPromptHandledRef = useRef(false);
   // The subject carried between turns. A ref: it must never be stale inside runQuery, and
   // it does not need to trigger a render.
   const contextRef = useRef<GiiContext | null>(null);
   const isPanel = variant === 'panel';
+
+  const pathPropertyId = propertyIdFromPath(pathname);
+  const scopedProperty = useMemo(() => {
+    const id = giiLaunch?.propertyId ?? pathPropertyId;
+    if (!id) return null;
+    return (
+      data.properties.find((p) => p.id === id) ??
+      data.archivedProperties.find((p) => p.id === id) ??
+      null
+    );
+  }, [data.archivedProperties, data.properties, giiLaunch?.propertyId, pathPropertyId]);
+
+  const scopedAddress = useMemo(() => {
+    if (giiLaunch?.propertyAddress?.trim()) return giiLaunch.propertyAddress.trim();
+    if (!scopedProperty) return null;
+    return formatPropertyFullAddress(scopedProperty);
+  }, [giiLaunch?.propertyAddress, scopedProperty]);
+
+  const propertyActionCount = useMemo(() => {
+    if (!scopedProperty) return 0;
+    return data.getPropertyActions(scopedProperty.id).length;
+  }, [data, scopedProperty]);
+
+  const suggestedPrompts = scopedProperty ? PROPERTY_GII_PROMPTS : PORTFOLIO_GII_PROMPTS;
+
+  useEffect(() => {
+    if (scopedProperty?.id) {
+      contextRef.current = { propertyId: scopedProperty.id };
+      return;
+    }
+    if (!giiLaunch?.propertyId) {
+      contextRef.current = null;
+    }
+  }, [giiLaunch?.propertyId, scopedProperty?.id]);
 
   useEffect(() => {
     const el = composerRef.current;
@@ -117,8 +180,42 @@ export function GiiAssistant({
   // today. Every count and row comes from the provider's data — the model states nothing here.
   // Guarded on `lines.length === 0` so it never clobbers an in-progress conversation, and on
   // `!data.loading` so it waits for the first data load instead of flashing "all caught up".
+  // Skipped when a launch prompt is queued — that turn replaces the greeting.
   useEffect(() => {
-    if (!open || data.loading || lines.length > 0) return;
+    if (
+      !open ||
+      data.loading ||
+      lines.length > 0 ||
+      giiLaunch?.initialPrompt ||
+      initialPromptHandledRef.current
+    ) {
+      return;
+    }
+
+    if (scopedProperty && scopedAddress) {
+      const propertyItems = data.needActionItems.filter(
+        (item) => item.propertyId === scopedProperty.id,
+      );
+      const text = buildPropertyManagerGreeting(
+        scopedAddress,
+        propertyActionCount,
+        user?.firstName,
+      );
+      const briefing =
+        propertyItems.length > 0
+          ? buildGiiBriefing(propertyItems, data.needActionGroups, new Date(), user?.firstName)
+          : null;
+      setLines([
+        {
+          id: `a-${idSeq()}`,
+          role: 'assistant',
+          text,
+          briefing: briefing?.isEmpty ? null : briefing,
+        },
+      ]);
+      return;
+    }
+
     const briefing = buildGiiBriefing(
       data.needActionItems,
       data.needActionGroups,
@@ -141,7 +238,11 @@ export function GiiAssistant({
     data.loading,
     data.needActionItems,
     data.needActionGroups,
+    giiLaunch?.initialPrompt,
     lines.length,
+    propertyActionCount,
+    scopedAddress,
+    scopedProperty,
     user?.firstName,
   ]);
 
@@ -155,7 +256,7 @@ export function GiiAssistant({
    * thinks; the reply replaces the placeholder when it lands. `buildGiiReply` (the old
    * template-string "brain") is retired — the reply is the model's now.
    */
-  const runQuery = async (text: string) => {
+  const runQuery = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
 
@@ -214,7 +315,24 @@ export function GiiAssistant({
     } finally {
       setSending(false);
     }
-  };
+  }, [data, lines, sending]);
+
+  // Launch prompt from property hub / phone book — runs once when Gii opens.
+  useEffect(() => {
+    if (!open || data.loading || !giiLaunch?.initialPrompt || initialPromptHandledRef.current) {
+      return;
+    }
+    initialPromptHandledRef.current = true;
+    const prompt = giiLaunch.initialPrompt;
+    clearGiiLaunch();
+    void runQuery(prompt);
+  }, [clearGiiLaunch, data.loading, giiLaunch?.initialPrompt, open, runQuery]);
+
+  useEffect(() => {
+    if (!open) {
+      initialPromptHandledRef.current = false;
+    }
+  }, [open]);
 
   /** Ask Gii conversationally about a briefing row — it resolves the property and lists its cases. */
   const askAboutRow = (row: PropertyNeedAction) => {
@@ -316,7 +434,11 @@ export function GiiAssistant({
           <div className="min-w-0">
             <p className="text-sm font-bold">Gii</p>
             <p className="text-muted-foreground truncate text-[10px]">
-              {isPanel ? 'Property assistant' : `Your property assistant · ${multilingualHint()}`}
+              {isPanel
+                ? 'Your Property Manager'
+                : scopedAddress
+                  ? `Property Manager · ${scopedAddress}`
+                  : `Your Property Manager · ${multilingualHint()}`}
             </p>
           </div>
         </div>
@@ -332,15 +454,26 @@ export function GiiAssistant({
         ) : null}
       </div>
 
+      {scopedAddress ? (
+        <div className="border-b px-4 py-2">
+          <div className="bg-primary/5 flex items-center gap-2 rounded-xl border border-primary/15 px-3 py-2">
+            <Building2 className="text-primary size-4 shrink-0" />
+            <p className="min-w-0 truncate text-xs font-medium">{scopedAddress}</p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
         {lines.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-emerald-500/10 text-primary">
               <Sparkles className="size-6" />
             </div>
-            <p className="text-sm font-semibold">Ask Gii anything</p>
-            <p className="text-muted-foreground mt-1.5 max-w-[240px] text-xs leading-relaxed">
-              {multilingualHint()}
+            <p className="text-sm font-semibold">Ask Gii, your Property Manager</p>
+            <p className="text-muted-foreground mt-1.5 max-w-[260px] text-xs leading-relaxed">
+              {scopedProperty
+                ? 'Create maintenance, inspections, or leasing — or ask for a status update.'
+                : multilingualHint()}
             </p>
           </div>
         ) : null}
@@ -430,6 +563,20 @@ export function GiiAssistant({
       </div>
 
       <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {!sending && lines.length <= 1 ? (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {suggestedPrompts.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => void runQuery(item.prompt)}
+                className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[11px] font-medium transition hover:border-primary/30 hover:bg-primary/5"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {listening ? (
           <div className="mb-2 flex items-center justify-center gap-2 text-xs font-medium text-primary">
             <span className="relative flex size-2">
@@ -450,7 +597,11 @@ export function GiiAssistant({
                 void runQuery(query);
               }
             }}
-            placeholder="Ask Gii anything…"
+            placeholder={
+              scopedProperty
+                ? 'Ask Gii to create a job or check this property…'
+                : 'Ask Gii anything…'
+            }
             rows={4}
             className="min-h-24 max-h-[220px] flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none"
             autoFocus={isPanel}

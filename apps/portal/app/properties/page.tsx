@@ -8,10 +8,11 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { GiiPortfolioBanner } from '@/components/agent/gii-portfolio-banner';
 import { PageIntro } from '@/components/agent/page-intro';
 import { PropertyDiscardDraftDialog } from '@/components/agent/property-discard-draft-dialog';
 import { PropertyEndManagementDialog } from '@/components/agent/property-end-management-dialog';
-import { PropertyListTable } from '@/components/agent/property-list-table';
+import { PropertyListView } from '@/components/agent/property-list-view';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -129,9 +130,11 @@ export default function PropertiesPage() {
           description={
             isArchivedView
               ? 'Properties whose management has ended. These records are kept for reference.'
-              : 'Table view of your managed properties. Rows needing action are highlighted.'
+              : 'Your managed properties — like a phone book. Tap one, then ask Gii to create jobs or check status.'
           }
         />
+
+        {!isArchivedView ? <GiiPortfolioBanner /> : null}
 
         {/* {needActionCount > 0 && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
@@ -190,7 +193,7 @@ export default function PropertiesPage() {
             }
           />
         ) : (
-          <PropertyListTable
+          <PropertyListView
             properties={list}
             agencies={agencies}
             variant={isArchivedView ? 'archived' : 'active'}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronRight, FileText, Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Loader2, Plus, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { DocumentUploadProgress } from '@/components/agent/document-upload-progress';
@@ -38,7 +38,7 @@ import {
 import { dedupePropertyDocumentsForChecklist } from '@/lib/property-document-merge';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
 import type { AgentDocument, Property } from '@/lib/types';
-import { formatPropertyFullAddress } from '@/lib/utils';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 type DisplayDoc = {
   id: string;
@@ -121,15 +121,21 @@ function DocumentColumn({
   uploadProgress: number | null;
   readOnly?: boolean;
 }) {
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const allRows = [...fixedRows, ...extraRows];
   const uploadedFileCount = allRows.reduce((sum, row) => sum + row.files.length, 0);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col rounded-xl border bg-card shadow-sm">
-      <div className="border-b px-3 py-3">
+      <button
+        type="button"
+        onClick={() => setMobileExpanded((v) => !v)}
+        className="border-b px-3 py-3 text-left md:pointer-events-none md:cursor-default"
+        aria-expanded={mobileExpanded}
+      >
         <div className="flex items-start gap-2">
           <FileText className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold leading-tight">
               {CREATE_PROPERTY_DOCUMENT_GROUP_LABELS[group]}
               {readOnly ? (
@@ -144,9 +150,17 @@ function DocumentColumn({
                 : `${allRows.filter((r) => r.uploaded).length}/${fixedRows.length} types uploaded`}
             </p>
           </div>
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground mt-0.5 size-4 shrink-0 transition-transform md:hidden',
+              mobileExpanded && 'rotate-180',
+            )}
+            aria-hidden
+          />
         </div>
-      </div>
+      </button>
 
+      <div className={cn(!mobileExpanded && 'hidden', 'md:block md:min-h-0 md:flex-1 md:flex md:flex-col')}>
       <ul className="divide-border/70 max-h-[min(70vh,640px)] flex-1 divide-y overflow-y-auto">
         {fixedRows.map((row) => {
           const busy = uploadingKey === `slot:${row.slotId ?? row.id}`;
@@ -296,6 +310,7 @@ function DocumentColumn({
         </Button>
       </div>
       ) : null}
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-
 import { PropertyInspectionTab } from '@/components/agent/property-inspection-tab';
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-tab';
+import { PropertyMobileHub } from '@/components/agent/property-mobile-hub';
 import { PropertyOverviewTab } from '@/components/agent/property-overview-tab';
 import { PropertyRemindersDialog } from '@/components/agent/property-reminders-dialog';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
@@ -388,6 +389,18 @@ export default function PropertyDetailPage() {
         </div>
 
         <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />
+
+        {tab === 'Overview' ? (
+          <PropertyMobileHub
+            property={property}
+            propertyId={id}
+            leasingCycles={propertyLeasingCycles}
+            tenantSelections={propertyLeasingCases}
+            currentLease={currentLease}
+            readOnly={isArchivedProperty}
+            onWorkflowCreated={() => void refresh()}
+          />
+        ) : null}
 
         {tab === 'Overview' && (
           <PropertyOverviewTab

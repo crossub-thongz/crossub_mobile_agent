@@ -6,6 +6,7 @@ import { CalendarDays, ChevronRight, Trash2 } from 'lucide-react';
 import {
   ModuleInteractiveTableRow,
   ModuleListTable,
+  ModuleMobileCardShell,
   ModuleSortableTableHead,
   ModuleTableChevronCell,
   ModuleTableHead,
@@ -341,76 +342,124 @@ export function RentReviewListTable({
   }, [items, sortDirection, sortKey]);
 
   return (
-    <ModuleListTable minWidth={1160}>
-      <ModuleSortableTableHead
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSort={onSort}
-        columns={[
-          { kind: 'sortable', label: 'ID', sortKey: 'id' },
-          { kind: 'sortable', label: 'Property', sortKey: 'property' },
-          { kind: 'sortable', label: 'Tenant', sortKey: 'tenant' },
-          { kind: 'sortable', label: 'Lease', sortKey: 'lease' },
-          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
-          { kind: 'sortable', label: 'Due', sortKey: 'due', defaultDirection: 'asc' },
-          { kind: 'sortable', label: 'Current rent', sortKey: 'currentRent' },
-          { kind: 'sortable', label: 'Stage', sortKey: 'stage' },
-          { kind: 'static', label: '' },
-        ]}
-      />
-      <tbody className="divide-y">
+    <>
+      <div className="space-y-2 md:hidden">
         {sorted.map((r) => {
           const href = detailHref?.(r.id);
           const progress = rentReviewWorkflowProgress(r);
-          const interactive = Boolean(onItemClick);
           const openItem = onItemClick ? () => onItemClick(r) : undefined;
           return (
-            <ModuleInteractiveTableRow
+            <ModuleMobileCardShell
               key={r.id}
-              onActivate={openItem}
+              onClick={openItem}
+              href={openItem ? undefined : href}
               selected={selectedId === r.id}
-              className={cn(r.requiresApproval && 'bg-destructive/[0.03]')}
+              highlight={r.requiresApproval}
             >
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {workflowCaseReferenceLabel(r.id, 'rent_review')}
-              </td>
-              {interactive ? (
-                <td className="max-w-[14rem] px-3 py-3 font-medium">
-                  <span className="line-clamp-2">{r.propertyAddress}</span>
-                </td>
-              ) : (
-                <ModuleTableLinkCell href={href!} className="max-w-[14rem]">
-                  <span className="line-clamp-2">{r.propertyAddress}</span>
-                </ModuleTableLinkCell>
-              )}
-              <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
-                <span className="line-clamp-2">{r.tenantName ?? '—'}</span>
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                {rentReviewLeaseLabel(r)}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {formatCreatedAt(rentReviewCreatedAtIso(r))}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums">
-                {formatDate(r.reviewDue)}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 font-medium tabular-nums">
-                {formatCurrency(r.currentRent)}/wk
-              </td>
-              <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
-              {interactive ? (
-                <td className="px-3 py-3 text-right text-muted-foreground">
-                  <ChevronRight className="inline size-4" />
-                </td>
-              ) : (
-                <ModuleTableChevronCell href={href!} />
-              )}
-            </ModuleInteractiveTableRow>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {workflowCaseReferenceLabel(r.id, 'rent_review')}
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                    {r.propertyAddress}
+                  </p>
+                </div>
+                <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="text-primary font-medium">{progress.currentStepLabel}</span>
+                <span className="font-medium tabular-nums">
+                  {formatCurrency(r.currentRent)}/wk
+                </span>
+                <span className="text-muted-foreground tabular-nums">
+                  Due {formatDate(r.reviewDue)}
+                </span>
+                {r.tenantName ? (
+                  <span className="text-muted-foreground">{r.tenantName}</span>
+                ) : null}
+                <span className="text-muted-foreground">
+                  {formatCreatedAt(rentReviewCreatedAtIso(r))}
+                </span>
+              </div>
+            </ModuleMobileCardShell>
           );
         })}
-      </tbody>
-    </ModuleListTable>
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={1160}>
+          <ModuleSortableTableHead
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={onSort}
+            columns={[
+              { kind: 'sortable', label: 'ID', sortKey: 'id' },
+              { kind: 'sortable', label: 'Property', sortKey: 'property' },
+              { kind: 'sortable', label: 'Tenant', sortKey: 'tenant' },
+              { kind: 'sortable', label: 'Lease', sortKey: 'lease' },
+              { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+              { kind: 'sortable', label: 'Due', sortKey: 'due', defaultDirection: 'asc' },
+              { kind: 'sortable', label: 'Current rent', sortKey: 'currentRent' },
+              { kind: 'sortable', label: 'Stage', sortKey: 'stage' },
+              { kind: 'static', label: '' },
+            ]}
+          />
+          <tbody className="divide-y">
+            {sorted.map((r) => {
+              const href = detailHref?.(r.id);
+              const progress = rentReviewWorkflowProgress(r);
+              const interactive = Boolean(onItemClick);
+              const openItem = onItemClick ? () => onItemClick(r) : undefined;
+              return (
+                <ModuleInteractiveTableRow
+                  key={r.id}
+                  onActivate={openItem}
+                  selected={selectedId === r.id}
+                  className={cn(r.requiresApproval && 'bg-destructive/[0.03]')}
+                >
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                    {workflowCaseReferenceLabel(r.id, 'rent_review')}
+                  </td>
+                  {interactive ? (
+                    <td className="max-w-[14rem] px-3 py-3 font-medium">
+                      <span className="line-clamp-2">{r.propertyAddress}</span>
+                    </td>
+                  ) : (
+                    <ModuleTableLinkCell href={href!} className="max-w-[14rem]">
+                      <span className="line-clamp-2">{r.propertyAddress}</span>
+                    </ModuleTableLinkCell>
+                  )}
+                  <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
+                    <span className="line-clamp-2">{r.tenantName ?? '—'}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                    {rentReviewLeaseLabel(r)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                    {formatCreatedAt(rentReviewCreatedAtIso(r))}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums">
+                    {formatDate(r.reviewDue)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 font-medium tabular-nums">
+                    {formatCurrency(r.currentRent)}/wk
+                  </td>
+                  <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
+                  {interactive ? (
+                    <td className="px-3 py-3 text-right text-muted-foreground">
+                      <ChevronRight className="inline size-4" />
+                    </td>
+                  ) : (
+                    <ModuleTableChevronCell href={href!} />
+                  )}
+                </ModuleInteractiveTableRow>
+              );
+            })}
+          </tbody>
+        </ModuleListTable>
+      </div>
+    </>
   );
 }
 
@@ -457,7 +506,67 @@ export function TribunalListTable({
   selectedId?: string | null;
 }) {
   return (
-    <ModuleListTable minWidth={1180}>
+    <>
+      <div className="space-y-2 md:hidden">
+        {items.map((c) => {
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(c) : undefined;
+          const href = tribunalDetail(c.id);
+          return (
+            <ModuleMobileCardShell
+              key={c.id}
+              onClick={openItem}
+              href={interactive ? undefined : href}
+              selected={selectedId === c.id}
+              highlight={c.requiresAction && c.status === 'active'}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{c.propertyAddress || '—'}</p>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                    {c.tenantName || 'No tenant'}
+                  </p>
+                </div>
+                <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="text-muted-foreground tabular-nums">
+                  {c.caseNumber ?? workflowCaseReferenceLabel(c.id, 'tribunal')}
+                </span>
+                <span className="text-muted-foreground">
+                  {c.createdAt ? formatDate(c.createdAt) : '—'}
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+                <div>
+                  <p className="text-muted-foreground mb-0.5">Rent</p>
+                  <TribunalArrearsCell
+                    amount={c.rentArrearsAmount}
+                    daysOverdue={c.rentArrearsDaysOverdue}
+                  />
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-0.5">Bills</p>
+                  <TribunalArrearsCell
+                    amount={c.billArrearsAmount}
+                    daysOverdue={c.billArrearsDaysOverdue}
+                  />
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-0.5">Bond</p>
+                  <TribunalArrearsCell
+                    amount={c.bondArrearsAmount}
+                    daysOverdue={c.bondArrearsDaysOverdue}
+                  />
+                </div>
+              </div>
+            </ModuleMobileCardShell>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={1180}>
       <ModuleTableHead
         columns={[
           'Order Number',
@@ -525,6 +634,8 @@ export function TribunalListTable({
         })}
       </tbody>
     </ModuleListTable>
+      </div>
+    </>
   );
 }
 
@@ -590,7 +701,63 @@ export function InspectionsListTable({
   const showDelete = Boolean(onDeleteRow && canDeleteRow);
 
   return (
-    <ModuleListTable minWidth={showDelete ? 1080 : 1040}>
+    <>
+      <div className="space-y-2 md:hidden">
+        {sorted.map((i) => {
+          const href = inspectionDetail(i.id);
+          const progress = inspectionWorkflowProgress(i);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(i) : undefined;
+          return (
+            <div key={i.id} className="relative">
+              <ModuleMobileCardShell
+                onClick={openItem}
+                href={interactive ? undefined : href}
+                selected={selectedId === i.id}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 pr-8">
+                    <p className="truncate text-sm font-semibold">{i.propertyAddress}</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {i.type} · {i.inspector ?? 'Pending'}
+                    </p>
+                  </div>
+                  <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                  <span className="text-muted-foreground tabular-nums">{i.trackingNumber}</span>
+                  <span className="text-primary font-medium">{progress.currentStepLabel}</span>
+                  <span className="text-muted-foreground">
+                    {formatScheduledAt(i.scheduledAt)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {formatCreatedAt(inspectionCreatedAtIso(i))}
+                  </span>
+                </div>
+              </ModuleMobileCardShell>
+              {showDelete && canDeleteRow?.(i) ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive absolute top-2 right-2 size-8"
+                  aria-label={`Delete ${i.trackingNumber}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDeleteRow?.(i);
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={showDelete ? 1080 : 1040}>
       <ModuleSortableTableHead
         sortKey={sortKey}
         sortDirection={sortDirection}
@@ -676,6 +843,8 @@ export function InspectionsListTable({
         })}
       </tbody>
     </ModuleListTable>
+      </div>
+    </>
   );
 }
 
@@ -689,7 +858,64 @@ export function AccountingListTable({
   selectedId?: string | null;
 }) {
   return (
-    <ModuleListTable minWidth={1000}>
+    <>
+      <div className="space-y-2 md:hidden">
+        {items.map((a) => {
+          const href = `${propertyDetail(a.propertyId)}?tab=Accounting`;
+          const arrearsLabel =
+            a.arrearsAmount > 0
+              ? `${formatCurrency(a.arrearsAmount)} (${a.daysInArrears}d)`
+              : 'None';
+          const progress = accountingArrearsProgress(a);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(a) : undefined;
+          const rowId = `arrears-${a.propertyId}`;
+          return (
+            <ModuleMobileCardShell
+              key={a.propertyId}
+              onClick={openItem}
+              href={interactive ? undefined : href}
+              selected={selectedId === rowId}
+              highlight={a.arrearsAmount > 0}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{a.propertyAddress}</p>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{a.tenantName}</p>
+                </div>
+                <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="text-muted-foreground">
+                  Paid {formatCurrency(a.rentPaidYtd)}
+                </span>
+                <span className="text-muted-foreground">
+                  Out {formatCurrency(a.rentOutstanding)}
+                </span>
+                <span className="font-medium tabular-nums">
+                  Bal {formatCurrency(a.currentBalance)}
+                </span>
+              </div>
+              <div className="mt-1.5 text-[11px]">
+                <span
+                  className={cn(
+                    'font-medium tabular-nums',
+                    a.arrearsAmount > 0 ? 'text-destructive' : 'text-muted-foreground',
+                  )}
+                >
+                  Arrears: {arrearsLabel}
+                </span>
+                {a.arrearsAmount > 0 ? (
+                  <span className="text-primary ml-2">{progress.currentStepLabel}</span>
+                ) : null}
+              </div>
+            </ModuleMobileCardShell>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={1000}>
       <ModuleTableHead
         columns={['Property', 'Tenant', 'Paid YTD', 'Outstanding', 'Balance', 'Arrears', '']}
       />
@@ -755,6 +981,8 @@ export function AccountingListTable({
         })}
       </tbody>
     </ModuleListTable>
+      </div>
+    </>
   );
 }
 
@@ -857,66 +1085,116 @@ export function LeasingCyclesTable({
       ];
 
   return (
-    <ModuleListTable minWidth={hidePropertyColumn ? 860 : 980}>
-      <ModuleSortableTableHead
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSort={onSort}
-        columns={headColumns}
-      />
-      <tbody className="divide-y">
+    <>
+      <div className="space-y-2 md:hidden">
         {sorted.map((cycle) => {
           const href = propertyDetail(cycle.propertyId);
           const lifecycle = leasingLifecycleProgress(cycle);
           const onboarding = leasingOnboardingProgress(cycle);
-          const isSelected = selectedCycleId === cycle.id;
           const openCycle = onCycleClick ? () => onCycleClick(cycle) : undefined;
+          const title = hidePropertyColumn
+            ? workflowCaseReferenceLabel(cycle.id, 'leasing')
+            : cycle.propertyAddress;
           return (
-            <ModuleInteractiveTableRow
+            <ModuleMobileCardShell
               key={cycle.id}
-              onActivate={openCycle}
-              selected={isSelected}
+              onClick={openCycle}
+              href={onCycleClick ? undefined : href}
+              selected={selectedCycleId === cycle.id}
             >
-              {hidePropertyColumn ? (
-                <td className="px-3 py-3 font-medium">
-                  {workflowCaseReferenceLabel(cycle.id, 'leasing')}
-                </td>
-              ) : onCycleClick ? (
-                <td className="max-w-[14rem] px-3 py-3 font-medium">
-                  <span className="line-clamp-2">{cycle.propertyAddress}</span>
-                </td>
-              ) : (
-                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                  <span className="line-clamp-2">{cycle.propertyAddress}</span>
-                </ModuleTableLinkCell>
-              )}
-              <td className="px-3 py-3 text-xs font-medium text-primary">
-                {lifecycle.currentStepLabel}
-              </td>
-              <td className="px-3 py-3 text-xs text-muted-foreground">
-                {onboarding?.currentStepLabel ?? '—'}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 tabular-nums">
-                {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {formatCreatedAt(leasingCycleCreatedAtIso(cycle))}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {cycle.availableFrom ? formatDateTime(cycle.availableFrom) : '—'}
-              </td>
-              {onCycleClick ? (
-                <td className="px-3 py-3 text-right text-muted-foreground">
-                  <ChevronRight className="inline size-4" />
-                </td>
-              ) : (
-                <ModuleTableChevronCell href={href} />
-              )}
-            </ModuleInteractiveTableRow>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{title}</p>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                    {onboarding?.currentStepLabel
+                      ? `Onboarding: ${onboarding.currentStepLabel}`
+                      : 'Onboarding not started'}
+                  </p>
+                </div>
+                <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="text-primary font-medium">{lifecycle.currentStepLabel}</span>
+                <span className="font-medium tabular-nums">
+                  {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
+                </span>
+                <span className="text-muted-foreground">
+                  {formatCreatedAt(leasingCycleCreatedAtIso(cycle))}
+                </span>
+                {cycle.availableFrom ? (
+                  <span className="text-muted-foreground">
+                    Avail {formatDate(cycle.availableFrom)}
+                  </span>
+                ) : null}
+              </div>
+            </ModuleMobileCardShell>
           );
         })}
-      </tbody>
-    </ModuleListTable>
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={hidePropertyColumn ? 860 : 980}>
+          <ModuleSortableTableHead
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={onSort}
+            columns={headColumns}
+          />
+          <tbody className="divide-y">
+            {sorted.map((cycle) => {
+              const href = propertyDetail(cycle.propertyId);
+              const lifecycle = leasingLifecycleProgress(cycle);
+              const onboarding = leasingOnboardingProgress(cycle);
+              const isSelected = selectedCycleId === cycle.id;
+              const openCycle = onCycleClick ? () => onCycleClick(cycle) : undefined;
+              return (
+                <ModuleInteractiveTableRow
+                  key={cycle.id}
+                  onActivate={openCycle}
+                  selected={isSelected}
+                >
+                  {hidePropertyColumn ? (
+                    <td className="px-3 py-3 font-medium">
+                      {workflowCaseReferenceLabel(cycle.id, 'leasing')}
+                    </td>
+                  ) : onCycleClick ? (
+                    <td className="max-w-[14rem] px-3 py-3 font-medium">
+                      <span className="line-clamp-2">{cycle.propertyAddress}</span>
+                    </td>
+                  ) : (
+                    <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                      <span className="line-clamp-2">{cycle.propertyAddress}</span>
+                    </ModuleTableLinkCell>
+                  )}
+                  <td className="px-3 py-3 text-xs font-medium text-primary">
+                    {lifecycle.currentStepLabel}
+                  </td>
+                  <td className="px-3 py-3 text-xs text-muted-foreground">
+                    {onboarding?.currentStepLabel ?? '—'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 tabular-nums">
+                    {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                    {formatCreatedAt(leasingCycleCreatedAtIso(cycle))}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                    {cycle.availableFrom ? formatDateTime(cycle.availableFrom) : '—'}
+                  </td>
+                  {onCycleClick ? (
+                    <td className="px-3 py-3 text-right text-muted-foreground">
+                      <ChevronRight className="inline size-4" />
+                    </td>
+                  ) : (
+                    <ModuleTableChevronCell href={href} />
+                  )}
+                </ModuleInteractiveTableRow>
+              );
+            })}
+          </tbody>
+        </ModuleListTable>
+      </div>
+    </>
   );
 }
 
@@ -964,7 +1242,46 @@ export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] 
   }, [items, sortDirection, sortKey]);
 
   return (
-    <ModuleListTable minWidth={980}>
+    <>
+      <div className="space-y-2 md:hidden">
+        {sorted.map((t) => {
+          const href = tenantSelectionDetail(t.id);
+          return (
+            <ModuleMobileCardShell
+              key={t.id}
+              href={href}
+              highlight={t.requiresApproval}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{t.applicantName}</p>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                    {t.propertyAddress}
+                  </p>
+                </div>
+                <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="font-medium tabular-nums">
+                  {formatCurrency(t.proposedRent)}/wk
+                </span>
+                <span className="text-muted-foreground">{t.leaseTerm}</span>
+                {t.requiresApproval ? (
+                  <StatusBadge label="Action required" variant="approval" />
+                ) : (
+                  <span className="text-primary font-medium">{t.status}</span>
+                )}
+                <span className="text-muted-foreground tabular-nums">
+                  {formatCreatedAt(tenantSelectionCreatedAtIso(t))}
+                </span>
+              </div>
+            </ModuleMobileCardShell>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={980}>
       <ModuleSortableTableHead
         sortKey={sortKey}
         sortDirection={sortDirection}
@@ -1016,6 +1333,8 @@ export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] 
         })}
       </tbody>
     </ModuleListTable>
+      </div>
+    </>
   );
 }
 
@@ -1067,47 +1386,80 @@ export function LeasingHistoryTable({
   }, [items, sortDirection, sortKey]);
 
   return (
-    <ModuleListTable minWidth={980}>
-      <ModuleSortableTableHead
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSort={onSort}
-        columns={[
-          { kind: 'sortable', label: 'Property', sortKey: 'property' },
-          { kind: 'sortable', label: 'Tenant', sortKey: 'tenant' },
-          { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
-          { kind: 'sortable', label: 'Lease period', sortKey: 'leasePeriod', defaultDirection: 'desc' },
-          { kind: 'sortable', label: 'Rent', sortKey: 'rent' },
-          { kind: 'sortable', label: 'Status', sortKey: 'status' },
-          { kind: 'static', label: '' },
-        ]}
-      />
-      <tbody className="divide-y">
+    <>
+      <div className="space-y-2 md:hidden">
         {sorted.map((l) => {
           const href = `${propertyDetail(l.propertyId)}?tab=Leasing`;
           return (
-            <tr key={l.id} className="transition-colors hover:bg-muted/20">
-              <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                <span className="line-clamp-2">{l.address}</span>
-              </ModuleTableLinkCell>
-              <td className="max-w-[10rem] px-3 py-3">
-                <span className="line-clamp-2">{l.approvedTenant}</span>
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {formatCreatedAt(leasingRecordCreatedAtIso(l))}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
-                {formatDate(l.leaseStart)} – {formatDate(l.leaseEnd)}
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 tabular-nums">
-                {formatCurrency(l.rentWeekly)}/wk
-              </td>
-              <td className="px-3 py-3 text-xs capitalize text-muted-foreground">{l.status}</td>
-              <ModuleTableChevronCell href={href} />
-            </tr>
+            <ModuleMobileCardShell key={l.id} href={href}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{l.approvedTenant}</p>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{l.address}</p>
+                </div>
+                <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                <span className="font-medium tabular-nums">
+                  {formatCurrency(l.rentWeekly)}/wk
+                </span>
+                <span className="text-muted-foreground capitalize">{l.status}</span>
+                <span className="text-muted-foreground tabular-nums">
+                  {formatDate(l.leaseStart)} – {formatDate(l.leaseEnd)}
+                </span>
+                <span className="text-muted-foreground tabular-nums">
+                  {formatCreatedAt(leasingRecordCreatedAtIso(l))}
+                </span>
+              </div>
+            </ModuleMobileCardShell>
           );
         })}
-      </tbody>
-    </ModuleListTable>
+      </div>
+
+      <div className="hidden md:block">
+        <ModuleListTable minWidth={980}>
+          <ModuleSortableTableHead
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={onSort}
+            columns={[
+              { kind: 'sortable', label: 'Property', sortKey: 'property' },
+              { kind: 'sortable', label: 'Tenant', sortKey: 'tenant' },
+              { kind: 'sortable', label: 'Date created', sortKey: 'createdAt', defaultDirection: 'desc' },
+              { kind: 'sortable', label: 'Lease period', sortKey: 'leasePeriod', defaultDirection: 'desc' },
+              { kind: 'sortable', label: 'Rent', sortKey: 'rent' },
+              { kind: 'sortable', label: 'Status', sortKey: 'status' },
+              { kind: 'static', label: '' },
+            ]}
+          />
+          <tbody className="divide-y">
+            {sorted.map((l) => {
+              const href = `${propertyDetail(l.propertyId)}?tab=Leasing`;
+              return (
+                <tr key={l.id} className="transition-colors hover:bg-muted/20">
+                  <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                    <span className="line-clamp-2">{l.address}</span>
+                  </ModuleTableLinkCell>
+                  <td className="max-w-[10rem] px-3 py-3">
+                    <span className="line-clamp-2">{l.approvedTenant}</span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                    {formatCreatedAt(leasingRecordCreatedAtIso(l))}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                    {formatDate(l.leaseStart)} – {formatDate(l.leaseEnd)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 tabular-nums">
+                    {formatCurrency(l.rentWeekly)}/wk
+                  </td>
+                  <td className="px-3 py-3 text-xs capitalize text-muted-foreground">{l.status}</td>
+                  <ModuleTableChevronCell href={href} />
+                </tr>
+              );
+            })}
+          </tbody>
+        </ModuleListTable>
+      </div>
+    </>
   );
 }

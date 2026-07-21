@@ -14,8 +14,48 @@ import {
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type { Property, RentReviewCase, VacatingCase } from '@/lib/types';
 import { isUuid } from '@/lib/file-upload';
-import { formatPropertyFullAddress } from '@/lib/utils';
+import { formatDate, formatPropertyFullAddress } from '@/lib/utils';
 import { JOB_CASE_DIALOG_SIZE, END_LEASING_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
+
+function LeasingCaseDialogSummary({
+  item,
+  property,
+  vacatingCases,
+}: {
+  item: PropertyLeasingWorkflowCase;
+  property: Property;
+  vacatingCases: VacatingCase[];
+}) {
+  const vacatingCase =
+    item.category === 'end_leasing'
+      ? vacatingCases.find((row) => row.id === item.id)
+      : undefined;
+
+  return (
+    <section className="bg-card mb-4 rounded-xl border p-3 md:mb-3 md:p-4">
+      <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        {item.label}
+      </p>
+      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">
+        {formatPropertyFullAddress(property)}
+      </p>
+      {item.detail ? (
+        <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{item.detail}</p>
+      ) : null}
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        {vacatingCase?.vacateDate ? (
+          <span className="text-muted-foreground">
+            Vacate {formatDate(vacatingCase.vacateDate)}
+          </span>
+        ) : null}
+        {item.status ? (
+          <span className="text-muted-foreground capitalize">{item.status}</span>
+        ) : null}
+      </div>
+      <p className="text-primary mt-3 text-xs font-medium">{item.currentStep}</p>
+    </section>
+  );
+}
 
 export function PropertyLeasingCaseWorkflowContent({
   item,
@@ -116,7 +156,12 @@ export function PropertyLeasingCaseWorkflowDialog({
       open={open}
       onClose={onClose}
       title={LEASING_CATEGORY_LABEL[item.category]}
-      subtitle={`${item.label} · ${item.currentStep}`}
+      subtitle={
+        <>
+          <span className="text-primary font-medium tabular-nums">{item.label}</span>
+          <span className="hidden sm:inline"> · {item.currentStep}</span>
+        </>
+      }
       size={
         item.category === 'end_leasing' ? END_LEASING_CASE_DIALOG_SIZE : JOB_CASE_DIALOG_SIZE
       }
@@ -130,11 +175,16 @@ export function PropertyLeasingCaseWorkflowDialog({
             onClick={() => onDeleteCase(item)}
           >
             <Trash2 className="size-3.5" />
-            Delete
+            <span className="hidden sm:inline">Delete</span>
           </Button>
         ) : null
       }
     >
+      <LeasingCaseDialogSummary
+        item={item}
+        property={property}
+        vacatingCases={vacatingCases}
+      />
       <PropertyLeasingCaseWorkflowContent
         item={item}
         property={property}

@@ -33,6 +33,7 @@ import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { cn } from '@/lib/utils';
 
 function StepContent({
   stepId,
@@ -192,34 +193,71 @@ export function RentReviewAgentWorkflowPanel({
   ];
   const stepReadOnly = !agentEditableSteps.includes(viewingStepId);
 
+  const isStepEnabled = (stepId: RentReviewAgentStep) => {
+    if (workflowClosed) return true;
+    const step = workflow.steps.find((s) => s.id === stepId);
+    return step != null && step.status !== 'upcoming';
+  };
+
   return (
     <div className="space-y-4">
-      <WorkflowProgressRail
-        steps={RENT_REVIEW_AGENT_STEP_ORDER}
-        labels={RENT_REVIEW_AGENT_STEP_LABEL}
-        currentStep={viewingStepId}
-        progressFillIndex={isLiveStep ? workflow.progressFillIndex : undefined}
-        getStepState={(stepId) => {
-          const step = workflow.steps.find((s) => s.id === stepId);
-          if (!step) return 'upcoming';
-          if (stepId === viewingStepId) return 'current';
-          if (step.status === 'done') return 'completed';
-          if (step.status === 'active') return 'current';
-          return 'upcoming';
-        }}
-        isStepCompleted={(stepId) =>
-          workflow.steps.find((s) => s.id === stepId)?.status === 'done'
-        }
-        isStepEnabled={(stepId) => {
-          if (workflowClosed) return true;
-          const step = workflow.steps.find((s) => s.id === stepId);
-          return step != null && step.status !== 'upcoming';
-        }}
-        onStepClick={handleStepClick}
-      />
+      <div className="md:hidden">
+        <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+          Workflow step
+        </p>
+        <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          {RENT_REVIEW_AGENT_STEP_ORDER.map((stepId) => {
+            const enabled = isStepEnabled(stepId);
+            const step = workflow.steps.find((s) => s.id === stepId);
+            const isViewing = stepId === viewingStepId;
+            const isDone = step?.status === 'done';
+            return (
+              <button
+                key={stepId}
+                type="button"
+                disabled={!enabled}
+                onClick={() => enabled && handleStepClick(stepId)}
+                className={cn(
+                  'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                  isViewing
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : isDone
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
+                      : 'border-border bg-card text-muted-foreground',
+                  !enabled && 'cursor-not-allowed opacity-50',
+                )}
+              >
+                {RENT_REVIEW_AGENT_STEP_LABEL[stepId]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="hidden md:block">
+        <WorkflowProgressRail
+          steps={RENT_REVIEW_AGENT_STEP_ORDER}
+          labels={RENT_REVIEW_AGENT_STEP_LABEL}
+          currentStep={viewingStepId}
+          progressFillIndex={isLiveStep ? workflow.progressFillIndex : undefined}
+          getStepState={(stepId) => {
+            const step = workflow.steps.find((s) => s.id === stepId);
+            if (!step) return 'upcoming';
+            if (stepId === viewingStepId) return 'current';
+            if (step.status === 'done') return 'completed';
+            if (step.status === 'active') return 'current';
+            return 'upcoming';
+          }}
+          isStepCompleted={(stepId) =>
+            workflow.steps.find((s) => s.id === stepId)?.status === 'done'
+          }
+          isStepEnabled={isStepEnabled}
+          onStepClick={handleStepClick}
+        />
+      </div>
 
       <div className="rounded-xl border bg-card">
-        <div className="border-b px-4 py-3">
+        <div className="border-b px-3 py-3 md:px-4">
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
             {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
@@ -228,7 +266,7 @@ export function RentReviewAgentWorkflowPanel({
             <p className="text-muted-foreground mt-1 text-xs">{viewingStep.workflowName}</p>
           ) : null}
         </div>
-        <div className="space-y-4 p-4">
+        <div className="space-y-4 p-3 md:p-4">
           <StepContent
             stepId={viewingStepId}
             detail={detail}

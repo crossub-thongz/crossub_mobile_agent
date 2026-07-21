@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
-import { GlobalShellFabs, ShellHeaderGiiButton, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
+import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -126,7 +126,6 @@ export function AgentShell({
               {!hideGlobalFabs && !title ? (
                 <ShellHeaderQuickActions pathname={pathname} />
               ) : null}
-              {!hideGlobalFabs ? <ShellHeaderGiiButton /> : null}
               <AgentNotificationBell unreadCount={unreadNotificationCount} />
               <ThemeToggle />
               <Link
@@ -206,7 +205,10 @@ export function AgentShell({
                 ? 'flex min-h-0 flex-1 flex-col max-lg:pt-2 lg:pt-0'
                 : 'pb-24 lg:pb-0 max-lg:pt-[var(--shell-header-offset)] lg:pt-0',
             )}
-            style={{ ['--shell-header-offset' as string]: `${headerHeight + 16}px` }}
+            style={{
+              ['--shell-header-height' as string]: `${headerHeight}px`,
+              ['--shell-header-offset' as string]: `${headerHeight + 16}px`,
+            }}
           >
             {showConnectionBanner && user && (
               <div className="mb-4">

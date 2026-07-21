@@ -1,11 +1,12 @@
 'use client';
 
-import { Check, Trash2 } from 'lucide-react';
+import { Check, ChevronRight, Trash2 } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import {
   ModuleInteractiveTableRow,
   ModuleListTable,
+  ModuleMobileCardShell,
   ModuleSortableTableHead,
   type ModuleTableColumn,
 } from '@/components/agent/module-list-table';
@@ -352,6 +353,107 @@ export function PropertyJobCasesTable({
           {activeView === 'completed' ? 'No completed jobs on file yet.' : 'No jobs in progress.'}
         </p>
       ) : (
+        <>
+          <div className="space-y-2 md:hidden">
+            {jobTypeFilterEnabled ? (
+              <div className="mb-1">
+                <label className="text-muted-foreground mb-2 block text-[11px] font-semibold uppercase tracking-wide">
+                  Job type
+                </label>
+                {jobTypeSelect}
+              </div>
+            ) : null}
+            {filteredRows.length === 0 ? (
+              <p className="text-muted-foreground px-1 py-4 text-sm">No jobs match this job type.</p>
+            ) : (
+              rowGroups.map((group, groupIndex) => (
+                <Fragment key={`mobile-${group.label || 'jobs'}-${groupIndex}`}>
+                  {showGroupHeaders ? (
+                    <p className="text-muted-foreground px-1 pt-1 text-[10px] font-bold uppercase tracking-[0.16em]">
+                      {group.label}
+                      <span className="ml-1.5 font-semibold tabular-nums normal-case tracking-normal">
+                        ({group.rows.length})
+                      </span>
+                    </p>
+                  ) : null}
+                  {group.rows.map((row) => {
+                    const selected = selectedId === row.id;
+                    const openRow = onRowClick ? () => onRowClick(row.id) : undefined;
+                    return (
+                      <div key={row.id} className="relative">
+                        <ModuleMobileCardShell
+                          onClick={openRow}
+                          selected={selected}
+                          highlight={!selected && row.phase === 'in_progress'}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 pr-8">
+                              <div className="flex items-center gap-2">
+                                {selected ? (
+                                  <span
+                                    className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full"
+                                    aria-hidden
+                                  >
+                                    <Check className="size-3" strokeWidth={3} />
+                                  </span>
+                                ) : null}
+                                <p className="truncate text-sm font-semibold">{row.name}</p>
+                              </div>
+                              <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                                {row.description}
+                              </p>
+                            </div>
+                            <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                            {groupByJobType || jobTypeFilter !== 'all' ? (
+                              <span className="text-muted-foreground">{row.jobType}</span>
+                            ) : null}
+                            <span className="text-primary font-medium">{row.status}</span>
+                            {row.issueType ? (
+                              <span className="text-muted-foreground">{row.issueType}</span>
+                            ) : null}
+                            {showKeyDateColumn && row.date !== '—' ? (
+                              <span className="text-muted-foreground tabular-nums">{row.date}</span>
+                            ) : null}
+                            <span className="text-muted-foreground tabular-nums">{row.createdAt}</span>
+                          </div>
+                          {row.rentReviewSchedule ? (
+                            <div className="mt-2">
+                              <RentReviewConductCountdownBadge
+                                label={row.rentReviewSchedule.orderCountdown.label}
+                                title={row.rentReviewSchedule.orderCountdown.title}
+                                tone={row.rentReviewSchedule.orderCountdown.tone}
+                                compact
+                              />
+                            </div>
+                          ) : null}
+                        </ModuleMobileCardShell>
+                        {showDelete && canDeleteRow?.(row) ? (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive absolute top-2 right-2 size-8"
+                            aria-label={`Delete ${row.name}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onDeleteRow?.(row);
+                            }}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              ))
+            )}
+          </div>
+
+          <div className="hidden md:block">
         <ModuleListTable minWidth={tableMinWidth}>
           {jobTypeFilterEnabled ? (
             <thead>
@@ -588,6 +690,8 @@ export function PropertyJobCasesTable({
             )}
           </tbody>
         </ModuleListTable>
+          </div>
+        </>
       )}
     </div>
   );

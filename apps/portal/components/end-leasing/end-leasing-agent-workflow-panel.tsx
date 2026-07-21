@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
+import { WorkflowMobileStepChips } from '@/components/agent/workflow-mobile-step-chips';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { EndLeasingBondReleasedPanel } from '@/components/end-leasing/end-leasing-bond-released-panel';
 import { EndLeasingOutgoingInspectionPanel } from '@/components/end-leasing/end-leasing-outgoing-inspection-panel';
@@ -94,39 +95,54 @@ export function EndLeasingAgentWorkflowPanel({
     viewingStepId === END_LEASING_AGENT_STEP.RESULT_CONFIRMED ||
     viewingStepId === END_LEASING_AGENT_STEP.BOND_RELEASED;
 
+  const isStepEnabled = (stepId: EndLeasingAgentStep) => {
+    const step = workflow.steps.find((s) => s.id === stepId);
+    return step != null && step.status !== 'upcoming';
+  };
+
   return (
     <div className="space-y-4">
-      <WorkflowProgressRail
+      <WorkflowMobileStepChips
         steps={END_LEASING_AGENT_STEP_ORDER}
         labels={END_LEASING_AGENT_STEP_LABEL}
         currentStep={viewingStepId}
-        progressFillIndex={isLiveStep ? workflow.progressFillIndex : undefined}
-        getStepState={(stepId) => {
-          const step = workflow.steps.find((s) => s.id === stepId);
-          if (!step) return 'upcoming';
-          if (stepId === viewingStepId) return 'current';
-          if (step.status === 'done') return 'completed';
-          if (step.status === 'active') return 'current';
-          return 'upcoming';
-        }}
+        onStepClick={handleStepClick}
         isStepCompleted={(stepId) =>
           workflow.steps.find((s) => s.id === stepId)?.status === 'done'
         }
-        isStepEnabled={(stepId) => {
-          const step = workflow.steps.find((s) => s.id === stepId);
-          return step != null && step.status !== 'upcoming';
-        }}
-        onStepClick={handleStepClick}
+        isStepEnabled={isStepEnabled}
       />
 
+      <div className="hidden md:block">
+        <WorkflowProgressRail
+          steps={END_LEASING_AGENT_STEP_ORDER}
+          labels={END_LEASING_AGENT_STEP_LABEL}
+          currentStep={viewingStepId}
+          progressFillIndex={isLiveStep ? workflow.progressFillIndex : undefined}
+          getStepState={(stepId) => {
+            const step = workflow.steps.find((s) => s.id === stepId);
+            if (!step) return 'upcoming';
+            if (stepId === viewingStepId) return 'current';
+            if (step.status === 'done') return 'completed';
+            if (step.status === 'active') return 'current';
+            return 'upcoming';
+          }}
+          isStepCompleted={(stepId) =>
+            workflow.steps.find((s) => s.id === stepId)?.status === 'done'
+          }
+          isStepEnabled={isStepEnabled}
+          onStepClick={handleStepClick}
+        />
+      </div>
+
       <div className="rounded-xl border bg-card">
-        <div className="border-b px-4 py-3">
+        <div className="border-b px-3 py-3 md:px-4">
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
             {isLiveStep ? 'Current step' : 'Step detail'}
           </p>
           <p className="mt-0.5 text-sm font-semibold">{stepTitles[viewingStepId]}</p>
         </div>
-        <div className="space-y-4 p-4">
+        <div className="space-y-4 p-3 md:p-4">
           <StepContent stepId={viewingStepId} caseData={caseData} />
 
           {showEmailHistory ? (

@@ -6,6 +6,7 @@ import {
   WorkflowProgressRail,
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
+import { WorkflowMobileStepChips } from '@/components/agent/workflow-mobile-step-chips';
 import { useLivePoll } from '@/lib/use-live-poll';
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
@@ -92,37 +93,56 @@ export function LeasingLifecycleStepRail({
   const displayRailStep =
     viewingRailStep ?? contentStepToRailStep(currentStep, liveRailStep);
 
+  const isStepEnabled = (step: LettingRailStep) =>
+    isLettingRailStepCompleted(detail, step, now) ||
+    isLettingRailStepEnabled(detail, step, now);
+
+  const handleRailStepClick = onStepClick
+    ? (railStep: LettingRailStep) => {
+        setViewingRailStep(railStep);
+        onStepClick(railStepToContentStep(railStep));
+      }
+    : undefined;
+
+  const mobileRailLabels: Record<LettingRailStep, string> = {
+    [LETTING_RAIL_STEP.ORDER_CREATED]: 'Created',
+    [LETTING_RAIL_STEP.SCHEDULING]: 'Scheduling',
+    [LETTING_RAIL_STEP.SCHEDULED]: 'Scheduled',
+    [LETTING_RAIL_STEP.REPORT_AVAILABLE]: 'Report',
+    [LETTING_RAIL_STEP.RESULTS]: 'Results',
+  };
+
   return (
-    <WorkflowProgressRail
-      steps={LETTING_RAIL_STEP_ORDER}
-      labels={LETTING_RAIL_STEP_LABEL}
-      currentStep={displayRailStep}
-      liveStep={liveRailStep}
-      progressFillIndex={fillIndex}
-      getStepState={(step) => {
-        const enabled =
-          isLettingRailStepCompleted(detail, step, now) ||
-          isLettingRailStepEnabled(detail, step, now);
-        const isDone = isLettingRailStepCompleted(detail, step, now);
-        const isViewing = step === displayRailStep;
-        if (!enabled && !isDone && !isViewing) return 'upcoming';
-        return resolveWorkflowStepState(isDone, isViewing);
-      }}
-      isStepCompleted={(step) => isLettingRailStepCompleted(detail, step, now)}
-      isStepEnabled={(step) =>
-        isLettingRailStepCompleted(detail, step, now) ||
-        isLettingRailStepEnabled(detail, step, now)
-      }
-      onStepClick={
-        onStepClick
-          ? (railStep) => {
-              setViewingRailStep(railStep);
-              onStepClick(railStepToContentStep(railStep));
-            }
-          : undefined
-      }
-      href={href}
-      className={className}
-    />
+    <>
+      <WorkflowMobileStepChips
+        steps={LETTING_RAIL_STEP_ORDER}
+        labels={mobileRailLabels}
+        currentStep={displayRailStep}
+        onStepClick={handleRailStepClick}
+        isStepCompleted={(step) => isLettingRailStepCompleted(detail, step, now)}
+        isStepEnabled={isStepEnabled}
+      />
+      <div className="hidden md:block">
+        <WorkflowProgressRail
+          steps={LETTING_RAIL_STEP_ORDER}
+          labels={LETTING_RAIL_STEP_LABEL}
+          currentStep={displayRailStep}
+          liveStep={liveRailStep}
+          progressFillIndex={fillIndex}
+          getStepState={(step) => {
+            const enabled = isStepEnabled(step);
+            const isDone = isLettingRailStepCompleted(detail, step, now);
+            const isViewing = step === displayRailStep;
+            if (!enabled && !isDone && !isViewing) return 'upcoming';
+            return resolveWorkflowStepState(isDone, isViewing);
+          }}
+          isStepCompleted={(step) => isLettingRailStepCompleted(detail, step, now)}
+          isStepEnabled={isStepEnabled}
+          onStepClick={handleRailStepClick}
+          href={href}
+          className={className}
+        />
+      </div>
+    </>
   );
 }

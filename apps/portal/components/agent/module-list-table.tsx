@@ -18,6 +18,40 @@ export type ModuleTableColumn<T extends string> =
       defaultDirection?: SortDirection;
     };
 
+export function ModuleMobileCardShell({
+  onClick,
+  href,
+  selected,
+  highlight,
+  children,
+}: {
+  onClick?: () => void;
+  href?: string;
+  selected?: boolean;
+  highlight?: boolean;
+  children: ReactNode;
+}) {
+  const className = cn(
+    'block rounded-xl border bg-card p-3 shadow-sm transition active:scale-[0.99]',
+    highlight && 'border-destructive/30 bg-destructive/[0.03]',
+    selected && 'border-primary ring-primary/20 ring-2',
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cn(className, 'w-full text-left')}>
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  );
+}
+
 export function ModuleListTable({
   minWidth = 720,
   children,

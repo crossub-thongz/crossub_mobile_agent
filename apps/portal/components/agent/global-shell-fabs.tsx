@@ -55,7 +55,7 @@ const DOCK_BUTTONS = [
 
 const MOBILE_GII_BUTTON = {
   id: 'gii' as const,
-  label: 'Gii',
+  label: 'Property Manager',
   icon: Sparkles,
   activeClass:
     'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
@@ -150,26 +150,33 @@ export function ShellHeaderQuickActions({
   );
 }
 
-/** Mobile-only Gii launcher — sits in the top header row, outside the quick-action pill. */
-export function ShellHeaderGiiButton() {
+/** Mobile floating Gii launcher — sits above the bottom tab bar. */
+export function MobileGiiFab() {
   const activePanel = useShellDockStore((s) => s.activePanel);
-  const togglePanel = useShellDockStore((s) => s.togglePanel);
+  const openGii = useShellDockStore((s) => s.openGii);
   const mobileGiiOpen = activePanel === 'gii';
 
+  if (mobileGiiOpen) return null;
+
   return (
-    <button
-      type="button"
-      title={MOBILE_GII_BUTTON.label}
-      aria-label={MOBILE_GII_BUTTON.label}
-      aria-pressed={mobileGiiOpen}
-      onClick={() => togglePanel('gii')}
-      className={cn(
-        'text-muted-foreground hover:bg-secondary flex size-9 shrink-0 items-center justify-center rounded-lg lg:hidden',
-        mobileGiiOpen && 'bg-primary/10 text-primary',
-      )}
+    <div
+      className="pointer-events-none fixed left-1/2 z-[60] w-full max-w-lg -translate-x-1/2 px-4 lg:hidden"
+      style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
     >
-      <MOBILE_GII_BUTTON.icon className="size-5" />
-    </button>
+      <button
+        type="button"
+        title={MOBILE_GII_BUTTON.label}
+        aria-label={MOBILE_GII_BUTTON.label}
+        onClick={() => openGii()}
+        className={cn(
+          'pointer-events-auto ml-auto flex size-14 items-center justify-center rounded-full',
+          'bg-gradient-to-br from-primary via-emerald-500 to-teal-600 text-white',
+          'shadow-lg shadow-primary/35 ring-4 ring-background transition active:scale-95',
+        )}
+      >
+        <MOBILE_GII_BUTTON.icon className="size-6" aria-hidden />
+      </button>
+    </div>
   );
 }
 
@@ -181,6 +188,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
 
   return (
     <>
+      <MobileGiiFab />
       <CommunicationDockSheet
         open={activePanel === 'communication'}
         onClose={closePanel}

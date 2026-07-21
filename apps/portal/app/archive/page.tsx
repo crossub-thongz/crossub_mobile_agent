@@ -14,6 +14,7 @@ import {
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ROUTES } from '@/constants/routes';
+import { buildEndLeasingArchiveRows } from '@/lib/archive-case-display';
 
 const TABS = [
   { id: 'new-letting', label: 'New letting' },
@@ -26,22 +27,27 @@ type ArchiveTab = (typeof TABS)[number]['id'];
 
 export default function ArchivePage() {
   const [tab, setTab] = useState<ArchiveTab>('new-letting');
-  const { archive } = useAgentData();
+  const { archive, vacating } = useAgentData();
+
+  const endLeasingArchiveRows = useMemo(
+    () => buildEndLeasingArchiveRows(archive.cancelledEndLeasing, vacating),
+    [archive.cancelledEndLeasing, vacating],
+  );
 
   const tabCounts = useMemo(
     () => ({
       'new-letting': archive.cancelledLeasingCycles.length,
-      'end-leasing': archive.cancelledEndLeasing.length,
+      'end-leasing': endLeasingArchiveRows.length,
       'rent-review': archive.cancelledRentReviews.length,
       maintenance: 0,
     }),
-    [archive],
+    [archive, endLeasingArchiveRows.length],
   );
 
   return (
     <AgentShell title="Archive" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
-        <PageIntro description="Cancelled workflow jobs and the reasons recorded when they were closed." />
+        <PageIntro description="Closed workflow jobs — deleted cases and completed end-of-tenancy outcomes." />
 
         <FilterChips
           options={TABS.map((t) => ({
@@ -65,14 +71,14 @@ export default function ArchivePage() {
         ) : null}
 
         {tab === 'end-leasing' ? (
-          archive.cancelledEndLeasing.length === 0 ? (
+          endLeasingArchiveRows.length === 0 ? (
             <EmptyState
               icon={FolderArchive}
-              title="No cancelled end-leasing cases"
-              description="Cancelled end-leasing cases with a recorded reason will appear here."
+              title="No end-leasing archive"
+              description="Deleted end-leasing cases and completed tenancies will appear here."
             />
           ) : (
-            <ArchivedEndLeasingTable items={archive.cancelledEndLeasing} />
+            <ArchivedEndLeasingTable items={endLeasingArchiveRows} />
           )
         ) : null}
 

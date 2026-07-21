@@ -1,14 +1,20 @@
+'use client';
+
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, UserRound } from 'lucide-react';
 
 import { NeedActionBadge } from '@/components/agent/need-action-badge';
+import {
+  propertyPhoneBookInitials,
+  propertyPhoneBookSubtitle,
+} from '@/lib/property-phone-book';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
 
 const STATUS_STYLES: Record<Property['leaseStatus'], string> = {
   active: 'bg-primary/15 text-primary',
-  periodic: 'bg-sky-500/15 text-sky-400',
-  vacating: 'bg-amber-500/15 text-amber-400',
+  periodic: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
+  vacating: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   vacant: 'bg-muted text-muted-foreground',
 };
 
@@ -21,24 +27,33 @@ export function PropertyListCard({
   actionCount: number;
   href: string;
 }) {
+  const subtitle = propertyPhoneBookSubtitle(property);
+  const initials = propertyPhoneBookInitials(property);
+
   return (
     <Link
       href={href}
       className={cn(
-        'group relative block rounded-2xl border bg-card p-4 pt-3.5 transition-all active:scale-[0.99]',
+        'group relative flex items-center gap-3 rounded-2xl border bg-card px-3 py-3.5 transition-all active:scale-[0.99]',
         actionCount > 0
           ? 'border-destructive/25 shadow-sm shadow-destructive/5'
           : 'border-border hover:border-primary/20 hover:shadow-md hover:shadow-primary/5',
       )}
     >
-      {actionCount > 0 && (
-        <div className="absolute top-3 right-3">
-          <NeedActionBadge count={actionCount} size="sm" />
-        </div>
-      )}
+      <div
+        className={cn(
+          'flex size-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold tabular-nums',
+          actionCount > 0
+            ? 'bg-destructive/10 text-destructive'
+            : 'bg-primary/10 text-primary',
+        )}
+        aria-hidden
+      >
+        {initials}
+      </div>
 
-      <div className="flex items-start gap-3 pr-16">
-        <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span
             className={cn(
               'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize',
@@ -47,24 +62,25 @@ export function PropertyListCard({
           >
             {property.leaseStatus}
           </span>
-          <p className="mt-1.5 font-semibold leading-snug">{property.address}</p>
-          <p className="text-muted-foreground text-xs">{property.suburb}</p>
-          <div className="text-muted-foreground mt-2 space-y-0.5 text-xs">
-            <p>
-              <span className="text-foreground/70">Tenant</span> · {property.tenantName}
-            </p>
-            {property.rentWeekly > 0 && (
-              <p>
-                <span className="text-foreground/70">Rent</span> ·{' '}
-                <span className="text-foreground font-medium tabular-nums">
-                  {formatCurrency(property.rentWeekly)}/wk
-                </span>
-              </p>
-            )}
-          </div>
+          {actionCount > 0 ? <NeedActionBadge count={actionCount} size="sm" /> : null}
         </div>
-        <ChevronRight className="text-muted-foreground mt-6 size-4 shrink-0 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+        <p className="mt-1 font-semibold leading-snug">{property.address}</p>
+        <p className="text-muted-foreground truncate text-xs">{property.suburb}</p>
+        <p className="text-muted-foreground mt-1 flex items-center gap-1 truncate text-xs">
+          <UserRound className="size-3 shrink-0 opacity-70" aria-hidden />
+          <span>{subtitle}</span>
+          {property.rentWeekly > 0 ? (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="text-foreground/80 tabular-nums">
+                {formatCurrency(property.rentWeekly)}/wk
+              </span>
+            </>
+          ) : null}
+        </p>
       </div>
+
+      <ChevronRight className="text-muted-foreground size-4 shrink-0 transition group-hover:translate-x-0.5 group-hover:text-primary" />
     </Link>
   );
 }

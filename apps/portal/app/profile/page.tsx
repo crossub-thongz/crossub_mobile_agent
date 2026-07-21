@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Building2, ChevronRight, History, LogOut, Mail, Phone, Settings, User } from 'lucide-react';
+import { Building2, ChevronRight, History, LogOut, Mail, Phone, Settings, User, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -59,6 +59,7 @@ export default function ProfilePage() {
     rentReviewDecisions,
     rentReviews,
   });
+  const phonebookCount = phonebook.landlords.length + phonebook.tenants.length;
 
   const localAccount = getLocalSessionAccount();
   const agencyName = primaryAgency?.name ?? localAccount?.agencyName ?? '—';
@@ -87,6 +88,71 @@ export default function ProfilePage() {
             </div>
           </div>
         </section>
+
+        <ProfileSectionTabs
+          active={tab}
+          onChange={setTab}
+          phonebookCount={phonebookCount}
+          historyCount={history.length}
+        />
+
+        {tab === 'contacts' ? (
+          <div className="space-y-6">
+            <PhonebookSection
+              title="Landlords"
+              icon={Building2}
+              entries={phonebook.landlords}
+              emptyLabel="No landlords in your portfolio"
+            />
+            <PhonebookSection
+              title="Tenants"
+              icon={User}
+              entries={phonebook.tenants}
+              emptyLabel="No tenants in your portfolio"
+            />
+          </div>
+        ) : (
+          <section className="space-y-2">
+            <div className="flex items-center gap-2 lg:hidden">
+              <History className="text-muted-foreground size-4" />
+              <h2 className="text-sm font-semibold">Your activity</h2>
+            </div>
+            {history.length === 0 ? (
+              <div className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
+                Messages you send and rent review decisions will appear here.
+              </div>
+            ) : (
+              history.map((item) => {
+                const content = (
+                  <div className="rounded-xl border bg-card p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{item.title}</p>
+                        <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+                          {item.detail}
+                        </p>
+                      </div>
+                      <span className="text-muted-foreground shrink-0 text-[10px]">
+                        {formatRelative(item.at)}
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground mt-2 text-[10px]">
+                      {formatDateTime(item.at)}
+                    </p>
+                  </div>
+                );
+
+                return item.href ? (
+                  <Link key={item.id} href={item.href} className="block">
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={item.id}>{content}</div>
+                );
+              })
+            )}
+          </section>
+        )}
 
         <section className="rounded-xl border bg-card p-4">
           <h2 className="text-sm font-semibold">Your details</h2>
@@ -220,87 +286,6 @@ export default function ProfilePage() {
           <ChevronRight className="text-muted-foreground size-4" />
         </Link>
 
-        <div className="flex rounded-lg border bg-card p-1">
-          {(
-            [
-              { id: 'contacts' as const, label: 'Phonebook' },
-              { id: 'history' as const, label: 'History' },
-            ] as const
-          ).map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={cn(
-                'flex-1 rounded-md py-2 text-sm font-medium transition-colors',
-                tab === id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'contacts' ? (
-          <div className="space-y-6">
-            <PhonebookSection
-              title="Landlords"
-              icon={Building2}
-              entries={phonebook.landlords}
-              emptyLabel="No landlords in your portfolio"
-            />
-            <PhonebookSection
-              title="Tenants"
-              icon={User}
-              entries={phonebook.tenants}
-              emptyLabel="No tenants in your portfolio"
-            />
-          </div>
-        ) : (
-          <section className="space-y-2">
-            <div className="flex items-center gap-2">
-              <History className="text-muted-foreground size-4" />
-              <h2 className="text-sm font-semibold">Your activity</h2>
-            </div>
-            {history.length === 0 ? (
-              <div className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
-                Messages you send and rent review decisions will appear here.
-              </div>
-            ) : (
-              history.map((item) => {
-                const content = (
-                  <div className="rounded-xl border bg-card p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{item.title}</p>
-                        <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
-                          {item.detail}
-                        </p>
-                      </div>
-                      <span className="text-muted-foreground shrink-0 text-[10px]">
-                        {formatRelative(item.at)}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground mt-2 text-[10px]">
-                      {formatDateTime(item.at)}
-                    </p>
-                  </div>
-                );
-
-                return item.href ? (
-                  <Link key={item.id} href={item.href} className="block">
-                    {content}
-                  </Link>
-                ) : (
-                  <div key={item.id}>{content}</div>
-                );
-              })
-            )}
-          </section>
-        )}
-
         <Button
           variant="outline"
           className="w-full text-destructive hover:text-destructive"
@@ -311,6 +296,76 @@ export default function ProfilePage() {
         </Button>
       </div>
     </AgentShell>
+  );
+}
+
+function ProfileSectionTabs({
+  active,
+  onChange,
+  phonebookCount,
+  historyCount,
+}: {
+  active: ProfileTab;
+  onChange: (tab: ProfileTab) => void;
+  phonebookCount: number;
+  historyCount: number;
+}) {
+  const tabs = [
+    { id: 'contacts' as const, label: 'Phonebook', shortLabel: 'Contacts', icon: Users, count: phonebookCount },
+    { id: 'history' as const, label: 'History', shortLabel: 'History', icon: History, count: historyCount },
+  ];
+
+  return (
+    <div
+      className={cn(
+        'sticky top-[var(--shell-header-height,3.5rem)] z-30 -mx-4 border-b border-border/60 bg-background/95 px-4 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/85 lg:static lg:mx-0 lg:rounded-xl lg:border lg:bg-card lg:p-1 lg:backdrop-blur-none',
+      )}
+    >
+      <div className="grid grid-cols-2 gap-2 lg:gap-1">
+        {tabs.map(({ id, label, shortLabel, icon: Icon, count }) => {
+          const isActive = active === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onChange(id)}
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'flex flex-col items-center gap-1 rounded-xl px-3 py-3 transition-colors lg:flex-row lg:justify-center lg:gap-2 lg:rounded-md lg:py-2.5',
+                isActive
+                  ? 'bg-primary/10 text-primary lg:bg-primary lg:text-primary-foreground'
+                  : 'bg-muted/30 text-muted-foreground lg:bg-transparent',
+              )}
+            >
+              <span
+                className={cn(
+                  'flex size-9 items-center justify-center rounded-xl lg:size-auto lg:rounded-none lg:bg-transparent',
+                  isActive ? 'bg-primary/15 lg:bg-transparent' : 'bg-background/80 lg:bg-transparent',
+                )}
+              >
+                <Icon className="size-4" aria-hidden />
+              </span>
+              <span className="flex flex-col items-center lg:flex-row lg:gap-1.5">
+                <span className="text-xs font-semibold lg:text-sm">
+                  <span className="lg:hidden">{shortLabel}</span>
+                  <span className="hidden lg:inline">{label}</span>
+                </span>
+                <span
+                  className={cn(
+                    'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+                    isActive
+                      ? 'bg-primary/15 text-primary lg:bg-primary-foreground/20 lg:text-primary-foreground'
+                      : 'bg-muted text-muted-foreground',
+                  )}
+                >
+                  {count}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -368,37 +423,51 @@ function PhonebookSection({
           {emptyLabel}
         </p>
       ) : (
-        entries.map((entry) => (
-          <div key={entry.id} className="rounded-xl border bg-card p-3">
-            <p className="font-medium">{entry.name}</p>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {entry.properties.join(' · ')}
-            </p>
-            <div className="text-muted-foreground mt-2 space-y-1 text-xs">
-              {entry.contact.phone && (
-                <a
-                  href={`tel:${entry.contact.phone.replace(/\s/g, '')}`}
-                  className="flex items-center gap-1.5 hover:text-foreground"
-                >
-                  <Phone className="size-3 shrink-0" />
-                  {entry.contact.phone}
-                </a>
-              )}
-              {entry.contact.email && (
-                <a
-                  href={`mailto:${entry.contact.email}`}
-                  className="flex items-center gap-1.5 hover:text-foreground"
-                >
-                  <Mail className="size-3 shrink-0" />
-                  {entry.contact.email}
-                </a>
-              )}
-              {!entry.contact.phone && !entry.contact.email && (
-                <span>No contact on file</span>
-              )}
+        entries.map((entry) => {
+          const initials = entry.name
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((part) => part[0] ?? '')
+            .join('')
+            .toUpperCase();
+
+          return (
+            <div key={entry.id} className="flex gap-3 rounded-2xl border bg-card p-3">
+              <div className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold">
+                {initials || '?'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold leading-snug">{entry.name}</p>
+                <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                  {entry.properties.join(' · ')}
+                </p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {entry.contact.phone ? (
+                    <a
+                      href={`tel:${entry.contact.phone.replace(/\s/g, '')}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium hover:bg-secondary"
+                    >
+                      <Phone className="size-3 shrink-0" />
+                      Call
+                    </a>
+                  ) : null}
+                  {entry.contact.email ? (
+                    <a
+                      href={`mailto:${entry.contact.email}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium hover:bg-secondary"
+                    >
+                      <Mail className="size-3 shrink-0" />
+                      Email
+                    </a>
+                  ) : null}
+                  {!entry.contact.phone && !entry.contact.email ? (
+                    <span className="text-muted-foreground text-xs">No contact on file</span>
+                  ) : null}
+                </div>
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </section>
   );

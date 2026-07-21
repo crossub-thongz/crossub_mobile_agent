@@ -95,6 +95,186 @@ function resolveFeeTypeFromDraft(draft: AddFeeDraft): string {
   return draft.preset;
 }
 
+function FeeTypeField({
+  row,
+  saving,
+  onUpdate,
+}: {
+  row: ManagementFeeRow;
+  saving: boolean;
+  onUpdate: (patch: Partial<ManagementFeeRow>) => void;
+}) {
+  const known = isKnownFeeType(row.feeType);
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={known ? row.feeType : CUSTOM_FEE_VALUE}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value === CUSTOM_FEE_VALUE) {
+            onUpdate({
+              feeType: known ? '' : row.feeType,
+            });
+            return;
+          }
+          onUpdate({
+            feeType: value,
+            valueMode: valueModeForUnit(
+              MANAGEMENT_FEE_OPTIONS.find((o) => o.id === value)?.unit === 'percent'
+                ? 'rate'
+                : 'week',
+            ),
+          });
+        }}
+        className={selectClass}
+        disabled={saving}
+      >
+        <option value="">Select fee</option>
+        {MANAGEMENT_FEE_OPTIONS.map((opt) => (
+          <option key={opt.id} value={opt.id}>
+            {opt.label}
+          </option>
+        ))}
+        <option value={CUSTOM_FEE_VALUE}>Custom…</option>
+      </select>
+      {!known ? (
+        <Input
+          value={row.feeType}
+          onChange={(e) => onUpdate({ feeType: e.target.value })}
+          placeholder="Enter fee name"
+          disabled={saving}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function FeeRateField({
+  row,
+  saving,
+  onUpdate,
+}: {
+  row: ManagementFeeRow;
+  saving: boolean;
+  onUpdate: (patch: Partial<ManagementFeeRow>) => void;
+}) {
+  const unit = feeUnit(row);
+
+  return (
+    <div className="flex gap-2">
+      <Input
+        type="number"
+        min={0}
+        max={unit === 'rate' ? 100 : undefined}
+        step={0.1}
+        value={row.amount}
+        onChange={(e) => onUpdate({ amount: e.target.value })}
+        className="min-w-0 flex-1"
+        disabled={saving}
+      />
+      <select
+        value={unit}
+        onChange={(e) =>
+          onUpdate({
+            valueMode: valueModeForUnit(e.target.value as ManagementFeeUnit),
+          })
+        }
+        className={cn(selectClass, 'w-[7.5rem] shrink-0')}
+        disabled={saving}
+      >
+        {UNIT_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function FeeGstField({
+  row,
+  saving,
+  onUpdate,
+}: {
+  row: ManagementFeeRow;
+  saving: boolean;
+  onUpdate: (patch: Partial<ManagementFeeRow>) => void;
+}) {
+  return (
+    <select
+      value={row.gst}
+      onChange={(e) =>
+        onUpdate({
+          gst: e.target.value as ManagementRateGst,
+        })
+      }
+      className={selectClass}
+      disabled={saving}
+    >
+      {GST_OPTIONS.map((opt) => (
+        <option key={opt.value || 'none'} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function FeeRowMobileCard({
+  row,
+  editing,
+  saving,
+  onUpdate,
+  onRemove,
+}: {
+  row: ManagementFeeRow;
+  editing: boolean;
+  saving: boolean;
+  onUpdate: (patch: Partial<ManagementFeeRow>) => void;
+  onRemove: () => void;
+}) {
+  if (!editing) {
+    return (
+      <div className="rounded-xl border bg-card p-3 shadow-sm">
+        <p className="text-sm font-semibold">{feeLabel(row.feeType)}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+          <span className="font-medium tabular-nums">{formatFeeRowDisplay(row)}</span>
+          <span className="text-muted-foreground">{formatGstLabel(row.gst)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border bg-card p-3 shadow-sm">
+      <FormField label="Fee type">
+        <FeeTypeField row={row} saving={saving} onUpdate={onUpdate} />
+      </FormField>
+      <FormField label="Rate">
+        <FeeRateField row={row} saving={saving} onUpdate={onUpdate} />
+      </FormField>
+      <FormField label="GST">
+        <FeeGstField row={row} saving={saving} onUpdate={onUpdate} />
+      </FormField>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-destructive hover:bg-destructive/10"
+          disabled={saving}
+          onClick={onRemove}
+          aria-label="Delete fee"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function PropertyFeesTab({
   property,
   propertyId,
@@ -269,7 +449,21 @@ export function PropertyFeesTab({
           No fees yet. Click Add fee to include one from the management agreement.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border/70 bg-card">
+        <>
+          <div className="space-y-2 md:hidden">
+            {displayFees.map((row) => (
+              <FeeRowMobileCard
+                key={row.id}
+                row={row}
+                editing={editing}
+                saving={saving}
+                onUpdate={(patch) => updateDraftFee(row.id, patch)}
+                onRemove={() => removeDraftFee(row.id)}
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card md:block">
           <table className="w-full min-w-[32rem] text-left text-sm">
             <thead className="border-b bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
               <tr>
@@ -280,135 +474,62 @@ export function PropertyFeesTab({
               </tr>
             </thead>
             <tbody>
-              {displayFees.map((row) => {
-                const unit = feeUnit(row);
-                const known = isKnownFeeType(row.feeType);
-                return (
-                  <tr key={row.id} className="border-b border-border/50 last:border-0">
-                    <td className="px-3 py-2.5 align-middle">
-                      {editing ? (
-                        <div className="space-y-1.5">
-                          <select
-                            value={known ? row.feeType : CUSTOM_FEE_VALUE}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === CUSTOM_FEE_VALUE) {
-                                updateDraftFee(row.id, {
-                                  feeType: known ? '' : row.feeType,
-                                });
-                                return;
-                              }
-                              updateDraftFee(row.id, {
-                                feeType: value,
-                                valueMode: valueModeForUnit(
-                                  MANAGEMENT_FEE_OPTIONS.find((o) => o.id === value)?.unit ===
-                                    'percent'
-                                    ? 'rate'
-                                    : 'week',
-                                ),
-                              });
-                            }}
-                            className={selectClass}
-                            disabled={saving}
-                          >
-                            <option value="">Select fee</option>
-                            {MANAGEMENT_FEE_OPTIONS.map((opt) => (
-                              <option key={opt.id} value={opt.id}>
-                                {opt.label}
-                              </option>
-                            ))}
-                            <option value={CUSTOM_FEE_VALUE}>Custom…</option>
-                          </select>
-                          {!known ? (
-                            <Input
-                              value={row.feeType}
-                              onChange={(e) => updateDraftFee(row.id, { feeType: e.target.value })}
-                              placeholder="Enter fee name"
-                              disabled={saving}
-                            />
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="font-medium">{feeLabel(row.feeType)}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 align-middle">
-                      {editing ? (
-                        <div className="flex gap-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={unit === 'rate' ? 100 : undefined}
-                            step={0.1}
-                            value={row.amount}
-                            onChange={(e) => updateDraftFee(row.id, { amount: e.target.value })}
-                            className="min-w-0 flex-1"
-                            disabled={saving}
-                          />
-                          <select
-                            value={unit}
-                            onChange={(e) =>
-                              updateDraftFee(row.id, {
-                                valueMode: valueModeForUnit(e.target.value as ManagementFeeUnit),
-                              })
-                            }
-                            className={cn(selectClass, 'w-[7.5rem] shrink-0')}
-                            disabled={saving}
-                          >
-                            {UNIT_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ) : (
-                        <span className="tabular-nums">{formatFeeRowDisplay(row)}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2.5 align-middle">
-                      {editing ? (
-                        <select
-                          value={row.gst}
-                          onChange={(e) =>
-                            updateDraftFee(row.id, {
-                              gst: e.target.value as ManagementRateGst,
-                            })
-                          }
-                          className={selectClass}
-                          disabled={saving}
-                        >
-                          {GST_OPTIONS.map((opt) => (
-                            <option key={opt.value || 'none'} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        formatGstLabel(row.gst)
-                      )}
-                    </td>
+              {displayFees.map((row) => (
+                <tr key={row.id} className="border-b border-border/50 last:border-0">
+                  <td className="px-3 py-2.5 align-middle">
                     {editing ? (
-                      <td className="px-3 py-2.5 text-right align-middle">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/10"
-                          disabled={saving}
-                          onClick={() => removeDraftFee(row.id)}
-                          aria-label="Delete fee"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </td>
-                    ) : null}
-                  </tr>
-                );
-              })}
+                      <FeeTypeField
+                        row={row}
+                        saving={saving}
+                        onUpdate={(patch) => updateDraftFee(row.id, patch)}
+                      />
+                    ) : (
+                      <span className="font-medium">{feeLabel(row.feeType)}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 align-middle">
+                    {editing ? (
+                      <FeeRateField
+                        row={row}
+                        saving={saving}
+                        onUpdate={(patch) => updateDraftFee(row.id, patch)}
+                      />
+                    ) : (
+                      <span className="tabular-nums">{formatFeeRowDisplay(row)}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 align-middle">
+                    {editing ? (
+                      <FeeGstField
+                        row={row}
+                        saving={saving}
+                        onUpdate={(patch) => updateDraftFee(row.id, patch)}
+                      />
+                    ) : (
+                      formatGstLabel(row.gst)
+                    )}
+                  </td>
+                  {editing ? (
+                    <td className="px-3 py-2.5 text-right align-middle">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10"
+                        disabled={saving}
+                        onClick={() => removeDraftFee(row.id)}
+                        aria-label="Delete fee"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>

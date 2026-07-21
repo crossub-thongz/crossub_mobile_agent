@@ -50,13 +50,20 @@ export function LeasingLifecycleTabs({
     [activeStep, liveDetail, now],
   );
 
+  const showLettingRail =
+    contentStep === LEASING_LIFECYCLE_STEP.OPEN_INSPECTION ||
+    contentStep === LEASING_LIFECYCLE_STEP.OPEN_REPORT ||
+    contentStep === LEASING_LIFECYCLE_STEP.RESULTS;
+
   return (
     <div className="min-w-0 space-y-4">
-      <LeasingLifecycleStepRail
-        detail={liveDetail}
-        currentStep={activeStep}
-        onStepClick={(step) => setActiveStep(detail.propertyId, step)}
-      />
+      <div className={showLettingRail ? undefined : 'hidden md:block'}>
+        <LeasingLifecycleStepRail
+          detail={liveDetail}
+          currentStep={activeStep}
+          onStepClick={(step) => setActiveStep(detail.propertyId, step)}
+        />
+      </div>
 
       {liveDetail.openInspection.agentConducted ? (
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3">
