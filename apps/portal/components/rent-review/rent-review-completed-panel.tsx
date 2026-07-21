@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { RentReviewCompletedCaseSummary } from '@/components/rent-review/rent-review-completed-case-summary';
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewFullAuditLog } from '@/components/rent-review/rent-review-full-audit-log';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,8 @@ export function RentReviewCompletedPanel({
 
   return (
     <div className="space-y-4">
+      <RentReviewCompletedCaseSummary detail={detail} />
+
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-4 text-sm font-semibold">Completed</p>
 
