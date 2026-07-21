@@ -18,7 +18,6 @@ import {
 import { cn } from '@/lib/utils';
 
 const TAB_ICONS: Record<string, LucideIcon> = {
-  Overview: Building2,
   Documents: FileText,
   Fees: Percent,
   'Rent Review': RefreshCw,
@@ -28,16 +27,29 @@ const TAB_ICONS: Record<string, LucideIcon> = {
   Accounting: Wallet,
   Tribunal: Gavel,
   Archive: Archive,
+  Overview: Building2,
+};
+
+/** User-facing labels (internal tab ids stay stable for routing). */
+const TAB_DISPLAY_LABELS: Record<string, string> = {
+  Documents: 'Documents',
+  Fees: 'Fees',
+  'Rent Review': 'Rent Review',
+  Leasing: 'Leasing',
+  Maintenance: 'Repair',
+  Inspection: 'Inspection',
+  Accounting: 'Accounting',
+  Tribunal: 'Tribunal',
+  Archive: 'Archive',
 };
 
 /** Compact labels for narrow mobile columns. */
 const TAB_SHORT_LABELS: Record<string, string> = {
-  Overview: 'Overview',
   Documents: 'Docs',
   Fees: 'Fees',
-  'Rent Review': 'Rent',
+  'Rent Review': 'Rent Review',
   Leasing: 'Leasing',
-  Maintenance: 'Maint.',
+  Maintenance: 'Repair',
   Inspection: 'Inspect',
   Accounting: 'Accounts',
   Tribunal: 'Tribunal',
@@ -45,7 +57,7 @@ const TAB_SHORT_LABELS: Record<string, string> = {
 };
 
 const TAB_GROUP_ORDER = [
-  ['Overview', 'Documents', 'Fees'],
+  ['Documents', 'Fees'],
   ['Rent Review', 'Leasing', 'Maintenance', 'Inspection'],
   ['Accounting', 'Tribunal', 'Archive'],
 ] as const;
@@ -77,7 +89,10 @@ function PropertyTabButton<T extends string>({
 }) {
   const Icon = TAB_ICONS[tab] ?? Building2;
   const isActive = active === tab;
-  const label = variant === 'mobile' ? (TAB_SHORT_LABELS[tab] ?? tab) : tab;
+  const label =
+    variant === 'mobile'
+      ? (TAB_SHORT_LABELS[tab] ?? TAB_DISPLAY_LABELS[tab] ?? tab)
+      : (TAB_DISPLAY_LABELS[tab] ?? tab);
 
   if (variant === 'mobile') {
     return (
@@ -87,7 +102,7 @@ function PropertyTabButton<T extends string>({
         onClick={() => onChange(tab)}
         aria-current={isActive ? 'page' : undefined}
         className={cn(
-          'flex min-w-[4.5rem] shrink-0 snap-center flex-col items-center gap-1 px-2 py-2.5 transition-colors',
+          'flex min-w-[4.75rem] shrink-0 snap-center flex-col items-center gap-1 px-2 py-2.5 transition-colors',
           isActive ? 'text-primary' : 'text-muted-foreground active:text-foreground',
         )}
       >
@@ -99,7 +114,12 @@ function PropertyTabButton<T extends string>({
         >
           <Icon className="size-4" aria-hidden />
         </span>
-        <span className={cn('max-w-[4.5rem] truncate text-[10px] leading-tight font-medium', isActive && 'font-semibold')}>
+        <span
+          className={cn(
+            'max-w-[4.75rem] truncate text-[10px] leading-tight font-medium',
+            isActive && 'font-semibold',
+          )}
+        >
           {label}
         </span>
         <span
@@ -177,10 +197,7 @@ export function PropertyTabBar<T extends string>({
           {groups.map((group, groupIndex) => (
             <div key={group.join('-')} className="flex shrink-0 items-center">
               {groupIndex > 0 ? (
-                <div
-                  className="bg-border/70 mx-1 h-8 w-px shrink-0"
-                  aria-hidden
-                />
+                <div className="bg-border/70 mx-1 h-8 w-px shrink-0" aria-hidden />
               ) : null}
               {group.map((tab) => (
                 <PropertyTabButton

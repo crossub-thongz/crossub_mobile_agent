@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
+import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { Button } from '@/components/ui/button';
 import {
   applySortDirection,
@@ -44,14 +45,14 @@ type PropertySortKey =
   | 'agency'
   | 'pm'
   | 'createdAt'
-  | 'reminder'
+  | 'messages'
   | 'endOfManagement';
 
 export function PropertyListTable({
   properties,
   agencies,
   variant = 'active',
-  actionCountFor,
+  messageUnreadFor,
   rowHref,
   onDelete,
   canManage,
@@ -59,7 +60,7 @@ export function PropertyListTable({
   properties: Property[];
   agencies: Agency[];
   variant?: 'active' | 'archived';
-  actionCountFor: (propertyId: string) => number;
+  messageUnreadFor?: (propertyId: string) => number;
   rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
   canManage?: boolean;
@@ -96,8 +97,11 @@ export function PropertyListTable({
         case 'createdAt':
           cmp = compareSortTime(propertyCreatedAtIso(a), propertyCreatedAtIso(b));
           break;
-        case 'reminder':
-          cmp = compareNumbers(actionCountFor(a.id), actionCountFor(b.id));
+        case 'messages':
+          cmp = compareNumbers(
+            messageUnreadFor?.(a.id) ?? 0,
+            messageUnreadFor?.(b.id) ?? 0,
+          );
           break;
         case 'endOfManagement':
           cmp = compareSortTime(a.endOfManagementDate, b.endOfManagementDate);
@@ -106,7 +110,7 @@ export function PropertyListTable({
       return applySortDirection(cmp, sortDirection);
     });
     return rows;
-  }, [actionCountFor, agencies, properties, sortDirection, sortKey]);
+  }, [agencies, messageUnreadFor, properties, sortDirection, sortKey]);
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -173,12 +177,12 @@ export function PropertyListTable({
                 />
               ) : (
                 <SortableTableHeader
-                  label="Reminder"
-                  sortKey="reminder"
+                  label="Messages"
+                  sortKey="messages"
                   activeKey={sortKey}
                   direction={sortDirection}
                   onSort={onSort}
-                  align="right"
+                  align="center"
                 />
               )}
               <th className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -188,7 +192,7 @@ export function PropertyListTable({
           </thead>
           <tbody className="divide-y">
             {sorted.map((property) => {
-              const actionCount = actionCountFor(property.id);
+              const messageUnread = messageUnreadFor?.(property.id) ?? 0;
               const isDraft = property.registryIntakeComplete === false;
               const pmName = property.propertyManager?.trim();
               const pmHref =
@@ -202,7 +206,7 @@ export function PropertyListTable({
                   key={property.id}
                   className={cn(
                     'transition-colors hover:bg-muted/20',
-                    !isArchived && actionCount > 0 && 'bg-destructive/[0.03]',
+                    !isArchived && messageUnread > 0 && 'bg-primary/[0.03]',
                     isArchived && 'bg-muted/10',
                   )}
                 >
@@ -258,14 +262,7 @@ export function PropertyListTable({
                     </td>
                   ) : (
                     <td className="px-3 py-3 text-center">
-                      <span
-                        className={cn(
-                          'text-xs font-semibold tabular-nums',
-                          actionCount > 0 ? 'text-destructive' : 'text-muted-foreground',
-                        )}
-                      >
-                        {actionCount}
-                      </span>
+                      <MessageUnreadBadge count={messageUnread} size="md" />
                     </td>
                   )}
                   <td className="px-3 py-3">

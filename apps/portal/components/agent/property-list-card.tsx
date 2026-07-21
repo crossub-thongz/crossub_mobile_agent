@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight, UserRound } from 'lucide-react';
 
+import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { NeedActionBadge } from '@/components/agent/need-action-badge';
 import {
   propertyPhoneBookInitials,
@@ -21,10 +22,12 @@ const STATUS_STYLES: Record<Property['leaseStatus'], string> = {
 export function PropertyListCard({
   property,
   actionCount,
+  messageUnread = 0,
   href,
 }: {
   property: Property;
   actionCount: number;
+  messageUnread?: number;
   href: string;
 }) {
   const subtitle = propertyPhoneBookSubtitle(property);
@@ -35,18 +38,13 @@ export function PropertyListCard({
       href={href}
       className={cn(
         'group relative flex items-center gap-3 rounded-2xl border bg-card px-3 py-3.5 transition-all active:scale-[0.99]',
-        actionCount > 0
-          ? 'border-destructive/25 shadow-sm shadow-destructive/5'
+        messageUnread > 0
+          ? 'border-primary/25 shadow-sm shadow-primary/5'
           : 'border-border hover:border-primary/20 hover:shadow-md hover:shadow-primary/5',
       )}
     >
       <div
-        className={cn(
-          'flex size-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold tabular-nums',
-          actionCount > 0
-            ? 'bg-destructive/10 text-destructive'
-            : 'bg-primary/10 text-primary',
-        )}
+        className="bg-primary/10 text-primary flex size-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold tabular-nums"
         aria-hidden
       >
         {initials}
@@ -64,7 +62,14 @@ export function PropertyListCard({
           </span>
           {actionCount > 0 ? <NeedActionBadge count={actionCount} size="sm" /> : null}
         </div>
-        <p className="mt-1 font-semibold leading-snug">{property.address}</p>
+        <p
+          className={cn(
+            'mt-1 leading-snug',
+            messageUnread > 0 ? 'font-bold' : 'font-semibold',
+          )}
+        >
+          {property.address}
+        </p>
         <p className="text-muted-foreground truncate text-xs">{property.suburb}</p>
         <p className="text-muted-foreground mt-1 flex items-center gap-1 truncate text-xs">
           <UserRound className="size-3 shrink-0 opacity-70" aria-hidden />
@@ -80,7 +85,10 @@ export function PropertyListCard({
         </p>
       </div>
 
-      <ChevronRight className="text-muted-foreground size-4 shrink-0 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+      <div className="flex shrink-0 items-center gap-2">
+        <MessageUnreadBadge count={messageUnread} size="lg" />
+        <ChevronRight className="text-muted-foreground size-4 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+      </div>
     </Link>
   );
 }

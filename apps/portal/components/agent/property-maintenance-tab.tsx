@@ -174,9 +174,9 @@ export function PropertyMaintenanceTab({
       <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold">Maintenance cases</h3>
+        <h3 className="text-sm font-semibold">Repair cases</h3>
         <p className="text-muted-foreground text-xs">
-          Active maintenance jobs in progress. Click a case to open the workflow popup.
+          Active repair jobs in progress. Click a case to open the workflow popup.
         </p>
         <PropertyJobCasesTable
           rows={activeJobRows}
@@ -186,8 +186,8 @@ export function PropertyMaintenanceTab({
             const request = maintenance.find((item) => item.id === row.id) ?? null;
             if (request) setDeleteTarget(request);
           }}
-          emptyTitle="No maintenance jobs"
-          emptyDescription="Log a maintenance job for this property to begin the workflow."
+          emptyTitle="No repair jobs"
+          emptyDescription="Add a repair job for this property to begin the workflow."
         />
       </section>
 

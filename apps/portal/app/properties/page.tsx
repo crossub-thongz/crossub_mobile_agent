@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { GiiPortfolioBanner } from '@/components/agent/gii-portfolio-banner';
 import { PageIntro } from '@/components/agent/page-intro';
 import { PropertyDiscardDraftDialog } from '@/components/agent/property-discard-draft-dialog';
 import { PropertyEndManagementDialog } from '@/components/agent/property-end-management-dialog';
@@ -18,7 +17,9 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import { propertyDetail, propertyNew, propertyRegistryResume } from '@/constants/routes';
+import { unreadMessagesForProperty } from '@/lib/communications-log';
 import type { Property } from '@/lib/types';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -43,6 +44,7 @@ export default function PropertiesPage() {
     endPropertyManagement,
     deleteDraftProperty,
     refreshArchivedProperties,
+    messages,
   } = useAgentData();
   const [filter, setFilter] = useState(
     urlFilter && FILTERS.some((f) => f.id === urlFilter) ? urlFilter : 'all',
@@ -95,6 +97,17 @@ export default function PropertiesPage() {
 
   const needActionCount = properties.filter((p) => getPropertyActions(p.id).length > 0).length;
 
+  const messageUnreadFor = useMemo(
+    () => (property: Property) =>
+      unreadMessagesForProperty(property.id, messages, formatPropertyFullAddress(property)),
+    [messages],
+  );
+
+  const totalUnreadMessages = useMemo(
+    () => list.reduce((sum, property) => sum + messageUnreadFor(property), 0),
+    [list, messageUnreadFor],
+  );
+
   const confirmDiscardDraft = async () => {
     if (!pendingDelete) return;
     setDiscardingDraft(true);
@@ -126,15 +139,20 @@ export default function PropertiesPage() {
   return (
     <AgentShell title="Properties">
       <div className="space-y-4">
-        <PageIntro
-          description={
-            isArchivedView
-              ? 'Properties whose management has ended. These records are kept for reference.'
-              : 'Your managed properties — like a phone book. Tap one, then ask Gii to create jobs or check status.'
-          }
-        />
-
-        {!isArchivedView ? <GiiPortfolioBanner /> : null}
+        <div className="flex items-start justify-between gap-3">
+          <PageIntro
+            description={
+              isArchivedView
+                ? 'Properties whose management has ended. These records are kept for reference.'
+                : 'Your managed properties — like a phone book. Red circles show unread messages (WeChat-style).'
+            }
+          />
+          {!isArchivedView && totalUnreadMessages > 0 ? (
+            <span className="bg-[#fa5151] mt-1 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white tabular-nums">
+              {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
+            </span>
+          ) : null}
+        </div>
 
         {/* {needActionCount > 0 && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
@@ -198,6 +216,7 @@ export default function PropertiesPage() {
             agencies={agencies}
             variant={isArchivedView ? 'archived' : 'active'}
             actionCountFor={(id) => getPropertyActions(id).length}
+            messageUnreadFor={messageUnreadFor}
             rowHref={(property) =>
               isArchivedView
                 ? propertyDetail(property.id)

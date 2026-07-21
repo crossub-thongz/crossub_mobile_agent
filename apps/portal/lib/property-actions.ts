@@ -164,7 +164,7 @@ export function getPropertyNeedActions(
         propertyAddress: addr,
         label: 'Tribunal action required',
         category: 'Tribunal',
-        href: tribunalDetail(t.id, fromProperty(property.id, 'Overview')),
+        href: tribunalDetail(t.id, fromProperty(property.id, 'Documents')),
         priority: 'urgent',
       });
     }

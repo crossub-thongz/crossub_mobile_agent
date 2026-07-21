@@ -3,25 +3,27 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ChevronLeft,
   Menu,
   Search,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
+import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
-import { CrossubLogo } from '@/components/brand/crossub-logo';
+import { ShellBackButton } from '@/components/layout/shell-back-button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess } from '@/lib/portal-service-level';
+import { totalUnreadMessages } from '@/lib/communications-log';
+import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { cn, displayName } from '@/lib/utils';
 
 function isActive(pathname: string, href: string): boolean {
@@ -60,7 +62,8 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { hasFullManagementAccess, unreadNotificationCount } = useAgentData();
+  const { hasFullManagementAccess, unreadNotificationCount, messages } = useAgentData();
+  const propertyUnread = totalUnreadMessages(messages);
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = [
     ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
@@ -110,17 +113,9 @@ export function AgentShell({
           )}
         >
           <div className="flex h-14 items-center justify-between gap-2 px-3">
-            {backHref ? (
-              <Link
-                href={backHref}
-                className="text-primary flex shrink-0 items-center gap-0.5 text-sm font-medium"
-              >
-                <ChevronLeft className="size-4" />
-                {backLabel}
-              </Link>
-            ) : (
-              <CrossubLogo size="sm" />
-            )}
+            <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
+              <ShellBackButton backHref={backHref} backLabel={backLabel} />
+            </Suspense>
 
             <div className="flex shrink-0 items-center gap-1">
               {!hideGlobalFabs && !title ? (
@@ -157,15 +152,14 @@ export function AgentShell({
           <header className="border-border bg-background/95 z-40 hidden shrink-0 flex-col gap-2 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
-                {backHref && (
-                  <Link
-                    href={backHref}
-                    className="text-primary hover:bg-primary/5 flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium transition"
-                  >
-                    <ChevronLeft className="size-4" />
-                    {backLabel}
-                  </Link>
-                )}
+                <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
+                  <ShellBackButton
+                    backHref={backHref}
+                    backLabel={backLabel}
+                    showLogoOnHome={false}
+                    className="hover:bg-primary/5 shrink-0 rounded-lg px-2 py-1.5 transition"
+                  />
+                </Suspense>
                 <div className="min-w-0">
                   <h1 className="truncate text-lg font-semibold">{title}</h1>
                   {user && (
@@ -187,6 +181,19 @@ export function AgentShell({
                 </Link>
               </div>
             </div>
+          </header>
+        )}
+
+        {!title && !immersive && !isShellHomePath(pathname) && (
+          <header className="border-border bg-background/95 z-40 hidden shrink-0 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
+            <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
+              <ShellBackButton
+                backHref={backHref}
+                backLabel={backLabel}
+                showLogoOnHome={false}
+                className="hover:bg-primary/5 rounded-lg px-2 py-1.5 transition"
+              />
+            </Suspense>
           </header>
         )}
 
@@ -273,6 +280,7 @@ export function AgentShell({
           <div className="flex h-16 items-stretch justify-around px-1">
             {primaryNav.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
+              const unreadBadge = href === ROUTES.PROPERTIES ? propertyUnread : 0;
               return (
                 <Link
                   key={href}
@@ -282,7 +290,16 @@ export function AgentShell({
                     active ? 'text-primary' : 'text-muted-foreground',
                   )}
                 >
-                  <Icon className={cn('size-5', active && 'stroke-[2.5]')} />
+                  <span className="relative">
+                    <Icon className={cn('size-5', active && 'stroke-[2.5]')} />
+                    {unreadBadge > 0 ? (
+                      <MessageUnreadBadge
+                        count={unreadBadge}
+                        size="sm"
+                        className="absolute -top-1.5 -right-2 ring-2 ring-background"
+                      />
+                    ) : null}
+                  </span>
                   <span className="max-w-full truncate text-center leading-tight">{label}</span>
                 </Link>
               );

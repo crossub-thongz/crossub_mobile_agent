@@ -98,7 +98,7 @@ export function tabActionsFor(
       return [
         {
           id: 'start_leasing',
-          label: 'Add New Leasing',
+          label: 'Add New Leasing/Open',
           description: 'Open another new leasing cycle for this property',
           primary: true,
         },
@@ -126,8 +126,8 @@ export function tabActionsFor(
       return [
         {
           id: 'start_maintenance',
-          label: 'Log maintenance job',
-          description: 'Create a maintenance request for this property',
+          label: 'Add new repair job',
+          description: 'Create a repair request for this property',
           primary: true,
         },
       ];

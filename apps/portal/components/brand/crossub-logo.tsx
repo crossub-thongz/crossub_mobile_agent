@@ -17,27 +17,27 @@ export function CrossubLogo({
   showTagline?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const heights = { sm: 24, md: 32, lg: 44 } as const;
-  const h = heights[size];
+  const sizes = { sm: 28, md: 36, lg: 56 } as const;
+  const dimension = sizes[size];
 
   const content = (
-    <div className={cn('flex flex-col', className)}>
-      <div className="rounded-md bg-white px-1.5 py-0.5">
+    <div className={cn('flex flex-col items-start', className)}>
+      <div className="overflow-hidden rounded-lg">
         <Image
-        src="/crossub-logo.png"
-        alt="CROSSUB"
-        width={Math.round(h * 3.2)}
-        height={h}
-        className="h-auto w-auto object-contain"
-        style={{ height: h, width: 'auto' }}
-        priority
-      />
+          src="/crossub-logo.png"
+          alt="CROSSUB"
+          width={dimension}
+          height={dimension}
+          className="size-auto object-contain"
+          style={{ width: dimension, height: dimension }}
+          priority
+        />
       </div>
-      {showTagline && (
-        <p className="text-muted-foreground mt-1 text-[9px] font-medium tracking-[0.2em] uppercase">
+      {showTagline ? (
+        <p className="text-muted-foreground mt-1.5 text-[9px] font-medium tracking-[0.2em] uppercase">
           Your property partner
         </p>
-      )}
+      ) : null}
     </div>
   );
 

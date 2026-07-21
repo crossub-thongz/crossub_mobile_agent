@@ -11,7 +11,7 @@ import { appendDetailNavContext, fromProperty } from '@/lib/detail-navigation';
 const ACTIONS = [
   { id: 'maintenance', label: 'Maintenance request', icon: Wrench, href: (id: string) => `${ROUTES.MAINTENANCE}?property=${id}` },
   { id: 'inspection', label: 'Add inspection', icon: ClipboardList, href: (id: string) => inspectionNew(id) },
-  { id: 'rent-review', label: 'Rent review', icon: TrendingUp, href: (id: string) => appendDetailNavContext(ROUTES.RENT_REVIEW, fromProperty(id, 'Overview')) },
+  { id: 'rent-review', label: 'Rent review', icon: TrendingUp, href: (id: string) => appendDetailNavContext(ROUTES.RENT_REVIEW, fromProperty(id, 'Documents')) },
   { id: 'tribunal', label: 'Tribunal case', icon: Gavel, href: () => ROUTES.TRIBUNAL },
   { id: 'message', label: 'Message', icon: MessageSquare, href: () => messagesNew() },
 ] as const;

@@ -515,10 +515,10 @@ export function PropertyWorkflowCreateDialog({
   };
 
   const titles: Record<PropertyWorkflowActionId, string> = {
-    start_leasing: 'Add New Leasing',
+    start_leasing: 'Add New Leasing/Open',
     start_rent_review: 'Add rent review',
     start_end_leasing: 'End Leasing',
-    start_maintenance: 'Log maintenance job',
+    start_maintenance: 'Add new repair job',
     schedule_open_inspection: 'Schedule open inspection',
     schedule_ingoing_inspection: 'Schedule ingoing inspection',
     schedule_outgoing_inspection: 'Schedule outgoing inspection',

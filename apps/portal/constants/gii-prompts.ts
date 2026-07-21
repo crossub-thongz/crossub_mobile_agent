@@ -2,8 +2,8 @@
 export const PROPERTY_GII_PROMPTS = [
   {
     id: 'maintenance',
-    label: 'Log maintenance',
-    prompt: 'Create a maintenance job for this property.',
+    label: 'Add repair job',
+    prompt: 'Create a repair job for this property.',
   },
   {
     id: 'inspection',

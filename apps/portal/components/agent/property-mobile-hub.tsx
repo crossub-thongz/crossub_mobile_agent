@@ -81,7 +81,7 @@ export function PropertyMobileHub({
 
   return (
     <div className="space-y-3 lg:hidden">
-      <button
+      {/* <button
         type="button"
         onClick={() => openGiiForProperty()}
         className="w-full rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/12 via-card to-emerald-500/8 p-4 text-left shadow-sm transition active:scale-[0.99]"
@@ -98,7 +98,7 @@ export function PropertyMobileHub({
             </p>
           </div>
         </div>
-      </button>
+      </button> */}
 
       {/* Quick Gii prompt chips — hidden for now; use Ask Gii or Create a case tiles instead.
       <div className="flex flex-wrap gap-1.5">

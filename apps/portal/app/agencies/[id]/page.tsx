@@ -10,7 +10,8 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { Agency } from '@/lib/types';
 import { propertyDetail, ROUTES } from '@/constants/routes';
-import { cn } from '@/lib/utils';
+import { unreadMessagesForProperty } from '@/lib/communications-log';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 const STATUS_STYLES: Record<Agency['status'], string> = {
   ACTIVE: 'bg-primary/15 text-primary',
@@ -27,7 +28,7 @@ const STATUS_LABEL: Record<Agency['status'], string> = {
 export default function AgencyDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { agencies, properties, getPropertyActions } = useAgentData();
+  const { agencies, properties, getPropertyActions, messages } = useAgentData();
   const agency = agencies.find((a) => a.id === id);
 
   if (!agency) notFound();
@@ -127,6 +128,11 @@ export default function AgencyDetailPage() {
                 key={p.id}
                 property={p}
                 actionCount={getPropertyActions(p.id).length}
+                messageUnread={unreadMessagesForProperty(
+                  p.id,
+                  messages,
+                  formatPropertyFullAddress(p),
+                )}
                 href={propertyDetail(p.id)}
               />
             ))

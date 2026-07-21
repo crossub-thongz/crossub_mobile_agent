@@ -9,6 +9,7 @@ import {
   formatStrataMeta,
   hasContact,
 } from '@/components/agent/property-contact-tile';
+import { PropertyTenancyManagementSections } from '@/components/agent/property-tenancy-management-sections';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import type {
@@ -18,6 +19,7 @@ import type {
   LeasingRecord,
   Property,
   TenantSelectionCase,
+  VacatingCase,
 } from '@/lib/types';
 
 function StatCell({
@@ -67,15 +69,16 @@ function formatKeyFobCount(count: number | null | undefined): string {
   return count === 1 ? '1 fob' : `${count} fobs`;
 }
 
-/** Registry strip merged into the property profile header card. */
+/** Collapsible property, tenancy, and management details in the profile header card. */
 export function PropertyProfileDetails({
   property,
   propertyId,
   currentLease,
   inspections: _inspections,
-  propertyDocs: _propertyDocs,
+  propertyDocs,
   leasingCycles,
   tenantSelections,
+  vacatingCases = [],
   onViewBondLodgement: _onViewBondLodgement,
   onRefresh,
 }: {
@@ -86,6 +89,7 @@ export function PropertyProfileDetails({
   propertyDocs: AgentDocument[];
   leasingCycles?: LeasingCycle[];
   tenantSelections?: TenantSelectionCase[];
+  vacatingCases?: VacatingCase[];
   onViewBondLodgement?: () => void;
   onRefresh?: () => void;
 }) {
@@ -99,7 +103,7 @@ export function PropertyProfileDetails({
     currentLease,
   );
 
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
 
   const furnished =
@@ -133,23 +137,21 @@ export function PropertyProfileDetails({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-2 text-left"
+        className="flex w-full items-center gap-2 text-left"
         aria-expanded={open}
       >
         <h3 className="text-sm font-semibold">Property details</h3>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="text-muted-foreground text-xs capitalize">{property.leaseStatus}</span>
-          {open ? (
-            <ChevronUp className="text-muted-foreground size-4 shrink-0" />
-          ) : (
-            <ChevronDown className="text-muted-foreground size-4 shrink-0" />
-          )}
-        </span>
+        {open ? (
+          <ChevronUp className="text-muted-foreground size-4 shrink-0" aria-hidden />
+        ) : (
+          <ChevronDown className="text-muted-foreground size-4 shrink-0" aria-hidden />
+        )}
+        <span className="text-muted-foreground ml-auto text-xs capitalize">{property.leaseStatus}</span>
       </button>
 
       {open ? (
-        <>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="mt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <StatCell
               label="Furnished"
               value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
@@ -158,7 +160,7 @@ export function PropertyProfileDetails({
             <StatCell label="Key fob" value={formatKeyFobCount(sync.keyFobCount)} />
           </div>
 
-          <div className="mt-2 space-y-2">
+          <div className="space-y-2">
             {hasContact(buildingManager) ? (
               <ContactTile
                 title="Building manager"
@@ -193,14 +195,19 @@ export function PropertyProfileDetails({
               />
             )}
           </div>
-        </>
-      ) : (
-        <p className="text-muted-foreground mt-2 text-xs">
-          {registry.propertyType ?? 'Property'}
-          {registry.furnished != null ? ` · ${registry.furnished ? 'Furnished' : 'Unfurnished'}` : ''}
-          {sync.keyFobCount != null ? ` · ${formatKeyFobCount(sync.keyFobCount)}` : ''}
-        </p>
-      )}
+
+          <PropertyTenancyManagementSections
+            property={property}
+            propertyId={propertyId}
+            currentLease={currentLease}
+            propertyDocs={propertyDocs}
+            leasingCycles={leasingCycles}
+            tenantSelections={tenantSelections}
+            vacatingCases={vacatingCases}
+            onRefresh={onRefresh}
+          />
+        </div>
+      ) : null}
 
       <PropertyBuildingContactsDialog
         open={buildingDialogOpen}

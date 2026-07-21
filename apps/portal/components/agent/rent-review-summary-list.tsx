@@ -67,7 +67,7 @@ export function RentReviewSummaryList({
         open={selectedId !== null}
         onClose={() => setSelectedId(null)}
         review={selected}
-        navContext={fromProperty(propertyId, 'Overview')}
+        navContext={fromProperty(propertyId, 'Documents')}
       />
     </>
   );

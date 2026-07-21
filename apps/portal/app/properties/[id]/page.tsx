@@ -11,11 +11,10 @@ import {
 } from 'lucide-react';
 
 import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
+import { PropertyGiiPanel } from '@/components/agent/property-gii-panel';
 import { PropertyInspectionTab } from '@/components/agent/property-inspection-tab';
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-tab';
-import { PropertyMobileHub } from '@/components/agent/property-mobile-hub';
-import { PropertyOverviewTab } from '@/components/agent/property-overview-tab';
 import { PropertyRemindersDialog } from '@/components/agent/property-reminders-dialog';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
@@ -66,13 +65,13 @@ import {
 type Tab = PropertyDetailTab;
 
 function normalizeTab(raw: string | null, allowedTabs: readonly Tab[]): Tab {
-  if (raw === 'Tenancy' || raw === 'Communication') {
+  if (raw === 'Overview' || raw === 'Tenancy' || raw === 'Communication') {
     if (allowedTabs.includes('Leasing')) return 'Leasing';
-    return allowedTabs[0] ?? 'Overview';
+    return allowedTabs[0] ?? 'Documents';
   }
   if (raw === 'History' && allowedTabs.includes('Archive')) return 'Archive';
   if (allowedTabs.includes(raw as Tab)) return raw as Tab;
-  return allowedTabs[0] ?? 'Overview';
+  return allowedTabs[0] ?? 'Documents';
 }
 
 export default function PropertyDetailPage() {
@@ -146,7 +145,7 @@ export default function PropertyDetailPage() {
         : [...PROPERTY_DETAIL_TABS],
     [agencies, property],
   );
-  const [tab, setTab] = useState<Tab>('Overview');
+  const [tab, setTab] = useState<Tab>('Documents');
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
   const [selectedRentReviewId, setSelectedRentReviewId] = useState<string | null>(null);
   const [leasingChatOpen, setLeasingChatOpen] = useState(false);
@@ -357,7 +356,9 @@ export default function PropertyDetailPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (tab !== 'Overview') setTab('Overview');
+                    document
+                      .getElementById('property-gii-panel')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     setRemindersOpen(true);
                   }}
                   className="flex items-center gap-2 rounded-xl border-2 border-amber-500/60 bg-amber-500/15 px-3 py-2 text-amber-950 shadow-sm transition hover:bg-amber-500/25 dark:text-amber-100"
@@ -373,57 +374,23 @@ export default function PropertyDetailPage() {
             </div>
           </div>
 
-          {tab === 'Overview' ? (
-            <PropertyProfileDetails
-              property={property}
-              propertyId={id}
-              currentLease={currentLease}
-              inspections={tasks.inspections}
-              propertyDocs={propertyDocs}
-              leasingCycles={propertyLeasingCycles}
-              tenantSelections={propertyLeasingCases}
-              onViewBondLodgement={viewBondLodgement}
-              onRefresh={() => void refresh()}
-            />
-          ) : null}
+          <PropertyProfileDetails
+            property={property}
+            propertyId={id}
+            currentLease={currentLease}
+            inspections={tasks.inspections}
+            propertyDocs={propertyDocs}
+            leasingCycles={propertyLeasingCycles}
+            tenantSelections={propertyLeasingCases}
+            vacatingCases={propertyVacatingCases}
+            onViewBondLodgement={viewBondLodgement}
+            onRefresh={() => void refresh()}
+          />
         </div>
 
         <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />
 
-        {tab === 'Overview' ? (
-          <PropertyMobileHub
-            property={property}
-            propertyId={id}
-            leasingCycles={propertyLeasingCycles}
-            tenantSelections={propertyLeasingCases}
-            currentLease={currentLease}
-            readOnly={isArchivedProperty}
-            onWorkflowCreated={() => void refresh()}
-          />
-        ) : null}
-
-        {tab === 'Overview' && (
-          <PropertyOverviewTab
-            property={property}
-            propertyId={id}
-            maintenance={tasks.maintenance}
-            inspections={tasks.inspections}
-            propertyDocs={propertyDocs}
-            leasing={leasing}
-            currentLease={currentLease}
-            rentReviewDecisions={decisions}
-            tenancyRentReviews={tenancyRentReviews}
-            leasingCycles={propertyLeasingCycles}
-            tenantSelections={propertyLeasingCases}
-            vacatingCases={propertyVacatingCases}
-            tribunalCases={tribunalCases.filter((t) => t.propertyId === id)}
-            accounting={acct}
-            onRefresh={() => void refresh()}
-            onViewBondLodgement={viewBondLodgement}
-            onViewRentReview={setSelectedRentReviewId}
-            onOpenInspectionCreated={openPropertyInspection}
-          />
-        )}
+        <PropertyGiiPanel propertyId={id} propertyAddress={fullAddress} />
 
         {tab === 'Documents' && (
           <PropertyDocumentsTab

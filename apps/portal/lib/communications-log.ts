@@ -72,6 +72,29 @@ export type PropertyMessageGroup = {
 };
 
 /** Group threads by property (newest activity first within each group). */
+/** Total unread messages across all threads (WeChat-style nav badge). */
+export function totalUnreadMessages(threads: MessageThread[]): number {
+  return threads.reduce((sum, thread) => sum + (thread.unread > 0 ? thread.unread : 0), 0);
+}
+
+/** Total unread messages across all threads for one property (WeChat-style phone book badge). */
+export function unreadMessagesForProperty(
+  propertyId: string,
+  threads: MessageThread[],
+  propertyAddress?: string,
+): number {
+  const normalizedAddress = propertyAddress?.trim().toLowerCase();
+  return threads
+    .filter((thread) => {
+      if (thread.propertyId === propertyId) return true;
+      if (!thread.propertyId && normalizedAddress) {
+        return thread.propertyAddress.trim().toLowerCase() === normalizedAddress;
+      }
+      return false;
+    })
+    .reduce((sum, thread) => sum + (thread.unread > 0 ? thread.unread : 0), 0);
+}
+
 export function groupThreadsByProperty(threads: MessageThread[]): PropertyMessageGroup[] {
   const groups = new Map<string, PropertyMessageGroup>();
   for (const thread of threads) {

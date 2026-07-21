@@ -150,13 +150,13 @@ export function ShellHeaderQuickActions({
   );
 }
 
-/** Mobile floating Gii launcher — sits above the bottom tab bar. */
-export function MobileGiiFab() {
+/** Mobile floating Gii launcher — hidden on property detail (inline Gii panel instead). */
+export function MobileGiiFab({ pathname }: { pathname: string }) {
   const activePanel = useShellDockStore((s) => s.activePanel);
   const openGii = useShellDockStore((s) => s.openGii);
   const mobileGiiOpen = activePanel === 'gii';
 
-  if (mobileGiiOpen) return null;
+  if (propertyIdFromPath(pathname) || mobileGiiOpen) return null;
 
   return (
     <div
@@ -188,7 +188,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
 
   return (
     <>
-      <MobileGiiFab />
+      <MobileGiiFab pathname={pathname} />
       <CommunicationDockSheet
         open={activePanel === 'communication'}
         onClose={closePanel}
@@ -200,7 +200,7 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         onClose={closePanel}
         propertyId={propertyId}
       />
-      {mobileGiiOpen ? (
+      {mobileGiiOpen && !propertyId ? (
         <div className="lg:hidden">
           <GiiAssistant open variant="modal" onClose={closePanel} />
         </div>

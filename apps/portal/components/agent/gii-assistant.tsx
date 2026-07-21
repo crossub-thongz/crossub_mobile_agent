@@ -48,9 +48,9 @@ function buildPropertyManagerGreeting(
   const name = agentName?.trim();
   const lead = name ? `Hi ${name}` : 'Hi';
   if (actionCount > 0) {
-    return `${lead} — I'm your Property Manager for ${address}. ${actionCount} item${actionCount === 1 ? '' : 's'} need attention here. Ask me to create jobs or check status.`;
+    return `${lead} — I'm your Property Manager for ${address}. ${actionCount} job${actionCount === 1 ? '' : 's'} need your attention — ask me for details or type Approve.`;
   }
-  return `${lead} — I'm your Property Manager for ${address}. Ask me to log maintenance, schedule inspections, start leasing, or check what's happening.`;
+  return `${lead} — I'm your Property Manager for ${address}. Ask me to add a repair, schedule inspections, start leasing, or check status.`;
 }
 
 type ChatLine = {
@@ -101,7 +101,7 @@ export function GiiAssistant({
 }: {
   open: boolean;
   onClose?: () => void;
-  variant?: 'modal' | 'panel';
+  variant?: 'modal' | 'panel' | 'embedded';
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -122,6 +122,8 @@ export function GiiAssistant({
   // it does not need to trigger a render.
   const contextRef = useRef<GiiContext | null>(null);
   const isPanel = variant === 'panel';
+  const isEmbedded = variant === 'embedded';
+  const isInline = isPanel || isEmbedded;
 
   const pathPropertyId = propertyIdFromPath(pathname);
   const scopedProperty = useMemo(() => {
@@ -156,6 +158,12 @@ export function GiiAssistant({
       contextRef.current = null;
     }
   }, [giiLaunch?.propertyId, scopedProperty?.id]);
+
+  useEffect(() => {
+    if (!scopedProperty?.id) return;
+    setLines([]);
+    initialPromptHandledRef.current = false;
+  }, [scopedProperty?.id]);
 
   useEffect(() => {
     const el = composerRef.current;
@@ -421,12 +429,19 @@ export function GiiAssistant({
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden bg-background',
-        isPanel
-          ? 'h-full max-h-full w-full border-l'
-          : 'h-[min(92vh,680px)] w-full max-w-lg rounded-t-3xl border shadow-2xl sm:rounded-3xl',
+        isEmbedded
+          ? 'h-full max-h-full w-full'
+          : isPanel
+            ? 'h-full max-h-full w-full border-l'
+            : 'h-[min(92vh,680px)] w-full max-w-lg rounded-t-3xl border shadow-2xl sm:rounded-3xl',
       )}
     >
-      <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+      <div
+        className={cn(
+          'flex shrink-0 items-center justify-between border-b px-4 py-3',
+          isEmbedded && 'py-2.5',
+        )}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-600 text-primary-foreground shadow-md">
             <Sparkles className="size-4" />
@@ -434,7 +449,7 @@ export function GiiAssistant({
           <div className="min-w-0">
             <p className="text-sm font-bold">Gii</p>
             <p className="text-muted-foreground truncate text-[10px]">
-              {isPanel
+              {isEmbedded || isPanel
                 ? 'Your Property Manager'
                 : scopedAddress
                   ? `Property Manager · ${scopedAddress}`
@@ -442,7 +457,7 @@ export function GiiAssistant({
             </p>
           </div>
         </div>
-        {!isPanel && onClose ? (
+        {!isInline && onClose ? (
           <button
             type="button"
             onClick={onClose}
@@ -454,7 +469,7 @@ export function GiiAssistant({
         ) : null}
       </div>
 
-      {scopedAddress ? (
+      {scopedAddress && !isEmbedded ? (
         <div className="border-b px-4 py-2">
           <div className="bg-primary/5 flex items-center gap-2 rounded-xl border border-primary/15 px-3 py-2">
             <Building2 className="text-primary size-4 shrink-0" />
@@ -472,7 +487,7 @@ export function GiiAssistant({
             <p className="text-sm font-semibold">Ask Gii, your Property Manager</p>
             <p className="text-muted-foreground mt-1.5 max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
-                ? 'Create maintenance, inspections, or leasing — or ask for a status update.'
+                ? 'Jobs needing your approval appear above. Ask for details, then reply Approve or ask follow-up questions.'
                 : multilingualHint()}
             </p>
           </div>
@@ -604,7 +619,7 @@ export function GiiAssistant({
             }
             rows={4}
             className="min-h-24 max-h-[220px] flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none"
-            autoFocus={isPanel}
+            autoFocus={isInline}
           />
           {query.trim() ? (
             <button
@@ -645,7 +660,7 @@ export function GiiAssistant({
     </div>
   );
 
-  if (isPanel) {
+  if (isInline) {
     return (
       <>
         {shell}

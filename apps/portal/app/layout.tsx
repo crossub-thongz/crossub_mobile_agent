@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   title: 'CROSSUB | Agent App',
   description:
     'Mobile-first agent portal — approvals, properties, inspections, maintenance, rent review, and vacating.',
+  icons: {
+    icon: '/crossub-logo.png',
+    apple: '/crossub-logo.png',
+  },
 };
 
 export const viewport: Viewport = {
