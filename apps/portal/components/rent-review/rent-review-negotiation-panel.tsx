@@ -8,9 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RentReviewNegotiationAuditBadge } from '@/components/rent-review/rent-review-negotiation-audit-badge';
+import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
+import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
+  canRecordTenantResponseOnBehalf,
   canResolveNegotiation,
 } from '@/lib/rent-review/agent-workflow-model';
 import { deriveRentIncreaseOnDate } from '@/lib/rent-review/agent-decision-scheduling';
@@ -19,6 +22,7 @@ import {
   agentProposedWeekly,
   buildNegotiationComparison,
   formatNegotiationDelta,
+  isPendingNegotiation,
   resolveInitialNoticeWeeklyRent,
 } from '@/lib/rent-review/negotiation-display';
 import { formatRentReviewTermLabel } from '@/lib/rent-review-lease-helpers';
@@ -98,6 +102,7 @@ export function RentReviewNegotiationPanel({
   const [auditExpanded, setAuditExpanded] = useState(false);
 
   const pending = canResolveNegotiation(detail);
+  const awaitingResponse = isPendingNegotiation(detail);
   const hasHistory = hasTenantCounterHistory(detail);
   const negotiation = useMemo(() => buildNegotiationComparison(detail), [detail]);
   const counterDelta = formatNegotiationDelta(negotiation.deltaWeekly);
@@ -167,6 +172,56 @@ export function RentReviewNegotiationPanel({
       'Marked non-negotiable',
     );
   };
+
+  const noticeAudit = [...detail.auditLog].reverse().find((e) => e.kind === 'tenant_notices_dispatched');
+  const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
+
+  const downloadNotice = async () => {
+    setBusy(true);
+    try {
+      const blob = await rentReviewApi.downloadNoticeOfRentIncrease(detail.id, {
+        weekly: detail.proposedWeeklyRent ?? undefined,
+        effectiveDate: effectiveDate || undefined,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `notice-of-rent-increase-${detail.id.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Notice of Rent Increase downloaded');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (awaitingResponse) {
+    return (
+      <div className="space-y-4">
+        <section className="rounded-xl border bg-card p-4">
+          <p className="mb-1 text-sm font-semibold">Pending negotiation</p>
+          <p className="text-muted-foreground mb-4 text-xs">
+            The formal notice was sent automatically when the agent decision was saved. Awaiting
+            tenant accept, decline, or counter-offer.
+          </p>
+          <RentReviewTenantNoticeTermsSummary
+            detail={detail}
+            noticeSentAt={noticeAudit?.at}
+            onDownloadNotice={() => void downloadNotice()}
+            downloadBusy={busy}
+          />
+        </section>
+        <p className="text-muted-foreground text-xs">
+          The system sends an automated reminder every 2 days until the tenant responds.
+        </p>
+        {showRecordResponse && !readOnly ? (
+          <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -261,8 +316,7 @@ export function RentReviewNegotiationPanel({
                   {initialNoticeWeekly != null ? (
                     <p className="text-muted-foreground text-[11px] leading-relaxed">
                       At or below {formatCurrency(initialNoticeWeekly)}/wk — emailed to the tenant
-                      directly. Above that amount — a new formal notice is required on Tenant
-                      notified.
+                      directly. Above that amount — return to Agent decision to re-send a formal notice.
                     </p>
                   ) : null}
                   <Button
@@ -299,7 +353,7 @@ export function RentReviewNegotiationPanel({
                   ? 'Review the tenant offer above.'
                   : detail.auditLog.some((e) => e.kind === 'agent_reproposed_after_counter')
                     ? 'Counter-offer emailed to tenant — awaiting their response.'
-                    : 'Negotiation round complete — continue on Tenant notified or Tenant decision.'}
+                    : 'Negotiation round complete — continue on Tenant decision.'}
           </p>
         ) : null}
       </section>

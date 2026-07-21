@@ -24,7 +24,7 @@ function resolveRentReviewStepId(workflowState?: string): string {
     case RENT_REVIEW_WORKFLOW_STATE.NEGOTIATION:
       return 'negotiation';
     case RENT_REVIEW_WORKFLOW_STATE.TENANT_NOTIFIED:
-      return 'tenant_notified';
+      return 'negotiation';
     case RENT_REVIEW_WORKFLOW_STATE.TENANT_REJECTED:
       return 'completed';
     case RENT_REVIEW_WORKFLOW_STATE.TENANT_ACCEPTED:
@@ -40,10 +40,29 @@ function resolveRentReviewStepId(workflowState?: string): string {
   }
 }
 
+function resolveRentReviewStepLabel(review: RentReviewCase, currentStepId: string): string {
+  const state = review.workflowState?.toUpperCase();
+  if (
+    state === RENT_REVIEW_WORKFLOW_STATE.TENANT_NOTIFIED ||
+    (state === RENT_REVIEW_WORKFLOW_STATE.NEGOTIATION && review.tenantResponse === 'pending')
+  ) {
+    return 'Pending negotiation';
+  }
+  if (state === RENT_REVIEW_WORKFLOW_STATE.NEGOTIATION && review.tenantResponse === 'counter') {
+    return 'Counter-offer review';
+  }
+  return RENT_REVIEW_AGENT_STEPS.find((s) => s.id === currentStepId)?.label ?? 'Rent research';
+}
+
 export function rentReviewWorkflowProgress(review: RentReviewCase): CaseWorkflowProgress {
-  return buildCaseWorkflowProgress(
+  const currentStepId = resolveRentReviewStepId(review.workflowState);
+  const progress = buildCaseWorkflowProgress(
     'Rent review workflow',
     RENT_REVIEW_AGENT_STEPS,
-    resolveRentReviewStepId(review.workflowState),
+    currentStepId,
   );
+  return {
+    ...progress,
+    currentStepLabel: resolveRentReviewStepLabel(review, currentStepId),
+  };
 }

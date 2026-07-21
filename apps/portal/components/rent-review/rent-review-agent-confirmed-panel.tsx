@@ -216,7 +216,7 @@ export function RentReviewAgentConfirmedPanel({
           <p className="text-sm font-semibold">Tenant has been notified</p>
           <p className="text-muted-foreground mt-1 text-xs">
             The formal rent increase notice was sent. Agent decision fields are read-only — continue
-            on the Tenant notified step.
+            on Negotiation.
           </p>
         </section>
         <ReadOnlyAgentDecision

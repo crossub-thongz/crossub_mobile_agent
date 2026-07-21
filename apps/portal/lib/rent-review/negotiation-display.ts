@@ -8,6 +8,20 @@ export function hasPendingTenantCounter(detail: RentReviewWorkflowDetail): boole
   );
 }
 
+/** Formal notice sent — awaiting tenant accept, decline, or counter-offer. */
+export function isPendingNegotiation(detail: RentReviewWorkflowDetail): boolean {
+  if (!detail.auditLog.some((e) => e.kind === 'tenant_notices_dispatched')) return false;
+  if (hasPendingTenantCounter(detail)) return false;
+  if (
+    ['tenant_accepted', 'tenant_rejected', 'accounting', 'completed'].includes(
+      detail.workflowState,
+    )
+  ) {
+    return false;
+  }
+  return detail.workflowState === 'tenant_notified' || detail.workflowState === 'negotiation';
+}
+
 /** Weekly rent on the first formal notice emailed to the tenant. */
 export function resolveInitialNoticeWeeklyRent(
   detail: RentReviewWorkflowDetail,

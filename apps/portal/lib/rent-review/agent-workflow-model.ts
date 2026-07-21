@@ -4,6 +4,7 @@ import { commRecordsFromAuditLog } from '@/lib/rent-review/communications';
 import {
   canResendTenantNotice,
   hasPendingTenantCounter,
+  isPendingNegotiation,
 } from '@/lib/rent-review/negotiation-display';
 import {
   buildLeaseAgreementProgress,
@@ -154,7 +155,7 @@ export function canResolveNegotiation(detail: RentReviewWorkflowDetail): boolean
   return hasPendingTenantCounter(detail);
 }
 
-export { canResendTenantNotice, hasPendingTenantCounter };
+export { canResendTenantNotice, hasPendingTenantCounter, isPendingNegotiation };
 
 /** Formal increase notice has been dispatched to the tenant. */
 export function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
@@ -302,12 +303,40 @@ function tenantNotifiedSubProgress(detail: RentReviewWorkflowDetail): RentReview
 
 function negotiationSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubProgressItem[] {
   const pending = hasPendingTenantCounter(detail);
+  const awaitingResponse = isPendingNegotiation(detail);
   const counterSubmitted = auditHas(detail, 'tenant_counter_submitted');
   const agentAccepted = auditHas(detail, 'agent_accepted_tenant_counter');
   const reproposed = auditHas(detail, 'agent_reproposed_after_counter');
   const nonNegotiable = auditHas(detail, 'agent_marked_non_negotiable');
   const resend = canResendTenantNotice(detail);
   const feedbackDone = !pending && (agentAccepted || reproposed || nonNegotiable);
+  const noticeAt = auditAt(detail, 'tenant_notices_dispatched');
+
+  if (awaitingResponse) {
+    const reminderCount = detail.auditLog.filter((e) => e.kind === 'tenant_response_reminder').length;
+    return [
+      {
+        id: 'notice',
+        label: noticeAt
+          ? `Formal notice sent (${noticeAt.slice(0, 10)})`
+          : 'Formal notice sent to tenant',
+        done: true,
+      },
+      {
+        id: 'awaiting',
+        label: 'Pending negotiation — awaiting tenant response',
+        done: false,
+      },
+      {
+        id: 'reminders',
+        label:
+          reminderCount > 0
+            ? `${reminderCount} reminder${reminderCount === 1 ? '' : 's'} sent (every 2 days)`
+            : 'Auto-reminder every 2 days if no reply',
+        done: reminderCount > 0,
+      },
+    ];
+  }
 
   return [
     {
@@ -508,24 +537,20 @@ export function resolveRentReviewAgentStep(detail: RentReviewWorkflowDetail): Re
       if (!isRentResearchStepComplete(detail)) {
         return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
       }
-      if (hasPendingTenantCounter(detail)) {
+      if (hasPendingTenantCounter(detail) || isPendingNegotiation(detail)) {
         return RENT_REVIEW_AGENT_STEP.NEGOTIATION;
       }
-      return hasAgentPricingFinalized(detail)
-        ? RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED
-        : RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
+      if (canResendTenantNotice(detail)) {
+        return RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
+      }
+      return RENT_REVIEW_AGENT_STEP.AGENT_CONFIRMED;
     case 'negotiation':
       if (!isRentResearchStepComplete(detail)) {
         return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
       }
-      return hasPendingTenantCounter(detail)
-        ? RENT_REVIEW_AGENT_STEP.NEGOTIATION
-        : RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED;
+      return RENT_REVIEW_AGENT_STEP.NEGOTIATION;
     case 'tenant_notified':
-      if (hasPendingTenantCounter(detail)) {
-        return RENT_REVIEW_AGENT_STEP.NEGOTIATION;
-      }
-      return RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED;
+      return RENT_REVIEW_AGENT_STEP.NEGOTIATION;
     case 'tenant_accepted':
       return RENT_REVIEW_AGENT_STEP.TENANT_DECISION;
     case 'tenant_rejected':
@@ -570,6 +595,17 @@ function subProgressForStep(
   }
 }
 
+function workflowNameForStep(
+  step: RentReviewAgentStep,
+  detail: RentReviewWorkflowDetail,
+): string {
+  if (step === RENT_REVIEW_AGENT_STEP.NEGOTIATION) {
+    if (hasPendingTenantCounter(detail)) return 'Counter-offer review';
+    if (isPendingNegotiation(detail)) return 'Pending negotiation';
+  }
+  return 'Rent review';
+}
+
 export function buildRentReviewAgentWorkflow(
   detail: RentReviewWorkflowDetail,
 ): RentReviewAgentWorkflowModel {
@@ -582,7 +618,7 @@ export function buildRentReviewAgentWorkflow(
     label: RENT_REVIEW_AGENT_STEP_LABEL[id],
     status: idx < liveIdx ? 'done' : idx === liveIdx ? 'active' : 'upcoming',
     subProgress: subProgressForStep(id, detail),
-    workflowName: 'Rent review',
+    workflowName: workflowNameForStep(id, detail),
   }));
 
   if (workflowClosed) {

@@ -437,7 +437,9 @@ export function mapAgentRentReviews(dtos: AgentRentReview[]): RentReviewCase[] {
     status:
       r.workflowState === 'CANCELLED'
         ? 'deleted'
-        : r.workflowState.replace(/_/g, ' ').toLowerCase(),
+        : r.workflowState === RENT_REVIEW_WORKFLOW_STATE.TENANT_NOTIFIED
+          ? 'pending negotiation'
+          : r.workflowState.replace(/_/g, ' ').toLowerCase(),
     workflowState: r.workflowState,
     tenantResponse: RENT_REVIEW_TENANT_RESPONSE[r.workflowState],
     requiresApproval:
