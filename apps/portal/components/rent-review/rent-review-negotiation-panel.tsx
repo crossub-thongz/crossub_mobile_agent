@@ -19,6 +19,7 @@ import {
   agentProposedWeekly,
   buildNegotiationComparison,
   formatNegotiationDelta,
+  resolveInitialNoticeWeeklyRent,
 } from '@/lib/rent-review/negotiation-display';
 import { formatRentReviewTermLabel } from '@/lib/rent-review-lease-helpers';
 import { rentReviewApi } from '@/lib/rent-review-api';
@@ -108,6 +109,7 @@ export function RentReviewNegotiationPanel({
   const auditEntryCount =
     detail.pricingMilestones.length + counterAudit.length + supplementalAuditEntries.length;
   const agentWeekly = agentProposedWeekly(detail);
+  const initialNoticeWeekly = resolveInitialNoticeWeeklyRent(detail);
   const effectiveDate =
     toDateOnly(detail.effectiveDate) ?? deriveRentIncreaseOnDate(detail) ?? undefined;
 
@@ -150,7 +152,7 @@ export function RentReviewNegotiationPanel({
           },
           detail.leaseEndDate,
         ),
-      'Agent counter-offer recorded',
+      'Counter-offer sent to tenant',
     );
   };
 
@@ -256,6 +258,13 @@ export function RentReviewNegotiationPanel({
                     placeholder={agentWeekly != null ? String(agentWeekly) : undefined}
                     onChange={(e) => setAgentCounterRent(e.target.value)}
                   />
+                  {initialNoticeWeekly != null ? (
+                    <p className="text-muted-foreground text-[11px] leading-relaxed">
+                      At or below {formatCurrency(initialNoticeWeekly)}/wk — emailed to the tenant
+                      directly. Above that amount — a new formal notice is required on Tenant
+                      notified.
+                    </p>
+                  ) : null}
                   <Button
                     variant="outline"
                     className="w-full"
@@ -285,10 +294,12 @@ export function RentReviewNegotiationPanel({
                   ? 'Tenant counter-offer received — your property manager will review and respond.'
                   : 'Negotiation round complete — see audit below for the recorded outcome.'
               : detail.rentNegotiable === false
-                ? 'Rent is non-negotiable — re-send the notice on Tenant notified.'
+                ? 'Rent is marked non-negotiable — the tenant can accept or decline on the original notice.'
                 : canResolveNegotiation(detail)
                   ? 'Review the tenant offer above.'
-                  : 'Negotiation round complete — continue on Tenant notified or Tenant decision.'}
+                  : detail.auditLog.some((e) => e.kind === 'agent_reproposed_after_counter')
+                    ? 'Counter-offer emailed to tenant — awaiting their response.'
+                    : 'Negotiation round complete — continue on Tenant notified or Tenant decision.'}
           </p>
         ) : null}
       </section>

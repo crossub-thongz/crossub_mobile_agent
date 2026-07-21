@@ -105,7 +105,7 @@ export function RentReviewTenantNotifiedPanel({
           </p>
           <p className="text-muted-foreground text-xs">
             {resendNotice
-              ? 'Updated terms are ready after negotiation. Re-send the formal notice so the tenant can accept, counter (if negotiable), or decline.'
+              ? 'The counter-offer exceeds the original formal notice amount. Re-send the NSW notice with the updated rent before the tenant can respond.'
               : 'Dispatch the formal increase notice with the agent-confirmed terms so the tenant can accept, counter, or decline.'}
           </p>
           {detail.rentNegotiable === false ? (

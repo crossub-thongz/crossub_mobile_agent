@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { MapPin, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -37,9 +37,10 @@ const MESSAGE_TYPES = ['App message', 'Email', 'Internal message'] as const;
 
 export default function NewMessagePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { properties, ensureMessageThread } = useAgentData();
   const [search, setSearch] = useState('');
-  const [propertyId, setPropertyId] = useState('');
+  const [propertyId, setPropertyId] = useState(() => searchParams.get('property') ?? '');
   const [category, setCategory] = useState<MessageCategory>('Others');
   const [recipient, setRecipient] = useState('');
   const [messageType, setMessageType] = useState<(typeof MESSAGE_TYPES)[number]>('App message');

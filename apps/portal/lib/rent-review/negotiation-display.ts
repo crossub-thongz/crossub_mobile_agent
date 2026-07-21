@@ -8,16 +8,39 @@ export function hasPendingTenantCounter(detail: RentReviewWorkflowDetail): boole
   );
 }
 
-/** Agent resolved a counter and must re-send the formal notice with updated terms. */
+/** Weekly rent on the first formal notice emailed to the tenant. */
+export function resolveInitialNoticeWeeklyRent(
+  detail: RentReviewWorkflowDetail,
+): number | null {
+  const milestone = [...(detail.pricingMilestones ?? [])]
+    .filter((m) => m.headline === 'Delivered to tenant')
+    .sort(
+      (a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime(),
+    )[0];
+  return milestone?.weeklyRent ?? null;
+}
+
+/**
+ * A new formal NSW notice is only required when the agent counter-offer exceeds
+ * the amount on the original notice sent to the tenant.
+ */
+export function requiresFormalNoticeResend(detail: RentReviewWorkflowDetail): boolean {
+  if (!detail.auditLog.some((e) => e.kind === 'agent_reproposed_after_counter')) {
+    return false;
+  }
+  const initial = resolveInitialNoticeWeeklyRent(detail);
+  const current = detail.proposedWeeklyRent ?? detail.ai.suggestedWeekly;
+  if (initial == null || current == null) return false;
+  return current > initial;
+}
+
+/** Agent resolved a counter with a higher rent — must re-send the formal notice. */
 export function canResendTenantNotice(detail: RentReviewWorkflowDetail): boolean {
   return (
     detail.workflowState === 'agent_review' &&
     detail.tenantCounterWeekly == null &&
     detail.auditLog.some((e) => e.kind === 'tenant_notices_dispatched') &&
-    detail.auditLog.some(
-      (e) =>
-        e.kind === 'agent_reproposed_after_counter' || e.kind === 'agent_marked_non_negotiable',
-    )
+    requiresFormalNoticeResend(detail)
   );
 }
 

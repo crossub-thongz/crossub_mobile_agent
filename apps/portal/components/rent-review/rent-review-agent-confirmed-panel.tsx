@@ -24,7 +24,7 @@ import {
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
-import { toDateOnly } from '@/lib/rent-review/scheduling';
+import { toDateOnly, resolveNoticePayableFromDate } from '@/lib/rent-review/scheduling';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
@@ -87,13 +87,15 @@ export function RentReviewAgentConfirmedPanel({
   const [preferredLeaseType, setPreferredLeaseType] = useState<PreferredLeaseType>('periodic');
   const [fixedTermWeeks, setFixedTermWeeks] = useState<FixedTermWeeks>(52);
   const [fixedTermEndDate, setFixedTermEndDate] = useState('');
+  const [manualRentIncreaseOn, setManualRentIncreaseOn] = useState('');
+
+  const hasLeaseEnd = Boolean(toDateOnly(detail.leaseEndDate));
 
   const hasCounter = canResolveNegotiation(detail);
   const editable = canEditAgentDecision(detail) && !readOnly;
   const noticeSent = hasTenantNoticeSent(detail);
   const currentLeaseIsFixed = isCurrentTenancyFixed(detail);
   const autoNewLeaseStart = useMemo(() => deriveNewLeaseStartDate(detail), [detail]);
-  const autoRentIncreaseOn = useMemo(() => deriveRentIncreaseOnDate(detail), [detail]);
 
   useEffect(() => {
     setPreferredRent(
@@ -105,11 +107,29 @@ export function RentReviewAgentConfirmedPanel({
     );
     setFixedTermWeeks(resolveFixedTermWeeks(detail));
     setFixedTermEndDate(detail.newAgreementEnd ?? '');
+    setManualRentIncreaseOn(
+      toDateOnly(detail.effectiveDate) ??
+        resolveNoticePayableFromDate({
+          leaseEndDate: detail.leaseEndDate,
+          storedEffectiveDate: detail.effectiveDate,
+        }),
+    );
   }, [detail.id]);
 
+  const autoRentIncreaseOnResolved = useMemo(
+    () =>
+      resolveNoticePayableFromDate({
+        leaseEndDate: detail.leaseEndDate,
+        storedEffectiveDate: detail.effectiveDate,
+      }) || deriveRentIncreaseOnDate(detail),
+    [detail],
+  );
+
   const effectiveDate = editable
-    ? autoRentIncreaseOn
-    : (toDateOnly(detail.effectiveDate) ?? autoRentIncreaseOn);
+    ? hasLeaseEnd
+      ? autoRentIncreaseOnResolved
+      : manualRentIncreaseOn
+    : (toDateOnly(detail.effectiveDate) ?? autoRentIncreaseOnResolved);
   const newLeaseStart = editable
     ? currentLeaseIsFixed
       ? autoNewLeaseStart
@@ -337,11 +357,30 @@ export function RentReviewAgentConfirmedPanel({
           </div>
 
           <div className="text-muted-foreground mt-4 grid gap-2 rounded-lg border border-dashed bg-muted/20 p-3 text-[11px] sm:grid-cols-2">
-            <p>
-              <span className="font-medium text-foreground">Rent increase on:</span>{' '}
-              {formatDateOnly(effectiveDate) ?? '—'}
-              <span className="ml-1">(auto)</span>
-            </p>
+            {editable && !hasLeaseEnd ? (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor={`rent-increase-on-${detail.id}`} className="text-foreground text-xs">
+                  Rent increase on
+                </Label>
+                <Input
+                  id={`rent-increase-on-${detail.id}`}
+                  type="date"
+                  value={manualRentIncreaseOn}
+                  disabled={busy}
+                  onChange={(e) => setManualRentIncreaseOn(e.target.value)}
+                />
+                <p className="text-[10px] leading-relaxed">
+                  Periodic tenancy — set the NSW notice payable-from date manually (at least 60 days
+                  after delivery).
+                </p>
+              </div>
+            ) : (
+              <p>
+                <span className="font-medium text-foreground">Rent increase on:</span>{' '}
+                {formatDateOnly(effectiveDate) ?? '—'}
+                {hasLeaseEnd ? <span className="ml-1">(auto)</span> : null}
+              </p>
+            )}
             {currentLeaseIsFixed && newLeaseStart ? (
               <p>
                 <span className="font-medium text-foreground">New lease start:</span>{' '}

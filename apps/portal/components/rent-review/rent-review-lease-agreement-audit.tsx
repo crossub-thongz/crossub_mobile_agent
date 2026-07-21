@@ -11,17 +11,21 @@ export function RentReviewLeaseAgreementAudit({
   title = 'Lease extension agreement',
   onViewAgreement,
   viewingAgreement = false,
+  viewLabel = 'View agreement',
 }: {
   steps: LeaseAgreementStep[];
   title?: string;
-  /** Opens / downloads the lease extension agreement PDF (available once sent or signed). */
+  /** Opens / downloads the lease extension agreement PDF once preparing starts. */
   onViewAgreement?: () => void;
   viewingAgreement?: boolean;
+  viewLabel?: string;
 }) {
   if (steps.length === 0) return null;
 
   const doneCount = steps.filter((step) => step.done).length;
-  const canView = Boolean(onViewAgreement) && steps.some((s) => s.id === 'sent' && s.done);
+  const canView =
+    Boolean(onViewAgreement) &&
+    steps.some((s) => (s.id === 'preparing' || s.id === 'sent') && s.done);
 
   return (
     <section className="rounded-xl border bg-muted/20 p-4">
@@ -38,7 +42,7 @@ export function RentReviewLeaseAgreementAudit({
               onClick={() => onViewAgreement?.()}
             >
               <FileText className="size-3.5" />
-              {viewingAgreement ? 'Opening…' : 'View agreement'}
+              {viewingAgreement ? 'Opening…' : viewLabel}
             </Button>
           ) : null}
           <p className="text-muted-foreground text-[10px] tabular-nums">

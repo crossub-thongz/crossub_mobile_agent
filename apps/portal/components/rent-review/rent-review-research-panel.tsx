@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
+import { RentReviewNoticePayableFromField } from '@/components/rent-review/rent-review-notice-payable-from-field';
 import { RentReviewResearchResultSection } from '@/components/rent-review/rent-review-research-result-section';
 import { RentResearchPlatformsPanel } from '@/components/rent-review/rent-research-platforms-panel';
 import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
@@ -15,6 +16,10 @@ import {
   hasMarketResearchComplete,
   hasResearchRequested,
 } from '@/lib/rent-review/agent-workflow-model';
+import {
+  buildLandlordResearchEmailDraft,
+  resolveLandlordContact,
+} from '@/lib/rent-review/research-landlord-email';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
@@ -31,6 +36,7 @@ export function RentReviewResearchPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const autoSendLandlordAttempted = useRef<string | null>(null);
 
   const property = properties.find((p) => p.id === detail.propertyId);
   const recipientContacts = buildPropertyWorkflowEmailContacts(property, {
@@ -50,6 +56,46 @@ export function RentReviewResearchPanel({
   const researchComplete = hasMarketResearchComplete(detail);
   const canViewResults = canAgentViewResearchResults(detail);
   const landlordEmailed = detail.auditLog.some((e) => e.kind === 'landlord_research_email');
+
+  useEffect(() => {
+    if (!canViewResults || landlordEmailed || autoSendLandlordAttempted.current === detail.id) {
+      return;
+    }
+    if (!detail.propertyId || !landlordEmail?.includes('@')) return;
+
+    autoSendLandlordAttempted.current = detail.id;
+    const contact = resolveLandlordContact(landlordName, landlordEmail);
+    const draft = buildLandlordResearchEmailDraft(detail, contact.name, contact.email);
+
+    void runMutation(
+      detail.id,
+      rentReviewApi.sendEmail(
+        detail.id,
+        {
+          toEmail: contact.email,
+          toName: contact.name,
+          subject: draft.subject,
+          body: draft.body,
+          kind: 'landlord_research_email',
+          channel: 'email',
+        },
+        detail.propertyId,
+        detail.leaseEndDate,
+      ),
+    )
+      .then((updated) => onUpdated?.(updated))
+      .catch(() => {
+        autoSendLandlordAttempted.current = null;
+      });
+  }, [
+    canViewResults,
+    detail,
+    landlordEmailed,
+    landlordEmail,
+    landlordName,
+    onUpdated,
+    runMutation,
+  ]);
 
   const requestResearch = async () => {
     if (!detail.propertyId) {
@@ -96,18 +142,30 @@ export function RentReviewResearchPanel({
         </section>
       ) : null}
 
-      {researchRequested && !canViewResults ? (
+      {researchComplete && !canViewResults ? (
         <section className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4">
           <div className="flex items-start gap-3">
             <Clock className="text-muted-foreground mt-0.5 size-5 shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-semibold">
-                {researchComplete ? 'Waiting for research pack' : 'Waiting for market research'}
-              </p>
+              <p className="text-sm font-semibold">Market research complete</p>
               <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                {researchComplete
-                  ? 'Admin has completed research. You will see results here once they send the research pack to you.'
-                  : 'Admin has been notified. Research results will appear here after admin completes the review and sends them to you.'}
+                Admin is reviewing the research pack. Results will appear here once they send it to
+                you.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {researchRequested && !researchComplete && !canViewResults ? (
+        <section className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4">
+          <div className="flex items-start gap-3">
+            <Clock className="text-muted-foreground mt-0.5 size-5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Running market research</p>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                NSW Fair Trading, RP Data, and REA.com.au are being queried. Results will appear
+                here when complete.
               </p>
             </div>
           </div>
@@ -116,6 +174,22 @@ export function RentReviewResearchPanel({
 
       {canViewResults ? (
         <>
+          <RentReviewNoticePayableFromField
+            detail={detail}
+            onSave={async (payableFrom) => {
+              const updated = await runMutation(
+                detail.id,
+                rentReviewApi.updateNoticePayableFrom(
+                  detail.id,
+                  payableFrom,
+                  detail.propertyId ?? undefined,
+                  detail.leaseEndDate,
+                ),
+              );
+              onUpdated?.(updated);
+              return updated;
+            }}
+          />
           <RentResearchPlatformsPanel platforms={detail.ai.research?.platforms ?? []} readOnly />
 
           <RentReviewResearchResultSection
@@ -123,7 +197,11 @@ export function RentReviewResearchPanel({
             researchComplete={researchComplete}
             landlordEmailed={landlordEmailed}
             onEmail={() => setLandlordDialogOpen(true)}
-            helperText="Review the research pack, then email the landlord to confirm the recommended rent."
+            helperText={
+              landlordEmailed
+                ? 'The landlord has been emailed the research pack automatically.'
+                : 'The research pack is emailed to the landlord automatically when research is complete.'
+            }
           />
         </>
       ) : null}

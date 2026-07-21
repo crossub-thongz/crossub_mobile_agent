@@ -31,17 +31,18 @@ export function buildLandlordResearchEmailDraft(
   const suggested =
     detail.ai.suggestedWeekly ?? detail.proposedWeeklyRent ?? detail.currentWeeklyRent;
   const pct = detail.ai.increasePercent;
-  const increaseLine =
-    pct != null
-      ? `a recommended increase of ${pct}% to ${formatCurrency(suggested)} per week`
-      : `a recommended rent of ${formatCurrency(suggested)} per week`;
 
   const body =
     `Dear ${landlordName},\n\n` +
     `We have completed the market rent research for your property at ${detail.propertyAddress} ` +
     `(tenant: ${detail.tenantName}).\n\n` +
-    `Our research across ${RENT_RESEARCH_PLATFORMS.join(', ')} indicates ${increaseLine}, ` +
-    `compared with the current rent of ${formatCurrency(detail.currentWeeklyRent)} per week.\n\n` +
+    buildRentResearchSummaryBlock({
+      currentWeekly: detail.currentWeeklyRent,
+      leaseEndDate: detail.leaseEndDate,
+      suggestedWeekly: suggested,
+      increasePercent: pct,
+    }) +
+    `\nOur research across ${RENT_RESEARCH_PLATFORMS.join(', ')} supports the recommended figure.\n\n` +
     `${detail.ai.rationale ?? 'Comparable lettings in the area support the recommended figure.'}\n\n` +
     `Please find attached:\n` +
     `• CROSSUB Rent Review Report\n` +
@@ -62,9 +63,56 @@ export function buildLandlordResearchEmailDraft(
 
 export function defaultResearchAttachments(): JobCaseEmailAttachment[] {
   return [
-    { name: 'CROSSUB-Rent-Review-Report.pdf', sizeLabel: '~120 KB' },
-    { name: 'NSW-Fair-Trading-Reference.pdf', sizeLabel: '~85 KB' },
+    { name: 'CROSSUB-Rent-Review-Report.html', sizeLabel: '~120 KB' },
+    { name: 'NSW-Fair-Trading-Notice.pdf', sizeLabel: '~85 KB' },
   ];
+}
+
+export function formatLeaseEndShort(iso: string | null | undefined): string {
+  if (!iso?.trim()) return 'Open-ended';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
+function buildRentResearchSummaryBlock(input: {
+  currentWeekly: number;
+  leaseEndDate: string | null | undefined;
+  suggestedWeekly: number;
+  increasePercent?: number | null;
+}): string {
+  const pct = input.increasePercent;
+  return (
+    `Current rent: ${formatCurrency(input.currentWeekly)}/week\n` +
+    `Lease end date: ${formatLeaseEndShort(input.leaseEndDate)}\n` +
+    `Recommended rent: ${formatCurrency(input.suggestedWeekly)}/week` +
+    (pct != null ? ` (+${pct}%)` : '') +
+    `\n`
+  );
+}
+
+export function researchPackDraftAttachmentUrls(
+  propertyId: string,
+  reviewId: string,
+  suggestedWeekly?: number | null,
+  effectiveDate?: string | null,
+): Record<string, string> {
+  const base = `/api/v1/agent/properties/${propertyId}/workflows/rent-review/${reviewId}`;
+  const params = new URLSearchParams();
+  if (suggestedWeekly != null && Number.isFinite(suggestedWeekly)) {
+    params.set('weekly', String(suggestedWeekly));
+  }
+  if (effectiveDate?.trim()) {
+    params.set('effectiveDate', effectiveDate.trim());
+  }
+  const noticeQs = params.toString();
+  return {
+    'CROSSUB-Rent-Review-Report.html': `${base}/research-report.html`,
+    'NSW-Fair-Trading-Notice.pdf': `${base}/notice-of-rent-increase.pdf${noticeQs ? `?${noticeQs}` : ''}`,
+  };
 }
 
 export function buildResearchReportHtml(detail: RentReviewWorkflowDetail): string {

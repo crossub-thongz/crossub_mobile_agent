@@ -78,7 +78,10 @@ export const rentReviewDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/rent-review/${id}`, ctx);
 export const vacatingDetail = (id: string, ctx?: DetailNavContext) =>
   appendDetailNavContext(`/vacating/${id}`, ctx);
-export const messagesNew = () => '/messages/new';
+export const messagesNew = (query?: { property?: string }) => {
+  if (!query?.property) return '/messages/new';
+  return `/messages/new?property=${encodeURIComponent(query.property)}`;
+};
 export const messageDetail = (id: string) => `/messages/${id}`;
 export const communicationsThread = (threadId: string) =>
   `${ROUTES.COMMUNICATIONS}?threadId=${encodeURIComponent(threadId)}`;

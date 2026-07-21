@@ -88,6 +88,8 @@ export interface RentReviewWorkflowDetail {
   preferredLeaseType: 'fixed' | 'periodic' | null;
   newAgreementStart: string | null;
   newAgreementEnd: string | null;
+  leaseAdditionalTerms: string | null;
+  leaseAdditionalTermsPets: string | null;
   createdAt: string;
   agentConfirmedDate: string | null;
   completedDate: string | null;

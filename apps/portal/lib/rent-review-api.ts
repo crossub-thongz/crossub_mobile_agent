@@ -56,6 +56,8 @@ export function mapRentReviewWorkflowDetail(
     preferredLeaseType: d.preferredLeaseType,
     newAgreementStart: dateOnly(d.newAgreementStart),
     newAgreementEnd: dateOnly(d.newAgreementEnd),
+    leaseAdditionalTerms: d.leaseAdditionalTerms,
+    leaseAdditionalTermsPets: d.leaseAdditionalTermsPets,
     createdAt: d.createdAt,
     agentConfirmedDate: d.agentConfirmedDate,
     completedDate: dateOnly(d.completedDate),
@@ -175,6 +177,53 @@ export const rentReviewApi = {
     }
     return map(
       unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/proposed-rent`, input)),
+      leaseEndDate,
+    );
+  },
+
+  updateNoticePayableFrom: (
+    id: string,
+    payableFrom: string,
+    propertyId?: string | null,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> => {
+    const body = { payableFrom };
+    if (propertyId) {
+      return map(
+        unwrap(
+          apiV1.patch<{ review: ServerRentReviewWorkflowView }>(
+            `${agentRentReviewWorkflowPath(propertyId, id)}/notice-payable-from`,
+            body,
+          ),
+        ),
+        leaseEndDate,
+      );
+    }
+    return map(
+      unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/notice-payable-from`, body)),
+      leaseEndDate,
+    );
+  },
+
+  updateLeaseAgreementTerms: (
+    id: string,
+    input: { additionalTerms?: string | null; additionalTermsPets?: string | null },
+    propertyId?: string | null,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> => {
+    if (propertyId) {
+      return map(
+        unwrap(
+          apiV1.patch<{ review: ServerRentReviewWorkflowView }>(
+            `${agentRentReviewWorkflowPath(propertyId, id)}/lease-agreement-terms`,
+            input,
+          ),
+        ),
+        leaseEndDate,
+      );
+    }
+    return map(
+      unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/lease-agreement-terms`, input)),
       leaseEndDate,
     );
   },

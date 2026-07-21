@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewLeaseAgreementAudit } from '@/components/rent-review/rent-review-lease-agreement-audit';
+import { RentReviewLeaseAgreementTermsField } from '@/components/rent-review/rent-review-lease-agreement-terms-field';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
 import {
   buildLeaseAgreementProgress,
@@ -120,8 +121,33 @@ export function RentReviewTenantDecisionPanel({
       {accepted && fixedRenewal ? (
         <RentReviewLeaseAgreementAudit
           steps={leaseAgreement}
-          onViewAgreement={leaseAudit.sentDone ? () => void viewLeaseAgreement() : undefined}
+          onViewAgreement={
+            leaseAudit.preparingDone ? () => void viewLeaseAgreement() : undefined
+          }
           viewingAgreement={viewingAgreement}
+          viewLabel={leaseAudit.sentDone ? 'View agreement' : 'Preview agreement'}
+        />
+      ) : null}
+
+      {accepted && fixedRenewal && leaseAudit.preparingDone && !leaseAudit.sentDone && !readOnly ? (
+        <RentReviewLeaseAgreementTermsField
+          detail={detail}
+          disabled={busy}
+          previewing={viewingAgreement}
+          onPreview={() => void viewLeaseAgreement()}
+          onSave={async (input) => {
+            const updated = await runMutation(
+              detail.id,
+              rentReviewApi.updateLeaseAgreementTerms(
+                detail.id,
+                input,
+                detail.propertyId ?? undefined,
+                detail.leaseEndDate,
+              ),
+            );
+            onUpdated?.(updated);
+            return updated;
+          }}
         />
       ) : null}
 

@@ -255,7 +255,7 @@ function agentConfirmedSubProgress(detail: RentReviewWorkflowDetail): RentReview
     {
       id: 'ready',
       label: resend
-        ? 'Re-send notice with updated terms'
+        ? 'Re-send formal notice (higher than original)'
         : noticeSent
           ? 'Tenant notified'
           : pricingFinalized
@@ -336,11 +336,11 @@ function negotiationSubProgress(detail: RentReviewWorkflowDetail): RentReviewSub
     {
       id: 'next',
       label: resend
-        ? 'Re-send notice on Tenant notified'
+        ? 'Re-send formal notice (higher than original)'
         : agentAccepted
           ? 'Proceed to Tenant decision'
           : reproposed || nonNegotiable
-            ? 'Updated terms ready for tenant'
+            ? 'Counter-offer emailed — awaiting tenant'
             : 'Awaiting negotiation',
       done: feedbackDone && !resend,
     },

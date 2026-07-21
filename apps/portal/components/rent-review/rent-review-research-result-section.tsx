@@ -78,7 +78,7 @@ export function RentReviewResearchResultSection({
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         {landlordEmailed ? (
           <p className="text-muted-foreground text-xs sm:mr-auto">
-            Research results emailed to the landlord.
+            Research results emailed to the landlord automatically.
           </p>
         ) : null}
         <Button
@@ -88,7 +88,7 @@ export function RentReviewResearchResultSection({
           onClick={onEmail}
         >
           <Mail className="size-4" />
-          Email
+          {landlordEmailed ? 'Sent to landlord' : 'Email landlord'}
         </Button>
       </div>
       {!researchComplete || helperText ? (

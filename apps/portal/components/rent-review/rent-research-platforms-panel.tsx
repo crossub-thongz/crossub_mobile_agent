@@ -120,8 +120,8 @@ function PlatformResearchRow({
       ) : status === 'pending' ? (
         <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
           {readOnly
-            ? 'Pending — admin will run market research from the admin portal.'
-            : 'Runs when you confirm the rent review or rerun market research.'}
+            ? 'Runs automatically when the rent review is created.'
+            : 'Runs automatically when the rent review is created.'}
         </p>
       ) : null}
 

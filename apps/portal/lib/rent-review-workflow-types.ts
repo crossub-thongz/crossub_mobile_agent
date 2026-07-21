@@ -90,6 +90,8 @@ export interface ServerRentReviewWorkflowView {
   preferredLeaseType: 'fixed' | 'periodic' | null;
   newAgreementStart: string | null;
   newAgreementEnd: string | null;
+  leaseAdditionalTerms: string | null;
+  leaseAdditionalTermsPets: string | null;
   tenantRef: string | null;
   managingAgentLabel: string | null;
   createdAt: string;

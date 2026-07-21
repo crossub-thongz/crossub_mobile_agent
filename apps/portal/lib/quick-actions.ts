@@ -9,7 +9,8 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import { messagesNew, propertyNew, ROUTES, inspectionNew, tenantNew } from '@/constants/routes';
+import { messagesNew, propertyNew, inspectionNew, tenantNew } from '@/constants/routes';
+import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 
 export type BuiltinQuickActionId =
   | 'add-property'
@@ -25,6 +26,8 @@ export interface BuiltinQuickAction {
   label: string;
   icon: LucideIcon;
   resolveHref: (propertyId?: string) => string;
+  /** Opens an inline create workflow instead of navigating away. */
+  workflowActionId?: PropertyWorkflowActionId;
 }
 
 export interface CustomQuickAction {
@@ -44,7 +47,8 @@ export const BUILTIN_QUICK_ACTIONS: BuiltinQuickAction[] = [
     id: 'add-tenant',
     label: 'Add tenant',
     icon: UserPlus,
-    resolveHref: () => tenantNew(),
+    resolveHref: (propertyId) =>
+      tenantNew(propertyId ? { propertyId } : undefined),
   },
   {
     id: 'open-inspection',
@@ -54,28 +58,31 @@ export const BUILTIN_QUICK_ACTIONS: BuiltinQuickAction[] = [
   },
   {
     id: 'maintenance',
-    label: 'Maintenance request',
+    label: 'Add new repair job',
     icon: Wrench,
-    resolveHref: (propertyId) =>
-      propertyId ? `${ROUTES.MAINTENANCE}?property=${propertyId}` : ROUTES.MAINTENANCE,
+    resolveHref: () => '',
+    workflowActionId: 'start_maintenance',
   },
   {
     id: 'rent-review',
     label: 'Rent review',
     icon: TrendingUp,
-    resolveHref: () => ROUTES.RENT_REVIEW,
+    resolveHref: () => '',
+    workflowActionId: 'start_rent_review',
   },
   {
     id: 'tribunal',
     label: 'Tribunal case',
     icon: Gavel,
-    resolveHref: () => ROUTES.TRIBUNAL,
+    resolveHref: () => '',
+    workflowActionId: 'open_tribunal',
   },
   {
     id: 'message',
     label: 'New message',
     icon: MessageSquare,
-    resolveHref: () => messagesNew(),
+    resolveHref: (propertyId) =>
+      messagesNew(propertyId ? { property: propertyId } : undefined),
   },
 ];
 
@@ -83,6 +90,7 @@ export type ResolvedQuickAction = {
   id: string;
   label: string;
   href: string;
+  workflowActionId?: PropertyWorkflowActionId;
   icon: LucideIcon;
   builtin: boolean;
 };
@@ -97,6 +105,7 @@ export function resolveQuickActions(
     id: a.id,
     label: a.label,
     href: a.resolveHref(propertyId),
+    workflowActionId: a.workflowActionId,
     icon: a.icon,
     builtin: true,
   }));

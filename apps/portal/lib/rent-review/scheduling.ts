@@ -252,3 +252,36 @@ export function calendarDaysUntil(
   const start = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate(), 12);
   return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 }
+
+/** NSW notice "Payable from" — mirrors backend scheduling util. */
+export function resolveNoticePayableFromDate(input: {
+  suppliedOn?: string | null;
+  leaseEndDate?: string | null;
+  lastRentIncreaseAt?: string | null;
+  explicitPayableFrom?: string | null;
+  storedEffectiveDate?: string | null;
+}): string {
+  const supplied = toDateOnly(input.suppliedOn) ?? new Date().toISOString().slice(0, 10);
+  const statutoryMin = isoDateAddDays(supplied, RENT_REVIEW_STATUTORY_NOTICE_DAYS);
+
+  const override =
+    toDateOnly(input.explicitPayableFrom) ?? toDateOnly(input.storedEffectiveDate);
+  if (override) {
+    return override >= statutoryMin ? override : statutoryMin;
+  }
+
+  const leaseEnd = toDateOnly(input.leaseEndDate);
+  const lastIncrease = toDateOnly(input.lastRentIncreaseAt);
+  let anchor: string | null = null;
+  if (lastIncrease) {
+    anchor = isoDateAddYears(lastIncrease, 1);
+  } else if (leaseEnd) {
+    anchor = leaseEnd;
+  }
+
+  if (anchor) {
+    return anchor >= statutoryMin ? anchor : statutoryMin;
+  }
+
+  return statutoryMin;
+}

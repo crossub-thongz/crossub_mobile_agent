@@ -619,7 +619,7 @@ export function PropertyWorkflowCreateDialog({
             fixedTermWeeks,
             rentPaidUntil: rentPaidUntil || undefined,
           });
-          toast.success('Rent review submitted to CROSSUB');
+          toast.success('Rent review submitted — market research started');
           await refresh();
           onSuccess({ kind: 'rent_review', id: result.id });
           return;
@@ -642,7 +642,7 @@ export function PropertyWorkflowCreateDialog({
           rentNegotiable: rentNegotiationChoice === 'negotiable',
           rentPaidUntil: rentPaidUntil || undefined,
         });
-        toast.success('Rent review created');
+        toast.success('Rent review created — market research started');
         await refresh();
         onSuccess({ kind: 'rent_review', id: result.id });
         return;

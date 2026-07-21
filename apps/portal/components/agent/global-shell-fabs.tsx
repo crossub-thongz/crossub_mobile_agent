@@ -17,6 +17,7 @@ import {
 
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { PhonePanel } from '@/components/agent/phone-panel';
+import { QuickCreateWorkflowDialog } from '@/components/agent/quick-create-workflow-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,7 @@ import {
   BUILTIN_QUICK_ACTIONS,
   resolveQuickActions,
 } from '@/lib/quick-actions';
+import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS } from '@/lib/portal-service-level';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { useAgentStore } from '@/lib/store';
@@ -327,6 +329,10 @@ function QuickCreateDockSheet({
   const [customize, setCustomize] = useState(false);
   const [customLabel, setCustomLabel] = useState('');
   const [customHref, setCustomHref] = useState('');
+  const [pendingWorkflow, setPendingWorkflow] = useState<{
+    actionId: PropertyWorkflowActionId;
+    propertyId?: string;
+  } | null>(null);
   const router = useRouter();
   const { hasFullManagementAccess } = useAgentData();
   const hiddenBuiltinQuickActionIds = useAgentStore((s) => s.hiddenBuiltinQuickActionIds);
@@ -358,11 +364,31 @@ function QuickCreateDockSheet({
     setCustomHref('');
   };
 
-  if (!open) return null;
+  if (!open) {
+    return (
+      <QuickCreateWorkflowDialog
+        actionId={pendingWorkflow?.actionId ?? null}
+        open={pendingWorkflow != null}
+        onOpenChange={(next) => {
+          if (!next) setPendingWorkflow(null);
+        }}
+        initialPropertyId={pendingWorkflow?.propertyId}
+      />
+    );
+  }
 
   return (
-    <div className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-border/70 bg-card/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-xl">
+    <>
+      <QuickCreateWorkflowDialog
+        actionId={pendingWorkflow?.actionId ?? null}
+        open={pendingWorkflow != null}
+        onOpenChange={(next) => {
+          if (!next) setPendingWorkflow(null);
+        }}
+        initialPropertyId={pendingWorkflow?.propertyId}
+      />
+      <div className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-border/70 bg-card/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-xl">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-sm font-semibold">
             {customize ? 'Customize shortcuts' : 'Quick create'}
@@ -385,11 +411,16 @@ function QuickCreateDockSheet({
                   No shortcuts yet. Tap customize to add some.
                 </p>
               ) : (
-                actions.map(({ id, label, href, icon: Icon }) => (
+                actions.map(({ id, label, href, workflowActionId, icon: Icon }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => {
+                      if (workflowActionId) {
+                        setPendingWorkflow({ actionId: workflowActionId, propertyId });
+                        close();
+                        return;
+                      }
                       close();
                       router.push(href);
                     }}
@@ -494,6 +525,7 @@ function QuickCreateDockSheet({
         </Button>
       </div>
     </div>
+    </>
   );
 }
 

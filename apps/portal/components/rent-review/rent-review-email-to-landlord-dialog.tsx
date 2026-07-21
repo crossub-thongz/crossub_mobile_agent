@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FileText, Loader2, Paperclip, Send } from 'lucide-react';
+import { Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { EmailAttachmentList } from '@/components/agent/email-attachment-list';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,8 +19,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   buildLandlordResearchEmailDraft,
   buildResearchReportHtml,
+  defaultResearchAttachments,
+  researchPackDraftAttachmentUrls,
   resolveLandlordContact,
 } from '@/lib/rent-review/research-landlord-email';
+import { resolveNoticePayableFromDate } from '@/lib/rent-review/scheduling';
 import {
   formatWorkflowEmailContact,
   type WorkflowEmailContact,
@@ -84,21 +88,39 @@ export function RentReviewEmailToLandlordDialog({
         const reportBlob = new Blob([buildResearchReportHtml(detail)], { type: 'text/html' });
         let fairTradingSize = '~85 KB';
         try {
+          const payableFrom = resolveNoticePayableFromDate({
+            leaseEndDate: detail.leaseEndDate,
+            storedEffectiveDate: detail.effectiveDate,
+          });
           const noticeBlob = await rentReviewApi.downloadNoticeOfRentIncrease(detail.id, {
             weekly: detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
+            effectiveDate: payableFrom,
           });
           fairTradingSize = `${Math.max(1, Math.round(noticeBlob.size / 1024))} KB`;
         } catch {
           /* notice PDF optional at research stage */
         }
-        if (!active) return;
-        setAttachments([
-          {
-            name: 'CROSSUB-Rent-Review-Report.html',
-            sizeLabel: `${Math.max(1, Math.round(reportBlob.size / 1024))} KB`,
-          },
-          { name: 'NSW-Fair-Trading-Notice.pdf', sizeLabel: fairTradingSize },
-        ]);
+        if (!active || !detail.propertyId) return;
+        const payableFrom = resolveNoticePayableFromDate({
+          leaseEndDate: detail.leaseEndDate,
+          storedEffectiveDate: detail.effectiveDate,
+        });
+        const urls = researchPackDraftAttachmentUrls(
+          detail.propertyId,
+          detail.id,
+          detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
+          payableFrom,
+        );
+        setAttachments(
+          defaultResearchAttachments().map((file) => ({
+            ...file,
+            sizeLabel:
+              file.name === 'CROSSUB-Rent-Review-Report.html'
+                ? `${Math.max(1, Math.round(reportBlob.size / 1024))} KB`
+                : fairTradingSize,
+            url: urls[file.name],
+          })),
+        );
       } finally {
         if (active) setLoadingAttachments(false);
       }
@@ -217,34 +239,17 @@ export function RentReviewEmailToLandlordDialog({
             </p>
           </div>
 
-          <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <Paperclip className="size-3.5" />
-              Attachments
-              {loadingAttachments ? (
-                <Loader2 className="text-muted-foreground size-3.5 animate-spin" />
-              ) : null}
-            </div>
-            <ul className="space-y-1.5">
-              {attachments.map((file) => (
-                <li
-                  key={file.name}
-                  className="flex items-center gap-2 rounded-lg border bg-background px-2.5 py-2 text-xs"
-                >
-                  <FileText className="text-primary size-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate font-medium">{file.name}</span>
-                  {file.sizeLabel ? (
-                    <span className="text-muted-foreground shrink-0 tabular-nums">
-                      {file.sizeLabel}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+          <EmailAttachmentList attachments={attachments} title="Attachments" />
+          {loadingAttachments ? (
+            <p className="text-muted-foreground flex items-center gap-2 text-[11px]">
+              <Loader2 className="size-3.5 animate-spin" />
+              Loading attachment sizes…
+            </p>
+          ) : (
             <p className="text-muted-foreground text-[11px]">
               Includes the CROSSUB research report and NSW Fair Trading notice reference.
             </p>
-          </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
