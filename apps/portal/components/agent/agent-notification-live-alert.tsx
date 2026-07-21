@@ -105,10 +105,10 @@ export function AgentNotificationLiveAlert() {
   const Icon = alertIcon(current.type);
   const tone =
     current.type === 'urgent'
-      ? 'border-destructive/50 bg-destructive/5'
+      ? 'border-destructive/50 bg-background text-foreground'
       : current.type === 'approval'
-        ? 'border-primary/50 bg-primary/5'
-        : 'border-border bg-card';
+        ? 'border-primary/50 bg-background text-foreground'
+        : 'border-border bg-background text-foreground';
 
   return (
     <div
@@ -120,7 +120,7 @@ export function AgentNotificationLiveAlert() {
     >
       <div
         className={cn(
-          'pointer-events-auto w-full max-w-md rounded-2xl border p-4 shadow-2xl transition-all duration-200',
+          'pointer-events-auto w-full max-w-md rounded-2xl border p-4 shadow-2xl ring-1 ring-black/5 transition-all duration-200 dark:ring-white/10',
           tone,
           visible ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0',
         )}
