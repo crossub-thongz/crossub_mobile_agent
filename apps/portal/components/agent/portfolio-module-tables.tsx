@@ -1206,7 +1206,15 @@ type TenantSelectionSortKey =
   | 'createdAt'
   | 'status';
 
-export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] }) {
+export function TenantSelectionsTable({
+  items,
+  onItemClick,
+  selectedId,
+}: {
+  items: TenantSelectionCase[];
+  onItemClick?: (item: TenantSelectionCase) => void;
+  selectedId?: string | null;
+}) {
   const { sortKey, sortDirection, onSort } = useClientTableSort<TenantSelectionSortKey>(
     'createdAt',
     'desc',
@@ -1246,10 +1254,13 @@ export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] 
       <div className="space-y-2 md:hidden">
         {sorted.map((t) => {
           const href = tenantSelectionDetail(t.id);
+          const openItem = onItemClick ? () => onItemClick(t) : undefined;
           return (
             <ModuleMobileCardShell
               key={t.id}
-              href={href}
+              onClick={openItem}
+              href={openItem ? undefined : href}
+              selected={selectedId === t.id}
               highlight={t.requiresApproval}
             >
               <div className="flex items-start justify-between gap-2">
@@ -1299,17 +1310,24 @@ export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] 
       <tbody className="divide-y">
         {sorted.map((t) => {
           const href = tenantSelectionDetail(t.id);
+          const interactive = Boolean(onItemClick);
+          const openItem = onItemClick ? () => onItemClick(t) : undefined;
           return (
-            <tr
+            <ModuleInteractiveTableRow
               key={t.id}
-              className={cn(
-                'transition-colors hover:bg-muted/20',
-                t.requiresApproval && 'bg-destructive/[0.03]',
-              )}
+              onActivate={openItem}
+              selected={selectedId === t.id}
+              className={cn(t.requiresApproval && 'bg-destructive/[0.03]')}
             >
-              <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                <span className="line-clamp-2">{t.propertyAddress}</span>
-              </ModuleTableLinkCell>
+              {interactive ? (
+                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                  <span className="line-clamp-2">{t.propertyAddress}</span>
+                </td>
+              ) : (
+                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                  <span className="line-clamp-2">{t.propertyAddress}</span>
+                </ModuleTableLinkCell>
+              )}
               <td className="max-w-[10rem] px-3 py-3">
                 <span className="line-clamp-2">{t.applicantName}</span>
               </td>
@@ -1327,8 +1345,14 @@ export function TenantSelectionsTable({ items }: { items: TenantSelectionCase[] 
                   <span className="text-primary text-xs font-medium">{t.status}</span>
                 )}
               </td>
-              <ModuleTableChevronCell href={href} />
-            </tr>
+              {interactive ? (
+                <td className="px-3 py-3 text-right text-muted-foreground">
+                  <ChevronRight className="inline size-4" />
+                </td>
+              ) : (
+                <ModuleTableChevronCell href={href} />
+              )}
+            </ModuleInteractiveTableRow>
           );
         })}
       </tbody>

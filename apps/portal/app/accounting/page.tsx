@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { FilePlus2, TrendingDown, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,18 +30,17 @@ import {
   parseAccountingSection,
   type AccountingSectionId,
 } from '@/constants/accounting-sections';
-import { ROUTES, propertyDetail } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   deleteInvoice,
   fetchInvoices,
   type AgentInvoiceListItem,
 } from '@/lib/crossub-api/agent-client';
-import { accountingToJobRow } from '@/lib/portfolio-case-dialog';
+import { accountingPortfolioToJobRow } from '@/lib/portfolio-case-dialog';
 import { formatCurrency } from '@/lib/utils';
 
 export default function AccountingPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { accounting, properties, primaryAgency } = useAgentData();
   const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
@@ -74,9 +73,9 @@ export default function AccountingPage() {
       setSection(next);
       const params = new URLSearchParams(searchParams.toString());
       params.set('section', next);
-      router.replace(`${ROUTES.ACCOUNTING}?${params.toString()}`, { scroll: false });
+      window.history.replaceState(null, '', `${ROUTES.ACCOUNTING}?${params.toString()}`);
     },
-    [router, searchParams],
+    [searchParams],
   );
 
   const loadInvoices = useCallback(async () => {
@@ -94,16 +93,11 @@ export default function AccountingPage() {
     if (section === 'invoices') void loadInvoices();
   }, [section, loadInvoices]);
 
-  const openArrearsCase = useCallback(
+  const openAccountingCase = useCallback(
     (item: (typeof accounting)[number]) => {
-      const job = accountingToJobRow(item);
-      if (job) {
-        openJob(job);
-        return;
-      }
-      router.push(`${propertyDetail(item.propertyId)}?tab=Accounting#rent-arrears`);
+      openJob(accountingPortfolioToJobRow(item));
     },
-    [openJob, router],
+    [openJob],
   );
 
   const arrearsItems = useMemo(() => filterArrearsItems(accounting), [accounting]);
@@ -170,7 +164,11 @@ export default function AccountingPage() {
                 description="Rent reconciliation will appear when portfolio accounting data is available."
               />
             ) : (
-              <RentReconciliationListTable items={accounting} />
+              <RentReconciliationListTable
+                items={accounting}
+                selectedId={selectedId}
+                onItemClick={openAccountingCase}
+              />
             )}
 
             <ModuleCommunications
@@ -266,15 +264,9 @@ export default function AccountingPage() {
               <ArrearsListTable
                 items={arrearsItems}
                 selectedId={selectedId}
-                onItemClick={openArrearsCase}
+                onItemClick={openAccountingCase}
               />
             )}
-
-            <PortfolioCaseDialogHost
-              job={selectedJob}
-              onClose={closeJob}
-              onOpenJob={openJob}
-            />
 
             <ModuleCommunications
               categories={['Accounting']}
@@ -291,12 +283,22 @@ export default function AccountingPage() {
               description="Owner statements will appear once properties are assigned to your portfolio."
             />
           ) : (
-            <StatementsListTable items={accounting} />
+            <StatementsListTable
+              items={accounting}
+              selectedId={selectedId}
+              onItemClick={openAccountingCase}
+            />
           )
         ) : null}
 
         {section === 'settings' ? <AccountingSettingsSection /> : null}
       </div>
+
+      <PortfolioCaseDialogHost
+        job={selectedJob}
+        onClose={closeJob}
+        onOpenJob={openJob}
+      />
 
       <InvoiceEditorDialog
         open={editorOpen}

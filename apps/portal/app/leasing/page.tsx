@@ -26,7 +26,7 @@ import {
   ROUTES,
 } from '@/constants/routes';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
-import { leasingCycleToJobRow, rentReviewToJobRow } from '@/lib/portfolio-case-dialog';
+import { leasingCycleToJobRow, rentReviewToJobRow, tenantSelectionToJobRow } from '@/lib/portfolio-case-dialog';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
 const TABS = [
@@ -171,7 +171,14 @@ export default function LeasingPage() {
             ) : (
               <div className="space-y-3">
                 <h2 className="text-sm font-semibold">Tenant applications</h2>
-                <TenantSelectionsTable items={filteredApplications} />
+                <TenantSelectionsTable
+                  items={filteredApplications}
+                  selectedId={selectedId}
+                  onItemClick={(item) => {
+                    const job = tenantSelectionToJobRow(item, portfolioData);
+                    if (job) openJob(job);
+                  }}
+                />
               </div>
             )}
           </section>

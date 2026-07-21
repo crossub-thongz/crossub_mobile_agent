@@ -376,7 +376,11 @@ export function PropertyLeasingJobPanel({
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Tenant applications
             </p>
-            <TenantSelectionsTable items={propertyTenantSelections} />
+            <TenantSelectionsTable
+              items={propertyTenantSelections}
+              selectedId={selectedCaseId}
+              onItemClick={(item) => handleRowClick(item.id)}
+            />
           </div>
         ) : null}
       </section>

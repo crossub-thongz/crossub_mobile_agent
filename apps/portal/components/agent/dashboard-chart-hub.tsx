@@ -396,7 +396,7 @@ function BreakdownSlide({
         <ChevronRight className="text-muted-foreground size-5 shrink-0 transition group-hover:translate-x-0.5 group-hover:text-primary" />
       </div>
 
-      <div className="flex justify-center py-1">
+      <div className="touch-pan-y flex justify-center py-1">
         <DonutChart
           segments={donutSegments.length ? donutSegments : segments}
           size={112}
@@ -404,7 +404,7 @@ function BreakdownSlide({
         />
       </div>
 
-      <div className="space-y-3">
+      <div className="touch-pan-y space-y-3">
         {segments.map((segment) => (
           <SegmentBarRow
             key={segment.label}
@@ -416,7 +416,7 @@ function BreakdownSlide({
         ))}
       </div>
 
-      <div className="text-primary flex items-center justify-center gap-1 rounded-xl border border-primary/20 bg-primary/5 py-2.5 text-sm font-semibold">
+      <div className="touch-pan-y text-primary flex items-center justify-center gap-1 rounded-xl border border-primary/20 bg-primary/5 py-2.5 text-sm font-semibold">
         Open {definition.title}
         <ChevronRight className="size-4" />
       </div>
@@ -513,6 +513,59 @@ function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
     };
   }, [syncActiveFromCarousel]);
 
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+
+    let startX = 0;
+    let startY = 0;
+    let lockedAxis: 'horizontal' | 'vertical' | null = null;
+
+    const resetOverflow = () => {
+      lockedAxis = null;
+      el.style.overflowX = '';
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      lockedAxis = null;
+      el.style.overflowX = '';
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      const dx = event.touches[0].clientX - startX;
+      const dy = event.touches[0].clientY - startY;
+
+      if (lockedAxis === null) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        lockedAxis = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+      }
+
+      if (lockedAxis === 'vertical') {
+        // Release horizontal scroll capture so the page can scroll vertically.
+        el.style.overflowX = 'hidden';
+      } else {
+        el.style.overflowX = '';
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', resetOverflow, { passive: true });
+    el.addEventListener('touchcancel', resetOverflow, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', resetOverflow);
+      el.removeEventListener('touchcancel', resetOverflow);
+      el.style.overflowX = '';
+    };
+  }, []);
+
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm md:hidden">
       <div className="border-b bg-muted/20 px-3 py-2.5">
@@ -572,7 +625,7 @@ function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
 
       <div
         ref={carouselRef}
-        className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto touch-pan-x"
+        className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
         aria-label="Portfolio breakdown categories"
       >
         {CHART_DEFINITIONS.map((definition) => (

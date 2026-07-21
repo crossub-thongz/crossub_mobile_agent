@@ -67,6 +67,7 @@ export function resolvePortfolioCasePropertyId(
       return data.tribunalCases.find((row) => row.id === job.id)?.propertyId ?? null;
     case 'accounting':
       if (job.id.startsWith('arrears-')) return job.id.slice('arrears-'.length);
+      if (job.id.startsWith('recon-')) return job.id.slice('recon-'.length);
       return data.accounting.find((row) => `arrears-${row.propertyId}` === job.id)?.propertyId ?? null;
     default:
       return null;
@@ -159,6 +160,50 @@ export function tribunalToJobRow(item: TribunalCase): PropertyJobRow {
 
 export function accountingToJobRow(item: PropertyAccounting): PropertyJobRow | null {
   return accountingJobRows(item)[0] ?? null;
+}
+
+/** Portfolio accounting row — opens arrears workflow when present, otherwise reconciliation summary. */
+export function accountingPortfolioToJobRow(item: PropertyAccounting): PropertyJobRow {
+  const arrears = accountingToJobRow(item);
+  if (arrears) return arrears;
+
+  return {
+    id: `recon-${item.propertyId}`,
+    kind: 'accounting',
+    jobType: 'Accounting',
+    name: 'Rent reconciliation',
+    description: `${item.tenantName} · ${item.propertyAddress}`,
+    date: '—',
+    createdAt: '—',
+    createdAtMs: 0,
+    status: item.arrearsAmount > 0 ? 'Collection in progress' : 'Up to date',
+    phase: 'in_progress',
+  };
+}
+
+export function accountingPortfolioJobId(item: PropertyAccounting): string {
+  return accountingPortfolioToJobRow(item).id;
+}
+
+export function tenantSelectionToJobRow(
+  item: TenantSelectionCase,
+  data: PortfolioAgentData,
+): PropertyJobRow | null {
+  if (!item.propertyId) return null;
+  const workflowCase = leasingCasesForProperty(item.propertyId, data).find(
+    (row) => row.id === item.id,
+  );
+  return workflowCase ? (leasingWorkflowJobRows([workflowCase])[0] ?? null) : null;
+}
+
+export function vacatingToJobRow(
+  item: VacatingCase,
+  data: PortfolioAgentData,
+): PropertyJobRow | null {
+  const workflowCase = leasingCasesForProperty(item.propertyId, data).find(
+    (row) => row.id === item.id && row.category === 'end_leasing',
+  );
+  return workflowCase ? (leasingWorkflowJobRows([workflowCase])[0] ?? null) : null;
 }
 
 function leasingCasesForProperty(
