@@ -95,7 +95,7 @@ export function RentReviewTenantDecisionPanel({
         <section className="rounded-xl border bg-card p-4">
           <dl className="text-sm">
             <div>
-              <dt className="text-muted-foreground text-xs">Residential tenancy agreement</dt>
+              <dt className="text-muted-foreground text-xs">Lease extension agreement</dt>
               <dd className="mt-0.5">
                 <Button
                   type="button"
@@ -106,7 +106,7 @@ export function RentReviewTenantDecisionPanel({
                   onClick={() => void viewResidentialTenancyAgreement()}
                 >
                   <FileDown className="size-3.5" />
-                  {viewingAgreement ? 'Opening…' : 'PDF'}
+                  {viewingAgreement ? 'Opening…' : accepted ? 'View agreement' : 'Preview agreement'}
                 </Button>
               </dd>
             </div>
@@ -128,7 +128,7 @@ export function RentReviewTenantDecisionPanel({
           steps={leaseAgreement}
           onViewAgreement={() => void viewResidentialTenancyAgreement()}
           viewingAgreement={viewingAgreement}
-          viewLabel={leaseAudit.signedDone ? 'View signed agreement' : 'View agreement'}
+          viewLabel={leaseAudit.signedDone ? 'View signed agreement' : 'Preview agreement'}
         />
       ) : null}
 

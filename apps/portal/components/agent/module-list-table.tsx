@@ -5,7 +5,13 @@ import { ChevronRight } from 'lucide-react';
 import { Children, cloneElement, isValidElement, useCallback, type ReactNode, type SyntheticEvent } from 'react';
 
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
+import {
+  useWorkflowCaseIsNew,
+  workflowCaseNewCardClass,
+  workflowCaseNewRowClass,
+} from '@/hooks/use-workflow-case-new';
 import type { SortDirection } from '@/lib/client-table-sort';
+import type { AgentWorkflowCaseModule } from '@/lib/workflow-case-new-highlight';
 import { cn } from '@/lib/utils';
 
 export type ModuleTableColumn<T extends string> =
@@ -30,23 +36,57 @@ export const MODULE_TABLE_COLUMN_WIDTHS = {
   leasingHistory: ['22%', '14%', '12%', '16%', '10%', '10%', '5%'],
 } as const;
 
+/** Truncated cell text — full value shown via native hover `title`. */
+export function ModuleTableTruncateText({
+  children,
+  title,
+  className,
+}: {
+  children: React.ReactNode;
+  title?: string;
+  className?: string;
+}) {
+  const hoverTitle =
+    title ?? (typeof children === 'string' || typeof children === 'number' ? String(children) : undefined);
+
+  return (
+    <span className={cn('block min-w-0 truncate', className)} title={hoverTitle}>
+      {children}
+    </span>
+  );
+}
+
+export function moduleTableCellClassName(className?: string): string {
+  return cn('min-w-0 overflow-hidden px-2 py-2.5 lg:px-3 lg:py-3', className);
+}
+
 export function ModuleMobileCardShell({
   onClick,
   href,
   selected,
   highlight,
+  newCaseModule,
+  newCaseId,
   children,
 }: {
   onClick?: () => void;
   href?: string;
   selected?: boolean;
   highlight?: boolean;
+  newCaseModule?: AgentWorkflowCaseModule;
+  newCaseId?: string;
   children: ReactNode;
 }) {
-  const className = cn(
-    'block rounded-xl border bg-card p-3 shadow-sm transition active:scale-[0.99]',
-    highlight && 'border-destructive/30 bg-destructive/[0.03]',
-    selected && 'border-primary ring-primary/20 ring-2',
+  const isNewCase = useWorkflowCaseIsNew(newCaseModule ?? 'maintenance', newCaseId ?? '');
+  const showNewCase = Boolean(newCaseModule && newCaseId && isNewCase);
+
+  const className = workflowCaseNewCardClass(
+    showNewCase,
+    cn(
+      'block rounded-xl border bg-card p-3 shadow-sm transition active:scale-[0.99]',
+      highlight && 'border-destructive/30 bg-destructive/[0.03]',
+      selected && 'border-primary ring-primary/20 ring-2',
+    ),
   );
 
   if (onClick) {
@@ -194,13 +234,20 @@ export function ModuleInteractiveTableRow({
   onActivate,
   selected,
   className,
+  newCaseModule,
+  newCaseId,
   children,
 }: {
   onActivate?: () => void;
   selected?: boolean;
   className?: string;
+  newCaseModule?: AgentWorkflowCaseModule;
+  newCaseId?: string;
   children: ReactNode;
 }) {
+  const isNewCase = useWorkflowCaseIsNew(newCaseModule ?? 'maintenance', newCaseId ?? '');
+  const showNewCase = Boolean(newCaseModule && newCaseId && isNewCase);
+
   const activate = useCallback(
     (event: SyntheticEvent) => {
       if (!onActivate) return;
@@ -212,7 +259,9 @@ export function ModuleInteractiveTableRow({
 
   if (!onActivate) {
     return (
-      <tr className={cn('transition-colors hover:bg-muted/20', className)}>{children}</tr>
+      <tr className={workflowCaseNewRowClass(showNewCase, cn('transition-colors hover:bg-muted/20', className))}>
+        {children}
+      </tr>
     );
   }
 
@@ -221,10 +270,13 @@ export function ModuleInteractiveTableRow({
       role="button"
       tabIndex={0}
       aria-selected={selected || undefined}
-      className={cn(
-        'cursor-pointer touch-manipulation transition-colors hover:bg-muted/20',
-        selected && 'bg-primary/5',
-        className,
+      className={workflowCaseNewRowClass(
+        showNewCase,
+        cn(
+          'cursor-pointer touch-manipulation transition-colors hover:bg-muted/20',
+          selected && 'bg-primary/5',
+          className,
+        ),
       )}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {

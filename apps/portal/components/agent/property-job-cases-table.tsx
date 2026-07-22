@@ -8,6 +8,8 @@ import {
   ModuleListTable,
   ModuleMobileCardShell,
   ModuleSortableTableHead,
+  ModuleTableTruncateText,
+  moduleTableCellClassName,
   type ModuleTableColumn,
 } from '@/components/agent/module-list-table';
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
@@ -82,6 +84,23 @@ function sortPropertyJobRows(
     return applySortDirection(cmp, sortDirection);
   });
   return sorted;
+}
+
+const PROPERTY_JOB_CELL_WEIGHT: Record<PropertyJobRowCellKey, number> = {
+  jobType: 9,
+  name: 10,
+  issueType: 10,
+  description: 22,
+  createdAt: 13,
+  date: 11,
+  status: 11,
+  countdown: 12,
+  delete: 4,
+};
+
+function propertyJobTableColumnWidths(cells: PropertyJobRowCellKey[]): string[] {
+  const total = cells.reduce((sum, cell) => sum + PROPERTY_JOB_CELL_WEIGHT[cell], 0);
+  return cells.map((cell) => `${((PROPERTY_JOB_CELL_WEIGHT[cell] / total) * 100).toFixed(1)}%`);
 }
 
 export function PropertyJobCasesTable({
@@ -282,12 +301,10 @@ export function PropertyJobCasesTable({
     showKeyDateColumn,
     showRentReviewSchedule,
   ]);
-  const tableMinWidth =
-    (rentReviewLayout ? 900 : 980) +
-    (showIssueType ? 120 : 0) +
-    (showKeyDateColumn || rentReviewLayout ? 100 : 0) +
-    (showRentReviewSchedule ? 100 : 0) +
-    (showDelete ? 40 : 0);
+  const tableColumnWidths = useMemo(
+    () => propertyJobTableColumnWidths(rowCellOrder),
+    [rowCellOrder],
+  );
 
   if (rows.length === 0) {
     return (
@@ -454,7 +471,7 @@ export function PropertyJobCasesTable({
           </div>
 
           <div className="hidden md:block">
-        <ModuleListTable minWidth={tableMinWidth}>
+        <ModuleListTable columnWidths={tableColumnWidths}>
           {jobTypeFilterEnabled ? (
             <thead>
               <tr className="border-b bg-muted/30">
@@ -531,20 +548,18 @@ export function PropertyJobCasesTable({
                     switch (cell) {
                       case 'jobType':
                         return (
-                          <td key={cell} className="px-3 py-3 text-xs">
-                            <span
-                              className={cn(
-                                selected ? 'font-semibold text-primary' : 'text-muted-foreground',
-                              )}
+                          <td key={cell} className={moduleTableCellClassName('text-xs')}>
+                            <ModuleTableTruncateText
+                              className={cn(selected ? 'font-semibold text-primary' : 'text-muted-foreground')}
                             >
                               {row.jobType}
-                            </span>
+                            </ModuleTableTruncateText>
                           </td>
                         );
                       case 'name':
                         return (
-                          <td key={cell} className="max-w-[10rem] px-3 py-3">
-                            <div className="flex items-center gap-2">
+                          <td key={cell} className={moduleTableCellClassName()}>
+                            <div className="flex min-w-0 items-center gap-2">
                               {selected ? (
                                 <span
                                   className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full"
@@ -553,79 +568,74 @@ export function PropertyJobCasesTable({
                                   <Check className="size-3" strokeWidth={3} />
                                 </span>
                               ) : null}
-                              <span
+                              <ModuleTableTruncateText
                                 className={cn(
                                   'leading-snug',
                                   selected ? 'text-primary font-semibold' : 'font-medium',
                                 )}
                               >
                                 {row.name}
-                              </span>
+                              </ModuleTableTruncateText>
                             </div>
                           </td>
                         );
                       case 'issueType':
                         return (
-                          <td key={cell} className="max-w-[9rem] px-3 py-3 text-xs">
-                            <span
+                          <td key={cell} className={moduleTableCellClassName('text-xs')}>
+                            <ModuleTableTruncateText
                               className={cn(
-                                'line-clamp-2 font-medium',
+                                'font-medium',
                                 selected ? 'text-foreground' : 'text-muted-foreground',
                               )}
                             >
                               {row.issueType ?? '—'}
-                            </span>
+                            </ModuleTableTruncateText>
                           </td>
                         );
                       case 'description':
                         return (
-                          <td key={cell} className="max-w-[16rem] px-3 py-3 text-xs">
-                            <span
-                              className={cn(
-                                'line-clamp-2',
-                                selected ? 'text-foreground' : 'text-muted-foreground',
-                              )}
+                          <td key={cell} className={moduleTableCellClassName('text-xs')}>
+                            <ModuleTableTruncateText
+                              className={cn(selected ? 'text-foreground' : 'text-muted-foreground')}
                             >
                               {row.description}
-                            </span>
+                            </ModuleTableTruncateText>
                           </td>
                         );
                       case 'createdAt':
                         return (
                           <td
                             key={cell}
-                            className={cn(
-                              'whitespace-nowrap px-3 py-3 text-xs tabular-nums',
-                              selected ? 'text-foreground' : 'text-muted-foreground',
+                            className={moduleTableCellClassName(
+                              cn('text-xs tabular-nums', selected ? 'text-foreground' : 'text-muted-foreground'),
                             )}
                           >
-                            {row.createdAt}
+                            <ModuleTableTruncateText>{row.createdAt}</ModuleTableTruncateText>
                           </td>
                         );
                       case 'date':
                         return (
                           <td
                             key={cell}
-                            className={cn(
-                              'whitespace-nowrap px-3 py-3 text-xs tabular-nums',
-                              selected ? 'text-foreground' : 'text-muted-foreground',
+                            className={moduleTableCellClassName(
+                              cn('text-xs tabular-nums', selected ? 'text-foreground' : 'text-muted-foreground'),
                             )}
                           >
-                            {row.date}
+                            <ModuleTableTruncateText>{row.date}</ModuleTableTruncateText>
                           </td>
                         );
                       case 'status':
                         return (
-                          <td key={cell} className="px-3 py-3 text-xs">
+                          <td key={cell} className={moduleTableCellClassName('text-xs')}>
                             <span
                               className={cn(
-                                'inline-flex rounded-full px-2 py-0.5 font-semibold',
-                                selected
-                                  ? 'bg-primary/15 text-primary'
-                                  : 'text-primary font-medium',
+                                'inline-flex max-w-full rounded-full px-2 py-0.5',
+                                selected ? 'bg-primary/15 text-primary' : 'text-primary',
                               )}
                             >
-                              {row.status}
+                              <ModuleTableTruncateText className="font-semibold">
+                                {row.status}
+                              </ModuleTableTruncateText>
                             </span>
                           </td>
                         );

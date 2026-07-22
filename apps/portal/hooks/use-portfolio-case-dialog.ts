@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { markAgentWorkflowCaseOpenedFromJob } from '@/lib/mark-agent-workflow-case-opened';
 import type { PortfolioAgentData } from '@/lib/portfolio-case-dialog';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { useAgentStore } from '@/lib/store';
@@ -30,6 +31,7 @@ export function usePortfolioCaseDialog() {
   );
 
   const openJob = useCallback((job: PropertyJobRow | null) => {
+    if (job) markAgentWorkflowCaseOpenedFromJob(job);
     setSelectedJob(job);
   }, []);
 

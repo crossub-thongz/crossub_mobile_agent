@@ -107,3 +107,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes workflow-case-glow {
+  0%, 100% {
+    box-shadow: inset 0 0 10px rgba(52, 211, 153, 0.22);
+  }
+  50% {
+    box-shadow: inset 0 0 22px rgba(52, 211, 153, 0.48);
+  }
+}
+
+.animate-workflow-case-glow {
+  animation: workflow-case-glow 2.2s ease-in-out infinite;
+}

@@ -40,7 +40,13 @@ export function isTenantVacatePathComplete(detail: RentReviewWorkflowDetail): bo
 }
 
 export function isPreferredRenewalFixed(detail: RentReviewWorkflowDetail): boolean {
-  return detail.preferredLeaseType === 'fixed' || detail.newAgreementEnd != null;
+  return (
+    detail.preferredLeaseType === 'fixed' ||
+    detail.newAgreementEnd != null ||
+    (detail.newAgreementStart != null &&
+      detail.fixedTermWeeks != null &&
+      detail.fixedTermWeeks > 0)
+  );
 }
 
 /** New lease start/end apply only when the agent chose a fixed-term renewal. */
@@ -223,19 +229,20 @@ export function buildLeaseAgreementProgress(detail: RentReviewWorkflowDetail): L
     auditAt(detail, K.PREPARING) ??
     auditAt(detail, 'tenant_accepted_response') ??
     auditAt(detail, 'agent_accepted_tenant_counter');
-  const sentAt = auditAt(detail, K.SENT);
+  const sentAt =
+    auditAt(detail, K.SENT) ?? auditAt(detail, 'tenant_notices_dispatched');
   const signedAt = auditAt(detail, K.SIGNED);
 
   return [
     {
       id: 'preparing',
-      label: 'Residential tenancy agreement preparing',
+      label: 'Lease extension agreement preparing',
       done: preparingAt != null,
       at: preparingAt,
     },
     {
       id: 'sent',
-      label: 'Residential tenancy agreement sent',
+      label: 'Lease extension agreement sent',
       done: sentAt != null,
       at: sentAt,
     },

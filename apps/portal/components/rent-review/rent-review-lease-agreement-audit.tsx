@@ -8,7 +8,7 @@ import { formatDateTime } from '@/lib/utils';
 
 export function RentReviewLeaseAgreementAudit({
   steps,
-  title = 'Residential tenancy agreement',
+  title = 'Lease extension agreement',
   onViewAgreement,
   viewingAgreement = false,
   viewLabel = 'View agreement',
@@ -23,9 +23,7 @@ export function RentReviewLeaseAgreementAudit({
   if (steps.length === 0) return null;
 
   const doneCount = steps.filter((step) => step.done).length;
-  const canView =
-    Boolean(onViewAgreement) &&
-    steps.some((s) => (s.id === 'preparing' || s.id === 'sent') && s.done);
+  const canView = Boolean(onViewAgreement) && steps.length > 0;
 
   return (
     <section className="rounded-xl border bg-muted/20 p-4">

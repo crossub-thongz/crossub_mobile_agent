@@ -12,7 +12,10 @@ import {
   ModuleTableChevronCell,
   ModuleTableHead,
   ModuleTableLinkCell,
+  ModuleTableTruncateText,
+  moduleTableCellClassName,
 } from '@/components/agent/module-list-table';
+import { WorkflowCaseListSeeder } from '@/components/agent/workflow-case-list-seeder';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -139,6 +142,7 @@ export function MaintenanceListTable({
 
   return (
     <>
+      <WorkflowCaseListSeeder module="maintenance" caseIds={items.map((m) => m.id)} />
       {/* Mobile: stacked cards — table is too wide for phones */}
       <div className="space-y-2 md:hidden">
         {sorted.map((m) => {
@@ -232,13 +236,19 @@ export function MaintenanceListTable({
                   key={m.id}
                   onActivate={openItem}
                   selected={selectedId === m.id}
+                  newCaseModule="maintenance"
+                  newCaseId={m.id}
                   className={cn(m.requiresApproval && 'bg-destructive/[0.03]')}
                 >
                   <td className="text-muted-foreground min-w-0 truncate px-2 py-2.5 text-xs tabular-nums lg:px-3 lg:py-3">
                     {m.trackingNumber}
                   </td>
-                  <td className="text-muted-foreground min-w-0 truncate px-2 py-2.5 text-xs tabular-nums lg:px-3 lg:py-3">
-                    {formatCreatedAt(maintenanceCreatedAtIso(m))}
+                  <td
+                    className={moduleTableCellClassName(
+                      'text-muted-foreground text-xs tabular-nums',
+                    )}
+                  >
+                    <ModuleTableTruncateText>{formatCreatedAt(maintenanceCreatedAtIso(m))}</ModuleTableTruncateText>
                   </td>
                   {interactive ? (
                     <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
@@ -350,6 +360,7 @@ export function RentReviewListTable({
 
   return (
     <>
+      <WorkflowCaseListSeeder module="rent_review" caseIds={items.map((r) => r.id)} />
       <div className="space-y-2 md:hidden">
         {sorted.map((r) => {
           const href = detailHref?.(r.id);
@@ -362,6 +373,8 @@ export function RentReviewListTable({
               href={openItem ? undefined : href}
               selected={selectedId === r.id}
               highlight={r.requiresApproval}
+              newCaseModule="rent_review"
+              newCaseId={r.id}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -423,6 +436,8 @@ export function RentReviewListTable({
                   key={r.id}
                   onActivate={openItem}
                   selected={selectedId === r.id}
+                  newCaseModule="rent_review"
+                  newCaseId={r.id}
                   className={cn(r.requiresApproval && 'bg-destructive/[0.03]')}
                 >
                   <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
@@ -831,6 +846,7 @@ export function InspectionsListTable({
 
   return (
     <>
+      <WorkflowCaseListSeeder module="inspection" caseIds={items.map((i) => i.id)} />
       <div className="space-y-2 md:hidden">
         {sorted.map((i) => {
           const href = inspectionDetail(i.id);
@@ -843,6 +859,8 @@ export function InspectionsListTable({
                 onClick={openItem}
                 href={interactive ? undefined : href}
                 selected={selectedId === i.id}
+                newCaseModule="inspection"
+                newCaseId={i.id}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 pr-8">
@@ -920,6 +938,8 @@ export function InspectionsListTable({
               key={i.id}
               onActivate={openItem}
               selected={selectedId === i.id}
+              newCaseModule="inspection"
+              newCaseId={i.id}
             >
               <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                 {i.trackingNumber}
@@ -1221,6 +1241,7 @@ export function LeasingCyclesTable({
 
   return (
     <>
+      <WorkflowCaseListSeeder module="leasing" caseIds={items.map((cycle) => cycle.id)} />
       <div className="space-y-2 md:hidden">
         {sorted.map((cycle) => {
           const href = propertyDetail(cycle.propertyId);
@@ -1236,6 +1257,8 @@ export function LeasingCyclesTable({
               onClick={openCycle}
               href={onCycleClick ? undefined : href}
               selected={selectedCycleId === cycle.id}
+              newCaseModule="leasing"
+              newCaseId={cycle.id}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -1293,6 +1316,8 @@ export function LeasingCyclesTable({
                   key={cycle.id}
                   onActivate={openCycle}
                   selected={isSelected}
+                  newCaseModule="leasing"
+                  newCaseId={cycle.id}
                 >
                   {hidePropertyColumn ? (
                     <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">

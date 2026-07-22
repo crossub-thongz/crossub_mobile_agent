@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { RentReviewCompletedCaseSummary } from '@/components/rent-review/rent-review-completed-case-summary';
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewFullAuditLog } from '@/components/rent-review/rent-review-full-audit-log';
+import { RentReviewLeaseAgreementAudit } from '@/components/rent-review/rent-review-lease-agreement-audit';
 import { Button } from '@/components/ui/button';
 import {
   isRentReviewWorkflowClosed,
@@ -61,17 +62,15 @@ export function RentReviewCompletedPanel({
     }
   };
 
-  const downloadResidentialTenancyAgreement = async () => {
+  const viewResidentialTenancyAgreement = async () => {
     setBusy(true);
     try {
-      const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id);
+      const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id, {
+        propertyId: detail.propertyId,
+      });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `residential-tenancy-agreement-${detail.id.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Residential tenancy agreement downloaded');
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -94,7 +93,7 @@ export function RentReviewCompletedPanel({
             <dl className="space-y-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <dt className="text-muted-foreground text-xs">Residential tenancy agreement</dt>
+                  <dt className="text-muted-foreground text-xs">Lease extension agreement</dt>
                   <dd className="mt-0.5 font-medium">{leaseExtensionStatus}</dd>
                 </div>
                 <Button
@@ -102,19 +101,20 @@ export function RentReviewCompletedPanel({
                   variant="outline"
                   size="sm"
                   className="h-8 gap-1.5 px-2.5 text-xs"
-                  disabled={busy || !leaseAudit.preparingDone}
-                  onClick={() => void downloadResidentialTenancyAgreement()}
+                  disabled={busy}
+                  onClick={() => void viewResidentialTenancyAgreement()}
                 >
                   <FileDown className="size-3.5" />
-                  PDF
+                  {leaseAudit.signedDone ? 'View signed agreement' : 'Preview agreement'}
                 </Button>
               </div>
             </dl>
-            {!leaseAudit.preparingDone ? (
-              <p className="text-muted-foreground text-xs">
-                PDF is available once the residential tenancy agreement is being prepared.
-              </p>
-            ) : null}
+            <RentReviewLeaseAgreementAudit
+              steps={leaseAudit.steps}
+              onViewAgreement={() => void viewResidentialTenancyAgreement()}
+              viewingAgreement={busy}
+              viewLabel={leaseAudit.signedDone ? 'View signed agreement' : 'Preview agreement'}
+            />
           </div>
         ) : accepted ? (
           <div className="space-y-2 text-sm">
