@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { SelectChip } from '@/components/agent/form-step';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,6 +30,14 @@ import {
 } from '@/lib/rent-calculations';
 import type { Property } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+type ArrearsKind = 'rent' | 'bill' | 'bond';
+
+const ARREARS_KIND_OPTIONS: { id: ArrearsKind; label: string }[] = [
+  { id: 'rent', label: 'Rent arrears' },
+  { id: 'bill', label: 'Bill arrears' },
+  { id: 'bond', label: 'Bond arrears' },
+];
 
 const BILL_TYPE_PRESETS = [
   'Water',
@@ -147,6 +156,7 @@ export function CreateTribunalRentChasingDialog({
   const [agreementEndDate, setAgreementEndDate] = useState('');
   const [bondAmount, setBondAmount] = useState('');
   const [bondNotes, setBondNotes] = useState('');
+  const [selectedKinds, setSelectedKinds] = useState<ArrearsKind[]>([]);
 
   const propertyOptions = useMemo(
     () =>
@@ -164,6 +174,7 @@ export function CreateTribunalRentChasingDialog({
   useEffect(() => {
     if (!open) return;
     setPropertyId(initialPropertyId ?? '');
+    setSelectedKinds([]);
   }, [open, initialPropertyId]);
 
   useEffect(() => {
@@ -279,8 +290,26 @@ export function CreateTribunalRentChasingDialog({
       Boolean(agreementEndDate.trim()) ||
       Boolean(bondNotes.trim());
 
+    if (selectedKinds.length === 0) {
+      toast.error('Select at least one arrears type');
+      return;
+    }
+
+    if (selectedKinds.includes('rent') && !hasRent) {
+      toast.error('Fill in rent arrears details');
+      return;
+    }
+    if (selectedKinds.includes('bill') && !hasBills) {
+      toast.error('Add at least one bill arrears item');
+      return;
+    }
+    if (selectedKinds.includes('bond') && !hasBond) {
+      toast.error('Fill in bond arrears details');
+      return;
+    }
+
     if (!hasRent && !hasBills && !hasBond) {
-      toast.error('Fill in at least one of Rent Arrears, Bill Arrears, or Bond Arrears');
+      toast.error('Select and fill in at least one of Rent, Bill, or Bond arrears');
       return;
     }
 
@@ -298,15 +327,15 @@ export function CreateTribunalRentChasingDialog({
     }
 
     const body: CreateAgentTribunalRentChasingInput = {};
-    if (hasRent) {
+    if (selectedKinds.includes('rent') && hasRent) {
       body.rentArrears = {
         rentAmount: rentValue,
         paymentCycle: paymentCycle || undefined,
         rentPaidTo: rentPaidTo.trim() || undefined,
       };
     }
-    if (hasBills) body.billArrears = billRows;
-    if (hasBond) {
+    if (selectedKinds.includes('bill') && hasBills) body.billArrears = billRows;
+    if (selectedKinds.includes('bond') && hasBond) {
       body.bondArrears = {
         agreementEndDate: agreementEndDate.trim() || undefined,
         bondAmount: bondValue,
@@ -369,6 +398,34 @@ export function CreateTribunalRentChasingDialog({
             </div>
           ) : (
             <>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">What are you chasing?</p>
+                <p className="text-muted-foreground text-xs">
+                  Select one or more arrears types to include in this Rent Chasing case.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {ARREARS_KIND_OPTIONS.map((option) => {
+                    const selected = selectedKinds.includes(option.id);
+                    return (
+                      <SelectChip
+                        key={option.id}
+                        selected={selected}
+                        onClick={() =>
+                          setSelectedKinds((prev) =>
+                            selected
+                              ? prev.filter((kind) => kind !== option.id)
+                              : [...prev, option.id],
+                          )
+                        }
+                      >
+                        {option.label}
+                      </SelectChip>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {selectedKinds.includes('rent') ? (
               <Section
                 title="Rent Arrears"
                 description="Prefills from the property profile. Changes update rent paid to and weekly rent."
@@ -409,7 +466,9 @@ export function CreateTribunalRentChasingDialog({
                   </Field>
                 </div>
               </Section>
+              ) : null}
 
+              {selectedKinds.includes('bill') ? (
               <Section
                 title="Bill Arrears"
                 description="Add one or more unpaid bills. Types can be custom."
@@ -533,7 +592,9 @@ export function CreateTribunalRentChasingDialog({
                   </Button>
                 </div>
               </Section>
+              ) : null}
 
+              {selectedKinds.includes('bond') ? (
               <Section
                 title="Bond Arrears"
                 description="Agreement end drives days overdue once the tenant has vacated. Bond syncs to the property profile."
@@ -570,6 +631,7 @@ export function CreateTribunalRentChasingDialog({
                   </Field>
                 </div>
               </Section>
+              ) : null}
             </>
           )}
         </div>
@@ -583,7 +645,7 @@ export function CreateTribunalRentChasingDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={() => void submit()} disabled={saving || loading}>
+          <Button type="button" onClick={() => void submit()} disabled={saving || loading || selectedKinds.length === 0}>
             {saving ? (
               <>
                 <Loader2 className="size-4 animate-spin" />

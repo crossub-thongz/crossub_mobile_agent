@@ -15,15 +15,19 @@ export type GiiLaunchContext = {
 type ShellDockStore = {
   activePanel: ShellDockPanel;
   giiLaunch: GiiLaunchContext | null;
+  /** Property profile Gii tab renders inline in main content (desktop + mobile). */
+  propertyGiiInlineActive: boolean;
   togglePanel: (id: Exclude<ShellDockPanel, null>) => void;
   closePanel: () => void;
   openGii: (launch?: GiiLaunchContext) => void;
   clearGiiLaunch: () => void;
+  setPropertyGiiInlineActive: (active: boolean) => void;
 };
 
 export const useShellDockStore = create<ShellDockStore>((set) => ({
   activePanel: null,
   giiLaunch: null,
+  propertyGiiInlineActive: false,
   togglePanel: (id) =>
     set((state) => ({
       activePanel: state.activePanel === id ? null : id,
@@ -36,6 +40,7 @@ export const useShellDockStore = create<ShellDockStore>((set) => ({
       giiLaunch: launch ?? null,
     }),
   clearGiiLaunch: () => set({ giiLaunch: null }),
+  setPropertyGiiInlineActive: (active) => set({ propertyGiiInlineActive: active }),
 }));
 
 /** Desktop shell always shows the Gii panel; mobile uses the header quick-action strip. */

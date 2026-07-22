@@ -7,7 +7,6 @@ import { ChevronDown, ChevronRight, Mail, MessageSquare, Plus, Search } from 'lu
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -180,10 +179,6 @@ export default function MessagesPage() {
   return (
     <AgentShell title={pageTitle} backHref={propertyFilter ? `/properties/${propertyFilter}` : undefined} backLabel="Property">
       <div className="space-y-3">
-        {propertyFilter ? (
-          <TalkToStaffSupportButton propertyId={propertyFilter} />
-        ) : null}
-
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />

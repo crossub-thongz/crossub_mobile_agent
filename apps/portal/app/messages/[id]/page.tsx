@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
-import { ChevronDown, Mail, MessageSquare, Send } from 'lucide-react';
+import { Mail, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ContactDetails } from '@/components/agent/contact-details';
@@ -45,7 +45,8 @@ export default function MessageDetailPage() {
   );
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messageCount === 0) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messageCount]);
 
   useEffect(() => {
@@ -82,50 +83,27 @@ export default function MessageDetailPage() {
   };
 
   return (
-    <AgentShell title={thread.subject} backHref={ROUTES.MESSAGES} hideGlobalFabs>
-      <div className="flex min-h-[calc(100dvh-var(--shell-header-offset)-4rem-env(safe-area-inset-bottom))] flex-col lg:min-h-0">
-        {highlightParty && partyLabel && (
-          <div className="mb-4 shrink-0 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
-            Messaging <span className="font-semibold">{partyLabel}</span>
-            {highlightParty === 'tenant' ? ' (tenant)' : ' (landlord)'}
-          </div>
-        )}
-
-        <div className="mb-4 shrink-0 overflow-hidden rounded-xl border bg-card">
-          <button
-            type="button"
-            onClick={() => setContactsOpen((value) => !value)}
-            aria-expanded={contactsOpen}
-            className="hover:bg-secondary/30 flex w-full items-center justify-between gap-2 px-3 py-3 text-left text-xs transition md:pointer-events-none md:cursor-default md:hover:bg-transparent"
-          >
-            <div className="min-w-0">
-              <p className="font-medium">{thread.propertyAddress}</p>
-              <p className="text-muted-foreground mt-0.5 line-clamp-1 md:hidden">
-                {contactsOpen
-                  ? 'Landlord & tenant contacts'
-                  : `${thread.homeOwnerName} · ${thread.tenantName}`}
-              </p>
-            </div>
-            <ChevronDown
-              className={cn(
-                'text-muted-foreground size-4 shrink-0 transition-transform md:hidden',
-                contactsOpen && 'rotate-180',
-              )}
-              aria-hidden
-            />
-          </button>
-          <div className={cn('border-t px-3 pt-3 pb-3', !contactsOpen && 'hidden md:block')}>
-            <ContactDetails
-              homeOwnerName={thread.homeOwnerName}
-              homeOwnerContact={thread.homeOwnerContact}
-              tenantName={thread.tenantName}
-              tenantContact={thread.tenantContact}
-              highlightParty={highlightParty}
-            />
-          </div>
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-4">
+    <AgentShell
+      title={thread.subject}
+      backHref={ROUTES.MESSAGES}
+      hideGlobalFabs
+      headerMeta={{
+        label: thread.propertyAddress,
+        open: contactsOpen,
+        onToggle: () => setContactsOpen((value) => !value),
+        panel: (
+          <ContactDetails
+            homeOwnerName={thread.homeOwnerName}
+            homeOwnerContact={thread.homeOwnerContact}
+            tenantName={thread.tenantName}
+            tenantContact={thread.tenantContact}
+            highlightParty={highlightParty}
+          />
+        ),
+      }}
+    >
+      <div className="flex flex-col">
+        <div className="space-y-3">
           {thread.messages.map((msg) => {
             const isAgent = msg.sentByAgent || !msg.from.includes('CROSSUB');
             return (
@@ -156,7 +134,7 @@ export default function MessageDetailPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-border bg-background shrink-0 space-y-2 border-t pt-3">
+        <div className="border-border mt-4 space-y-2 border-t pt-3">
           <MessageCompose
             value={reply}
             onChange={setReply}

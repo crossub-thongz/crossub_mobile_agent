@@ -666,6 +666,7 @@ export function mapAgentTribunal(dtos: AgentTribunal[]): TribunalCase[] {
         (t.status === TRIBUNAL_CASE_STATUS.DRAFT ||
           t.status === TRIBUNAL_CASE_STATUS.SUBMITTED),
       createdAt: t.createdAt ?? undefined,
+      hearingDate: t.hearingDate ?? undefined,
       rentArrearsAmount: t.rentArrearsAmount ?? null,
       rentArrearsDaysOverdue: t.rentArrearsDaysOverdue ?? null,
       billArrearsAmount: t.billArrearsAmount ?? null,

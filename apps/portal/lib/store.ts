@@ -119,6 +119,9 @@ interface AgentStore {
       category?: import('@/lib/types').MessageCategory;
       subject?: string;
       caseId?: string;
+      initialBody?: string;
+      initialFrom?: string;
+      initialAt?: string;
     },
   ) => string;
   onboardingDismissed: boolean;
@@ -236,12 +239,22 @@ export const useAgentStore = create<AgentStore>()(
       ensureMessageThread: (property, agentPortfolioId, existingThreadId, options) => {
         if (existingThreadId) return existingThreadId;
         const category = options?.category ?? 'Others';
+        if (options?.subject) {
+          const bySubject = get().customMessageThreads.find(
+            (t) => t.propertyId === property.id && t.subject === options.subject,
+          );
+          if (bySubject) return bySubject.id;
+        }
         const custom = get().customMessageThreads.find((t) => {
           if (t.propertyId !== property.id) return false;
           if (options?.caseId) return t.relatedCaseId === options.caseId;
           return t.messageCategory === category || t.taskType === category;
         });
         if (custom) return custom.id;
+
+        const now = options?.initialAt ?? new Date().toISOString();
+        const openingBody = options?.initialBody?.trim();
+        const openingFrom = options?.initialFrom?.trim() || 'Agent';
 
         const thread: MessageThread = {
           id: `msg-${property.id}-${Date.now()}`,
@@ -256,11 +269,22 @@ export const useAgentStore = create<AgentStore>()(
           taskType: category,
           messageCategory: category,
           relatedCaseId: options?.caseId,
-          lastMessage: 'Start a conversation',
-          lastAt: new Date().toISOString(),
+          lastMessage: openingBody ?? 'Start a conversation',
+          lastAt: now,
           unread: 0,
           channel: 'app',
-          messages: [],
+          messages: openingBody
+            ? [
+                {
+                  id: `msg-open-${Date.now()}`,
+                  from: openingFrom,
+                  body: openingBody,
+                  at: now,
+                  channel: 'app',
+                  sentByAgent: true,
+                },
+              ]
+            : [],
         };
         set((s) => ({
           customMessageThreads: [...s.customMessageThreads, thread],

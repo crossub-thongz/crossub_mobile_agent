@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { FormStep, SelectChip } from '@/components/agent/form-step';
 import { PageIntro } from '@/components/agent/page-intro';
+import { PropertyNewMessageRecipients } from '@/components/agent/property-new-message-recipients';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,21 @@ export default function NewMessagePage() {
 
   const selected = properties.find((p) => p.id === propertyId);
   const step = !propertyId ? 1 : !category ? 2 : 3;
+
+  if (selected && searchParams.get('property')) {
+    return (
+      <AgentShell
+        title="New message"
+        backHref={`/properties/${selected.id}`}
+        backLabel="Property"
+      >
+        <div className="space-y-4">
+          <PageIntro description="Choose who to message for this property." />
+          <PropertyNewMessageRecipients property={selected} />
+        </div>
+      </AgentShell>
+    );
+  }
 
   const onStart = () => {
     if (!propertyId) {

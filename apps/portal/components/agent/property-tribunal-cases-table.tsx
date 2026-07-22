@@ -28,6 +28,7 @@ export function PropertyTribunalCasesTable({
       items={items}
       selectedId={selectedId}
       onItemClick={onItemClick}
+      scope="property"
     />
   );
 }

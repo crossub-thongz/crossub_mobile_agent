@@ -37,6 +37,7 @@ export type AgentLeasing = components['schemas']['AgentLeasingDto'];
 export type AgentAccounting = components['schemas']['AgentAccountingDto'];
 export type AgentTribunal = components['schemas']['AgentTribunalDto'] & {
   createdAt?: string | null;
+  hearingDate?: string | null;
 };
 export type AgentLeasingCycle = {
   id: string;

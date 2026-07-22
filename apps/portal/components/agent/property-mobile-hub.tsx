@@ -168,7 +168,7 @@ export function PropertyMobileHub({
 
       <PropertyWorkflowCreateDialog
         actionId={manualAction}
-        open={manualAction != null && manualAction !== 'open_tribunal'}
+        open={manualAction != null && manualAction !== 'open_tribunal' && manualAction !== 'open_rent_chasing'}
         onOpenChange={(open) => {
           if (!open) setManualAction(null);
         }}
@@ -185,7 +185,7 @@ export function PropertyMobileHub({
       />
 
       <CreateTribunalRentChasingDialog
-        open={manualAction === 'open_tribunal'}
+        open={manualAction === 'open_tribunal' || manualAction === 'open_rent_chasing'}
         onOpenChange={(open) => {
           if (!open) setManualAction(null);
         }}

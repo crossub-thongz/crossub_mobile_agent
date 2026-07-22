@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  ChevronDown,
   Menu,
   Search,
   X,
@@ -25,6 +26,7 @@ import { filterNavByAccess } from '@/lib/portal-service-level';
 import { totalUnreadMessages } from '@/lib/communications-log';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { cn, displayName } from '@/lib/utils';
+import { useShellDockStore } from '@/lib/shell-dock-store';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === ROUTES.DASHBOARD) return pathname === href;
@@ -41,6 +43,7 @@ export function AgentShell({
   showConnectionBanner,
   wide,
   immersive,
+  headerMeta,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -56,6 +59,13 @@ export function AgentShell({
   wide?: boolean;
   /** Hide mobile chrome for immersive workspace pages */
   immersive?: boolean;
+  /** Optional expandable row under the title (e.g. property address on message threads). */
+  headerMeta?: {
+    label: string;
+    open: boolean;
+    onToggle: () => void;
+    panel: React.ReactNode;
+  };
 }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -64,6 +74,7 @@ export function AgentShell({
   const [headerHeight, setHeaderHeight] = useState(56);
   const { hasFullManagementAccess, unreadNotificationCount, messages } = useAgentData();
   const propertyUnread = totalUnreadMessages(messages);
+  const propertyGiiInlineActive = useShellDockStore((s) => s.propertyGiiInlineActive);
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = [
     ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
@@ -134,15 +145,36 @@ export function AgentShell({
           </div>
 
           {title && (
-            <div className="border-border flex items-center gap-2 border-t px-3 py-2">
-              <div className="min-w-0 flex-1">
-                <h1 className="truncate text-base font-semibold">{title}</h1>
-                {user && (
-                  <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
-                )}
+            <div className="border-border border-t px-3 py-2">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <h1 className="truncate text-base font-semibold">{title}</h1>
+                  {headerMeta ? (
+                    <button
+                      type="button"
+                      onClick={headerMeta.onToggle}
+                      aria-expanded={headerMeta.open}
+                      className="text-muted-foreground hover:text-foreground mt-0.5 flex w-full min-w-0 items-center gap-1 text-left text-xs transition"
+                    >
+                      <span className="truncate">{headerMeta.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          'size-3.5 shrink-0 transition-transform',
+                          headerMeta.open && 'rotate-180',
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  ) : user ? (
+                    <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
+                  ) : null}
+                </div>
+                {!hideGlobalFabs ? (
+                  <ShellHeaderQuickActions pathname={pathname} />
+                ) : null}
               </div>
-              {!hideGlobalFabs ? (
-                <ShellHeaderQuickActions pathname={pathname} />
+              {headerMeta?.open ? (
+                <div className="border-border mt-2 border-t pt-2">{headerMeta.panel}</div>
               ) : null}
             </div>
           )}
@@ -162,9 +194,25 @@ export function AgentShell({
                 </Suspense>
                 <div className="min-w-0">
                   <h1 className="truncate text-lg font-semibold">{title}</h1>
-                  {user && (
+                  {headerMeta ? (
+                    <button
+                      type="button"
+                      onClick={headerMeta.onToggle}
+                      aria-expanded={headerMeta.open}
+                      className="text-muted-foreground hover:text-foreground mt-0.5 flex max-w-full min-w-0 items-center gap-1 text-left text-xs transition"
+                    >
+                      <span className="truncate">{headerMeta.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          'size-3.5 shrink-0 transition-transform',
+                          headerMeta.open && 'rotate-180',
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  ) : user ? (
                     <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
-                  )}
+                  ) : null}
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -181,6 +229,9 @@ export function AgentShell({
                 </Link>
               </div>
             </div>
+            {headerMeta?.open ? (
+              <div className="border-border border-t px-6 py-3">{headerMeta.panel}</div>
+            ) : null}
           </header>
         )}
 
@@ -321,9 +372,11 @@ export function AgentShell({
         {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
         </div>
 
-        <aside className="bg-background hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
-          <GiiAssistant open variant="panel" />
-        </aside>
+        {!propertyGiiInlineActive ? (
+          <aside className="bg-background hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
+            <GiiAssistant open variant="panel" />
+          </aside>
+        ) : null}
       </div>
     </div>
   );

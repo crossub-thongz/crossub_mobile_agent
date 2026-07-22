@@ -915,7 +915,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
       const existing = findStaffSupportThread(messages, propertyId, caseContext);
       if (existing) {
-        return existing.serverThreadId ?? existing.id;
+        return existing.id;
       }
 
       const propertyAddress = formatPropertyFullAddress(property);
@@ -925,9 +925,20 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         propertyId,
         case: caseContext,
       });
+      const from = user ? displayName(user) : 'Agent';
+      const now = new Date().toISOString();
 
-      if (apiConnected) {
-        const created = await apiCreateThread({
+      const localId = storeEnsureMessageThread(property, agentPortfolioId, undefined, {
+        category: 'Others',
+        subject,
+        caseId: caseContext?.caseId,
+        initialBody: body,
+        initialFrom: from,
+        initialAt: now,
+      });
+
+      if (apiConnected && !createdThreadIds[localId]) {
+        void apiCreateThread({
           subject,
           body,
           propertyId,
@@ -935,32 +946,23 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           ...(caseContext && caseContext.caseType !== 'PROPERTY'
             ? { caseType: caseContext.caseType, caseId: caseContext.caseId }
             : {}),
-        });
-        await refresh();
-        return created.id;
+        })
+          .then((created) => {
+            setCreatedThreadIds((prev) => ({ ...prev, [localId]: created.id }));
+            return refresh();
+          })
+          .catch(() => {});
       }
 
-      const localId = storeEnsureMessageThread(property, agentPortfolioId, undefined, {
-        category: 'Others',
-        subject,
-        caseId: caseContext?.caseId,
-      });
-      sendThreadMessage(
-        localId,
-        body,
-        user ? displayName(user) : 'Agent',
-        undefined,
-        'app',
-      );
       return localId;
     },
     [
       agentPortfolioId,
       apiConnected,
+      createdThreadIds,
       messages,
       properties,
       refresh,
-      sendThreadMessage,
       storeEnsureMessageThread,
       user,
     ],

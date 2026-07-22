@@ -55,6 +55,12 @@ import type {
   TribunalCase,
 } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import {
+  tribunalCaseHasArrears,
+  tribunalStatusBadgeVariant,
+  tribunalStatusLabel,
+  tribunalTypeLabel,
+} from '@/lib/tribunal-labels';
 import { cn, formatCurrency, formatDate, formatDateTime, formatScheduledAt } from '@/lib/utils';
 
 function capitalize(value: string): string {
@@ -500,11 +506,133 @@ export function TribunalListTable({
   items,
   onItemClick,
   selectedId,
+  scope = 'portfolio',
 }: {
   items: TribunalCase[];
   onItemClick?: (item: TribunalCase) => void;
   selectedId?: string | null;
+  /** Property tab hides the address subline under tenant. */
+  scope?: 'property' | 'portfolio';
 }) {
+  const useArrearsLayout = items.some(tribunalCaseHasArrears);
+
+  if (useArrearsLayout) {
+    return (
+      <>
+        <div className="space-y-2 md:hidden">
+          {items.map((c) => {
+            const interactive = Boolean(onItemClick);
+            const openItem = onItemClick ? () => onItemClick(c) : undefined;
+            const href = tribunalDetail(c.id);
+            return (
+              <ModuleMobileCardShell
+                key={c.id}
+                onClick={openItem}
+                href={interactive ? undefined : href}
+                selected={selectedId === c.id}
+                highlight={c.requiresAction && c.status === 'active'}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      {c.tenantName || 'No tenant'}
+                    </p>
+                    {scope === 'portfolio' ? (
+                      <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                        {c.propertyAddress || '—'}
+                      </p>
+                    ) : null}
+                    <p className="text-muted-foreground mt-1 text-[11px]">
+                      {tribunalTypeLabel(c.tribunalType)}
+                    </p>
+                  </div>
+                  <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <p className="text-muted-foreground mb-0.5">Claimed</p>
+                    <p className="font-medium tabular-nums">
+                      {c.amountClaimed != null ? formatCurrency(c.amountClaimed) : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground mb-0.5">Hearing</p>
+                    <p className="font-medium tabular-nums">
+                      {c.hearingDate ? formatDate(c.hearingDate) : '—'}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <StatusBadge
+                    label={tribunalStatusLabel(c.apiStatus)}
+                    variant={tribunalStatusBadgeVariant(c.apiStatus)}
+                    className="normal-case"
+                  />
+                </div>
+              </ModuleMobileCardShell>
+            );
+          })}
+        </div>
+
+        <div className="hidden md:block">
+          <ModuleListTable minWidth={760}>
+            <ModuleTableHead
+              columns={['Type', 'Tenant', 'Claimed', 'Hearing', 'Status', '']}
+            />
+            <tbody className="divide-y">
+              {items.map((c) => {
+                const interactive = Boolean(onItemClick);
+                const openItem = onItemClick ? () => onItemClick(c) : undefined;
+                return (
+                  <ModuleInteractiveTableRow
+                    key={c.id}
+                    onActivate={openItem}
+                    selected={selectedId === c.id}
+                    className={cn(
+                      c.requiresAction && c.status === 'active' && 'bg-destructive/[0.03]',
+                    )}
+                  >
+                    <td className="whitespace-nowrap px-3 py-3 text-sm text-muted-foreground">
+                      {tribunalTypeLabel(c.tribunalType)}
+                    </td>
+                    <td className="max-w-[14rem] px-3 py-3 text-sm">
+                      <p className="line-clamp-2 font-medium">{c.tenantName || '—'}</p>
+                      {scope === 'portfolio' ? (
+                        <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                          {c.propertyAddress || '—'}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-sm font-medium tabular-nums">
+                      {c.amountClaimed != null ? formatCurrency(c.amountClaimed) : '—'}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-sm text-muted-foreground tabular-nums">
+                      {c.hearingDate ? formatDate(c.hearingDate) : '—'}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-sm">
+                      <StatusBadge
+                        label={tribunalStatusLabel(c.apiStatus)}
+                        variant={tribunalStatusBadgeVariant(c.apiStatus)}
+                        className="normal-case"
+                      />
+                    </td>
+                    {interactive ? (
+                      <td className="px-3 py-3 text-right text-muted-foreground">
+                        <ChevronRight className="inline size-4" />
+                      </td>
+                    ) : (
+                      <ModuleTableChevronCell href={tribunalDetail(c.id)} />
+                    )}
+                  </ModuleInteractiveTableRow>
+                );
+              })}
+            </tbody>
+          </ModuleListTable>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="space-y-2 md:hidden">

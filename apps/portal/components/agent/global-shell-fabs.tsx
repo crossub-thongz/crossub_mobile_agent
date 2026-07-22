@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,12 +17,13 @@ import {
 
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { PhonePanel } from '@/components/agent/phone-panel';
+import { PropertyNewMessageRecipients } from '@/components/agent/property-new-message-recipients';
 import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
 import { QuickCreateWorkflowDialog } from '@/components/agent/quick-create-workflow-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { messageDetail, messagesForProperty, messagesNew, ROUTES } from '@/constants/routes';
+import { messagesForProperty, messagesNew, ROUTES } from '@/constants/routes';
 import {
   BUILTIN_QUICK_ACTIONS,
   resolveQuickActions,
@@ -120,7 +121,6 @@ export function ShellHeaderQuickActions({
   /** Compact icon row for the header toolbar (default). */
   inline?: boolean;
 }) {
-  const router = useRouter();
   const propertyId = propertyIdFromPath(pathname);
   const { activePanel, togglePanel, visibleButtons } = useShellQuickActions(pathname);
   const { messages, properties } = useAgentData();
@@ -141,7 +141,7 @@ export function ShellHeaderQuickActions({
 
   const handlePanelClick = (btnId: (typeof DOCK_BUTTONS)[number]['id']) => {
     if (btnId === 'communication' && propertyId) {
-      router.push(messagesForProperty(propertyId));
+      togglePanel('communication');
       return;
     }
     togglePanel(btnId);
@@ -300,66 +300,94 @@ function CommunicationDockSheet({
   onClose: () => void;
   propertyId?: string;
 }) {
-  const router = useRouter();
-  const { messages } = useAgentData();
+  const [view, setView] = useState<'menu' | 'new-message'>('menu');
+  const { messages, properties } = useAgentData();
 
-  const openPropertyMessages = () => {
-    if (!propertyId) return;
-    router.push(messagesForProperty(propertyId));
-    onClose();
-  };
+  const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
+  const propertyUnread =
+    propertyId && property
+      ? unreadMessagesForProperty(
+          propertyId,
+          messages,
+          formatPropertyFullAddress(property),
+        )
+      : 0;
+
+  useEffect(() => {
+    if (!open) setView('menu');
+  }, [open]);
 
   if (!open) return null;
+
+  const sheetTitle = view === 'new-message' ? 'New message' : 'Messages';
 
   return (
     <div className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-2xl border border-border/70 bg-card/95 p-4 shadow-2xl shadow-black/30 backdrop-blur-xl">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold">Messages</p>
+          <p className="text-sm font-semibold">{sheetTitle}</p>
           <button type="button" onClick={onClose} aria-label="Close">
             <X className="text-muted-foreground size-5" />
           </button>
         </div>
-        <div className="space-y-2">
-          {propertyId && (
-            <>
-              <TalkToStaffSupportButton
-                propertyId={propertyId}
-                variant="compact"
-                onOpened={onClose}
-              />
+        {propertyId && property ? (
+          view === 'new-message' ? (
+            <PropertyNewMessageRecipients
+              property={property}
+              onBack={() => setView('menu')}
+              onOpened={onClose}
+            />
+          ) : (
+            <div className="space-y-2">
+              <TalkToStaffSupportButton propertyId={propertyId} onOpened={onClose} />
+              <Link
+                href={messagesForProperty(propertyId)}
+                onClick={onClose}
+                className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+              >
+                <Building2 className="text-primary size-4 shrink-0" />
+                <span className="min-w-0 flex-1 text-left">Property conversations</span>
+                {propertyUnread > 0 ? (
+                  <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                    {propertyUnread}
+                  </span>
+                ) : null}
+              </Link>
               <button
                 type="button"
-                onClick={openPropertyMessages}
-                className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm hover:bg-secondary"
+                onClick={() => setView('new-message')}
+                className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
               >
-                <Building2 className="text-primary size-4" />
-                Property messages
+                <MessageSquare className="text-primary size-4 shrink-0" />
+                New message
               </button>
-            </>
-          )}
-          <Link
-            href={messagesNew()}
-            onClick={onClose}
-            className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
-          >
-            <MessageSquare className="text-primary size-4" />
-            New message
-          </Link>
-          <Link
-            href={ROUTES.MESSAGES}
-            onClick={onClose}
-            className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
-          >
-            <MessageSquare className="text-primary size-4" />
-            All conversations
-            {messages.some((m) => m.unread > 0) && (
-              <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
-                {messages.reduce((s, m) => s + m.unread, 0)}
-              </span>
-            )}
-          </Link>
-        </div>
+            </div>
+          )
+        ) : (
+          <div className="space-y-2">
+            <Link
+              href={messagesNew()}
+              onClick={onClose}
+              className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+            >
+              <MessageSquare className="text-primary size-4" />
+              New message
+            </Link>
+            <Link
+              href={ROUTES.MESSAGES}
+              onClick={onClose}
+              className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+            >
+              <MessageSquare className="text-primary size-4" />
+              All conversations
+              {messages.some((m) => m.unread > 0) && (
+                <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                  {messages.reduce((s, m) => s + m.unread, 0)}
+                </span>
+              )}
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

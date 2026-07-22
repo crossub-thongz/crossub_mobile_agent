@@ -494,24 +494,25 @@ export default function PropertyDetailPage() {
 
         {tab === 'Accounting' && (
           <PropertyAccountingTab
+            property={property}
             propertyId={id}
             accounting={acct}
             arrearsSectionRef={arrearsSectionRef}
-          />
-        )}
-
-        {tab === 'Tribunal' && (
-          <PropertyTribunalTab
-            property={property}
-            propertyId={id}
-            tribunalCases={propertyTribunalCases}
             leasingCycles={propertyLeasingCycles}
             rentReviews={tenancyRentReviews}
             vacatingCases={propertyVacatingCases}
             maintenance={tasks.maintenance}
             inspections={tasks.inspections}
+            tribunalCases={propertyTribunalCases}
             tenantSelections={propertyLeasingCases}
             currentLease={currentLease}
+            onRefresh={() => void refresh()}
+          />
+        )}
+
+        {tab === 'Tribunal' && (
+          <PropertyTribunalTab
+            tribunalCases={propertyTribunalCases}
             onRefresh={() => void refresh()}
           />
         )}

@@ -55,7 +55,7 @@ const TAB_SHORT_LABELS: Record<string, string> = {
   Leasing: 'Leasing',
   Maintenance: 'Repair',
   Inspection: 'Inspect',
-  Accounting: 'Accounts',
+  Accounting: 'Accounting',
   Tribunal: 'Tribunal',
   Archive: 'Archive',
 };

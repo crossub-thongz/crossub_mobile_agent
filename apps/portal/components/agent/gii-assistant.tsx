@@ -118,6 +118,7 @@ export function GiiAssistant({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const pageScrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   const initialPromptHandledRef = useRef(false);
@@ -126,7 +127,9 @@ export function GiiAssistant({
   const contextRef = useRef<GiiContext | null>(null);
   const isPanel = variant === 'panel';
   const isEmbedded = variant === 'embedded';
+  const isModal = variant === 'modal';
   const isInline = isPanel || isEmbedded;
+  const usePageScroll = isEmbedded || isModal;
 
   const pathPropertyId = propertyIdFromPath(pathname);
   const scopedProperty = useMemo(() => {
@@ -209,9 +212,8 @@ export function GiiAssistant({
 
   const scrollChatToBottom = useCallback(
     (behavior: ScrollBehavior = 'smooth') => {
-      // Embedded Gii shares the property page scroll — no nested overflow container
-      // (Android WebView/Chrome mishandles nested scroll + smooth scroll).
-      if (isEmbedded) {
+      // Embedded + mobile modal share one scroll surface (avoids nested scroll on Android).
+      if (usePageScroll) {
         endRef.current?.scrollIntoView({ behavior, block: 'nearest' });
         return;
       }
@@ -219,7 +221,7 @@ export function GiiAssistant({
       if (!el) return;
       el.scrollTo({ top: el.scrollHeight, behavior });
     },
-    [isEmbedded],
+    [usePageScroll],
   );
 
   // Track whether the user has scrolled away from the latest messages.
@@ -236,6 +238,24 @@ export function GiiAssistant({
       return () => window.removeEventListener('scroll', onScroll);
     }
 
+    if (isModal) {
+      const pageEl = pageScrollRef.current;
+      const innerEl = scrollContainerRef.current;
+      const onScroll = () => {
+        const el =
+          pageEl && pageEl.scrollHeight > pageEl.clientHeight + 1 ? pageEl : innerEl;
+        if (!el) return;
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        stickToBottomRef.current = distanceFromBottom < 120;
+      };
+      pageEl?.addEventListener('scroll', onScroll, { passive: true });
+      innerEl?.addEventListener('scroll', onScroll, { passive: true });
+      return () => {
+        pageEl?.removeEventListener('scroll', onScroll);
+        innerEl?.removeEventListener('scroll', onScroll);
+      };
+    }
+
     const el = scrollContainerRef.current;
     if (!el) return;
     const onScroll = () => {
@@ -244,20 +264,20 @@ export function GiiAssistant({
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [isEmbedded, open]);
+  }, [isEmbedded, isModal, open]);
 
   // New turns follow the conversation; use instant scroll on embedded Android paths.
   useEffect(() => {
     if (lines.length === 0) return;
     stickToBottomRef.current = true;
-    scrollChatToBottom(isEmbedded ? 'auto' : 'smooth');
-  }, [isEmbedded, lines, scrollChatToBottom]);
+    scrollChatToBottom(usePageScroll ? 'auto' : 'smooth');
+  }, [lines, scrollChatToBottom, usePageScroll]);
 
-  // Live briefing refreshes (5s poll) — panel/modal only; never yank the property page.
+  // Live briefing refreshes (5s poll) — page-scroll surfaces only; never yank scroll position.
   useEffect(() => {
-    if (isEmbedded || !stickToBottomRef.current) return;
+    if (usePageScroll || !stickToBottomRef.current) return;
     scrollChatToBottom('smooth');
-  }, [isEmbedded, liveBriefing, scrollChatToBottom]);
+  }, [liveBriefing, scrollChatToBottom, usePageScroll]);
 
   /**
    * A turn runs two things at once:
@@ -438,7 +458,12 @@ export function GiiAssistant({
           ? 'w-full'
           : isPanel
             ? 'h-full max-h-full min-h-0 w-full overflow-hidden border-l'
-            : 'h-[min(92vh,680px)] min-h-0 w-full max-w-lg overflow-hidden rounded-t-3xl border shadow-2xl sm:rounded-3xl',
+            : cn(
+                'w-full max-w-lg border shadow-2xl',
+                'max-lg:min-h-full max-lg:overflow-visible max-lg:rounded-none',
+                'lg:h-[min(92vh,680px)] lg:min-h-0 lg:overflow-hidden lg:rounded-3xl',
+                'rounded-t-3xl sm:rounded-3xl',
+              ),
       )}
     >
       <div
@@ -487,8 +512,8 @@ export function GiiAssistant({
         ref={scrollContainerRef}
         className={cn(
           'space-y-3 px-4 py-3',
-          isEmbedded
-            ? 'pb-[max(6rem,env(safe-area-inset-bottom))]'
+          usePageScroll
+            ? cn(isModal && 'lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain')
             : 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
         )}
       >
@@ -609,14 +634,7 @@ export function GiiAssistant({
         <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
 
-      <div
-        className={cn(
-          'shrink-0 border-t bg-background p-3',
-          isEmbedded
-            ? 'sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 shadow-[0_-6px_20px_rgba(0,0,0,0.06)] pb-[max(0.75rem,env(safe-area-inset-bottom))]'
-            : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-        )}
-      >
+      <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {!sending && !hasUserMessages ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {suggestedPrompts.map((item) => (
@@ -713,7 +731,10 @@ export function GiiAssistant({
 
   return (
     <>
-      <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:p-4">
+      <div
+        ref={pageScrollRef}
+        className="fixed inset-0 z-[95] overflow-y-auto bg-black/55 p-0 backdrop-blur-sm lg:flex lg:items-end lg:justify-center lg:overflow-hidden sm:p-4"
+      >
         {shell}
       </div>
       <PortfolioCaseDialogHost job={selectedJob} onClose={closeJob} onOpenJob={openJob} />

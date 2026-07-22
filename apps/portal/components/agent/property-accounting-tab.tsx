@@ -1,11 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Wallet } from 'lucide-react';
+import { toast } from 'sonner';
 
+import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
+import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { InfoPanel } from '@/components/agent/info-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { accountingJobRows } from '@/lib/property-job-rows';
 import {
   buildPropertyAccountingSummary,
@@ -13,7 +17,17 @@ import {
 } from '@/lib/property-portal-accounting';
 import type { PropertyPortalAccounting, PropertyPortalFinancial } from '@/lib/property-registry-api';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
-import type { Property, PropertyAccounting } from '@/lib/types';
+import type {
+  Inspection,
+  LeasingCycle,
+  LeasingRecord,
+  MaintenanceItem,
+  Property,
+  RentReviewCase,
+  TenantSelectionCase,
+  TribunalCase,
+  VacatingCase,
+} from '@/lib/types';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 function AccountingInfoGrid({
@@ -71,18 +85,44 @@ function RentLedgerTable({
 }
 
 export function PropertyAccountingTab({
+  property,
   propertyId,
   accounting: fallbackAccounting,
   financial,
+  leasingCycles,
+  rentReviews,
+  vacatingCases,
+  maintenance,
+  inspections,
+  tribunalCases,
+  tenantSelections,
+  currentLease,
   arrearsSectionRef,
+  onRefresh,
 }: {
+  property: Property;
   propertyId: string;
-  accounting?: PropertyAccounting | null;
+  accounting?: import('@/lib/types').PropertyAccounting | null;
   financial?: PropertyPortalFinancial | null;
   arrearsSectionRef?: React.RefObject<HTMLElement | null>;
+  leasingCycles: LeasingCycle[];
+  rentReviews: RentReviewCase[];
+  vacatingCases: VacatingCase[];
+  maintenance: MaintenanceItem[];
+  inspections: Inspection[];
+  tribunalCases: TribunalCase[];
+  tenantSelections: TenantSelectionCase[];
+  currentLease?: LeasingRecord;
+  onRefresh?: () => void;
 }) {
-  const { apiConnected } = useAgentData();
+  const { apiConnected, primaryAgency, properties } = useAgentData();
   const { detail } = usePropertyPortalDetail(propertyId, apiConnected);
+  const ledgerSectionRef = useRef<HTMLElement>(null);
+  const localArrearsRef = useRef<HTMLElement>(null);
+  const arrearsRef = arrearsSectionRef ?? localArrearsRef;
+
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+
   const portalAccounting = detail?.accounting ?? null;
   const portalFinancial = detail?.financial ?? financial ?? null;
 
@@ -143,16 +183,73 @@ export function PropertyAccountingTab({
     [fallbackAccounting],
   );
 
-  if (!hasData) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        No accounting data — ledger activity will appear here once available.
-      </p>
-    );
-  }
+  const scrollToSection = (ref: React.RefObject<HTMLElement | null>, label: string) => {
+    const el = ref.current;
+    if (!el) {
+      toast.message(label);
+      return;
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleCustomAction = (actionId: PropertyWorkflowActionId) => {
+    if (actionId === 'create_rent_reconciliation') {
+      scrollToSection(ledgerSectionRef, 'Rent reconciliation');
+      return true;
+    }
+    if (actionId === 'open_invoice_management') {
+      if (!primaryAgency) {
+        toast.error('Complete your agency profile before creating invoices');
+        return true;
+      }
+      setInvoiceOpen(true);
+      return true;
+    }
+    if (actionId === 'view_arrears') {
+      scrollToSection(arrearsRef, 'Arrears');
+      return true;
+    }
+    return false;
+  };
 
   return (
     <div className="space-y-4">
+      <PropertyWorkflowPanel
+        tab="accounting"
+        property={property}
+        propertyId={propertyId}
+        leasingCycles={leasingCycles}
+        rentReviews={rentReviews}
+        vacatingCases={vacatingCases}
+        maintenance={maintenance}
+        inspections={inspections}
+        tribunalCases={tribunalCases}
+        tenantSelections={tenantSelections}
+        currentLease={currentLease}
+        onCreated={() => void onRefresh?.()}
+        onCustomAction={handleCustomAction}
+        actionsOnly
+      />
+
+      <InvoiceEditorDialog
+        open={invoiceOpen}
+        onOpenChange={setInvoiceOpen}
+        mode="create"
+        agency={primaryAgency}
+        properties={properties}
+        onSaved={() => {
+          setInvoiceOpen(false);
+          toast.success('Invoice saved');
+        }}
+      />
+
+      {!hasData ? (
+        <p className="text-muted-foreground text-sm">
+          No accounting data yet — use the actions above to reconcile rent, manage invoices, or
+          open a Rent Chasing case.
+        </p>
+      ) : null}
+
       {accountingCases.length > 0 ? (
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">Accounting cases</h3>
@@ -175,14 +272,14 @@ export function PropertyAccountingTab({
         </div>
       </InfoPanel>
 
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold">Rent ledger</h3>
+      <section ref={ledgerSectionRef} id="rent-reconciliation" className="space-y-3 scroll-mt-24">
+        <h3 className="text-sm font-semibold">Rent reconciliation</h3>
         <RentLedgerTable ledger={ledger} />
       </section>
 
-      {portalAccounting?.outstandingRentDays != null || outstandingDays > 0 ? (
-        <section ref={arrearsSectionRef} id="rent-arrears" className="space-y-3">
-          <h3 className="text-sm font-semibold">Rent arrears</h3>
+      <section ref={arrearsRef} id="rent-arrears" className="space-y-3 scroll-mt-24">
+        <h3 className="text-sm font-semibold">Arrears</h3>
+        {portalAccounting?.outstandingRentDays != null || outstandingDays > 0 ? (
           <AccountingInfoGrid
             items={[
               { label: 'Outstanding amount', value: formatCurrency(outstandingAmount) },
@@ -193,8 +290,10 @@ export function PropertyAccountingTab({
               },
             ]}
           />
-        </section>
-      ) : null}
+        ) : (
+          <p className="text-muted-foreground text-sm">No rent arrears on file for this property.</p>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Owner statements</h3>

@@ -72,10 +72,10 @@ export const BUILTIN_QUICK_ACTIONS: BuiltinQuickAction[] = [
   },
   {
     id: 'tribunal',
-    label: 'Tribunal case',
+    label: 'Rent chasing',
     icon: Gavel,
     resolveHref: () => '',
-    workflowActionId: 'open_tribunal',
+    workflowActionId: 'open_rent_chasing',
   },
   {
     id: 'message',

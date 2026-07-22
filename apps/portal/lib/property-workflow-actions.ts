@@ -15,6 +15,7 @@ export type PropertyWorkflowTab =
   | 'rent_review'
   | 'maintenance'
   | 'inspection'
+  | 'accounting'
   | 'tribunal';
 
 export type PropertyWorkflowActionId =
@@ -26,6 +27,10 @@ export type PropertyWorkflowActionId =
   | 'schedule_ingoing_inspection'
   | 'schedule_outgoing_inspection'
   | 'schedule_routine_inspection'
+  | 'create_rent_reconciliation'
+  | 'open_invoice_management'
+  | 'view_arrears'
+  | 'open_rent_chasing'
   | 'open_tribunal';
 
 export type InspectionScheduleActionId =
@@ -156,12 +161,29 @@ export function tabActionsFor(
         },
       ];
     case 'tribunal':
+      return [];
+    case 'accounting':
       return [
         {
-          id: 'open_tribunal',
-          label: 'Rent Chasing',
-          description: 'Open a Rent Chasing tribunal case for rent, bill, or bond arrears',
+          id: 'create_rent_reconciliation',
+          label: 'Create rent reconciliation',
+          description: 'Review rent received and outstanding balances for this property',
           primary: true,
+        },
+        {
+          id: 'open_invoice_management',
+          label: 'Invoice management',
+          description: 'Create or manage Crossub management fee tax invoices',
+        },
+        {
+          id: 'view_arrears',
+          label: 'Arrears',
+          description: 'View rent and invoice arrears for this property',
+        },
+        {
+          id: 'open_rent_chasing',
+          label: 'Rent chasing',
+          description: 'Open a tribunal Rent Chasing case for rent, bill, or bond arrears',
         },
       ];
     default:

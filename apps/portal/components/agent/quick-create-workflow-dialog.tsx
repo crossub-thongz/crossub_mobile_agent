@@ -30,12 +30,14 @@ const ACTION_TAB: Record<
   start_maintenance: 'maintenance',
   start_rent_review: 'rent_review',
   open_tribunal: 'tribunal',
+  open_rent_chasing: 'accounting',
 };
 
 const ACTION_LABEL: Partial<Record<PropertyWorkflowActionId, string>> = {
   start_maintenance: 'Add new repair job',
   start_rent_review: 'Rent review',
-  open_tribunal: 'Tribunal case',
+  open_tribunal: 'Rent chasing',
+  open_rent_chasing: 'Rent chasing',
 };
 
 function workflowTabFor(actionId: PropertyWorkflowActionId): PropertyWorkflowTab | null {
@@ -253,7 +255,7 @@ export function QuickCreateWorkflowDialog({
         </DialogContent>
       </Dialog>
 
-      {property && propertyId && formOpen && actionId !== 'open_tribunal' ? (
+      {property && propertyId && formOpen && actionId !== 'open_tribunal' && actionId !== 'open_rent_chasing' ? (
         <PropertyWorkflowCreateDialog
           actionId={actionId}
           open
@@ -270,7 +272,7 @@ export function QuickCreateWorkflowDialog({
         />
       ) : null}
 
-      {propertyId && formOpen && actionId === 'open_tribunal' ? (
+      {propertyId && formOpen && (actionId === 'open_tribunal' || actionId === 'open_rent_chasing') ? (
         <CreateTribunalRentChasingDialog
           open
           onOpenChange={(next) => {

@@ -109,6 +109,7 @@ export function PropertyWorkflowPanel({
   emptyDescription,
   actionsOnly = false,
   onCreated,
+  onCustomAction,
 }: {
   tab: PropertyWorkflowTab;
   property: Property;
@@ -125,6 +126,8 @@ export function PropertyWorkflowPanel({
   emptyDescription?: string;
   actionsOnly?: boolean;
   onCreated?: (result?: PropertyWorkflowCreatedResult) => void;
+  /** Return true when the action is handled locally (no create dialog). */
+  onCustomAction?: (actionId: PropertyWorkflowActionId) => boolean;
 }) {
   const { primaryAgency } = useAgentData();
 
@@ -166,7 +169,9 @@ export function PropertyWorkflowPanel({
         ? 'Log a maintenance job for this property.'
         : tab === 'inspection'
           ? 'Schedule open, ingoing, outgoing, or routine inspections for this property.'
-          : 'Open a Rent Chasing tribunal case for rent, bill, or bond arrears.');
+          : tab === 'accounting'
+            ? 'Reconcile rent, manage invoices, review arrears, or open a Rent Chasing tribunal case.'
+            : 'Tribunal cases for this property.');
 
   return (
     <>
@@ -178,6 +183,7 @@ export function PropertyWorkflowPanel({
               action={action}
               onClick={() => {
                 if (action.disabled) return;
+                if (onCustomAction?.(action.id)) return;
                 setActiveAction(action.id);
               }}
             />
@@ -206,7 +212,7 @@ export function PropertyWorkflowPanel({
 
       <PropertyWorkflowCreateDialog
         actionId={activeAction}
-        open={activeAction != null && activeAction !== 'open_tribunal'}
+        open={activeAction != null && activeAction !== 'open_tribunal' && activeAction !== 'open_rent_chasing'}
         onOpenChange={(open) => {
           if (!open) setActiveAction(null);
         }}
@@ -223,7 +229,7 @@ export function PropertyWorkflowPanel({
       />
 
       <CreateTribunalRentChasingDialog
-        open={activeAction === 'open_tribunal'}
+        open={activeAction === 'open_tribunal' || activeAction === 'open_rent_chasing'}
         onOpenChange={(open) => {
           if (!open) setActiveAction(null);
         }}
