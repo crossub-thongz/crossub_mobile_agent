@@ -8,6 +8,7 @@ import {
   GROUP_SUMMARY_NOUN,
   PRIORITY_RANK,
 } from '@/constants/gii-briefing';
+import { sortNeedActionsByRecency } from '@/lib/property-actions';
 import type { NeedActionGroup, PropertyNeedAction } from '@/lib/types';
 
 /**
@@ -21,7 +22,7 @@ import type { NeedActionGroup, PropertyNeedAction } from '@/lib/types';
 export interface GiiBriefing {
   /** Greeting bubble text: salutation + count (or the caught-up line when empty). */
   greeting: string;
-  /** "First up: …" callout for the single top-priority item — null when there is nothing. */
+  /** "Latest: …" callout for the most recently updated item — null when there is nothing. */
   subtitle: string | null;
   /** One-line group summary, e.g. "1 maintenance · 1 rent review" — null when empty. */
   groupSummary: string | null;
@@ -48,10 +49,6 @@ function salutation(now: Date): string {
 function greetingLead(now: Date, agentName?: string | null): string {
   const name = agentName?.trim();
   return name ? `${salutation(now)}, ${name}` : salutation(now);
-}
-
-function sortByPriority(items: PropertyNeedAction[]): PropertyNeedAction[] {
-  return [...items].sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
 }
 
 /** A group's most-urgent item, as a priority rank (lower = more urgent). */
@@ -96,14 +93,14 @@ export function buildGiiBriefing(
     };
   }
 
-  const sorted = sortByPriority(items);
+  const sorted = sortNeedActionsByRecency(items);
   const rows = sorted.slice(0, BRIEFING_MAX_ROWS);
   const top = sorted[0];
   const verb = total === 1 ? 'thing needs' : 'things need';
 
   return {
     greeting: `${lead} 👋 ${total} ${verb} you today.`,
-    subtitle: `First up: ${top.label} · ${top.propertyAddress}.`,
+    subtitle: `Latest: ${top.label} · ${top.propertyAddress}.`,
     groupSummary: groupSummary(groups),
     total,
     rows,

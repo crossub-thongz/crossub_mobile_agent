@@ -83,6 +83,9 @@ export const messagesNew = (query?: { property?: string }) => {
   return `/messages/new?property=${encodeURIComponent(query.property)}`;
 };
 export const messageDetail = (id: string) => `/messages/${id}`;
+
+export const messagesForProperty = (propertyId: string) =>
+  `/messages?property=${encodeURIComponent(propertyId)}`;
 export const communicationsThread = (threadId: string) =>
   `${ROUTES.COMMUNICATIONS}?threadId=${encodeURIComponent(threadId)}`;
 export const messageDetailParty = (id: string, party: 'tenant' | 'owner') =>

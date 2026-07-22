@@ -4,12 +4,30 @@ export function MessageUnreadBadge({
   count,
   className,
   size = 'sm',
+  variant = 'count',
 }: {
   count: number;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  /** Dot-only indicator (WeChat-style) or numbered badge. */
+  variant?: 'count' | 'dot';
 }) {
   if (count <= 0) return null;
+
+  if (variant === 'dot') {
+    return (
+      <span
+        className={cn(
+          'bg-[#fa5151] absolute rounded-full ring-2 ring-background',
+          size === 'sm' && 'size-2',
+          size === 'md' && 'size-2.5',
+          size === 'lg' && 'size-3',
+          className,
+        )}
+        aria-label={`${count} unread message${count === 1 ? '' : 's'}`}
+      />
+    );
+  }
 
   const label = count > 99 ? '99+' : String(count);
 

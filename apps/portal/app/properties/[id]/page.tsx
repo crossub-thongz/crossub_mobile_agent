@@ -7,7 +7,6 @@ import {
   Bath,
   BedDouble,
   Car,
-  ListTodo,
 } from 'lucide-react';
 
 import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
@@ -352,7 +351,7 @@ export default function PropertyDetailPage() {
               )} */}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {needActions.length > 0 && (
+              {/* {needActions.length > 0 && (
                 <button
                   type="button"
                   onClick={() => {
@@ -370,7 +369,7 @@ export default function PropertyDetailPage() {
                     {needActions.length}
                   </span>
                 </button>
-              )}
+              )} */}
             </div>
           </div>
 
@@ -391,7 +390,9 @@ export default function PropertyDetailPage() {
 
         <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />
 
-        <PropertyGiiPanel propertyId={id} propertyAddress={fullAddress} />
+        {tab === 'Gii' ? (
+          <PropertyGiiPanel propertyId={id} propertyAddress={fullAddress} />
+        ) : null}
 
         {tab === 'Documents' && (
           <PropertyDocumentsTab

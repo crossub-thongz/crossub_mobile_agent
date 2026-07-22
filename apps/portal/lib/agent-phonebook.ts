@@ -20,6 +20,16 @@ export const AGENT_PHONEBOOK_GROUP_LABEL: Record<AgentPhonebookGroup, string> = 
 
 const GROUP_ORDER: AgentPhonebookGroup[] = ['tenant', 'landlord', 'agency'];
 
+/** Contacts for one property (tenant + landlord on file). */
+export function phonebookContactsForProperty(
+  propertyId: string,
+  contacts: AgentPhonebookContact[],
+): AgentPhonebookContact[] {
+  return contacts.filter(
+    (c) => c.id === `tenant-${propertyId}` || c.id === `landlord-${propertyId}`,
+  );
+}
+
 /** Contacts the signed-in Account Manager can call — tenants, landlords, agency reps. */
 export function buildAgentPhonebook(
   properties: Property[],

@@ -11,6 +11,7 @@ import {
   KeyRound,
   Percent,
   RefreshCw,
+  Sparkles,
   Wallet,
   Wrench,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const TAB_ICONS: Record<string, LucideIcon> = {
+  Gii: Sparkles,
   Documents: FileText,
   Fees: Percent,
   'Rent Review': RefreshCw,
@@ -32,6 +34,7 @@ const TAB_ICONS: Record<string, LucideIcon> = {
 
 /** User-facing labels (internal tab ids stay stable for routing). */
 const TAB_DISPLAY_LABELS: Record<string, string> = {
+  Gii: 'Gii',
   Documents: 'Documents',
   Fees: 'Fees',
   'Rent Review': 'Rent Review',
@@ -45,6 +48,7 @@ const TAB_DISPLAY_LABELS: Record<string, string> = {
 
 /** Compact labels for narrow mobile columns. */
 const TAB_SHORT_LABELS: Record<string, string> = {
+  Gii: 'Gii',
   Documents: 'Docs',
   Fees: 'Fees',
   'Rent Review': 'Rent Review',
@@ -57,6 +61,7 @@ const TAB_SHORT_LABELS: Record<string, string> = {
 };
 
 const TAB_GROUP_ORDER = [
+  ['Gii'],
   ['Documents', 'Fees'],
   ['Rent Review', 'Leasing', 'Maintenance', 'Inspection'],
   ['Accounting', 'Tribunal', 'Archive'],

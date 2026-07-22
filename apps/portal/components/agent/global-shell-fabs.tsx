@@ -21,16 +21,17 @@ import { QuickCreateWorkflowDialog } from '@/components/agent/quick-create-workf
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { messageDetail, messagesNew, ROUTES } from '@/constants/routes';
+import { messageDetail, messagesForProperty, messagesNew, ROUTES } from '@/constants/routes';
 import {
   BUILTIN_QUICK_ACTIONS,
   resolveQuickActions,
 } from '@/lib/quick-actions';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS } from '@/lib/portal-service-level';
+import { unreadMessagesForProperty } from '@/lib/communications-log';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { useAgentStore } from '@/lib/store';
-import { cn } from '@/lib/utils';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 const DOCK_BUTTONS = [
   {
@@ -118,9 +119,32 @@ export function ShellHeaderQuickActions({
   /** Compact icon row for the header toolbar (default). */
   inline?: boolean;
 }) {
+  const router = useRouter();
+  const propertyId = propertyIdFromPath(pathname);
   const { activePanel, togglePanel, visibleButtons } = useShellQuickActions(pathname);
+  const { messages, properties } = useAgentData();
+
+  const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
+  const scopedUnread =
+    propertyId && property
+      ? unreadMessagesForProperty(
+          propertyId,
+          messages,
+          formatPropertyFullAddress(property),
+        )
+      : 0;
+  const globalUnread = messages.reduce((sum, m) => sum + (m.unread > 0 ? m.unread : 0), 0);
+  const messageUnread = propertyId ? scopedUnread : globalUnread;
 
   if (visibleButtons.length === 0) return null;
+
+  const handlePanelClick = (btnId: (typeof DOCK_BUTTONS)[number]['id']) => {
+    if (btnId === 'communication' && propertyId) {
+      router.push(messagesForProperty(propertyId));
+      return;
+    }
+    togglePanel(btnId);
+  };
 
   return (
     <div
@@ -139,12 +163,14 @@ export function ShellHeaderQuickActions({
             title={btn.label}
             aria-label={btn.label}
             aria-pressed={isActive}
-            onClick={() => togglePanel(btn.id)}
+            onClick={() => handlePanelClick(btn.id)}
             className={headerQuickActionClass(isActive, inline)}
           >
             <Icon className={inline ? 'size-4' : 'size-5'} />
             {!inline ? <span className="max-w-full truncate">{btn.label}</span> : null}
-            {btn.id === 'communication' ? <UnreadBadge variant="header" /> : null}
+            {btn.id === 'communication' ? (
+              <UnreadBadge count={messageUnread} variant="header" />
+            ) : null}
           </button>
         );
       })}
@@ -196,7 +222,11 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         onClose={closePanel}
         propertyId={propertyId}
       />
-      <PhoneDockSheet open={activePanel === 'phone'} onClose={closePanel} />
+      <PhoneDockSheet
+        open={activePanel === 'phone'}
+        onClose={closePanel}
+        propertyId={propertyId}
+      />
       <QuickCreateDockSheet
         open={activePanel === 'quick'}
         onClose={closePanel}
@@ -211,20 +241,24 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
   );
 }
 
-function UnreadBadge({ variant = 'dock' }: { variant?: 'dock' | 'header' }) {
-  const { messages } = useAgentData();
-  const unread = messages.reduce((sum, m) => sum + m.unread, 0);
-  if (unread <= 0) return null;
+function UnreadBadge({
+  count,
+  variant = 'dock',
+}: {
+  count: number;
+  variant?: 'dock' | 'header';
+}) {
+  if (count <= 0) return null;
   return (
     <span
       className={cn(
-        'bg-destructive absolute flex min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white',
+        'bg-destructive absolute flex items-center justify-center rounded-full font-bold text-white',
         variant === 'header'
-          ? 'top-0 right-0 size-3.5 min-w-3.5 translate-x-1/4 -translate-y-1/4 text-[8px]'
-          : '-top-0.5 -right-0.5 size-4',
+          ? 'top-0 right-0 size-3.5 min-w-3.5 translate-x-1/4 -translate-y-1/4 text-[8px] leading-none'
+          : '-top-0.5 -right-0.5 size-4 min-w-4 text-[9px]',
       )}
     >
-      {unread > 9 ? '9+' : unread}
+      {count > 9 ? '9+' : count}
     </span>
   );
 }
@@ -232,9 +266,11 @@ function UnreadBadge({ variant = 'dock' }: { variant?: 'dock' | 'header' }) {
 function PhoneDockSheet({
   open,
   onClose,
+  propertyId,
 }: {
   open: boolean;
   onClose: () => void;
+  propertyId?: string;
 }) {
   if (!open) return null;
 
@@ -242,7 +278,12 @@ function PhoneDockSheet({
     <div className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4 sm:items-center">
       <div className="flex h-[min(72vh,560px)] w-full max-w-[380px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-2xl shadow-black/30 backdrop-blur-xl">
         <div className="flex min-h-0 flex-1 flex-col p-4">
-          <PhonePanel variant="sheet" onClose={onClose} className="h-full" />
+          <PhonePanel
+            variant="sheet"
+            onClose={onClose}
+            propertyId={propertyId}
+            className="h-full"
+          />
         </div>
       </div>
     </div>

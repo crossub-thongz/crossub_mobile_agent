@@ -44,10 +44,18 @@ export function PropertyListCard({
       )}
     >
       <div
-        className="bg-primary/10 text-primary flex size-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold tabular-nums"
+        className="bg-primary/10 text-primary relative flex size-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold tabular-nums"
         aria-hidden
       >
         {initials}
+        {messageUnread > 0 && actionCount === 0 ? (
+          <MessageUnreadBadge
+            count={messageUnread}
+            variant="dot"
+            size="md"
+            className="top-0.5 right-0.5"
+          />
+        ) : null}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -60,7 +68,17 @@ export function PropertyListCard({
           >
             {property.leaseStatus}
           </span>
-          {actionCount > 0 ? <NeedActionBadge count={actionCount} size="sm" /> : null}
+          {actionCount > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <NeedActionBadge count={actionCount} size="sm" />
+              {messageUnread > 0 ? (
+                <span
+                  className="bg-[#fa5151] size-2 shrink-0 rounded-full ring-2 ring-background"
+                  aria-label={`${messageUnread} unread message${messageUnread === 1 ? '' : 's'}`}
+                />
+              ) : null}
+            </span>
+          ) : null}
         </div>
         <p
           className={cn(
@@ -86,7 +104,6 @@ export function PropertyListCard({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <MessageUnreadBadge count={messageUnread} size="lg" />
         <ChevronRight className="text-muted-foreground size-4 transition group-hover:translate-x-0.5 group-hover:text-primary" />
       </div>
     </Link>

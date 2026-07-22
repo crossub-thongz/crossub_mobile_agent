@@ -395,6 +395,7 @@ export function mapAgentMaintenance(
       })(),
       requiresApproval: m.status === MAINTENANCE_STATUS.QUOTING,
       createdAt: m.createdAt,
+      updatedAt: m.updatedAt ?? m.createdAt ?? undefined,
       deleteReason: m.closureReason ?? undefined,
       deletedAt:
         m.status === MAINTENANCE_STATUS.CANCELLED ? m.updatedAt ?? m.createdAt : undefined,

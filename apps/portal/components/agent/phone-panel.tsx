@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import {
   AGENT_PHONEBOOK_GROUP_LABEL,
   buildAgentPhonebook,
+  phonebookContactsForProperty,
   type AgentPhonebookGroup,
 } from '@/lib/agent-phonebook';
 import { placePhoneCall } from '@/lib/phone';
@@ -26,20 +27,30 @@ export function PhonePanel({
   variant = 'sheet',
   onClose,
   className,
+  propertyId,
 }: {
   variant?: 'sheet' | 'embedded';
   onClose?: () => void;
   className?: string;
+  /** When set, show only this property's tenant and landlord contacts. */
+  propertyId?: string;
 }) {
   const { properties, agencies } = useAgentData();
-  const [tab, setTab] = useState<'dial' | 'contacts'>('dial');
+  const [tab, setTab] = useState<'dial' | 'contacts'>(() =>
+    propertyId ? 'contacts' : 'dial',
+  );
   const [dialNumber, setDialNumber] = useState('');
   const [search, setSearch] = useState('');
 
-  const phonebook = useMemo(
-    () => buildAgentPhonebook(properties, agencies),
-    [properties, agencies],
-  );
+  const phonebook = useMemo(() => {
+    const all = buildAgentPhonebook(properties, agencies);
+    if (!propertyId) return all;
+    return phonebookContactsForProperty(propertyId, all);
+  }, [properties, agencies, propertyId]);
+
+  const propertyLabel = propertyId
+    ? properties.find((p) => p.id === propertyId)?.address
+    : undefined;
 
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -63,9 +74,16 @@ export function PhonePanel({
     <div className={cn('flex min-h-0 flex-col', className)}>
       {variant === 'sheet' && onClose ? (
         <div className="mb-3 flex shrink-0 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Phone className="size-4 text-emerald-600 dark:text-emerald-400" />
-            <p className="text-sm font-semibold">Calls</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Phone className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <p className="text-sm font-semibold">
+                {propertyId ? 'Property contacts' : 'Calls'}
+              </p>
+            </div>
+            {propertyLabel ? (
+              <p className="text-muted-foreground mt-0.5 truncate text-xs">{propertyLabel}</p>
+            ) : null}
           </div>
           <button type="button" onClick={onClose} aria-label="Close">
             <X className="text-muted-foreground size-5" />

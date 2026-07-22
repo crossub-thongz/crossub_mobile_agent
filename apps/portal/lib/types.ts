@@ -279,6 +279,8 @@ export interface PropertyNeedAction {
   category: NeedActionCategory;
   href: string;
   priority: Priority;
+  /** Most recent activity on this task — drives Gii "latest update" ordering. */
+  updatedAt?: string;
 }
 
 export interface NeedActionGroup {
@@ -419,6 +421,8 @@ export interface MaintenanceRequest {
   timeline: TimelineEntry[];
   /** API created timestamp when available. */
   createdAt?: string;
+  /** Last change on the maintenance case (tenant submit, quote, status change). */
+  updatedAt?: string;
   source?: 'api';
   submittedQuotationId?: string;
   invoiceUploaded?: boolean;

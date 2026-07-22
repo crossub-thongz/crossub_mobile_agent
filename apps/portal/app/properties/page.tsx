@@ -154,15 +154,17 @@ export default function PropertiesPage() {
           ) : null}
         </div>
 
-        {/* {needActionCount > 0 && (
+        {needActionCount > 0 && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
-            <span className="font-semibold text-destructive">{needActionCount}</span>
-            <span className="text-muted-foreground">
-              {' '}
-              propert{needActionCount === 1 ? 'y' : 'ies'} need action
+            <span className="inline-flex items-center gap-2">
+              <span className="font-semibold text-destructive">{needActionCount}</span>
+              <span className="text-muted-foreground">
+                propert{needActionCount === 1 ? 'y' : 'ies'} need action
+              </span>
+              <span className="bg-[#fa5151] size-2 shrink-0 rounded-full" aria-hidden />
             </span>
           </div>
-        )} */}
+        )}
 
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />

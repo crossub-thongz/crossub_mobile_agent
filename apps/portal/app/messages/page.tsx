@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ChevronDown, ChevronRight, Mail, MessageSquare, Plus, Search } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
@@ -71,8 +72,14 @@ function MessageThreadRow({ thread }: { thread: MessageThread }) {
   );
 }
 
-function PropertyMessageGroupSection({ group }: { group: PropertyMessageGroup }) {
-  const [open, setOpen] = useState(false);
+function PropertyMessageGroupSection({
+  group,
+  defaultOpen = false,
+}: {
+  group: PropertyMessageGroup;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const latestThread = group.threads[0];
 
   return (
@@ -127,12 +134,17 @@ function PropertyMessageGroupSection({ group }: { group: PropertyMessageGroup })
 }
 
 export default function MessagesPage() {
-  const { messages } = useAgentData();
+  const searchParams = useSearchParams();
+  const propertyFilter = searchParams.get('property');
+  const { messages, properties } = useAgentData();
   const [search, setSearch] = useState('');
-  const [readFilter, setReadFilter] = useState('unread');
+  const [readFilter, setReadFilter] = useState(propertyFilter ? 'all' : 'unread');
 
   const filtered = useMemo(() => {
     let items = [...messages];
+    if (propertyFilter) {
+      items = items.filter((t) => t.propertyId === propertyFilter);
+    }
     if (readFilter === 'unread') {
       items = items.filter((t) => t.unread > 0);
     }
@@ -145,16 +157,27 @@ export default function MessagesPage() {
         t.tenantName.toLowerCase().includes(q) ||
         t.homeOwnerName.toLowerCase().includes(q),
     );
-  }, [messages, search, readFilter]);
+  }, [messages, propertyFilter, search, readFilter]);
 
   const groups = useMemo(() => groupThreadsByProperty(filtered), [filtered]);
   const unreadCount = useMemo(
-    () => messages.reduce((sum, t) => sum + (t.unread > 0 ? t.unread : 0), 0),
-    [messages],
+    () =>
+      (propertyFilter
+        ? messages.filter((t) => t.propertyId === propertyFilter)
+        : messages
+      ).reduce((sum, t) => sum + (t.unread > 0 ? t.unread : 0), 0),
+    [messages, propertyFilter],
   );
 
+  const filteredProperty = propertyFilter
+    ? properties.find((p) => p.id === propertyFilter)
+    : undefined;
+  const pageTitle = filteredProperty
+    ? `${filteredProperty.address} — Messages`
+    : 'Messages';
+
   return (
-    <AgentShell title="Messages">
+    <AgentShell title={pageTitle} backHref={propertyFilter ? `/properties/${propertyFilter}` : undefined} backLabel="Property">
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
@@ -212,7 +235,11 @@ export default function MessagesPage() {
         ) : (
           <div className="space-y-2">
             {groups.map((group) => (
-              <PropertyMessageGroupSection key={group.propertyId ?? group.propertyAddress} group={group} />
+              <PropertyMessageGroupSection
+                key={group.propertyId ?? group.propertyAddress}
+                group={group}
+                defaultOpen={Boolean(propertyFilter)}
+              />
             ))}
           </div>
         )}

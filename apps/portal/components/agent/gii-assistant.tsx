@@ -19,6 +19,7 @@ import {
 } from '@/constants/gii-prompts';
 import { searchAgentSystem, type SystemSearchResult } from '@/lib/agent-system-search';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
+import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import type { PropertyNeedAction } from '@/lib/types';
 import {
   needActionToJobRow,
@@ -142,10 +143,36 @@ export function GiiAssistant({
     return formatPropertyFullAddress(scopedProperty);
   }, [giiLaunch?.propertyAddress, scopedProperty]);
 
-  const propertyActionCount = useMemo(() => {
-    if (!scopedProperty) return 0;
-    return data.getPropertyActions(scopedProperty.id).length;
-  }, [data, scopedProperty]);
+
+  const briefingItems = useMemo(() => {
+    if (!scopedProperty) return data.needActionItems;
+    return data.needActionItems.filter((item) => item.propertyId === scopedProperty.id);
+  }, [data.needActionItems, scopedProperty]);
+
+  const briefingGroups = useMemo(
+    () => buildNeedActionGroups(briefingItems),
+    [briefingItems],
+  );
+
+  const liveBriefing = useMemo(
+    () => buildGiiBriefing(briefingItems, briefingGroups, new Date(), user?.firstName),
+    [briefingItems, briefingGroups, user?.firstName],
+  );
+
+  const greetingText = useMemo(() => {
+    if (scopedProperty && scopedAddress) {
+      return buildPropertyManagerGreeting(
+        scopedAddress,
+        briefingItems.length,
+        user?.firstName,
+      );
+    }
+    return liveBriefing.subtitle
+      ? `${liveBriefing.greeting}\n\n${liveBriefing.subtitle}`
+      : liveBriefing.greeting;
+  }, [briefingItems.length, liveBriefing, scopedAddress, scopedProperty, user?.firstName]);
+
+  const hasUserMessages = useMemo(() => lines.some((l) => l.role === 'user'), [lines]);
 
   const suggestedPrompts = scopedProperty ? PROPERTY_GII_PROMPTS : PORTFOLIO_GII_PROMPTS;
 
@@ -182,77 +209,7 @@ export function GiiAssistant({
   // without this the assessment lands below the fold.
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [lines]);
-
-  // Proactive briefing: when Gii opens onto an empty thread, greet and list what needs action
-  // today. Every count and row comes from the provider's data — the model states nothing here.
-  // Guarded on `lines.length === 0` so it never clobbers an in-progress conversation, and on
-  // `!data.loading` so it waits for the first data load instead of flashing "all caught up".
-  // Skipped when a launch prompt is queued — that turn replaces the greeting.
-  useEffect(() => {
-    if (
-      !open ||
-      data.loading ||
-      lines.length > 0 ||
-      giiLaunch?.initialPrompt ||
-      initialPromptHandledRef.current
-    ) {
-      return;
-    }
-
-    if (scopedProperty && scopedAddress) {
-      const propertyItems = data.needActionItems.filter(
-        (item) => item.propertyId === scopedProperty.id,
-      );
-      const text = buildPropertyManagerGreeting(
-        scopedAddress,
-        propertyActionCount,
-        user?.firstName,
-      );
-      const briefing =
-        propertyItems.length > 0
-          ? buildGiiBriefing(propertyItems, data.needActionGroups, new Date(), user?.firstName)
-          : null;
-      setLines([
-        {
-          id: `a-${idSeq()}`,
-          role: 'assistant',
-          text,
-          briefing: briefing?.isEmpty ? null : briefing,
-        },
-      ]);
-      return;
-    }
-
-    const briefing = buildGiiBriefing(
-      data.needActionItems,
-      data.needActionGroups,
-      new Date(),
-      user?.firstName,
-    );
-    const text = briefing.subtitle
-      ? `${briefing.greeting}\n\n${briefing.subtitle}`
-      : briefing.greeting;
-    setLines([
-      {
-        id: `a-${idSeq()}`,
-        role: 'assistant',
-        text,
-        briefing: briefing.isEmpty ? null : briefing,
-      },
-    ]);
-  }, [
-    open,
-    data.loading,
-    data.needActionItems,
-    data.needActionGroups,
-    giiLaunch?.initialPrompt,
-    lines.length,
-    propertyActionCount,
-    scopedAddress,
-    scopedProperty,
-    user?.firstName,
-  ]);
+  }, [lines, liveBriefing]);
 
   /**
    * A turn runs two things at once:
@@ -479,7 +436,25 @@ export function GiiAssistant({
       ) : null}
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
-        {lines.length === 0 ? (
+        {!data.loading && !giiLaunch?.initialPrompt ? (
+          <div className="space-y-2">
+            {!hasUserMessages ? (
+              <div className="bg-secondary mr-auto max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+                {greetingText}
+              </div>
+            ) : null}
+            {!liveBriefing.isEmpty ? (
+              <GiiBriefingCard
+                briefing={liveBriefing}
+                onNavigate={onClose}
+                onAsk={askAboutRow}
+                onOpen={openNeedAction}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
+        {lines.length === 0 && data.loading ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-emerald-500/10 text-primary">
               <Sparkles className="size-6" />
@@ -488,6 +463,16 @@ export function GiiAssistant({
             <p className="text-muted-foreground mt-1.5 max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
                 ? 'Jobs needing your approval appear above. Ask for details, then reply Approve or ask follow-up questions.'
+                : multilingualHint()}
+            </p>
+          </div>
+        ) : null}
+
+        {lines.length === 0 && !data.loading && liveBriefing.isEmpty && !giiLaunch?.initialPrompt ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <p className="text-muted-foreground max-w-[260px] text-xs leading-relaxed">
+              {scopedProperty
+                ? 'Ask Gii to create a job or check this property.'
                 : multilingualHint()}
             </p>
           </div>
@@ -508,15 +493,6 @@ export function GiiAssistant({
             </div>
 
             {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
-
-            {line.briefing ? (
-              <GiiBriefingCard
-                briefing={line.briefing}
-                onNavigate={onClose}
-                onAsk={askAboutRow}
-                onOpen={openNeedAction}
-              />
-            ) : null}
 
             {line.lodgedRef ? (
               <p className="mr-auto text-xs font-medium text-primary">
@@ -578,7 +554,7 @@ export function GiiAssistant({
       </div>
 
       <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {!sending && lines.length <= 1 ? (
+        {!sending && !hasUserMessages ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {suggestedPrompts.map((item) => (
               <button

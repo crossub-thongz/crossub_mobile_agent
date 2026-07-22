@@ -11,6 +11,7 @@ import { formatPropertyFullAddress } from '@/lib/utils';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { isTenantSelectionPending } from '@/lib/tenant-selection';
+import { PRIORITY_RANK } from '@/constants/gii-briefing';
 import type {
   AgentDocument,
   Inspection,
@@ -20,8 +21,38 @@ import type {
   PropertyNeedAction,
   RentReviewCase,
   TenantSelectionCase,
+  TimelineEntry,
   TribunalCase,
 } from '@/lib/types';
+
+function latestTimestamp(...candidates: (string | undefined)[]): string {
+  const parsed = candidates
+    .map((c) => Date.parse(c ?? ''))
+    .filter((t) => !Number.isNaN(t) && t > 0);
+  if (parsed.length === 0) return new Date(0).toISOString();
+  return new Date(Math.max(...parsed)).toISOString();
+}
+
+function timelineLatest(timeline: TimelineEntry[]): string | undefined {
+  if (timeline.length === 0) return undefined;
+  let best = timeline[0]?.at;
+  for (const entry of timeline) {
+    if (Date.parse(entry.at) > Date.parse(best)) best = entry.at;
+  }
+  return best;
+}
+
+/** Newest activity first; priority breaks ties when timestamps match or are missing. */
+export function sortNeedActionsByRecency(
+  items: PropertyNeedAction[],
+): PropertyNeedAction[] {
+  return [...items].sort((a, b) => {
+    const aTime = Date.parse(a.updatedAt ?? '') || 0;
+    const bTime = Date.parse(b.updatedAt ?? '') || 0;
+    if (bTime !== aTime) return bTime - aTime;
+    return PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+  });
+}
 
 export function getPropertyNeedActions(
   property: Property,
@@ -56,6 +87,11 @@ export function getPropertyNeedActions(
       category: 'Maintenance',
       href: maintenanceDetail(m.id, fromProperty(property.id, 'Maintenance')),
       priority: m.priority === 'urgent' ? 'urgent' : 'high',
+      updatedAt: latestTimestamp(
+        m.updatedAt,
+        timelineLatest(m.timeline),
+        m.createdAt,
+      ),
     });
   }
 
@@ -70,6 +106,12 @@ export function getPropertyNeedActions(
           category: 'Leasing',
           href: rentReviewDetail(r.id, fromProperty(property.id, 'Leasing')),
           priority: 'high',
+          updatedAt: latestTimestamp(
+            timelineLatest(r.timeline),
+            r.negotiationHistory?.at(-1)?.at,
+            r.dateStarted,
+            r.createdAt,
+          ),
         });
       }
     }
@@ -85,6 +127,7 @@ export function getPropertyNeedActions(
         category: 'Leasing',
         href: tenantSelectionDetail(t.id, fromProperty(property.id, 'Leasing')),
         priority: 'high',
+        updatedAt: latestTimestamp(timelineLatest(t.timeline), t.createdAt),
       });
     }
   }
@@ -100,6 +143,11 @@ export function getPropertyNeedActions(
           category: 'Inspection',
           href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
           priority: 'normal',
+          updatedAt: latestTimestamp(
+            timelineLatest(i.timeline),
+            i.scheduledAt,
+            i.createdAt,
+          ),
         });
       }
       if (i.reportStatus === 'pending' && i.status.toLowerCase().includes('complete')) {
@@ -111,6 +159,7 @@ export function getPropertyNeedActions(
           category: 'Inspection',
           href: inspectionDetail(i.id, fromProperty(property.id, 'Inspection')),
           priority: 'normal',
+          updatedAt: latestTimestamp(timelineLatest(i.timeline), i.createdAt),
         });
       }
     }
@@ -125,6 +174,7 @@ export function getPropertyNeedActions(
       category: 'Accounting',
       href: `${propertyDetail(property.id)}?tab=Accounting&focus=arrears`,
       priority: data.accounting.daysInArrears > 14 ? 'urgent' : 'high',
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -137,6 +187,7 @@ export function getPropertyNeedActions(
       category: 'Leasing',
       href: `${propertyDetail(property.id)}?tab=Leasing&leasing=new-leasing`,
       priority: 'normal',
+      updatedAt: latestTimestamp(property.createdAt),
     });
   }
 
@@ -152,6 +203,7 @@ export function getPropertyNeedActions(
         category: 'Leasing',
         href: `${propertyDetail(property.id)}?tab=Leasing&leasing=rent-review`,
         priority: days <= 30 ? 'high' : 'normal',
+        updatedAt: property.nextRentReview,
       });
     }
   }
@@ -166,6 +218,7 @@ export function getPropertyNeedActions(
         category: 'Tribunal',
         href: tribunalDetail(t.id, fromProperty(property.id, 'Documents')),
         priority: 'urgent',
+        updatedAt: latestTimestamp(t.createdAt),
       });
     }
   }
@@ -183,6 +236,7 @@ export function getPropertyNeedActions(
       category: 'Others',
       href: `${propertyDetail(property.id)}?tab=Documents`,
       priority: 'normal',
+      updatedAt: latestTimestamp(property.createdAt),
     });
   }
 
@@ -199,8 +253,5 @@ export function buildRemindingQueue(
     seen.add(item.id);
     return true;
   });
-  return items.sort((a, b) => {
-    const order = { urgent: 0, high: 1, normal: 2, low: 3 };
-    return order[a.priority] - order[b.priority];
-  });
+  return sortNeedActionsByRecency(items);
 }
