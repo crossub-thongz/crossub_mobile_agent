@@ -185,7 +185,7 @@ export function tabActionsFor(
         {
           id: 'open_rent_chasing',
           label: 'Rent chasing',
-          description: 'Open a tribunal Rent Chasing case for rent, bill, or bond arrears',
+          description: 'Add rent, bill, or bond arrears for this property',
         },
       ];
     default:

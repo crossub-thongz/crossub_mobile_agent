@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
@@ -9,13 +8,11 @@ import { RentReconciliationDialog } from '@/components/accounting/rent-reconcili
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
-import { InfoPanel } from '@/components/agent/info-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { buildRentReconciliationProperty } from '@/lib/rent-reconciliation';
 import { accountingJobRows } from '@/lib/property-job-rows';
 import {
-  buildPropertyAccountingSummary,
   hasPropertyAccountingData,
 } from '@/lib/property-portal-accounting';
 import type { PropertyPortalAccounting, PropertyPortalFinancial } from '@/lib/property-registry-api';
@@ -133,17 +130,6 @@ export function PropertyAccountingTab({
 
   const portalAccounting = detail?.accounting ?? null;
   const portalFinancial = detail?.financial ?? financial ?? null;
-
-  const summary = useMemo(
-    () =>
-      buildPropertyAccountingSummary({
-        propertyId,
-        accounting: portalAccounting,
-        financial: portalFinancial,
-        fallback: fallbackAccounting,
-      }),
-    [propertyId, portalAccounting, portalFinancial, fallbackAccounting],
-  );
 
   const hasData = hasPropertyAccountingData({
     accounting: portalAccounting,
@@ -263,6 +249,7 @@ export function PropertyAccountingTab({
       <RentReconciliationDialog
         open={rentReconOpen}
         onOpenChange={setRentReconOpen}
+        propertyId={propertyId}
         property={rentReconProperty}
         onSubmitted={() => {
           void refreshPortalDetail();
@@ -296,21 +283,6 @@ export function PropertyAccountingTab({
           <PropertyJobCasesTable rows={accountingCases} showViewToggle={false} />
         </section>
       ) : null}
-
-      <InfoPanel title="Accounting" icon={Wallet}>
-        <p className="text-muted-foreground text-sm">
-          Rent ledger, statements, and arrears for this property.
-        </p>
-        <div className="mt-3 rounded-xl border bg-card px-4 py-3">
-          <p className="text-primary text-[10px] font-semibold uppercase tracking-wide">
-            {summary.label}
-          </p>
-          <p className="mt-0.5 text-sm font-semibold">{summary.currentStep}</p>
-          {summary.detail ? (
-            <p className="text-muted-foreground mt-1 text-xs">{summary.detail}</p>
-          ) : null}
-        </div>
-      </InfoPanel>
 
       <section ref={ledgerSectionRef} id="rent-reconciliation" className="space-y-3 scroll-mt-24">
         <h3 className="text-sm font-semibold">Rent reconciliation</h3>

@@ -232,6 +232,36 @@ export async function cancelAgentIngoingInspection(
   );
 }
 
+/** Record rent reconciliation on the property ledger. */
+export type AgentRecordRentReconciliationInput = {
+  amount: number;
+  paymentDate: string;
+  paymentMethod: 'cash' | 'cheque' | 'card' | 'eft';
+  rentAllocation?: number;
+  bondAllocation?: number;
+  note?: string;
+};
+
+export async function createAgentPropertyArrears(
+  propertyId: string,
+  body: CreateAgentTribunalRentChasingInput,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(`${base(propertyId)}/accounting/arrears`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function createAgentRentReconciliation(
+  propertyId: string,
+  body: AgentRecordRentReconciliationInput,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(`${base(propertyId)}/accounting/rent-reconciliation`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 /** Open a Rent Chasing tribunal case and sync rent/bond/bill fields to the property profile. */
 export async function createAgentTribunalRentChasing(
   propertyId: string,

@@ -5,6 +5,7 @@ import {
   Building2,
   Calendar,
   CircleDollarSign,
+  Loader2,
   UserRound,
   UsersRound,
   X,
@@ -22,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { RentReconciliationProperty } from '@/lib/rent-reconciliation';
+import { createAgentRentReconciliation } from '@/lib/crossub-api/agent-workflow-client';
 import { cn } from '@/lib/utils';
 
 const PAYMENT_METHODS = ['cash', 'cheque', 'card', 'eft'] as const;
@@ -240,11 +242,13 @@ function OptionCheckbox({
 export function RentReconciliationDialog({
   open,
   onOpenChange,
+  propertyId,
   property,
   onSubmitted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  propertyId: string;
   property: RentReconciliationProperty | null;
   onSubmitted?: (submission: RentReconciliationSubmission) => void;
 }) {
@@ -259,6 +263,7 @@ export function RentReconciliationDialog({
   const [receiptToSupplier, setReceiptToSupplier] = useState(false);
   const [addNote, setAddNote] = useState(false);
   const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const rentDueDate = property
     ? addDays(property.paidToDate, property.rentCycleLabel === 'Weekly' ? 7 : 30)
@@ -282,7 +287,9 @@ export function RentReconciliationDialog({
     setReceiptToSupplier(false);
     setAddNote(false);
     setNote('');
-  }, [open, property]);
+    // Reset only when the dialog opens or the property changes — not when the
+    // parent rebuilds the property object on background portal polls.
+  }, [open, property?.id, property?.address]);
 
   const allocationTotal = useMemo(
     () => parseCurrencyInput(rentAllocation) + parseCurrencyInput(bondAllocation),
@@ -299,8 +306,8 @@ export function RentReconciliationDialog({
     }
   };
 
-  const handleSubmit = () => {
-    if (!property) return;
+  const handleSubmit = async () => {
+    if (!property || saving) return;
     const total = headerAmount;
     if (total <= 0) {
       toast.error('Enter a payment amount or allocation');
@@ -308,16 +315,35 @@ export function RentReconciliationDialog({
     }
     const rent = parseCurrencyInput(rentAllocation);
     const bond = parseCurrencyInput(bondAllocation);
-    onSubmitted?.({
+    const submission: RentReconciliationSubmission = {
       amount: total,
       paymentDate,
       paymentMethod,
       rentAllocation: rent,
       bondAllocation: bond,
       note: addNote && note.trim() ? note.trim() : undefined,
-    });
-    toast.success(`Rent reconciliation recorded for ${property.address}`);
-    onOpenChange(false);
+    };
+
+    setSaving(true);
+    try {
+      await createAgentRentReconciliation(propertyId, {
+        amount: submission.amount,
+        paymentDate: submission.paymentDate,
+        paymentMethod: submission.paymentMethod,
+        rentAllocation: rent > 0 ? rent : undefined,
+        bondAllocation: bond > 0 ? bond : undefined,
+        note: submission.note,
+      });
+      toast.success(`Rent reconciliation recorded for ${property.address}`);
+      onSubmitted?.(submission);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not record rent reconciliation',
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!property) return null;
@@ -559,15 +585,24 @@ export function RentReconciliationDialog({
               variant="outline"
               className="h-11 w-full sm:min-w-28 sm:w-auto"
               onClick={() => onOpenChange(false)}
+              disabled={saving}
             >
               Cancel
             </Button>
             <Button
               type="button"
               className="h-11 w-full bg-sky-600 text-white hover:bg-sky-700 sm:min-w-44 sm:w-auto"
-              onClick={handleSubmit}
+              onClick={() => void handleSubmit()}
+              disabled={saving}
             >
-              Record {formatCurrencyCents(headerAmount) || '$0.00'}
+              {saving ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Recording…
+                </>
+              ) : (
+                <>Record {formatCurrencyCents(headerAmount) || '$0.00'}</>
+              )}
             </Button>
           </div>
         </footer>

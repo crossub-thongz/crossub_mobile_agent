@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
+  createAgentPropertyArrears,
   createAgentTribunalRentChasing,
   fetchAgentTribunalRentChasingPrefill,
   type AgentTribunalRentChasingPrefill,
@@ -235,23 +236,28 @@ export function CreateTribunalRentChasingDialog({
     [accounting],
   );
 
+  const isAddingArrears = mode === 'rent_chasing';
+
   const propertyOptions = useMemo(
     () =>
       [...properties]
         .filter((property) =>
           initialPropertyId
             ? property.id === initialPropertyId
-            : propertyIdsWithArrears.has(property.id),
+            : isAddingArrears || propertyIdsWithArrears.has(property.id),
         )
         .sort((a, b) =>
           a.address.localeCompare(b.address, undefined, { sensitivity: 'base' }),
         ),
-    [initialPropertyId, properties, propertyIdsWithArrears],
+    [initialPropertyId, properties, propertyIdsWithArrears, isAddingArrears],
   );
 
-  const availableKinds = useMemo(
-    () => [...new Set(prefill?.arrears.map((row) => row.kind) ?? [])] as ArrearsKind[],
-    [prefill],
+  const selectableKinds = useMemo(
+    () =>
+      isAddingArrears
+        ? ARREARS_KIND_OPTIONS.map((option) => option.id)
+        : ([...new Set(prefill?.arrears.map((row) => row.kind) ?? [])] as ArrearsKind[]),
+    [isAddingArrears, prefill],
   );
 
   useEffect(() => {
@@ -283,32 +289,24 @@ export function CreateTribunalRentChasingDialog({
         const nextPrefill = await fetchAgentTribunalRentChasingPrefill(propertyId);
         if (cancelled) return;
         setPrefill(nextPrefill);
-        if (nextPrefill.hasAccountingArrears) {
-          stashPrefillFields(nextPrefill, {
-            setRentAmount,
-            setPaymentCycle,
-            setRentPaidTo,
-            setBills,
-            setAgreementEndDate,
-            setBondAmount,
-            setBondNotes,
-          });
-          setSelectedKinds([]);
-        } else {
-          setSelectedKinds([]);
-          setRentAmount('');
-          setRentPaidTo('');
-          setBills([]);
-          setAgreementEndDate('');
-          setBondAmount('');
-          setBondNotes('');
-        }
+        stashPrefillFields(nextPrefill, {
+          setRentAmount,
+          setPaymentCycle,
+          setRentPaidTo,
+          setBills,
+          setAgreementEndDate,
+          setBondAmount,
+          setBondNotes,
+        });
+        setSelectedKinds([]);
       } catch (err) {
         if (!cancelled) {
           setPrefill(null);
-          toast.error(
-            err instanceof Error ? err.message : 'Could not load accounting arrears',
-          );
+          if (!isAddingArrears) {
+            toast.error(
+              err instanceof Error ? err.message : 'Could not load accounting arrears',
+            );
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -318,9 +316,33 @@ export function CreateTribunalRentChasingDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, propertyId]);
+  }, [open, propertyId, isAddingArrears]);
 
   const lockedProperty = Boolean(initialPropertyId);
+
+  const applyPropertyDefaults = (kind: ArrearsKind) => {
+    const property = properties.find((item) => item.id === propertyId);
+    if (!property) return;
+
+    if (kind === 'rent') {
+      if (property.rentWeekly) {
+        setRentAmount((prev) => prev.trim() || String(property.rentWeekly));
+      }
+      if (property.rentPaidUntil) {
+        setRentPaidTo((prev) => prev.trim() || property.rentPaidUntil!.slice(0, 10));
+      }
+      return;
+    }
+
+    if (kind === 'bond') {
+      if (property.bondAmount) {
+        setBondAmount((prev) => prev.trim() || String(property.bondAmount));
+      }
+      if (property.leaseEnd) {
+        setAgreementEndDate((prev) => prev.trim() || property.leaseEnd!.slice(0, 10));
+      }
+    }
+  };
 
   const toggleArrearsKind = (kind: ArrearsKind) => {
     setSelectedKinds((prev) => {
@@ -336,16 +358,20 @@ export function CreateTribunalRentChasingDialog({
           setBondAmount,
           setBondNotes,
         });
+      } else {
+        applyPropertyDefaults(kind);
+      }
+      if (kind === 'bill') {
+        setBills((prev) => (prev.length > 0 ? prev : [newBillRow()]));
       }
       return [...prev, kind];
     });
   };
 
-  const dialogTitle = mode === 'tribunal' ? 'Add tribunal case' : 'Rent Chasing';
-  const dialogDescription =
-    mode === 'tribunal'
-      ? 'Review accounting arrears for this property, then choose which to include in the tribunal case.'
-      : 'Review accounting arrears, then choose which rent, bill, or bond items to include in this Rent Chasing case.';
+  const dialogTitle = isAddingArrears ? 'Add arrears' : 'Add tribunal case';
+  const dialogDescription = isAddingArrears
+    ? 'Choose which arrears to record for this property — rent, bills, or bond — then fill in the details.'
+    : 'Review accounting arrears for this property, then choose which to include in the tribunal case.';
 
   const submit = async () => {
     if (!propertyId) {
@@ -433,16 +459,42 @@ export function CreateTribunalRentChasingDialog({
 
     setSaving(true);
     try {
+      if (isAddingArrears) {
+        await createAgentPropertyArrears(propertyId, body);
+        toast.success('Arrears recorded');
+        onOpenChange(false);
+        onCreated?.('');
+        return;
+      }
+
       const result = await createAgentTribunalRentChasing(propertyId, body);
-      toast.success(mode === 'tribunal' ? 'Tribunal case created' : 'Rent Chasing case created');
+      toast.success('Tribunal case created');
       onOpenChange(false);
       onCreated?.(result.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not create tribunal case');
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : isAddingArrears
+            ? 'Could not save arrears'
+            : 'Could not create tribunal case',
+      );
     } finally {
       setSaving(false);
     }
   };
+
+  const canSubmit =
+    Boolean(propertyId) &&
+    selectedKinds.length > 0 &&
+    !saving &&
+    !loading &&
+    (isAddingArrears || prefill?.hasAccountingArrears);
+
+  const showArrearsForm =
+    Boolean(propertyId) &&
+    !loading &&
+    (isAddingArrears || Boolean(prefill?.hasAccountingArrears));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -485,14 +537,13 @@ export function CreateTribunalRentChasingDialog({
           {loading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
               <Loader2 className="size-4 animate-spin" />
-              Loading accounting arrears…
+              Loading property details…
             </div>
-          ) : prefill && !prefill.hasAccountingArrears ? (
+          ) : !showArrearsForm ? (
             <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center">
               <p className="text-sm font-medium">No accounting arrears on file</p>
               <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                Create arrears in Accounting for this property before opening a tribunal Rent
-                Chasing case.
+                Add rent, bill, or bond arrears in Accounting before opening a tribunal case.
               </p>
             </div>
           ) : (
@@ -530,14 +581,17 @@ export function CreateTribunalRentChasingDialog({
               ) : null}
 
               <div className="space-y-2">
-                <p className="text-sm font-medium">Include in tribunal case</p>
+                <p className="text-sm font-medium">
+                  {isAddingArrears ? 'Arrears to add' : 'Include in tribunal case'}
+                </p>
                 <p className="text-muted-foreground text-xs">
-                  Choose one or more arrears types from Accounting. Form sections appear after
-                  you select them.
+                  {isAddingArrears
+                    ? 'Select one or more arrears types, then complete the sections below.'
+                    : 'Choose one or more arrears types from Accounting. Form sections appear after you select them.'}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {ARREARS_KIND_OPTIONS.filter((option) =>
-                    availableKinds.includes(option.id),
+                    selectableKinds.includes(option.id),
                   ).map((option) => {
                     const selected = selectedKinds.includes(option.id);
                     return (
@@ -551,7 +605,7 @@ export function CreateTribunalRentChasingDialog({
                     );
                   })}
                 </div>
-                {availableKinds.length > 0 && selectedKinds.length === 0 ? (
+                {selectableKinds.length > 0 && selectedKinds.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
                     Select at least one arrears type to continue.
                   </p>
@@ -561,7 +615,11 @@ export function CreateTribunalRentChasingDialog({
               {selectedKinds.includes('rent') ? (
               <Section
                 title="Rent Arrears"
-                description="From Accounting — adjust if needed before creating the case."
+                description={
+                  isAddingArrears
+                    ? 'Record the outstanding rent for this property.'
+                    : 'From Accounting — adjust if needed before creating the case.'
+                }
               >
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Rent">
@@ -778,12 +836,14 @@ export function CreateTribunalRentChasingDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={() => void submit()} disabled={saving || loading || !prefill?.hasAccountingArrears || selectedKinds.length === 0}>
+          <Button type="button" onClick={() => void submit()} disabled={!canSubmit}>
             {saving ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Creating…
+                {isAddingArrears ? 'Saving…' : 'Creating…'}
               </>
+            ) : isAddingArrears ? (
+              'Save arrears'
             ) : (
               'Create case'
             )}
