@@ -526,7 +526,16 @@ export default function PropertyDetailPage() {
 
         {tab === 'Tribunal' && (
           <PropertyTribunalTab
+            property={property}
+            propertyId={id}
             tribunalCases={propertyTribunalCases}
+            leasingCycles={propertyLeasingCycles}
+            rentReviews={tenancyRentReviews}
+            vacatingCases={propertyVacatingCases}
+            maintenance={tasks.maintenance}
+            inspections={tasks.inspections}
+            tenantSelections={propertyLeasingCases}
+            currentLease={currentLease}
             onRefresh={() => void refresh()}
           />
         )}

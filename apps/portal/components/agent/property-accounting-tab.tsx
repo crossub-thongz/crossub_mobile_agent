@@ -1,18 +1,18 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
+import { RentReconciliationDialog } from '@/components/accounting/rent-reconciliation-dialog';
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { InfoPanel } from '@/components/agent/info-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ROUTES } from '@/constants/routes';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
+import { buildRentReconciliationProperty } from '@/lib/rent-reconciliation';
 import { accountingJobRows } from '@/lib/property-job-rows';
 import {
   buildPropertyAccountingSummary,
@@ -119,13 +119,16 @@ export function PropertyAccountingTab({
   onRefresh?: () => void;
 }) {
   const { apiConnected, primaryAgency, properties } = useAgentData();
-  const router = useRouter();
-  const { detail } = usePropertyPortalDetail(propertyId, apiConnected);
+  const { detail, refresh: refreshPortalDetail } = usePropertyPortalDetail(
+    propertyId,
+    apiConnected,
+  );
   const ledgerSectionRef = useRef<HTMLElement>(null);
   const localArrearsRef = useRef<HTMLElement>(null);
   const arrearsRef = arrearsSectionRef ?? localArrearsRef;
 
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [rentReconOpen, setRentReconOpen] = useState(false);
   const [rentChasingOpen, setRentChasingOpen] = useState(false);
 
   const portalAccounting = detail?.accounting ?? null;
@@ -188,11 +191,27 @@ export function PropertyAccountingTab({
     [fallbackAccounting],
   );
 
+  const rentReconProperty = useMemo(
+    () =>
+      buildRentReconciliationProperty({
+        property,
+        accounting: portalAccounting,
+        financial: portalFinancial,
+        fallbackAccounting: fallbackAccounting ?? undefined,
+        rentPaidUntil: detail?.overview?.rentPaidUntilDate ?? property.rentPaidUntil,
+      }),
+    [
+      property,
+      portalAccounting,
+      portalFinancial,
+      fallbackAccounting,
+      detail?.overview?.rentPaidUntilDate,
+    ],
+  );
+
   const handleCustomAction = (actionId: PropertyWorkflowActionId) => {
     if (actionId === 'create_rent_reconciliation') {
-      router.push(
-        `${ROUTES.ACCOUNTING}?section=rent_reconciliation&propertyId=${encodeURIComponent(propertyId)}`,
-      );
+      setRentReconOpen(true);
       return true;
     }
     if (actionId === 'open_invoice_management') {
@@ -241,15 +260,26 @@ export function PropertyAccountingTab({
         }}
       />
 
+      <RentReconciliationDialog
+        open={rentReconOpen}
+        onOpenChange={setRentReconOpen}
+        property={rentReconProperty}
+        onSubmitted={() => {
+          void refreshPortalDetail();
+          void onRefresh?.();
+          ledgerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
+      />
+
       <CreateTribunalRentChasingDialog
         open={rentChasingOpen}
         onOpenChange={setRentChasingOpen}
         propertyId={propertyId}
         properties={properties}
+        mode="rent_chasing"
         onCreated={() => {
           setRentChasingOpen(false);
           void onRefresh?.();
-          toast.success('Rent Chasing case created');
         }}
       />
 

@@ -280,6 +280,7 @@ export function QuickCreateWorkflowDialog({
           }}
           propertyId={propertyId}
           properties={properties}
+          mode={actionId === 'open_tribunal' ? 'tribunal' : 'rent_chasing'}
           onCreated={(caseId) => {
             void handleCreated({ kind: 'tribunal', id: caseId });
           }}

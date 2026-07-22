@@ -191,6 +191,7 @@ export function PropertyMobileHub({
         }}
         propertyId={propertyId}
         properties={properties}
+        mode={manualAction === 'open_tribunal' ? 'tribunal' : 'rent_chasing'}
         onCreated={() => {
           setManualAction(null);
           onWorkflowCreated?.();

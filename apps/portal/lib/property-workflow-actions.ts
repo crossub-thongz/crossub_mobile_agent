@@ -160,7 +160,15 @@ export function tabActionsFor(
         },
       ];
     case 'tribunal':
-      return [];
+      if (ctx.tribunalCases.length > 0) return [];
+      return [
+        {
+          id: 'open_tribunal',
+          label: 'Add tribunal',
+          description: 'Open an NCAT tribunal case from accounting arrears on this property',
+          primary: true,
+        },
+      ];
     case 'accounting':
       return [
         {

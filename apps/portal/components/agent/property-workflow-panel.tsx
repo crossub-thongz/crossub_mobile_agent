@@ -236,6 +236,7 @@ export function PropertyWorkflowPanel({
         }}
         propertyId={propertyId}
         properties={properties}
+        mode={activeAction === 'open_tribunal' ? 'tribunal' : 'rent_chasing'}
         onCreated={(caseId) => {
           setActiveAction(null);
           onCreated?.({ kind: 'tribunal', id: caseId });
