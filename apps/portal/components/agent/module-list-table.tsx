@@ -18,6 +18,18 @@ export type ModuleTableColumn<T extends string> =
       defaultDirection?: SortDirection;
     };
 
+/** Percentage or fixed widths for `table-fixed` columns — keeps tables within the main panel. */
+export const MODULE_TABLE_COLUMN_WIDTHS = {
+  maintenance: ['8%', '11%', '16%', '22%', '13%', '12%', '8%', '5%'],
+  inspections: ['7%', '22%', '8%', '11%', '11%', '11%', '14%', '5%'],
+  inspectionsWithDelete: ['7%', '20%', '8%', '10%', '10%', '10%', '13%', '4%', '5%'],
+  leasingCycles: ['24%', '15%', '14%', '10%', '12%', '12%', '5%'],
+  leasingCyclesCompact: ['14%', '16%', '14%', '10%', '12%', '12%', '5%'],
+  rentReview: ['8%', '20%', '12%', '9%', '11%', '9%', '10%', '11%', '5%'],
+  tenantSelection: ['22%', '16%', '10%', '10%', '12%', '12%', '5%'],
+  leasingHistory: ['22%', '14%', '12%', '16%', '10%', '10%', '5%'],
+} as const;
+
 export function ModuleMobileCardShell({
   onClick,
   href,
@@ -53,22 +65,26 @@ export function ModuleMobileCardShell({
 }
 
 export function ModuleListTable({
-  minWidth = 720,
+  columnWidths,
   children,
 }: {
+  /** @deprecated Tables are fluid — pass `columnWidths` instead of a min-width floor. */
   minWidth?: number;
+  columnWidths?: readonly string[];
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="overflow-x-auto">
-        <table
-          className="w-full border-collapse text-left text-sm"
-          style={{ minWidth }}
-        >
-          {children}
-        </table>
-      </div>
+    <div className="min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm">
+      <table className="w-full table-fixed border-collapse text-left text-sm">
+        {columnWidths && columnWidths.length > 0 ? (
+          <colgroup>
+            {columnWidths.map((width, index) => (
+              <col key={`${width}-${index}`} style={{ width }} />
+            ))}
+          </colgroup>
+        ) : null}
+        {children}
+      </table>
     </div>
   );
 }
@@ -81,7 +97,7 @@ export function ModuleTableHead({ columns }: { columns: string[] }) {
           <th
             key={col}
             className={cn(
-              'px-3 py-3 font-semibold',
+              'px-2 py-2.5 font-semibold lg:px-3 lg:py-3',
               col === '' && 'w-10 text-right',
             )}
           >
@@ -113,7 +129,7 @@ export function ModuleSortableTableHead<T extends string>({
               <th
                 key={`static-${index}`}
                 className={cn(
-                  'px-3 py-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground',
+                  'px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:px-3 lg:py-3',
                   col.align === 'right' ? 'text-right' : 'text-left',
                   col.label === '' && 'w-10',
                 )}
@@ -235,14 +251,14 @@ export function ModuleTableLinkCell({
 }) {
   if (onClick) {
     return (
-      <td className={cn('px-3 py-3', className)}>
+      <td className={cn('min-w-0 px-2 py-2.5 lg:px-3 lg:py-3', className)}>
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             onClick();
           }}
-          className="text-left font-medium leading-snug text-foreground hover:text-primary"
+          className="w-full min-w-0 text-left font-medium leading-snug text-foreground hover:text-primary"
         >
           {children}
         </button>
@@ -251,8 +267,8 @@ export function ModuleTableLinkCell({
   }
 
   return (
-    <td className={cn('px-3 py-3', className)}>
-      <Link href={href!} className="font-medium leading-snug text-foreground hover:text-primary">
+    <td className={cn('min-w-0 px-2 py-2.5 lg:px-3 lg:py-3', className)}>
+      <Link href={href!} className="block min-w-0 font-medium leading-snug text-foreground hover:text-primary">
         {children}
       </Link>
     </td>
@@ -268,7 +284,7 @@ export function ModuleTableChevronCell({
 }) {
   if (onClick) {
     return (
-      <td className="px-3 py-3 text-right">
+      <td className="px-2 py-2.5 text-right lg:px-3 lg:py-3">
         <button
           type="button"
           onClick={(event) => {
@@ -285,7 +301,7 @@ export function ModuleTableChevronCell({
   }
 
   return (
-    <td className="px-3 py-3 text-right">
+    <td className="px-2 py-2.5 text-right lg:px-3 lg:py-3">
       <Link href={href!} className="text-muted-foreground inline-flex hover:text-primary">
         <ChevronRight className="size-4" />
       </Link>

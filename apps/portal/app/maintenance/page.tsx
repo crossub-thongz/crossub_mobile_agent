@@ -65,7 +65,7 @@ export default function MaintenancePage() {
 
   return (
     <AgentShell title="Maintenance">
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         <StatusBanner
           status={summary?.statusLabel ?? 'No jobs'}
           tone={

@@ -28,7 +28,7 @@ export function SortableTableHeader<T extends string>({
   return (
     <th
       className={cn(
-        'px-3 py-3 font-semibold',
+        'px-2 py-2.5 font-semibold lg:px-3 lg:py-3',
         align === 'right' ? 'text-right' : 'text-left',
         className,
       )}

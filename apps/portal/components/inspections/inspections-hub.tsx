@@ -116,7 +116,7 @@ export function InspectionsHub({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 min-w-0">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <SummaryTile label="Open active" value={counts.open} icon={DoorOpen} highlight={counts.open > 0} />
         <SummaryTile label="Needs attention" value={counts.action} highlight={counts.action > 0} />

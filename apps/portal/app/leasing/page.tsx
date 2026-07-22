@@ -111,7 +111,7 @@ export default function LeasingPage() {
 
   return (
     <AgentShell title="Leasing" backHref={ROUTES.DASHBOARD}>
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         <PageIntro description="New applications, rent reviews, and tenancy history across your portfolio." />
 
         <div className="grid grid-cols-2 gap-2">

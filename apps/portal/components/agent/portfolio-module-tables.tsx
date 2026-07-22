@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { CalendarDays, ChevronRight, Trash2 } from 'lucide-react';
 
 import {
+  MODULE_TABLE_COLUMN_WIDTHS,
   ModuleInteractiveTableRow,
   ModuleListTable,
   ModuleMobileCardShell,
@@ -199,7 +200,7 @@ export function MaintenanceListTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={1080}>
+        <ModuleListTable columnWidths={MODULE_TABLE_COLUMN_WIDTHS.maintenance}>
           <ModuleSortableTableHead
             sortKey={sortKey}
             sortDirection={sortDirection}
@@ -233,31 +234,31 @@ export function MaintenanceListTable({
                   selected={selectedId === m.id}
                   className={cn(m.requiresApproval && 'bg-destructive/[0.03]')}
                 >
-                  <td className="text-muted-foreground whitespace-nowrap px-3 py-3 text-xs tabular-nums">
+                  <td className="text-muted-foreground min-w-0 truncate px-2 py-2.5 text-xs tabular-nums lg:px-3 lg:py-3">
                     {m.trackingNumber}
                   </td>
-                  <td className="text-muted-foreground whitespace-nowrap px-3 py-3 text-xs tabular-nums">
+                  <td className="text-muted-foreground min-w-0 truncate px-2 py-2.5 text-xs tabular-nums lg:px-3 lg:py-3">
                     {formatCreatedAt(maintenanceCreatedAtIso(m))}
                   </td>
                   {interactive ? (
-                    <td className="max-w-[12rem] px-3 py-3 font-medium">
+                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
                       <span className="line-clamp-2">{m.title}</span>
                     </td>
                   ) : (
-                    <ModuleTableLinkCell href={href} className="max-w-[12rem]">
+                    <ModuleTableLinkCell href={href}>
                       <span className="line-clamp-2">{m.title}</span>
                     </ModuleTableLinkCell>
                   )}
-                  <td className="text-muted-foreground max-w-[14rem] px-3 py-3">
+                  <td className="text-muted-foreground min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
                     <span className="line-clamp-2">{m.propertyAddress}</span>
                   </td>
-                  <td className="text-primary px-3 py-3 text-xs font-medium">
+                  <td className="text-primary min-w-0 truncate px-2 py-2.5 text-xs font-medium lg:px-3 lg:py-3">
                     {progress.currentStepLabel}
                   </td>
-                  <td className="text-muted-foreground px-3 py-3 text-xs">
+                  <td className="text-muted-foreground min-w-0 truncate px-2 py-2.5 text-xs lg:px-3 lg:py-3">
                     {capitalize(m.responsibility)}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
                     <span
                       className={cn(
                         'text-xs font-semibold uppercase',
@@ -270,7 +271,7 @@ export function MaintenanceListTable({
                     </span>
                   </td>
                   {interactive ? (
-                    <td className="text-muted-foreground px-3 py-3 text-right">
+                    <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
                       <ChevronRight className="inline size-4" />
                     </td>
                   ) : (
@@ -394,7 +395,7 @@ export function RentReviewListTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={1160}>
+        <ModuleListTable columnWidths={MODULE_TABLE_COLUMN_WIDTHS.rentReview}>
           <ModuleSortableTableHead
             sortKey={sortKey}
             sortDirection={sortDirection}
@@ -424,36 +425,36 @@ export function RentReviewListTable({
                   selected={selectedId === r.id}
                   className={cn(r.requiresApproval && 'bg-destructive/[0.03]')}
                 >
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                     {workflowCaseReferenceLabel(r.id, 'rent_review')}
                   </td>
                   {interactive ? (
-                    <td className="max-w-[14rem] px-3 py-3 font-medium">
+                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
                       <span className="line-clamp-2">{r.propertyAddress}</span>
                     </td>
                   ) : (
-                    <ModuleTableLinkCell href={href!} className="max-w-[14rem]">
+                    <ModuleTableLinkCell href={href!}>
                       <span className="line-clamp-2">{r.propertyAddress}</span>
                     </ModuleTableLinkCell>
                   )}
-                  <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
+                  <td className="min-w-0 px-2 py-2.5 text-muted-foreground lg:px-3 lg:py-3">
                     <span className="line-clamp-2">{r.tenantName ?? '—'}</span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">
                     {rentReviewLeaseLabel(r)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                     {formatCreatedAt(rentReviewCreatedAtIso(r))}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs tabular-nums lg:px-3 lg:py-3">
                     {formatDate(r.reviewDue)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 font-medium tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 font-medium tabular-nums lg:px-3 lg:py-3">
                     {formatCurrency(r.currentRent)}/wk
                   </td>
-                  <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium text-primary lg:px-3 lg:py-3">{progress.currentStepLabel}</td>
                   {interactive ? (
-                    <td className="px-3 py-3 text-right text-muted-foreground">
+                    <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
                       <ChevronRight className="inline size-4" />
                     </td>
                   ) : (
@@ -575,7 +576,7 @@ export function TribunalListTable({
         </div>
 
         <div className="hidden md:block">
-          <ModuleListTable minWidth={760}>
+          <ModuleListTable>
             <ModuleTableHead
               columns={['Type', 'Tenant', 'Claimed', 'Hearing', 'Status', '']}
             />
@@ -694,7 +695,7 @@ export function TribunalListTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={1180}>
+        <ModuleListTable>
       <ModuleTableHead
         columns={[
           'Order Number',
@@ -885,7 +886,13 @@ export function InspectionsListTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={showDelete ? 1080 : 1040}>
+        <ModuleListTable
+          columnWidths={
+            showDelete
+              ? MODULE_TABLE_COLUMN_WIDTHS.inspectionsWithDelete
+              : MODULE_TABLE_COLUMN_WIDTHS.inspections
+          }
+        >
       <ModuleSortableTableHead
         sortKey={sortKey}
         sortDirection={sortDirection}
@@ -914,31 +921,31 @@ export function InspectionsListTable({
               onActivate={openItem}
               selected={selectedId === i.id}
             >
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                 {i.trackingNumber}
               </td>
               {interactive ? (
-                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
                   <span className="line-clamp-2">{i.propertyAddress}</span>
                 </td>
               ) : (
-                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                <ModuleTableLinkCell href={href}>
                   <span className="line-clamp-2">{i.propertyAddress}</span>
                 </ModuleTableLinkCell>
               )}
-              <td className="px-3 py-3 text-xs font-medium">{i.type}</td>
-              <td className="max-w-[9rem] px-3 py-3 text-xs text-muted-foreground">
+              <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium lg:px-3 lg:py-3">{i.type}</td>
+              <td className="min-w-0 px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">
                 <span className="line-clamp-2">{i.inspector ?? 'Pending'}</span>
               </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                 {formatCreatedAt(inspectionCreatedAtIso(i))}
               </td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                 {formatScheduledAt(i.scheduledAt)}
               </td>
-              <td className="px-3 py-3 text-xs font-medium text-primary">{progress.currentStepLabel}</td>
+              <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium text-primary lg:px-3 lg:py-3">{progress.currentStepLabel}</td>
               {showDelete && (
-                <td className="px-2 py-3 text-right">
+                <td className="px-1 py-2.5 text-right lg:px-2 lg:py-3">
                   {canDeleteRow?.(i) ? (
                     <Button
                       type="button"
@@ -960,7 +967,7 @@ export function InspectionsListTable({
                 </td>
               )}
               {interactive ? (
-                <td className="px-3 py-3 text-right text-muted-foreground">
+                <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
                   <ChevronRight className="inline size-4" />
                 </td>
               ) : (
@@ -1043,7 +1050,7 @@ export function AccountingListTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={1000}>
+        <ModuleListTable>
       <ModuleTableHead
         columns={['Property', 'Tenant', 'Paid YTD', 'Outstanding', 'Balance', 'Arrears', '']}
       />
@@ -1261,7 +1268,13 @@ export function LeasingCyclesTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={hidePropertyColumn ? 860 : 980}>
+        <ModuleListTable
+          columnWidths={
+            hidePropertyColumn
+              ? MODULE_TABLE_COLUMN_WIDTHS.leasingCyclesCompact
+              : MODULE_TABLE_COLUMN_WIDTHS.leasingCycles
+          }
+        >
           <ModuleSortableTableHead
             sortKey={sortKey}
             sortDirection={sortDirection}
@@ -1282,35 +1295,35 @@ export function LeasingCyclesTable({
                   selected={isSelected}
                 >
                   {hidePropertyColumn ? (
-                    <td className="px-3 py-3 font-medium">
+                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
                       {workflowCaseReferenceLabel(cycle.id, 'leasing')}
                     </td>
                   ) : onCycleClick ? (
-                    <td className="max-w-[14rem] px-3 py-3 font-medium">
+                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
                       <span className="line-clamp-2">{cycle.propertyAddress}</span>
                     </td>
                   ) : (
-                    <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                    <ModuleTableLinkCell href={href}>
                       <span className="line-clamp-2">{cycle.propertyAddress}</span>
                     </ModuleTableLinkCell>
                   )}
-                  <td className="px-3 py-3 text-xs font-medium text-primary">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium text-primary lg:px-3 lg:py-3">
                     {lifecycle.currentStepLabel}
                   </td>
-                  <td className="px-3 py-3 text-xs text-muted-foreground">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">
                     {onboarding?.currentStepLabel ?? '—'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 tabular-nums lg:px-3 lg:py-3">
                     {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                     {formatCreatedAt(leasingCycleCreatedAtIso(cycle))}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                     {cycle.availableFrom ? formatDateTime(cycle.availableFrom) : '—'}
                   </td>
                   {onCycleClick ? (
-                    <td className="px-3 py-3 text-right text-muted-foreground">
+                    <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
                       <ChevronRight className="inline size-4" />
                     </td>
                   ) : (
@@ -1420,7 +1433,7 @@ export function TenantSelectionsTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={980}>
+        <ModuleListTable columnWidths={MODULE_TABLE_COLUMN_WIDTHS.tenantSelection}>
       <ModuleSortableTableHead
         sortKey={sortKey}
         sortDirection={sortDirection}
@@ -1448,25 +1461,25 @@ export function TenantSelectionsTable({
               className={cn(t.requiresApproval && 'bg-destructive/[0.03]')}
             >
               {interactive ? (
-                <td className="max-w-[14rem] px-3 py-3 font-medium">
+                <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
                   <span className="line-clamp-2">{t.propertyAddress}</span>
                 </td>
               ) : (
-                <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                <ModuleTableLinkCell href={href}>
                   <span className="line-clamp-2">{t.propertyAddress}</span>
                 </ModuleTableLinkCell>
               )}
-              <td className="max-w-[10rem] px-3 py-3">
+              <td className="min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
                 <span className="line-clamp-2">{t.applicantName}</span>
               </td>
-              <td className="whitespace-nowrap px-3 py-3 tabular-nums">
+              <td className="min-w-0 truncate px-2 py-2.5 tabular-nums lg:px-3 lg:py-3">
                 {formatCurrency(t.proposedRent)}/wk
               </td>
-              <td className="px-3 py-3 text-xs text-muted-foreground">{t.leaseTerm}</td>
-              <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">{t.leaseTerm}</td>
+              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                 {formatCreatedAt(tenantSelectionCreatedAtIso(t))}
               </td>
-              <td className="px-3 py-3">
+              <td className="min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
                 {t.requiresApproval ? (
                   <StatusBadge label="Action required" variant="approval" />
                 ) : (
@@ -1474,7 +1487,7 @@ export function TenantSelectionsTable({
                 )}
               </td>
               {interactive ? (
-                <td className="px-3 py-3 text-right text-muted-foreground">
+                <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
                   <ChevronRight className="inline size-4" />
                 </td>
               ) : (
@@ -1569,7 +1582,7 @@ export function LeasingHistoryTable({
       </div>
 
       <div className="hidden md:block">
-        <ModuleListTable minWidth={980}>
+        <ModuleListTable columnWidths={MODULE_TABLE_COLUMN_WIDTHS.leasingHistory}>
           <ModuleSortableTableHead
             sortKey={sortKey}
             sortDirection={sortDirection}
@@ -1589,22 +1602,22 @@ export function LeasingHistoryTable({
               const href = `${propertyDetail(l.propertyId)}?tab=Leasing`;
               return (
                 <tr key={l.id} className="transition-colors hover:bg-muted/20">
-                  <ModuleTableLinkCell href={href} className="max-w-[14rem]">
+                  <ModuleTableLinkCell href={href}>
                     <span className="line-clamp-2">{l.address}</span>
                   </ModuleTableLinkCell>
-                  <td className="max-w-[10rem] px-3 py-3">
+                  <td className="min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
                     <span className="line-clamp-2">{l.approvedTenant}</span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                     {formatCreatedAt(leasingRecordCreatedAtIso(l))}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
                     {formatDate(l.leaseStart)} – {formatDate(l.leaseEnd)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3 tabular-nums">
+                  <td className="min-w-0 truncate px-2 py-2.5 tabular-nums lg:px-3 lg:py-3">
                     {formatCurrency(l.rentWeekly)}/wk
                   </td>
-                  <td className="px-3 py-3 text-xs capitalize text-muted-foreground">{l.status}</td>
+                  <td className="min-w-0 truncate px-2 py-2.5 text-xs capitalize text-muted-foreground lg:px-3 lg:py-3">{l.status}</td>
                   <ModuleTableChevronCell href={href} />
                 </tr>
               );
