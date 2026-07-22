@@ -765,7 +765,7 @@ function buildLeaseAgreementSentEmail(
   entry: RentReviewAuditEntry,
 ): RentReviewEmailRecord {
   const snapshot = parseRentReviewEmailSnapshot(entry.detail);
-  const fileName = `lease-extension-agreement-${detail.id.slice(0, 8)}.pdf`;
+  const fileName = `residential-tenancy-agreement-${detail.id.slice(0, 8)}.pdf`;
   if (snapshot) {
     return {
       id: entry.id,
@@ -788,7 +788,7 @@ function buildLeaseAgreementSentEmail(
 
   return {
     id: entry.id,
-    subject: `Lease extension agreement — ${detail.propertyAddress}`,
+    subject: `Residential tenancy agreement — ${detail.propertyAddress}`,
     ...formatAgentSender(),
     to: detail.tenantName,
     at: entry.at,
@@ -796,7 +796,7 @@ function buildLeaseAgreementSentEmail(
     body: [
       `Dear ${detail.tenantName},`,
       '',
-      'Please find attached your lease extension agreement for signature.',
+      'Please find attached your residential tenancy agreement for signature.',
       '',
       `Property: ${detail.propertyAddress}`,
       '',

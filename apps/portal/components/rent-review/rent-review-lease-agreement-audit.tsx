@@ -8,7 +8,7 @@ import { formatDateTime } from '@/lib/utils';
 
 export function RentReviewLeaseAgreementAudit({
   steps,
-  title = 'Lease extension agreement',
+  title = 'Residential tenancy agreement',
   onViewAgreement,
   viewingAgreement = false,
   viewLabel = 'View agreement',

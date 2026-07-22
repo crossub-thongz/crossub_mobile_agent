@@ -61,17 +61,17 @@ export function RentReviewCompletedPanel({
     }
   };
 
-  const downloadLeaseExtensionPdf = async () => {
+  const downloadResidentialTenancyAgreement = async () => {
     setBusy(true);
     try {
       const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `lease-extension-agreement-${detail.id.slice(0, 8)}.pdf`;
+      a.download = `residential-tenancy-agreement-${detail.id.slice(0, 8)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Lease extension agreement downloaded');
+      toast.success('Residential tenancy agreement downloaded');
     } catch (err) {
       toast.error(apiErrorMessage(err));
     } finally {
@@ -94,7 +94,7 @@ export function RentReviewCompletedPanel({
             <dl className="space-y-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <dt className="text-muted-foreground text-xs">Lease extension agreement</dt>
+                  <dt className="text-muted-foreground text-xs">Residential tenancy agreement</dt>
                   <dd className="mt-0.5 font-medium">{leaseExtensionStatus}</dd>
                 </div>
                 <Button
@@ -102,17 +102,17 @@ export function RentReviewCompletedPanel({
                   variant="outline"
                   size="sm"
                   className="h-8 gap-1.5 px-2.5 text-xs"
-                  disabled={busy || !leaseAudit.sentDone}
-                  onClick={() => void downloadLeaseExtensionPdf()}
+                  disabled={busy || !leaseAudit.preparingDone}
+                  onClick={() => void downloadResidentialTenancyAgreement()}
                 >
                   <FileDown className="size-3.5" />
                   PDF
                 </Button>
               </div>
             </dl>
-            {!leaseAudit.sentDone ? (
+            {!leaseAudit.preparingDone ? (
               <p className="text-muted-foreground text-xs">
-                PDF is available once the lease extension agreement has been sent.
+                PDF is available once the residential tenancy agreement is being prepared.
               </p>
             ) : null}
           </div>
@@ -121,7 +121,7 @@ export function RentReviewCompletedPanel({
             <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
               Situation 1 — tenant accepted
             </p>
-            <p className="font-medium">Periodic renewal — no lease extension agreement required.</p>
+            <p className="font-medium">Periodic renewal — no residential tenancy agreement required.</p>
             <p className="text-muted-foreground text-xs">
               {workflowClosed
                 ? 'Rent review closed and system sync completed.'

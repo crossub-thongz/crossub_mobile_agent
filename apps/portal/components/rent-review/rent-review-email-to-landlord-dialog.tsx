@@ -87,10 +87,8 @@ export function RentReviewEmailToLandlordDialog({
         const reportBlob = new Blob([buildResearchReportHtml(detail)], { type: 'text/html' });
         let leaseAgreementSize = '~200 KB';
         try {
-          const leaseBlob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id, {
+          const leaseBlob = await rentReviewApi.downloadNoticeOfRentIncrease(detail.id, {
             weekly: detail.ai.suggestedWeekly ?? detail.currentWeeklyRent,
-            draft: true,
-            propertyId: detail.propertyId ?? undefined,
           });
           leaseAgreementSize = `${Math.max(1, Math.round(leaseBlob.size / 1024))} KB`;
         } catch {

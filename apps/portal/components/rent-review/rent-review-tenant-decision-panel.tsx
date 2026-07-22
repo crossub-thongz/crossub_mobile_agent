@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Button } from '@/components/ui/button';
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewLeaseAgreementAudit } from '@/components/rent-review/rent-review-lease-agreement-audit';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
@@ -38,10 +40,14 @@ export function RentReviewTenantDecisionPanel({
   const fixedRenewal = isPreferredRenewalFixed(detail);
   const awaiting = !accepted && !declined;
 
-  const viewLeaseAgreement = async () => {
+  const viewResidentialTenancyAgreement = async () => {
     setViewingAgreement(true);
     try {
-      const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id);
+      const blob = await rentReviewApi.downloadLeaseExtensionAgreement(detail.id, {
+        draft: !accepted,
+        weekly: detail.proposedWeeklyRent ?? undefined,
+        propertyId: detail.propertyId,
+      });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -85,11 +91,28 @@ export function RentReviewTenantDecisionPanel({
         ) : null}
       </section>
 
-      {/* Record tenant response — tenants respond via the tenant portal instead.
-      {showRecordResponse && !readOnly ? (
-        <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} readOnly={readOnly} />
+      {fixedRenewal ? (
+        <section className="rounded-xl border bg-card p-4">
+          <dl className="text-sm">
+            <div>
+              <dt className="text-muted-foreground text-xs">Residential tenancy agreement</dt>
+              <dd className="mt-0.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2.5 text-xs"
+                  disabled={viewingAgreement}
+                  onClick={() => void viewResidentialTenancyAgreement()}
+                >
+                  <FileDown className="size-3.5" />
+                  {viewingAgreement ? 'Opening…' : 'PDF'}
+                </Button>
+              </dd>
+            </div>
+          </dl>
+        </section>
       ) : null}
-      */}
 
       {declined && !readOnly ? (
         <RentReviewEndLeasingPanel
@@ -103,9 +126,7 @@ export function RentReviewTenantDecisionPanel({
       {accepted && fixedRenewal ? (
         <RentReviewLeaseAgreementAudit
           steps={leaseAgreement}
-          onViewAgreement={
-            leaseAudit.preparingDone ? () => void viewLeaseAgreement() : undefined
-          }
+          onViewAgreement={() => void viewResidentialTenancyAgreement()}
           viewingAgreement={viewingAgreement}
           viewLabel={leaseAudit.signedDone ? 'View signed agreement' : 'View agreement'}
         />

@@ -65,7 +65,7 @@ export function RentReviewTenantNoticeTermsSummary({
             tabular
           />
           <div>
-            <dt className="text-muted-foreground text-xs">Rent increase notice</dt>
+            <dt className="text-muted-foreground text-xs">Notice of rent increase</dt>
             <dd className="mt-0.5">
               {onDownloadNotice ? (
                 <Button
