@@ -1,10 +1,12 @@
 'use client';
 
 import { rentReviewLeaseTypeLabel } from '@/lib/rent-review/agent-workflow-model';
+import { RentReviewSignedLeaseAgreementCard } from '@/components/rent-review/rent-review-signed-lease-agreement-card';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
 import { formatRentReviewTermLabel } from '@/lib/rent-review-lease-helpers';
 import {
   buildTenantAcceptanceSummary,
+  isPreferredRenewalFixed,
   isTenantAccepted,
   isTenantDeclined,
 } from '@/lib/rent-review/tenant-decision-display';
@@ -130,6 +132,9 @@ function CompletedTenantDecisionSection({ detail }: { detail: RentReviewWorkflow
             {counterAccepted ? 'Accepted — agent accepted counter-offer' : 'Accepted proposed terms'}
           </p>
           <RentReviewTenantAcceptanceSummary summary={acceptance} />
+          {isPreferredRenewalFixed(detail) ? (
+            <RentReviewSignedLeaseAgreementCard detail={detail} />
+          ) : null}
         </div>
       ) : null}
 

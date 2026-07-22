@@ -220,13 +220,32 @@ export interface LeaseAgreementAuditState {
   signedDone: boolean;
 }
 
+export function isLeaseAgreementSigned(detail: RentReviewWorkflowDetail): boolean {
+  return auditHas(detail, RENT_REVIEW_LEASE_AGREEMENT_AUDIT_KIND.SIGNED);
+}
+
+export function leaseAgreementSignedAt(detail: RentReviewWorkflowDetail): string | null {
+  return auditAt(detail, RENT_REVIEW_LEASE_AGREEMENT_AUDIT_KIND.SIGNED);
+}
+
+/** Fixed-term renewals with a tenant-signed agreement ready to view. */
+export function shouldShowSignedLeaseAgreement(detail: RentReviewWorkflowDetail): boolean {
+  return (
+    isTenantAccepted(detail) &&
+    isPreferredRenewalFixed(detail) &&
+    isLeaseAgreementSigned(detail)
+  );
+}
+
 /** Fixed-term accept path — standard lease agreement contract flow audit. */
 export function buildLeaseAgreementProgress(detail: RentReviewWorkflowDetail): LeaseAgreementStep[] {
-  if (!isTenantAccepted(detail) || !isPreferredRenewalFixed(detail)) return [];
+  if (!isPreferredRenewalFixed(detail)) return [];
+  if (!isTenantAccepted(detail) && !isLeaseAgreementSigned(detail)) return [];
 
   const K = RENT_REVIEW_LEASE_AGREEMENT_AUDIT_KIND;
   const preparingAt =
     auditAt(detail, K.PREPARING) ??
+    auditAt(detail, 'tenant_notices_dispatched') ??
     auditAt(detail, 'tenant_accepted_response') ??
     auditAt(detail, 'agent_accepted_tenant_counter');
   const sentAt =
@@ -248,7 +267,7 @@ export function buildLeaseAgreementProgress(detail: RentReviewWorkflowDetail): L
     },
     {
       id: 'signed',
-      label: 'Virtually signed on tenant acceptance',
+      label: 'Tenant signed agreement',
       done: signedAt != null,
       at: signedAt,
     },

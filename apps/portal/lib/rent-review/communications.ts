@@ -10,6 +10,10 @@ const COMM_AUDIT_KINDS = new Set([
   'agent_research_email',
   'comm_reply',
   'comm_forward',
+  'agent_counter_offer_email',
+  'tenant_accept_signed_lease_agent_email',
+  'tenant_accept_signed_lease_admin_email',
+  'accounting_complete_signed_lease_admin_email',
 ]);
 
 interface RentReviewEmailSnapshot {
