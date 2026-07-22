@@ -181,6 +181,18 @@ export default function PropertyDetailPage() {
     setTab(normalizeTab(searchParams.get('tab'), propertyTabs));
   }, [searchParams, propertyTabs]);
 
+  /** Desktop uses the shell sidebar for Gii — never keep the mobile-only Gii tab active. */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const sync = () => {
+      if (desktop.matches && tab === 'Gii') setTab('Documents');
+    };
+    sync();
+    desktop.addEventListener('change', sync);
+    return () => desktop.removeEventListener('change', sync);
+  }, [tab]);
+
   useEffect(() => {
     if (!inspectionFocusId || !propertyTabs.includes('Inspection')) return;
     setTab('Inspection');
@@ -391,7 +403,9 @@ export default function PropertyDetailPage() {
         <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />
 
         {tab === 'Gii' ? (
-          <PropertyGiiPanel propertyId={id} propertyAddress={fullAddress} />
+          <div className="lg:hidden">
+            <PropertyGiiPanel propertyId={id} propertyAddress={fullAddress} />
+          </div>
         ) : null}
 
         {tab === 'Documents' && (

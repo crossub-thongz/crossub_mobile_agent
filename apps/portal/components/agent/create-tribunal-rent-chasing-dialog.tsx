@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -16,20 +16,19 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { fetchProperty } from '@/lib/crossub-api/agent-client';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   createAgentTribunalRentChasing,
+  fetchAgentTribunalRentChasingPrefill,
+  type AgentTribunalRentChasingPrefill,
   type CreateAgentTribunalRentChasingInput,
 } from '@/lib/crossub-api/agent-workflow-client';
-import { fetchPropertyRentPaidUntil } from '@/lib/property-form-prefill';
-import { propertyRegistryApi } from '@/lib/property-registry-api';
 import {
-  amountFromWeekly,
   RENT_PERIOD_OPTIONS,
   type RentPeriodChoice,
 } from '@/lib/rent-calculations';
 import type { Property } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 type ArrearsKind = 'rent' | 'bill' | 'bond';
 
@@ -109,26 +108,67 @@ function Field({
   );
 }
 
-function parseDraftBills(draft: Record<string, unknown> | null | undefined): BillRow[] {
-  const raw = draft?.accountingBills;
-  if (!Array.isArray(raw) || raw.length === 0) return [];
-  return raw
-    .map((entry) => {
-      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return null;
-      const row = entry as Record<string, unknown>;
-      const billType = typeof row.billType === 'string' ? row.billType.trim() : '';
-      const billName = typeof row.billName === 'string' ? row.billName.trim() : billType;
-      if (!billType && !billName) return null;
-      const preset = BILL_TYPE_PRESETS.includes(billType as (typeof BILL_TYPE_PRESETS)[number]);
-      return newBillRow({
-        billType: preset ? billType : billType || 'Other',
-        billName: billName || billType,
-        dueDate: typeof row.dueDate === 'string' ? row.dueDate.slice(0, 10) : '',
-        amount: row.amount != null && Number.isFinite(Number(row.amount)) ? String(row.amount) : '',
-        customType: !preset,
-      });
-    })
-    .filter((row): row is BillRow => row != null);
+function billRowsFromPrefill(
+  rows: AgentTribunalRentChasingPrefill['billArrears'],
+): BillRow[] {
+  return rows.map((bill) =>
+    newBillRow({
+      billType: bill.billType,
+      billName: bill.billName ?? bill.billType,
+      dueDate: bill.dueDate ?? '',
+      amount: bill.amount != null ? String(bill.amount) : '',
+      customType: !BILL_TYPE_PRESETS.includes(
+        bill.billType as (typeof BILL_TYPE_PRESETS)[number],
+      ),
+    }),
+  );
+}
+
+function applyPrefillToForm(
+  prefill: AgentTribunalRentChasingPrefill,
+  setters: {
+    setSelectedKinds: (kinds: ArrearsKind[]) => void;
+    setRentAmount: (value: string) => void;
+    setPaymentCycle: (value: RentPeriodChoice) => void;
+    setRentPaidTo: (value: string) => void;
+    setBills: (rows: BillRow[]) => void;
+    setAgreementEndDate: (value: string) => void;
+    setBondAmount: (value: string) => void;
+    setBondNotes: (value: string) => void;
+  },
+) {
+  const kinds = [...new Set(prefill.arrears.map((row) => row.kind))] as ArrearsKind[];
+  setters.setSelectedKinds(kinds);
+
+  if (prefill.rentArrears) {
+    setters.setRentAmount(
+      prefill.rentArrears.rentAmount != null
+        ? String(prefill.rentArrears.rentAmount)
+        : '',
+    );
+    setters.setPaymentCycle(
+      (prefill.rentArrears.paymentCycle as RentPeriodChoice) ?? 'weekly',
+    );
+    setters.setRentPaidTo(prefill.rentArrears.rentPaidTo ?? '');
+  } else {
+    setters.setRentAmount('');
+    setters.setRentPaidTo('');
+    setters.setPaymentCycle('weekly');
+  }
+
+  setters.setBills(billRowsFromPrefill(prefill.billArrears));
+
+  if (prefill.bondArrears) {
+    setters.setAgreementEndDate(prefill.bondArrears.agreementEndDate ?? '');
+    setters.setBondAmount(
+      prefill.bondArrears.bondAmount != null ? String(prefill.bondArrears.bondAmount) : '',
+    );
+    setters.setBondNotes(prefill.bondArrears.notes ?? '');
+  } else {
+    setters.setAgreementEndDate('');
+    setters.setBondAmount('');
+    setters.setBondNotes('');
+  }
 }
 
 export function CreateTribunalRentChasingDialog({
@@ -157,24 +197,41 @@ export function CreateTribunalRentChasingDialog({
   const [bondAmount, setBondAmount] = useState('');
   const [bondNotes, setBondNotes] = useState('');
   const [selectedKinds, setSelectedKinds] = useState<ArrearsKind[]>([]);
+  const [prefill, setPrefill] = useState<AgentTribunalRentChasingPrefill | null>(null);
+
+  const { accounting } = useAgentData();
+  const propertyIdsWithArrears = useMemo(
+    () =>
+      new Set(
+        accounting.filter((row) => row.arrearsAmount > 0).map((row) => row.propertyId),
+      ),
+    [accounting],
+  );
 
   const propertyOptions = useMemo(
     () =>
-      [...properties].sort((a, b) =>
-        a.address.localeCompare(b.address, undefined, { sensitivity: 'base' }),
-      ),
-    [properties],
+      [...properties]
+        .filter((property) =>
+          initialPropertyId
+            ? property.id === initialPropertyId
+            : propertyIdsWithArrears.has(property.id),
+        )
+        .sort((a, b) =>
+          a.address.localeCompare(b.address, undefined, { sensitivity: 'base' }),
+        ),
+    [initialPropertyId, properties, propertyIdsWithArrears],
   );
 
-  // Keep a stable ref so portfolio refreshes don't re-trigger prefill (that was
-  // flipping `loading` and making the dialog flicker).
-  const propertiesRef = useRef(properties);
-  propertiesRef.current = properties;
+  const availableKinds = useMemo(
+    () => [...new Set(prefill?.arrears.map((row) => row.kind) ?? [])] as ArrearsKind[],
+    [prefill],
+  );
 
   useEffect(() => {
     if (!open) return;
     setPropertyId(initialPropertyId ?? '');
     setSelectedKinds([]);
+    setPrefill(null);
   }, [open, initialPropertyId]);
 
   useEffect(() => {
@@ -187,6 +244,7 @@ export function CreateTribunalRentChasingDialog({
         setAgreementEndDate('');
         setBondAmount('');
         setBondNotes('');
+        setPrefill(null);
       }
       return;
     }
@@ -195,58 +253,36 @@ export function CreateTribunalRentChasingDialog({
     setLoading(true);
     void (async () => {
       try {
-        const [agentProperty, record, paidTo] = await Promise.all([
-          fetchProperty(propertyId).catch(() => null),
-          propertyRegistryApi.get(propertyId).catch(() => null),
-          fetchPropertyRentPaidUntil(propertyId),
-        ]);
-
+        const nextPrefill = await fetchAgentTribunalRentChasingPrefill(propertyId);
         if (cancelled) return;
-
-        const draft =
-          agentProperty?.registryDraft != null &&
-          typeof agentProperty.registryDraft === 'object' &&
-          !Array.isArray(agentProperty.registryDraft)
-            ? (agentProperty.registryDraft as Record<string, unknown>)
-            : null;
-
-        const cycleRaw =
-          typeof draft?.rentPeriod === 'string' ? draft.rentPeriod.trim().toLowerCase() : '';
-        const cycle: RentPeriodChoice =
-          cycleRaw === 'fortnightly' || cycleRaw === 'monthly' || cycleRaw === 'weekly'
-            ? cycleRaw
-            : 'weekly';
-
-        const listed = propertiesRef.current.find((p) => p.id === propertyId);
-        const weekly =
-          agentProperty?.rentWeekly ??
-          record?.rentWeekly ??
-          listed?.rentWeekly ??
-          null;
-
-        setPaymentCycle(cycle);
-        setRentAmount(
-          weekly != null && weekly > 0 ? String(amountFromWeekly(weekly, cycle)) : '',
-        );
-        setRentPaidTo(paidTo ?? '');
-        setAgreementEndDate(
-          (
-            agentProperty?.leaseEnd ??
-            record?.leaseEndDate ??
-            listed?.leaseEnd ??
-            ''
-          )
-            .toString()
-            .slice(0, 10),
-        );
-        const bond =
-          agentProperty?.bondAmount ??
-          record?.bondAmount ??
-          listed?.bondAmount ??
-          null;
-        setBondAmount(bond != null && bond > 0 ? String(bond) : '');
-        setBondNotes('');
-        setBills(parseDraftBills(draft));
+        setPrefill(nextPrefill);
+        if (nextPrefill.hasAccountingArrears) {
+          applyPrefillToForm(nextPrefill, {
+            setSelectedKinds,
+            setRentAmount,
+            setPaymentCycle,
+            setRentPaidTo,
+            setBills,
+            setAgreementEndDate,
+            setBondAmount,
+            setBondNotes,
+          });
+        } else {
+          setSelectedKinds([]);
+          setRentAmount('');
+          setRentPaidTo('');
+          setBills([]);
+          setAgreementEndDate('');
+          setBondAmount('');
+          setBondNotes('');
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setPrefill(null);
+          toast.error(
+            err instanceof Error ? err.message : 'Could not load accounting arrears',
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -362,8 +398,8 @@ export function CreateTribunalRentChasingDialog({
         <DialogHeader className="shrink-0 border-b px-4 py-3 text-left">
           <DialogTitle>Rent Chasing</DialogTitle>
           <DialogDescription>
-            Create a tribunal case for rent, bill, and bond arrears. Profile fields update when you
-            save.
+            Tribunal cases are opened from Accounting arrears. Review the outstanding items
+            below, then choose which to include in this case.
           </DialogDescription>
         </DialogHeader>
 
@@ -371,7 +407,13 @@ export function CreateTribunalRentChasingDialog({
           <Field label="Property">
             {lockedProperty ? (
               <p className="text-sm font-medium">
-                {properties.find((p) => p.id === propertyId)?.address ?? 'Selected property'}
+                {prefill?.propertyAddress ??
+                  properties.find((p) => p.id === propertyId)?.address ??
+                  'Selected property'}
+              </p>
+            ) : propertyOptions.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                No properties with open accounting arrears.
               </p>
             ) : (
               <select
@@ -394,17 +436,59 @@ export function CreateTribunalRentChasingDialog({
           {loading ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
               <Loader2 className="size-4 animate-spin" />
-              Loading property profile…
+              Loading accounting arrears…
+            </div>
+          ) : prefill && !prefill.hasAccountingArrears ? (
+            <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center">
+              <p className="text-sm font-medium">No accounting arrears on file</p>
+              <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                Create arrears in Accounting for this property before opening a tribunal Rent
+                Chasing case.
+              </p>
             </div>
           ) : (
             <>
+              {prefill?.arrears.length ? (
+                <section className="space-y-2 rounded-xl border bg-muted/20 p-4">
+                  <p className="text-sm font-semibold">Accounting arrears</p>
+                  <div className="overflow-hidden rounded-lg border bg-card">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wide">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">Type</th>
+                          <th className="px-3 py-2 font-medium">Item</th>
+                          <th className="px-3 py-2 font-medium">Amount</th>
+                          <th className="px-3 py-2 font-medium">Due</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {prefill.arrears.map((row, index) => (
+                          <tr key={`${row.kind}-${row.name}-${index}`} className="border-t">
+                            <td className="px-3 py-2 capitalize">{row.kind}</td>
+                            <td className="px-3 py-2">{row.name}</td>
+                            <td className="px-3 py-2 font-medium tabular-nums">
+                              {row.amount != null ? formatCurrency(row.amount) : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground tabular-nums">
+                              {row.dueDate ? formatDate(row.dueDate) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ) : null}
+
               <div className="space-y-2">
-                <p className="text-sm font-medium">What are you chasing?</p>
+                <p className="text-sm font-medium">Include in tribunal case</p>
                 <p className="text-muted-foreground text-xs">
-                  Select one or more arrears types to include in this Rent Chasing case.
+                  Select which accounting arrears to carry into this Rent Chasing case.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {ARREARS_KIND_OPTIONS.map((option) => {
+                  {ARREARS_KIND_OPTIONS.filter((option) =>
+                    availableKinds.includes(option.id),
+                  ).map((option) => {
                     const selected = selectedKinds.includes(option.id);
                     return (
                       <SelectChip
@@ -428,7 +512,7 @@ export function CreateTribunalRentChasingDialog({
               {selectedKinds.includes('rent') ? (
               <Section
                 title="Rent Arrears"
-                description="Prefills from the property profile. Changes update rent paid to and weekly rent."
+                description="From Accounting — adjust if needed before creating the case."
               >
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Rent">
@@ -645,7 +729,7 @@ export function CreateTribunalRentChasingDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={() => void submit()} disabled={saving || loading || selectedKinds.length === 0}>
+          <Button type="button" onClick={() => void submit()} disabled={saving || loading || !prefill?.hasAccountingArrears || selectedKinds.length === 0}>
             {saving ? (
               <>
                 <Loader2 className="size-4 animate-spin" />

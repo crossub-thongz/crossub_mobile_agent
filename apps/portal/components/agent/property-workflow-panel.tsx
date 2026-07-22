@@ -202,6 +202,7 @@ export function PropertyWorkflowPanel({
                 action={action}
                 onClick={() => {
                   if (action.disabled) return;
+                  if (onCustomAction?.(action.id)) return;
                   setActiveAction(action.id);
                 }}
               />

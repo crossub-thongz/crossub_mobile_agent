@@ -29,7 +29,6 @@ export type PropertyWorkflowActionId =
   | 'schedule_routine_inspection'
   | 'create_rent_reconciliation'
   | 'open_invoice_management'
-  | 'view_arrears'
   | 'open_rent_chasing'
   | 'open_tribunal';
 
@@ -174,11 +173,6 @@ export function tabActionsFor(
           id: 'open_invoice_management',
           label: 'Invoice management',
           description: 'Create or manage Crossub management fee tax invoices',
-        },
-        {
-          id: 'view_arrears',
-          label: 'Arrears',
-          description: 'View rent and invoice arrears for this property',
         },
         {
           id: 'open_rent_chasing',
