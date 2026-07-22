@@ -593,9 +593,12 @@ export function GiiAssistant({
                 ? 'Ask Gii to create a job or check this property…'
                 : 'Ask Gii anything…'
             }
-            rows={4}
-            className="min-h-24 max-h-[220px] flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none"
-            autoFocus={isInline}
+            rows={isEmbedded ? 3 : 4}
+            className={cn(
+              'flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none',
+              isEmbedded ? 'min-h-16 max-h-[160px]' : 'min-h-24 max-h-[220px]',
+            )}
+            autoFocus={isPanel}
           />
           {query.trim() ? (
             <button

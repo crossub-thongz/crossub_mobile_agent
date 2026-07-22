@@ -28,6 +28,46 @@ function splitBodyPrefix(body: string): { prefix: string; detail: string } | nul
   return { prefix, detail };
 }
 
+function normalizeAddressKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function addressesMatch(a: string, b: string): boolean {
+  const left = normalizeAddressKey(a);
+  const right = normalizeAddressKey(b);
+  if (!left || !right) return false;
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+/** Property address as title; message body without a duplicated address prefix. */
+export function agentNotificationDisplay(notification: AgentNotification): {
+  title: string;
+  body: string;
+} {
+  const rawBody = notification.body?.trim() ?? '';
+  const address = notification.propertyAddress?.trim() ?? '';
+  const bodyParts = rawBody ? splitBodyPrefix(rawBody) : null;
+
+  let title = address || notification.title?.trim() || 'Notification';
+  let body = rawBody;
+
+  if (address && bodyParts && addressesMatch(bodyParts.prefix, address)) {
+    body = bodyParts.detail;
+  } else if (!address && bodyParts) {
+    title = bodyParts.prefix;
+    body = bodyParts.detail;
+  }
+
+  if (!body) {
+    body =
+      notification.actionRequired?.trim() ||
+      notification.title?.trim() ||
+      rawBody;
+  }
+
+  return { title, body };
+}
+
 function firstClause(text: string): string {
   const match = text.match(/^[^.!?]+/);
   return (match?.[0] ?? text).trim();

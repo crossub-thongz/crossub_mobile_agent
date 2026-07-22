@@ -15,6 +15,7 @@ import {
   markNotificationAlerted,
 } from '@/lib/notification-alert-state';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
+import { agentNotificationDisplay } from '@/lib/notification-activity';
 import { useAgentStore } from '@/lib/store';
 import type { AgentNotification } from '@/lib/types';
 import { cn, formatRelative } from '@/lib/utils';
@@ -105,6 +106,7 @@ export function AgentNotificationLiveAlert() {
 
   if (status !== 'authed' || !current) return null;
 
+  const display = agentNotificationDisplay(current);
   const Icon = alertIcon(current.type);
   const tone =
     current.type === 'urgent'
@@ -145,7 +147,7 @@ export function AgentNotificationLiveAlert() {
                 <p className="text-primary text-[10px] font-semibold tracking-wider uppercase">
                   New notification
                 </p>
-                <p className="mt-0.5 text-sm font-semibold leading-snug">{current.title}</p>
+                <p className="mt-0.5 text-sm font-semibold leading-snug">{display.title}</p>
               </div>
               <button
                 type="button"
@@ -156,14 +158,12 @@ export function AgentNotificationLiveAlert() {
                 <X className="size-4" />
               </button>
             </div>
-            <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">
-              {current.body}
+            <p className="text-muted-foreground mt-1 line-clamp-3 text-sm leading-relaxed">
+              {display.body}
             </p>
-            {current.propertyAddress && (
-              <p className="text-muted-foreground mt-1 truncate text-[11px]">
-                {current.propertyAddress}
-              </p>
-            )}
+            {current.actionRequired ? (
+              <p className="text-primary mt-1 text-xs font-medium">{current.actionRequired}</p>
+            ) : null}
             <p className="text-muted-foreground mt-1 text-[10px]">{formatRelative(current.at)}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Button size="sm" className="h-8 text-xs" onClick={openCurrent}>

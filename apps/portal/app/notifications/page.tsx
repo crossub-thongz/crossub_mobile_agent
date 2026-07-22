@@ -12,6 +12,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
+import { agentNotificationDisplay } from '@/lib/notification-activity';
 import { formatDateTime } from '@/lib/utils';
 
 const FILTERS = [
@@ -72,7 +73,9 @@ export default function NotificationsPage() {
           />
         ) : (
           <div className="space-y-2">
-            {list.map((n) => (
+            {list.map((n) => {
+              const display = agentNotificationDisplay(n);
+              return (
               <button
                 key={n.id}
                 type="button"
@@ -91,12 +94,8 @@ export default function NotificationsPage() {
                         <StatusBadge label="Urgent" priority="urgent" />
                       )}
                     </div>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {n.propertyAddress}
-                    </p>
-                    <p className="text-sm font-semibold">{n.title}</p>
-                    <p className="text-muted-foreground text-xs">{n.body}</p>
-                    <p className="text-primary text-xs font-medium">{n.status}</p>
+                    <p className="text-sm font-semibold leading-snug">{display.title}</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{display.body}</p>
                     {n.actionRequired && (
                       <p className="text-primary text-xs font-medium">{n.actionRequired}</p>
                     )}
@@ -107,7 +106,8 @@ export default function NotificationsPage() {
                   <ChevronRight className="text-muted-foreground size-4 shrink-0" />
                 </div>
               </button>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
