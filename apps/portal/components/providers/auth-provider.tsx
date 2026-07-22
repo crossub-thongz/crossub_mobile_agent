@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { api, ApiError } from '@/lib/api';
+import { clearAddToHomeScreenDismissedForSession } from '@/lib/add-to-home-screen-state';
 import type { AuthUser } from '@/lib/auth-types';
 import {
   clearLocalSession,
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     clearLocalSession();
+    clearAddToHomeScreenDismissedForSession();
     try {
       await api.post('/auth/logout');
     } catch {

@@ -8,6 +8,10 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { isPublicRoute } from '@/constants/routes';
 import {
+  dismissAddToHomeScreenForSession,
+  isAddToHomeScreenDismissedForSession,
+} from '@/lib/add-to-home-screen-state';
+import {
   isAndroid,
   isBeforeInstallPromptEvent,
   isIosSafari,
@@ -15,17 +19,24 @@ import {
   isStandaloneDisplay,
   type BeforeInstallPromptEvent,
 } from '@/lib/add-to-home-screen';
-import { useAgentStore } from '@/lib/store';
 
 export function AddToHomeScreenPrompt() {
   const pathname = usePathname();
   const { status } = useAuth();
-  const dismissed = useAgentStore((s) => s.addToHomeScreenDismissed);
-  const dismiss = useAgentStore((s) => s.dismissAddToHomeScreen);
 
   const bannerRef = useRef<HTMLDivElement>(null);
+  const [dismissed, setDismissed] = useState(false);
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installing, setInstalling] = useState(false);
+
+  useEffect(() => {
+    setDismissed(isAddToHomeScreenDismissedForSession());
+  }, [status]);
+
+  const dismiss = useCallback(() => {
+    dismissAddToHomeScreenForSession();
+    setDismissed(true);
+  }, []);
 
   const shouldShow =
     status === 'authed' &&
@@ -127,14 +138,15 @@ export function AddToHomeScreenPrompt() {
               {canNativeInstall
                 ? 'Install CROSSUB Agent for quick access from your home screen — like a native app.'
                 : ios
-                  ? 'Tap Share, then Add to Home Screen for one-tap access to your portal.'
+                  ? 'Tap Share, then View More, then Add to Home Screen for one-tap access to your portal.'
                   : 'Add CROSSUB Agent to your home screen for faster access and a full-screen experience.'}
             </p>
             {ios && !canNativeInstall ? (
               <p className="text-muted-foreground mt-2 flex items-center gap-1.5 text-xs">
                 <Share className="size-3.5 shrink-0" aria-hidden />
                 <span>
-                  Share <span className="text-foreground font-medium">→</span> Add to Home Screen
+                  Share <span className="text-foreground font-medium">→</span> View More{' '}
+                  <span className="text-foreground font-medium">→</span> Add to Home Screen
                 </span>
               </p>
             ) : null}

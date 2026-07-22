@@ -126,8 +126,6 @@ interface AgentStore {
   ) => string;
   onboardingDismissed: boolean;
   dismissOnboarding: () => void;
-  addToHomeScreenDismissed: boolean;
-  dismissAddToHomeScreen: () => void;
   uploadedDocuments: AgentDocument[];
   addUploadedDocument: (doc: AgentDocument) => void;
   notificationPrefs: NotificationPrefs;
@@ -295,8 +293,6 @@ export const useAgentStore = create<AgentStore>()(
       },
       onboardingDismissed: false,
       dismissOnboarding: () => set({ onboardingDismissed: true }),
-      addToHomeScreenDismissed: false,
-      dismissAddToHomeScreen: () => set({ addToHomeScreenDismissed: true }),
       uploadedDocuments: [],
       addUploadedDocument: (doc) =>
         set((s) => ({ uploadedDocuments: [doc, ...s.uploadedDocuments] })),
