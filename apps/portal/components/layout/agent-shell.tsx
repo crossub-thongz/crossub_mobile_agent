@@ -62,10 +62,8 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { hasFullManagementAccess, unreadNotificationCount, messages, properties, getPropertyActions } =
-    useAgentData();
+  const { hasFullManagementAccess, unreadNotificationCount, messages } = useAgentData();
   const propertyUnread = totalUnreadMessages(messages);
-  const propertiesNeedAction = properties.some((p) => getPropertyActions(p.id).length > 0);
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = [
     ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
@@ -283,7 +281,6 @@ export function AgentShell({
             {primaryNav.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
               const unreadBadge = href === ROUTES.PROPERTIES ? propertyUnread : 0;
-              const needActionDot = href === ROUTES.PROPERTIES && propertiesNeedAction;
               return (
                 <Link
                   key={href}
@@ -295,14 +292,7 @@ export function AgentShell({
                 >
                   <span className="relative">
                     <Icon className={cn('size-5', active && 'stroke-[2.5]')} />
-                    {needActionDot ? (
-                      <MessageUnreadBadge
-                        count={1}
-                        variant="dot"
-                        size="sm"
-                        className="absolute -top-0.5 -right-0.5 ring-2 ring-background"
-                      />
-                    ) : unreadBadge > 0 ? (
+                    {unreadBadge > 0 ? (
                       <MessageUnreadBadge
                         count={unreadBadge}
                         size="sm"

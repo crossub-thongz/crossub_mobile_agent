@@ -51,9 +51,8 @@ export function PropertyListCard({
         {messageUnread > 0 && actionCount === 0 ? (
           <MessageUnreadBadge
             count={messageUnread}
-            variant="dot"
-            size="md"
-            className="top-0.5 right-0.5"
+            size="sm"
+            className="absolute -top-1 -right-1 ring-2 ring-background"
           />
         ) : null}
       </div>
@@ -72,10 +71,7 @@ export function PropertyListCard({
             <span className="inline-flex items-center gap-1">
               <NeedActionBadge count={actionCount} size="sm" />
               {messageUnread > 0 ? (
-                <span
-                  className="bg-[#fa5151] size-2 shrink-0 rounded-full ring-2 ring-background"
-                  aria-label={`${messageUnread} unread message${messageUnread === 1 ? '' : 's'}`}
-                />
+                <MessageUnreadBadge count={messageUnread} size="sm" />
               ) : null}
             </span>
           ) : null}

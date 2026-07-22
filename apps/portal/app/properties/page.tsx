@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { PageIntro } from '@/components/agent/page-intro';
 import { PropertyDiscardDraftDialog } from '@/components/agent/property-discard-draft-dialog';
 import { PropertyEndManagementDialog } from '@/components/agent/property-end-management-dialog';
@@ -161,7 +162,9 @@ export default function PropertiesPage() {
               <span className="text-muted-foreground">
                 propert{needActionCount === 1 ? 'y' : 'ies'} need action
               </span>
-              <span className="bg-[#fa5151] size-2 shrink-0 rounded-full" aria-hidden />
+              {totalUnreadMessages > 0 ? (
+                <MessageUnreadBadge count={totalUnreadMessages} size="sm" />
+              ) : null}
             </span>
           </div>
         )}
