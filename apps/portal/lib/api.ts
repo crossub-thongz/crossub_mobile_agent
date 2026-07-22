@@ -174,6 +174,7 @@ export const api = {
 /** Versioned mobile facades (`/api/v1/*`) with the same cookie session + 401 refresh as `api`. */
 export const apiV1 = {
   get: <T>(path: string) => request<T>(`/v1${path.startsWith('/') ? path : `/${path}`}`),
+  getBlob: (path: string) => requestBlob(`/v1${path.startsWith('/') ? path : `/${path}`}`),
   post: <T>(path: string, body?: unknown) =>
     request<T>(`/v1${path.startsWith('/') ? path : `/${path}`}`, {
       method: 'POST',
@@ -190,3 +191,17 @@ export const apiV1 = {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     }),
 };
+
+/** Fetch a blob from an app-relative API URL (`/api/...` or `/api/v1/...`) with session refresh. */
+export function fetchApiBlobFromUrl(url: string): Promise<Blob> {
+  const qIndex = url.indexOf('?');
+  const bare = qIndex >= 0 ? url.slice(0, qIndex) : url;
+  const query = qIndex >= 0 ? url.slice(qIndex) : '';
+  if (bare.startsWith('/api/v1/')) {
+    return apiV1.getBlob(`${bare.slice('/api/v1'.length)}${query}`);
+  }
+  if (bare.startsWith('/api/')) {
+    return api.getBlob(`${bare.slice('/api'.length)}${query}`);
+  }
+  throw new ApiError(400, 'Unsupported attachment URL');
+}
