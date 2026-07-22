@@ -90,7 +90,10 @@ export type AgentMessageThread =
 export type AgentThreadMessage =
   components['schemas']['AgentThreadMessageResponseDto'];
 export type CreateAgentThreadInput =
-  components['schemas']['CreateAgentMessageThreadDto'];
+  components['schemas']['CreateAgentMessageThreadDto'] & {
+    caseType?: string;
+    caseId?: string;
+  };
 export type AgentNotificationDto =
   components['schemas']['AgentNotificationResponseDto'];
 export type AgentDocumentDto =

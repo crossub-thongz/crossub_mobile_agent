@@ -17,6 +17,7 @@ import {
 
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { PhonePanel } from '@/components/agent/phone-panel';
+import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
 import { QuickCreateWorkflowDialog } from '@/components/agent/quick-create-workflow-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -300,12 +301,11 @@ function CommunicationDockSheet({
   propertyId?: string;
 }) {
   const router = useRouter();
-  const { messages, ensureMessageThread } = useAgentData();
+  const { messages } = useAgentData();
 
-  const openPropertyChat = () => {
+  const openPropertyMessages = () => {
     if (!propertyId) return;
-    const threadId = ensureMessageThread(propertyId);
-    router.push(messageDetail(threadId));
+    router.push(messagesForProperty(propertyId));
     onClose();
   };
 
@@ -322,14 +322,21 @@ function CommunicationDockSheet({
         </div>
         <div className="space-y-2">
           {propertyId && (
-            <button
-              type="button"
-              onClick={openPropertyChat}
-              className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm hover:bg-secondary"
-            >
-              <Building2 className="text-primary size-4" />
-              Property messages
-            </button>
+            <>
+              <TalkToStaffSupportButton
+                propertyId={propertyId}
+                variant="compact"
+                onOpened={onClose}
+              />
+              <button
+                type="button"
+                onClick={openPropertyMessages}
+                className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm hover:bg-secondary"
+              >
+                <Building2 className="text-primary size-4" />
+                Property messages
+              </button>
+            </>
           )}
           <Link
             href={messagesNew()}

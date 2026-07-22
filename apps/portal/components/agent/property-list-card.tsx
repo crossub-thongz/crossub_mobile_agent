@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { ChevronRight, UserRound } from 'lucide-react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
-import { NeedActionBadge } from '@/components/agent/need-action-badge';
 import {
   propertyPhoneBookInitials,
   propertyPhoneBookSubtitle,
@@ -21,12 +20,10 @@ const STATUS_STYLES: Record<Property['leaseStatus'], string> = {
 
 export function PropertyListCard({
   property,
-  actionCount,
   messageUnread = 0,
   href,
 }: {
   property: Property;
-  actionCount: number;
   messageUnread?: number;
   href: string;
 }) {
@@ -48,7 +45,7 @@ export function PropertyListCard({
         aria-hidden
       >
         {initials}
-        {messageUnread > 0 && actionCount === 0 ? (
+        {messageUnread > 0 ? (
           <MessageUnreadBadge
             count={messageUnread}
             size="sm"
@@ -67,14 +64,6 @@ export function PropertyListCard({
           >
             {property.leaseStatus}
           </span>
-          {actionCount > 0 ? (
-            <span className="inline-flex items-center gap-1">
-              <NeedActionBadge count={actionCount} size="sm" />
-              {messageUnread > 0 ? (
-                <MessageUnreadBadge count={messageUnread} size="sm" />
-              ) : null}
-            </span>
-          ) : null}
         </div>
         <p
           className={cn(

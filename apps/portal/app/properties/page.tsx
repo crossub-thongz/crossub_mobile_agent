@@ -8,8 +8,6 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
-import { PageIntro } from '@/components/agent/page-intro';
 import { PropertyDiscardDraftDialog } from '@/components/agent/property-discard-draft-dialog';
 import { PropertyEndManagementDialog } from '@/components/agent/property-end-management-dialog';
 import { PropertyListView } from '@/components/agent/property-list-view';
@@ -38,7 +36,6 @@ export default function PropertiesPage() {
     properties,
     archivedProperties,
     agencies,
-    getPropertyActions,
     accounting,
     hasFullManagementAccess,
     apiConnected,
@@ -96,17 +93,10 @@ export default function PropertiesPage() {
     return items;
   }, [properties, archivedProperties, filter, isArchivedView, search, accounting]);
 
-  const needActionCount = properties.filter((p) => getPropertyActions(p.id).length > 0).length;
-
   const messageUnreadFor = useMemo(
     () => (property: Property) =>
       unreadMessagesForProperty(property.id, messages, formatPropertyFullAddress(property)),
     [messages],
-  );
-
-  const totalUnreadMessages = useMemo(
-    () => list.reduce((sum, property) => sum + messageUnreadFor(property), 0),
-    [list, messageUnreadFor],
   );
 
   const confirmDiscardDraft = async () => {
@@ -140,35 +130,6 @@ export default function PropertiesPage() {
   return (
     <AgentShell title="Properties">
       <div className="space-y-4">
-        {/* <div className="flex items-start justify-between gap-3">
-          <PageIntro
-            description={
-              isArchivedView
-                ? 'Properties whose management has ended. These records are kept for reference.'
-                : 'Your managed properties — like a phone book. Red circles show unread messages (WeChat-style).'
-            }
-          />
-          {!isArchivedView && totalUnreadMessages > 0 ? (
-            <span className="bg-[#fa5151] mt-1 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white tabular-nums">
-              {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
-            </span>
-          ) : null}
-        </div> */}
-
-        {needActionCount > 0 && (
-          <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
-            <span className="inline-flex items-center gap-2">
-              <span className="font-semibold text-destructive">{needActionCount}</span>
-              <span className="text-muted-foreground">
-                propert{needActionCount === 1 ? 'y' : 'ies'} need action
-              </span>
-              {totalUnreadMessages > 0 ? (
-                <MessageUnreadBadge count={totalUnreadMessages} size="sm" />
-              ) : null}
-            </span>
-          </div>
-        )}
-
         <div className="relative">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
@@ -220,7 +181,6 @@ export default function PropertiesPage() {
             properties={list}
             agencies={agencies}
             variant={isArchivedView ? 'archived' : 'active'}
-            actionCountFor={(id) => getPropertyActions(id).length}
             messageUnreadFor={messageUnreadFor}
             rowHref={(property) =>
               isArchivedView

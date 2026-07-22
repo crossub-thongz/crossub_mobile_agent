@@ -28,7 +28,7 @@ export function PropertyGiiPanel({
   return (
     <section
       id="property-gii-panel"
-      className="flex h-[calc(100dvh-var(--shell-header-offset,7rem)-7.5rem-env(safe-area-inset-bottom))] min-h-[min(62vh,520px)] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm lg:hidden"
+      className="flex flex-col rounded-2xl border bg-card shadow-sm lg:hidden"
       aria-label="Gii property manager"
     >
       <GiiAssistant open variant="embedded" />

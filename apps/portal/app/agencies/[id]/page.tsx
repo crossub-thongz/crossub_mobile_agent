@@ -28,7 +28,7 @@ const STATUS_LABEL: Record<Agency['status'], string> = {
 export default function AgencyDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { agencies, properties, getPropertyActions, messages } = useAgentData();
+  const { agencies, properties, messages } = useAgentData();
   const agency = agencies.find((a) => a.id === id);
 
   if (!agency) notFound();
@@ -127,7 +127,6 @@ export default function AgencyDetailPage() {
               <PropertyListCard
                 key={p.id}
                 property={p}
-                actionCount={getPropertyActions(p.id).length}
                 messageUnread={unreadMessagesForProperty(
                   p.id,
                   messages,

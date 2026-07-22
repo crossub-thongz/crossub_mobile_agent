@@ -288,7 +288,7 @@ export default function PropertyDetailPage() {
   const fullAddress = formatPropertyFullAddress(property);
 
   return (
-    <AgentShell title={fullAddress} backHref={ROUTES.PROPERTIES} backLabel="Properties">
+    <AgentShell backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <div className="space-y-4 pb-8">
         {isArchivedProperty ? (
           <div className="rounded-xl border border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm">

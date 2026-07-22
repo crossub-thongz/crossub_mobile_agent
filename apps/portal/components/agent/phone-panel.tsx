@@ -5,6 +5,7 @@ import { Phone, PhoneCall, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { DialPad } from '@/components/agent/dial-pad';
+import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import {
@@ -122,6 +123,11 @@ export function PhonePanel({
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
+          {propertyId ? (
+            <div className="shrink-0 border-b p-3">
+              <TalkToStaffSupportButton propertyId={propertyId} variant="compact" />
+            </div>
+          ) : null}
           <div className="border-border/60 relative shrink-0 border-b p-2">
             <Search className="text-muted-foreground absolute top-1/2 left-4 size-3.5 -translate-y-1/2" />
             <Input

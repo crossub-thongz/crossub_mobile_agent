@@ -75,6 +75,12 @@ import {
   tenantSelectionDecisionKey,
 } from '@/lib/tenant-selection';
 import { buildDashboardKpis } from '@/lib/dashboard-kpis';
+import {
+  buildStaffSupportContextBody,
+  findStaffSupportThread,
+  staffSupportSubject,
+  type StaffCaseContext,
+} from '@/lib/staff-support-thread';
 import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-actions';
 import { buildSectionStatus } from '@/lib/section-status';
@@ -230,6 +236,11 @@ interface AgentDataContextValue {
     propertyId: string,
     options?: { category?: MessageCategory; subject?: string; caseId?: string },
   ) => string;
+  /** Open (or reuse) a CROSSUB staff support thread with property / case context for admin. */
+  openStaffSupportThread: (
+    propertyId: string,
+    caseContext?: StaffCaseContext,
+  ) => Promise<string>;
   addProperty: (input: import('@/lib/store').NewPropertyInput) => Promise<Property>;
   savePropertyRegistryDraft: (
     propertyId: string | null,
@@ -895,6 +906,66 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [properties, messages, agentPortfolioId, storeEnsureMessageThread],
   );
 
+  const openStaffSupportThread = useCallback(
+    async (propertyId: string, caseContext?: StaffCaseContext): Promise<string> => {
+      const property = properties.find((p) => p.id === propertyId);
+      if (!property) {
+        throw new Error('Property not found');
+      }
+
+      const existing = findStaffSupportThread(messages, propertyId, caseContext);
+      if (existing) {
+        return existing.serverThreadId ?? existing.id;
+      }
+
+      const propertyAddress = formatPropertyFullAddress(property);
+      const subject = staffSupportSubject(propertyAddress);
+      const body = buildStaffSupportContextBody({
+        propertyAddress,
+        propertyId,
+        case: caseContext,
+      });
+
+      if (apiConnected) {
+        const created = await apiCreateThread({
+          subject,
+          body,
+          propertyId,
+          department: 'GENERAL',
+          ...(caseContext && caseContext.caseType !== 'PROPERTY'
+            ? { caseType: caseContext.caseType, caseId: caseContext.caseId }
+            : {}),
+        });
+        await refresh();
+        return created.id;
+      }
+
+      const localId = storeEnsureMessageThread(property, agentPortfolioId, undefined, {
+        category: 'Others',
+        subject,
+        caseId: caseContext?.caseId,
+      });
+      sendThreadMessage(
+        localId,
+        body,
+        user ? displayName(user) : 'Agent',
+        undefined,
+        'app',
+      );
+      return localId;
+    },
+    [
+      agentPortfolioId,
+      apiConnected,
+      messages,
+      properties,
+      refresh,
+      sendThreadMessage,
+      storeEnsureMessageThread,
+      user,
+    ],
+  );
+
   const addProperty = useCallback(
     async (input: import('@/lib/store').NewPropertyInput): Promise<Property> => {
       if (apiConnected && input.intakeMode === 'new') {
@@ -1431,6 +1502,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     markThreadRead,
     sendMessage,
     ensureMessageThread,
+    openStaffSupportThread,
     addProperty,
     savePropertyRegistryDraft,
     endPropertyManagement,

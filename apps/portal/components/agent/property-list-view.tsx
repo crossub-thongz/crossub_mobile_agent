@@ -12,7 +12,6 @@ export function PropertyListView({
   properties,
   agencies,
   variant,
-  actionCountFor,
   messageUnreadFor,
   rowHref,
   onDelete,
@@ -21,7 +20,6 @@ export function PropertyListView({
   properties: Property[];
   agencies: Agency[];
   variant: 'active' | 'archived';
-  actionCountFor: (id: string) => number;
   messageUnreadFor?: (property: Property) => number;
   rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
@@ -53,7 +51,6 @@ export function PropertyListView({
           <PropertyListCard
             key={property.id}
             property={property}
-            actionCount={actionCountFor(property.id)}
             messageUnread={messageUnreadFor?.(property) ?? 0}
             href={rowHref(property)}
           />

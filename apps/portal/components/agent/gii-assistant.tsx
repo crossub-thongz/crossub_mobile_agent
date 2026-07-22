@@ -118,6 +118,7 @@ export function GiiAssistant({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   const initialPromptHandledRef = useRef(false);
   // The subject carried between turns. A ref: it must never be stale inside runQuery, and
@@ -206,15 +207,35 @@ export function GiiAssistant({
     return last?.results ?? [];
   }, [lines]);
 
-  const scrollChatToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
-  }, []);
+  const scrollChatToBottom = useCallback(
+    (behavior: ScrollBehavior = 'smooth') => {
+      // Embedded Gii shares the property page scroll — no nested overflow container
+      // (Android WebView/Chrome mishandles nested scroll + smooth scroll).
+      if (isEmbedded) {
+        endRef.current?.scrollIntoView({ behavior, block: 'nearest' });
+        return;
+      }
+      const el = scrollContainerRef.current;
+      if (!el) return;
+      el.scrollTo({ top: el.scrollHeight, behavior });
+    },
+    [isEmbedded],
+  );
 
-  // Track whether the user has scrolled up inside the chat — briefing polls must not
-  // yank the whole property page back down via scrollIntoView on a nested anchor.
+  // Track whether the user has scrolled away from the latest messages.
   useEffect(() => {
+    if (!open) return;
+
+    if (isEmbedded) {
+      const onScroll = () => {
+        const end = endRef.current;
+        if (!end) return;
+        stickToBottomRef.current = end.getBoundingClientRect().bottom - window.innerHeight < 120;
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }
+
     const el = scrollContainerRef.current;
     if (!el) return;
     const onScroll = () => {
@@ -223,20 +244,20 @@ export function GiiAssistant({
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [open]);
+  }, [isEmbedded, open]);
 
-  // New turns always follow the conversation inside the chat panel only.
+  // New turns follow the conversation; use instant scroll on embedded Android paths.
   useEffect(() => {
     if (lines.length === 0) return;
     stickToBottomRef.current = true;
-    scrollChatToBottom('smooth');
-  }, [lines, scrollChatToBottom]);
+    scrollChatToBottom(isEmbedded ? 'auto' : 'smooth');
+  }, [isEmbedded, lines, scrollChatToBottom]);
 
-  // Live briefing refreshes (5s poll) — keep pinned only when already at chat bottom.
+  // Live briefing refreshes (5s poll) — panel/modal only; never yank the property page.
   useEffect(() => {
-    if (!stickToBottomRef.current) return;
+    if (isEmbedded || !stickToBottomRef.current) return;
     scrollChatToBottom('smooth');
-  }, [liveBriefing, scrollChatToBottom]);
+  }, [isEmbedded, liveBriefing, scrollChatToBottom]);
 
   /**
    * A turn runs two things at once:
@@ -412,12 +433,12 @@ export function GiiAssistant({
   const shell = (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-background',
+        'flex flex-col bg-background',
         isEmbedded
-          ? 'h-full max-h-full w-full'
+          ? 'w-full'
           : isPanel
-            ? 'h-full max-h-full w-full border-l'
-            : 'h-[min(92vh,680px)] w-full max-w-lg rounded-t-3xl border shadow-2xl sm:rounded-3xl',
+            ? 'h-full max-h-full min-h-0 w-full overflow-hidden border-l'
+            : 'h-[min(92vh,680px)] min-h-0 w-full max-w-lg overflow-hidden rounded-t-3xl border shadow-2xl sm:rounded-3xl',
       )}
     >
       <div
@@ -464,7 +485,12 @@ export function GiiAssistant({
 
       <div
         ref={scrollContainerRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3"
+        className={cn(
+          'space-y-3 px-4 py-3',
+          isEmbedded
+            ? 'pb-[max(6rem,env(safe-area-inset-bottom))]'
+            : 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+        )}
       >
         {!data.loading && !giiLaunch?.initialPrompt ? (
           <div className="space-y-2">
@@ -580,9 +606,17 @@ export function GiiAssistant({
             ))}
           </ul>
         )}
+        <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
 
-      <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div
+        className={cn(
+          'shrink-0 border-t bg-background p-3',
+          isEmbedded
+            ? 'sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 shadow-[0_-6px_20px_rgba(0,0,0,0.06)] pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+            : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+        )}
+      >
         {!sending && !hasUserMessages ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {suggestedPrompts.map((item) => (
