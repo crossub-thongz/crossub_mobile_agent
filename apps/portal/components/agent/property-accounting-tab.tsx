@@ -8,10 +8,11 @@ import { RentReconciliationDialog } from '@/components/accounting/rent-reconcili
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
+import { RentChasingArrearsDialog } from '@/components/agent/rent-chasing-arrears-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { buildRentReconciliationProperty } from '@/lib/rent-reconciliation';
-import { accountingJobRows } from '@/lib/property-job-rows';
+import { accountingJobRows, type PropertyJobRow } from '@/lib/property-job-rows';
 import {
   hasPropertyAccountingData,
 } from '@/lib/property-portal-accounting';
@@ -127,6 +128,9 @@ export function PropertyAccountingTab({
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [rentReconOpen, setRentReconOpen] = useState(false);
   const [rentChasingOpen, setRentChasingOpen] = useState(false);
+  const [selectedAccountingCase, setSelectedAccountingCase] = useState<PropertyJobRow | null>(
+    null,
+  );
 
   const portalAccounting = detail?.accounting ?? null;
   const portalFinancial = detail?.financial ?? financial ?? null;
@@ -172,10 +176,18 @@ export function PropertyAccountingTab({
     })) ??
     [];
 
-  const accountingCases = useMemo(
-    () => accountingJobRows(fallbackAccounting),
-    [fallbackAccounting],
-  );
+  const accountingCases = useMemo(() => {
+    const enriched = fallbackAccounting
+      ? {
+          ...fallbackAccounting,
+          arrearsKeyDate:
+            fallbackAccounting.arrearsKeyDate ??
+            detail?.overview?.rentPaidUntilDate ??
+            undefined,
+        }
+      : null;
+    return accountingJobRows(enriched);
+  }, [fallbackAccounting, detail?.overview?.rentPaidUntilDate]);
 
   const rentReconProperty = useMemo(
     () =>
@@ -280,9 +292,26 @@ export function PropertyAccountingTab({
       {accountingCases.length > 0 ? (
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">Accounting cases</h3>
-          <PropertyJobCasesTable rows={accountingCases} showViewToggle={false} />
+          <PropertyJobCasesTable
+            rows={accountingCases}
+            showViewToggle={false}
+            selectedId={selectedAccountingCase?.id}
+            onRowClick={(id) => {
+              const row = accountingCases.find((item) => item.id === id) ?? null;
+              setSelectedAccountingCase(row);
+            }}
+          />
         </section>
       ) : null}
+
+      <RentChasingArrearsDialog
+        open={selectedAccountingCase != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAccountingCase(null);
+        }}
+        propertyId={propertyId}
+        subtitle={selectedAccountingCase?.status}
+      />
 
       <section ref={ledgerSectionRef} id="rent-reconciliation" className="space-y-3 scroll-mt-24">
         <h3 className="text-sm font-semibold">Rent reconciliation</h3>

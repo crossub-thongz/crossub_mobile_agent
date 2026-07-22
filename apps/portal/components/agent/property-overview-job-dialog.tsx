@@ -1,11 +1,11 @@
 'use client';
 
-import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import {
   PropertyLeasingCaseWorkflowDialog,
 } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { PropertyMaintenanceCaseDialog } from '@/components/agent/property-maintenance-case-dialog';
 import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/property-rent-review-case-workflow-dialog';
+import { RentChasingArrearsDialog } from '@/components/agent/rent-chasing-arrears-dialog';
 import { TribunalCaseDetailDialog } from '@/components/agent/tribunal-case-detail-dialog';
 import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
 import { fromProperty } from '@/lib/detail-navigation';
@@ -25,7 +25,6 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 function profileTabForJobKind(kind: PropertyJobRow['kind']): string {
   switch (kind) {
@@ -160,81 +159,16 @@ export function PropertyOverviewJobDialog({
     );
   }
 
-  if (job.kind === 'accounting' && accounting) {
-    const billArrears =
-      accounting.bills
-        ?.filter((bill) => bill.status === 'outstanding')
-        .reduce((sum, bill) => sum + bill.amount, 0) ?? 0;
-    const debtCollection =
-      accounting.collectionActivity?.map((event) => ({
-        id: event.id,
-        channel: event.type,
-        timestamp: event.at,
-        summary: event.detail ? `${event.summary} — ${event.detail}` : event.summary,
-      })) ?? [];
-
+  if (job.kind === 'accounting') {
     return (
-      <CaseDetailDialog
+      <RentChasingArrearsDialog
         open={open}
-        onClose={onClose}
-        title={job.name}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) onClose();
+        }}
+        propertyId={propertyId}
         subtitle={job.status}
-        size={JOB_CASE_DIALOG_SIZE}
-      >
-        <div className="space-y-4">
-          <div className="rounded-xl border bg-card p-4 text-sm">
-            <p className="font-semibold">{accounting.tenantName}</p>
-            <p className="text-muted-foreground mt-0.5 text-xs">{property.address}</p>
-          </div>
-
-          <dl className="grid gap-2 sm:grid-cols-2">
-            {[
-              { label: 'Paid YTD', value: formatCurrency(accounting.rentPaidYtd) },
-              { label: 'Rent outstanding', value: formatCurrency(accounting.rentOutstanding) },
-              { label: 'Current balance', value: formatCurrency(accounting.currentBalance) },
-              {
-                label: 'Rent arrears',
-                value:
-                  accounting.arrearsAmount > 0
-                    ? `${formatCurrency(accounting.arrearsAmount)} · ${accounting.daysInArrears}d`
-                    : 'None',
-              },
-              {
-                label: 'Invoice arrears',
-                value: billArrears > 0 ? formatCurrency(billArrears) : 'None',
-              },
-            ].map((item) => (
-              <div key={item.label} className="rounded-lg border bg-muted/20 px-3 py-2.5">
-                <dt className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-                  {item.label}
-                </dt>
-                <dd className="mt-1 text-sm font-medium tabular-nums">{item.value}</dd>
-              </div>
-            ))}
-          </dl>
-
-          {debtCollection.length > 0 ? (
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Arrears reminders</h3>
-              <ul className="space-y-2">
-                {debtCollection.map((event) => (
-                  <li key={event.id} className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-                        {event.channel}
-                      </span>
-                      <span className="text-muted-foreground text-[11px] tabular-nums">
-                        {formatDateTime(event.timestamp)}
-                      </span>
-                    </div>
-                    <p className="mt-1">{event.summary}</p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </div>
-      </CaseDetailDialog>
+      />
     );
   }
 

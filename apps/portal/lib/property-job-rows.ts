@@ -562,32 +562,34 @@ export function accountingJobRows(accounting?: PropertyAccounting | null): Prope
   if (accounting.arrearsAmount <= 0 && billArrears <= 0) return [];
 
   if (accounting.arrearsAmount > 0) {
+    const { createdAt, createdAtMs } = rowCreatedAt(accounting.arrearsOpenedAt);
     return [
       {
         id: `arrears-${accounting.propertyId}`,
         kind: 'accounting',
         jobType: 'Accounting',
-        name: 'Rent arrears',
-        description: `${accounting.tenantName} · ${accounting.daysInArrears} days outstanding`,
-        date: '—',
-        createdAt: '—',
-        createdAtMs: 0,
+        name: 'Rent chasing',
+        description: `${accounting.tenantName || '—'} · ${accounting.daysInArrears} days outstanding`,
+        date: accounting.arrearsKeyDate ? formatDate(accounting.arrearsKeyDate) : '—',
+        createdAt,
+        createdAtMs,
         status: 'Collection in progress',
         phase: 'in_progress',
       },
     ];
   }
 
+  const { createdAt, createdAtMs } = rowCreatedAt(accounting.arrearsOpenedAt);
   return [
     {
       id: `arrears-${accounting.propertyId}`,
       kind: 'accounting',
       jobType: 'Accounting',
-      name: 'Invoice arrears',
-      description: `${accounting.tenantName} · outstanding invoices`,
-      date: '—',
-      createdAt: '—',
-      createdAtMs: 0,
+      name: 'Rent chasing',
+      description: `${accounting.tenantName || '—'} · outstanding invoices`,
+      date: accounting.arrearsKeyDate ? formatDate(accounting.arrearsKeyDate) : '—',
+      createdAt,
+      createdAtMs,
       status: 'Collection in progress',
       phase: 'in_progress',
     },

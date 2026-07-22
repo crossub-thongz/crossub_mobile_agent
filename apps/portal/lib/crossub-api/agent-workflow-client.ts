@@ -239,6 +239,8 @@ export type AgentRecordRentReconciliationInput = {
   paymentMethod: 'cash' | 'cheque' | 'card' | 'eft';
   rentAllocation?: number;
   bondAllocation?: number;
+  rentDescription?: string;
+  bondDescription?: string;
   note?: string;
 };
 

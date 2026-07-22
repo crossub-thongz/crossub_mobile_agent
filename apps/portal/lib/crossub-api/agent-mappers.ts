@@ -626,19 +626,27 @@ export function mapAgentArchive(
 export function mapAgentAccounting(
   dtos: AgentAccounting[],
 ): PropertyAccounting[] {
-  return dtos.map((a) => ({
-    propertyId: a.propertyId,
-    propertyAddress: a.propertyAddress,
-    tenantName: a.tenantName ?? '—',
-    rentPaidYtd: a.rentPaidYtd ?? 0,
-    rentOutstanding: a.rentOutstanding ?? 0,
-    currentBalance: a.arrearsAmount > 0 ? -a.arrearsAmount : 0,
-    daysInArrears: a.daysInArrears,
-    arrearsAmount: a.arrearsAmount,
-    bills: [],
-    statements: [],
-    collectionActivity: [],
-  }));
+  return dtos.map((a) => {
+    const row = a as AgentAccounting & {
+      arrearsOpenedAt?: string | null;
+      arrearsKeyDate?: string | null;
+    };
+    return {
+      propertyId: a.propertyId,
+      propertyAddress: a.propertyAddress,
+      tenantName: a.tenantName ?? '—',
+      rentPaidYtd: a.rentPaidYtd ?? 0,
+      rentOutstanding: a.rentOutstanding ?? 0,
+      currentBalance: a.arrearsAmount > 0 ? -a.arrearsAmount : 0,
+      daysInArrears: a.daysInArrears,
+      arrearsAmount: a.arrearsAmount,
+      arrearsOpenedAt: row.arrearsOpenedAt ?? undefined,
+      arrearsKeyDate: row.arrearsKeyDate ?? undefined,
+      bills: [],
+      statements: [],
+      collectionActivity: [],
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------

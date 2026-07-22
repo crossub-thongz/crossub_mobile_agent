@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Building2,
   Calendar,
@@ -264,24 +264,27 @@ export function RentReconciliationDialog({
   const [addNote, setAddNote] = useState(false);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const rentAllocationManual = useRef(false);
+  const bondAllocationManual = useRef(false);
 
   const rentDueDate = property
     ? addDays(property.paidToDate, property.rentCycleLabel === 'Weekly' ? 7 : 30)
     : '';
   const fullAddress = property ? `${property.address}, ${property.suburb}` : '';
-  const rentAmountDue =
-    property && property.rentArrearsAmount > 0
-      ? formatCurrencyCents(property.rentArrearsAmount)
-      : '—';
+  const rentLedgerDescription = property
+    ? `Paid to ${formatDateSlash(property.paidToDate)}`
+    : '';
 
   useEffect(() => {
     if (!open || !property) return;
+    rentAllocationManual.current = false;
+    bondAllocationManual.current = false;
     setAmount('');
     setPaymentDate(todayIso());
     setPaymentMethod('eft');
     setRentAllocation('');
     setBondAllocation('');
-    setBondDescription(`Bond — ${property.address}`);
+    setBondDescription(`Bond — ${property.address}, ${property.suburb}`);
     setAddRentCredit(false);
     setPrintReceipt(true);
     setReceiptToSupplier(false);
@@ -289,7 +292,12 @@ export function RentReconciliationDialog({
     setNote('');
     // Reset only when the dialog opens or the property changes — not when the
     // parent rebuilds the property object on background portal polls.
-  }, [open, property?.id, property?.address]);
+  }, [open, property?.id, property?.address, property?.suburb]);
+  const defaultBondDescription = property ? `Bond — ${fullAddress}` : '';
+  const rentAmountDue =
+    property && property.rentArrearsAmount > 0
+      ? formatCurrencyCents(property.rentArrearsAmount)
+      : '—';
 
   const allocationTotal = useMemo(
     () => parseCurrencyInput(rentAllocation) + parseCurrencyInput(bondAllocation),
@@ -298,12 +306,39 @@ export function RentReconciliationDialog({
 
   const headerAmount = parseCurrencyInput(amount) || allocationTotal;
 
+  const syncRentAllocationFromAmount = (amountValue: string, bondValue: string) => {
+    if (rentAllocationManual.current) return;
+    const parsedAmount = parseCurrencyInput(amountValue);
+    const parsedBond = parseCurrencyInput(bondValue);
+    const rentPart = Math.max(0, parsedAmount - parsedBond);
+    setRentAllocation(rentPart > 0 ? formatCurrencyCents(rentPart) : '');
+  };
+
   const handleAmountChange = (value: string) => {
     setAmount(value);
-    const parsed = parseCurrencyInput(value);
-    if (parsed > 0 && !rentAllocation) {
-      setRentAllocation(formatCurrencyCents(parsed));
+    syncRentAllocationFromAmount(value, bondAllocation);
+  };
+
+  const handleRentAllocationChange = (value: string) => {
+    rentAllocationManual.current = true;
+    setRentAllocation(value);
+  };
+
+  const handleBondAllocationChange = (value: string) => {
+    bondAllocationManual.current = true;
+    setBondAllocation(value);
+    syncRentAllocationFromAmount(amount, value);
+  };
+
+  const resolveAllocations = (total: number) => {
+    let rent = parseCurrencyInput(rentAllocation);
+    let bond = parseCurrencyInput(bondAllocation);
+    if (rent <= 0 && bond <= 0) {
+      rent = total;
+    } else if (rent + bond < total) {
+      rent += total - rent - bond;
     }
+    return { rent, bond };
   };
 
   const handleSubmit = async () => {
@@ -313,8 +348,7 @@ export function RentReconciliationDialog({
       toast.error('Enter a payment amount or allocation');
       return;
     }
-    const rent = parseCurrencyInput(rentAllocation);
-    const bond = parseCurrencyInput(bondAllocation);
+    const { rent, bond } = resolveAllocations(total);
     const submission: RentReconciliationSubmission = {
       amount: total,
       paymentDate,
@@ -332,6 +366,8 @@ export function RentReconciliationDialog({
         paymentMethod: submission.paymentMethod,
         rentAllocation: rent > 0 ? rent : undefined,
         bondAllocation: bond > 0 ? bond : undefined,
+        rentDescription: rent > 0 ? rentLedgerDescription : undefined,
+        bondDescription: bond > 0 ? bondDescription.trim() || defaultBondDescription : undefined,
         note: submission.note,
       });
       toast.success(`Rent reconciliation recorded for ${property.address}`);
@@ -479,10 +515,10 @@ export function RentReconciliationDialog({
               <AllocationCard
                 title="Rent"
                 due={formatDateShort(rentDueDate)}
-                description={`Paid to ${formatDateSlash(property.paidToDate)}`}
+                description={rentLedgerDescription}
                 amountDue={rentAmountDue}
                 amount={rentAllocation}
-                onAmountChange={setRentAllocation}
+                onAmountChange={handleRentAllocationChange}
               />
               <AllocationCard
                 title="Bond"
@@ -490,7 +526,7 @@ export function RentReconciliationDialog({
                 description={bondDescription}
                 amountDue="—"
                 amount={bondAllocation}
-                onAmountChange={setBondAllocation}
+                onAmountChange={handleBondAllocationChange}
                 descriptionEditable
                 onDescriptionChange={setBondDescription}
               />
@@ -511,7 +547,7 @@ export function RentReconciliationDialog({
                       <td className="px-3 py-3 font-medium">Rent</td>
                       <td className="px-3 py-3 text-muted-foreground">{formatDateShort(rentDueDate)}</td>
                       <td className="px-3 py-3 text-muted-foreground">
-                        Paid to {formatDateSlash(property.paidToDate)}
+                        {rentLedgerDescription}
                       </td>
                       <td className="px-3 py-3 text-right text-muted-foreground">{rentAmountDue}</td>
                       <td className="px-3 py-3">
@@ -519,7 +555,7 @@ export function RentReconciliationDialog({
                           inputMode="decimal"
                           placeholder="$0.00"
                           value={rentAllocation}
-                          onChange={(e) => setRentAllocation(e.target.value)}
+                          onChange={(e) => handleRentAllocationChange(e.target.value)}
                           className="h-10 text-right tabular-nums"
                         />
                       </td>
@@ -540,7 +576,7 @@ export function RentReconciliationDialog({
                           inputMode="decimal"
                           placeholder="$0.00"
                           value={bondAllocation}
-                          onChange={(e) => setBondAllocation(e.target.value)}
+                          onChange={(e) => handleBondAllocationChange(e.target.value)}
                           className="h-10 text-right tabular-nums"
                         />
                       </td>

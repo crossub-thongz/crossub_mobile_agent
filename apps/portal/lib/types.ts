@@ -259,6 +259,10 @@ export interface PropertyAccounting {
   currentBalance: number;
   daysInArrears: number;
   arrearsAmount: number;
+  /** ISO datetime — oldest open arrears case opened. */
+  arrearsOpenedAt?: string;
+  /** ISO date — rent paid-to or earliest bill due. */
+  arrearsKeyDate?: string;
   rentIncomeHistory?: RentIncomeEntry[];
   bills?: AccountingBill[];
   statements?: AccountingStatement[];
