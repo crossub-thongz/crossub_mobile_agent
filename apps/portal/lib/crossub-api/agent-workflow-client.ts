@@ -243,6 +243,30 @@ export async function createAgentTribunalRentChasing(
   });
 }
 
+export type AgentTribunalRentChasingPrefill = {
+  propertyId: string;
+  propertyAddress: string;
+  tenantName: string | null;
+  hasAccountingArrears: boolean;
+  arrears: Array<{
+    kind: 'rent' | 'bill' | 'bond';
+    name: string;
+    tenantName: string;
+    amount: number | null;
+    daysOverdue: number | null;
+    dueDate: string | null;
+  }>;
+  rentArrears: CreateAgentTribunalRentChasingInput['rentArrears'] | null;
+  billArrears: NonNullable<CreateAgentTribunalRentChasingInput['billArrears']>;
+  bondArrears: CreateAgentTribunalRentChasingInput['bondArrears'] | null;
+};
+
+export async function fetchAgentTribunalRentChasingPrefill(
+  propertyId: string,
+): Promise<AgentTribunalRentChasingPrefill> {
+  return agentFetch(`${base(propertyId)}/tribunal/rent-chasing/prefill`);
+}
+
 export type AgentTribunalRentChasingDetail =
   components['schemas']['AgentTribunalRentChasingDetailDto'];
 

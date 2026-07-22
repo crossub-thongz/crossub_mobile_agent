@@ -67,9 +67,6 @@ function NavLink({
       >
         {label}
       </span>
-      {!compact && badge && badge > 0 ? (
-        <MessageUnreadBadge count={badge} size="sm" className="ml-auto" />
-      ) : null}
     </Link>
   );
 }

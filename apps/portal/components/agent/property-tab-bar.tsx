@@ -223,7 +223,9 @@ export function PropertyTabBar<T extends string>({
       </div>
 
       <div className="scrollbar-none hidden flex-wrap gap-2 lg:flex">
-        {tabs.map((tab) => (
+        {tabs
+          .filter((tab) => tab !== 'Gii')
+          .map((tab) => (
           <PropertyTabButton
             key={tab}
             tab={tab}

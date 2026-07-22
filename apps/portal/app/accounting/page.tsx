@@ -93,6 +93,18 @@ export default function AccountingPage() {
     if (section === 'invoices') void loadInvoices();
   }, [section, loadInvoices]);
 
+  useEffect(() => {
+    const propertyId = searchParams.get('propertyId');
+    if (!propertyId || section !== 'rent_reconciliation') return;
+    const item = accounting.find((row) => row.propertyId === propertyId);
+    if (!item) return;
+    openJob(accountingPortfolioToJobRow(item));
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('propertyId');
+    const query = params.toString();
+    window.history.replaceState(null, '', query ? `${ROUTES.ACCOUNTING}?${query}` : ROUTES.ACCOUNTING);
+  }, [accounting, openJob, searchParams, section]);
+
   const openAccountingCase = useCallback(
     (item: (typeof accounting)[number]) => {
       openJob(accountingPortfolioToJobRow(item));

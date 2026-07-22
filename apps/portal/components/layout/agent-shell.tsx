@@ -26,7 +26,6 @@ import { filterNavByAccess } from '@/lib/portal-service-level';
 import { totalUnreadMessages } from '@/lib/communications-log';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { cn, displayName } from '@/lib/utils';
-import { useShellDockStore } from '@/lib/shell-dock-store';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === ROUTES.DASHBOARD) return pathname === href;
@@ -74,7 +73,6 @@ export function AgentShell({
   const [headerHeight, setHeaderHeight] = useState(56);
   const { hasFullManagementAccess, unreadNotificationCount, messages } = useAgentData();
   const propertyUnread = totalUnreadMessages(messages);
-  const propertyGiiInlineActive = useShellDockStore((s) => s.propertyGiiInlineActive);
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = [
     ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
@@ -372,11 +370,9 @@ export function AgentShell({
         {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
         </div>
 
-        {!propertyGiiInlineActive ? (
-          <aside className="bg-background hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
-            <GiiAssistant open variant="panel" />
-          </aside>
-        ) : null}
+        <aside className="bg-background hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
+          <GiiAssistant open variant="panel" />
+        </aside>
       </div>
     </div>
   );

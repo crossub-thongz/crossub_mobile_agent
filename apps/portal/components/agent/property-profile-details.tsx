@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
@@ -27,7 +27,7 @@ import type {
   TenantSelectionCase,
   VacatingCase,
 } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 function StatCell({
   label,
@@ -122,6 +122,10 @@ export function PropertyProfileDetails({
   const [open, setOpen] = useState(false);
   const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
 
+  useEffect(() => {
+    if (window.matchMedia('(min-width: 1024px)').matches) setOpen(true);
+  }, []);
+
   const furnished =
     sync.overview?.furnished ??
     (typeof sync.record?.furnished === 'boolean' ? sync.record.furnished : property.furnished);
@@ -172,20 +176,19 @@ export function PropertyProfileDetails({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center gap-2 text-left"
+        className="flex w-full items-center gap-2 text-left lg:pointer-events-none"
         aria-expanded={open}
       >
         <h3 className="text-sm font-semibold">Property details</h3>
         {open ? (
-          <ChevronUp className="text-muted-foreground size-4 shrink-0" aria-hidden />
+          <ChevronUp className="text-muted-foreground size-4 shrink-0 lg:hidden" aria-hidden />
         ) : (
-          <ChevronDown className="text-muted-foreground size-4 shrink-0" aria-hidden />
+          <ChevronDown className="text-muted-foreground size-4 shrink-0 lg:hidden" aria-hidden />
         )}
         <span className="text-muted-foreground ml-auto text-xs capitalize">{property.leaseStatus}</span>
       </button>
 
-      {open ? (
-        <div className="mt-3 space-y-3">
+      <div className={cn('mt-3 space-y-3', !open && 'hidden lg:block')}>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <StatCell
               label="Furnished"
@@ -246,8 +249,7 @@ export function PropertyProfileDetails({
             vacatingCases={vacatingCases}
             onRefresh={onRefresh}
           />
-        </div>
-      ) : null}
+      </div>
 
       <PropertyBuildingContactsDialog
         open={buildingDialogOpen}
