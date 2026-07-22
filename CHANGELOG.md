@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-22
+
+### Changed
+- On a property, Gii's panel now opens with that property's **jobs in progress** (count + list), not the smaller need-action subset. It shows the same "Jobs in progress" set the property Overview tab renders — maintenance, inspections, rent reviews, leasing, tribunal, vacating and accounting cases — and tapping any row opens that case in the portfolio dialog. Greeting reads "… N jobs in progress here — tap any to open." New shared pure selector `lib/gii-property-jobs.ts` (`selectPropertyInProgressJobs`) assembles the rows from the provider's portfolio-wide arrays exactly as `app/properties/[id]/page.tsx` slices them, so the panel and the Overview tab can never disagree on what jobs a property has; new `components/agent/gii-property-jobs-card.tsx` renders them and `constants/property-jobs.ts` holds the per-kind icon/label. Portfolio scope (no property) is unchanged — still the need-action briefing. Requested by Justin. Client-only; no backend or contract change.
+
 ## 2026-07-19
 
 ### Changed

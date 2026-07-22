@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
+import { GiiPropertyJobsCard } from '@/components/agent/gii-property-jobs-card';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -19,7 +20,10 @@ import {
 } from '@/constants/gii-prompts';
 import { searchAgentSystem, type SystemSearchResult } from '@/lib/agent-system-search';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
+import { selectPropertyInProgressJobs } from '@/lib/gii-property-jobs';
 import { buildNeedActionGroups } from '@/lib/need-action-groups';
+import type { PropertyJobRow } from '@/lib/property-job-rows';
+import { useAgentStore } from '@/lib/store';
 import type { PropertyNeedAction } from '@/lib/types';
 import {
   needActionToJobRow,
@@ -43,15 +47,15 @@ function propertyIdFromPath(pathname: string): string | undefined {
 
 function buildPropertyManagerGreeting(
   address: string,
-  actionCount: number,
+  jobCount: number,
   agentName?: string | null,
 ): string {
   const name = agentName?.trim();
   const lead = name ? `Hi ${name}` : 'Hi';
-  if (actionCount > 0) {
-    return `${lead} — I'm your Property Manager for ${address}. ${actionCount} job${actionCount === 1 ? '' : 's'} need your attention — ask me for details or type Approve.`;
+  if (jobCount > 0) {
+    return `${lead} — I'm your Property Manager for ${address}. ${jobCount} job${jobCount === 1 ? '' : 's'} in progress here — tap any to open, or ask me about this property.`;
   }
-  return `${lead} — I'm your Property Manager for ${address}. Ask me to add a repair, schedule inspections, start leasing, or check status.`;
+  return `${lead} — I'm your Property Manager for ${address}. No jobs in progress right now. Ask me to add a repair, schedule an inspection, start leasing, or check status.`;
 }
 
 type ChatLine = {
@@ -111,6 +115,7 @@ export function GiiAssistant({
   const giiLaunch = useShellDockStore((s) => s.giiLaunch);
   const clearGiiLaunch = useShellDockStore((s) => s.clearGiiLaunch);
   const { selectedJob, openJob, closeJob, portfolioData } = usePortfolioCaseDialog();
+  const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [query, setQuery] = useState('');
   const [listening, setListening] = useState(false);
   const [sending, setSending] = useState(false);
@@ -148,6 +153,38 @@ export function GiiAssistant({
     return formatPropertyFullAddress(scopedProperty);
   }, [giiLaunch?.propertyAddress, scopedProperty]);
 
+  // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
+  // progress" set the Overview tab shows (one shared selector, so the two never disagree),
+  // not the smaller need-action subset. Portfolio scope keeps the need-action briefing.
+  const propertyJobs = useMemo(() => {
+    if (!scopedProperty) return [] as PropertyJobRow[];
+    return selectPropertyInProgressJobs({
+      property: scopedProperty,
+      maintenanceAll: data.maintenanceAll,
+      inspections: data.inspections,
+      rentReviews: data.rentReviews,
+      rentReviewDecisions,
+      leasingRecords: data.leasingRecords,
+      leasingCycles: data.leasingCycles,
+      tenantSelections: data.tenantSelections,
+      vacating: data.vacating,
+      tribunalCases: data.tribunalCases,
+      accounting: data.accounting,
+    });
+  }, [
+    scopedProperty,
+    data.maintenanceAll,
+    data.inspections,
+    data.rentReviews,
+    rentReviewDecisions,
+    data.leasingRecords,
+    data.leasingCycles,
+    data.tenantSelections,
+    data.vacating,
+    data.tribunalCases,
+    data.accounting,
+  ]);
+
 
   const briefingItems = useMemo(() => {
     if (!scopedProperty) return data.needActionItems;
@@ -168,14 +205,18 @@ export function GiiAssistant({
     if (scopedProperty && scopedAddress) {
       return buildPropertyManagerGreeting(
         scopedAddress,
-        briefingItems.length,
+        propertyJobs.length,
         user?.firstName,
       );
     }
     return liveBriefing.subtitle
       ? `${liveBriefing.greeting}\n\n${liveBriefing.subtitle}`
       : liveBriefing.greeting;
-  }, [briefingItems.length, liveBriefing, scopedAddress, scopedProperty, user?.firstName]);
+  }, [propertyJobs.length, liveBriefing, scopedAddress, scopedProperty, user?.firstName]);
+
+  // What the greeting count and the empty-states key off — jobs on a property, else the
+  // portfolio need-action briefing.
+  const briefingIsEmpty = scopedProperty ? propertyJobs.length === 0 : liveBriefing.isEmpty;
 
   const hasUserMessages = useMemo(() => lines.some((l) => l.role === 'user'), [lines]);
 
@@ -524,7 +565,11 @@ export function GiiAssistant({
                 {greetingText}
               </div>
             ) : null}
-            {!liveBriefing.isEmpty ? (
+            {scopedProperty ? (
+              propertyJobs.length > 0 ? (
+                <GiiPropertyJobsCard jobs={propertyJobs} onOpen={openJob} />
+              ) : null
+            ) : !liveBriefing.isEmpty ? (
               <GiiBriefingCard
                 briefing={liveBriefing}
                 onNavigate={onClose}
@@ -543,13 +588,13 @@ export function GiiAssistant({
             <p className="text-sm font-semibold">Ask Gii, your Property Manager</p>
             <p className="text-muted-foreground mt-1.5 max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
-                ? 'Jobs needing your approval appear above. Ask for details, then reply Approve or ask follow-up questions.'
+                ? 'Jobs in progress appear above. Tap any to open, or ask me about this property.'
                 : multilingualHint()}
             </p>
           </div>
         ) : null}
 
-        {lines.length === 0 && !data.loading && liveBriefing.isEmpty && !giiLaunch?.initialPrompt ? (
+        {lines.length === 0 && !data.loading && briefingIsEmpty && !giiLaunch?.initialPrompt ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-muted-foreground max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
