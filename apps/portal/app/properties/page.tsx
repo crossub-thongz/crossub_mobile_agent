@@ -140,7 +140,7 @@ export default function PropertiesPage() {
   return (
     <AgentShell title="Properties">
       <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
+        {/* <div className="flex items-start justify-between gap-3">
           <PageIntro
             description={
               isArchivedView
@@ -153,7 +153,7 @@ export default function PropertiesPage() {
               {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
             </span>
           ) : null}
-        </div>
+        </div> */}
 
         {needActionCount > 0 && (
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm">
