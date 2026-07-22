@@ -117,7 +117,8 @@ export function GiiAssistant({
   const [lines, setLines] = useState<ChatLine[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
   const initialPromptHandledRef = useRef(false);
   // The subject carried between turns. A ref: it must never be stale inside runQuery, and
   // it does not need to trigger a render.
@@ -205,11 +206,37 @@ export function GiiAssistant({
     return last?.results ?? [];
   }, [lines]);
 
-  // Follow the conversation — a reply plus its card is taller than the viewport, so
-  // without this the assessment lands below the fold.
+  const scrollChatToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
+  // Track whether the user has scrolled up inside the chat — briefing polls must not
+  // yank the whole property page back down via scrollIntoView on a nested anchor.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [lines, liveBriefing]);
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      stickToBottomRef.current = distanceFromBottom < 80;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [open]);
+
+  // New turns always follow the conversation inside the chat panel only.
+  useEffect(() => {
+    if (lines.length === 0) return;
+    stickToBottomRef.current = true;
+    scrollChatToBottom('smooth');
+  }, [lines, scrollChatToBottom]);
+
+  // Live briefing refreshes (5s poll) — keep pinned only when already at chat bottom.
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    scrollChatToBottom('smooth');
+  }, [liveBriefing, scrollChatToBottom]);
 
   /**
    * A turn runs two things at once:
@@ -435,7 +462,10 @@ export function GiiAssistant({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3">
+      <div
+        ref={scrollContainerRef}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3"
+      >
         {!data.loading && !giiLaunch?.initialPrompt ? (
           <div className="space-y-2">
             {!hasUserMessages ? (
@@ -550,7 +580,6 @@ export function GiiAssistant({
             ))}
           </ul>
         )}
-        <div ref={endRef} />
       </div>
 
       <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
