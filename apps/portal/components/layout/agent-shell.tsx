@@ -90,6 +90,17 @@ export function AgentShell({
   }, [title]);
 
   useEffect(() => {
+    if (immersive) {
+      document.documentElement.style.removeProperty('--shell-header-height');
+      return;
+    }
+    document.documentElement.style.setProperty('--shell-header-height', `${headerHeight}px`);
+    return () => {
+      document.documentElement.style.removeProperty('--shell-header-height');
+    };
+  }, [headerHeight, immersive]);
+
+  useEffect(() => {
     setMoreOpen(false);
   }, [pathname]);
 
@@ -259,7 +270,7 @@ export function AgentShell({
               wide ? (immersive ? 'flex min-h-0 flex-1 flex-col px-2 lg:px-4' : 'px-4 pb-4 lg:p-0') : 'px-4 py-4',
               immersive
                 ? 'flex min-h-0 flex-1 flex-col max-lg:pt-2 lg:pt-0'
-                : 'pb-24 lg:pb-0 max-lg:pt-[var(--shell-header-offset)] lg:pt-0',
+                : 'pb-24 lg:pb-0 max-lg:pt-[calc(var(--shell-header-offset)+var(--add-to-home-prompt-height,0px))] lg:pt-0',
             )}
             style={{
               ['--shell-header-height' as string]: `${headerHeight}px`,

@@ -12,6 +12,7 @@ import { AgentNotificationDialogProvider } from '@/components/providers/agent-no
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
 import { ChunkReloadGuard } from '@/components/providers/chunk-reload-guard';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AddToHomeScreenPrompt } from '@/components/agent/add-to-home-screen-prompt';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
 import './globals.css';
@@ -25,6 +26,12 @@ export const metadata: Metadata = {
   title: 'CROSSUB | Agent App',
   description:
     'Mobile-first agent portal — approvals, properties, inspections, maintenance, rent review, and vacating.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'CROSSUB Agent',
+    statusBarStyle: 'default',
+  },
   icons: {
     icon: '/crossub-logo.png',
     apple: '/crossub-logo.png',
@@ -63,6 +70,7 @@ export default function RootLayout({
                     <PortalServiceLevelGate>
                       <AgentNotificationDialogProvider>
                         <AgentNotificationLiveAlert />
+                        <AddToHomeScreenPrompt />
                         {children}
                         <WelcomeOnboarding />
                       </AgentNotificationDialogProvider>
