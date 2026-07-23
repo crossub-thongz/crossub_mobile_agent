@@ -11,8 +11,8 @@ export function resolveAgentPortfolioId(user: AuthUser | null): AgentPortfolioId
 }
 
 export function filterByPropertyIds<T extends { propertyId: string }>(
-  items: T[],
+  items: T[] | undefined | null,
   propertyIds: Set<string>,
 ): T[] {
-  return items.filter((i) => propertyIds.has(i.propertyId));
+  return (items ?? []).filter((i) => propertyIds.has(i.propertyId));
 }

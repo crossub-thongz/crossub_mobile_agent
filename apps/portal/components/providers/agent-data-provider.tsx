@@ -290,14 +290,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const agentPortfolioId = resolveAgentPortfolioId(user);
   const sentThreadMessages = useAgentStore((s) => s.sentThreadMessages);
   const sendThreadMessage = useAgentStore((s) => s.sendThreadMessage);
-  const addedProperties = useAgentStore((s) => s.addedProperties);
-  const addedInspections = useAgentStore((s) => s.addedInspections);
-  const customMessageThreads = useAgentStore((s) => s.customMessageThreads);
+  const addedProperties = useAgentStore((s) => s.addedProperties ?? []);
+  const addedInspections = useAgentStore((s) => s.addedInspections ?? []);
+  const customMessageThreads = useAgentStore((s) => s.customMessageThreads ?? []);
   const storeAddProperty = useAgentStore((s) => s.addProperty);
   const storeAddOpenInspection = useAgentStore((s) => s.addOpenInspection);
   const registerInspection = useAgentStore((s) => s.registerInspection);
   const storeEnsureMessageThread = useAgentStore((s) => s.ensureMessageThread);
-  const uploadedDocuments = useAgentStore((s) => s.uploadedDocuments);
+  const uploadedDocuments = useAgentStore((s) => s.uploadedDocuments ?? []);
   const addUploadedDocument = useAgentStore((s) => s.addUploadedDocument);
   const notificationPrefs = useAgentStore((s) => s.notificationPrefs);
   const tenantSelectionDecisions = useAgentStore((s) => s.tenantSelectionDecisions);
@@ -590,7 +590,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const maintenanceAll = useMemo(() => {
     if (!portfolio) return [];
     return enrichPropertyAddresses(
-      mapAgentMaintenance(portfolio.maintenance),
+      mapAgentMaintenance(portfolio.maintenance ?? []),
       properties,
     );
   }, [portfolio, properties]);
@@ -607,7 +607,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const maintenanceKpis = useMemo(() => {
     if (!portfolio) return null;
-    const rows = portfolio.maintenance;
+    const rows = portfolio.maintenance ?? [];
     const overdue = rows.filter(
       (m) =>
         m.urgent &&
@@ -630,7 +630,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     // overlay fresher rows. Never replace the book with a single page of /inspections.
     const portfolioRows = portfolio
       ? enrichPropertyAddresses(
-          filterByPropertyIds(mapAgentInspections(portfolio.inspections), propertyIds),
+          filterByPropertyIds(mapAgentInspections(portfolio.inspections ?? []), propertyIds),
           properties,
         )
       : [];
@@ -689,7 +689,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const rentReviews = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentRentReviews(portfolio.rentReviews), properties)
+        ? enrichPropertyAddresses(mapAgentRentReviews(portfolio.rentReviews ?? []), properties)
         : [],
     [portfolio, properties],
   );
@@ -697,7 +697,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const vacating = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentVacating(portfolio.vacating), properties)
+        ? enrichPropertyAddresses(mapAgentVacating(portfolio.vacating ?? []), properties)
         : [],
     [portfolio, properties],
   );
@@ -705,7 +705,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const tenantSelections = useMemo(() => {
     const base = portfolio
       ? enrichPropertyAddresses(
-          mapAgentTenantSelections(portfolio.tenantSelections),
+          mapAgentTenantSelections(portfolio.tenantSelections ?? []),
           properties,
         )
       : [];
@@ -719,7 +719,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [portfolio, properties, tenantSelectionDecisions]);
 
   const leasingRecords = useMemo(
-    () => (portfolio ? mapAgentLeasing(portfolio.leasing) : []),
+    () => (portfolio ? mapAgentLeasing(portfolio.leasing ?? []) : []),
     [portfolio],
   );
 
@@ -727,7 +727,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     () =>
       portfolio
         ? enrichPropertyAddresses(
-            mapAgentLeasingCycles(portfolio.leasingCycles),
+            mapAgentLeasingCycles(portfolio.leasingCycles ?? []),
             properties,
           )
         : [],
@@ -749,7 +749,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const accounting = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentAccounting(portfolio.accounting), properties)
+        ? enrichPropertyAddresses(mapAgentAccounting(portfolio.accounting ?? []), properties)
         : [],
     [portfolio, properties],
   );
@@ -757,7 +757,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const tribunalCases = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentTribunal(portfolio.tribunal), properties)
+        ? enrichPropertyAddresses(mapAgentTribunal(portfolio.tribunal ?? []), properties)
         : [],
     [portfolio, properties],
   );

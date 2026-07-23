@@ -418,6 +418,26 @@ export const useAgentStore = create<AgentStore>()(
     {
       name: 'crossub-agent-store',
       skipHydration: true,
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<AgentStore> | undefined;
+        return {
+          ...current,
+          ...saved,
+          addedProperties: saved?.addedProperties ?? current.addedProperties,
+          customMessageThreads: saved?.customMessageThreads ?? current.customMessageThreads,
+          uploadedDocuments: saved?.uploadedDocuments ?? current.uploadedDocuments,
+          addedInspections: saved?.addedInspections ?? current.addedInspections,
+          provisionedTenants: saved?.provisionedTenants ?? current.provisionedTenants,
+          hiddenBuiltinQuickActionIds:
+            saved?.hiddenBuiltinQuickActionIds ?? current.hiddenBuiltinQuickActionIds,
+          customQuickActions: saved?.customQuickActions ?? current.customQuickActions,
+          rentReviewDecisions: saved?.rentReviewDecisions ?? current.rentReviewDecisions,
+          tenantSelectionDecisions:
+            saved?.tenantSelectionDecisions ?? current.tenantSelectionDecisions,
+          sentThreadMessages: saved?.sentThreadMessages ?? current.sentThreadMessages,
+          notificationPrefs: saved?.notificationPrefs ?? current.notificationPrefs,
+        };
+      },
     },
   ),
 );
