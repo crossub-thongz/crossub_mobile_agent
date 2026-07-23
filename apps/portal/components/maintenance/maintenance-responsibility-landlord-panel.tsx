@@ -5,6 +5,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { AddHandymanDialog } from '@/components/end-leasing/add-handyman-dialog';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   fetchMaintenanceContractorSuggestions,
   type MaintenanceContractorSuggestion,
 } from '@/lib/crossub-api/maintenance-client';
@@ -12,6 +19,12 @@ import {
   fetchPreferredContractors,
   type PreferredContractor,
 } from '@/lib/crossub-api/agent-client';
+import {
+  MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT,
+  MAINTENANCE_CONTRACTOR_PREVIEW_COUNT,
+  topMaintenanceContractorIds,
+} from '@/lib/maintenance/maintenance-contractor-list.constants';
+import { useContractorAutoPick } from '@/lib/maintenance/use-contractor-auto-pick';
 import { maintenanceContractorSelectionKey } from '@/lib/maintenance/maintenance-contractor-key';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +41,82 @@ function mapPreferredToSuggestion(row: PreferredContractor): MaintenanceContract
     isTopPick: false,
     rating: null,
   };
+}
+
+function ContractorSuggestionRow({
+  contractor,
+  index,
+  active,
+  isAutoPick,
+  isClientPreferred,
+  disabled,
+  onToggle,
+}: {
+  contractor: MaintenanceContractorSuggestion;
+  index: number;
+  active: boolean;
+  isAutoPick: boolean;
+  isClientPreferred: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onToggle}
+      className={cn(
+        'w-full rounded-lg border px-3 py-2 text-left transition-colors',
+        active
+          ? 'border-primary bg-primary/10'
+          : 'border-border bg-background hover:bg-secondary/40',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <input
+            type="checkbox"
+            readOnly
+            checked={active}
+            className="mt-1 size-4 accent-primary"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{contractor.name}</p>
+            <p className="text-muted-foreground mt-0.5 truncate text-xs">
+              {[contractor.email, contractor.phone].filter(Boolean).join(' · ') || '—'}
+            </p>
+            {contractor.serviceTypes.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {contractor.serviceTypes.slice(0, 4).map((tag) => (
+                  <span
+                    key={`${contractor.id}-${tag}`}
+                    className="text-muted-foreground rounded bg-muted/40 px-2 py-0.5 text-[10px] font-medium ring-1 ring-border"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {isClientPreferred ? (
+            <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+              Preferred
+            </span>
+          ) : null}
+          {isAutoPick ? (
+            <span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              Auto
+            </span>
+          ) : null}
+          {!isAutoPick && index < MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT ? (
+            <span className="text-muted-foreground text-[10px] tabular-nums">#{index + 1}</span>
+          ) : null}
+        </div>
+      </div>
+    </button>
+  );
 }
 
 export function MaintenanceResponsibilityLandlordPanel({
@@ -48,6 +137,7 @@ export function MaintenanceResponsibilityLandlordPanel({
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<MaintenanceContractorSuggestion[]>([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [viewMoreOpen, setViewMoreOpen] = useState(false);
 
   const loadSuggestions = async () => {
     if (!apiConnected) {
@@ -88,18 +178,29 @@ export function MaintenanceResponsibilityLandlordPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when request/agency changes
   }, [requestId, agencyId, apiConnected]);
 
-  useEffect(() => {
-    if (selectedContractorIds.length > 0 || suggestions.length === 0) return;
-    const topPick = suggestions.find((row) => row.isTopPick) ?? suggestions[0];
-    if (topPick) onChangeSelectedContractorIds([topPick.id]);
-  }, [onChangeSelectedContractorIds, selectedContractorIds.length, suggestions]);
+  const { markSelectionTouched } = useContractorAutoPick({
+    enabled: true,
+    contractors: suggestions,
+    selectedIds: selectedContractorIds,
+    onChangeSelectedIds: onChangeSelectedContractorIds,
+    resetKey: requestId,
+  });
 
   const preferredIds = useMemo(
     () => new Set(suggestions.filter((row) => row.isPreferred).map((row) => row.id)),
     [suggestions],
   );
 
+  const autoPickIds = useMemo(
+    () => new Set(topMaintenanceContractorIds(suggestions)),
+    [suggestions],
+  );
+
+  const previewSuggestions = suggestions.slice(0, MAINTENANCE_CONTRACTOR_PREVIEW_COUNT);
+  const moreSuggestions = suggestions.slice(MAINTENANCE_CONTRACTOR_PREVIEW_COUNT);
+
   const toggleContractor = (contractorId: string) => {
+    markSelectionTouched();
     onChangeSelectedContractorIds(
       selectedContractorIds.includes(contractorId)
         ? selectedContractorIds.filter((id) => id !== contractorId)
@@ -110,9 +211,33 @@ export function MaintenanceResponsibilityLandlordPanel({
   const handleCreated = (contractor: PreferredContractor) => {
     const mapped = mapPreferredToSuggestion(contractor);
     setSuggestions((prev) => [mapped, ...prev.filter((row) => row.id !== mapped.id)]);
+    markSelectionTouched();
     onChangeSelectedContractorIds([
       ...new Set([...selectedContractorIds, maintenanceContractorSelectionKey(contractor)]),
     ]);
+  };
+
+  const renderContractor = (contractor: MaintenanceContractorSuggestion, index: number) => {
+    const active = selectedContractorIds.includes(contractor.id);
+    const isAutoPick =
+      active &&
+      selectedContractorIds.length <= MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT &&
+      autoPickIds.has(contractor.id) &&
+      selectedContractorIds.every((id) => autoPickIds.has(id));
+    const isClientPreferred = preferredIds.has(contractor.id);
+
+    return (
+      <ContractorSuggestionRow
+        key={contractor.id}
+        contractor={contractor}
+        index={index}
+        active={active}
+        isAutoPick={isAutoPick}
+        isClientPreferred={isClientPreferred}
+        disabled={disabled}
+        onToggle={() => toggleContractor(contractor.id)}
+      />
+    );
   };
 
   return (
@@ -134,8 +259,8 @@ export function MaintenanceResponsibilityLandlordPanel({
           </Button>
         </div>
         <p className="text-muted-foreground mt-1 text-xs">
-          Select one or more tradesmen to send for quote review. Each selected contractor receives
-          an RFQ when you confirm responsibility.
+          Top {MAINTENANCE_CONTRACTOR_AUTO_PICK_COUNT} ranked tradesmen are pre-selected (untick any you
+          do not want). Adjust before confirming — only your selection is sent when you submit.
         </p>
 
         <div className="mt-3 space-y-2">
@@ -146,68 +271,21 @@ export function MaintenanceResponsibilityLandlordPanel({
               No contractors yet. Add a tradesman to your agency preferred list.
             </p>
           ) : (
-            suggestions.map((contractor, index) => {
-              const active = selectedContractorIds.includes(contractor.id);
-              const isAutoPick =
-                active && selectedContractorIds.length === 1 && (contractor.isTopPick || index === 0);
-              const isClientPreferred = preferredIds.has(contractor.id);
-
-              return (
-                <button
-                  key={contractor.id}
+            <>
+              {previewSuggestions.map((contractor, index) => renderContractor(contractor, index))}
+              {moreSuggestions.length > 0 ? (
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs"
                   disabled={disabled}
-                  onClick={() => toggleContractor(contractor.id)}
-                  className={cn(
-                    'w-full rounded-lg border px-3 py-2 text-left transition-colors',
-                    active
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border bg-background hover:bg-secondary/40',
-                  )}
+                  onClick={() => setViewMoreOpen(true)}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <input
-                        type="checkbox"
-                        readOnly
-                        checked={active}
-                        className="mt-1 size-4 accent-primary"
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{contractor.name}</p>
-                        <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                          {[contractor.email, contractor.phone].filter(Boolean).join(' · ') || '—'}
-                        </p>
-                        {contractor.serviceTypes.length > 0 ? (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {contractor.serviceTypes.slice(0, 4).map((tag) => (
-                              <span
-                                key={`${contractor.id}-${tag}`}
-                                className="text-muted-foreground rounded bg-muted/40 px-2 py-0.5 text-[10px] font-medium ring-1 ring-border"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      {isClientPreferred ? (
-                        <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
-                          Preferred
-                        </span>
-                      ) : null}
-                      {isAutoPick ? (
-                        <span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                          Auto
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </button>
-              );
-            })
+                  View more ({moreSuggestions.length} more)
+                </Button>
+              ) : null}
+            </>
           )}
         </div>
 
@@ -218,6 +296,21 @@ export function MaintenanceResponsibilityLandlordPanel({
           </p>
         ) : null}
       </div>
+
+      <Dialog open={viewMoreOpen} onOpenChange={setViewMoreOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>All tradesmen</DialogTitle>
+            <DialogDescription>
+              Select contractors for the quote request. Your submission replaces any unsent picks from
+              other users.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {suggestions.map((contractor, index) => renderContractor(contractor, index))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AddHandymanDialog
         open={addOpen}

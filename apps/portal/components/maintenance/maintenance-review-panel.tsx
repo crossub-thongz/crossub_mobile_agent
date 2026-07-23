@@ -56,6 +56,12 @@ export function MaintenanceReviewPanel({
   const [emailCcInput, setEmailCcInput] = useState('');
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    setPendingResponsibility(null);
+    setPendingContractorIds([]);
+    setEmailCcInput('');
+  }, [ctx.item.id]);
+
   const agencyId = property?.agencyId;
   const invitedContractorIds = resolveInvitedContractorIds(ctx);
   const responsibility = resolveMaintenanceResponsibility(ctx);

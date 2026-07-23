@@ -23,6 +23,7 @@ export const MAINTENANCE_AGENT_STEP = {
   JOB_CREATED: 'job_created',
   REVIEW: 'review',
   GET_QUOTE: 'get_quote',
+  SCHEDULE: 'schedule',
   IN_PROGRESS: 'in_progress',
   JOB_COMPLETED: 'job_completed',
 } as const;
@@ -34,6 +35,7 @@ export const MAINTENANCE_AGENT_STEP_ORDER: MaintenanceAgentStep[] = [
   MAINTENANCE_AGENT_STEP.JOB_CREATED,
   MAINTENANCE_AGENT_STEP.REVIEW,
   MAINTENANCE_AGENT_STEP.GET_QUOTE,
+  MAINTENANCE_AGENT_STEP.SCHEDULE,
   MAINTENANCE_AGENT_STEP.IN_PROGRESS,
   MAINTENANCE_AGENT_STEP.JOB_COMPLETED,
 ];
@@ -42,6 +44,7 @@ export const MAINTENANCE_AGENT_STEP_LABEL: Record<MaintenanceAgentStep, string> 
   [MAINTENANCE_AGENT_STEP.JOB_CREATED]: 'Created',
   [MAINTENANCE_AGENT_STEP.REVIEW]: 'Review',
   [MAINTENANCE_AGENT_STEP.GET_QUOTE]: 'Quote',
+  [MAINTENANCE_AGENT_STEP.SCHEDULE]: 'Schedule',
   [MAINTENANCE_AGENT_STEP.IN_PROGRESS]: 'Progress',
   [MAINTENANCE_AGENT_STEP.JOB_COMPLETED]: 'Done',
 };
@@ -50,6 +53,7 @@ export const MAINTENANCE_AGENT_STEP_TITLE: Record<MaintenanceAgentStep, string> 
   [MAINTENANCE_AGENT_STEP.JOB_CREATED]: 'Job created',
   [MAINTENANCE_AGENT_STEP.REVIEW]: 'Review',
   [MAINTENANCE_AGENT_STEP.GET_QUOTE]: 'Get quote',
+  [MAINTENANCE_AGENT_STEP.SCHEDULE]: 'Schedule visit',
   [MAINTENANCE_AGENT_STEP.IN_PROGRESS]: 'In progress',
   [MAINTENANCE_AGENT_STEP.JOB_COMPLETED]: 'Job completed',
 };
@@ -310,6 +314,10 @@ export function resolveMaintenanceAgentStep(
     return MAINTENANCE_AGENT_STEP.IN_PROGRESS;
   }
 
+  if (status === 'pending_schedule') {
+    return MAINTENANCE_AGENT_STEP.SCHEDULE;
+  }
+
   if (status === 'pending_approval' || status === 'pending_quotation' || quoteDeclinedLoopBack(ctx)) {
     return MAINTENANCE_AGENT_STEP.GET_QUOTE;
   }
@@ -442,6 +450,27 @@ function getQuoteSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubPro
         quote?.status === 'approved' ||
         ctx.workspaceCase.status === 'pending_approval' ||
         ['in_progress', 'completed', 'closed'].includes(ctx.workspaceCase.status),
+    },
+  ];
+}
+
+function scheduleSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubProgressItem[] {
+  const proposal = ctx.item.scheduleProposal;
+  return [
+    {
+      id: 'contractor_contacted',
+      label: 'Contractor emailed with tenant contact',
+      done: ctx.workspaceCase.status === 'pending_schedule' || Boolean(proposal),
+    },
+    {
+      id: 'availability',
+      label: 'Contractor submitted visit availability',
+      done: Boolean(proposal?.availableTimes?.trim()),
+    },
+    {
+      id: 'tenant_confirm',
+      label: 'Tenant approved visit time',
+      done: proposal?.tenantDecision === 'approved',
     },
   ];
 }
@@ -644,6 +673,8 @@ function subProgressForStep(
       return reviewSubProgress(ctx);
     case MAINTENANCE_AGENT_STEP.GET_QUOTE:
       return getQuoteSubProgress(ctx);
+    case MAINTENANCE_AGENT_STEP.SCHEDULE:
+      return scheduleSubProgress(ctx);
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
       return inProgressSubProgress(ctx);
     case MAINTENANCE_AGENT_STEP.JOB_COMPLETED:
@@ -714,6 +745,10 @@ const IMPORTANT_MAINTENANCE_EMAIL_KINDS = new Set([
   'quotation_resubmitted',
   'quotation_created',
   'quotation_review_decision',
+  'contractor_evidence_requested',
+  'contractor_evidence_fulfilled',
+  'contractor_rfq_accepted',
+  'contractor_rfq_declined',
 ]);
 
 function isImportantMaintenanceEmail(record: MaintenanceEmailRecord): boolean {
@@ -1013,6 +1048,14 @@ function emailRecordsForStepOnly(
       return buildResponsibilityReviewEmails(ctx).filter(isImportantMaintenanceEmail);
     case MAINTENANCE_AGENT_STEP.GET_QUOTE:
       return buildQuotationWorkflowEmails(ctx).filter(isImportantMaintenanceEmail);
+    case MAINTENANCE_AGENT_STEP.SCHEDULE:
+      return emailNotifications(ctx.workspaceCase).filter(
+        (e) =>
+          isImportantMaintenanceEmail(e) &&
+          /schedule|visit availability|visit time|tenant contact/i.test(
+            `${e.subject} ${e.body}`,
+          ),
+      );
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
       // Acceptance synthetics (handyman/tenant notified) are not real sends — skip.
       return [];

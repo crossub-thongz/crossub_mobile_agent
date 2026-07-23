@@ -299,3 +299,19 @@ export async function deleteMaintenanceAttachment(
 ): Promise<ApiMaintenanceState> {
   return api.delete<ApiMaintenanceState>(`/maintenance/attachments/${attachmentId}`);
 }
+
+/** Run RFQ reminder / auto-reselect SLA tick (agent role). */
+export async function runMaintenanceSlaTick(): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/sla/tick', { actorRole: AGENT_ROLE });
+}
+
+export async function fulfillContractorEvidenceRequest(args: {
+  requestId: string;
+  evidenceRequestId: string;
+  fulfillmentNote?: string;
+}): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/contractor-evidence-requests/fulfill', {
+    ...args,
+    actorRole: AGENT_ROLE,
+  });
+}

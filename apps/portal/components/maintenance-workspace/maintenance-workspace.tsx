@@ -568,12 +568,12 @@ export function MaintenanceWorkspace({
                               <>
                                 {remindersSent} reminder{remindersSent === 1 ? '' : 's'} sent.
                                 {reminderEta ? ` Next reminder ${reminderEta}.` : ' '}
-                                Reminders every 24 hours.
+                                Reminders every 4 hours per contractor (up to 3 each).
                               </>
                             ) : reminderEta ? (
-                              <>Reminder will be sent {reminderEta}. Reminders every 24 hours.</>
+                              <>Reminder will be sent {reminderEta}. Reminders every 4 hours per contractor.</>
                             ) : (
-                              <>Awaiting contractor quote submission.</>
+                              <>Awaiting contractor quote submission — reminders every 4 hours.</>
                             )}
                           </p>
                         </div>

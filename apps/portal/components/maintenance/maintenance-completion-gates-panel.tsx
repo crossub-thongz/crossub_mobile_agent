@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileText, Loader2, Play, Upload, X } from 'lucide-react';
+import { CheckCircle2, Download, FileText, Loader2, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -15,19 +15,10 @@ import {
 import {
   deleteMaintenanceAttachment,
   setMaintenanceCompletionEvidence,
-  setMaintenanceInvoiceUploaded,
-  uploadMaintenanceAttachment,
 } from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
-import { fileToBase64 } from '@/lib/file-upload';
-import {
-  isAllowedMaintenanceInvoiceMime,
-  MAX_MAINTENANCE_ATTACHMENT_BYTES,
-  MAX_MAINTENANCE_ATTACHMENT_LABEL,
-} from '@/lib/maintenance/maintenance-attachment-limits';
-import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn } from '@/lib/utils';
 
 const MAX_COMPLETION_EVIDENCE = 8;
@@ -81,9 +72,6 @@ export function MaintenanceCompletionGatesPanel({
   onUpdated?: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
-  const [uploadingInvoice, setUploadingInvoice] = useState(false);
-  const [invoiceUploadPhase, setInvoiceUploadPhase] = useState<'idle' | 'reading' | 'uploading'>('idle');
-  const [pendingInvoiceFile, setPendingInvoiceFile] = useState<File | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<ApiMaintenanceAttachment | null>(
     null,
   );
@@ -128,47 +116,6 @@ export function MaintenanceCompletionGatesPanel({
       toast.error('Could not update — try again');
     } finally {
       setBusy(false);
-    }
-  };
-
-  const handleInvoiceUpload = async () => {
-    if (!pendingInvoiceFile || !canEdit) return;
-
-    const file = pendingInvoiceFile;
-    if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
-      toast.error(`File exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
-      setPendingInvoiceFile(null);
-      return;
-    }
-    const mime = file.type || 'application/pdf';
-    if (!isAllowedMaintenanceInvoiceMime(mime)) {
-      toast.error('Unsupported invoice file type. Use PDF or image (PNG, JPEG, WebP, HEIC).');
-      setPendingInvoiceFile(null);
-      return;
-    }
-
-    setUploadingInvoice(true);
-    setInvoiceUploadPhase('reading');
-    try {
-      const contentBase64 = await fileToBase64(file);
-      setInvoiceUploadPhase('uploading');
-      await uploadMaintenanceAttachment({
-        maintenanceRequestId: requestId,
-        kind: 'invoice',
-        fileName: file.name,
-        mimeType: mime,
-        sizeBytes: file.size,
-        contentBase64,
-      });
-      await setMaintenanceInvoiceUploaded(requestId, true);
-      setPendingInvoiceFile(null);
-      toast.success('Invoice uploaded — task marked checked');
-      await onUpdated?.();
-    } catch (err) {
-      toast.error(apiErrorMessage(err, 'Invoice upload failed'));
-    } finally {
-      setUploadingInvoice(false);
-      setInvoiceUploadPhase('idle');
     }
   };
 
@@ -227,84 +174,42 @@ export function MaintenanceCompletionGatesPanel({
         <p className="text-muted-foreground text-xs">View only — admin records tenant sign-off.</p>
       </section>
 
-      {/* Invoice Uploaded — uploading the file marks this gate automatically. */}
+      {/* Invoice Uploaded — view only for agents (contractor/admin upload). */}
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Invoice Uploaded" checked={invoiceUploaded} />
         <p className="text-muted-foreground text-xs">
-          Upload the contractor invoice (PDF or image, up to {MAX_MAINTENANCE_ATTACHMENT_LABEL}). The
-          task is marked checked when the upload succeeds. Tap a file to preview or download.
+          View the contractor invoice uploaded by the contractor or admin. Tap a file to
+          preview or download.
         </p>
 
-        {canEdit ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary/40">
-              <Upload className="size-3.5" />
-              Choose invoice
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                className="hidden"
-                disabled={uploadingInvoice}
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  e.target.value = '';
-                  if (!file) return;
-                  if (file.size > MAX_MAINTENANCE_ATTACHMENT_BYTES) {
-                    toast.error(`File exceeds the ${MAX_MAINTENANCE_ATTACHMENT_LABEL} limit`);
-                    return;
-                  }
-                  const mime = file.type || 'application/pdf';
-                  if (!isAllowedMaintenanceInvoiceMime(mime)) {
-                    toast.error(
-                      'Unsupported invoice file type. Use PDF or image (PNG, JPEG, WebP, HEIC).',
-                    );
-                    return;
-                  }
-                  setPendingInvoiceFile(file);
-                }}
-              />
-            </label>
-            {pendingInvoiceFile ? (
-              <>
-                <span className="text-muted-foreground max-w-[140px] truncate text-xs">
-                  {pendingInvoiceFile.name}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={uploadingInvoice}
-                  onClick={() => void handleInvoiceUpload()}
-                >
-                  {uploadingInvoice ? (
-                    <>
-                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                      {invoiceUploadPhase === 'reading' ? 'Reading file…' : 'Uploading…'}
-                    </>
-                  ) : (
-                    'Upload'
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPendingInvoiceFile(null)}
-                >
-                  Remove
-                </Button>
-              </>
+        {ctx.workspaceCase.contractorInvoiceNumber ||
+        ctx.workspaceCase.contractorInvoiceAmount != null ? (
+          <dl className="bg-background space-y-1 rounded-lg border p-3 text-xs">
+            {ctx.workspaceCase.contractorInvoiceNumber ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Invoice #</dt>
+                <dd className="font-medium">{ctx.workspaceCase.contractorInvoiceNumber}</dd>
+              </div>
             ) : null}
-          </div>
+            {ctx.workspaceCase.contractorInvoiceAmount != null ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Amount</dt>
+                <dd className="font-medium tabular-nums">
+                  ${ctx.workspaceCase.contractorInvoiceAmount.toFixed(2)}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
         ) : null}
 
         {invoiceAttachments.length === 0 ? (
           <p className="text-muted-foreground rounded-lg border border-dashed bg-background px-3 py-4 text-center text-xs">
-            No invoice attached yet.
+            No invoice file attached yet — awaiting contractor or admin upload.
           </p>
         ) : (
           <div className="rounded-lg border bg-background p-3">
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
-              Uploaded invoice
+              Invoice file
             </p>
             <InvoiceAttachmentGallery
               attachments={invoiceAttachments}

@@ -46,7 +46,7 @@ export function PropertyMaintenanceJobPanel({
 }) {
   const { user } = useAuth();
   const { apiConnected, refresh } = useAgentData();
-  const { workspaceCase, liveMapped, syncing, attachments, contractors, refresh: refreshCase } = useMaintenanceCaseLiveSync(
+  const { workspaceCase, liveMapped, syncing, attachments, contractors, refresh: refreshCase, maintenanceReminders, workflowRequest, quotations } = useMaintenanceCaseLiveSync(
     item,
     property,
     apiConnected,
@@ -93,6 +93,9 @@ export function PropertyMaintenanceJobPanel({
       onCaseUpdated={onCaseUpdated}
       apiConnected={apiConnected}
       syncing={syncing && apiConnected}
+      maintenanceReminders={maintenanceReminders}
+      workflowRequest={workflowRequest}
+      quotations={quotations}
     />
   );
 }

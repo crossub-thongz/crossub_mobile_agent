@@ -8,28 +8,57 @@ import {
   type MappedMaintenance,
 } from '@/lib/data/map-maintenance';
 import { mergeMaintenanceCaseForLiveSync } from '@/lib/maintenance/merge-maintenance-case';
+import {
+  getContractorRfqReminderUiState,
+  shouldStopRfqReminderLoop,
+} from '@/lib/maintenance/maintenance-rfq-reminder.util';
 
 export type MaintenanceCaseSnapshot = {
   mapped: MappedMaintenance;
   remindersSent: number;
   nextReminderDueAt: string | null;
+  maintenanceReminders: ApiMaintenanceState['maintenanceReminders'];
+  workflowRequest: ApiMaintenanceState['maintenanceRequests'][number] | null;
+  quotations: ApiMaintenanceState['quotations'];
   attachments: NonNullable<ApiMaintenanceState['maintenanceAttachments']>;
   contractors: ApiMaintenanceState['contractors'];
 };
 
 export function remindersForCase(
   state: ApiMaintenanceState,
-  requestId: string,
+  request: ApiMaintenanceState['maintenanceRequests'][number],
 ): { sent: number; nextDueAt: string | null } {
   const rows = state.maintenanceReminders.filter(
-    (r) => r.maintenanceRequestId === requestId,
+    (r) => r.maintenanceRequestId === request.id && r.type === 'reminder',
   );
-  const sent = rows.filter((r) => r.type === 'reminder').length;
-  const upcoming = rows
-    .map((r) => r.dueAt)
-    .filter((d) => new Date(d).getTime() > Date.now())
-    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-  return { sent, nextDueAt: upcoming[0] ?? null };
+  const sent = rows.length;
+
+  const requestQuotations = state.quotations.filter((q) => q.maintenanceRequestId === request.id);
+  if (shouldStopRfqReminderLoop(request, requestQuotations)) {
+    return { sent, nextDueAt: null };
+  }
+
+  const invitedIds = request.invitedContractorIds ?? [];
+  let earliestNext: number | null = null;
+  const now = new Date();
+  for (const contractorId of invitedIds) {
+    const ui = getContractorRfqReminderUiState({
+      contractorId,
+      request,
+      reminders: state.maintenanceReminders,
+      quotations: requestQuotations,
+      now,
+    });
+    if (ui.responded || ui.remindersSent >= ui.maxReminders) continue;
+    if (earliestNext == null || ui.nextDueAtMs < earliestNext) {
+      earliestNext = ui.nextDueAtMs;
+    }
+  }
+
+  return {
+    sent,
+    nextDueAt: earliestNext != null ? new Date(earliestNext).toISOString() : null,
+  };
 }
 
 /** Load one maintenance case — Prisma row merged with the live workflow board. */
@@ -68,11 +97,19 @@ export async function fetchMaintenanceCase(
     mapped.propertyAddress = req.address || mapped.propertyAddress;
   }
 
-  const { sent, nextDueAt } = remindersForCase(state, caseId);
+  const workflowRequest = workflowReq ?? req;
+  const { sent, nextDueAt } = remindersForCase(state, workflowRequest);
+  const caseReminders = state.maintenanceReminders.filter(
+    (r) => r.maintenanceRequestId === caseId,
+  );
+
   return {
     mapped,
     remindersSent: sent,
     nextReminderDueAt: nextDueAt,
+    maintenanceReminders: caseReminders,
+    workflowRequest,
+    quotations: state.quotations.filter((q) => q.maintenanceRequestId === caseId),
     attachments: state.maintenanceAttachments ?? [],
     contractors: state.contractors ?? [],
   };

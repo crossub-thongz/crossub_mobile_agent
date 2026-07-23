@@ -36,6 +36,7 @@ export interface ApiQuotation {
   submittedAt: string;
   status: 'submitted' | 'approved' | 'declined';
   declineReason?: string;
+  declinedBy?: 'contractor' | 'admin' | 'agent';
   lineItems?: QuotationLineItem[];
   comments?: string;
 }
@@ -119,6 +120,32 @@ export interface ApiMaintenanceRequest {
   buildingManager?: ApiMaintenanceParty;
   strataContact?: ApiMaintenanceParty;
   timeline: { status: ApiMaintenanceStatus; enteredAt: string; exitedAt?: string }[];
+  rfqReminderRound?: number;
+  rfqRoundStartedAt?: string;
+  rfqExcludedContractorIds?: string[];
+  contractorRfqResponses?: Array<{
+    contractorId: string;
+    action: 'accept' | 'decline' | 'request_more_pictures';
+    at: string;
+    declineReason?: string;
+    message?: string;
+  }>;
+  contractorEvidenceRequests?: Array<{
+    id: string;
+    contractorId: string;
+    message: string;
+    requestedAt: string;
+    status: 'pending' | 'fulfilled';
+    fulfilledAt?: string;
+    fulfilledBy?: ApiMaintenanceUserRole;
+    fulfillmentNote?: string;
+  }>;
+  quotationApprovalRoundStartedAt?: string;
+  quotationApprovalReminderRound?: number;
+  contractorInvoiceNumber?: string;
+  contractorInvoiceAmount?: number;
+  contractorInvoiceDate?: string;
+  invoiceEmailedToAgentAt?: string;
 }
 
 export interface ApiMaintenanceAuditLogEntry {
@@ -163,8 +190,13 @@ export interface ApiMaintenanceState {
   maintenanceReminders: {
     id: string;
     maintenanceRequestId: string;
+    status?: ApiMaintenanceStatus;
     type: 'reminder' | 'escalation';
     dueAt: string;
+    sentAt?: string;
+    contractorId?: string;
+    rfqRound?: number;
+    quotationApprovalRound?: number;
   }[];
   lastMaintenanceError: string | null;
 }

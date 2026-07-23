@@ -37,6 +37,9 @@ export interface MaintenanceWorkspaceCase {
   completionEvidenceUploaded?: boolean;
   tenantApprovalReceived?: boolean;
   invoiceUploaded?: boolean;
+  contractorInvoiceNumber?: string;
+  contractorInvoiceAmount?: number;
+  contractorInvoiceDate?: string;
   tenant?: MaintenanceWorkspaceParty;
   agent?: MaintenanceWorkspaceParty;
   buildingName?: string | null;

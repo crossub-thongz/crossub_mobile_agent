@@ -41,6 +41,14 @@ import {
 import { maintenanceContractorSelectionKey } from '@/lib/maintenance/maintenance-contractor-key';
 import type { Property } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
+import { MaintenanceContractorRfqReminderCountdown } from '@/components/maintenance/maintenance-contractor-rfq-reminder-countdown';
+import { MaintenanceQuotationApprovalReminderCountdown } from '@/components/maintenance/maintenance-quotation-approval-reminder-countdown';
+import { MaintenanceContractorEvidenceRequestsPanel } from '@/components/maintenance/maintenance-contractor-evidence-requests-panel';
+import type {
+  ApiMaintenanceRequest,
+  ApiMaintenanceState,
+  ApiQuotation,
+} from '@/lib/crossub-api/types';
 
 function reviewForContractor(
   reviews: QuotationReviewRecord[] | undefined,
@@ -92,6 +100,8 @@ function ContractorQuoteCollapsible({
   canReview,
   onToggle,
   onCaseUpdated,
+  workflowRequest,
+  maintenanceReminders,
 }: {
   contractorName: string;
   contractorId: string;
@@ -103,6 +113,8 @@ function ContractorQuoteCollapsible({
   canReview: boolean;
   onToggle: () => void;
   onCaseUpdated?: () => Promise<void>;
+  workflowRequest?: ApiMaintenanceRequest | null;
+  maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
 }) {
   const [viewingPreviousId, setViewingPreviousId] = useState<string | null>(null);
   const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, submitted);
@@ -179,6 +191,15 @@ function ContractorQuoteCollapsible({
         <span className="min-w-0">
           <p className="truncate text-sm font-semibold">{contractorName}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">{statusLabel}</p>
+          {!submitted && workflowRequest ? (
+            <MaintenanceContractorRfqReminderCountdown
+              contractorId={contractorId}
+              request={workflowRequest}
+              reminders={maintenanceReminders ?? []}
+              quotations={quotations}
+              className="mt-1"
+            />
+          ) : null}
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {requotedAwaitingAgent ? (
@@ -282,17 +303,23 @@ export function MaintenanceGetQuotePanel({
   contractors = [],
   onCaseUpdated,
   apiConnected = false,
+  maintenanceReminders = [],
+  workflowRequest = null,
+  quotations: quotationsProp = [],
 }: {
   ctx: MaintenanceWorkflowContext;
   property?: Property;
   contractors?: Array<{ id: string; name: string }>;
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
+  maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
+  workflowRequest?: ApiMaintenanceRequest | null;
+  quotations?: ApiQuotation[];
 }) {
   const [suggestions, setSuggestions] = useState<MaintenanceContractorSuggestion[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
-  const quotes = getMaintenanceQuotationsForCase(ctx.workspaceCase);
+  const quotes = quotationsProp.length > 0 ? quotationsProp : getMaintenanceQuotationsForCase(ctx.workspaceCase);
   const invitedIds = useMemo(() => {
     const resolved = resolveRfqContractorIds({
       requestId: ctx.workspaceCase.id,
@@ -380,11 +407,27 @@ export function MaintenanceGetQuotePanel({
 
   return (
     <div className="space-y-4">
+      {workflowRequest ? (
+        <MaintenanceContractorEvidenceRequestsPanel
+          request={workflowRequest}
+          contractors={contractors}
+          onCaseUpdated={onCaseUpdated}
+        />
+      ) : null}
       <section className="rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Repair quotations</p>
         <p className="text-muted-foreground mt-1 text-xs">
           Quotations are entered in the admin portal. Expand a contractor to approve, requote, decline, or send emails.
+          Reminders are sent every 4 hours (up to 3 per contractor) until they respond; if none reply, the system auto-reselects 3 new contractors.
         </p>
+        {workflowRequest?.status === 'pending_approval' ? (
+          <MaintenanceQuotationApprovalReminderCountdown
+            request={workflowRequest}
+            reminders={maintenanceReminders}
+            quotations={quotes}
+            className="mt-2"
+          />
+        ) : null}
 
         {invitedIds.length === 0 ? (
           <p className="text-muted-foreground mt-3 text-xs">
@@ -415,6 +458,8 @@ export function MaintenanceGetQuotePanel({
                   canReview={canReview}
                   onToggle={() => toggleExpanded(contractorId)}
                   onCaseUpdated={onCaseUpdated}
+                  workflowRequest={workflowRequest}
+                  maintenanceReminders={maintenanceReminders}
                 />
               );
             })}

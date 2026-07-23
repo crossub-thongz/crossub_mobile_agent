@@ -35,6 +35,9 @@ function StepContent({
   contractors = [],
   onCaseUpdated,
   apiConnected,
+  maintenanceReminders = [],
+  workflowRequest,
+  quotations = [],
 }: {
   stepId: MaintenanceAgentStep;
   ctx: MaintenanceWorkflowContext;
@@ -43,6 +46,9 @@ function StepContent({
   contractors?: Array<{ id: string; name: string }>;
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
+  maintenanceReminders?: import('@/lib/crossub-api/types').ApiMaintenanceState['maintenanceReminders'];
+  workflowRequest?: import('@/lib/crossub-api/types').ApiMaintenanceRequest | null;
+  quotations?: import('@/lib/crossub-api/types').ApiQuotation[];
 }) {
   switch (stepId) {
     case MAINTENANCE_AGENT_STEP.JOB_CREATED:
@@ -65,6 +71,9 @@ function StepContent({
           contractors={contractors}
           onCaseUpdated={onCaseUpdated}
           apiConnected={apiConnected}
+          maintenanceReminders={maintenanceReminders}
+          workflowRequest={workflowRequest}
+          quotations={quotations}
         />
       );
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
@@ -100,6 +109,9 @@ export function MaintenanceAgentWorkflowPanel({
   onCaseUpdated,
   apiConnected = true,
   syncing = false,
+  maintenanceReminders = [],
+  workflowRequest = null,
+  quotations = [],
 }: {
   ctx: MaintenanceWorkflowContext;
   item: MaintenanceRequest;
@@ -109,6 +121,9 @@ export function MaintenanceAgentWorkflowPanel({
   onCaseUpdated?: () => Promise<void>;
   apiConnected?: boolean;
   syncing?: boolean;
+  maintenanceReminders?: import('@/lib/crossub-api/types').ApiMaintenanceState['maintenanceReminders'];
+  workflowRequest?: import('@/lib/crossub-api/types').ApiMaintenanceRequest | null;
+  quotations?: import('@/lib/crossub-api/types').ApiQuotation[];
 }) {
   const workflow = useMemo(() => buildMaintenanceAgentWorkflow(ctx), [ctx]);
   const [viewingStepId, setViewingStepId] = useState<MaintenanceAgentStep>(workflow.liveStepId);
@@ -237,6 +252,9 @@ export function MaintenanceAgentWorkflowPanel({
             contractors={contractors}
             onCaseUpdated={onCaseUpdated}
             apiConnected={apiConnected}
+            maintenanceReminders={maintenanceReminders}
+            workflowRequest={workflowRequest}
+            quotations={quotations}
           />
           <JobCaseStageEmailHistory
             emails={stageEmails}

@@ -1,8 +1,4 @@
 import type { ApiMaintenanceRequest, ApiMaintenanceStatus, QuotationReviewRecord } from '@/lib/crossub-api/types';
-import {
-  unionInvitedContractorIds,
-  unionInvitedContractorSnapshots,
-} from '@/lib/maintenance/resolve-rfq-contractor-ids';
 
 const STATUS_RANK: Record<string, number> = {
   under_review: 1,
@@ -57,14 +53,12 @@ export function mergeMaintenanceCaseForLiveSync(
     responsibility: workflow.responsibility ?? prisma.responsibility,
     assignedContractorId: workflow.assignedContractorId ?? prisma.assignedContractorId,
     assignedContractor: prisma.assignedContractor ?? workflow.assignedContractor,
-    invitedContractorIds: unionInvitedContractorIds(
-      prisma.invitedContractorIds,
-      workflow.invitedContractorIds,
-    ),
-    invitedContractors: unionInvitedContractorSnapshots(
-      prisma.invitedContractors,
-      workflow.invitedContractors,
-    ),
+    invitedContractorIds: workflow.invitedContractorIds?.length
+      ? workflow.invitedContractorIds
+      : prisma.invitedContractorIds,
+    invitedContractors: workflow.invitedContractors?.length
+      ? workflow.invitedContractors
+      : prisma.invitedContractors,
     quotationReviews: mergeQuotationReviews(prisma.quotationReviews, workflow.quotationReviews),
     quotationIds: workflow.quotationIds?.length ? workflow.quotationIds : prisma.quotationIds,
     completionEvidenceUploaded:
@@ -81,5 +75,17 @@ export function mergeMaintenanceCaseForLiveSync(
         : prisma.timeline,
     tenant: prisma.tenant ?? workflow.tenant,
     agent: prisma.agent ?? workflow.agent,
+    rfqReminderRound: workflow.rfqReminderRound ?? prisma.rfqReminderRound,
+    rfqRoundStartedAt: workflow.rfqRoundStartedAt ?? prisma.rfqRoundStartedAt,
+    rfqExcludedContractorIds:
+      workflow.rfqExcludedContractorIds?.length
+        ? workflow.rfqExcludedContractorIds
+        : prisma.rfqExcludedContractorIds,
+    contractorRfqResponses: workflow.contractorRfqResponses?.length
+      ? workflow.contractorRfqResponses
+      : prisma.contractorRfqResponses,
+    contractorEvidenceRequests: workflow.contractorEvidenceRequests?.length
+      ? workflow.contractorEvidenceRequests
+      : prisma.contractorEvidenceRequests,
   };
 }

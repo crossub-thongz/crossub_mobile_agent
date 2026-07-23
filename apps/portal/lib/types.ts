@@ -431,6 +431,16 @@ export interface MaintenanceRequest {
   submittedQuotationId?: string;
   invoiceUploaded?: boolean;
   completionEvidenceUploaded?: boolean;
+  scheduleStepStartedAt?: string;
+  scheduleProposal?: {
+    contractorId: string;
+    availableTimes: string;
+    submittedAt: string;
+    tenantDecision?: 'approved' | 'declined';
+    tenantDecidedAt?: string;
+    tenantDeclineReason?: string;
+  };
+  scheduleEscalated?: boolean;
   /** Recorded when the case was deleted/cancelled. */
   deleteReason?: string;
   deletedAt?: string;

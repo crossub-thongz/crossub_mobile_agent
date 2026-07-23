@@ -178,6 +178,9 @@ export function buildWorkspaceCaseFromApi(
     completionEvidenceUploaded: req.completionEvidenceUploaded,
     tenantApprovalReceived: req.tenantApprovalReceived,
     invoiceUploaded: req.invoiceUploaded,
+    contractorInvoiceNumber: req.contractorInvoiceNumber,
+    contractorInvoiceAmount: req.contractorInvoiceAmount,
+    contractorInvoiceDate: req.contractorInvoiceDate,
     tenant: resolveWorkspaceTenant(req.tenant, property),
     agent: agent
       ? {
