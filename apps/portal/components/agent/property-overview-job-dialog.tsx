@@ -1,5 +1,6 @@
 'use client';
 
+import { RentReconciliationCaseDialog } from '@/components/accounting/rent-reconciliation-case-dialog';
 import {
   PropertyLeasingCaseWorkflowDialog,
 } from '@/components/agent/property-leasing-case-workflow-dialog';
@@ -160,6 +161,20 @@ export function PropertyOverviewJobDialog({
   }
 
   if (job.kind === 'accounting') {
+    if (job.id.startsWith('recon-')) {
+      return (
+        <RentReconciliationCaseDialog
+          open={open}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) onClose();
+          }}
+          propertyId={propertyId}
+          property={property}
+          fallbackAccounting={accounting}
+        />
+      );
+    }
+
     return (
       <RentChasingArrearsDialog
         open={open}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FilePlus2, TrendingDown, TrendingUp } from 'lucide-react';
+import { FilePlus2, Receipt, TrendingDown, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -12,6 +12,8 @@ import {
   StatementsListTable,
   sumOutstandingBills,
 } from '@/components/accounting/accounting-portfolio-tables';
+import { RentReconciliationCaseDialog } from '@/components/accounting/rent-reconciliation-case-dialog';
+import { RentReconciliationPropertyPickerDialog } from '@/components/accounting/rent-reconciliation-property-picker-dialog';
 import { AccountingSettingsSection } from '@/components/accounting/accounting-settings-section';
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
 import { InvoiceListTable } from '@/components/accounting/invoice-list-table';
@@ -37,7 +39,7 @@ import {
   fetchInvoices,
   type AgentInvoiceListItem,
 } from '@/lib/crossub-api/agent-client';
-import { accountingPortfolioToJobRow } from '@/lib/portfolio-case-dialog';
+import { accountingPortfolioToJobRow, accountingPortfolioJobId } from '@/lib/portfolio-case-dialog';
 import { formatCurrency } from '@/lib/utils';
 
 export default function AccountingPage() {
@@ -59,6 +61,9 @@ export default function AccountingPage() {
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
+  const [reconPickerOpen, setReconPickerOpen] = useState(false);
+  const [reconPropertyId, setReconPropertyId] = useState<string | null>(null);
+  const [reconDialogOpen, setReconDialogOpen] = useState(false);
 
   useEffect(() => {
     const next = parseAccountingSection(searchParams.get('section'), {
@@ -96,14 +101,15 @@ export default function AccountingPage() {
   useEffect(() => {
     const propertyId = searchParams.get('propertyId');
     if (!propertyId || section !== 'rent_reconciliation') return;
-    const item = accounting.find((row) => row.propertyId === propertyId);
-    if (!item) return;
-    openJob(accountingPortfolioToJobRow(item));
+    const property = properties.find((row) => row.id === propertyId);
+    if (!property) return;
+    setReconPropertyId(propertyId);
+    setReconDialogOpen(true);
     const params = new URLSearchParams(searchParams.toString());
     params.delete('propertyId');
     const query = params.toString();
     window.history.replaceState(null, '', query ? `${ROUTES.ACCOUNTING}?${query}` : ROUTES.ACCOUNTING);
-  }, [accounting, openJob, searchParams, section]);
+  }, [properties, searchParams, section]);
 
   const openAccountingCase = useCallback(
     (item: (typeof accounting)[number]) => {
@@ -111,6 +117,30 @@ export default function AccountingPage() {
     },
     [openJob],
   );
+
+  const openRentReconciliation = useCallback((item: (typeof accounting)[number]) => {
+    setReconPropertyId(item.propertyId);
+    setReconDialogOpen(true);
+  }, []);
+
+  const reconProperty = useMemo(
+    () => (reconPropertyId ? properties.find((row) => row.id === reconPropertyId) ?? null : null),
+    [properties, reconPropertyId],
+  );
+
+  const reconFallbackAccounting = useMemo(
+    () =>
+      reconPropertyId
+        ? accounting.find((row) => row.propertyId === reconPropertyId) ?? null
+        : null,
+    [accounting, reconPropertyId],
+  );
+
+  const reconSelectedId = useMemo(() => {
+    if (!reconDialogOpen || !reconPropertyId) return selectedId;
+    const item = accounting.find((row) => row.propertyId === reconPropertyId);
+    return item ? accountingPortfolioJobId(item) : null;
+  }, [accounting, reconDialogOpen, reconPropertyId, selectedId]);
 
   const arrearsItems = useMemo(() => filterArrearsItems(accounting), [accounting]);
   const totalIncome = accounting.reduce((s, a) => s + a.rentPaidYtd, 0);
@@ -145,6 +175,21 @@ export default function AccountingPage() {
 
         {section === 'rent_reconciliation' ? (
           <>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-muted-foreground text-sm">
+                Record rent received and update property ledgers.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                disabled={properties.length === 0}
+                onClick={() => setReconPickerOpen(true)}
+              >
+                <Receipt className="mr-1.5 size-4" />
+                Create rent reconciliation
+              </Button>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border bg-gradient-to-br from-primary/10 to-card p-4">
                 <div className="flex items-center gap-2">
@@ -178,8 +223,8 @@ export default function AccountingPage() {
             ) : (
               <RentReconciliationListTable
                 items={accounting}
-                selectedId={selectedId}
-                onItemClick={openAccountingCase}
+                selectedId={reconSelectedId}
+                onItemClick={openRentReconciliation}
               />
             )}
 
@@ -327,6 +372,29 @@ export default function AccountingPage() {
         onOpenChange={setPreviewOpen}
         invoiceId={previewInvoiceId}
       />
+
+      <RentReconciliationPropertyPickerDialog
+        open={reconPickerOpen}
+        onOpenChange={setReconPickerOpen}
+        properties={properties}
+        onSelect={(propertyId) => {
+          setReconPropertyId(propertyId);
+          setReconDialogOpen(true);
+        }}
+      />
+
+      {reconProperty ? (
+        <RentReconciliationCaseDialog
+          open={reconDialogOpen}
+          onOpenChange={(open) => {
+            setReconDialogOpen(open);
+            if (!open) setReconPropertyId(null);
+          }}
+          propertyId={reconProperty.id}
+          property={reconProperty}
+          fallbackAccounting={reconFallbackAccounting}
+        />
+      ) : null}
     </AgentShell>
   );
 }

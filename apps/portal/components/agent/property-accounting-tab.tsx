@@ -4,14 +4,13 @@ import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
-import { RentReconciliationDialog } from '@/components/accounting/rent-reconciliation-dialog';
+import { RentReconciliationCaseDialog } from '@/components/accounting/rent-reconciliation-case-dialog';
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-table';
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { RentChasingArrearsDialog } from '@/components/agent/rent-chasing-arrears-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
-import { buildRentReconciliationProperty } from '@/lib/rent-reconciliation';
 import { accountingJobRows, type PropertyJobRow } from '@/lib/property-job-rows';
 import {
   hasPropertyAccountingData,
@@ -189,24 +188,6 @@ export function PropertyAccountingTab({
     return accountingJobRows(enriched);
   }, [fallbackAccounting, detail?.overview?.rentPaidUntilDate]);
 
-  const rentReconProperty = useMemo(
-    () =>
-      buildRentReconciliationProperty({
-        property,
-        accounting: portalAccounting,
-        financial: portalFinancial,
-        fallbackAccounting: fallbackAccounting ?? undefined,
-        rentPaidUntil: detail?.overview?.rentPaidUntilDate ?? property.rentPaidUntil,
-      }),
-    [
-      property,
-      portalAccounting,
-      portalFinancial,
-      fallbackAccounting,
-      detail?.overview?.rentPaidUntilDate,
-    ],
-  );
-
   const handleCustomAction = (actionId: PropertyWorkflowActionId) => {
     if (actionId === 'create_rent_reconciliation') {
       setRentReconOpen(true);
@@ -258,11 +239,12 @@ export function PropertyAccountingTab({
         }}
       />
 
-      <RentReconciliationDialog
+      <RentReconciliationCaseDialog
         open={rentReconOpen}
         onOpenChange={setRentReconOpen}
         propertyId={propertyId}
-        property={rentReconProperty}
+        property={property}
+        fallbackAccounting={fallbackAccounting}
         onSubmitted={() => {
           void refreshPortalDetail();
           void onRefresh?.();
