@@ -177,6 +177,7 @@ export function buildWorkspaceCaseFromApi(
     quotationReviews: req.quotationReviews,
     quotationIds: req.quotationIds ?? [],
     completionEvidenceUploaded: req.completionEvidenceUploaded,
+    agentApprovalReceived: req.agentApprovalReceived,
     tenantApprovalReceived: req.tenantApprovalReceived,
     invoiceUploaded: req.invoiceUploaded,
     contractorInvoiceNumber: req.contractorInvoiceNumber,

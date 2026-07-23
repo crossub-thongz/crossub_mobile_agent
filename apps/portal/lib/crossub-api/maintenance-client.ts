@@ -86,6 +86,7 @@ export async function transitionMaintenanceCase(
   toStatus: MaintenanceWorkflowStatus,
   extras?: {
     completionEvidenceUploaded?: boolean;
+    agentApprovalReceived?: boolean;
     tenantApprovalReceived?: boolean;
     invoiceUploaded?: boolean;
   },

@@ -65,6 +65,8 @@ export function mergeMaintenanceCaseForLiveSync(
     completionEvidenceUploaded:
       Boolean(prisma.completionEvidenceUploaded) ||
       Boolean(workflow.completionEvidenceUploaded),
+    agentApprovalReceived:
+      Boolean(prisma.agentApprovalReceived) || Boolean(workflow.agentApprovalReceived),
     tenantApprovalReceived:
       Boolean(prisma.tenantApprovalReceived) || Boolean(workflow.tenantApprovalReceived),
     invoiceUploaded: Boolean(prisma.invoiceUploaded) || Boolean(workflow.invoiceUploaded),

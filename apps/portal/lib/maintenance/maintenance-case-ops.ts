@@ -76,6 +76,7 @@ export async function recordTenantAcknowledgementAndClose(requestId: string) {
 export async function confirmMaintenanceGatesComplete(requestId: string) {
   await transitionMaintenanceCase(requestId, 'completed', {
     completionEvidenceUploaded: true,
+    agentApprovalReceived: true,
     tenantApprovalReceived: true,
     invoiceUploaded: true,
   });
@@ -85,6 +86,7 @@ export async function confirmMaintenanceGatesComplete(requestId: string) {
 export async function closeMaintenanceCase(requestId: string) {
   await transitionMaintenanceCase(requestId, 'closed', {
     completionEvidenceUploaded: true,
+    agentApprovalReceived: true,
     tenantApprovalReceived: true,
     invoiceUploaded: true,
   });

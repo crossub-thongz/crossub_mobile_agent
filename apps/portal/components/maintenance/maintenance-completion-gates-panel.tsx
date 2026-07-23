@@ -84,7 +84,9 @@ export function MaintenanceCompletionGatesPanel({
   const isCompleted = status === 'completed';
   const canEdit = apiConnected && !isClosed && (isInProgress || isCompleted);
 
-  const evidenceApproved = Boolean(ctx.workspaceCase.completionEvidenceUploaded);
+  const hasCompletionEvidence =
+    evidenceAttachments.length > 0 || Boolean(ctx.workspaceCase.completionEvidenceUploaded);
+  const agentApproved = Boolean(ctx.workspaceCase.agentApprovalReceived);
   const tenantSignOff = Boolean(ctx.workspaceCase.tenantApprovalReceived);
 
   const evidenceAttachments = useMemo(
@@ -120,15 +122,19 @@ export function MaintenanceCompletionGatesPanel({
   };
 
   const allGatesCleared =
-    evidenceApproved && tenantSignOff && invoiceUploaded && responsibility !== 'tenant';
+    hasCompletionEvidence &&
+    agentApproved &&
+    tenantSignOff &&
+    invoiceUploaded &&
+    responsibility !== 'tenant';
 
   return (
     <div className="space-y-4">
-      {/* Completion Evidence Uploaded — agents view + approve only (contractor/admin upload). */}
+      {/* Completion evidence — view uploads; agent approves via checkbox below. */}
       <section className="space-y-3 rounded-xl border bg-card p-4">
-        <SectionHeader title="Completion Evidence Uploaded" checked={evidenceApproved} />
+        <SectionHeader title="Completion evidence" checked={hasCompletionEvidence} />
         <p className="text-muted-foreground text-xs">
-          View completion photos uploaded by the contractor, then approve when ready.
+          View completion photos uploaded by the contractor.
         </p>
 
         {canEdit ? (
@@ -136,18 +142,16 @@ export function MaintenanceCompletionGatesPanel({
             <input
               type="checkbox"
               className="rounded"
-              checked={evidenceApproved}
+              checked={agentApproved}
               disabled={busy}
               onChange={(e) =>
                 void runGateUpdate(
                   () => setMaintenanceCompletionEvidence(requestId, e.target.checked),
-                  e.target.checked
-                    ? 'Completion evidence approved'
-                    : 'Completion evidence approval cleared',
+                  e.target.checked ? 'Agent approval recorded' : 'Agent approval cleared',
                 )
               }
             />
-            <span className="font-medium">Approve completion evidence</span>
+            <span className="font-medium">Agent approval received</span>
           </label>
         ) : null}
 

@@ -561,8 +561,13 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
       },
       {
         id: 'completion_evidence',
-        label: 'Completion Evidence Uploaded',
+        label: 'Completion evidence uploaded',
         done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
+      },
+      {
+        id: 'agent_approval',
+        label: 'Agent approval received',
+        done: Boolean(ctx.workspaceCase.agentApprovalReceived),
       },
       {
         id: 'tenant_signoff',
@@ -616,8 +621,13 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
     },
     {
       id: 'completion_evidence',
-      label: 'Completion Evidence Uploaded',
+      label: 'Completion evidence uploaded',
       done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
+    },
+    {
+      id: 'agent_approval',
+      label: 'Agent approval received',
+      done: Boolean(ctx.workspaceCase.agentApprovalReceived),
     },
     {
       id: 'tenant_signoff',
@@ -665,8 +675,13 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
     return [
       {
         id: 'completion_evidence',
-        label: 'Completion Evidence Uploaded',
+        label: 'Completion evidence uploaded',
         done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
+      },
+      {
+        id: 'agent_approval',
+        label: 'Agent approval received',
+        done: Boolean(ctx.workspaceCase.agentApprovalReceived),
       },
       {
         id: 'tenant_signoff',
@@ -689,8 +704,13 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
   return [
     {
       id: 'completion_photos',
-      label: 'Completion Evidence Uploaded',
+      label: 'Completion evidence uploaded',
       done: Boolean(ctx.workspaceCase.completionEvidenceUploaded),
+    },
+    {
+      id: 'agent_approval',
+      label: 'Agent approval received',
+      done: Boolean(ctx.workspaceCase.agentApprovalReceived),
     },
     {
       id: 'tenant_signoff',

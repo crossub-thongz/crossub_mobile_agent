@@ -122,6 +122,7 @@ export interface ApiMaintenanceRequest {
   quotationReviews?: QuotationReviewRecord[];
   quotationIds: string[];
   completionEvidenceUploaded?: boolean;
+  agentApprovalReceived?: boolean;
   tenantApprovalReceived?: boolean;
   invoiceUploaded?: boolean;
   deleteReason?: string;

@@ -35,6 +35,7 @@ export interface MaintenanceWorkspaceCase {
   quotationReviews?: QuotationReviewRecord[];
   quotationIds: string[];
   completionEvidenceUploaded?: boolean;
+  agentApprovalReceived?: boolean;
   tenantApprovalReceived?: boolean;
   invoiceUploaded?: boolean;
   contractorInvoiceNumber?: string;
