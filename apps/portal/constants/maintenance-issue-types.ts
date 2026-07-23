@@ -66,3 +66,17 @@ export function isMaintenanceIssueTypeValid(selection: string, otherDetail: stri
   if (selection === MAINTENANCE_ISSUE_TYPE_OTHER) return otherDetail.trim().length > 0;
   return isKnownMaintenanceIssueType(selection);
 }
+
+/** Issue types where urgent can be set immediately (tenant + agent). */
+export const TENANT_URGENT_MAINTENANCE_ISSUE_TYPES = [
+  'Flooding and Water Damages',
+  'Locksmith',
+  'Electrical Services',
+  'Hot Water System Repair',
+] as const satisfies readonly MaintenanceIssueType[];
+
+const TENANT_URGENT_ISSUE_TYPE_SET = new Set<string>(TENANT_URGENT_MAINTENANCE_ISSUE_TYPES);
+
+export function isTenantUrgentEligibleMaintenanceIssueType(selection: string): boolean {
+  return TENANT_URGENT_ISSUE_TYPE_SET.has(selection);
+}

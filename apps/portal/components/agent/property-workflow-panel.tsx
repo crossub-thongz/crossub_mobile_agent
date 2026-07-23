@@ -74,6 +74,7 @@ import { TERMINATION_NOTICE_GROUND, TERMINATION_NOTICE_GROUND_OPTIONS, type Term
 import {
   formatMaintenanceIssueType,
   isMaintenanceIssueTypeValid,
+  isTenantUrgentEligibleMaintenanceIssueType,
 } from '@/constants/maintenance-issue-types';
 import { MaintenanceNewJobFormFields, type MaintenanceJobPriority } from '@/components/maintenance/maintenance-new-job-form-fields';
 import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
@@ -343,6 +344,7 @@ export function PropertyWorkflowCreateDialog({
   const [issueTypeOther, setIssueTypeOther] = useState('');
   const [description, setDescription] = useState('');
   const [maintPriority, setMaintPriority] = useState<MaintenanceJobPriority>('normal');
+  const [maintUrgentReason, setMaintUrgentReason] = useState('');
   const [maintTenantName, setMaintTenantName] = useState('');
   const [maintTenantEmail, setMaintTenantEmail] = useState('');
   const [maintTenantPhone, setMaintTenantPhone] = useState('');
@@ -428,6 +430,7 @@ export function PropertyWorkflowCreateDialog({
     setIssueTypeOther('');
     setDescription('');
     setMaintPriority('normal');
+    setMaintUrgentReason('');
     setMaintTenantName(maintenance.tenantName);
     setMaintTenantEmail(maintenance.tenantEmail);
     setMaintTenantPhone(maintenance.tenantPhone);
@@ -772,11 +775,19 @@ export function PropertyWorkflowCreateDialog({
           throw new Error('Issue type is required');
         }
         if (description.trim().length < 5) throw new Error('Description is required');
+        const urgentEligible = isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection);
+        const wantsUrgent = maintPriority === 'urgent';
+        if (wantsUrgent && !urgentEligible && maintUrgentReason.trim().length < 5) {
+          throw new Error('Please provide a reason for the urgent request');
+        }
         const result = await createAgentMaintenanceRequest(propertyId, {
           issueType: resolvedIssueType,
           description: description.trim(),
           address: maintPrefill.address,
-          urgent: maintPriority === 'urgent',
+          urgent: wantsUrgent,
+          ...(wantsUrgent && !urgentEligible
+            ? { urgentReason: maintUrgentReason.trim() }
+            : {}),
           ...(maintMediaUrls.length
             ? { photos: [...new Set(maintMediaUrls)] }
             : {}),
@@ -788,7 +799,11 @@ export function PropertyWorkflowCreateDialog({
               }
             : undefined,
         });
-        toast.success('Maintenance job logged');
+        toast.success(
+          wantsUrgent && !urgentEligible
+            ? 'Maintenance job logged — urgent request sent for admin review'
+            : 'Maintenance job logged',
+        );
         await refresh();
         onSuccess({ kind: 'maintenance', id: result.id });
         return;
@@ -1484,12 +1499,23 @@ export function PropertyWorkflowCreateDialog({
             propertyId={propertyId}
             issueTypeSelection={issueTypeSelection}
             issueTypeOther={issueTypeOther}
-            onIssueTypeSelectionChange={setIssueTypeSelection}
+            onIssueTypeSelectionChange={(value) => {
+              setIssueTypeSelection(value);
+              if (!isTenantUrgentEligibleMaintenanceIssueType(value)) {
+                setMaintPriority('normal');
+                setMaintUrgentReason('');
+              }
+            }}
             onIssueTypeOtherChange={setIssueTypeOther}
             description={description}
             onDescriptionChange={setDescription}
             priority={maintPriority}
-            onPriorityChange={setMaintPriority}
+            onPriorityChange={(value) => {
+              setMaintPriority(value);
+              if (value === 'normal') setMaintUrgentReason('');
+            }}
+            urgentReason={maintUrgentReason}
+            onUrgentReasonChange={setMaintUrgentReason}
             tenantName={maintTenantName}
             onTenantNameChange={setMaintTenantName}
             tenantEmail={maintTenantEmail}
@@ -1526,7 +1552,10 @@ export function PropertyWorkflowCreateDialog({
                 (actionId === 'start_rent_review' && prefillLoading) ||
                 (actionId === 'start_maintenance' &&
                   (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
-                    !description.trim()))
+                    !description.trim() ||
+                    (maintPriority === 'urgent' &&
+                      !isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection) &&
+                      maintUrgentReason.trim().length < 5)))
               }
               onClick={() => void handleSubmit()}
             >

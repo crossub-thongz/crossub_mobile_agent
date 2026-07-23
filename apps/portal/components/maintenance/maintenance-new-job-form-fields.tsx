@@ -5,8 +5,10 @@ import { AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import { MaintenanceIssueTypeField } from '@/components/maintenance/maintenance-issue-type-field';
 import { MaintenanceMediaUploadField } from '@/components/maintenance/maintenance-media-upload-field';
+import { isTenantUrgentEligibleMaintenanceIssueType } from '@/constants/maintenance-issue-types';
 import { cn } from '@/lib/utils';
 
 export type MaintenanceJobPriority = 'urgent' | 'normal';
@@ -22,6 +24,8 @@ export function MaintenanceNewJobFormFields({
   onDescriptionChange,
   priority,
   onPriorityChange,
+  urgentReason,
+  onUrgentReasonChange,
   tenantName,
   onTenantNameChange,
   tenantEmail,
@@ -42,6 +46,8 @@ export function MaintenanceNewJobFormFields({
   onDescriptionChange: (value: string) => void;
   priority: MaintenanceJobPriority;
   onPriorityChange: (value: MaintenanceJobPriority) => void;
+  urgentReason: string;
+  onUrgentReasonChange: (value: string) => void;
   tenantName: string;
   onTenantNameChange: (value: string) => void;
   tenantEmail: string;
@@ -54,6 +60,12 @@ export function MaintenanceNewJobFormFields({
 }) {
   const tenantIncomplete =
     !(tenantName.trim() && tenantEmail.trim() && tenantPhone.trim());
+  const urgentEligible = isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection);
+  const priorityOptions: MaintenanceJobPriority[] = urgentEligible
+    ? ['urgent', 'normal']
+    : ['normal'];
+  const showUrgentReason =
+    !urgentEligible && issueTypeSelection && priority === 'urgent';
 
   return (
     <div className="space-y-4">
@@ -98,8 +110,8 @@ export function MaintenanceNewJobFormFields({
 
       <div>
         <Label className="text-xs">Urgency</Label>
-        <div className="mt-2 flex gap-2">
-          {(['urgent', 'normal'] as MaintenanceJobPriority[]).map((level) => (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {priorityOptions.map((level) => (
             <button
               key={level}
               type="button"
@@ -118,7 +130,40 @@ export function MaintenanceNewJobFormFields({
               {level}
             </button>
           ))}
+          {!urgentEligible && issueTypeSelection ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={priority === 'urgent' ? 'destructive' : 'outline'}
+              disabled={disabled}
+              className="h-8 text-xs"
+              onClick={() => onPriorityChange('urgent')}
+            >
+              Request urgent
+            </Button>
+          ) : null}
         </div>
+        {issueTypeSelection && !urgentEligible ? (
+          <p className="text-muted-foreground mt-1.5 text-[11px] leading-snug">
+            Urgent is immediate for flooding, locksmith, electrical, and hot water repairs.
+            For other issues, use Request urgent and explain why — admin will confirm.
+          </p>
+        ) : null}
+        {showUrgentReason ? (
+          <div className="mt-3 space-y-1.5">
+            <Label htmlFor="property-mj-urgent-reason" className="text-xs">
+              Reason for urgent request *
+            </Label>
+            <Textarea
+              id="property-mj-urgent-reason"
+              value={urgentReason}
+              onChange={(e) => onUrgentReasonChange(e.target.value)}
+              rows={3}
+              placeholder="Why does this need urgent attention?"
+              disabled={disabled}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="rounded-md border bg-background p-3">

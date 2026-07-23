@@ -57,6 +57,7 @@ export type CreateAgentMaintenanceInput = {
   description: string;
   address?: string;
   urgent?: boolean;
+  urgentReason?: string;
   tenant?: { name: string; email?: string; phone?: string };
   photos?: string[];
 };
