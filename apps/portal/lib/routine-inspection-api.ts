@@ -11,11 +11,20 @@ export type CreateRoutineScheduleInput = {
   inspectorName?: string;
 };
 
-type ServerRoutineScheduleView = {
+export type ServerRoutineScheduleView = {
   id: string;
   propertyId: string;
-  currentInspection?: { id: string } | null;
+  flow: 'self' | 'in_person';
+  selfStatus: string | null;
+  currentInspectionId: string | null;
+  currentInspection?: {
+    id: string;
+    status: string;
+    reportUrl: string | null;
+  } | null;
 };
+
+const BASE = '/inspections/routine';
 
 const unwrap = async (
   p: Promise<{ schedule: ServerRoutineScheduleView }>,
@@ -23,5 +32,19 @@ const unwrap = async (
 
 export const routineInspectionApi = {
   create: (input: CreateRoutineScheduleInput) =>
-    unwrap(api.post<{ schedule: ServerRoutineScheduleView }>('/inspections/routine', input)),
+    unwrap(api.post<{ schedule: ServerRoutineScheduleView }>(BASE, input)),
+
+  getByInspection: (inspectionId: string) =>
+    unwrap(api.get<{ schedule: ServerRoutineScheduleView }>(`${BASE}/by-inspection/${inspectionId}`)),
+
+  approveSelf: (scheduleId: string) =>
+    unwrap(api.patch<{ schedule: ServerRoutineScheduleView }>(`${BASE}/${scheduleId}/approve-self`, {})),
+
+  declineSelf: (scheduleId: string, input: { reason: string }) =>
+    unwrap(
+      api.patch<{ schedule: ServerRoutineScheduleView }>(
+        `${BASE}/${scheduleId}/decline-self`,
+        input,
+      ),
+    ),
 };

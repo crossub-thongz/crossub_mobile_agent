@@ -90,17 +90,22 @@ export function InspectionCompareEvidenceSection({
   detail,
   currentLabel = 'Outgoing photo',
   title = 'Before / after evidence',
+  showReferenceIngoing = true,
 }: {
   detail: InspectionDetail | null;
   currentLabel?: string;
   title?: string;
+  showReferenceIngoing?: boolean;
 }) {
   const pairs = useMemo(
     () =>
       detail
-        ? buildOutgoingAreaPhotoPairs(detail.areas, detail.referenceIngoing?.areas)
+        ? buildOutgoingAreaPhotoPairs(
+            detail.areas,
+            showReferenceIngoing ? detail.referenceIngoing?.areas : undefined,
+          )
         : [],
-    [detail],
+    [detail, showReferenceIngoing],
   );
   const visible = pairs.filter(
     (p) => p.ingoingPhotos.length > 0 || p.outgoingPhotos.length > 0,
@@ -120,15 +125,24 @@ export function InspectionCompareEvidenceSection({
       {visible.length === 0 ? (
         <div className="text-muted-foreground flex items-center gap-2 rounded-lg border border-dashed p-4 text-xs">
           <Camera className="size-4 shrink-0" />
-          Latest ingoing photos appear beside current section photos once uploaded.
+          {showReferenceIngoing
+            ? 'Latest ingoing photos appear beside current section photos once uploaded.'
+            : 'Section photos will appear here once the tenant uploads them.'}
         </div>
       ) : (
         <div className="space-y-4">
           {visible.map((pair) => (
             <div key={pair.room} className="space-y-2">
               <p className="text-sm font-semibold">{pair.room}</p>
-              <div className="grid grid-cols-2 gap-3">
-                <PhotoSlot label="Ingoing" photos={pair.ingoingPhotos} />
+              <div
+                className={cn(
+                  'grid gap-3',
+                  showReferenceIngoing ? 'grid-cols-2' : 'grid-cols-1',
+                )}
+              >
+                {showReferenceIngoing ? (
+                  <PhotoSlot label="Ingoing" photos={pair.ingoingPhotos} />
+                ) : null}
                 <PhotoSlot label={currentLabel} photos={pair.outgoingPhotos} />
               </div>
             </div>

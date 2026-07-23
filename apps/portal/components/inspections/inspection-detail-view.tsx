@@ -25,6 +25,7 @@ import {
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { InspectionCompareEvidenceSection } from '@/components/inspections/inspection-compare-evidence-section';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { RoutineSelfInspectionReviewSection } from '@/components/inspections/routine-self-inspection-review-section';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
@@ -81,6 +82,10 @@ import {
 import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sync';
 import { useLivePoll } from '@/lib/use-live-poll';
 import { inspectionsApi } from '@/lib/inspections-api';
+import {
+  routineInspectionApi,
+  type ServerRoutineScheduleView,
+} from '@/lib/routine-inspection-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
@@ -222,10 +227,12 @@ export function InspectionDetailView({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [routineDetail, setRoutineDetail] = useState<InspectionDetail | null>(null);
+  const [routineSchedule, setRoutineSchedule] = useState<ServerRoutineScheduleView | null>(null);
 
   useEffect(() => {
     if (!apiConnected || !insp || insp.type !== 'ROUTINE') {
       setRoutineDetail(null);
+      setRoutineSchedule(null);
       return;
     }
     let cancelled = false;
@@ -236,6 +243,14 @@ export function InspectionDetailView({
       })
       .catch(() => {
         if (!cancelled) setRoutineDetail(null);
+      });
+    void routineInspectionApi
+      .getByInspection(insp.id)
+      .then((schedule) => {
+        if (!cancelled) setRoutineSchedule(schedule);
+      })
+      .catch(() => {
+        if (!cancelled) setRoutineSchedule(null);
       });
     return () => {
       cancelled = true;
@@ -764,11 +779,26 @@ export function InspectionDetailView({
         />
       ) : null}
 
+      {insp.type === 'ROUTINE' && routineSchedule ? (
+        <RoutineSelfInspectionReviewSection
+          schedule={routineSchedule}
+          propertyLabel={insp.propertyAddress}
+          onUpdated={setRoutineSchedule}
+        />
+      ) : null}
+
       {insp.type === 'ROUTINE' && routineDetail ? (
         <InspectionCompareEvidenceSection
           detail={routineDetail}
           currentLabel="Routine"
-          title="Routine vs latest ingoing"
+          title={
+            (routineSchedule?.flow ?? insp.routineMode) === 'self'
+              ? 'Tenant self-inspection photos'
+              : 'Routine vs latest ingoing'
+          }
+          showReferenceIngoing={
+            (routineSchedule?.flow ?? insp.routineMode) !== 'self'
+          }
         />
       ) : null}
 
