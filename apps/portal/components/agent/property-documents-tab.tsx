@@ -23,6 +23,7 @@ import {
   type DocumentChecklistRow,
 } from '@/lib/property-create-document-groups';
 import {
+  clearPropertyPendingUploads,
   peekPropertyPendingUploads,
   removePendingUploadRecord,
   type PendingPropertyUploadRecord,
@@ -434,12 +435,21 @@ export function PropertyDocumentsTab({
             ? 'Property document uploaded'
             : `${succeeded} property documents uploaded`,
         );
-      } else if (succeeded > 0) {
+        return;
+      }
+
+      // Failed create-flow queues used to stay in IndexedDB and re-toast on every
+      // property open. Drop them after one attempt so the Documents tab is usable;
+      // the agent can re-upload manually.
+      await clearPropertyPendingUploads(propertyId);
+      if (succeeded > 0) {
         toast.warning(
-          `Uploaded ${succeeded} document${succeeded === 1 ? '' : 's'}, ${failed} failed — refresh to retry the rest.`,
+          `Uploaded ${succeeded} document${succeeded === 1 ? '' : 's'}; ${failed} failed. Re-upload the rest from this tab.`,
         );
       } else {
-        toast.error('Document uploads failed — refresh this tab to retry.');
+        toast.error(
+          'Document uploads failed. Re-upload them from this Documents tab when ready.',
+        );
       }
     })().finally(() => {
       if (inflightQueueRef.current === propertyId) {
