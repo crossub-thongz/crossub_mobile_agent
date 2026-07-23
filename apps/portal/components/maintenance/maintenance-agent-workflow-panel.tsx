@@ -20,7 +20,6 @@ import {
   buildMaintenanceAgentWorkflow,
   MAINTENANCE_AGENT_STEP,
   MAINTENANCE_AGENT_STEP_LABEL,
-  MAINTENANCE_AGENT_STEP_ORDER,
   MAINTENANCE_AGENT_STEP_TITLE,
   maintenanceEmailRecordsForStep,
   type MaintenanceAgentStep,
@@ -146,30 +145,41 @@ export function MaintenanceAgentWorkflowPanel({
     }
   }, [ctx.item.id, workflow.liveStepId]);
 
+  useEffect(() => {
+    if (!workflow.stepOrder.includes(viewingStepId)) {
+      setViewingStepId(workflow.liveStepId);
+      followLiveStepRef.current = true;
+    }
+  }, [workflow.stepOrder, workflow.liveStepId, viewingStepId]);
+
   const handleStepClick = (stepId: MaintenanceAgentStep) => {
     setViewingStepId(stepId);
     followLiveStepRef.current = stepId === workflow.liveStepId;
   };
 
-  const viewingStep = workflow.steps.find((s) => s.id === viewingStepId) ?? workflow.steps[0];
-  const isLiveStep = viewingStepId === workflow.liveStepId;
+  const viewingStep =
+    workflow.steps.find((s) => s.id === viewingStepId) ??
+    workflow.steps.find((s) => s.id === workflow.liveStepId) ??
+    workflow.steps[0];
+  const resolvedViewingStepId = viewingStep?.id ?? workflow.liveStepId;
+  const isLiveStep = resolvedViewingStepId === workflow.liveStepId;
   const stageEmails = useMemo(
-    () => maintenanceEmailRecordsForStep(ctx, viewingStepId),
-    [ctx, viewingStepId],
+    () => maintenanceEmailRecordsForStep(ctx, resolvedViewingStepId),
+    [ctx, resolvedViewingStepId],
   );
 
   return (
     <div className="space-y-4">
       <WorkflowProgressRail
-        steps={MAINTENANCE_AGENT_STEP_ORDER}
+        steps={workflow.stepOrder}
         labels={MAINTENANCE_AGENT_STEP_LABEL}
-        currentStep={viewingStepId}
+        currentStep={resolvedViewingStepId}
         liveStep={workflow.liveStepId}
         progressFillIndex={isLiveStep ? workflow.progressFillIndex : undefined}
         getStepState={(stepId) => {
           const step = workflow.steps.find((s) => s.id === stepId);
           if (!step) return 'upcoming';
-          if (stepId === viewingStepId) return 'current';
+          if (stepId === resolvedViewingStepId) return 'current';
           if (step.status === 'done') return 'completed';
           return 'upcoming';
         }}
@@ -194,7 +204,7 @@ export function MaintenanceAgentWorkflowPanel({
         ctx={ctx}
         attachments={attachments}
         // Review step has its own evidence panel — avoid showing the same photos twice.
-        hideEvidence={viewingStepId === MAINTENANCE_AGENT_STEP.REVIEW}
+        hideEvidence={resolvedViewingStepId === MAINTENANCE_AGENT_STEP.REVIEW}
       />
 
       <div className="rounded-xl border bg-card">
@@ -215,7 +225,7 @@ export function MaintenanceAgentWorkflowPanel({
                 {isLiveStep ? 'Current step' : 'Viewing step'}
               </p>
               <p className="mt-0.5 text-sm font-semibold">
-                {MAINTENANCE_AGENT_STEP_TITLE[viewingStepId]}
+                {MAINTENANCE_AGENT_STEP_TITLE[resolvedViewingStepId]}
               </p>
               {!isLiveStep ? (
                 <p className="text-muted-foreground mt-1 text-xs">
@@ -248,7 +258,7 @@ export function MaintenanceAgentWorkflowPanel({
         </div>
         <div className="space-y-4 p-4">
           <StepContent
-            stepId={viewingStepId}
+            stepId={resolvedViewingStepId}
             ctx={ctx}
             property={property}
             attachments={attachments}

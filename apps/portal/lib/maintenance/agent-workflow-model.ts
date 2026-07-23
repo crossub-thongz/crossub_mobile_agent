@@ -40,6 +40,21 @@ export const MAINTENANCE_AGENT_STEP_ORDER: MaintenanceAgentStep[] = [
   MAINTENANCE_AGENT_STEP.JOB_COMPLETED,
 ];
 
+/** Steps shown in the progress rail for this case (tenant/strata skip quote + schedule). */
+export function getMaintenanceAgentStepOrder(
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceAgentStep[] {
+  if (!requiresContractorFlow(ctx)) {
+    return [
+      MAINTENANCE_AGENT_STEP.JOB_CREATED,
+      MAINTENANCE_AGENT_STEP.REVIEW,
+      MAINTENANCE_AGENT_STEP.IN_PROGRESS,
+      MAINTENANCE_AGENT_STEP.JOB_COMPLETED,
+    ];
+  }
+  return [...MAINTENANCE_AGENT_STEP_ORDER];
+}
+
 export const MAINTENANCE_AGENT_STEP_LABEL: Record<MaintenanceAgentStep, string> = {
   [MAINTENANCE_AGENT_STEP.JOB_CREATED]: 'Created',
   [MAINTENANCE_AGENT_STEP.REVIEW]: 'Review',
@@ -74,6 +89,7 @@ export interface MaintenanceAgentStepState {
 
 export interface MaintenanceAgentWorkflowModel {
   steps: MaintenanceAgentStepState[];
+  stepOrder: MaintenanceAgentStep[];
   liveStepId: MaintenanceAgentStep;
   progressFillIndex: number;
   requiresContractorFlow: boolean;
@@ -100,8 +116,28 @@ export interface MaintenanceEmailRecord {
 const ELECTRICAL_ISSUE_PATTERN =
   /electrical|appliance|washing machine|dryer|air conditioning|hot water/i;
 
-function stepIndex(step: MaintenanceAgentStep): number {
-  return MAINTENANCE_AGENT_STEP_ORDER.indexOf(step);
+function stepIndex(step: MaintenanceAgentStep, order: MaintenanceAgentStep[] = MAINTENANCE_AGENT_STEP_ORDER): number {
+  return order.indexOf(step);
+}
+
+function normalizeAgentStepForOrder(
+  stepId: MaintenanceAgentStep,
+  ctx: MaintenanceWorkflowContext,
+  stepOrder: MaintenanceAgentStep[],
+): MaintenanceAgentStep {
+  if (stepOrder.includes(stepId)) return stepId;
+  if (
+    stepId === MAINTENANCE_AGENT_STEP.GET_QUOTE ||
+    stepId === MAINTENANCE_AGENT_STEP.SCHEDULE
+  ) {
+    const status = ctx.workspaceCase.status;
+    if (status === 'in_progress') return MAINTENANCE_AGENT_STEP.IN_PROGRESS;
+    if (status === 'closed' || status === 'completed' || status === 'deleted') {
+      return MAINTENANCE_AGENT_STEP.JOB_COMPLETED;
+    }
+    return MAINTENANCE_AGENT_STEP.REVIEW;
+  }
+  return stepOrder[0] ?? stepId;
 }
 
 export function getLatestMaintenanceQuotation(
@@ -305,6 +341,7 @@ export function resolveMaintenanceAgentStep(
 ): MaintenanceAgentStep {
   const { workspaceCase } = ctx;
   const status = workspaceCase.status;
+  const landlordFlow = requiresContractorFlow(ctx);
 
   if (status === 'closed' || status === 'completed' || status === 'deleted') {
     return MAINTENANCE_AGENT_STEP.JOB_COMPLETED;
@@ -314,20 +351,33 @@ export function resolveMaintenanceAgentStep(
     return MAINTENANCE_AGENT_STEP.IN_PROGRESS;
   }
 
-  if (status === 'pending_schedule') {
-    return MAINTENANCE_AGENT_STEP.SCHEDULE;
-  }
-
-  if (status === 'pending_approval' || status === 'pending_quotation' || quoteDeclinedLoopBack(ctx)) {
-    return MAINTENANCE_AGENT_STEP.GET_QUOTE;
+  if (landlordFlow) {
+    if (status === 'pending_schedule') {
+      return MAINTENANCE_AGENT_STEP.SCHEDULE;
+    }
+    if (
+      status === 'pending_approval' ||
+      status === 'pending_quotation' ||
+      quoteDeclinedLoopBack(ctx)
+    ) {
+      return MAINTENANCE_AGENT_STEP.GET_QUOTE;
+    }
   }
 
   if (status === 'under_review' || status === 'pending_evidence') {
     return MAINTENANCE_AGENT_STEP.REVIEW;
   }
 
-  if (workspaceCase.responsibility && !requiresContractorFlow(ctx)) {
-    if (status === 'in_progress') return MAINTENANCE_AGENT_STEP.IN_PROGRESS;
+  if (!landlordFlow) {
+    if (
+      status === 'pending_schedule' ||
+      status === 'pending_approval' ||
+      status === 'pending_quotation'
+    ) {
+      return status === 'pending_schedule'
+        ? MAINTENANCE_AGENT_STEP.IN_PROGRESS
+        : MAINTENANCE_AGENT_STEP.REVIEW;
+    }
     return MAINTENANCE_AGENT_STEP.REVIEW;
   }
 
@@ -692,11 +742,13 @@ function subProgressForStep(
 export function buildMaintenanceAgentWorkflow(
   ctx: MaintenanceWorkflowContext,
 ): MaintenanceAgentWorkflowModel {
-  const liveStepId = resolveMaintenanceAgentStep(ctx);
-  const liveIdx = stepIndex(liveStepId);
+  const stepOrder = getMaintenanceAgentStepOrder(ctx);
+  const rawLiveStepId = resolveMaintenanceAgentStep(ctx);
+  const liveStepId = normalizeAgentStepForOrder(rawLiveStepId, ctx, stepOrder);
+  const liveIdx = Math.max(0, stepIndex(liveStepId, stepOrder));
   const quote = latestQuotation(ctx.workspaceCase);
 
-  const steps: MaintenanceAgentStepState[] = MAINTENANCE_AGENT_STEP_ORDER.map((id, idx) => ({
+  const steps: MaintenanceAgentStepState[] = stepOrder.map((id, idx) => ({
     id,
     label: MAINTENANCE_AGENT_STEP_LABEL[id],
     status: idx < liveIdx ? 'done' : idx === liveIdx ? 'active' : 'upcoming',
@@ -718,6 +770,7 @@ export function buildMaintenanceAgentWorkflow(
 
   return {
     steps,
+    stepOrder,
     liveStepId,
     progressFillIndex,
     requiresContractorFlow: requiresContractorFlow(ctx),
