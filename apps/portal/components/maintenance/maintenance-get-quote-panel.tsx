@@ -20,7 +20,7 @@ import {
   fetchMaintenanceContractorSuggestions,
   type MaintenanceContractorSuggestion,
 } from '@/lib/crossub-api/maintenance-client';
-import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
+import type { ApiMaintenanceRequest, ApiMaintenanceState, ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
 import {
   reviewMaintenanceQuotationDecisionCase,
   sendMaintenanceContractorFeedbackCase,
@@ -44,11 +44,7 @@ import { cn, formatDateTime } from '@/lib/utils';
 import { MaintenanceContractorRfqReminderCountdown } from '@/components/maintenance/maintenance-contractor-rfq-reminder-countdown';
 import { MaintenanceQuotationApprovalReminderCountdown } from '@/components/maintenance/maintenance-quotation-approval-reminder-countdown';
 import { MaintenanceContractorEvidenceRequestsPanel } from '@/components/maintenance/maintenance-contractor-evidence-requests-panel';
-import type {
-  ApiMaintenanceRequest,
-  ApiMaintenanceState,
-  ApiQuotation,
-} from '@/lib/crossub-api/types';
+import { mergeQuotationsForCase } from '@/lib/maintenance/fetch-maintenance-case';
 
 function reviewForContractor(
   reviews: QuotationReviewRecord[] | undefined,
@@ -319,7 +315,14 @@ export function MaintenanceGetQuotePanel({
   const [suggestions, setSuggestions] = useState<MaintenanceContractorSuggestion[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 
-  const quotes = quotationsProp.length > 0 ? quotationsProp : getMaintenanceQuotationsForCase(ctx.workspaceCase);
+  const quotes = useMemo(
+    () =>
+      mergeQuotationsForCase(
+        quotationsProp,
+        getMaintenanceQuotationsForCase(ctx.workspaceCase),
+      ),
+    [quotationsProp, ctx.workspaceCase],
+  );
   const invitedIds = useMemo(() => {
     const resolved = resolveRfqContractorIds({
       requestId: ctx.workspaceCase.id,

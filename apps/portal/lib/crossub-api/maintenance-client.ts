@@ -25,11 +25,30 @@ export async function fetchMaintenanceState(): Promise<ApiMaintenanceState> {
 
 export async function fetchMaintenanceRequest(
   requestId: string,
-): Promise<ApiMaintenanceState['maintenanceRequests'][number]> {
-  const { request } = await api.get<{ request: ApiMaintenanceState['maintenanceRequests'][number] }>(
-    `/maintenance/requests/${requestId}`,
-  );
-  return request;
+): Promise<{
+  request: ApiMaintenanceState['maintenanceRequests'][number];
+  quotations: ApiMaintenanceState['quotations'];
+  maintenanceReminders: ApiMaintenanceState['maintenanceReminders'];
+  maintenanceAttachments: NonNullable<ApiMaintenanceState['maintenanceAttachments']>;
+  maintenanceAuditLog: ApiMaintenanceState['maintenanceAuditLog'];
+  maintenanceNotifications: ApiMaintenanceState['maintenanceNotifications'];
+}> {
+  const payload = await api.get<{
+    request: ApiMaintenanceState['maintenanceRequests'][number];
+    quotations?: ApiMaintenanceState['quotations'];
+    maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
+    maintenanceAttachments?: ApiMaintenanceState['maintenanceAttachments'];
+    maintenanceAuditLog?: ApiMaintenanceState['maintenanceAuditLog'];
+    maintenanceNotifications?: ApiMaintenanceState['maintenanceNotifications'];
+  }>(`/maintenance/requests/${requestId}`);
+  return {
+    request: payload.request,
+    quotations: payload.quotations ?? [],
+    maintenanceReminders: payload.maintenanceReminders ?? [],
+    maintenanceAttachments: payload.maintenanceAttachments ?? [],
+    maintenanceAuditLog: payload.maintenanceAuditLog ?? [],
+    maintenanceNotifications: payload.maintenanceNotifications ?? [],
+  };
 }
 
 export async function fetchMaintenanceKpis(role: ApiMaintenanceUserRole = 'agent') {
