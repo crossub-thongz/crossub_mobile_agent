@@ -19,7 +19,7 @@ export function LeasingStepResults({
   onCaseClosed?: () => void;
 }) {
   const { leasingCycles, apiConnected } = useAgentData();
-  const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
+  const cycle = (leasingCycles ?? []).find((c) => c.propertyId === detail.propertyId);
   const cycleId = detail.cycleId ?? cycle?.id;
   const [chosenApplicantId, setChosenApplicantId] = useState<string | null>(null);
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
@@ -50,7 +50,7 @@ export function LeasingStepResults({
     };
   }, [apiConnected, cycleId, detail]);
 
-  const applicants = [...detail.applicationsDetail].sort(
+  const applicants = [...(detail.applicationsDetail ?? [])].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
   );
 

@@ -44,7 +44,7 @@ export function paymentConfirmationLabel(input: {
     input.kind === 'deposit' ? 'deposit proof approved' : 'bond proof approved';
   const markedNeedle = input.kind === 'deposit' ? 'deposit marked paid' : 'bond marked paid';
 
-  const haystack = input.timeline.map((entry) => entry.label.toLowerCase());
+  const haystack = (input.timeline ?? []).map((entry) => entry.label.toLowerCase());
   if (haystack.some((label) => label.includes(proofNeedle))) {
     return 'Paid · Agent confirmed';
   }
@@ -76,7 +76,7 @@ export function onboardingAuditEntries(detail: LeasingPropertyDetail): LeasingTi
     'e-signature',
     'esign',
   ];
-  return detail.timeline
+  return (detail.timeline ?? [])
     .filter((entry) => {
       const haystack = `${entry.label} ${entry.kind}`.toLowerCase();
       return needles.some((needle) => haystack.includes(needle));

@@ -16,6 +16,8 @@ import { fileNameFromDocumentUrl } from '@/lib/leasing-applicant-upload.util';
 const u = (v: string | null | undefined): string | undefined => v ?? undefined;
 const n = (v: number | null | undefined): number | undefined =>
   v == null ? undefined : v;
+const asArray = <T>(value: T[] | null | undefined): T[] =>
+  Array.isArray(value) ? value : [];
 
 const POOL_INSPECTOR_LABEL = 'Pending — task pool';
 
@@ -114,7 +116,7 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       inspectionId: ob?.ingoingInspection.inspectionId ?? undefined,
       reportAvailable: Boolean(ob?.ingoingInspection.inspectionId),
       tenantConfirmed: ob?.ingoingInspection.tenantConfirmed ?? false,
-      disputes: view.disputes.map((d) => ({
+      disputes: asArray(view.disputes).map((d) => ({
         id: d.id,
         area: d.area ?? '',
         description: d.description ?? '',
@@ -197,7 +199,7 @@ export function patchDetailFromCycleView(
       sentToAgentAt: u(view.openReport.sentToAgentAt),
       viewerInvitesSent: view.openReport.viewerInvitesSent,
       invitedCount: n(view.openReport.invitedCount),
-      viewerInvites: view.openReport.viewerInvites.map((invite) => ({
+      viewerInvites: asArray(view.openReport.viewerInvites).map((invite) => ({
         id: invite.id,
         email: u(invite.email),
         phone: u(invite.phone),
@@ -210,7 +212,7 @@ export function patchDetailFromCycleView(
       reportViewable: view.openReport.reportViewable,
       attendeeCount: n(view.openReport.attendeeCount),
     },
-    applicationsDetail: view.applications.map((r) => {
+    applicationsDetail: asArray(view.applications).map((r) => {
       const referenceDraft = parseReferenceCheckDraft(r.agentFeedback);
       return {
       id: r.applicationId,
@@ -238,7 +240,7 @@ export function patchDetailFromCycleView(
     };
     }),
     onboarding: mapOnboarding(view),
-    timeline: view.timeline.map((event) => ({
+    timeline: asArray(view.timeline).map((event) => ({
       id: event.id,
       label: event.label,
       kind: event.kind,

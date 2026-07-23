@@ -97,7 +97,7 @@ export function isOpenSessionRailStepCompleted(
 }
 
 function applications(session: OpenInspectionSession) {
-  return session.visitors.filter((v) => v.application);
+  return (session.visitors ?? []).filter((v) => v.application);
 }
 
 function allReviewed(session: OpenInspectionSession) {

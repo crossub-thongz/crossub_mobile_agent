@@ -40,7 +40,7 @@ export function LeasingWorkflowTimeline({
   const requestBondSectionHighlight = useLeasingWorkflowStore((s) => s.requestBondSectionHighlight);
   const detail = useLeasingWorkflowStore((s) => s.getDetail(propertyId));
   const { leasingCycles, apiConnected } = useAgentData();
-  const propertyCycles = leasingCycles.filter((c) => c.propertyId === propertyId);
+  const propertyCycles = (leasingCycles ?? []).filter((c) => c.propertyId === propertyId);
   const activeCycleId = splitLeasingCyclesByHistory(propertyCycles).active[0]?.id;
   const resolvedCycleId =
     leasingCycleId ?? activeCycleId ?? propertyCycles[0]?.id;

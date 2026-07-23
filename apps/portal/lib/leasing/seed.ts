@@ -64,6 +64,7 @@ export function defaultLeasingDetail(
       status: LEASING_ITEM_STATUS.NOT_STARTED,
       sentToAgent: false,
       viewerInvitesSent: false,
+      viewerInvites: [],
       applyPaths: [LEASING_APPLY_PATH.APP_DOWNLOAD, LEASING_APPLY_PATH.H5_WEB],
       reportViewable: false,
     },

@@ -27,7 +27,6 @@ import {
 } from '@/lib/crossub-api/agent-workflow-client';
 import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
-import { registerOpenInspectionFromCycle } from '@/lib/open-inspection-resolve';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
   buildLeasingCyclePrefill,
@@ -294,7 +293,7 @@ export function PropertyWorkflowCreateDialog({
   tenantSelections?: TenantSelectionCase[];
   onSuccess: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
-  const { refresh, apiConnected, endPropertyManagement, registerInspection } = useAgentData();
+  const { refresh, apiConnected, endPropertyManagement } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
 
@@ -573,12 +572,12 @@ export function PropertyWorkflowCreateDialog({
           fixedTermWeeks,
           tenantMovedOut: propertyIsVacant ? true : Boolean(tenantMovedOut),
           notes: lettingNotes.trim() || undefined,
-          skipOpenInspection: !crossubConductsOpen,
+          skipOpenInspection: crossubConductsOpen,
           ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
         });
         toast.success(
           crossubConductsOpen
-            ? 'Letting cycle created — open inspection queued; ingoing order created pending schedule'
+            ? 'Letting cycle created — schedule the open inspection when ready; ingoing order created pending schedule'
             : 'Letting cycle created — you conduct the open inspection; ingoing order created pending schedule',
         );
         if (apiConnected) {
@@ -594,13 +593,6 @@ export function PropertyWorkflowCreateDialog({
               : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL;
             store.resetActiveStepToHint(propertyId, nextStep);
             store.setActiveStep(propertyId, nextStep);
-            if (crossubConductsOpen) {
-              await registerOpenInspectionFromCycle(
-                propertyId,
-                view.openInspection.inspectionId,
-                registerInspection,
-              );
-            }
           } catch {
             /* live sync will catch up when the workflow opens */
           }
@@ -741,7 +733,7 @@ export function PropertyWorkflowCreateDialog({
             fixedTermWeeks: newLeasingTermWeeks,
             tenantMovedOut: false,
             notes: lettingNotes.trim() || undefined,
-            skipOpenInspection: !crossubConductsOpen,
+            skipOpenInspection: crossubConductsOpen,
             ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
           });
           if (apiConnected) {
@@ -757,20 +749,13 @@ export function PropertyWorkflowCreateDialog({
                 : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL;
               store.resetActiveStepToHint(propertyId, nextStep);
               store.setActiveStep(propertyId, nextStep);
-              if (crossubConductsOpen) {
-                await registerOpenInspectionFromCycle(
-                  propertyId,
-                  view.openInspection.inspectionId,
-                  registerInspection,
-                );
-              }
             } catch {
               /* live sync will catch up when the workflow opens */
             }
           }
           toast.success(
             crossubConductsOpen
-              ? 'End leasing and new leasing created — open inspection queued; ingoing and outgoing orders created'
+              ? 'End leasing and new leasing created — schedule the open inspection when ready; ingoing and outgoing orders created'
               : 'End leasing and new leasing created — you conduct open inspection; ingoing and outgoing orders created',
           );
         } catch (leasingErr) {

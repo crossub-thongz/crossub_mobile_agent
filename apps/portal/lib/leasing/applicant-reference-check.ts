@@ -17,7 +17,7 @@ function linkedVisitor(
   session: OpenInspectionSession,
   app: LeasingApplicationDetail,
 ) {
-  return session.visitors.find((visitor) => {
+  return (session.visitors ?? []).find((visitor) => {
     if (visitor.application?.id && visitor.application.id === app.id) return true;
     if (
       app.email?.trim() &&
@@ -78,7 +78,7 @@ export function applicantAuditEntries(
     app.email?.trim().toLowerCase() ?? '',
   ].filter(Boolean);
 
-  const fromLeasing = detail.timeline.filter((entry) => matchesApplicantAudit(entry, needles));
+  const fromLeasing = (detail.timeline ?? []).filter((entry) => matchesApplicantAudit(entry, needles));
   const fromOpen = (openSession?.timeline ?? []).filter((entry) =>
     matchesApplicantAudit(entry, needles),
   );

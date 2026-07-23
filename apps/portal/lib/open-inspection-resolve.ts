@@ -6,7 +6,24 @@ import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { LeasingOpenInspection } from '@/lib/leasing/types';
 import type { Inspection } from '@/lib/types';
 
-/** Latest OPEN pool inspection record for a property (no viewing session yet). */
+export type ResolveOpenInspectionForCycleInput = {
+  propertyId: string;
+  cycleId?: string | null;
+  inspectionId?: string | null;
+  viewingSessionId?: string | null;
+};
+
+function sortSessionsNewestFirst<T extends { createdAt?: string; startTime: string }>(
+  sessions: T[],
+): T[] {
+  return [...sessions].sort(
+    (a, b) =>
+      new Date(b.createdAt ?? b.startTime).getTime() -
+      new Date(a.createdAt ?? a.startTime).getTime(),
+  );
+}
+
+/** Latest OPEN pool inspection record for a property (legacy fallback). */
 export async function fetchLatestOpenPoolInspection(
   propertyId: string,
 ): Promise<Inspection | null> {
@@ -27,39 +44,62 @@ export function needsOpenInspectionScheduleRequest(oi: LeasingOpenInspection): b
   );
 }
 
-/** Register the OPEN case in the agent inspections list after leasing / request flows. */
-export async function registerOpenInspectionFromCycle(
-  propertyId: string,
-  inspectionId: string | null | undefined,
-  registerInspection: (inspection: Inspection) => void,
-): Promise<void> {
-  try {
-    const sessions = await openViewingsApi.list({ propertyId });
-    const latest = [...sessions]
-      .filter((s) => s.sessionStatus !== SessionStatusEnum.CANCELLED)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt ?? b.startTime).getTime() -
-          new Date(a.createdAt ?? a.startTime).getTime(),
-      )[0];
-    if (latest) {
-      registerInspection(mapOpenSessionToInspection(latest, propertyId));
-      return;
+/**
+ * Resolve the agent-facing OPEN case for a specific letting cycle.
+ * Prefers the viewing session over the inspector pool twin; never falls back to
+ * unrelated sessions on the same property.
+ */
+export async function resolveOpenInspectionForCycle(
+  input: ResolveOpenInspectionForCycleInput,
+): Promise<Inspection | null> {
+  const { propertyId, cycleId, inspectionId, viewingSessionId } = input;
+
+  if (viewingSessionId) {
+    try {
+      const session = await openViewingsApi.get(viewingSessionId);
+      if (session.sessionStatus !== SessionStatusEnum.CANCELLED) {
+        return mapOpenSessionToInspection(session, propertyId);
+      }
+    } catch {
+      /* try cycle-scoped lookup */
     }
-  } catch {
-    /* fall through to pool inspection */
+  }
+
+  if (cycleId) {
+    try {
+      const sessions = await openViewingsApi.list({ propertyId });
+      const forCycle = sortSessionsNewestFirst(
+        sessions.filter(
+          (session) =>
+            session.sessionStatus !== SessionStatusEnum.CANCELLED &&
+            session.leasingCycleId === cycleId,
+        ),
+      )[0];
+      if (forCycle) {
+        return mapOpenSessionToInspection(forCycle, propertyId);
+      }
+    } catch {
+      /* fall through to pool job */
+    }
   }
 
   if (inspectionId) {
     try {
       const record = await inspectionsApi.get(inspectionId);
-      registerInspection(mapInspectionRecordToView(record));
-      return;
+      return mapInspectionRecordToView(record);
     } catch {
-      /* fall through */
+      return null;
     }
   }
 
-  const pooled = await fetchLatestOpenPoolInspection(propertyId);
-  if (pooled) registerInspection(pooled);
+  return null;
+}
+
+/** Register the OPEN case in the agent inspections list after leasing / request flows. */
+export async function registerOpenInspectionFromCycle(
+  input: ResolveOpenInspectionForCycleInput,
+  registerInspection: (inspection: Inspection) => void,
+): Promise<void> {
+  const resolved = await resolveOpenInspectionForCycle(input);
+  if (resolved) registerInspection(resolved);
 }

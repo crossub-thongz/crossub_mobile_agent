@@ -37,11 +37,11 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
   const [busyAppId, setBusyAppId] = useState<string | null>(null);
   const [showContactForm, setShowContactForm] = useState(false);
 
-  const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
+  const cycle = (leasingCycles ?? []).find((c) => c.propertyId === detail.propertyId);
   const cycleId = detail.cycleId ?? cycle?.id;
 
   const readOnly = isApplicationApprovalLocked(detail);
-  const apps = readOnly ? getApprovedApplications(detail) : detail.applicationsDetail;
+  const apps = readOnly ? getApprovedApplications(detail) : (detail.applicationsDetail ?? []);
   const selectedCount = countSelectedForApprovalSend(apps);
 
   const agentConductedLinks =

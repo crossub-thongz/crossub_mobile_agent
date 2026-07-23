@@ -7,14 +7,18 @@ import {
 } from '@/lib/leasing/constants';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 
+function leasingApplications(detail: LeasingPropertyDetail) {
+  return detail.applicationsDetail ?? [];
+}
+
 export function areAllApplicantResultsSent(detail: LeasingPropertyDetail): boolean {
-  const apps = detail.applicationsDetail;
+  const apps = leasingApplications(detail);
   if (apps.length === 0) return false;
   return apps.every((a) => Boolean(a.feedbackSentAt));
 }
 
 export function deriveApplicationStatus(detail: LeasingPropertyDetail): LeasingItemStatus {
-  const apps = detail.applicationsDetail;
+  const apps = leasingApplications(detail);
   if (apps.length === 0) return LEASING_ITEM_STATUS.NOT_STARTED;
   if (apps.some((a) => a.agentDecision === LEASING_AGENT_DECISION.APPROVED)) {
     return LEASING_ITEM_STATUS.DONE;
@@ -29,7 +33,7 @@ export function isApplicationApprovalLocked(detail: LeasingPropertyDetail): bool
 }
 
 export function getApprovedApplications(detail: LeasingPropertyDetail) {
-  return detail.applicationsDetail.filter(
+  return leasingApplications(detail).filter(
     (a) => a.agentDecision === LEASING_AGENT_DECISION.APPROVED,
   );
 }
@@ -184,7 +188,7 @@ export function deriveStepStatus(
     case LEASING_LIFECYCLE_STEP.RESULTS:
       return areAllApplicantResultsSent(detail)
         ? LEASING_ITEM_STATUS.DONE
-        : detail.applicationsDetail.length > 0
+        : leasingApplications(detail).length > 0
           ? LEASING_ITEM_STATUS.IN_PROGRESS
           : LEASING_ITEM_STATUS.NOT_STARTED;
     case LEASING_LIFECYCLE_STEP.ONBOARDING:

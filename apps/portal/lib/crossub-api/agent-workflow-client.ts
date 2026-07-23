@@ -100,6 +100,8 @@ export type RequestAgentOpenInspectionInput = {
   preferredEndTime?: string;
   preferredNotes?: string;
   keyCollectLocation?: string;
+  /** Begin the viewing window immediately (testing) — skips Saturday validation. */
+  startNow?: boolean;
 };
 
 export async function requestAgentOpenInspection(
@@ -109,6 +111,20 @@ export async function requestAgentOpenInspection(
 ): Promise<AgentWorkflowCreateResult> {
   return agentFetch(
     `${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/open-inspection/request`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export async function startAgentOpenInspectionNow(
+  propertyId: string,
+  cycleId: string,
+  body: Pick<RequestAgentOpenInspectionInput, 'keyCollectLocation'> = {},
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/open-inspection/start-now`,
     {
       method: 'POST',
       body: JSON.stringify(body),

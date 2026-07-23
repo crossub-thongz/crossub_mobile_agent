@@ -97,7 +97,7 @@ function formatMoneyAud(value?: number | null): string | null {
 }
 
 function applicationFeedbackRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[] {
-  return detail.applicationsDetail
+  return (detail.applicationsDetail ?? [])
     .filter((app) => app.feedbackSentAt && app.feedback?.trim())
     .map((app) => ({
       id: `${app.id}-feedback`,
@@ -214,7 +214,7 @@ function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailReco
   const signing = detail.onboarding.agreement.signingStatus;
   if (signing !== 'not_sent') {
     const sentAt =
-      detail.timeline.find((e) => /contract sent for e-signature|agreement sent|contract uploaded/i.test(e.label))
+      detail.timeline?.find((e) => /contract sent for e-signature|agreement sent|contract uploaded/i.test(e.label))
         ?.at ??
       detail.onboarding.bond.sentToTenantAt ??
       detail.onboarding.agreement.signedAt ??
@@ -232,7 +232,7 @@ function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailReco
 
   const signedAt =
     detail.onboarding.agreement.signedAt ||
-    detail.timeline.find((e) => /signed lease agreement emailed|recorded lease agreement signing|uploaded signed lease/i.test(e.label))
+    detail.timeline?.find((e) => /signed lease agreement emailed|recorded lease agreement signing|uploaded signed lease/i.test(e.label))
       ?.at ||
     '';
   if (

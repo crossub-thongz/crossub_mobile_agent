@@ -86,7 +86,7 @@ export function OpenInspectionCheckInList({
   const [sending, setSending] = useState(false);
 
   const checkIns = useMemo(
-    () => session.visitors.filter(isCheckInVisitor),
+    () => (session.visitors ?? []).filter(isCheckInVisitor),
     [session.visitors],
   );
 

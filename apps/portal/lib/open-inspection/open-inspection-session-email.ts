@@ -51,7 +51,7 @@ export function openInspectionApplyLinkEmails(
   const applyUrl = session.applyUrl?.trim();
   const agent = agentSender(session);
 
-  return session.visitors
+  return (session.visitors ?? [])
     .filter((visitor) => visitor.applyLinkSentAt?.trim())
     .map((visitor) => ({
       id: `${visitor.id}-apply-link`,

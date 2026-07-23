@@ -117,7 +117,7 @@ export function OpenInspectionApplicantPanel({
   const [feedback, setFeedback] = useState('');
   const [rejectReason, setRejectReason] = useState('');
 
-  const applicants = session.visitors.filter((v) => v.application);
+  const applicants = (session.visitors ?? []).filter((v) => v.application);
 
   const confirmApprove = async () => {
     if (!approveVisitor?.application) return;

@@ -29,7 +29,7 @@ export function OpenInspectionStagePanel({
 }) {
   const reportReady = session.openReportGenerated === true;
   const canCompleteReview = canCompleteOpenSessionReview(session);
-  const applicantsWithApplications = session.visitors.filter((v) => v.application);
+  const applicantsWithApplications = (session.visitors ?? []).filter((v) => v.application);
 
   return (
     <div className="space-y-4">

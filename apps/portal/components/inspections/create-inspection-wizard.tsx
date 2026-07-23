@@ -25,7 +25,6 @@ import {
   defaultOpenInspectionSchedule,
   toDatetimeLocalValue,
 } from '@/lib/inspections/outgoing-schedule';
-import { SessionStatusEnum } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import {
   validateCrossubOpenDateTimeLocal,
@@ -49,7 +48,7 @@ import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { routineInspectionApi } from '@/lib/routine-inspection-api';
 import { terminationApi } from '@/lib/termination-case-api';
-import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
+import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
 import {
   getOpenListingContext,
   OPEN_CONDUCTED_BY_LABEL,
@@ -129,31 +128,15 @@ export function InspectionCreateTypeButtons({
 async function resolveCreatedOpenInspection(
   propertyId: string,
   openInspectionId?: string,
+  cycleId?: string,
+  viewingSessionId?: string | null,
 ): Promise<Inspection | null> {
-  // Prefer the ViewingSession row — requestAgentOpenInspection also spawns an OPEN
-  // pool Inspection for inspectors; registering that twin duplicates the case list.
-  try {
-    const sessions = await openViewingsApi.list({ propertyId });
-    const latest = [...sessions]
-      .filter((s) => s.sessionStatus !== SessionStatusEnum.CANCELLED)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt ?? b.startTime).getTime() -
-          new Date(a.createdAt ?? a.startTime).getTime(),
-      )[0];
-    if (latest) return mapOpenSessionToInspection(latest, propertyId);
-  } catch {
-    /* fall through */
-  }
-  if (openInspectionId) {
-    try {
-      const record = await inspectionsApi.get(openInspectionId);
-      return mapInspectionRecordToView(record);
-    } catch {
-      /* fall through to list lookup */
-    }
-  }
-  return fetchLatestOpenPoolInspection(propertyId);
+  return resolveOpenInspectionForCycle({
+    propertyId,
+    cycleId,
+    inspectionId: openInspectionId,
+    viewingSessionId,
+  });
 }
 
 type StandaloneOpenLeaseTermChoice = '26' | '52' | 'custom';
@@ -542,6 +525,7 @@ export function CreateInspectionWizard({
           const inspection = await resolveCreatedOpenInspection(
             property.id,
             result.openInspectionId,
+            cycleId,
           );
           if (inspection) {
             registerInspection(inspection);
@@ -624,6 +608,7 @@ export function CreateInspectionWizard({
           const inspection = await resolveCreatedOpenInspection(
             property.id,
             result.openInspectionId,
+            cycleId,
           );
           if (inspection) {
             registerInspection(inspection);

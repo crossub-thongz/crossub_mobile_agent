@@ -17,6 +17,7 @@ import {
   validateCrossubOpenDateTimeLocal,
 } from '@/lib/open-inspection/open-inspection-saturday';
 import { registerOpenInspectionFromCycle } from '@/lib/open-inspection-resolve';
+import { openInspectionEndIsoFromDurationHours } from '@/lib/open-inspection/start-now';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,44 @@ export function OpenInspectionScheduleRequestPanel({
   const [preferredNotes, setPreferredNotes] = useState('');
   const [keyCollectLocation, setKeyCollectLocation] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [startingNow, setStartingNow] = useState(false);
+
+  const parseDurationHours = (): number | null => {
+    const hours = Number(durationHours);
+    if (!Number.isFinite(hours) || hours <= 0) return null;
+    return hours;
+  };
+
+  const validateKeyLocation = (): string | null => {
+    const keyLocation = keyCollectLocation.trim();
+    if (!keyLocation) return 'Enter where the inspector collects keys';
+    return null;
+  };
+
+  const finalizeSchedule = async (
+    body: Parameters<typeof requestAgentOpenInspection>[2],
+    successMessage: string,
+  ) => {
+    const result = await requestAgentOpenInspection(propertyId, cycleId, body);
+    toast.success(successMessage);
+
+    const view = await leasingOpsApi.get(cycleId);
+    applyCycleView(propertyId, view);
+
+    await registerOpenInspectionFromCycle(
+      {
+        propertyId,
+        cycleId,
+        inspectionId: result.openInspectionId ?? view.openInspection.inspectionId,
+        viewingSessionId: view.viewingSessionId,
+      },
+      registerInspection,
+    );
+    await refresh({ force: true });
+    onScheduled?.(
+      result.openInspectionId ?? view.openInspection.inspectionId ?? undefined,
+    );
+  };
 
   const submit = async () => {
     if (!apiConnected) {
@@ -49,14 +88,14 @@ export function OpenInspectionScheduleRequestPanel({
       toast.error('Pick a Saturday and start time');
       return;
     }
-    const keyLocation = keyCollectLocation.trim();
-    if (!keyLocation) {
-      toast.error('Enter where the inspector collects keys');
+    const keyError = validateKeyLocation();
+    if (keyError) {
+      toast.error(keyError);
       return;
     }
 
-    const hours = Number(durationHours);
-    if (!Number.isFinite(hours) || hours <= 0) {
+    const hours = parseDurationHours();
+    if (hours == null) {
       toast.error('Enter a valid duration in hours');
       return;
     }
@@ -82,26 +121,14 @@ export function OpenInspectionScheduleRequestPanel({
 
     setSubmitting(true);
     try {
-      const body = {
-        preferredStartTime: new Date(preferredStartLocal).toISOString(),
-        preferredEndTime: new Date(preferredEndLocal).toISOString(),
-        preferredNotes: preferredNotes.trim() || undefined,
-        keyCollectLocation: keyLocation,
-      };
-      const result = await requestAgentOpenInspection(propertyId, cycleId, body);
-      toast.success('Open inspection scheduled — CROSSUB will assign an inspector');
-
-      const view = await leasingOpsApi.get(cycleId);
-      applyCycleView(propertyId, view);
-
-      await registerOpenInspectionFromCycle(
-        propertyId,
-        result.openInspectionId ?? view.openInspection.inspectionId,
-        registerInspection,
-      );
-      await refresh({ force: true });
-      onScheduled?.(
-        result.openInspectionId ?? view.openInspection.inspectionId ?? undefined,
+      await finalizeSchedule(
+        {
+          preferredStartTime: new Date(preferredStartLocal).toISOString(),
+          preferredEndTime: new Date(preferredEndLocal).toISOString(),
+          preferredNotes: preferredNotes.trim() || undefined,
+          keyCollectLocation: keyCollectLocation.trim(),
+        },
+        'Open inspection scheduled — CROSSUB will assign an inspector',
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not schedule open inspection');
@@ -110,13 +137,51 @@ export function OpenInspectionScheduleRequestPanel({
     }
   };
 
+  const submitStartNow = async () => {
+    if (!apiConnected) {
+      toast.error('Connect to the API to schedule');
+      return;
+    }
+    const keyError = validateKeyLocation();
+    if (keyError) {
+      toast.error(keyError);
+      return;
+    }
+
+    const hours = parseDurationHours();
+    if (hours == null) {
+      toast.error('Enter a valid duration in hours');
+      return;
+    }
+
+    setStartingNow(true);
+    try {
+      await finalizeSchedule(
+        {
+          startNow: true,
+          preferredEndTime: openInspectionEndIsoFromDurationHours(hours),
+          preferredNotes: preferredNotes.trim() || undefined,
+          keyCollectLocation: keyCollectLocation.trim(),
+        },
+        'Open inspection started — viewing window is live now',
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not start open inspection now');
+    } finally {
+      setStartingNow(false);
+    }
+  };
+
+  const busy = submitting || startingNow;
+
   return (
     <section className={cn('space-y-4 rounded-2xl border bg-card p-4', className)}>
       <div>
         <h2 className="text-sm font-semibold">Schedule Open Inspection</h2>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-          CROSSUB open inspections are held on <strong>Saturdays</strong> only. An inspector
-          will be assigned from the task pool.
+          CROSSUB open inspections are normally held on <strong>Saturdays</strong>. Use{' '}
+          <strong>Start open inspection now</strong> to begin immediately for testing — the end
+          time follows the duration you set below.
         </p>
       </div>
 
@@ -125,7 +190,7 @@ export function OpenInspectionScheduleRequestPanel({
         label="Viewing date & time *"
         value={preferredStartLocal}
         onChange={setPreferredStartLocal}
-        disabled={submitting}
+        disabled={busy}
         defaultTime="10:00"
       />
 
@@ -138,7 +203,7 @@ export function OpenInspectionScheduleRequestPanel({
           step={0.5}
           value={durationHours}
           onChange={(e) => setDurationHours(e.target.value)}
-          disabled={submitting}
+          disabled={busy}
           className="w-28"
         />
       </div>
@@ -150,7 +215,7 @@ export function OpenInspectionScheduleRequestPanel({
           value={keyCollectLocation}
           onChange={(e) => setKeyCollectLocation(e.target.value)}
           placeholder="e.g. Lockbox on front gate — code 4821"
-          disabled={submitting}
+          disabled={busy}
         />
         <p className="text-muted-foreground text-[11px] leading-relaxed">
           The assigned inspector sees this only after they accept the job.
@@ -165,26 +230,45 @@ export function OpenInspectionScheduleRequestPanel({
           onChange={(e) => setPreferredNotes(e.target.value)}
           rows={3}
           placeholder="e.g. Tenant needs 24h notice…"
-          disabled={submitting}
+          disabled={busy}
         />
       </div>
 
-      <Button
-        type="button"
-        size="sm"
-        className="h-9"
-        disabled={submitting}
-        onClick={() => void submit()}
-      >
-        {submitting ? (
-          <>
-            <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-            Scheduling…
-          </>
-        ) : (
-          'Schedule open inspection'
-        )}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          className="h-9"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              Scheduling…
+            </>
+          ) : (
+            'Schedule open inspection'
+          )}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-9"
+          disabled={busy}
+          onClick={() => void submitStartNow()}
+        >
+          {startingNow ? (
+            <>
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              Starting…
+            </>
+          ) : (
+            'Start open inspection now'
+          )}
+        </Button>
+      </div>
     </section>
   );
 }

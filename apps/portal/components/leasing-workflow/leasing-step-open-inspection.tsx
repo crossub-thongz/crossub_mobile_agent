@@ -10,6 +10,7 @@ import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/
 import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
+import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,7 +81,7 @@ export function LeasingStepOpenInspection({
   const reportReady =
     isLeasingOpenReportReady(detail) || openSession?.openReportGenerated === true;
 
-  const cycle = leasingCycles.find((c) => c.propertyId === detail.propertyId);
+  const cycle = (leasingCycles ?? []).find((c) => c.propertyId === detail.propertyId);
   const cycleId = leasingCycleId ?? detail.cycleId ?? cycle?.id;
 
   const oi = detail.openInspection;
@@ -90,7 +91,7 @@ export function LeasingStepOpenInspection({
   const linkedInspection = useMemo(
     () =>
       resolveOpenInspectionForProperty(
-        inspections,
+        inspections ?? [],
         detail.propertyId,
         oi.viewingSessionId,
         oi.inspectionId,
@@ -113,6 +114,13 @@ export function LeasingStepOpenInspection({
     crossubManagedOpen && hasOpenInspection && !isScheduled && !isRequested;
   const needsScheduleRequest =
     crossubManagedOpen && needsOpenInspectionScheduleRequest(oi);
+  const canStartOpenNow =
+    crossubManagedOpen &&
+    isScheduled &&
+    !openInspectionStartReached(oi, now) &&
+    Boolean(cycleId) &&
+    apiConnected;
+
   const canOpenJobCase = Boolean(oi.viewingSessionId || oi.inspectionId || linkedInspection);
 
   const inspectionTime = isScheduled
@@ -318,6 +326,16 @@ export function LeasingStepOpenInspection({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {canStartOpenNow && cycleId ? (
+              <StartCrossubOpenNowButton
+                propertyId={detail.propertyId}
+                cycleId={cycleId}
+                inspectionId={oi.inspectionId}
+                onStarted={(inspectionId) => {
+                  if (inspectionId) onOpenInspectionCreated?.(inspectionId);
+                }}
+              />
+            ) : null}
             {canOpenJobCase ? (
               <Button
                 size="sm"

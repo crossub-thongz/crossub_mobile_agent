@@ -31,6 +31,7 @@ import { RoutineInPersonKeyCustodySection } from '@/components/inspections/routi
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionOpenStage } from '@/components/open-inspection/open-inspection-open-stage';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
+import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
@@ -59,7 +60,7 @@ import {
 } from '@/lib/leasing/letting-rail-progress';
 import { OpenNewLeasingCaseButton } from '@/components/leasing-workflow/open-new-leasing-case-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
-import { formatInspectionDurationHours, formatInspectionTimeRange, needsOpenInspectionScheduleRequest } from '@/lib/leasing/open-inspection-display';
+import { formatInspectionDurationHours, formatInspectionTimeRange, needsOpenInspectionScheduleRequest, openInspectionStartReached } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
@@ -348,6 +349,13 @@ export function InspectionDetailView({
     isCrossubManagedLeasingOpen &&
     leasingDetail != null &&
     needsOpenInspectionScheduleRequest(leasingDetail.openInspection);
+  const canStartCrossubOpenNow =
+    isCrossubManagedLeasingOpen &&
+    leasingDetail != null &&
+    Boolean(leasingDetail.openInspection.scheduledTime) &&
+    !openInspectionStartReached(leasingDetail.openInspection) &&
+    Boolean(linkedLeasingCycleId) &&
+    apiConnected;
   const isCrossubOpen =
     insp.type === 'OPEN' &&
     (insp.openConductedBy === 'crossub' ||
@@ -596,6 +604,15 @@ export function InspectionDetailView({
           ) : null}
           {leasingDetail.openInspection.inspectorName ? (
             <InfoRow label="Inspector" value={leasingDetail.openInspection.inspectorName} icon={User} />
+          ) : null}
+          {canStartCrossubOpenNow && linkedLeasingCycleId ? (
+            <div className="pt-2">
+              <StartCrossubOpenNowButton
+                propertyId={insp.propertyId}
+                cycleId={linkedLeasingCycleId}
+                inspectionId={leasingDetail.openInspection.inspectionId}
+              />
+            </div>
           ) : null}
         </InfoSection>
       ) : null}
