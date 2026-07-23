@@ -48,10 +48,10 @@ function DialogContent({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
-  /** Stack above CaseDetailDialog (`z-[90]`) and other high z-index shells. */
+  /** Stack above CaseDetailDialog (`z-[100]`) and other high z-index shells. */
   elevated?: boolean;
 }) {
-  const z = elevated ? 'z-[100]' : 'z-50';
+  const z = elevated ? 'z-[110]' : 'z-50';
   return (
     <DialogPortal>
       <DialogOverlay className={elevated ? z : undefined} />
