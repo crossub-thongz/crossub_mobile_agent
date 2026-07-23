@@ -14,8 +14,10 @@ import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
 const STATUS_LABEL: Record<string, string> = {
   under_review: 'Under review',
+  pending_evidence: 'Requesting evidence',
   pending_quotation: 'Pending quotation',
   pending_approval: 'Quote approval',
+  pending_schedule: 'Schedule visit',
   in_progress: 'In progress',
   completed: 'Completed',
   closed: 'Closed',
@@ -175,6 +177,9 @@ export function mapApiMaintenanceRequest(
     invitedContractors: req.invitedContractors,
     deleteReason: req.deleteReason,
     deletedAt: req.deletedAt,
+    scheduleStepStartedAt: req.scheduleStepStartedAt,
+    scheduleProposal: req.scheduleProposal,
+    scheduleEscalated: req.scheduleEscalated,
   };
 }
 

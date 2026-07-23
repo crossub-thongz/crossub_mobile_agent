@@ -5,6 +5,7 @@ export const STATUS_LABELS: Record<string, string> = {
   pending_evidence: 'Requesting More Evidence',
   pending_quotation: 'Pending Quotation',
   pending_approval: 'Pending Approval',
+  pending_schedule: 'Schedule Visit',
   in_progress: 'In Progress',
   completed: 'Completed',
   closed: 'Closed',

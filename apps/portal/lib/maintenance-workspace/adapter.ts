@@ -15,6 +15,7 @@ const REQUEST_STATUS_MAP: Record<string, MaintenanceWorkspaceStatus> = {
   'under review': 'under_review',
   'quote approval': 'pending_approval',
   'pending quotation': 'pending_quotation',
+  'schedule visit': 'pending_schedule',
   'in progress': 'in_progress',
   completed: 'completed',
   closed: 'closed',

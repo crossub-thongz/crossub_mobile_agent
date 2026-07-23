@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
+import { MaintenanceSchedulePanel } from '@/components/maintenance/maintenance-schedule-panel';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
 import { MaintenanceJobIntakeSummary } from '@/components/maintenance/maintenance-job-intake-summary';
 import { MaintenanceJobTypeSummary } from '@/components/maintenance/maintenance-job-type-summary';
@@ -76,6 +77,8 @@ function StepContent({
           quotations={quotations}
         />
       );
+    case MAINTENANCE_AGENT_STEP.SCHEDULE:
+      return <MaintenanceSchedulePanel ctx={ctx} contractors={contractors} />;
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
       return (
         <MaintenanceInProgressPanel

@@ -32,6 +32,9 @@ function mergeMaintenanceItem(
     timeline: liveMapped.timeline,
     invitedContractorIds: liveMapped.invitedContractorIds,
     invitedContractors: liveMapped.apiRequest.invitedContractors,
+    scheduleStepStartedAt: liveMapped.scheduleStepStartedAt,
+    scheduleProposal: liveMapped.scheduleProposal,
+    scheduleEscalated: liveMapped.scheduleEscalated,
   };
 }
 

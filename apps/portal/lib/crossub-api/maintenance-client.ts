@@ -12,6 +12,7 @@ export type MaintenanceWorkflowStatus =
   | 'pending_evidence'
   | 'pending_quotation'
   | 'pending_approval'
+  | 'pending_schedule'
   | 'in_progress'
   | 'completed'
   | 'closed';

@@ -5,10 +5,11 @@ const STATUS_RANK: Record<string, number> = {
   pending_evidence: 2,
   pending_quotation: 3,
   pending_approval: 4,
-  in_progress: 5,
-  completed: 6,
-  closed: 7,
-  deleted: 8,
+  pending_schedule: 5,
+  in_progress: 6,
+  completed: 7,
+  closed: 8,
+  deleted: 9,
 };
 
 function preferAdvancedStatus(
@@ -87,5 +88,8 @@ export function mergeMaintenanceCaseForLiveSync(
     contractorEvidenceRequests: workflow.contractorEvidenceRequests?.length
       ? workflow.contractorEvidenceRequests
       : prisma.contractorEvidenceRequests,
+    scheduleStepStartedAt: workflow.scheduleStepStartedAt ?? prisma.scheduleStepStartedAt,
+    scheduleProposal: workflow.scheduleProposal ?? prisma.scheduleProposal,
+    scheduleEscalated: workflow.scheduleEscalated ?? prisma.scheduleEscalated,
   };
 }

@@ -2,12 +2,23 @@
 
 export type ApiMaintenanceStatus =
   | 'under_review'
+  | 'pending_evidence'
   | 'pending_quotation'
   | 'pending_approval'
+  | 'pending_schedule'
   | 'in_progress'
   | 'completed'
   | 'closed'
   | 'deleted';
+
+export interface ApiMaintenanceScheduleProposal {
+  contractorId: string;
+  availableTimes: string;
+  submittedAt: string;
+  tenantDecision?: 'approved' | 'declined';
+  tenantDecidedAt?: string;
+  tenantDeclineReason?: string;
+}
 
 export type ApiMaintenancePriority = 'low' | 'medium' | 'high' | 'critical';
 export type ApiMaintenanceResponsibility = 'tenant' | 'landlord' | 'strata';
@@ -142,6 +153,9 @@ export interface ApiMaintenanceRequest {
   }>;
   quotationApprovalRoundStartedAt?: string;
   quotationApprovalReminderRound?: number;
+  scheduleStepStartedAt?: string;
+  scheduleProposal?: ApiMaintenanceScheduleProposal;
+  scheduleEscalated?: boolean;
   contractorInvoiceNumber?: string;
   contractorInvoiceAmount?: number;
   contractorInvoiceDate?: string;

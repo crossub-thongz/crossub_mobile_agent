@@ -469,8 +469,13 @@ function scheduleSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubPro
     },
     {
       id: 'tenant_confirm',
-      label: 'Tenant approved visit time',
-      done: proposal?.tenantDecision === 'approved',
+      label:
+        proposal?.tenantDecision === 'declined'
+          ? 'Tenant declined visit time'
+          : 'Tenant approved visit time',
+      done:
+        proposal?.tenantDecision === 'approved' ||
+        proposal?.tenantDecision === 'declined',
     },
   ];
 }
