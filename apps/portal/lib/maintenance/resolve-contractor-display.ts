@@ -1,6 +1,7 @@
 import type { ApiQuotation } from '@/lib/crossub-api/types';
 import type { MaintenanceContractorSuggestion } from '@/lib/crossub-api/maintenance-client';
 import { maintenanceContractorSelectionKey } from '@/lib/maintenance/maintenance-contractor-key';
+import { maintenanceContractorCatalogName } from '@/lib/maintenance/maintenance-contractor-catalog';
 
 export function contractorIdsMatch(a: string, b: string): boolean {
   const norm = (id: string) => id.replace(/^agency-pref-/, '');
@@ -60,7 +61,10 @@ export function resolveContractorDisplayName(
   if (suggestion?.name) return suggestion.name;
 
   const contractor = args.contractors?.find((row) => contractorIdsMatch(row.id, contractorId));
-  if (contractor?.name) return contractor.name;
+  if (contractor?.name && contractor.name !== contractor.id) return contractor.name;
+
+  const catalogName = maintenanceContractorCatalogName(contractorId);
+  if (catalogName) return catalogName;
 
   const assignedName =
     args.assignedContractorName ??
@@ -75,7 +79,7 @@ export function resolveContractorDisplayName(
     args.auditEntries,
     args.invitedContractorIds,
   );
-  if (fromAudit) return fromAudit;
+  if (fromAudit && fromAudit !== contractorId) return fromAudit;
 
   return snapshot?.name ?? contractorId;
 }
