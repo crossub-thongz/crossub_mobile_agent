@@ -8,6 +8,7 @@ import { CreateInspectionWizard, type InspectionCreateResult } from '@/component
 import { OpenLeasingGenerateReportButton } from '@/components/leasing-workflow/open-leasing-generate-report-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
+import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +32,7 @@ import {
   formatInspectionTimeRange,
   formatLettingRent,
   formatTenantMovedOutDate,
+  needsOpenInspectionScheduleRequest,
   openInspectionStartReached,
   resolveOpenInspectionForProperty,
 } from '@/lib/leasing/open-inspection-display';
@@ -107,6 +109,8 @@ export function LeasingStepOpenInspection({
   const isRequested = !isScheduled && Boolean(oi.preferredScheduledTime || oi.preferredNotes);
   const crossubOrderPlaced =
     crossubManagedOpen && hasOpenInspection && !isScheduled && !isRequested;
+  const needsScheduleRequest =
+    crossubManagedOpen && needsOpenInspectionScheduleRequest(oi);
   const canOpenJobCase = Boolean(oi.viewingSessionId || oi.inspectionId || linkedInspection);
 
   const inspectionTime = isScheduled
@@ -283,8 +287,8 @@ export function LeasingStepOpenInspection({
               ) : null}
               {crossubOrderPlaced ? (
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  CROSSUB is scheduling your open inspection. You will be notified when a time is
-                  confirmed.
+                  Pick a Saturday for CROSSUB to conduct the open, or Mon–Fri / Sunday to run it
+                  yourself.
                 </p>
               ) : null}
               {oi.pushedToAgentApp ? (
@@ -347,6 +351,16 @@ export function LeasingStepOpenInspection({
         </div>
       )}
 
+      {needsScheduleRequest && cycleId ? (
+        <OpenInspectionScheduleRequestPanel
+          propertyId={detail.propertyId}
+          cycleId={cycleId}
+          onScheduled={(inspectionId) => {
+            if (inspectionId) onOpenInspectionCreated?.(inspectionId);
+          }}
+        />
+      ) : null}
+
       {openSession && (isScheduled || isScheduledStep || showOpenReport) ? (
         <OpenInspectionApplicantPanel
           session={openSession}
@@ -387,10 +401,10 @@ export function LeasingStepOpenInspection({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent elevated className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Request open inspection</DialogTitle>
+            <DialogTitle>Schedule Open Inspection</DialogTitle>
             <DialogDescription>
-              Choose when you would like the viewing window to start and end. CROSSUB will
-              confirm the official schedule in the admin portal.
+              Saturday — CROSSUB assigns an inspector. Mon–Fri or Sunday — you conduct the open
+              yourself.
             </DialogDescription>
           </DialogHeader>
           <CreateInspectionWizard

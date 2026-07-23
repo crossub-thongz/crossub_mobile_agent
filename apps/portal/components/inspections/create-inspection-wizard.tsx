@@ -28,6 +28,9 @@ import {
 import { SessionStatusEnum } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import {
+  validateCrossubOpenDateTimeLocal,
+} from '@/lib/open-inspection/open-inspection-saturday';
+import {
   buildAgentContactPrefill,
   buildIngoingInspectionPrefill,
   buildLeasingCyclePrefill,
@@ -511,29 +514,31 @@ export function CreateInspectionWizard({
               'Letting cycle is not ready — close and reopen the workflow, then try again',
             );
           }
-          if (!openPreferredStartLocal && !openPreferredNotes.trim()) {
-            throw new Error('Enter a viewing start time, or notes for CROSSUB');
+          if (!openPreferredStartLocal) {
+            throw new Error('Enter a viewing start date and time');
           }
           if (!openPreferredEndLocal) {
-            throw new Error('Enter a viewing end time');
+            throw new Error('Enter a viewing end date and time');
           }
-          if (
-            openPreferredEndLocal &&
-            openPreferredStartLocal &&
-            new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)
-          ) {
-            throw new Error('Preferred end time must be after the start time');
+          const startError = validateCrossubOpenDateTimeLocal(
+            openPreferredStartLocal,
+            'Viewing start date & time',
+          );
+          if (startError) throw new Error(startError);
+          const endError = validateCrossubOpenDateTimeLocal(
+            openPreferredEndLocal,
+            'Viewing end date & time',
+          );
+          if (endError) throw new Error(endError);
+          if (new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)) {
+            throw new Error('Viewing end time must be after the start time');
           }
           const result = await requestAgentOpenInspection(property.id, cycleId, {
-            preferredStartTime: openPreferredStartLocal
-              ? new Date(openPreferredStartLocal).toISOString()
-              : undefined,
-            preferredEndTime: openPreferredEndLocal
-              ? new Date(openPreferredEndLocal).toISOString()
-              : undefined,
+            preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
+            preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
             preferredNotes: openPreferredNotes.trim() || undefined,
           });
-          toast.success('Open inspection requested — CROSSUB will confirm the schedule');
+          toast.success('Open inspection scheduled');
           const inspection = await resolveCreatedOpenInspection(
             property.id,
             result.openInspectionId,
@@ -570,14 +575,24 @@ export function CreateInspectionWizard({
         // Case 2: vacant / newly registered property — creating a CROSSUB open
         // must also create (or attach to) a New Leasing job case.
         if (manualStandaloneCrossubOpen && propertyIsVacant) {
-          if (!openPreferredEndLocal) {
-            throw new Error('Enter a viewing end time');
+          if (!openPreferredStartLocal) {
+            throw new Error('Enter a viewing start date and time');
           }
-          if (
-            openPreferredStartLocal &&
-            new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)
-          ) {
-            throw new Error('Preferred end time must be after the start time');
+          if (!openPreferredEndLocal) {
+            throw new Error('Enter a viewing end date and time');
+          }
+          const startError = validateCrossubOpenDateTimeLocal(
+            openPreferredStartLocal,
+            'Viewing start date & time',
+          );
+          if (startError) throw new Error(startError);
+          const endError = validateCrossubOpenDateTimeLocal(
+            openPreferredEndLocal,
+            'Viewing end date & time',
+          );
+          if (endError) throw new Error(endError);
+          if (new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)) {
+            throw new Error('Viewing end time must be after the start time');
           }
           const rent = Number(openPreferredRentPerWeek);
           const fixedTermWeeks = resolveStandaloneOpenLeaseTermWeeks(
@@ -603,8 +618,8 @@ export function CreateInspectionWizard({
           });
           toast.success(
             leasingCycle?.id
-              ? 'Open inspection requested — CROSSUB will confirm the schedule'
-              : 'New leasing created and open inspection requested',
+              ? 'Open inspection scheduled'
+              : 'New leasing created and open inspection scheduled',
           );
           const inspection = await resolveCreatedOpenInspection(
             property.id,
@@ -1148,6 +1163,11 @@ function OpenInspectionForm({
               value={preferredStartLocal}
               onChange={(e) => onPreferredStartLocalChange(e.target.value)}
             />
+            {leasingRequestMode || conductedBy === 'crossub' ? (
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                CROSSUB open inspections must be on a Saturday (Sydney time).
+              </p>
+            ) : null}
           </Field>
           <Field
             label={
@@ -1162,18 +1182,20 @@ function OpenInspectionForm({
               onChange={(e) => onPreferredEndLocalChange(e.target.value)}
             />
           </Field>
-          <Field label="Notes for CROSSUB (optional)">
+          <Field label="Notes (optional)">
             <Textarea
               value={preferredNotes}
               onChange={(e) => onPreferredNotesChange(e.target.value)}
               rows={3}
-              placeholder="e.g. Saturdays preferred, tenant needs 24h notice…"
+              placeholder="e.g. Tenant needs 24h notice…"
             />
           </Field>
           <p className="text-muted-foreground text-xs">
             {leasingRequestMode
-              ? 'CROSSUB will confirm the official viewing window in the admin portal before the inspection is advertised.'
-              : 'This is your preference only. Use the end field for a range or latest option (e.g. 14 Jul start and 15 Jul end if either day works). CROSSUB will confirm the official schedule in the admin portal before the viewing is advertised.'}
+              ? 'Saturday — CROSSUB assigns an inspector. Other days — you conduct the open yourself.'
+              : conductedBy === 'crossub'
+                ? 'CROSSUB open inspections are scheduled on Saturdays only.'
+                : 'Use the end field for a viewing window on the same day.'}
           </p>
         </>
       ) : null}

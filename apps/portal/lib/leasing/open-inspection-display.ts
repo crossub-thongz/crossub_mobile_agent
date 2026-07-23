@@ -16,6 +16,8 @@ export function isAssignedInspectorName(name?: string | null): boolean {
   ].includes(normalized);
 }
 
+export { needsOpenInspectionScheduleRequest } from '@/lib/open-inspection-resolve';
+
 export function resolveOpenInspectionForProperty(
   inspections: Inspection[],
   propertyId: string,

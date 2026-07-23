@@ -27,6 +27,7 @@ import {
 } from '@/lib/crossub-api/agent-workflow-client';
 import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { registerOpenInspectionFromCycle } from '@/lib/open-inspection-resolve';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
   buildLeasingCyclePrefill,
@@ -293,7 +294,7 @@ export function PropertyWorkflowCreateDialog({
   tenantSelections?: TenantSelectionCase[];
   onSuccess: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
-  const { refresh, apiConnected, endPropertyManagement } = useAgentData();
+  const { refresh, apiConnected, endPropertyManagement, registerInspection } = useAgentData();
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
 
@@ -593,6 +594,13 @@ export function PropertyWorkflowCreateDialog({
               : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL;
             store.resetActiveStepToHint(propertyId, nextStep);
             store.setActiveStep(propertyId, nextStep);
+            if (crossubConductsOpen) {
+              await registerOpenInspectionFromCycle(
+                propertyId,
+                view.openInspection.inspectionId,
+                registerInspection,
+              );
+            }
           } catch {
             /* live sync will catch up when the workflow opens */
           }
@@ -749,6 +757,13 @@ export function PropertyWorkflowCreateDialog({
                 : LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL;
               store.resetActiveStepToHint(propertyId, nextStep);
               store.setActiveStep(propertyId, nextStep);
+              if (crossubConductsOpen) {
+                await registerOpenInspectionFromCycle(
+                  propertyId,
+                  view.openInspection.inspectionId,
+                  registerInspection,
+                );
+              }
             } catch {
               /* live sync will catch up when the workflow opens */
             }

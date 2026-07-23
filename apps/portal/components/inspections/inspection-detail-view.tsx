@@ -29,6 +29,7 @@ import { RoutineSelfInspectionReviewSection } from '@/components/inspections/rou
 import { RoutineSelfPreviousSubmissionSection } from '@/components/inspections/routine-self-previous-submission-section';
 import { RoutineInPersonKeyCustodySection } from '@/components/inspections/routine-in-person-key-custody-section';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
+import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
@@ -57,7 +58,7 @@ import {
 } from '@/lib/leasing/letting-rail-progress';
 import { OpenNewLeasingCaseButton } from '@/components/leasing-workflow/open-new-leasing-case-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
-import { formatInspectionTimeRange } from '@/lib/leasing/open-inspection-display';
+import { formatInspectionTimeRange, needsOpenInspectionScheduleRequest } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
@@ -337,10 +338,19 @@ export function InspectionDetailView({
 
   const workflow = inspectionWorkflowProgress(insp);
   const nextAction = inspectionNextAction(insp);
+  const isOpenLeasingCase =
+    insp.type === 'OPEN' && Boolean(leasingDetail) && !isStandaloneOpenViewing;
   const isSelfOpen = insp.type === 'OPEN' && insp.openConductedBy === 'agent';
+  const isCrossubManagedLeasingOpen =
+    isOpenLeasingCase && Boolean(leasingDetail) && !leasingDetail.openInspection.agentConducted;
+  const needsScheduleRequest =
+    isCrossubManagedLeasingOpen &&
+    leasingDetail != null &&
+    needsOpenInspectionScheduleRequest(leasingDetail.openInspection);
   const isCrossubOpen =
     insp.type === 'OPEN' &&
     (insp.openConductedBy === 'crossub' ||
+      isCrossubManagedLeasingOpen ||
       Boolean(leasingDetail?.openInspection.preferredScheduledTime || leasingDetail?.openInspection.preferredNotes));
   const inspectorLabel = isSelfOpen
     ? OPEN_CONDUCTED_BY_LABEL.agent
@@ -357,8 +367,6 @@ export function InspectionDetailView({
   const hasReport = reportGenerated || insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
   const sources = openSession?.reportSourceCounts;
   const canDelete = apiConnected && canDeleteOpenInspection(insp);
-  const isOpenLeasingCase =
-    insp.type === 'OPEN' && Boolean(leasingDetail) && !isStandaloneOpenViewing;
   const property = insp.propertyId
     ? properties.find((p) => p.id === insp.propertyId)
     : undefined;
@@ -524,6 +532,13 @@ export function InspectionDetailView({
         </section>
       ) : null}
 
+      {needsScheduleRequest && !isOpenResultsStep && linkedLeasingCycleId ? (
+        <OpenInspectionScheduleRequestPanel
+          propertyId={insp.propertyId}
+          cycleId={linkedLeasingCycleId}
+        />
+      ) : null}
+
       {insp.type === 'OPEN' && leasingDetail?.openInspection.preferredScheduledTime && !isOpenResultsStep ? (
         <InfoSection title="Preferred schedule">
           <InfoRow
@@ -601,7 +616,7 @@ export function InspectionDetailView({
         />
       )}
 
-      {isCrossubOpen && !isOpenResultsStep && (
+      {isCrossubOpen && !isOpenResultsStep && !needsScheduleRequest && (
         <Callout
           tone="info"
           title="CROSSUB is arranging this open inspection"

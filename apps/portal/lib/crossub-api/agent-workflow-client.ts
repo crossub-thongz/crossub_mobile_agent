@@ -115,6 +115,20 @@ export async function requestAgentOpenInspection(
   );
 }
 
+export async function scheduleAgentSelfOpenInspection(
+  propertyId: string,
+  cycleId: string,
+  body: RequestAgentOpenInspectionInput,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/open-inspection/self-schedule`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
 export async function cancelAgentOpenInspection(
   propertyId: string,
   inspectionId: string,
