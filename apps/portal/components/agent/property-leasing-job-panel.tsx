@@ -488,47 +488,19 @@ export function PropertyLeasingJobPanel({
     );
   };
 
-  if (workflowCases.length === 0) {
-    const hasDeleted =
-      deletedLeasingCycles.length > 0 || deletedEndLeasingCases.length > 0;
+  const hasCompletedHistory =
+    historyNewLeasingJobRows.length > 0 || historyEndLeasingJobRows.length > 0;
+  const hasDeletedHistory =
+    deletedLeasingCycles.length > 0 || deletedEndLeasingCases.length > 0;
+  const hasLeasingHistory = hasCompletedHistory || hasDeletedHistory;
+  const hasAnyLeasingTabData =
+    leasingCycles.length > 0 ||
+    vacatingCases.length > 0 ||
+    propertyTenantSelections.length > 0 ||
+    hasLeasingHistory;
 
-    if (!hasDeleted) {
-      return (
-        <PropertyWorkflowPanel
-          tab="leasing"
-          property={property}
-          propertyId={propertyId}
-          leasingCycles={leasingCycles}
-          rentReviews={rentReviews}
-          vacatingCases={vacatingCases}
-          maintenance={maintenance}
-          inspections={inspections}
-          tribunalCases={tribunalCases}
-          tenantSelections={tenantSelections}
-          currentLease={currentLease}
-          emptyTitle="No leasing activity yet"
-          onCreated={handleWorkflowCreated}
-        />
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        {workflowActions}
-        {renderLeasingTables()}
-        {renderHistoryTables()}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {workflowActions}
-
-      {renderLeasingTables()}
-
-      {renderHistoryTables()}
-
+  const workflowDialogs = (
+    <>
       <WorkflowCaseDeleteDialog
         open={deleteTarget != null}
         onOpenChange={(open) => {
@@ -570,6 +542,38 @@ export function PropertyLeasingJobPanel({
         canDeleteCase={canDeleteCase}
         onDeleteCase={(item) => setDeleteTarget(item)}
       />
+    </>
+  );
+
+  if (workflowCases.length === 0 && !hasAnyLeasingTabData) {
+    return (
+      <PropertyWorkflowPanel
+        tab="leasing"
+        property={property}
+        propertyId={propertyId}
+        leasingCycles={leasingCycles}
+        rentReviews={rentReviews}
+        vacatingCases={vacatingCases}
+        maintenance={maintenance}
+        inspections={inspections}
+        tribunalCases={tribunalCases}
+        tenantSelections={tenantSelections}
+        currentLease={currentLease}
+        emptyTitle="No leasing activity yet"
+        onCreated={handleWorkflowCreated}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {workflowActions}
+
+      {renderLeasingTables()}
+
+      {renderHistoryTables()}
+
+      {workflowDialogs}
 
       {showCurrentTenancySummary && currentLease ? (
         <LeasingTenancySummary

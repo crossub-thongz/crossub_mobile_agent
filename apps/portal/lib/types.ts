@@ -181,6 +181,8 @@ export interface LeasingCycle {
   propertyAddress: string;
   lifecycleStep: string;
   onboardingStepId?: string | null;
+  /** False when onboarding is complete and the cycle is historical. */
+  isActive?: boolean;
   rentPerWeek?: number;
   availableFrom?: string;
   createdAt?: string;

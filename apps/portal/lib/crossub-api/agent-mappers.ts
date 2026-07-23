@@ -573,6 +573,7 @@ export function mapAgentLeasingCycles(
     propertyAddress: c.propertyAddress,
     lifecycleStep: c.lifecycleStep,
     onboardingStepId: c.onboardingStepId,
+    isActive: c.isActive ?? undefined,
     rentPerWeek: c.rentPerWeek ?? undefined,
     availableFrom: c.availableFrom ?? undefined,
     createdAt: c.createdAt ?? undefined,

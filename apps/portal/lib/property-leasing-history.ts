@@ -11,7 +11,9 @@ export function isHistoryEndLeasingCase(vacating: VacatingCase): boolean {
 
 /** Onboarding fully done — case belongs in History, not Active. */
 export function isCompletedLeasingCycle(cycle: LeasingCycle): boolean {
-  return cycle.onboardingStepId === 'completed';
+  if (cycle.onboardingStepId === 'completed') return true;
+  // Completed cycles are inactive ONBOARDING rows; tolerate missing onboardingStepId.
+  return cycle.isActive === false && cycle.lifecycleStep === 'ONBOARDING';
 }
 
 /**

@@ -45,6 +45,7 @@ export type AgentLeasingCycle = {
   propertyAddress: string;
   lifecycleStep: string;
   onboardingStepId?: string | null;
+  isActive?: boolean;
   rentPerWeek?: number | null;
   availableFrom?: string | null;
   createdAt?: string | null;
