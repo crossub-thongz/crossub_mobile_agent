@@ -26,6 +26,8 @@ import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field
 import { InspectionCompareEvidenceSection } from '@/components/inspections/inspection-compare-evidence-section';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { RoutineSelfInspectionReviewSection } from '@/components/inspections/routine-self-inspection-review-section';
+import { RoutineSelfPreviousSubmissionSection } from '@/components/inspections/routine-self-previous-submission-section';
+import { RoutineInPersonKeyCustodySection } from '@/components/inspections/routine-in-person-key-custody-section';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
@@ -777,6 +779,31 @@ export function InspectionDetailView({
           detail={leasingDetail}
           openSession={openSession}
         />
+      ) : null}
+
+      {insp.type === 'ROUTINE' &&
+      (routineSchedule?.flow ?? insp.routineMode) === 'in_person' &&
+      insp.id ? (
+        <RoutineInPersonKeyCustodySection
+          inspectionId={insp.id}
+          apiConnected={apiConnected}
+          inspectorAssigned={Boolean(insp.inspector && insp.inspector !== 'Unassigned')}
+        />
+      ) : null}
+
+      {insp.type === 'ROUTINE' && routineSchedule?.currentInspection?.previousSubmission ? (
+        <RoutineSelfPreviousSubmissionSection
+          submission={routineSchedule.currentInspection.previousSubmission}
+          propertyLabel={insp.propertyAddress}
+          inspectionRecordId={routineSchedule.currentInspectionId ?? routineSchedule.currentInspection.id}
+          declineReason={routineSchedule.currentInspection.declineReason}
+        />
+      ) : null}
+
+      {insp.type === 'ROUTINE' && routineSchedule?.currentInspection?.declineReason ? (
+        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm">
+          Awaiting tenant to re-upload the routine self-inspection.
+        </div>
       ) : null}
 
       {insp.type === 'ROUTINE' && routineSchedule ? (

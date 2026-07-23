@@ -21,6 +21,17 @@ export type ServerRoutineScheduleView = {
     id: string;
     status: string;
     reportUrl: string | null;
+    declineReason?: string | null;
+    previousSubmission?: {
+      submittedAt: string;
+      reportUrl: string | null;
+      sections: Array<{
+        id: string;
+        room: string;
+        description: string;
+        photos: string[];
+      }>;
+    } | null;
   } | null;
 };
 
