@@ -419,3 +419,22 @@ export function resolveLeaseDates(
     end: lease?.leaseEnd ?? property.leaseEnd,
   };
 }
+
+/** Fixed when a lease end date is on file; otherwise periodic (no fixed end). */
+export function deriveLeaseTermLabel(
+  leaseEnd: string | null | undefined,
+  options?: { vacant?: boolean },
+): 'Fixed term' | 'Periodic' | null {
+  if (options?.vacant) return null;
+  const day = leaseEnd?.trim().slice(0, 10);
+  return day ? 'Fixed term' : 'Periodic';
+}
+
+export function formatProfileLeaseStatus(
+  property: Property,
+  leaseEnd?: string | null,
+): string {
+  if (property.leaseStatus === 'vacant') return 'Vacant';
+  if (property.leaseStatus === 'vacating') return 'Vacating';
+  return deriveLeaseTermLabel(leaseEnd) ?? property.leaseStatus;
+}

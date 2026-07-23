@@ -52,6 +52,7 @@ export interface PropertyContactBlock {
 export interface PropertyPortalOverview {
   leaseStartDate?: string;
   leaseEndDate?: string;
+  leaseTermType?: 'fixed' | 'periodic';
   nextRentReviewDate?: string;
   lastRentIncreaseDate?: string;
   rentPaidUntilDate?: string;

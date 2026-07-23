@@ -13,8 +13,10 @@ import { PropertyTenancyManagementSections } from '@/components/agent/property-t
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import {
+  formatProfileLeaseStatus,
   formatUpcomingRentChangeHint,
   resolveCurrentRent,
+  resolveLeaseDates,
   resolveUpcomingAcceptedRentChange,
 } from '@/lib/property-overview';
 import type {
@@ -167,6 +169,13 @@ export function PropertyProfileDetails({
     ? formatUpcomingRentChangeHint(upcomingRentChange)
     : undefined;
 
+  const profileLeaseStatus = useMemo(() => {
+    const { end } = resolveLeaseDates(property, currentLease);
+    const leaseEnd =
+      overview?.leaseEndDate ?? sync.record?.leaseEndDate ?? end ?? property.leaseEnd;
+    return formatProfileLeaseStatus(property, leaseEnd);
+  }, [property, currentLease, overview, sync.record]);
+
   const handleSaved = () => {
     onRefresh?.();
   };
@@ -185,22 +194,26 @@ export function PropertyProfileDetails({
         ) : (
           <ChevronDown className="text-muted-foreground size-4 shrink-0 lg:hidden" aria-hidden />
         )}
-        <span className="text-muted-foreground ml-auto text-xs capitalize">{property.leaseStatus}</span>
       </button>
 
       <div className={cn('mt-3 space-y-3', !open && 'hidden lg:block')}>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <StatCell
-              label="Furnished"
-              value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
-            />
-            <StatCell label="Property type" value={registry.propertyType ?? '—'} />
-            <StatCell label="Key fob" value={formatKeyFobCount(sync.keyFobCount)} />
-            <StatCell
-              label="Weekly rent"
-              value={weeklyRentLabel}
-              hint={upcomingRentHint}
-            />
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <StatCell
+                label="Furnished"
+                value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
+              />
+              <StatCell label="Property type" value={registry.propertyType ?? '—'} />
+              <StatCell label="Key fob" value={formatKeyFobCount(sync.keyFobCount)} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <StatCell
+                label="Weekly rent"
+                value={weeklyRentLabel}
+                hint={upcomingRentHint}
+              />
+              <StatCell label="Lease status" value={profileLeaseStatus} />
+            </div>
           </div>
 
           <div className="space-y-2">
