@@ -1,4 +1,5 @@
 import {
+  SessionStatusEnum,
   type OpenInspectionSession,
 } from '@/constants/open-inspection-ops';
 import { LEASING_AGENT_DECISION } from '@/lib/leasing/constants';
@@ -28,18 +29,37 @@ function startReached(session: OpenInspectionSession, now: Date) {
   return new Date(session.startTime) <= now;
 }
 
+function viewingSessionIsLive(session: OpenInspectionSession): boolean {
+  return (
+    session.sessionStatus === SessionStatusEnum.OPEN ||
+    session.sessionStatus === SessionStatusEnum.STAFF_EN_ROUTE ||
+    session.sessionStatus === SessionStatusEnum.CLOSED
+  );
+}
+
+function isAgentConductedOpen(session: OpenInspectionSession): boolean {
+  const note = session.shortNote?.toLowerCase() ?? '';
+  return note.includes('agent-conducted open');
+}
+
+function canEnterOpenRailStep(session: OpenInspectionSession, now: Date): boolean {
+  if (!startReached(session, now)) return false;
+  if (viewingSessionIsLive(session)) return true;
+  if (isAgentConductedOpen(session)) return true;
+  return false;
+}
+
 export function deriveOpenSessionRailProgress(
   session: OpenInspectionSession,
   now: Date = new Date(),
 ): { currentRailStep: OpenSessionRailStep; fillIndex: number } {
   const reportReady =
     session.openReportGenerated === true || Boolean(session.reviewCompletedAt);
-  const started = startReached(session, now);
 
   if (reportReady) {
     return { currentRailStep: OPEN_SESSION_RAIL_STEP.REPORT, fillIndex: 2 };
   }
-  if (started) {
+  if (canEnterOpenRailStep(session, now)) {
     return { currentRailStep: OPEN_SESSION_RAIL_STEP.OPEN, fillIndex: 1 };
   }
   return { currentRailStep: OPEN_SESSION_RAIL_STEP.SCHEDULED, fillIndex: 0 };
@@ -63,11 +83,10 @@ export function isOpenSessionRailStepCompleted(
 ): boolean {
   const reportReady =
     session.openReportGenerated === true || Boolean(session.reviewCompletedAt);
-  const started = startReached(session, now);
 
   switch (step) {
     case OPEN_SESSION_RAIL_STEP.SCHEDULED:
-      return started;
+      return canEnterOpenRailStep(session, now);
     case OPEN_SESSION_RAIL_STEP.OPEN:
       return reportReady;
     case OPEN_SESSION_RAIL_STEP.REPORT:
@@ -94,6 +113,6 @@ export function canCompleteOpenSessionReview(
   now: Date = new Date(),
 ) {
   if (session.reviewCompletedAt || session.openReportGenerated) return false;
-  if (!startReached(session, now)) return false;
+  if (!canEnterOpenRailStep(session, now)) return false;
   return allReviewed(session);
 }
