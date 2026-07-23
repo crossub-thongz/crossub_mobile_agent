@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Building2, Shield, User } from 'lucide-react';
 import { toast } from 'sonner';
 
