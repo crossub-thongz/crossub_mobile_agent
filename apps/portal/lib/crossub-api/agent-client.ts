@@ -707,16 +707,21 @@ export async function uploadAgentDocumentFileWithProgress(
   const session = await beginDocumentUploadSession(payload);
   if (session.mode === 'direct') {
     onNetworkProgress?.(0);
-    await putFileToPresignedUrl(
-      session.uploadUrl,
-      file,
-      payload.mimeType,
-      (pct) => onNetworkProgress?.(Math.min(90, Math.round(pct * 0.9))),
-    );
-    onNetworkProgress?.(95);
-    const created = await completeDocumentUploadSession(session.storageKey, payload);
-    onNetworkProgress?.(100);
-    return created;
+    try {
+      await putFileToPresignedUrl(
+        session.uploadUrl,
+        file,
+        payload.mimeType,
+        (pct) => onNetworkProgress?.(Math.min(90, Math.round(pct * 0.9))),
+      );
+      onNetworkProgress?.(95);
+      const created = await completeDocumentUploadSession(session.storageKey, payload);
+      onNetworkProgress?.(100);
+      return created;
+    } catch {
+      // Direct-to-R2 PUT often fails when the bucket CORS policy omits the portal
+      // origin (upload-session still succeeds). Fall back to base64-through-API.
+    }
   }
 
   const contentBase64 = await fileToBase64WithProgress(file, (readPct) =>
