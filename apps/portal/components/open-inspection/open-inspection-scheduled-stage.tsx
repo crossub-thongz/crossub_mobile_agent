@@ -3,7 +3,7 @@
 import { Calendar, FileText, User } from 'lucide-react';
 
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
-import { formatLettingRent } from '@/lib/leasing/open-inspection-display';
+import { formatInspectionDurationHours, formatLettingRent } from '@/lib/leasing/open-inspection-display';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
 function FactTile({ label, value, icon: Icon }: { label: string; value: string; icon?: React.ElementType }) {
@@ -26,6 +26,10 @@ export function OpenInspectionScheduledStage({ session }: { session: OpenInspect
       : session.startTime
         ? formatDateTime(session.startTime)
         : '—';
+  const inspectionDuration =
+    session.startTime && session.endTime
+      ? formatInspectionDurationHours(session.startTime, session.endTime)
+      : null;
   const inspectorName = session.agent?.name?.trim() || 'Unassigned';
   const notes = session.shortNote?.trim() || '—';
 
@@ -43,6 +47,9 @@ export function OpenInspectionScheduledStage({ session }: { session: OpenInspect
           value={rental?.availableFrom ? formatDate(rental.availableFrom) : '—'}
         />
         <FactTile label="Inspection time" value={inspectionTime} icon={Calendar} />
+        {inspectionDuration ? (
+          <FactTile label="Duration" value={inspectionDuration} />
+        ) : null}
         <FactTile label="Inspector name" value={inspectorName} icon={User} />
       </div>
       <div className="mt-2">

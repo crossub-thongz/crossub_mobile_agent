@@ -29,6 +29,7 @@ import { RoutineSelfInspectionReviewSection } from '@/components/inspections/rou
 import { RoutineSelfPreviousSubmissionSection } from '@/components/inspections/routine-self-previous-submission-section';
 import { RoutineInPersonKeyCustodySection } from '@/components/inspections/routine-in-person-key-custody-section';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
+import { OpenInspectionOpenStage } from '@/components/open-inspection/open-inspection-open-stage';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
@@ -58,7 +59,7 @@ import {
 } from '@/lib/leasing/letting-rail-progress';
 import { OpenNewLeasingCaseButton } from '@/components/leasing-workflow/open-new-leasing-case-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
-import { formatInspectionTimeRange, needsOpenInspectionScheduleRequest } from '@/lib/leasing/open-inspection-display';
+import { formatInspectionDurationHours, formatInspectionTimeRange, needsOpenInspectionScheduleRequest } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
@@ -549,6 +550,20 @@ export function InspectionDetailView({
             )}
             icon={Calendar}
           />
+          {formatInspectionDurationHours(
+            leasingDetail.openInspection.preferredScheduledTime,
+            leasingDetail.openInspection.preferredScheduledTimeEnd,
+          ) ? (
+            <InfoRow
+              label="Duration"
+              value={
+                formatInspectionDurationHours(
+                  leasingDetail.openInspection.preferredScheduledTime,
+                  leasingDetail.openInspection.preferredScheduledTimeEnd,
+                )!
+              }
+            />
+          ) : null}
           {leasingDetail.openInspection.preferredNotes ? (
             <InfoRow label="Notes" value={leasingDetail.openInspection.preferredNotes} />
           ) : null}
@@ -565,6 +580,20 @@ export function InspectionDetailView({
             )}
             icon={Calendar}
           />
+          {formatInspectionDurationHours(
+            leasingDetail.openInspection.scheduledTime,
+            leasingDetail.openInspection.scheduledTimeEnd,
+          ) ? (
+            <InfoRow
+              label="Duration"
+              value={
+                formatInspectionDurationHours(
+                  leasingDetail.openInspection.scheduledTime,
+                  leasingDetail.openInspection.scheduledTimeEnd,
+                )!
+              }
+            />
+          ) : null}
           {leasingDetail.openInspection.inspectorName ? (
             <InfoRow label="Inspector" value={leasingDetail.openInspection.inspectorName} icon={User} />
           ) : null}
@@ -671,6 +700,14 @@ export function InspectionDetailView({
           propertyLabel={insp.propertyAddress}
           onSessionChange={setOpenSession}
         />
+      ) : null}
+
+      {openSession &&
+      insp.type === 'OPEN' &&
+      !isStandaloneOpenViewing &&
+      leasingDetail?.openInspection.agentConducted &&
+      !isOpenResultsStep ? (
+        <OpenInspectionOpenStage session={openSession} onSessionChange={setOpenSession} />
       ) : null}
 
       {openSession && insp.type === 'OPEN' && !isStandaloneOpenViewing && !isOpenResultsStep ? (

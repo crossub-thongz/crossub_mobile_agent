@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
 import { OpenLeasingGenerateReportButton } from '@/components/leasing-workflow/open-leasing-generate-report-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
+import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
@@ -29,6 +30,7 @@ import { resolveOpenInspectionSessionId } from '@/lib/leasing/resolve-open-inspe
 import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import {
   canCancelLetting,
+  formatInspectionDurationHours,
   formatInspectionTimeRange,
   formatLettingRent,
   formatTenantMovedOutDate,
@@ -124,6 +126,18 @@ export function LeasingStepOpenInspection({
           oi.preferredScheduledTimeEnd,
         )
       : formatInspectionTimeRange();
+
+  const inspectionDuration = isScheduled
+    ? formatInspectionDurationHours(
+        oi.scheduledTime ?? linkedInspection?.scheduledAt,
+        oi.scheduledTimeEnd,
+      )
+    : isRequested
+      ? formatInspectionDurationHours(
+          oi.preferredScheduledTime,
+          oi.preferredScheduledTimeEnd,
+        )
+      : null;
 
   const inspectionTimeLabel = isScheduled
     ? 'Scheduled'
@@ -279,6 +293,12 @@ export function LeasingStepOpenInspection({
               <p className="text-muted-foreground text-xs">
                 {inspectionTimeLabel} ·{' '}
                 <span className="text-foreground font-medium">{inspectionTime}</span>
+                {inspectionDuration ? (
+                  <>
+                    {' '}
+                    · <span className="text-foreground font-medium">{inspectionDuration}</span>
+                  </>
+                ) : null}
               </p>
               {isRequested && oi.preferredNotes ? (
                 <p className="text-muted-foreground text-xs leading-relaxed">
@@ -287,8 +307,7 @@ export function LeasingStepOpenInspection({
               ) : null}
               {crossubOrderPlaced ? (
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Pick a Saturday for CROSSUB to conduct the open, or Mon–Fri / Sunday to run it
-                  yourself.
+                  Choose a Saturday for CROSSUB to conduct the open inspection.
                 </p>
               ) : null}
               {oi.pushedToAgentApp ? (
@@ -361,7 +380,15 @@ export function LeasingStepOpenInspection({
         />
       ) : null}
 
-      {openSession && (isScheduled || isScheduledStep || showOpenReport) ? (
+      {oi.agentConducted && oi.viewingSessionId ? (
+        <OpenInspectionApplicantLinksPanel
+          propertyId={detail.propertyId}
+          viewingSessionId={oi.viewingSessionId}
+          apiConnected={apiConnected}
+        />
+      ) : null}
+
+      {openSession && (isScheduled || isScheduledStep || showOpenReport) && !oi.agentConducted ? (
         <OpenInspectionApplicantPanel
           session={openSession}
           onSessionChange={setOpenSession}
@@ -403,8 +430,7 @@ export function LeasingStepOpenInspection({
           <DialogHeader>
             <DialogTitle>Schedule Open Inspection</DialogTitle>
             <DialogDescription>
-              Saturday — CROSSUB assigns an inspector. Mon–Fri or Sunday — you conduct the open
-              yourself.
+              Choose a Saturday — CROSSUB assigns an inspector from the task pool.
             </DialogDescription>
           </DialogHeader>
           <CreateInspectionWizard

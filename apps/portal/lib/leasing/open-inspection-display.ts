@@ -86,6 +86,19 @@ export function formatInspectionTimeRange(
   return `${startLabel} – ${formatDate(end)} · ${formatTime(end)}`;
 }
 
+export function formatInspectionDurationHours(
+  start?: string,
+  end?: string,
+): string | null {
+  if (!start || !end) return null;
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const hours = ms / (60 * 60 * 1000);
+  if (hours === 1) return '1 hour';
+  if (Number.isInteger(hours)) return `${hours} hours`;
+  return `${hours.toFixed(1)} hours`;
+}
+
 export function canCancelLetting(
   detail: LeasingPropertyDetail,
   linkedInspection?: { scheduledAt?: string; inspector?: string },

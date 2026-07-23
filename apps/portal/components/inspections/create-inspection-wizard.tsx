@@ -1192,10 +1192,8 @@ function OpenInspectionForm({
           </Field>
           <p className="text-muted-foreground text-xs">
             {leasingRequestMode
-              ? 'Saturday — CROSSUB assigns an inspector. Other days — you conduct the open yourself.'
-              : conductedBy === 'crossub'
-                ? 'CROSSUB open inspections are scheduled on Saturdays only.'
-                : 'Use the end field for a viewing window on the same day.'}
+              ? 'Choose a Saturday — CROSSUB assigns an inspector from the task pool.'
+              : 'CROSSUB open inspections are scheduled on Saturdays only.'}
           </p>
         </>
       ) : null}

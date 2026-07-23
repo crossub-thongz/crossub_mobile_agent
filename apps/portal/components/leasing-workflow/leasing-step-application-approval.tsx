@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { LeasingApplicantAddPanel } from '@/components/leasing-workflow/leasing-applicant-add-panel';
 import { LeasingApplicantDocumentIntake } from '@/components/leasing-workflow/leasing-applicant-document-intake';
 import { LeasingApplicantOrderCard } from '@/components/leasing-workflow/leasing-applicant-order-card';
+import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
@@ -42,6 +43,15 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
   const readOnly = isApplicationApprovalLocked(detail);
   const apps = readOnly ? getApprovedApplications(detail) : detail.applicationsDetail;
   const selectedCount = countSelectedForApprovalSend(apps);
+
+  const agentConductedLinks =
+    detail.openInspection.agentConducted && detail.openInspection.viewingSessionId ? (
+      <OpenInspectionApplicantLinksPanel
+        propertyId={detail.propertyId}
+        viewingSessionId={detail.openInspection.viewingSessionId}
+        apiConnected={apiConnected}
+      />
+    ) : null;
 
   const toggleSelected = async (applicationId: string) => {
     setBusyAppId(applicationId);
@@ -141,6 +151,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
     if (detail.openInspection.pushedToAgentApp) {
       return (
         <div className="space-y-3">
+          {agentConductedLinks}
           {intakeSection}
           <div className="border-primary/30 bg-primary/5 rounded-xl border p-4">
             <div className="flex items-start gap-3">
@@ -153,7 +164,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
                 </p>
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {detail.openInspection.agentConducted
-                    ? 'You opened this letting with a self-run open inspection. Drag in application documents above, or wait for viewers to apply via the CROSSUB app / H5 form.'
+                    ? 'You opened this letting with a self-run open inspection. Share the check-in and application links (or QR codes) below with prospects, drag in application documents above, or wait for viewers to apply via the tenant app.'
                     : 'CROSSUB pushed the arranged viewing time to your app. Drag in application documents above, or wait for viewers to apply via the CROSSUB app / H5 form.'}
                 </p>
                 {detail.openInspection.scheduledTime ? (
@@ -183,6 +194,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
     return (
       <div className="space-y-4">
+        {agentConductedLinks}
         {intakeSection}
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center">
           <div className="bg-secondary flex size-11 items-center justify-center rounded-full">
@@ -208,6 +220,7 @@ export function LeasingStepApplicationApproval({ detail }: { detail: LeasingProp
 
   return (
     <div className="space-y-3">
+      {agentConductedLinks}
       {intakeSection}
 
       {readOnly ? (
