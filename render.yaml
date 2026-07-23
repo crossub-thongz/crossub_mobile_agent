@@ -20,3 +20,5 @@ services:
         value: /api
       - key: API_INTERNAL_URL
         sync: false
+      - key: NEXT_PUBLIC_TENANT_APP_URL
+        sync: false

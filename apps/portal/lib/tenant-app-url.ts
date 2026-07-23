@@ -1,13 +1,22 @@
 /** Staging tenant portal — default when env is unset (no localhost in QR / apply links). */
 export const STAGING_TENANT_APP_URL = 'https://crossub-mobile-tenant.onrender.com';
+export const PROD_TENANT_APP_URL = 'https://crossub-mobile-tenant-prod.onrender.com';
+
+function isProdDeploymentHost(hostname: string): boolean {
+  return hostname.includes('-prod') || hostname.endsWith('.crossub.com.au');
+}
 
 /** Public tenant app base URL for apply links, QR codes, and credential handoff. */
 export function tenantAppBaseUrl(): string {
   const raw = process.env.NEXT_PUBLIC_TENANT_APP_URL?.trim();
   if (raw && raw.length > 0) return raw.replace(/\/$/, '');
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3003';
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost') return 'http://localhost:3003';
+    if (isProdDeploymentHost(host)) return PROD_TENANT_APP_URL;
   }
+  const apiInternal = process.env.API_INTERNAL_URL?.trim() ?? '';
+  if (apiInternal.includes('-prod')) return PROD_TENANT_APP_URL;
   return STAGING_TENANT_APP_URL;
 }
 
