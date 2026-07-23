@@ -34,7 +34,6 @@ import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection
 import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
-import { CaseWorkflowProgressCard } from '@/components/agent/case-workflow-progress-card';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { DocumentViewer } from '@/components/agent/document-viewer';
@@ -44,7 +43,6 @@ import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delet
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES, inspectionDetail } from '@/constants/routes';
-import { inspectionWorkflowProgress } from '@/lib/case-workflows';
 import type { DetailNavContext } from '@/lib/detail-navigation';
 import {
   inspectionEmailRecordsForStep,
@@ -338,7 +336,6 @@ export function InspectionDetailView({
     return <AgentFieldInspectionDetail inspection={insp} apiConnected={apiConnected} />;
   }
 
-  const workflow = inspectionWorkflowProgress(insp);
   const nextAction = inspectionNextAction(insp);
   const isOpenLeasingCase =
     insp.type === 'OPEN' && Boolean(leasingDetail) && !isStandaloneOpenViewing;
@@ -636,10 +633,6 @@ export function InspectionDetailView({
             </Button>
           )}
         </section>
-      ) : null}
-
-      {!isOpenLeasingCase && !isStandaloneOpenViewing ? (
-        <CaseWorkflowProgressCard progress={workflow} />
       ) : null}
 
       {isSelfOpen && !isOpenResultsStep && !isStandaloneOpenViewing && (
