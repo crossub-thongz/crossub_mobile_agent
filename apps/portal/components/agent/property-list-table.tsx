@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, Pencil, Trash2 } from 'lucide-react';
 
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
@@ -218,8 +218,9 @@ export function PropertyListTable({
                       <span className="line-clamp-2">{formatPropertyFullAddress(property)}</span>
                     </Link>
                     {isDraft ? (
-                      <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-                        Draft — resume
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-900 dark:bg-red-950/50 dark:text-red-200">
+                        <AlertCircle className="size-3 shrink-0" aria-hidden />
+                        Incomplete — finish setup
                       </span>
                     ) : null}
                   </td>
