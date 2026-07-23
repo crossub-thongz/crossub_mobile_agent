@@ -45,7 +45,7 @@ function propertyIdFromPath(pathname: string): string | undefined {
   return id;
 }
 
-function buildPropertyManagerGreeting(
+function buildAccountManagerGreeting(
   address: string,
   jobCount: number,
   agentName?: string | null,
@@ -53,9 +53,9 @@ function buildPropertyManagerGreeting(
   const name = agentName?.trim();
   const lead = name ? `Hi ${name}` : 'Hi';
   if (jobCount > 0) {
-    return `${lead} — I'm your Property Manager for ${address}. ${jobCount} job${jobCount === 1 ? '' : 's'} in progress here — tap any to open, or ask me about this property.`;
+    return `${lead} — I'm your Account Manager for ${address}. ${jobCount} job${jobCount === 1 ? '' : 's'} in progress here — tap any to open, or ask me about this property.`;
   }
-  return `${lead} — I'm your Property Manager for ${address}. No jobs in progress right now. Ask me to add a repair, schedule an inspection, start leasing, or check status.`;
+  return `${lead} — I'm your Account Manager for ${address}. No jobs in progress right now. Ask me to add a repair, schedule an inspection, start leasing, or check status.`;
 }
 
 type ChatLine = {
@@ -203,7 +203,7 @@ export function GiiAssistant({
 
   const greetingText = useMemo(() => {
     if (scopedProperty && scopedAddress) {
-      return buildPropertyManagerGreeting(
+      return buildAccountManagerGreeting(
         scopedAddress,
         propertyJobs.length,
         user?.firstName,
@@ -521,10 +521,10 @@ export function GiiAssistant({
             <p className="text-sm font-bold">Gii</p>
             <p className="text-muted-foreground truncate text-[10px]">
               {isEmbedded || isPanel
-                ? 'Your Property Manager'
+                ? 'Your Account Manager'
                 : scopedAddress
-                  ? `Property Manager · ${scopedAddress}`
-                  : `Your Property Manager · ${multilingualHint()}`}
+                  ? `Account Manager · ${scopedAddress}`
+                  : `Your Account Manager · ${multilingualHint()}`}
             </p>
           </div>
         </div>
@@ -585,7 +585,7 @@ export function GiiAssistant({
             <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-emerald-500/10 text-primary">
               <Sparkles className="size-6" />
             </div>
-            <p className="text-sm font-semibold">Ask Gii, your Property Manager</p>
+            <p className="text-sm font-semibold">Ask Gii, your Account Manager</p>
             <p className="text-muted-foreground mt-1.5 max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
                 ? 'Jobs in progress appear above. Tap any to open, or ask me about this property.'

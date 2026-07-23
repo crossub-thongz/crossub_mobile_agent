@@ -91,7 +91,7 @@ export function PropertyMobileHub({
             <Sparkles className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Ask Gii, your Property Manager</p>
+            <p className="text-sm font-semibold">Ask Gii, your Account Manager</p>
             <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
               Tell Gii what you need — maintenance jobs, inspections, leasing, or a quick status
               check for this property.

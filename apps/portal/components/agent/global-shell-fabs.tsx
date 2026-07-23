@@ -60,7 +60,7 @@ const DOCK_BUTTONS = [
 
 const MOBILE_GII_BUTTON = {
   id: 'gii' as const,
-  label: 'Property Manager',
+  label: 'Account Manager',
   icon: Sparkles,
   activeClass:
     'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',

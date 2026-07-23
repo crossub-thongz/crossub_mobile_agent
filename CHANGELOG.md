@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-24
+
+### Changed
+- App icon no longer fills its tile. The source mark ran edge-to-edge (~84% of its canvas), which is what made the installed icon read as oversized; it is now trimmed to its true bounding box and re-placed centred at 66% on transparent 192/512 tiles, with a white-plated `apple-touch-icon` (iOS flattens transparency to black) and a 52% `icon-maskable-512` inside Android's circular safe zone. Also fixes the manifest, which declared one 754px file as both `192x192` and `512x512` and marked it `maskable`, so Android was cropping an already-edge-to-edge mark. `layout.tsx` now declares the real per-size icons. Requested by the boss ("图标太大了，缩小一些").
+- Gii presents itself as an **Account Manager**, not a Property Manager — panel subtitle, mobile FAB label, property-scoped greeting, and the "Ask Gii, your …" prompt headers. Requested by the boss ("GII 不是 property manager 是 account manager"). Copy-only; the leasing workflow's own "Property Manager" actor label is a different concept and is unchanged.
+
 ## 2026-07-22
 
 ### Changed

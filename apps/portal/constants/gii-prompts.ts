@@ -1,4 +1,4 @@
-/** Suggested prompts when Gii is scoped to a property — Property Manager mode. */
+/** Suggested prompts when Gii is scoped to a property — Account Manager mode. */
 export const PROPERTY_GII_PROMPTS = [
   {
     id: 'maintenance',
