@@ -84,11 +84,6 @@ export function MaintenanceCompletionGatesPanel({
   const isCompleted = status === 'completed';
   const canEdit = apiConnected && !isClosed && (isInProgress || isCompleted);
 
-  const hasCompletionEvidence =
-    evidenceAttachments.length > 0 || Boolean(ctx.workspaceCase.completionEvidenceUploaded);
-  const agentApproved = Boolean(ctx.workspaceCase.agentApprovalReceived);
-  const tenantSignOff = Boolean(ctx.workspaceCase.tenantApprovalReceived);
-
   const evidenceAttachments = useMemo(
     () =>
       attachments.filter(
@@ -103,6 +98,11 @@ export function MaintenanceCompletionGatesPanel({
       ),
     [attachments, requestId],
   );
+
+  const hasCompletionEvidence =
+    evidenceAttachments.length > 0 || Boolean(ctx.workspaceCase.completionEvidenceUploaded);
+  const agentApproved = Boolean(ctx.workspaceCase.agentApprovalReceived);
+  const tenantSignOff = Boolean(ctx.workspaceCase.tenantApprovalReceived);
   // Gate is checked by upload itself — no manual checkbox for agents.
   const invoiceUploaded =
     Boolean(ctx.workspaceCase.invoiceUploaded) || invoiceAttachments.length > 0;
