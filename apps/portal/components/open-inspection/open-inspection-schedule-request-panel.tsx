@@ -37,6 +37,7 @@ export function OpenInspectionScheduleRequestPanel({
   const [preferredStartLocal, setPreferredStartLocal] = useState('');
   const [durationHours, setDurationHours] = useState('1');
   const [preferredNotes, setPreferredNotes] = useState('');
+  const [keyCollectLocation, setKeyCollectLocation] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
@@ -46,6 +47,11 @@ export function OpenInspectionScheduleRequestPanel({
     }
     if (!preferredStartLocal) {
       toast.error('Pick a Saturday and start time');
+      return;
+    }
+    const keyLocation = keyCollectLocation.trim();
+    if (!keyLocation) {
+      toast.error('Enter where the inspector collects keys');
       return;
     }
 
@@ -80,6 +86,7 @@ export function OpenInspectionScheduleRequestPanel({
         preferredStartTime: new Date(preferredStartLocal).toISOString(),
         preferredEndTime: new Date(preferredEndLocal).toISOString(),
         preferredNotes: preferredNotes.trim() || undefined,
+        keyCollectLocation: keyLocation,
       };
       const result = await requestAgentOpenInspection(propertyId, cycleId, body);
       toast.success('Open inspection scheduled — CROSSUB will assign an inspector');
@@ -134,6 +141,20 @@ export function OpenInspectionScheduleRequestPanel({
           disabled={submitting}
           className="w-28"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="open-schedule-key-location">Key collect location *</Label>
+        <Input
+          id="open-schedule-key-location"
+          value={keyCollectLocation}
+          onChange={(e) => setKeyCollectLocation(e.target.value)}
+          placeholder="e.g. Lockbox on front gate — code 4821"
+          disabled={submitting}
+        />
+        <p className="text-muted-foreground text-[11px] leading-relaxed">
+          The assigned inspector sees this only after they accept the job.
+        </p>
       </div>
 
       <div className="space-y-2">

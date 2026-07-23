@@ -99,6 +99,7 @@ export type RequestAgentOpenInspectionInput = {
   preferredStartTime?: string;
   preferredEndTime?: string;
   preferredNotes?: string;
+  keyCollectLocation?: string;
 };
 
 export async function requestAgentOpenInspection(

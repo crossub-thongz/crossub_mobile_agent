@@ -118,6 +118,7 @@ export default function PropertyDetailPage() {
       setPropertyLoadState('ready');
       return;
     }
+    setFetchedProperty(null);
     let cancelled = false;
     setPropertyLoadState('loading');
     void fetchProperty(id)
@@ -209,7 +210,30 @@ export default function PropertyDetailPage() {
     [property, getPropertyActions],
   );
 
-  if (!property && propertyLoadState === 'loading') {
+  const propertyDeletedLeasingCycles = useMemo(
+    () => archive.cancelledLeasingCycles.filter((c) => c.propertyId === id),
+    [archive.cancelledLeasingCycles, id],
+  );
+  const propertyDeletedEndLeasingCases = useMemo(
+    () => archive.cancelledEndLeasing.filter((c) => c.propertyId === id),
+    [archive.cancelledEndLeasing, id],
+  );
+  const propertyDeletedRentReviews = useMemo(
+    () => archive.cancelledRentReviews.filter((r) => r.propertyId === id),
+    [archive.cancelledRentReviews, id],
+  );
+
+  const clearPropertyInspectionFocus = useCallback(() => {
+    setSelectedInspectionId(null);
+    if (!searchParams.get('inspection')) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('inspection');
+    const query = next.toString();
+    router.replace(query ? `/properties/${id}?${query}` : `/properties/${id}`);
+  }, [id, router, searchParams]);
+
+  if (!property) {
+    if (propertyLoadState === 'missing') notFound();
     return (
       <AgentShell>
         <p className="text-muted-foreground py-16 text-center text-sm">Loading property…</p>
@@ -217,11 +241,9 @@ export default function PropertyDetailPage() {
     );
   }
 
-  if (!property && propertyLoadState === 'missing') notFound();
-
   const tasks = {
     maintenance: maintenanceAll.filter(
-      (m) => m.propertyId === id || m.propertyAddress.includes(property.address),
+      (m) => m.propertyId === id || (property.address && m.propertyAddress.includes(property.address)),
     ),
     inspections: inspections.filter((i) => i.propertyId === id),
     rentReviews: rentReviewsForProperty(rentReviews, id, property),
@@ -262,18 +284,6 @@ export default function PropertyDetailPage() {
     activeOpenInspection,
   });
   const propertyLeasingCycles = leasingCycles.filter((c) => c.propertyId === id);
-  const propertyDeletedLeasingCycles = useMemo(
-    () => archive.cancelledLeasingCycles.filter((c) => c.propertyId === id),
-    [archive.cancelledLeasingCycles, id],
-  );
-  const propertyDeletedEndLeasingCases = useMemo(
-    () => archive.cancelledEndLeasing.filter((c) => c.propertyId === id),
-    [archive.cancelledEndLeasing, id],
-  );
-  const propertyDeletedRentReviews = useMemo(
-    () => archive.cancelledRentReviews.filter((r) => r.propertyId === id),
-    [archive.cancelledRentReviews, id],
-  );
   const nextRentReviewDate = getNextRentReviewDate(property, tenancyRentReviews, {
     isVacant,
   });
@@ -281,14 +291,6 @@ export default function PropertyDetailPage() {
     isVacant,
   });
   const propertyTribunalCases = tribunalCases.filter((t) => t.propertyId === id);
-  const clearPropertyInspectionFocus = useCallback(() => {
-    setSelectedInspectionId(null);
-    if (!searchParams.get('inspection')) return;
-    const next = new URLSearchParams(searchParams.toString());
-    next.delete('inspection');
-    const query = next.toString();
-    router.replace(query ? `/properties/${id}?${query}` : `/properties/${id}`);
-  }, [id, router, searchParams]);
 
   const selectedRentReview =
     selectedRentReviewId != null

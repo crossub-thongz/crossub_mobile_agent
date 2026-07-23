@@ -149,7 +149,7 @@ export function mapAgentProperty(
   return {
     id: dto.id,
     agencyId: dto.agencyId,
-    address: dto.address,
+    address: dto.address ?? '',
     suburb: dto.suburb ?? '',
     state: ext.state ?? undefined,
     postcode: ext.postcode ?? undefined,

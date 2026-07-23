@@ -771,7 +771,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     const reconcileContacts = (thread: MessageThread): MessageThread => {
       const prop = thread.propertyId
         ? properties.find((p) => p.id === thread.propertyId)
-        : properties.find((p) => thread.propertyAddress.includes(p.address));
+        : properties.find((p) => p.address && thread.propertyAddress.includes(p.address));
       return {
         ...thread,
         propertyAddress: prop
@@ -1201,7 +1201,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
             (p) =>
               formatPropertyFullAddress(p) === propertyAddress ||
               `${p.address}, ${p.suburb}` === propertyAddress ||
-              (p.address.length > 0 && propertyAddress.includes(p.address)),
+              Boolean(p.address?.trim()) && propertyAddress.includes(p.address),
           );
         const propertyId = options?.propertyId ?? prop?.id;
         try {
@@ -1263,7 +1263,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
             ),
           };
     if (apiDocuments) return apiDocuments.map(enrichDoc);
-    const prefixes = properties.map((p) => p.address.split(',')[0]);
+    const prefixes = properties
+      .map((p) => (p.address ?? '').split(',')[0])
+      .filter(Boolean);
     return uploadedDocuments
       .filter((d) =>
         prefixes.some((a) => d.propertyAddress.includes(a) || d.propertyAddress === 'Portfolio'),

@@ -18,7 +18,7 @@ export function findPropertyForAddress(
   const normalizedNeedle = needle.toLowerCase();
   return properties.find((p) => {
     const full = formatPropertyFullAddress(p).toLowerCase();
-    const street = p.address.trim().toLowerCase();
+    const street = (p.address ?? '').trim().toLowerCase();
     const streetSuburb = `${p.address}, ${p.suburb}`.toLowerCase();
     const needleStreet = normalizedNeedle.split(',')[0]?.trim() ?? '';
     return (
