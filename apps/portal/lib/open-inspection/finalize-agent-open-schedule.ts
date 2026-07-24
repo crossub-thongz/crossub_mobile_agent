@@ -1,5 +1,5 @@
 import type { AgentWorkflowCreateResult } from '@/lib/crossub-api/agent-workflow-client';
-import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { fetchLeasingCycleView, invalidateLeasingCycleView } from '@/lib/leasing/fetch-leasing-cycle';
 import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
 import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
 import type { Inspection } from '@/lib/types';
@@ -34,8 +34,8 @@ export async function finalizeAgentOpenInspectionSchedule({
     registerInspection(inspection);
   }
 
-  void leasingOpsApi
-    .get(cycleId)
+  invalidateLeasingCycleView(cycleId);
+  void fetchLeasingCycleView(cycleId)
     .then((view) => applyCycleView(propertyId, view))
     .catch(() => undefined);
   void refresh();

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { fetchLeasingCycleView } from '@/lib/leasing/fetch-leasing-cycle';
+import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
 import { resolvePropertyTenantContact, type PropertyTenantContact } from '@/lib/property-form-prefill';
 import type { LeasingCycle, LeasingRecord, Property, TenantSelectionCase } from '@/lib/types';
 import {
@@ -46,6 +47,22 @@ const EMPTY: PropertyOverviewSync = {
   loading: false,
 };
 
+function bondFromCycleView(
+  cycleView: ServerLeasingCycleView,
+  portalFinancialBond: number | null,
+): PropertyBondSnapshot {
+  const bondBlock = cycleView.onboarding?.bond;
+  return {
+    agentLink: bondBlock?.agentLink ?? null,
+    ledgerEntryId: bondBlock?.ledgerEntryId ?? null,
+    lodgementRef: bondBlock?.lodgementRef ?? null,
+    amount: cycleView.rental.bond ?? portalFinancialBond,
+    status: bondBlock?.status ?? null,
+    paidAt: bondBlock?.paidAt ?? null,
+    sentToTenantAt: bondBlock?.sentToTenantAt ?? null,
+  };
+}
+
 export function usePropertyOverviewSync(
   property: Property,
   apiConnected: boolean,
@@ -55,6 +72,27 @@ export function usePropertyOverviewSync(
 ): PropertyOverviewSync {
   const propertyId = property.id;
   const [state, setState] = useState<PropertyOverviewSync>(EMPTY);
+  const [cycleView, setCycleView] = useState<ServerLeasingCycleView | null>(null);
+
+  useEffect(() => {
+    if (!apiConnected || !leasingCycle?.id) {
+      setCycleView(null);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchLeasingCycleView(leasingCycle.id)
+      .then((view) => {
+        if (!cancelled) setCycleView(view);
+      })
+      .catch(() => {
+        if (!cancelled) setCycleView(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, leasingCycle?.id]);
 
   const sync = useCallback(async () => {
     if (!apiConnected) {
@@ -63,16 +101,11 @@ export function usePropertyOverviewSync(
     }
     setState((prev) => ({ ...prev, loading: prev.record == null }));
     try {
-      const [record, portal, cycleView] = await Promise.all([
+      const [record, portal] = await Promise.all([
         propertyRegistryApi.get(propertyId).catch(() => null),
         propertyRegistryApi.getPortal(propertyId).catch(() => null),
-        leasingCycle?.id
-          ? leasingOpsApi.get(leasingCycle.id).catch(() => null)
-          : Promise.resolve(null),
       ]);
 
-      const bondBlock = cycleView?.onboarding?.bond;
-      const keyFobCount = cycleView?.onboarding?.keyCollection?.tenantReport?.fobsCount ?? null;
       const tenantContact = resolvePropertyTenantContact({
         property,
         currentLease,
@@ -92,15 +125,7 @@ export function usePropertyOverviewSync(
         financial: portal?.financial ?? null,
         accounting: portal?.accounting ?? null,
         bond: cycleView
-          ? {
-              agentLink: bondBlock?.agentLink ?? null,
-              ledgerEntryId: bondBlock?.ledgerEntryId ?? null,
-              lodgementRef: bondBlock?.lodgementRef ?? null,
-              amount: cycleView.rental.bond ?? portal?.financial?.bondAmount ?? null,
-              status: bondBlock?.status ?? null,
-              paidAt: bondBlock?.paidAt ?? null,
-              sentToTenantAt: bondBlock?.sentToTenantAt ?? null,
-            }
+          ? bondFromCycleView(cycleView, portal?.financial?.bondAmount ?? null)
           : portal?.financial?.bondAmount != null
             ? {
                 agentLink: null,
@@ -112,14 +137,14 @@ export function usePropertyOverviewSync(
                 sentToTenantAt: null,
               }
             : null,
-        keyFobCount,
+        keyFobCount: cycleView?.onboarding?.keyCollection?.tenantReport?.fobsCount ?? null,
         tenantContact: tenantContact.name ? tenantContact : null,
         loading: false,
       });
     } catch {
       setState((prev) => ({ ...prev, loading: false }));
     }
-  }, [apiConnected, property, propertyId, leasingCycle?.id, tenantSelections, currentLease]);
+  }, [apiConnected, property, propertyId, cycleView, tenantSelections, currentLease]);
 
   useEffect(() => {
     void sync();

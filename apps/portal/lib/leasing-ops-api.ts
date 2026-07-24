@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { fetchLeasingCycleView } from '@/lib/leasing/fetch-leasing-cycle';
 import type {
   CreateManualApplicantInput,
   SendViewerInvitesInput,
@@ -28,7 +29,7 @@ export type ScheduleIngoingInput = {
  * Account managers with MODIFY_CUSTOMER_INFO can call these for assigned agencies.
  */
 export const leasingOpsApi = {
-  get: (cycleId: string) => unwrap(api.get<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}`)),
+  get: (cycleId: string) => fetchLeasingCycleView(cycleId),
 
   syncApplications: (cycleId: string) =>
     unwrap(api.post<{ cycle: ServerLeasingCycleView }>(`${BASE}/${cycleId}/applications/sync`)),

@@ -47,47 +47,21 @@ export function LeasingWorkflowTimeline({
   const initializedKeyRef = useRef<string | null>(null);
   const bondFocusAppliedRef = useRef(false);
 
-  useLeasingCycleLiveSync(propertyId, resolvedCycleId, apiConnected);
+  useLeasingCycleLiveSync(propertyId, resolvedCycleId, apiConnected, {
+    onSynced: (view) => {
+      ensureDetail(propertyId, propertyAddress, rentWeekly);
+      const step = (view.activeStepHint ?? view.lifecycleStep) as LeasingLifecycleStep;
+      const initKey = `${propertyId}:${resolvedCycleId}`;
+      if (initializedKeyRef.current !== initKey) {
+        resetActiveStepToHint(propertyId, step);
+        initializedKeyRef.current = initKey;
+      }
+    },
+  });
 
   useEffect(() => {
     ensureDetail(propertyId, propertyAddress, rentWeekly);
   }, [ensureDetail, propertyId, propertyAddress, rentWeekly]);
-
-  useEffect(() => {
-    if (!apiConnected || !resolvedCycleId || !isUuid(resolvedCycleId)) return;
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const view = await leasingOpsApi.get(resolvedCycleId);
-        if (cancelled) return;
-
-        ensureDetail(propertyId, propertyAddress, rentWeekly);
-        applyCycleView(propertyId, view);
-        const step = (view.activeStepHint ?? view.lifecycleStep) as LeasingLifecycleStep;
-        const initKey = `${propertyId}:${resolvedCycleId}`;
-        if (initializedKeyRef.current !== initKey) {
-          resetActiveStepToHint(propertyId, step);
-          initializedKeyRef.current = initKey;
-        }
-      } catch {
-        /* keep last known snapshot */
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    apiConnected,
-    resolvedCycleId,
-    propertyId,
-    propertyAddress,
-    rentWeekly,
-    ensureDetail,
-    applyCycleView,
-    resetActiveStepToHint,
-  ]);
 
   useEffect(() => {
     if (!leasingCycleId || !isUuid(leasingCycleId)) return;
