@@ -11,6 +11,8 @@ export interface ArchivedLandlordOverviewSnapshot {
   rentPaidUntilDate?: string;
   vacateDate?: string;
   nextRoutineInspectionDate?: string;
+  routineInspectionFrequency?: number;
+  routineInspectionFrequencyMonths?: number;
   currentRentWeekly?: number;
   bondAmount?: number;
   depositAmount?: number;
@@ -77,6 +79,14 @@ function parseArchivedLandlordOverview(
     nextRoutineInspectionDate:
       typeof item.nextRoutineInspectionDate === 'string'
         ? item.nextRoutineInspectionDate
+        : undefined,
+    routineInspectionFrequency:
+      typeof item.routineInspectionFrequency === 'number'
+        ? item.routineInspectionFrequency
+        : undefined,
+    routineInspectionFrequencyMonths:
+      typeof item.routineInspectionFrequencyMonths === 'number'
+        ? item.routineInspectionFrequencyMonths
         : undefined,
     currentRentWeekly:
       typeof item.currentRentWeekly === 'number' ? item.currentRentWeekly : undefined,

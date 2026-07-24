@@ -58,6 +58,8 @@ export interface PropertyPortalOverview {
   rentPaidUntilDate?: string;
   vacateDate?: string;
   nextRoutineInspectionDate?: string;
+  routineInspectionFrequency?: number;
+  routineInspectionFrequencyMonths?: number;
   furnished?: boolean;
   buildingName?: string;
   strataPlanNumber?: string;

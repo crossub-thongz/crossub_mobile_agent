@@ -274,6 +274,8 @@ export function PropertyTenancyManagementSections({
         archiveVacate,
       ),
       nextRoutine: firstDate(overview?.nextRoutineInspectionDate, sync.record?.nextInspectionAt),
+      routineAnnualVisits: overview?.routineInspectionFrequency ?? null,
+      routineCycleMonths: overview?.routineInspectionFrequencyMonths ?? null,
     };
   }, [overview, sync.record, property, leaseStart, vacatingCases, openEndLeasingCase]);
 
@@ -460,6 +462,22 @@ export function PropertyTenancyManagementSections({
           <StatCell
             label="Next routine"
             value={tenancyDates.nextRoutine ? formatDate(tenancyDates.nextRoutine) : '—'}
+          />
+          <StatCell
+            label="Annual visits"
+            value={
+              tenancyDates.routineAnnualVisits != null
+                ? `${tenancyDates.routineAnnualVisits}× per year`
+                : '—'
+            }
+          />
+          <StatCell
+            label="Cycle interval"
+            value={
+              tenancyDates.routineCycleMonths != null
+                ? `Every ${tenancyDates.routineCycleMonths} months`
+                : '—'
+            }
           />
         </div>
       </DetailsSubsection>

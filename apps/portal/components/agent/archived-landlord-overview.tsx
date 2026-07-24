@@ -110,6 +110,22 @@ export function ArchivedLandlordOverview({
                 : '—'
             }
           />
+          <StatCell
+            label="Annual visits"
+            value={
+              overview?.routineInspectionFrequency != null
+                ? `${overview.routineInspectionFrequency}× per year`
+                : '—'
+            }
+          />
+          <StatCell
+            label="Cycle interval"
+            value={
+              overview?.routineInspectionFrequencyMonths != null
+                ? `Every ${overview.routineInspectionFrequencyMonths} months`
+                : '—'
+            }
+          />
         </div>
       </OverviewSection>
 
