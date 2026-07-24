@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Mic, Phone, Send, Sparkles, X } from 'lucide-react';
+import { Building2, Mic, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
@@ -13,7 +13,6 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { messageDetail } from '@/constants/routes';
 import {
   VOICE_BUTTON_ARIA_LABEL,
   VOICE_PHASE,
@@ -26,17 +25,13 @@ import {
   PORTFOLIO_GII_PROMPTS,
   PROPERTY_GII_PROMPTS,
 } from '@/constants/gii-prompts';
-import { searchAgentSystem, type SystemSearchResult } from '@/lib/agent-system-search';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
 import { selectPropertyInProgressJobs } from '@/lib/gii-property-jobs';
 import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { useAgentStore } from '@/lib/store';
 import type { PropertyNeedAction } from '@/lib/types';
-import {
-  needActionToJobRow,
-  searchResultToJobRow,
-} from '@/lib/portfolio-case-dialog';
+import { needActionToJobRow } from '@/lib/portfolio-case-dialog';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   sendGiiMessage,
@@ -70,7 +65,6 @@ type ChatLine = {
   id: string;
   role: 'user' | 'assistant';
   text: string;
-  results?: SystemSearchResult[];
   assessment?: GiiAssessment | null;
   briefing?: GiiBriefing | null;
   lodgedRef?: string | null;
@@ -281,11 +275,6 @@ export function GiiAssistant({
     el.style.height = `${next}px`;
   }, [query, open]);
 
-  const latestResults = useMemo(() => {
-    const last = [...lines].reverse().find((l) => l.role === 'assistant' && l.results?.length);
-    return last?.results ?? [];
-  }, [lines]);
-
   const scrollChatToBottom = useCallback(
     (behavior: ScrollBehavior = 'smooth') => {
       // Embedded + mobile modal share one scroll surface (avoids nested scroll on Android).
@@ -338,20 +327,20 @@ export function GiiAssistant({
   }, [liveBriefing, scrollChatToBottom, usePageScroll]);
 
   /**
-   * A turn runs two things at once:
-   *  - `searchAgentSystem` over data the provider already holds — instant, offline, and
-   *    what powers the Open / Message / Call result cards.
-   *  - the real assistant on the API, which does the understanding and the maths.
+   * A turn is just the assistant on the API — it does the understanding and the maths.
    *
-   * The local results render immediately so the panel never feels dead while the model
-   * thinks; the reply replaces the placeholder when it lands. `buildGiiReply` (the old
-   * template-string "brain") is retired — the reply is the model's now.
+   * There used to be a second half: a local search sweep whose Open / Message / Call cards
+   * rendered instantly so the panel did not feel dead while the old template-string brain
+   * caught up. Both are gone. The cards matched on the raw query text, so an address
+   * mentioned once pinned that property's every repair, inspection, rent review and
+   * message under the answer — and they were rendered after the whole transcript rather
+   * than under their own turn, so they stayed there, attached to whatever Gii said next.
+   * A one-line "email sent" came with nine cards below it.
    */
   const runQuery = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
 
-    const found = searchAgentSystem(trimmed, data);
     const userLine: ChatLine = { id: `u-${idSeq()}`, role: 'user', text: trimmed };
     const pendingId = `a-${idSeq()}`;
 
@@ -365,7 +354,7 @@ export function GiiAssistant({
     setLines((prev) => [
       ...prev,
       userLine,
-      { id: pendingId, role: 'assistant', text: 'Thinking…', results: found, pending: true },
+      { id: pendingId, role: 'assistant', text: 'Thinking…', pending: true },
     ]);
     setQuery('');
     setSending(true);
@@ -437,16 +426,6 @@ export function GiiAssistant({
       return;
     }
     router.push(row.href);
-    onClose?.();
-  };
-
-  const openSearchResult = (result: SystemSearchResult) => {
-    const job = searchResultToJobRow(result, portfolioData);
-    if (job) {
-      openJob(job);
-      return;
-    }
-    router.push(result.href);
     onClose?.();
   };
 
@@ -527,30 +506,6 @@ export function GiiAssistant({
     },
     [],
   );
-
-  const openMessage = (result: SystemSearchResult) => {
-    if (!result.propertyId) {
-      router.push(result.href);
-      onClose?.();
-      return;
-    }
-    const threadId = data.ensureMessageThread(result.propertyId, {
-      category: 'Others',
-      subject: result.label,
-    });
-    if (threadId) {
-      router.push(messageDetail(threadId));
-      onClose?.();
-    }
-  };
-
-  const callContact = (result: SystemSearchResult) => {
-    if (!result.phone) {
-      toast.error('No phone number on file');
-      return;
-    }
-    window.location.href = `tel:${result.phone}`;
-  };
 
   if (!open) return null;
 
@@ -689,54 +644,6 @@ export function GiiAssistant({
           </div>
         ))}
 
-        {latestResults.length > 0 && (
-          <ul className="space-y-2 pt-1 pb-2">
-            {latestResults.map((r) => (
-              <li key={r.id} className="rounded-xl border bg-card p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
-                  {r.kind}
-                </p>
-                <p className="text-sm font-medium">{r.label}</p>
-                <p className="text-muted-foreground text-xs">{r.sub}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    onClick={() => openSearchResult(r)}
-                  >
-                    Open
-                  </Button>
-                  {r.propertyId && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={() => openMessage(r)}
-                    >
-                      <Send className="size-3" />
-                      Message
-                    </Button>
-                  )}
-                  {r.phone && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={() => callContact(r)}
-                    >
-                      <Phone className="size-3" />
-                      Call
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
         <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
 
