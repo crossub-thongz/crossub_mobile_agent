@@ -59,7 +59,13 @@ function resolveWeatherLocation(): Promise<{
   });
 }
 
-export function AgentSidebarStatus({ compact = false }: { compact?: boolean }) {
+export function AgentSidebarStatus({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   const [now, setNow] = useState<Date | null>(null);
   const [weather, setWeather] = useState<SidebarWeatherSnapshot | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
@@ -99,56 +105,32 @@ export function AgentSidebarStatus({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={cn(
-        'border-border/70 border-b px-3 py-2.5',
-        compact && 'px-2 group-hover/sidebar:px-3',
+        'min-w-0',
+        compact &&
+          'max-w-0 flex-1 overflow-hidden opacity-0 transition-all duration-200 group-hover/sidebar:max-w-none group-hover/sidebar:opacity-100',
+        className,
       )}
     >
-      <div
-        className={cn(
-          'text-muted-foreground space-y-1 text-[11px] leading-snug',
-          compact &&
-            'max-h-0 overflow-hidden opacity-0 transition-all duration-200 group-hover/sidebar:max-h-24 group-hover/sidebar:opacity-100',
+      <p className="text-foreground truncate text-[10px] font-medium leading-tight tabular-nums">
+        <span>{date}</span>
+        <span className="text-muted-foreground mx-1">·</span>
+        <span>{time}</span>
+      </p>
+
+      <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center gap-1 text-[10px] leading-tight">
+        {weatherLoading ? (
+          <Loader2 className="size-3 shrink-0 animate-spin opacity-60" />
+        ) : weather ? (
+          <>
+            <WeatherIcon code={weather.weatherCode} className="size-3 shrink-0 text-primary" />
+            <span className="truncate">
+              {weather.temperatureC}°C · {weather.condition}
+            </span>
+          </>
+        ) : (
+          <span className="truncate">Weather unavailable</span>
         )}
-      >
-        <p className="text-foreground font-medium tabular-nums">
-          <span>{date}</span>
-          <span className="text-muted-foreground mx-1.5">·</span>
-          <span>{time}</span>
-        </p>
-
-        <div className="flex items-center gap-1.5">
-          {weatherLoading ? (
-            <Loader2 className="size-3.5 shrink-0 animate-spin opacity-60" />
-          ) : weather ? (
-            <>
-              <WeatherIcon code={weather.weatherCode} className="size-3.5 shrink-0 text-primary" />
-              <span className="truncate">
-                {weather.temperatureC}°C · {weather.condition} · {weather.locationLabel}
-              </span>
-            </>
-          ) : (
-            <span className="truncate">Weather unavailable</span>
-          )}
-        </div>
       </div>
-
-      {compact ? (
-        <div className="flex flex-col items-center gap-1 group-hover/sidebar:hidden">
-          <span className="text-foreground text-[10px] font-semibold tabular-nums">{time}</span>
-          {weatherLoading ? (
-            <Loader2 className="text-muted-foreground size-3.5 animate-spin" />
-          ) : weather ? (
-            <div className="flex items-center gap-0.5">
-              <WeatherIcon code={weather.weatherCode} className="size-3.5 text-primary" />
-              <span className="text-muted-foreground text-[10px] font-medium tabular-nums">
-                {weather.temperatureC}°
-              </span>
-            </div>
-          ) : (
-            <Cloud className="text-muted-foreground size-3.5 opacity-60" />
-          )}
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -96,21 +96,17 @@ export function AgentSidebar({
           : 'w-[260px]',
       )}
     >
-      <div className="border-border/70 border-b">
-        <div
-          className={cn(
-            'flex h-14 items-center',
-            compact
-              ? 'justify-center px-2 group-hover/sidebar:justify-between group-hover/sidebar:px-4'
-              : 'justify-between gap-2 px-4',
-          )}
-        >
-          <CrossubLogo size="sm" />
-          <div className={cn(compact ? 'hidden group-hover/sidebar:block' : 'block')}>
-            <ThemeToggle />
-          </div>
+      <div
+        className={cn(
+          'border-border/70 flex min-h-14 items-center gap-2 border-b py-2',
+          compact ? 'justify-center px-2 group-hover/sidebar:px-3' : 'px-3',
+        )}
+      >
+        <CrossubLogo size="sm" className="shrink-0" />
+        <AgentSidebarStatus compact={compact} className="flex-1" />
+        <div className={cn('shrink-0', compact && 'hidden group-hover/sidebar:block')}>
+          <ThemeToggle />
         </div>
-        <AgentSidebarStatus compact={compact} />
       </div>
 
       <nav className="flex-1 overflow-x-hidden overflow-y-auto p-2">
