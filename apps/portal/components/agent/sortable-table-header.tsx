@@ -19,7 +19,7 @@ export function SortableTableHeader<T extends string>({
   activeKey: T | null;
   direction: SortDirection;
   onSort: (key: T) => void;
-  align?: 'left' | 'right';
+  align?: 'left' | 'center' | 'right';
   className?: string;
 }) {
   const isActive = activeKey === sortKey;
@@ -29,7 +29,7 @@ export function SortableTableHeader<T extends string>({
     <th
       className={cn(
         'px-2 py-2.5 font-semibold lg:px-3 lg:py-3',
-        align === 'right' ? 'text-right' : 'text-left',
+        align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left',
         className,
       )}
     >
@@ -38,6 +38,7 @@ export function SortableTableHeader<T extends string>({
         onClick={() => onSort(sortKey)}
         className={cn(
           'group inline-flex items-center gap-1.5 rounded text-[11px] uppercase tracking-wide transition-colors hover:text-foreground focus:outline-none',
+          align === 'center' && 'mx-auto',
           align === 'right' && 'ml-auto',
           isActive ? 'text-foreground' : 'text-muted-foreground',
         )}

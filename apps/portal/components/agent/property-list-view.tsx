@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 
 import type { Agency, Property } from '@/lib/types';
-import { formatPropertyFullAddress } from '@/lib/utils';
 
 import { PropertyListCard } from '@/components/agent/property-list-card';
 import { PropertyListTable } from '@/components/agent/property-list-table';
@@ -13,6 +12,7 @@ export function PropertyListView({
   agencies,
   variant,
   messageUnreadFor,
+  needActionCountFor,
   rowHref,
   onDelete,
   canManage,
@@ -21,6 +21,7 @@ export function PropertyListView({
   agencies: Agency[];
   variant: 'active' | 'archived';
   messageUnreadFor?: (property: Property) => number;
+  needActionCountFor?: (property: Property) => number;
   rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
   canManage: boolean;
@@ -28,13 +29,16 @@ export function PropertyListView({
   const mobileSorted = useMemo(() => {
     const rows = [...properties];
     rows.sort((a, b) => {
+      const needA = needActionCountFor?.(a) ?? 0;
+      const needB = needActionCountFor?.(b) ?? 0;
+      if (needB !== needA) return needB - needA;
       const unreadA = messageUnreadFor?.(a) ?? 0;
       const unreadB = messageUnreadFor?.(b) ?? 0;
       if (unreadB !== unreadA) return unreadB - unreadA;
       return a.address.localeCompare(b.address, undefined, { sensitivity: 'base' });
     });
     return rows;
-  }, [messageUnreadFor, properties]);
+  }, [messageUnreadFor, needActionCountFor, properties]);
 
   const desktopSorted = useMemo(
     () =>
@@ -52,6 +56,7 @@ export function PropertyListView({
             key={property.id}
             property={property}
             messageUnread={messageUnreadFor?.(property) ?? 0}
+            needActionCount={needActionCountFor?.(property) ?? 0}
             href={rowHref(property)}
           />
         ))}
@@ -67,6 +72,14 @@ export function PropertyListView({
               ? (propertyId) => {
                   const property = properties.find((item) => item.id === propertyId);
                   return property ? messageUnreadFor(property) : 0;
+                }
+              : undefined
+          }
+          needActionCountFor={
+            needActionCountFor
+              ? (propertyId) => {
+                  const property = properties.find((item) => item.id === propertyId);
+                  return property ? needActionCountFor(property) : 0;
                 }
               : undefined
           }

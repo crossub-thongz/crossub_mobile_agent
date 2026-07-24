@@ -43,6 +43,7 @@ export default function PropertiesPage() {
     deleteDraftProperty,
     refreshArchivedProperties,
     messages,
+    getPropertyActions,
   } = useAgentData();
   const [filter, setFilter] = useState(
     urlFilter && FILTERS.some((f) => f.id === urlFilter) ? urlFilter : 'all',
@@ -97,6 +98,11 @@ export default function PropertiesPage() {
     () => (property: Property) =>
       unreadMessagesForProperty(property.id, messages, formatPropertyFullAddress(property)),
     [messages],
+  );
+
+  const needActionCountFor = useMemo(
+    () => (property: Property) => getPropertyActions(property.id).length,
+    [getPropertyActions],
   );
 
   const confirmDiscardDraft = async () => {
@@ -182,6 +188,7 @@ export default function PropertiesPage() {
             agencies={agencies}
             variant={isArchivedView ? 'archived' : 'active'}
             messageUnreadFor={messageUnreadFor}
+            needActionCountFor={needActionCountFor}
             rowHref={(property) =>
               isArchivedView
                 ? propertyDetail(property.id)

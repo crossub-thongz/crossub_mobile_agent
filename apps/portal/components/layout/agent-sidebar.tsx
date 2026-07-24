@@ -11,7 +11,6 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { totalUnreadMessages } from '@/lib/communications-log';
 import { filterNavByAccess } from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
@@ -80,8 +79,8 @@ export function AgentSidebar({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
-  const { hasFullManagementAccess, messages } = useAgentData();
-  const propertyUnread = totalUnreadMessages(messages);
+  const { hasFullManagementAccess, needActionItems } = useAgentData();
+  const propertyNeedActionCount = needActionItems.length;
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = filterNavByAccess(MORE_NAV, hasFullManagementAccess);
   const moreFooterNav = filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess);
@@ -121,7 +120,7 @@ export function AgentSidebar({
                   <NavLink
                     {...item}
                     active={isActive(pathname, item.href)}
-                    badge={item.href === ROUTES.PROPERTIES ? propertyUnread : undefined}
+                    badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
                   />
                 </li>
               ))}
@@ -156,7 +155,7 @@ export function AgentSidebar({
                   {...item}
                   active={isActive(pathname, item.href)}
                   compact
-                  badge={item.href === ROUTES.PROPERTIES ? propertyUnread : undefined}
+                  badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
                 />
               </li>
             ))}

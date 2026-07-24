@@ -23,7 +23,6 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess } from '@/lib/portal-service-level';
-import { totalUnreadMessages } from '@/lib/communications-log';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { cn, displayName } from '@/lib/utils';
 
@@ -71,8 +70,8 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const { hasFullManagementAccess, unreadNotificationCount, messages } = useAgentData();
-  const propertyUnread = totalUnreadMessages(messages);
+  const { hasFullManagementAccess, unreadNotificationCount, needActionItems } = useAgentData();
+  const propertyNeedActionCount = needActionItems.length;
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = [
     ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
@@ -355,7 +354,7 @@ export function AgentShell({
           <div className="flex h-16 items-stretch justify-around px-1">
             {primaryNav.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
-              const unreadBadge = href === ROUTES.PROPERTIES ? propertyUnread : 0;
+              const needActionBadge = href === ROUTES.PROPERTIES ? propertyNeedActionCount : 0;
               return (
                 <Link
                   key={href}
@@ -367,9 +366,9 @@ export function AgentShell({
                 >
                   <span className="relative">
                     <Icon className={cn('size-5', active && 'stroke-[2.5]')} />
-                    {unreadBadge > 0 ? (
+                    {needActionBadge > 0 ? (
                       <MessageUnreadBadge
-                        count={unreadBadge}
+                        count={needActionBadge}
                         size="sm"
                         className="absolute -top-1.5 -right-2 ring-2 ring-background"
                       />

@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, Bell, Pencil, Trash2 } from 'lucide-react';
 
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
-import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { Button } from '@/components/ui/button';
+import { messagesForProperty, needActionsForProperty } from '@/constants/routes';
 import {
   applySortDirection,
   compareNumbers,
@@ -46,6 +46,7 @@ type PropertySortKey =
   | 'pm'
   | 'createdAt'
   | 'messages'
+  | 'needActions'
   | 'endOfManagement';
 
 export function PropertyListTable({
@@ -53,6 +54,7 @@ export function PropertyListTable({
   agencies,
   variant = 'active',
   messageUnreadFor,
+  needActionCountFor,
   rowHref,
   onDelete,
   canManage,
@@ -61,6 +63,7 @@ export function PropertyListTable({
   agencies: Agency[];
   variant?: 'active' | 'archived';
   messageUnreadFor?: (propertyId: string) => number;
+  needActionCountFor?: (propertyId: string) => number;
   rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
   canManage?: boolean;
@@ -103,6 +106,12 @@ export function PropertyListTable({
             messageUnreadFor?.(b.id) ?? 0,
           );
           break;
+        case 'needActions':
+          cmp = compareNumbers(
+            needActionCountFor?.(a.id) ?? 0,
+            needActionCountFor?.(b.id) ?? 0,
+          );
+          break;
         case 'endOfManagement':
           cmp = compareSortTime(a.endOfManagementDate, b.endOfManagementDate);
           break;
@@ -110,7 +119,7 @@ export function PropertyListTable({
       return applySortDirection(cmp, sortDirection);
     });
     return rows;
-  }, [agencies, messageUnreadFor, properties, sortDirection, sortKey]);
+  }, [agencies, messageUnreadFor, needActionCountFor, properties, sortDirection, sortKey]);
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -123,7 +132,7 @@ export function PropertyListTable({
           <col className="w-[11%]" />
           <col className="w-[9%]" />
           <col className="w-[11%]" />
-          <col className="w-[7%]" />
+          <col className="w-[10%]" />
           <col className="w-[8%]" />
         </colgroup>
         <thead>
@@ -203,6 +212,7 @@ export function PropertyListTable({
         <tbody className="divide-y">
             {sorted.map((property) => {
               const messageUnread = messageUnreadFor?.(property.id) ?? 0;
+              const needActionCount = needActionCountFor?.(property.id) ?? 0;
               const isDraft = property.registryIntakeComplete === false;
               const pmName = property.propertyManager?.trim();
               const pmHref =
@@ -276,8 +286,53 @@ export function PropertyListTable({
                         : '—'}
                     </td>
                   ) : (
-                    <td className="px-2 py-2.5 text-center lg:px-3 lg:py-3">
-                      <MessageUnreadBadge count={messageUnread} size="md" />
+                    <td className="px-2 py-2.5 text-center align-middle lg:px-3 lg:py-3">
+                      <div className="inline-flex items-center justify-center gap-2">
+                        <Link
+                          href={messagesForProperty(property.id)}
+                          className={cn(
+                            'hover:bg-secondary/60 relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                            messageUnread > 0
+                              ? 'text-primary'
+                              : 'text-muted-foreground hover:text-foreground',
+                          )}
+                          aria-label={
+                            messageUnread > 0
+                              ? `${messageUnread} unread message${messageUnread === 1 ? '' : 's'} for this property`
+                              : 'View messages for this property'
+                          }
+                          title="Messages"
+                        >
+                          <Bell className="size-5" strokeWidth={2} />
+                          {messageUnread > 0 ? (
+                            <span className="bg-[#fa5151] pointer-events-none absolute top-0 right-0 flex min-w-[1.125rem] translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-background">
+                              {messageUnread > 99 ? '99+' : messageUnread}
+                            </span>
+                          ) : null}
+                        </Link>
+                        <Link
+                          href={needActionsForProperty(property.id)}
+                          className={cn(
+                            'hover:bg-secondary/60 relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                            needActionCount > 0
+                              ? 'text-destructive'
+                              : 'text-muted-foreground hover:text-foreground',
+                          )}
+                          aria-label={
+                            needActionCount > 0
+                              ? `${needActionCount} need action${needActionCount === 1 ? '' : 's'} for this property`
+                              : 'View need actions for this property'
+                          }
+                          title="Need action"
+                        >
+                          <AlertTriangle className="size-5" strokeWidth={2} />
+                          {needActionCount > 0 ? (
+                            <span className="bg-destructive pointer-events-none absolute top-0 right-0 flex min-w-[1.125rem] translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-background">
+                              {needActionCount > 99 ? '99+' : needActionCount}
+                            </span>
+                          ) : null}
+                        </Link>
+                      </div>
                     </td>
                   )}
                   <td className="px-2 py-2.5 lg:px-3 lg:py-3">
