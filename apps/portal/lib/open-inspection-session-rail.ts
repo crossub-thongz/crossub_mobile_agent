@@ -112,7 +112,19 @@ export function canCompleteOpenSessionReview(
   session: OpenInspectionSession,
   now: Date = new Date(),
 ) {
+  return shouldShowCompleteReviewAction(session, now);
+}
+
+/** True when one or more applicants still need an approve/reject decision. */
+export function hasPendingOpenApplicantReviews(session: OpenInspectionSession) {
+  return !allReviewed(session) && applications(session).length > 0;
+}
+
+/** Show the complete-review CTA once the confirmed viewing window has started. */
+export function shouldShowCompleteReviewAction(
+  session: OpenInspectionSession,
+  now: Date = new Date(),
+) {
   if (session.reviewCompletedAt || session.openReportGenerated) return false;
-  if (!canEnterOpenRailStep(session, now)) return false;
-  return allReviewed(session);
+  return startReached(session, now);
 }

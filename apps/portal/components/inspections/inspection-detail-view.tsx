@@ -34,6 +34,7 @@ import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection
 import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
 import { OpenInspectionEarlyStartNotice } from '@/components/open-inspection/open-inspection-early-start-notice';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
+import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { DocumentViewer } from '@/components/agent/document-viewer';
