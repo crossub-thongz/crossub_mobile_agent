@@ -109,6 +109,9 @@ export interface InspectionDetail extends InspectionRecord {
     inspectionId: string
     propertyId: string
     areas: Array<{ name: string; photos: InspectionDetailPhoto[] }>
+    areaPlan?: {
+      rooms: Array<{ name: string; sections: string[] }>
+    } | null
   } | null
 }
 

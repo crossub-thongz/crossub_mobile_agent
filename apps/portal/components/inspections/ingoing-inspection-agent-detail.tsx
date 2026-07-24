@@ -24,6 +24,7 @@ import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delet
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { IngoingReportFindingsSection } from '@/components/inspections/ingoing-report-findings-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
@@ -54,7 +55,7 @@ import {
   type AgentIngoingGateStatus,
 } from '@/lib/ingoing-inspection-display';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
-import type { InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
+import type { InspectionDetail, InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDate, formatDateTime } from '@/lib/utils';
@@ -64,6 +65,7 @@ import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 type IngoingSnapshot = {
   record: InspectionRecord | null;
   progression: OnSiteProgression | null;
+  detail: InspectionDetail | null;
   signName: string | null;
   signUrl: string | null;
   reportUrl: string | null;
@@ -127,6 +129,7 @@ export function IngoingInspectionAgentDetail({
   const [snapshot, setSnapshot] = useState<IngoingSnapshot>({
     record: null,
     progression: null,
+    detail: null,
     signName: null,
     signUrl: null,
     reportUrl: null,
@@ -223,6 +226,7 @@ export function IngoingInspectionAgentDetail({
       setSnapshot({
         record,
         progression,
+        detail,
         signName,
         signUrl,
         reportUrl,
@@ -254,7 +258,7 @@ export function IngoingInspectionAgentDetail({
 
   useLivePoll(refreshSnapshot, apiConnected);
 
-  const { record, progression, signName, signUrl, reportUrl, hasFindings, leasingTenantApproved } =
+  const { record, progression, detail, signName, signUrl, reportUrl, hasFindings, leasingTenantApproved } =
     snapshot;
 
   const custody = progression?.keyCustody;
@@ -544,7 +548,7 @@ export function IngoingInspectionAgentDetail({
             }
           >
             {reportReady ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <BoolStatus
                   done
                   doneLabel={
@@ -561,16 +565,22 @@ export function IngoingInspectionAgentDetail({
                   inspectionType="ingoing"
                   canDownload
                 />
+                <IngoingReportFindingsSection detail={detail} isLoading={loading} />
+              </div>
+            ) : keyCollected ? (
+              <div className="space-y-3">
+                <BoolStatus
+                  done={false}
+                  doneLabel="Report submitted"
+                  pendingLabel="Waiting for the inspector to submit the field report…"
+                />
+                <IngoingReportFindingsSection detail={detail} isLoading={loading} />
               </div>
             ) : (
               <BoolStatus
                 done={false}
                 doneLabel="Report submitted"
-                pendingLabel={
-                  keyCollected
-                    ? 'Waiting for the inspector to submit the field report…'
-                    : 'Available after key collection proof'
-                }
+                pendingLabel="Available after key collection proof"
               />
             )}
           </StepCard>

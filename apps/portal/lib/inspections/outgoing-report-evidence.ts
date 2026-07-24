@@ -15,6 +15,13 @@ export type ReferenceIngoingAreas = ReadonlyArray<{
   photos: InspectionDetailPhoto[];
 }>;
 
+export type ReferenceIngoingContext = {
+  areas?: ReferenceIngoingAreas;
+  areaPlan?: {
+    rooms: Array<{ name: string; sections: string[] }>;
+  } | null;
+} | null;
+
 const INGOING_SUFFIX = /\s*\(Ingoing\)\s*$/i;
 const OUTGOING_SUFFIX = /\s*\(Outgoing\)\s*$/i;
 
@@ -78,11 +85,40 @@ function matchReferencePhotos(
   return [];
 }
 
+function sectionAreaName(room: string, section: string): string {
+  return `${room} · ${section}`;
+}
+
+function seedPairsFromAreaPlan(
+  map: Map<string, OutgoingAreaPhotoPair>,
+  reference: ReferenceIngoingContext,
+): void {
+  const plan = reference?.areaPlan;
+  if (!plan?.rooms?.length) return;
+
+  for (const planRoom of plan.rooms) {
+    for (const section of planRoom.sections) {
+      const room = sectionAreaName(planRoom.name, section);
+      const key = normalizeKey(room);
+      if (map.has(key)) continue;
+      map.set(key, {
+        room,
+        ingoingPhotos: matchReferencePhotos(room, reference?.areas),
+        outgoingPhotos: [],
+      });
+    }
+  }
+}
+
 /** Group inspector uploads into before/after pairs; seed empty ingoing from reference. */
 export function buildOutgoingAreaPhotoPairs(
   areas: readonly InspectionDetailArea[],
-  referenceAreas?: ReferenceIngoingAreas,
+  reference?: ReferenceIngoingContext | ReferenceIngoingAreas,
 ): OutgoingAreaPhotoPair[] {
+  const referenceAreas = Array.isArray(reference) ? reference : reference?.areas;
+  const referenceContext: ReferenceIngoingContext = Array.isArray(reference)
+    ? { areas: reference }
+    : (reference ?? null);
   const map = new Map<string, OutgoingAreaPhotoPair>();
 
   for (const room of OUTGOING_COMPARISON_AREAS) {
@@ -124,6 +160,8 @@ export function buildOutgoingAreaPhotoPairs(
       outgoingPhotos: [],
     });
   }
+
+  seedPairsFromAreaPlan(map, referenceContext);
 
   const preferred = OUTGOING_COMPARISON_AREAS.map((room) =>
     map.get(normalizeKey(room)),

@@ -102,7 +102,7 @@ export function InspectionCompareEvidenceSection({
       detail
         ? buildOutgoingAreaPhotoPairs(
             detail.areas,
-            showReferenceIngoing ? detail.referenceIngoing?.areas : undefined,
+            showReferenceIngoing ? detail.referenceIngoing : undefined,
           )
         : [],
     [detail, showReferenceIngoing],
