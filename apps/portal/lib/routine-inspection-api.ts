@@ -11,12 +11,30 @@ export type CreateRoutineScheduleInput = {
   inspectorName?: string;
 };
 
+export type ChangeRoutineFlowInput = {
+  flow: 'self' | 'in_person';
+  reason: string;
+  reasonNote: string;
+};
+
+export type ServerRoutineScheduleAuditEntry = {
+  id: string;
+  field: string;
+  previousValue: string;
+  newValue: string;
+  reason: string;
+  reasonNote: string | null;
+  changedBy: string;
+  changedAt: string;
+};
+
 export type ServerRoutineScheduleView = {
   id: string;
   propertyId: string;
   flow: 'self' | 'in_person';
   selfStatus: string | null;
   currentInspectionId: string | null;
+  audit?: ServerRoutineScheduleAuditEntry[];
   currentInspection?: {
     id: string;
     status: string;
@@ -44,6 +62,9 @@ const unwrap = async (
 export const routineInspectionApi = {
   create: (input: CreateRoutineScheduleInput) =>
     unwrap(api.post<{ schedule: ServerRoutineScheduleView }>(BASE, input)),
+
+  changeFlow: (scheduleId: string, input: ChangeRoutineFlowInput) =>
+    unwrap(api.patch<{ schedule: ServerRoutineScheduleView }>(`${BASE}/${scheduleId}/flow`, input)),
 
   getByInspection: (inspectionId: string) =>
     unwrap(api.get<{ schedule: ServerRoutineScheduleView }>(`${BASE}/by-inspection/${inspectionId}`)),

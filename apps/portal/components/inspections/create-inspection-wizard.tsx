@@ -292,7 +292,7 @@ export function CreateInspectionWizard({
     tenantEmail: '',
     scheduledDate: '',
     frequency: 2 as 2 | 3,
-    flow: 'self' as 'self' | 'in_person',
+    flow: 'in_person' as 'self' | 'in_person',
     inspectorName: '',
   });
 
@@ -702,7 +702,7 @@ export function CreateInspectionWizard({
       if (inspectionType === 'ROUTINE') {
         const schedule = await routineInspectionApi.create({
           propertyId: property.id,
-          flow: routine.flow,
+          flow: 'in_person',
           frequency: routine.frequency,
           scheduledDate: routine.scheduledDate || undefined,
           tenantName: routine.tenantName.trim() || undefined,
@@ -1286,15 +1286,14 @@ function RoutineInspectionForm({
 }) {
   return (
     <div className="space-y-3">
-      <Field label="Inspection flow *">
-        <select
-          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-          value={routine.flow}
-          onChange={(e) => onChange({ ...routine, flow: e.target.value as 'self' | 'in_person' })}
-        >
-          <option value="self">Tenant self-inspection</option>
-          <option value="in_person">In-person inspector visit</option>
-        </select>
+      <Field label="Inspection flow">
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
+          <p className="font-medium">In-person inspector visit</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            New routine inspections start in-person. Switch to tenant self-inspection later from
+            the case with a documented reason.
+          </p>
+        </div>
       </Field>
       <Field label="Frequency (per year) *">
         <select

@@ -18,9 +18,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { JobCaseEmailAttachment, JobCaseEmailRecord } from '@/lib/job-case-email';
 import type { WorkflowEmailContact } from '@/lib/job-case-email-recipients';
+import { EmailPreviewParties } from '@/components/agent/email-preview-parties';
 import {
   extractEmailAddress,
-  formatEmailPartyWithRole,
+  formatEmailPartyPreview,
   formatWorkflowEmailContact,
   formatWorkflowEmailContactBlock,
 } from '@/lib/job-case-email-recipients';
@@ -60,16 +61,24 @@ function emailDirection(email: JobCaseEmailRecord): 'inbound' | 'outbound' {
   return 'outbound';
 }
 
-function emailPartyLine(email: JobCaseEmailRecord): string {
+function emailPartyLine(email: JobCaseEmailRecord, contacts: WorkflowEmailContact[]): string {
   const channel = email.channel === 'message' ? 'Message' : 'Email';
-  return `${channel} · From ${email.from} · To ${email.to}`;
+  const from = formatEmailPartyPreview(
+    email.from,
+    email.fromEmail ?? extractEmailAddress(email.from),
+    contacts,
+  );
+  const to = formatEmailPartyPreview(email.to, email.toEmail, contacts);
+  return `${channel} · From ${from} · To ${to}`;
 }
 
 function EmailListRow({
   email,
+  contacts,
   onSelect,
 }: {
   email: JobCaseEmailRecord;
+  contacts: WorkflowEmailContact[];
   onSelect: () => void;
 }) {
   const direction = emailDirection(email);
@@ -91,7 +100,7 @@ function EmailListRow({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{email.subject}</p>
-        <p className="text-muted-foreground mt-0.5 truncate text-xs">{emailPartyLine(email)}</p>
+        <p className="text-muted-foreground mt-0.5 truncate text-xs">{emailPartyLine(email, contacts)}</p>
         <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{formatDateTime(email.at)}</p>
       </div>
       <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />
@@ -142,8 +151,8 @@ function buildForwardDraft(
     body:
       (contactBlock ? `${contactBlock}\n` : '') +
       `---------- Forwarded message ----------\n` +
-      `From: ${email.from}\n` +
-      `To: ${email.to}\n` +
+      `From: ${formatEmailPartyPreview(email.from, email.fromEmail ?? extractEmailAddress(email.from), contacts)}\n` +
+      `To: ${formatEmailPartyPreview(email.to, email.toEmail, contacts)}\n` +
       `Date: ${formatDateTime(email.at)}\n` +
       `Subject: ${email.subject}\n\n` +
       email.body,
@@ -262,24 +271,13 @@ export function JobCaseEmailDetailDialog({
         {mode === 'view' ? (
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground text-xs">{formatDateTime(email.at)}</p>
-            <dl className="grid gap-2 text-xs sm:grid-cols-1">
-              <div>
-                <dt className="text-muted-foreground">From</dt>
-                <dd className="font-medium break-words">
-                  {formatEmailPartyWithRole(
-                    email.from,
-                    email.fromEmail ?? extractEmailAddress(email.from),
-                    recipientContacts,
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">To</dt>
-                <dd className="font-medium break-words">
-                  {formatEmailPartyWithRole(email.to, email.toEmail, recipientContacts)}
-                </dd>
-              </div>
-            </dl>
+            <EmailPreviewParties
+              from={email.from}
+              fromEmail={email.fromEmail ?? extractEmailAddress(email.from)}
+              to={email.to}
+              toEmail={email.toEmail}
+              contacts={recipientContacts}
+            />
             <div className="rounded-xl border bg-muted/20 p-3">
               <pre className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
                 {email.body}
@@ -409,7 +407,11 @@ export function JobCaseEmailLog({
           <ul className="divide-y">
             {sorted.map((email) => (
               <li key={email.id}>
-                <EmailListRow email={email} onSelect={() => setSelectedId(email.id)} />
+                <EmailListRow
+                  email={email}
+                  contacts={recipientContacts}
+                  onSelect={() => setSelectedId(email.id)}
+                />
               </li>
             ))}
           </ul>
@@ -434,11 +436,14 @@ export function JobCaseEmailLog({
 export function JobCaseSentEmailPreviewCard({
   title,
   record,
+  recipientContacts = [],
 }: {
   title: string;
   record: JobCaseEmailRecord;
+  recipientContacts?: WorkflowEmailContact[];
 }) {
   const [open, setOpen] = useState(false);
+  const toLine = formatEmailPartyPreview(record.to, record.toEmail, recipientContacts);
 
   return (
     <>
@@ -454,7 +459,7 @@ export function JobCaseSentEmailPreviewCard({
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{title}</p>
             <p className="text-muted-foreground mt-0.5 truncate">
-              To: {record.to} · {formatDateTime(record.at)}
+              To: {toLine} · {formatDateTime(record.at)}
             </p>
             {record.subject ? (
               <p className="text-muted-foreground mt-1 truncate">{record.subject}</p>
@@ -468,6 +473,7 @@ export function JobCaseSentEmailPreviewCard({
         allEmails={[record]}
         open={open}
         onOpenChange={setOpen}
+        recipientContacts={recipientContacts}
       />
     </>
   );

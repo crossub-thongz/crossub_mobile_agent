@@ -7,7 +7,7 @@ export interface WorkflowEmailContact {
 }
 
 export function formatWorkflowEmailContact(contact: WorkflowEmailContact): string {
-  return `[${contact.role}] ${contact.email}`;
+  return `${contact.email} [${contact.role}]`;
 }
 
 function pushContact(
@@ -158,8 +158,8 @@ export function resolveEmailPartyRole(
   return inferPartyRole(party, resolvedEmail);
 }
 
-/** From / To line with role prefix, e.g. `[Landlord] owner@example.com`. */
-export function formatEmailPartyWithRole(
+/** Standard preview line: `email@example.com [Role]` or `Name <email> [Role]`. */
+export function formatEmailPartyPreview(
   party: string,
   email: string | undefined,
   contacts: WorkflowEmailContact[],
@@ -167,13 +167,26 @@ export function formatEmailPartyWithRole(
   const parsed = parseRoleBracketLabel(party);
   const role = resolveEmailPartyRole(party, email, contacts);
   const resolvedEmail = email?.trim() || extractEmailAddress(parsed.remainder || party);
-  const name = parsed.remainder && !parsed.remainder.includes('@') ? parsed.remainder : undefined;
+  const nameFromRemainder =
+    parsed.remainder && !parsed.remainder.includes('@') ? parsed.remainder : undefined;
+  const nameFromParty =
+    !party.includes('@') && !parsed.role && party.trim() ? party.trim() : undefined;
+  const name = nameFromRemainder ?? nameFromParty;
 
   if (role && resolvedEmail) {
-    return name ? `[${role}] ${name} <${resolvedEmail}>` : `[${role}] ${resolvedEmail}`;
+    return name && name !== resolvedEmail
+      ? `${name} <${resolvedEmail}> [${role}]`
+      : `${resolvedEmail} [${role}]`;
+  }
+  if (role && name) {
+    return `${name} [${role}]`;
   }
   if (role) {
-    return `[${role}] ${parsed.remainder || party}`;
+    return `${parsed.remainder || party} [${role}]`;
   }
+  if (resolvedEmail) return resolvedEmail;
   return party;
 }
+
+/** @deprecated Use {@link formatEmailPartyPreview}. */
+export const formatEmailPartyWithRole = formatEmailPartyPreview;

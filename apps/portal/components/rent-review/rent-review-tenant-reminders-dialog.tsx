@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { EmailPreviewParties } from '@/components/agent/email-preview-parties';
 import {
   buildTenantReminderListItems,
   resolveTenantReminderSchedule,
@@ -69,8 +70,15 @@ function ReminderListRow({
   );
 }
 
-function ReminderEmailPreview({ reminder }: { reminder: TenantReminderEmail }) {
+function ReminderEmailPreview({
+  reminder,
+  detail,
+}: {
+  reminder: TenantReminderEmail;
+  detail: RentReviewWorkflowDetail;
+}) {
   const upcoming = reminder.upcoming === true;
+  const contacts = [{ role: 'Tenant', name: detail.tenantName, email: 'tenant@example.com' }];
 
   return (
     <div className="space-y-3 text-sm">
@@ -83,16 +91,11 @@ function ReminderEmailPreview({ reminder }: { reminder: TenantReminderEmail }) {
           </p>
         </div>
       </div>
-      <dl className="grid gap-2 text-xs">
-        <div>
-          <dt className="text-muted-foreground">From</dt>
-          <dd className="font-medium">{reminder.from}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">To</dt>
-          <dd className="font-medium">{reminder.to}</dd>
-        </div>
-      </dl>
+      <EmailPreviewParties
+        from={reminder.from}
+        to={reminder.to}
+        contacts={contacts}
+      />
       <div className="rounded-xl border bg-muted/20 p-3">
         <pre className="text-foreground/90 whitespace-pre-wrap font-sans text-xs leading-relaxed">
           {reminder.body}
@@ -180,7 +183,7 @@ export function RentReviewTenantRemindersDialog({
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3">
-              <ReminderEmailPreview reminder={selected} />
+              <ReminderEmailPreview reminder={selected} detail={detail} />
             </div>
           </div>
         ) : (

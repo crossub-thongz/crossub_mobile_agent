@@ -27,6 +27,8 @@ import { InspectionCompareEvidenceSection } from '@/components/inspections/inspe
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { RoutineSelfInspectionReviewSection } from '@/components/inspections/routine-self-inspection-review-section';
 import { RoutineSelfPreviousSubmissionSection } from '@/components/inspections/routine-self-previous-submission-section';
+import { ChangeRoutineFlowDialog } from '@/components/inspections/change-routine-flow-dialog';
+import { RoutineAuditTrail } from '@/components/inspections/routine-audit-trail';
 import { RoutineInPersonKeyCustodySection } from '@/components/inspections/routine-in-person-key-custody-section';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionOpenStage } from '@/components/open-inspection/open-inspection-open-stage';
@@ -229,6 +231,7 @@ export function InspectionDetailView({
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [flowChangeOpen, setFlowChangeOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [routineDetail, setRoutineDetail] = useState<InspectionDetail | null>(null);
   const [routineSchedule, setRoutineSchedule] = useState<ServerRoutineScheduleView | null>(null);
@@ -708,6 +711,19 @@ export function InspectionDetailView({
           {insp.nextDueDate && (
             <InfoRow label="Next due" value={formatDateTime(insp.nextDueDate)} icon={Calendar} />
           )}
+          {apiConnected && routineSchedule && insp.type === 'ROUTINE' ? (
+            <div className="pt-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full text-xs"
+                onClick={() => setFlowChangeOpen(true)}
+              >
+                Change conduct mode
+              </Button>
+            </div>
+          ) : null}
         </InfoSection>
       )}
 
@@ -945,6 +961,10 @@ export function InspectionDetailView({
         ) : null}
       </section>
 
+      {routineSchedule?.audit?.length ? (
+        <RoutineAuditTrail entries={routineSchedule.audit} />
+      ) : null}
+
       <WorkflowCaseDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -953,6 +973,20 @@ export function InspectionDetailView({
         confirmLabel="Delete open inspection"
         onConfirm={handleDeleteConfirm}
       />
+
+      {routineSchedule ? (
+        <ChangeRoutineFlowDialog
+          schedule={routineSchedule}
+          open={flowChangeOpen}
+          onOpenChange={setFlowChangeOpen}
+          onUpdated={(updated) => {
+            setRoutineSchedule(updated);
+            if (insp) {
+              registerInspection({ ...insp, routineMode: updated.flow });
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
