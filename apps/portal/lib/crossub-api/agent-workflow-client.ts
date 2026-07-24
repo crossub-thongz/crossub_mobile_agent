@@ -59,7 +59,7 @@ export type CreateAgentMaintenanceInput = {
   urgent?: boolean;
   urgentReason?: string;
   tenant?: { name: string; email?: string; phone?: string };
-  photos?: string[];
+  photos: string[];
 };
 
 export type CreateAgentIngoingInspectionInput = {

@@ -780,6 +780,9 @@ export function PropertyWorkflowCreateDialog({
         if (wantsUrgent && !urgentEligible && maintUrgentReason.trim().length < 5) {
           throw new Error('Please provide a reason for the urgent request');
         }
+        if (maintMediaUrls.length < 1) {
+          throw new Error('At least one photo or video is required');
+        }
         const result = await createAgentMaintenanceRequest(propertyId, {
           issueType: resolvedIssueType,
           description: description.trim(),
@@ -788,9 +791,7 @@ export function PropertyWorkflowCreateDialog({
           ...(wantsUrgent && !urgentEligible
             ? { urgentReason: maintUrgentReason.trim() }
             : {}),
-          ...(maintMediaUrls.length
-            ? { photos: [...new Set(maintMediaUrls)] }
-            : {}),
+          photos: [...new Set(maintMediaUrls)],
           tenant: maintTenantName.trim()
             ? {
                 name: maintTenantName.trim(),
@@ -1553,6 +1554,7 @@ export function PropertyWorkflowCreateDialog({
                 (actionId === 'start_maintenance' &&
                   (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
                     !description.trim() ||
+                    maintMediaUrls.length < 1 ||
                     (maintPriority === 'urgent' &&
                       !isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection) &&
                       maintUrgentReason.trim().length < 5)))
