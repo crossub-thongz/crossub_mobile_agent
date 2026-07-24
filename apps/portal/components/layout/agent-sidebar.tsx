@@ -6,6 +6,7 @@ import { LogOut } from 'lucide-react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
+import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
@@ -95,18 +96,21 @@ export function AgentSidebar({
           : 'w-[260px]',
       )}
     >
-      <div
-        className={cn(
-          'flex h-14 items-center border-b border-border/70',
-          compact
-            ? 'justify-center px-2 group-hover/sidebar:justify-between group-hover/sidebar:px-4'
-            : 'justify-between gap-2 px-4',
-        )}
-      >
-        <CrossubLogo size="sm" />
-        <div className={cn(compact ? 'hidden group-hover/sidebar:block' : 'block')}>
-          <ThemeToggle />
+      <div className="border-border/70 border-b">
+        <div
+          className={cn(
+            'flex h-14 items-center',
+            compact
+              ? 'justify-center px-2 group-hover/sidebar:justify-between group-hover/sidebar:px-4'
+              : 'justify-between gap-2 px-4',
+          )}
+        >
+          <CrossubLogo size="sm" />
+          <div className={cn(compact ? 'hidden group-hover/sidebar:block' : 'block')}>
+            <ThemeToggle />
+          </div>
         </div>
+        <AgentSidebarStatus compact={compact} />
       </div>
 
       <nav className="flex-1 overflow-x-hidden overflow-y-auto p-2">

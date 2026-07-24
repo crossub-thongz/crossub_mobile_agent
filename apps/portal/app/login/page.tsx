@@ -123,7 +123,7 @@ export default function LoginPage() {
         <ThemeToggle />
       </div>
       <div className="mb-8 flex flex-col items-center gap-2">
-        <CrossubLogo href="" size="lg" showTagline />
+        <CrossubLogo href="" size="lg" showTagline className="md:items-center" />
         <p className="text-muted-foreground text-sm">Agent portal</p>
       </div>
 

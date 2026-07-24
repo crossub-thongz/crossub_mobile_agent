@@ -246,14 +246,29 @@ export function AgentShell({
 
         {!title && !immersive && !isShellHomePath(pathname) && (
           <header className="border-border bg-background/95 z-40 hidden shrink-0 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
-            <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
-              <ShellBackButton
-                backHref={backHref}
-                backLabel={backLabel}
-                showLogoOnHome={false}
-                className="hover:bg-primary/5 rounded-lg px-2 py-1.5 transition"
-              />
-            </Suspense>
+            <div className="flex w-full items-center justify-between gap-4">
+              <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
+                <ShellBackButton
+                  backHref={backHref}
+                  backLabel={backLabel}
+                  showLogoOnHome={false}
+                  className="hover:bg-primary/5 rounded-lg px-2 py-1.5 transition"
+                />
+              </Suspense>
+              <div className="flex items-center gap-1">
+                {!hideGlobalFabs ? (
+                  <ShellHeaderQuickActions pathname={pathname} />
+                ) : null}
+                <AgentNotificationBell unreadCount={unreadNotificationCount} />
+                <Link
+                  href={ROUTES.SEARCH}
+                  className="text-muted-foreground flex size-9 items-center justify-center rounded-lg hover:bg-secondary"
+                  aria-label="Search"
+                >
+                  <Search className="size-5" />
+                </Link>
+              </div>
+            </div>
           </header>
         )}
 
