@@ -17,7 +17,9 @@ import {
   ensureGroupDocumentTitle,
   PROPERTY_DETAIL_DOCUMENT_GROUP_ORDER,
   resolvePendingUploadDisplayLabel,
+  resolvePendingUploadGroup,
   resolvePendingUploadTitle,
+  uploadCategoryForGroup,
   type CreatePropertyDocumentGroup,
   type DocumentChecklistFile,
   type DocumentChecklistRow,
@@ -399,7 +401,12 @@ export function PropertyDocumentsTab({
 
         try {
           const file = new File([record.blob], record.fileName, { type: record.mimeType });
-          await uploadDocumentRef.current(file, 'lease', fullAddressRef.current, {
+          const group = resolvePendingUploadGroup({
+            slotId: record.slotId,
+            title: record.title,
+          });
+          const category = uploadCategoryForGroup(group);
+          await uploadDocumentRef.current(file, category, fullAddressRef.current, {
             title: resolvePendingUploadTitle(record),
             propertyId,
             skipRefresh: true,
@@ -641,7 +648,7 @@ export function PropertyDocumentsTab({
       for (let i = 0; i < ok.length; i++) {
         const file = ok[i]!;
         try {
-          await uploadDocument(file, 'lease', fullAddress, {
+          await uploadDocument(file, uploadCategoryForGroup(group), fullAddress, {
             title: `${baseTitle} — ${file.name}`,
             propertyId,
             onProgress: (pct) => {

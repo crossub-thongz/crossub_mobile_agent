@@ -133,7 +133,6 @@ export default function AddPropertyPage() {
   };
 
   const onPropertyCreated = (propertyId: string) => {
-    toast.success('Property added — uploading documents on the Documents tab');
     router.push(`${propertyDetail(propertyId)}?tab=${encodeURIComponent('Documents')}`);
   };
 

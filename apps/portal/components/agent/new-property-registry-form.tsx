@@ -57,9 +57,9 @@ import { emptyPartyContact, splitParties } from '@/lib/property-parties';
 import type { Property, PropertyPartyContact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
-  fileToPendingUploadRecord,
-  queuePropertyPendingUploads,
-} from '@/lib/property-create-pending-uploads';
+  queueFailedPropertyCreateUploads,
+  uploadPropertyCreatePendingDocuments,
+} from '@/lib/property-create-upload-flush';
 import {
   isBlockedDocumentFile,
   MAX_UPLOAD_BYTES,
@@ -356,7 +356,7 @@ export function NewPropertyRegistryForm({
   resumeMode?: boolean;
   draftPropertyId?: string | null;
 }) {
-  const { primaryAgency, loading, apiConnected } = useAgentData();
+  const { primaryAgency, loading, apiConnected, refresh } = useAgentData();
   const agencyLocked = !!primaryAgency || apiConnected;
   const [step, setStep] = useState<PropertyRegistryWizardStep>(initialState?.step ?? 'property');
   const [furthestStepIndex, setFurthestStepIndex] = useState(initialState?.furthestStepIndex ?? 0);
@@ -726,22 +726,29 @@ export function NewPropertyRegistryForm({
 
       const pending = formRef.current.pendingDocuments;
       if (apiConnected && pending.length > 0) {
-        await queuePropertyPendingUploads(
+        const { succeeded, failed, failedDocs } = await uploadPropertyCreatePendingDocuments(
           propertyId,
-          pending.map((doc) =>
-            fileToPendingUploadRecord(doc.file, {
-              id: doc.id,
-              title: doc.title,
-              slotId: doc.slotId,
-              source: doc.source,
-            }),
-          ),
+          pending,
         );
-        toast.message(
-          pending.length === 1
-            ? '1 document queued — uploading on the Documents tab.'
-            : `${pending.length} documents queued — uploading on the Documents tab.`,
-        );
+        await refresh();
+        if (failed > 0) {
+          await queueFailedPropertyCreateUploads(propertyId, failedDocs);
+        }
+        if (failed === 0) {
+          toast.success(
+            pending.length === 1
+              ? 'Property and document saved'
+              : `Property saved — ${succeeded} documents uploaded`,
+          );
+        } else if (succeeded > 0) {
+          toast.warning(
+            `Property saved — ${succeeded} uploaded, ${failed} failed. Retry the rest on the Documents tab.`,
+          );
+        } else {
+          toast.error(
+            'Property saved but document uploads failed. Retry on the Documents tab.',
+          );
+        }
       }
 
       onPropertyCreated?.(propertyId);

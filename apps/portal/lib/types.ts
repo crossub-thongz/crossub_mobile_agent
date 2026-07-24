@@ -661,7 +661,7 @@ export interface AgentDocument {
   id: string;
   title: string;
   propertyAddress: string;
-  category: 'inspection' | 'rent_review' | 'maintenance' | 'lease' | 'vacating';
+  category: 'inspection' | 'rent_review' | 'maintenance' | 'lease' | 'vacating' | 'management_agreement' | 'application';
   uploadedAt: string;
   href: string;
   downloadUrl?: string;

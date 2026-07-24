@@ -72,6 +72,13 @@ const TENANCY_LABELS = new Set(
   ),
 );
 
+/** API category for a checklist group — matches admin property Documents tab. */
+export function uploadCategoryForGroup(
+  group: CreatePropertyDocumentGroup,
+): 'lease' | 'management_agreement' {
+  return group === 'landlord' ? 'management_agreement' : 'lease';
+}
+
 function normalizeTitle(title: string): string {
   return title.trim().toLowerCase();
 }
