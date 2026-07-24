@@ -120,3 +120,59 @@
 .animate-workflow-case-glow {
   animation: workflow-case-glow 2.2s ease-in-out infinite;
 }
+
+/* Gii push-to-talk: the mic flips to a red waveform while the recogniser is open. */
+@keyframes voice-wave {
+  0%,
+  100% {
+    transform: scaleY(0.32);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-voice-wave {
+  transform-origin: center;
+  animation: voice-wave 0.85s ease-in-out infinite;
+}
+
+/* Release buffer: the bars settle instead of stopping dead. Duration tracks
+   VOICE_STOP_BUFFER_MS in constants/voice-input.ts. */
+@keyframes voice-wave-settle {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0.32);
+  }
+}
+
+.animate-voice-wave-settle {
+  transform-origin: center;
+  animation: voice-wave-settle 500ms ease-out forwards;
+}
+
+@keyframes voice-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(244, 63, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+  }
+}
+
+.animate-voice-pulse-ring {
+  animation: voice-pulse-ring 1.5s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-voice-wave,
+  .animate-voice-wave-settle,
+  .animate-voice-pulse-ring {
+    animation: none;
+  }
+}

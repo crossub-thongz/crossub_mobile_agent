@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Mic, MicOff, Phone, Send, Sparkles, X } from 'lucide-react';
+import { Building2, Mic, Phone, Send, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
@@ -14,6 +14,14 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { messageDetail } from '@/constants/routes';
+import {
+  VOICE_BUTTON_ARIA_LABEL,
+  VOICE_PHASE,
+  VOICE_STATUS_LABEL,
+  VOICE_STOP_BUFFER_MS,
+  VOICE_WAVE_BARS,
+  type VoicePhase,
+} from '@/constants/voice-input';
 import {
   PORTFOLIO_GII_PROMPTS,
   PROPERTY_GII_PROMPTS,
@@ -92,6 +100,27 @@ function resolveSpeechLanguage(): string {
   return lang;
 }
 
+/**
+ * Replaces the mic glyph while the recogniser is open, so the listening state is visible at
+ * a glance. `settling` runs the bars down over the release buffer instead of cutting them.
+ */
+function VoiceWave({ settling }: { settling: boolean }) {
+  return (
+    <span className="flex h-6 items-center justify-center gap-[3px]" aria-hidden="true">
+      {VOICE_WAVE_BARS.map((bar) => (
+        <span
+          key={bar.delayMs}
+          className={cn(
+            'block w-[3px] rounded-full bg-white',
+            settling ? 'animate-voice-wave-settle' : 'animate-voice-wave',
+          )}
+          style={{ height: `${bar.heightPx}px`, animationDelay: `${bar.delayMs}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
 function multilingualHint(): string {
   const lang = resolveSpeechLanguage();
   if (lang.startsWith('zh')) return 'Gii 支持中文语音和文字输入。';
@@ -117,10 +146,12 @@ export function GiiAssistant({
   const { selectedJob, openJob, closeJob, portfolioData } = usePortfolioCaseDialog();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [query, setQuery] = useState('');
-  const [listening, setListening] = useState(false);
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>(VOICE_PHASE.IDLE);
   const [sending, setSending] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  /** Pending `stop()` scheduled on release — its presence *is* the "wrapping up" flag. */
+  const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -129,6 +160,10 @@ export function GiiAssistant({
   // The subject carried between turns. A ref: it must never be stale inside runQuery, and
   // it does not need to trigger a render.
   const contextRef = useRef<GiiContext | null>(null);
+  const listening = voicePhase === VOICE_PHASE.LISTENING;
+  const wrappingUp = voicePhase === VOICE_PHASE.WRAPPING;
+  /** The mic stays "hot" through the release buffer — the recogniser is still open. */
+  const voiceActive = voicePhase !== VOICE_PHASE.IDLE;
   const isPanel = variant === 'panel';
   const isEmbedded = variant === 'embedded';
   const isModal = variant === 'modal';
@@ -415,7 +450,29 @@ export function GiiAssistant({
     onClose?.();
   };
 
+  const clearStopTimer = () => {
+    if (stopTimerRef.current) {
+      clearTimeout(stopTimerRef.current);
+      stopTimerRef.current = null;
+    }
+  };
+
+  const endVoiceSession = () => {
+    clearStopTimer();
+    recognitionRef.current = null;
+    setVoicePhase(VOICE_PHASE.IDLE);
+  };
+
   const startVoice = () => {
+    // Pressed again inside the release buffer — cancel the pending stop and keep the same
+    // utterance going rather than throwing away what has been captured so far.
+    if (stopTimerRef.current) {
+      clearStopTimer();
+      setVoicePhase(VOICE_PHASE.LISTENING);
+      return;
+    }
+    // A session is already open; `start()` would throw InvalidStateError.
+    if (recognitionRef.current) return;
     const SpeechRecognitionCtor =
       typeof window !== 'undefined'
         ? window.SpeechRecognition || window.webkitSpeechRecognition
@@ -428,11 +485,13 @@ export function GiiAssistant({
     recognition.lang = resolveSpeechLanguage();
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => {
-      setListening(false);
-      toast.error('Could not hear you clearly — try again or type your question');
+    recognition.onstart = () => setVoicePhase(VOICE_PHASE.LISTENING);
+    recognition.onend = endVoiceSession;
+    recognition.onerror = (event) => {
+      const aborted = event.error === 'aborted';
+      endVoiceSession();
+      // `abort()` on unmount is our own doing — don't blame the speaker for it.
+      if (!aborted) toast.error('Could not hear you clearly — try again or type your question');
     };
     recognition.onresult = (event) => {
       const transcript = event.results[0]?.[0]?.transcript ?? '';
@@ -442,10 +501,32 @@ export function GiiAssistant({
     recognition.start();
   };
 
+  /**
+   * Releasing the button does NOT close the recogniser straight away. Web Speech drops the
+   * utterance the instant `stop()` lands, so an immediate stop eats the final word. We keep
+   * it open for VOICE_STOP_BUFFER_MS while the waveform settles.
+   */
   const stopVoice = () => {
-    recognitionRef.current?.stop();
-    setListening(false);
+    if (!recognitionRef.current || stopTimerRef.current) return;
+    setVoicePhase(VOICE_PHASE.WRAPPING);
+    stopTimerRef.current = setTimeout(() => {
+      stopTimerRef.current = null;
+      try {
+        recognitionRef.current?.stop(); // `onend` flips the phase back to idle
+      } catch {
+        endVoiceSession();
+      }
+    }, VOICE_STOP_BUFFER_MS);
   };
+
+  // Leaving the panel mid-utterance must not leave a live recogniser or a pending stop behind.
+  useEffect(
+    () => () => {
+      if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
+      recognitionRef.current?.abort();
+    },
+    [],
+  );
 
   const openMessage = (result: SystemSearchResult) => {
     if (!result.propertyId) {
@@ -674,13 +755,25 @@ export function GiiAssistant({
             ))}
           </div>
         ) : null}
-        {listening ? (
-          <div className="mb-2 flex items-center justify-center gap-2 text-xs font-medium text-primary">
+        {voiceActive ? (
+          <div
+            className={cn(
+              'mb-2 flex items-center justify-center gap-2 text-xs font-medium transition-colors duration-300',
+              wrappingUp ? 'text-muted-foreground' : 'text-red-500',
+            )}
+          >
             <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
-              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+              {listening ? (
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-60" />
+              ) : null}
+              <span
+                className={cn(
+                  'relative inline-flex size-2 rounded-full transition-colors duration-300',
+                  wrappingUp ? 'bg-muted-foreground' : 'bg-red-500',
+                )}
+              />
             </span>
-            Listening… release when done
+            {listening ? VOICE_STATUS_LABEL.LISTENING : VOICE_STATUS_LABEL.WRAPPING}
           </div>
         ) : null}
         <div className="flex items-end gap-2 max-lg:flex-col max-lg:items-stretch">
@@ -724,18 +817,22 @@ export function GiiAssistant({
               }}
               onPointerUp={stopVoice}
               onPointerLeave={() => {
-                if (listening) stopVoice();
+                if (voiceActive) stopVoice();
               }}
               onPointerCancel={stopVoice}
               className={cn(
-                'mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
-                'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                'mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md',
+                'transition-all duration-300 ease-out active:scale-95',
                 'max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl',
-                listening && 'ring-4 ring-primary/35 scale-110 max-lg:scale-100',
+                voiceActive
+                  ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
+                  : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                listening && 'animate-voice-pulse-ring scale-110 max-lg:scale-100',
+                wrappingUp && 'scale-105 max-lg:scale-100',
               )}
-              aria-label={listening ? 'Stop recording' : 'Hold to speak'}
+              aria-label={voiceActive ? VOICE_BUTTON_ARIA_LABEL.ACTIVE : VOICE_BUTTON_ARIA_LABEL.IDLE}
             >
-              {listening ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+              {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-5" />}
             </button>
           )}
         </div>
