@@ -105,6 +105,12 @@ export interface OpenInspectionVisitor {
   interestLevel: InterestLevel;
   followUpStatus: FollowUpStatus;
   followUpNote?: string;
+  /** Prospect-declared lease term at QR check-in. */
+  leaseTerm?: string;
+  /** Prospect-declared pets at QR check-in. */
+  pets?: string;
+  /** Prospect comments captured at QR check-in. */
+  checkInComments?: string;
   lastContactedAt?: string;
   applyLinkSentAt?: string;
   application?: OpenInspectionApplication;

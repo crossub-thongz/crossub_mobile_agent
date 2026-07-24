@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, Loader2, Mail, MessageSquare, Phone, User, Users } from 'lucide-react';
+import { Check, Loader2, Mail, Phone, User, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { OpenInspectionCheckInVisitorDetails } from '@/components/open-inspection/open-inspection-check-in-visitor-details';
 import type { OpenInspectionSession, OpenInspectionVisitor } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
@@ -25,7 +26,13 @@ function canReceiveApplyLink(visitor: OpenInspectionVisitor): boolean {
   );
 }
 
-function CheckInRow({ visitor }: { visitor: OpenInspectionVisitor }) {
+function CheckInRow({
+  visitor,
+  sessionLeaseTerm,
+}: {
+  visitor: OpenInspectionVisitor;
+  sessionLeaseTerm?: string;
+}) {
   const email = visitor.email?.trim() || '';
   const hasApplication = Boolean(visitor.application);
   const alreadySent = Boolean(visitor.applyLinkSentAt);
@@ -52,12 +59,10 @@ function CheckInRow({ visitor }: { visitor: OpenInspectionVisitor }) {
               {visitor.phone}
             </p>
           ) : null}
-          {visitor.followUpNote?.trim() ? (
-            <p className="text-muted-foreground flex items-start gap-1.5 text-[11px]">
-              <MessageSquare className="mt-0.5 size-3 shrink-0" />
-              <span>{visitor.followUpNote}</span>
-            </p>
-          ) : null}
+          <OpenInspectionCheckInVisitorDetails
+            visitor={visitor}
+            sessionLeaseTerm={sessionLeaseTerm}
+          />
         </div>
         {hasApplication ? (
           <span className="text-muted-foreground shrink-0 text-[10px] font-medium">
@@ -158,7 +163,11 @@ export function OpenInspectionCheckInList({
       ) : (
         <ul className="space-y-2">
           {checkIns.map((visitor) => (
-            <CheckInRow key={visitor.id} visitor={visitor} />
+            <CheckInRow
+              key={visitor.id}
+              visitor={visitor}
+              sessionLeaseTerm={session.rental?.leaseTerm}
+            />
           ))}
         </ul>
       )}

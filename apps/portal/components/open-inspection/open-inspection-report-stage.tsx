@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Mail, MessageSquare } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { OpenInspectionCheckInVisitorDetails } from '@/components/open-inspection/open-inspection-check-in-visitor-details';
 import { Button } from '@/components/ui/button';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
@@ -57,16 +58,13 @@ export function OpenInspectionReportStage({
               <li key={visitor.id} className="rounded-xl border bg-background px-3 py-2.5 text-xs">
                 <p className="font-medium">{visitor.name || 'Unnamed visitor'}</p>
                 <div className="text-muted-foreground mt-1 space-y-0.5">
-                  {visitor.phone ? <p>Phone: {visitor.phone}</p> : null}
-                  {visitor.email ? <p>Email: {visitor.email}</p> : null}
-                  {visitor.followUpNote?.trim() ? (
-                    <p className="flex items-start gap-1.5">
-                      <MessageSquare className="mt-0.5 size-3 shrink-0" />
-                      <span>{visitor.followUpNote}</span>
-                    </p>
-                  ) : (
-                    <p>Notes: —</p>
-                  )}
+                  {visitor.phone ? <p>Mobile: {visitor.phone}</p> : null}
+                  {visitor.email ? <p>E-mail: {visitor.email}</p> : null}
+                  <OpenInspectionCheckInVisitorDetails
+                    visitor={visitor}
+                    sessionLeaseTerm={session.rental?.leaseTerm}
+                    variant="detailed"
+                  />
                 </div>
               </li>
             ))}

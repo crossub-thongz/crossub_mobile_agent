@@ -17,6 +17,10 @@ export function openInspectionSessionSyncKey(session: OpenInspectionSession): st
       id: visitor.id,
       attendanceStatus: visitor.attendanceStatus,
       applyLinkSentAt: visitor.applyLinkSentAt,
+      leaseTerm: visitor.leaseTerm,
+      pets: visitor.pets,
+      checkInComments: visitor.checkInComments,
+      followUpNote: visitor.followUpNote,
       application: visitor.application
         ? {
             agentDecision: visitor.application.agentDecision,
