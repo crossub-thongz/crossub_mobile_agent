@@ -406,16 +406,38 @@ export function PropertyDocumentsTab({
             title: record.title,
           });
           const category = uploadCategoryForGroup(group);
-          await uploadDocumentRef.current(file, category, fullAddressRef.current, {
-            title: resolvePendingUploadTitle(record),
-            propertyId,
-            skipRefresh: true,
-            onProgress: (pct) => {
-              const overall = Math.round(i * fileShare + (pct / 100) * fileShare);
-              setUploadProgress(overall);
-              setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
-            },
+          const title = resolvePendingUploadTitle({
+            slotId: record.slotId,
+            title: record.title,
+            fileName: record.fileName,
           });
+          try {
+            await uploadDocumentRef.current(file, category, fullAddressRef.current, {
+              title,
+              propertyId,
+              skipRefresh: true,
+              onProgress: (pct) => {
+                const overall = Math.round(i * fileShare + (pct / 100) * fileShare);
+                setUploadProgress(overall);
+                setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
+              },
+            });
+          } catch {
+            if (category === 'management_agreement') {
+              await uploadDocumentRef.current(file, 'lease', fullAddressRef.current, {
+                title,
+                propertyId,
+                skipRefresh: true,
+                onProgress: (pct) => {
+                  const overall = Math.round(i * fileShare + (pct / 100) * fileShare);
+                  setUploadProgress(overall);
+                  setQueuePhase(pct >= 95 ? 'saving' : 'uploading');
+                },
+              });
+            } else {
+              throw new Error('Upload failed');
+            }
+          }
           await removePendingUploadRecord(propertyId, record.id);
           succeeded += 1;
         } catch (err) {

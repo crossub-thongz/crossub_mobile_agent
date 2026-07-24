@@ -29,21 +29,36 @@ export async function uploadPropertyCreatePendingDocuments(
   const failedDocs: PropertyCreatePendingDocument[] = [];
 
   for (const doc of pending) {
+    const group = resolvePendingUploadGroup({ slotId: doc.slotId, title: doc.title });
+    const category = uploadCategoryForGroup(group);
+    const title = resolvePendingUploadTitle({
+      slotId: doc.slotId,
+      title: doc.title,
+      fileName: doc.file.name,
+    });
     try {
-      const group = resolvePendingUploadGroup({ slotId: doc.slotId, title: doc.title });
-      const category = uploadCategoryForGroup(group);
-      const title = resolvePendingUploadTitle({
-        slotId: doc.slotId,
-        title: doc.title,
-        fileName: doc.file.name,
-      });
       await uploadAgentDocumentFileWithProgress(doc.file, {
         category: category as UploadAgentDocumentInput['category'],
         propertyId,
         title,
       });
       succeeded += 1;
-    } catch {
+    } catch (firstErr) {
+      // Staging APIs predating management_agreement support — fall back to lease
+      // (checklist matching uses the title, not category).
+      if (category === 'management_agreement') {
+        try {
+          await uploadAgentDocumentFileWithProgress(doc.file, {
+            category: 'lease',
+            propertyId,
+            title,
+          });
+          succeeded += 1;
+          continue;
+        } catch {
+          /* fall through */
+        }
+      }
       failed += 1;
       failedDocs.push(doc);
     }
