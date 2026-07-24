@@ -20,15 +20,10 @@ export function useLeasingCycleLiveSync(
   const syncCycle = useCallback(async () => {
     if (!enabled || !apiConnected || !cycleId || !isUuid(propertyId)) return;
     try {
-      const view = await leasingOpsApi.syncApplications(cycleId);
+      const view = await leasingOpsApi.get(cycleId);
       applyCycleView(propertyId, view);
     } catch {
-      try {
-        const view = await leasingOpsApi.get(cycleId);
-        applyCycleView(propertyId, view);
-      } catch {
-        /* keep last known server snapshot */
-      }
+      /* keep last known server snapshot */
     }
   }, [enabled, apiConnected, cycleId, propertyId, applyCycleView]);
 

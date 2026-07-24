@@ -41,16 +41,26 @@ export function ModuleTableTruncateText({
   children,
   title,
   className,
+  lines = 1,
 }: {
   children: React.ReactNode;
   title?: string;
   className?: string;
+  lines?: 1 | 2;
 }) {
   const hoverTitle =
     title ?? (typeof children === 'string' || typeof children === 'number' ? String(children) : undefined);
 
   return (
-    <span className={cn('block min-w-0 truncate', className)} title={hoverTitle}>
+    <span
+      className={cn(
+        'block min-w-0',
+        lines === 1 && 'truncate',
+        lines === 2 && 'line-clamp-2 break-words',
+        className,
+      )}
+      title={hoverTitle}
+    >
       {children}
     </span>
   );

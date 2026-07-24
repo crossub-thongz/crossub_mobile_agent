@@ -7,8 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { startAgentOpenInspectionNow } from '@/lib/crossub-api/agent-workflow-client';
-import { leasingOpsApi } from '@/lib/leasing-ops-api';
-import { registerOpenInspectionFromCycle } from '@/lib/open-inspection-resolve';
+import { finalizeAgentOpenInspectionSchedule } from '@/lib/open-inspection/finalize-agent-open-schedule';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { cn } from '@/lib/utils';
 
@@ -42,23 +41,15 @@ export function StartCrossubOpenNowButton({
       const result = await startAgentOpenInspectionNow(propertyId, cycleId);
       toast.success('Open inspection started — viewing window is live now');
 
-      const view = await leasingOpsApi.get(cycleId);
-      applyCycleView(propertyId, view);
-
-      await registerOpenInspectionFromCycle(
-        {
-          propertyId,
-          cycleId,
-          inspectionId:
-            result.openInspectionId ?? view.openInspection.inspectionId ?? inspectionId,
-          viewingSessionId: view.viewingSessionId,
-        },
+      const resolvedId = await finalizeAgentOpenInspectionSchedule({
+        propertyId,
+        cycleId,
+        result,
         registerInspection,
-      );
-      await refresh({ force: true });
-      onStarted?.(
-        result.openInspectionId ?? view.openInspection.inspectionId ?? inspectionId ?? undefined,
-      );
+        applyCycleView,
+        refresh,
+      });
+      onStarted?.(resolvedId ?? inspectionId ?? undefined);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not start open inspection now');
     } finally {

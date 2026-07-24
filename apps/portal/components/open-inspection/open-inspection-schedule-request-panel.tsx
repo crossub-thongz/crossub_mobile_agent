@@ -11,12 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
-import { leasingOpsApi } from '@/lib/leasing-ops-api';
+import { finalizeAgentOpenInspectionSchedule } from '@/lib/open-inspection/finalize-agent-open-schedule';
 import {
   addHoursToDatetimeLocal,
   validateCrossubOpenDateTimeLocal,
 } from '@/lib/open-inspection/open-inspection-saturday';
-import { registerOpenInspectionFromCycle } from '@/lib/open-inspection-resolve';
 import { openInspectionEndIsoFromDurationHours } from '@/lib/open-inspection/start-now';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { cn } from '@/lib/utils';
@@ -61,22 +60,15 @@ export function OpenInspectionScheduleRequestPanel({
     const result = await requestAgentOpenInspection(propertyId, cycleId, body);
     toast.success(successMessage);
 
-    const view = await leasingOpsApi.get(cycleId);
-    applyCycleView(propertyId, view);
-
-    await registerOpenInspectionFromCycle(
-      {
-        propertyId,
-        cycleId,
-        inspectionId: result.openInspectionId ?? view.openInspection.inspectionId,
-        viewingSessionId: view.viewingSessionId,
-      },
+    const inspectionId = await finalizeAgentOpenInspectionSchedule({
+      propertyId,
+      cycleId,
+      result,
       registerInspection,
-    );
-    await refresh({ force: true });
-    onScheduled?.(
-      result.openInspectionId ?? view.openInspection.inspectionId ?? undefined,
-    );
+      applyCycleView,
+      refresh,
+    });
+    onScheduled?.(inspectionId);
   };
 
   const submit = async () => {

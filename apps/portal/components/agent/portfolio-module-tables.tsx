@@ -240,8 +240,8 @@ export function MaintenanceListTable({
                   newCaseId={m.id}
                   className={cn(m.requiresApproval && 'bg-destructive/[0.03]')}
                 >
-                  <td className="text-muted-foreground min-w-0 truncate px-2 py-2.5 text-xs tabular-nums lg:px-3 lg:py-3">
-                    {m.trackingNumber}
+                  <td className={moduleTableCellClassName('text-muted-foreground text-xs tabular-nums')}>
+                    <ModuleTableTruncateText>{m.trackingNumber}</ModuleTableTruncateText>
                   </td>
                   <td
                     className={moduleTableCellClassName(
@@ -251,25 +251,25 @@ export function MaintenanceListTable({
                     <ModuleTableTruncateText>{formatCreatedAt(maintenanceCreatedAtIso(m))}</ModuleTableTruncateText>
                   </td>
                   {interactive ? (
-                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
-                      <span className="line-clamp-2">{m.title}</span>
+                    <td className={moduleTableCellClassName('font-medium')}>
+                      <ModuleTableTruncateText lines={2}>{m.title}</ModuleTableTruncateText>
                     </td>
                   ) : (
                     <ModuleTableLinkCell href={href}>
-                      <span className="line-clamp-2">{m.title}</span>
+                      <ModuleTableTruncateText lines={2}>{m.title}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   )}
-                  <td className="text-muted-foreground min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
-                    <span className="line-clamp-2">{m.propertyAddress}</span>
+                  <td className={moduleTableCellClassName('text-muted-foreground')}>
+                    <ModuleTableTruncateText lines={2}>{m.propertyAddress}</ModuleTableTruncateText>
                   </td>
-                  <td className="text-primary min-w-0 truncate px-2 py-2.5 text-xs font-medium lg:px-3 lg:py-3">
-                    {progress.currentStepLabel}
+                  <td className={moduleTableCellClassName('text-primary text-xs font-medium')}>
+                    <ModuleTableTruncateText>{progress.currentStepLabel}</ModuleTableTruncateText>
                   </td>
-                  <td className="text-muted-foreground min-w-0 truncate px-2 py-2.5 text-xs lg:px-3 lg:py-3">
-                    {capitalize(m.responsibility)}
+                  <td className={moduleTableCellClassName('text-muted-foreground text-xs')}>
+                    <ModuleTableTruncateText>{capitalize(m.responsibility)}</ModuleTableTruncateText>
                   </td>
-                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
-                    <span
+                  <td className={moduleTableCellClassName()}>
+                    <ModuleTableTruncateText
                       className={cn(
                         'text-xs font-semibold uppercase',
                         m.priority === 'urgent'
@@ -278,7 +278,7 @@ export function MaintenanceListTable({
                       )}
                     >
                       {m.priority}
-                    </span>
+                    </ModuleTableTruncateText>
                   </td>
                   {interactive ? (
                     <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
@@ -440,34 +440,40 @@ export function RentReviewListTable({
                   newCaseId={r.id}
                   className={cn(r.requiresApproval && 'bg-destructive/[0.03]')}
                 >
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    {workflowCaseReferenceLabel(r.id, 'rent_review')}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                    <ModuleTableTruncateText>
+                      {workflowCaseReferenceLabel(r.id, 'rent_review')}
+                    </ModuleTableTruncateText>
                   </td>
                   {interactive ? (
-                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
-                      <span className="line-clamp-2">{r.propertyAddress}</span>
+                    <td className={moduleTableCellClassName('font-medium')}>
+                      <ModuleTableTruncateText lines={2}>{r.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   ) : (
                     <ModuleTableLinkCell href={href!}>
-                      <span className="line-clamp-2">{r.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{r.propertyAddress}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   )}
-                  <td className="min-w-0 px-2 py-2.5 text-muted-foreground lg:px-3 lg:py-3">
-                    <span className="line-clamp-2">{r.tenantName ?? '—'}</span>
+                  <td className={moduleTableCellClassName('text-muted-foreground')}>
+                    <ModuleTableTruncateText lines={2}>{r.tenantName ?? '—'}</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">
-                    {rentReviewLeaseLabel(r)}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground')}>
+                    <ModuleTableTruncateText>{rentReviewLeaseLabel(r)}</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    {formatCreatedAt(rentReviewCreatedAtIso(r))}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                    <ModuleTableTruncateText>
+                      {formatCreatedAt(rentReviewCreatedAtIso(r))}
+                    </ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs tabular-nums lg:px-3 lg:py-3">
-                    {formatDate(r.reviewDue)}
+                  <td className={moduleTableCellClassName('text-xs tabular-nums')}>
+                    <ModuleTableTruncateText>{formatDate(r.reviewDue)}</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 font-medium tabular-nums lg:px-3 lg:py-3">
-                    {formatCurrency(r.currentRent)}/wk
+                  <td className={moduleTableCellClassName('font-medium tabular-nums')}>
+                    <ModuleTableTruncateText>{formatCurrency(r.currentRent)}/wk</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium text-primary lg:px-3 lg:py-3">{progress.currentStepLabel}</td>
+                  <td className={moduleTableCellClassName('text-xs font-medium text-primary')}>
+                    <ModuleTableTruncateText>{progress.currentStepLabel}</ModuleTableTruncateText>
+                  </td>
                   {interactive ? (
                     <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
                       <ChevronRight className="inline size-4" />
@@ -612,11 +618,16 @@ export function TribunalListTable({
                       {tribunalTypeLabel(c.tribunalType)}
                     </td>
                     <td className="max-w-[14rem] px-3 py-3 text-sm">
-                      <p className="line-clamp-2 font-medium">{c.tenantName || '—'}</p>
+                      <ModuleTableTruncateText lines={2} className="font-medium">
+                        {c.tenantName || '—'}
+                      </ModuleTableTruncateText>
                       {scope === 'portfolio' ? (
-                        <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                        <ModuleTableTruncateText
+                          lines={2}
+                          className="text-muted-foreground mt-0.5 text-xs"
+                        >
                           {c.propertyAddress || '—'}
-                        </p>
+                        </ModuleTableTruncateText>
                       ) : null}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-sm font-medium tabular-nums">
@@ -743,10 +754,10 @@ export function TribunalListTable({
                 {c.createdAt ? formatDate(c.createdAt) : '—'}
               </td>
               <td className="max-w-[14rem] px-3 py-3 text-sm font-medium">
-                <span className="line-clamp-2">{c.propertyAddress || '—'}</span>
+                <ModuleTableTruncateText lines={2}>{c.propertyAddress || '—'}</ModuleTableTruncateText>
               </td>
               <td className="max-w-[10rem] px-3 py-3 text-sm">
-                <span className="line-clamp-2">{c.tenantName || '—'}</span>
+                <ModuleTableTruncateText lines={2}>{c.tenantName || '—'}</ModuleTableTruncateText>
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-sm">
                 <TribunalArrearsCell
@@ -864,7 +875,9 @@ export function InspectionsListTable({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 pr-8">
-                    <p className="truncate text-sm font-semibold">{i.propertyAddress}</p>
+                    <p className="truncate text-sm font-semibold" title={i.propertyAddress}>
+                      {i.propertyAddress}
+                    </p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {i.type} · {i.inspector ?? 'Pending'}
                     </p>
@@ -941,29 +954,35 @@ export function InspectionsListTable({
               newCaseModule="inspection"
               newCaseId={i.id}
             >
-              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                {i.trackingNumber}
+              <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                <ModuleTableTruncateText>{i.trackingNumber}</ModuleTableTruncateText>
               </td>
               {interactive ? (
-                <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
-                  <span className="line-clamp-2">{i.propertyAddress}</span>
+                <td className={moduleTableCellClassName('font-medium')}>
+                  <ModuleTableTruncateText lines={2}>{i.propertyAddress}</ModuleTableTruncateText>
                 </td>
               ) : (
                 <ModuleTableLinkCell href={href}>
-                  <span className="line-clamp-2">{i.propertyAddress}</span>
+                  <ModuleTableTruncateText lines={2}>{i.propertyAddress}</ModuleTableTruncateText>
                 </ModuleTableLinkCell>
               )}
-              <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium lg:px-3 lg:py-3">{i.type}</td>
-              <td className="min-w-0 px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">
-                <span className="line-clamp-2">{i.inspector ?? 'Pending'}</span>
+              <td className={moduleTableCellClassName('text-xs font-medium')}>
+                <ModuleTableTruncateText>{i.type}</ModuleTableTruncateText>
               </td>
-              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                {formatCreatedAt(inspectionCreatedAtIso(i))}
+              <td className={moduleTableCellClassName('text-xs text-muted-foreground')}>
+                <ModuleTableTruncateText lines={2}>{i.inspector ?? 'Pending'}</ModuleTableTruncateText>
               </td>
-              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                {formatScheduledAt(i.scheduledAt)}
+              <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                <ModuleTableTruncateText>
+                  {formatCreatedAt(inspectionCreatedAtIso(i))}
+                </ModuleTableTruncateText>
               </td>
-              <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium text-primary lg:px-3 lg:py-3">{progress.currentStepLabel}</td>
+              <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                <ModuleTableTruncateText>{formatScheduledAt(i.scheduledAt)}</ModuleTableTruncateText>
+              </td>
+              <td className={moduleTableCellClassName('text-xs font-medium text-primary')}>
+                <ModuleTableTruncateText>{progress.currentStepLabel}</ModuleTableTruncateText>
+              </td>
               {showDelete && (
                 <td className="px-1 py-2.5 text-right lg:px-2 lg:py-3">
                   {canDeleteRow?.(i) ? (
@@ -1094,15 +1113,15 @@ export function AccountingListTable({
             >
               {interactive ? (
                 <td className="max-w-[14rem] px-3 py-3 font-medium">
-                  <span className="line-clamp-2">{a.propertyAddress}</span>
+                  <ModuleTableTruncateText lines={2}>{a.propertyAddress}</ModuleTableTruncateText>
                 </td>
               ) : (
                 <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                  <span className="line-clamp-2">{a.propertyAddress}</span>
+                  <ModuleTableTruncateText lines={2}>{a.propertyAddress}</ModuleTableTruncateText>
                 </ModuleTableLinkCell>
               )}
               <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
-                <span className="line-clamp-2">{a.tenantName}</span>
+                <ModuleTableTruncateText lines={2}>{a.tenantName}</ModuleTableTruncateText>
               </td>
               <td className="whitespace-nowrap px-3 py-3 tabular-nums">{formatCurrency(a.rentPaidYtd)}</td>
               <td className="whitespace-nowrap px-3 py-3 tabular-nums">
@@ -1112,16 +1131,18 @@ export function AccountingListTable({
                 {formatCurrency(a.currentBalance)}
               </td>
               <td className="px-3 py-3">
-                <span
+                <ModuleTableTruncateText
                   className={cn(
                     'text-xs font-medium tabular-nums',
                     a.arrearsAmount > 0 ? 'text-destructive' : 'text-muted-foreground',
                   )}
                 >
                   {arrearsLabel}
-                </span>
+                </ModuleTableTruncateText>
                 {a.arrearsAmount > 0 ? (
-                  <p className="text-primary mt-0.5 text-[11px]">{progress.currentStepLabel}</p>
+                  <ModuleTableTruncateText className="text-primary mt-0.5 text-[11px]">
+                    {progress.currentStepLabel}
+                  </ModuleTableTruncateText>
                 ) : null}
               </td>
               {interactive ? (
@@ -1320,32 +1341,40 @@ export function LeasingCyclesTable({
                   newCaseId={cycle.id}
                 >
                   {hidePropertyColumn ? (
-                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
-                      {workflowCaseReferenceLabel(cycle.id, 'leasing')}
+                    <td className={moduleTableCellClassName('font-medium')}>
+                      <ModuleTableTruncateText>
+                        {workflowCaseReferenceLabel(cycle.id, 'leasing')}
+                      </ModuleTableTruncateText>
                     </td>
                   ) : onCycleClick ? (
-                    <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
-                      <span className="line-clamp-2">{cycle.propertyAddress}</span>
+                    <td className={moduleTableCellClassName('font-medium')}>
+                      <ModuleTableTruncateText lines={2}>{cycle.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   ) : (
                     <ModuleTableLinkCell href={href}>
-                      <span className="line-clamp-2">{cycle.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{cycle.propertyAddress}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   )}
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs font-medium text-primary lg:px-3 lg:py-3">
-                    {lifecycle.currentStepLabel}
+                  <td className={moduleTableCellClassName('text-xs font-medium text-primary')}>
+                    <ModuleTableTruncateText>{lifecycle.currentStepLabel}</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">
-                    {onboarding?.currentStepLabel ?? '—'}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground')}>
+                    <ModuleTableTruncateText>{onboarding?.currentStepLabel ?? '—'}</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 tabular-nums lg:px-3 lg:py-3">
-                    {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
+                  <td className={moduleTableCellClassName('tabular-nums')}>
+                    <ModuleTableTruncateText>
+                      {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
+                    </ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    {formatCreatedAt(leasingCycleCreatedAtIso(cycle))}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                    <ModuleTableTruncateText>
+                      {formatCreatedAt(leasingCycleCreatedAtIso(cycle))}
+                    </ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    {cycle.availableFrom ? formatDateTime(cycle.availableFrom) : '—'}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                    <ModuleTableTruncateText>
+                      {cycle.availableFrom ? formatDateTime(cycle.availableFrom) : '—'}
+                    </ModuleTableTruncateText>
                   </td>
                   {onCycleClick ? (
                     <td className="text-muted-foreground px-2 py-2.5 text-right lg:px-3 lg:py-3">
@@ -1486,29 +1515,35 @@ export function TenantSelectionsTable({
               className={cn(t.requiresApproval && 'bg-destructive/[0.03]')}
             >
               {interactive ? (
-                <td className="min-w-0 px-2 py-2.5 font-medium lg:px-3 lg:py-3">
-                  <span className="line-clamp-2">{t.propertyAddress}</span>
+                <td className={moduleTableCellClassName('font-medium')}>
+                  <ModuleTableTruncateText lines={2}>{t.propertyAddress}</ModuleTableTruncateText>
                 </td>
               ) : (
                 <ModuleTableLinkCell href={href}>
-                  <span className="line-clamp-2">{t.propertyAddress}</span>
+                  <ModuleTableTruncateText lines={2}>{t.propertyAddress}</ModuleTableTruncateText>
                 </ModuleTableLinkCell>
               )}
-              <td className="min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
-                <span className="line-clamp-2">{t.applicantName}</span>
+              <td className={moduleTableCellClassName()}>
+                <ModuleTableTruncateText lines={2}>{t.applicantName}</ModuleTableTruncateText>
               </td>
-              <td className="min-w-0 truncate px-2 py-2.5 tabular-nums lg:px-3 lg:py-3">
-                {formatCurrency(t.proposedRent)}/wk
+              <td className={moduleTableCellClassName('tabular-nums')}>
+                <ModuleTableTruncateText>{formatCurrency(t.proposedRent)}/wk</ModuleTableTruncateText>
               </td>
-              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground lg:px-3 lg:py-3">{t.leaseTerm}</td>
-              <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                {formatCreatedAt(tenantSelectionCreatedAtIso(t))}
+              <td className={moduleTableCellClassName('text-xs text-muted-foreground')}>
+                <ModuleTableTruncateText>{t.leaseTerm}</ModuleTableTruncateText>
               </td>
-              <td className="min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
+              <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                <ModuleTableTruncateText>
+                  {formatCreatedAt(tenantSelectionCreatedAtIso(t))}
+                </ModuleTableTruncateText>
+              </td>
+              <td className={moduleTableCellClassName()}>
                 {t.requiresApproval ? (
                   <StatusBadge label="Action required" variant="approval" />
                 ) : (
-                  <span className="text-primary text-xs font-medium">{t.status}</span>
+                  <ModuleTableTruncateText className="text-primary text-xs font-medium">
+                    {t.status}
+                  </ModuleTableTruncateText>
                 )}
               </td>
               {interactive ? (
@@ -1628,21 +1663,27 @@ export function LeasingHistoryTable({
               return (
                 <tr key={l.id} className="transition-colors hover:bg-muted/20">
                   <ModuleTableLinkCell href={href}>
-                    <span className="line-clamp-2">{l.address}</span>
+                    <ModuleTableTruncateText lines={2}>{l.address}</ModuleTableTruncateText>
                   </ModuleTableLinkCell>
-                  <td className="min-w-0 px-2 py-2.5 lg:px-3 lg:py-3">
-                    <span className="line-clamp-2">{l.approvedTenant}</span>
+                  <td className={moduleTableCellClassName()}>
+                    <ModuleTableTruncateText lines={2}>{l.approvedTenant}</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    {formatCreatedAt(leasingRecordCreatedAtIso(l))}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                    <ModuleTableTruncateText>
+                      {formatCreatedAt(leasingRecordCreatedAtIso(l))}
+                    </ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    {formatDate(l.leaseStart)} – {formatDate(l.leaseEnd)}
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums')}>
+                    <ModuleTableTruncateText>
+                      {formatDate(l.leaseStart)} – {formatDate(l.leaseEnd)}
+                    </ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 tabular-nums lg:px-3 lg:py-3">
-                    {formatCurrency(l.rentWeekly)}/wk
+                  <td className={moduleTableCellClassName('tabular-nums')}>
+                    <ModuleTableTruncateText>{formatCurrency(l.rentWeekly)}/wk</ModuleTableTruncateText>
                   </td>
-                  <td className="min-w-0 truncate px-2 py-2.5 text-xs capitalize text-muted-foreground lg:px-3 lg:py-3">{l.status}</td>
+                  <td className={moduleTableCellClassName('text-xs capitalize text-muted-foreground')}>
+                    <ModuleTableTruncateText>{l.status}</ModuleTableTruncateText>
+                  </td>
                   <ModuleTableChevronCell href={href} />
                 </tr>
               );

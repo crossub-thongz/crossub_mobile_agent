@@ -569,6 +569,7 @@ export function PropertyJobCasesTable({
                                 </span>
                               ) : null}
                               <ModuleTableTruncateText
+                                lines={2}
                                 className={cn(
                                   'leading-snug',
                                   selected ? 'text-primary font-semibold' : 'font-medium',
@@ -596,6 +597,7 @@ export function PropertyJobCasesTable({
                         return (
                           <td key={cell} className={moduleTableCellClassName('text-xs')}>
                             <ModuleTableTruncateText
+                              lines={2}
                               className={cn(selected ? 'text-foreground' : 'text-muted-foreground')}
                             >
                               {row.description}

@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { AlertCircle, AlertTriangle, Bell, Pencil, Trash2 } from 'lucide-react';
 
+import { ModuleTableTruncateText } from '@/components/agent/module-list-table';
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { Button } from '@/components/ui/button';
 import { messagesForProperty, needActionsForProperty } from '@/constants/routes';
@@ -29,6 +30,59 @@ function formatLeasePeriod(property: Property): string {
 function formatRent(property: Property): string {
   if (!property.rentWeekly || property.rentWeekly <= 0) return '—';
   return `${formatCurrency(property.rentWeekly)}/wk`;
+}
+
+function NotificationIconBadge({
+  count,
+  variant = 'message',
+}: {
+  count: number;
+  variant?: 'message' | 'action';
+}) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className={cn(
+        'pointer-events-none absolute -top-1 -right-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-card',
+        variant === 'message' ? 'bg-[#fa5151]' : 'bg-destructive',
+      )}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
+function TableIconLink({
+  href,
+  label,
+  title,
+  active,
+  activeClassName,
+  children,
+  badge,
+}: {
+  href: string;
+  label: string;
+  title: string;
+  active?: boolean;
+  activeClassName?: string;
+  children: ReactNode;
+  badge?: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'relative isolate flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-secondary/60',
+        active ? activeClassName : 'text-muted-foreground hover:text-foreground',
+      )}
+      aria-label={label}
+      title={title}
+    >
+      {children}
+      {badge}
+    </Link>
+  );
 }
 
 function resolveAgencyName(property: Property, agencies: Agency[]): string {
@@ -125,15 +179,15 @@ export function PropertyListTable({
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <table className="w-full table-fixed border-collapse text-left text-sm">
         <colgroup>
-          <col className="w-[22%]" />
+          <col className="w-[21%]" />
           <col className="w-[11%]" />
           <col className="w-[13%]" />
           <col className="w-[8%]" />
           <col className="w-[11%]" />
           <col className="w-[9%]" />
-          <col className="w-[11%]" />
           <col className="w-[10%]" />
-          <col className="w-[8%]" />
+          <col className="w-[5%]" />
+          <col className="w-[12%]" />
         </colgroup>
         <thead>
           <tr className="border-b bg-muted/30">
@@ -235,9 +289,9 @@ export function PropertyListTable({
                       href={rowHref(property)}
                       className="font-medium leading-snug text-foreground hover:text-primary"
                     >
-                      <span className="line-clamp-2 break-words">
+                      <ModuleTableTruncateText lines={2}>
                         {formatPropertyFullAddress(property)}
-                      </span>
+                      </ModuleTableTruncateText>
                     </Link>
                     {isDraft ? (
                       <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-900 dark:bg-red-950/50 dark:text-red-200">
@@ -247,18 +301,18 @@ export function PropertyListTable({
                     ) : null}
                   </td>
                   <td className="px-2 py-2.5 text-muted-foreground lg:px-3 lg:py-3">
-                    <span className="line-clamp-2 break-words">{property.tenantName || '—'}</span>
+                    <ModuleTableTruncateText lines={2}>{property.tenantName || '—'}</ModuleTableTruncateText>
                   </td>
                   <td className="px-2 py-2.5 text-xs leading-snug text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    <span className="line-clamp-2">{formatLeasePeriod(property)}</span>
+                    <ModuleTableTruncateText lines={2}>{formatLeasePeriod(property)}</ModuleTableTruncateText>
                   </td>
                   <td className="px-2 py-2.5 text-xs font-medium tabular-nums lg:px-3 lg:py-3">
                     {formatRent(property)}
                   </td>
                   <td className="px-2 py-2.5 text-muted-foreground lg:px-3 lg:py-3">
-                    <span className="line-clamp-2 break-words">
+                    <ModuleTableTruncateText lines={2}>
                       {resolveAgencyName(property, agencies)}
-                    </span>
+                    </ModuleTableTruncateText>
                   </td>
                   <td className="px-2 py-2.5 lg:px-3 lg:py-3">
                     {pmHref && pmName ? (
@@ -266,9 +320,9 @@ export function PropertyListTable({
                         href={pmHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary line-clamp-2 break-words text-xs font-medium hover:underline"
+                        className="text-primary text-xs font-medium hover:underline"
                       >
-                        {pmName}
+                        <ModuleTableTruncateText lines={2}>{pmName}</ModuleTableTruncateText>
                       </a>
                     ) : (
                       <span className="text-muted-foreground text-xs">—</span>
@@ -287,56 +341,44 @@ export function PropertyListTable({
                     </td>
                   ) : (
                     <td className="px-2 py-2.5 text-center align-middle lg:px-3 lg:py-3">
-                      <div className="inline-flex items-center justify-center gap-2">
-                        <Link
-                          href={messagesForProperty(property.id)}
-                          className={cn(
-                            'hover:bg-secondary/60 relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors',
-                            messageUnread > 0
-                              ? 'text-primary'
-                              : 'text-muted-foreground hover:text-foreground',
-                          )}
-                          aria-label={
-                            messageUnread > 0
-                              ? `${messageUnread} unread message${messageUnread === 1 ? '' : 's'} for this property`
-                              : 'View messages for this property'
-                          }
-                          title="Messages"
-                        >
-                          <Bell className="size-5" strokeWidth={2} />
-                          {messageUnread > 0 ? (
-                            <span className="bg-[#fa5151] pointer-events-none absolute top-0 right-0 flex min-w-[1.125rem] translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-background">
-                              {messageUnread > 99 ? '99+' : messageUnread}
-                            </span>
-                          ) : null}
-                        </Link>
-                        <Link
+                      <TableIconLink
+                        href={messagesForProperty(property.id)}
+                        label={
+                          messageUnread > 0
+                            ? `${messageUnread} unread message${messageUnread === 1 ? '' : 's'} for this property`
+                            : 'View messages for this property'
+                        }
+                        title="Messages"
+                        active={messageUnread > 0}
+                        activeClassName="text-primary"
+                        badge={
+                          <NotificationIconBadge count={messageUnread} variant="message" />
+                        }
+                      >
+                        <Bell className="size-5" strokeWidth={2} />
+                      </TableIconLink>
+                    </td>
+                  )}
+                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
+                    <div className="flex items-center justify-end gap-0.5 overflow-visible pr-1 pt-1">
+                      {!isArchived ? (
+                        <TableIconLink
                           href={needActionsForProperty(property.id)}
-                          className={cn(
-                            'hover:bg-secondary/60 relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors',
-                            needActionCount > 0
-                              ? 'text-destructive'
-                              : 'text-muted-foreground hover:text-foreground',
-                          )}
-                          aria-label={
+                          label={
                             needActionCount > 0
                               ? `${needActionCount} need action${needActionCount === 1 ? '' : 's'} for this property`
                               : 'View need actions for this property'
                           }
                           title="Need action"
+                          active={needActionCount > 0}
+                          activeClassName="text-destructive"
+                          badge={
+                            <NotificationIconBadge count={needActionCount} variant="action" />
+                          }
                         >
-                          <AlertTriangle className="size-5" strokeWidth={2} />
-                          {needActionCount > 0 ? (
-                            <span className="bg-destructive pointer-events-none absolute top-0 right-0 flex min-w-[1.125rem] translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-background">
-                              {needActionCount > 99 ? '99+' : needActionCount}
-                            </span>
-                          ) : null}
-                        </Link>
-                      </div>
-                    </td>
-                  )}
-                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
-                    <div className="flex items-center justify-end gap-1">
+                          <AlertTriangle className="size-4" strokeWidth={2} />
+                        </TableIconLink>
+                      ) : null}
                       <Button variant="ghost" size="icon" className="size-8" asChild>
                         <Link
                           href={rowHref(property)}

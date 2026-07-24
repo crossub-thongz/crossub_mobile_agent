@@ -6,6 +6,7 @@ import {
   ModuleTableChevronCell,
   ModuleTableHead,
   ModuleTableLinkCell,
+  ModuleTableTruncateText,
 } from '@/components/agent/module-list-table';
 import { propertyDetail } from '@/constants/routes';
 import { TERMINATION_UI } from '@/constants/end-leasing';
@@ -67,7 +68,7 @@ export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCy
               return (
                 <tr key={item.id} className="align-top transition-colors hover:bg-muted/20">
                   <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                    <span className="line-clamp-2">{item.propertyAddress}</span>
+                    <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                   </ModuleTableLinkCell>
                   <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums">
@@ -76,8 +77,8 @@ export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCy
                   <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
                     {formatDateTime(item.cancelledAt)}
                   </td>
-                  <td className="max-w-[18rem] px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap">
-                    {item.cancelReason}
+                  <td className="max-w-[18rem] px-3 py-3 text-xs leading-relaxed">
+                    <ModuleTableTruncateText lines={2}>{item.cancelReason}</ModuleTableTruncateText>
                   </td>
                   <ModuleTableChevronCell href={href} />
                 </tr>
@@ -143,11 +144,11 @@ export function ArchivedEndLeasingTable({ items }: { items: ArchiveEndLeasingRow
                 <tr key={item.id} className="align-top transition-colors hover:bg-muted/20">
                   {href ? (
                     <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   ) : (
                     <td className="max-w-[14rem] px-3 py-3 font-medium">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   )}
                   <td className="px-3 py-3 text-xs">{archiveOutcomeBadge(item.outcome)}</td>
@@ -157,8 +158,8 @@ export function ArchivedEndLeasingTable({ items }: { items: ArchiveEndLeasingRow
                   <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
                     {item.closedAt ? formatDateTime(item.closedAt) : '—'}
                   </td>
-                  <td className="max-w-[18rem] px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap">
-                    {item.note}
+                  <td className="max-w-[18rem] px-3 py-3 text-xs leading-relaxed">
+                    <ModuleTableTruncateText lines={2}>{item.note}</ModuleTableTruncateText>
                   </td>
                   {href ? <ModuleTableChevronCell href={href} /> : <td className="px-3 py-3" />}
                 </tr>
@@ -231,11 +232,11 @@ export function ArchivedRentReviewsTable({ items }: { items: ArchivedRentReview[
                 <tr key={item.id} className="align-top transition-colors hover:bg-muted/20">
                   {href ? (
                     <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   ) : (
                     <td className="max-w-[14rem] px-3 py-3 font-medium">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   )}
                   <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
@@ -248,8 +249,8 @@ export function ArchivedRentReviewsTable({ items }: { items: ArchivedRentReview[
                   <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
                     {formatDateTime(item.cancelledAt)}
                   </td>
-                  <td className="max-w-[18rem] px-3 py-3 text-xs leading-relaxed whitespace-pre-wrap">
-                    {item.cancelReason}
+                  <td className="max-w-[18rem] px-3 py-3 text-xs leading-relaxed">
+                    <ModuleTableTruncateText lines={2}>{item.cancelReason}</ModuleTableTruncateText>
                   </td>
                   {href ? <ModuleTableChevronCell href={href} /> : <td className="px-3 py-3" />}
                 </tr>

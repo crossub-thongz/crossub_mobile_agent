@@ -10,7 +10,15 @@ import type { Inspection } from '@/lib/types';
 import type { Property } from '@/lib/types';
 
 const PAGE_SIZE = 100;
-const MAX_PAGES = 50;
+const MAX_PAGES_PER_PROPERTY = 10;
+
+export type FetchAgentInspectionsOptions = {
+  /**
+   * When false, skip the paginated `/inspections` crawl (expensive on large agencies).
+   * Open-viewing sessions are still loaded.
+   */
+  includeStaffRecords?: boolean;
+};
 
 function propertyIdByAddress(properties: Property[]): Map<string, string> {
   const map = new Map<string, string>();
@@ -27,30 +35,9 @@ function propertyIdByAddress(properties: Property[]): Map<string, string> {
   return map;
 }
 
-/** Page through staff `/inspections` so completed cases are not dropped by pageSize. */
-async function listAllInspectionRecords() {
-  const all: Awaited<ReturnType<typeof inspectionsApi.list>>['inspections'] = [];
-  let page = 1;
-  let total = Number.POSITIVE_INFINITY;
-
-  while (page <= MAX_PAGES && all.length < total) {
-    const result = await inspectionsApi.list({ page, pageSize: PAGE_SIZE });
-    total = result.total;
-    all.push(...result.inspections);
-    if (result.inspections.length === 0) break;
-    page += 1;
-  }
-
-  return all;
-}
-
-/** Load inspections from the same staff APIs as crossub_web (scoped to assigned agencies). */
-export async function fetchAgentInspections(
-  properties: Property[] = [],
-): Promise<Inspection[]> {
-  const addressMap = propertyIdByAddress(properties);
-  const [records, liveSessions, cancelledSessions] = await Promise.all([
-    listAllInspectionRecords(),
+/** Open + cancelled viewing sessions — small, safe to poll frequently. */
+export async function fetchOpenInspectionSessions(): Promise<OpenInspectionSession[]> {
+  const [liveSessions, cancelledSessions] = await Promise.all([
     openViewingsApi.list().catch(() => [] as OpenInspectionSession[]),
     openViewingsApi
       .list({ sessionStatus: SessionStatusEnum.CANCELLED })
@@ -60,7 +47,70 @@ export async function fetchAgentInspections(
   for (const session of [...liveSessions, ...cancelledSessions]) {
     byId.set(session.id, session);
   }
-  return mergeInspectionRows(records, [...byId.values()], addressMap);
+  return [...byId.values()];
+}
+
+/** Staff inspection records scoped to the agent's property book (not the whole agency). */
+async function listInspectionRecordsForProperties(propertyIds: string[]) {
+  const uniqueIds = [...new Set(propertyIds.filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return [] as Awaited<ReturnType<typeof inspectionsApi.list>>['inspections'];
+  }
+
+  const all: Awaited<ReturnType<typeof inspectionsApi.list>>['inspections'] = [];
+  const seen = new Set<string>();
+
+  await Promise.all(
+    uniqueIds.map(async (propertyId) => {
+      let page = 1;
+      while (page <= MAX_PAGES_PER_PROPERTY) {
+        const result = await inspectionsApi.list({ page, pageSize: PAGE_SIZE, propertyId });
+        for (const row of result.inspections) {
+          if (seen.has(row.id)) continue;
+          seen.add(row.id);
+          all.push(row);
+        }
+        if (result.inspections.length === 0 || result.inspections.length < PAGE_SIZE) {
+          break;
+        }
+        page += 1;
+      }
+    }),
+  );
+
+  return all;
+}
+
+/** Refresh open-viewing rows on a background poll without re-crawling `/inspections`. */
+export function mergeOpenSessionsIntoInspections(
+  previous: Inspection[] | null,
+  properties: Property[],
+  sessions: OpenInspectionSession[],
+): Inspection[] {
+  const addressMap = propertyIdByAddress(properties);
+  const openRows = mergeInspectionRows([], sessions, addressMap);
+  const kept = (previous ?? []).filter((row) => row.source !== 'open_viewing');
+  const byId = new Map<string, Inspection>();
+  for (const row of kept) byId.set(row.id, row);
+  for (const row of openRows) byId.set(row.id, row);
+  return [...byId.values()];
+}
+
+/** Load inspections from staff APIs + open viewings (scoped to assigned properties). */
+export async function fetchAgentInspections(
+  properties: Property[] = [],
+  options: FetchAgentInspectionsOptions = {},
+): Promise<Inspection[]> {
+  const includeStaffRecords = options.includeStaffRecords !== false;
+  const addressMap = propertyIdByAddress(properties);
+  const propertyIds = properties.map((p) => p.id).filter(Boolean);
+  const [records, sessions] = await Promise.all([
+    includeStaffRecords
+      ? listInspectionRecordsForProperties(propertyIds)
+      : Promise.resolve([] as Awaited<ReturnType<typeof inspectionsApi.list>>['inspections']),
+    fetchOpenInspectionSessions(),
+  ]);
+  return mergeInspectionRows(records, sessions, addressMap);
 }
 
 export async function fetchInspectionDetail(

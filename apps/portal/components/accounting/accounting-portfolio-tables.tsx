@@ -6,6 +6,7 @@ import {
   ModuleMobileCardShell,
   ModuleTableChevronCell,
   ModuleTableLinkCell,
+  ModuleTableTruncateText,
 } from '@/components/agent/module-list-table';
 import { propertyDetail } from '@/constants/routes';
 import { accountingPortfolioJobId } from '@/lib/portfolio-case-dialog';
@@ -91,15 +92,15 @@ export function RentReconciliationListTable({
                 >
                   {interactive ? (
                     <td className="max-w-[14rem] px-3 py-3 font-medium">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   ) : (
                     <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   )}
                   <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
-                    <span className="line-clamp-2">{item.tenantName}</span>
+                    <ModuleTableTruncateText lines={2}>{item.tenantName}</ModuleTableTruncateText>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                     {formatCurrency(item.rentPaidYtd)}
@@ -204,15 +205,15 @@ export function ArrearsListTable({
                 >
                   {interactive ? (
                     <td className="max-w-[14rem] px-3 py-3 font-medium">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   ) : (
                     <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   )}
                   <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
-                    <span className="line-clamp-2">{item.tenantName}</span>
+                    <ModuleTableTruncateText lines={2}>{item.tenantName}</ModuleTableTruncateText>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums text-destructive">
                     {item.arrearsAmount > 0 ? formatCurrency(item.arrearsAmount) : '—'}
@@ -319,15 +320,15 @@ export function StatementsListTable({
                 >
                   {interactive ? (
                     <td className="max-w-[14rem] px-3 py-3 font-medium">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   ) : (
                     <ModuleTableLinkCell href={href} className="max-w-[14rem]">
-                      <span className="line-clamp-2">{item.propertyAddress}</span>
+                      <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </ModuleTableLinkCell>
                   )}
                   <td className="max-w-[10rem] px-3 py-3 text-muted-foreground">
-                    <span className="line-clamp-2">{item.tenantName}</span>
+                    <ModuleTableTruncateText lines={2}>{item.tenantName}</ModuleTableTruncateText>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                     {statements.length > 0 ? statements.length : '—'}
@@ -335,7 +336,7 @@ export function StatementsListTable({
                   <td className="whitespace-nowrap px-3 py-3">
                     {latest ? (
                       <span>
-                        {latest.period}
+                        <ModuleTableTruncateText>{latest.period}</ModuleTableTruncateText>
                         <span className="text-muted-foreground ml-2 tabular-nums">
                           {formatCurrency(latest.amount)}
                         </span>

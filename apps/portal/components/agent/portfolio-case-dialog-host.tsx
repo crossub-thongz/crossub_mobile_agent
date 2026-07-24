@@ -9,7 +9,11 @@ import {
   rentReviewJobRows,
   type PropertyJobRow,
 } from '@/lib/property-job-rows';
-import { resolvePortfolioCaseContext } from '@/lib/portfolio-case-dialog';
+import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
+import {
+  resolvePortfolioCaseContext,
+  resolvePortfolioCasePropertyId,
+} from '@/lib/portfolio-case-dialog';
 import { useAgentStore } from '@/lib/store';
 
 export function PortfolioCaseDialogHost({
@@ -66,10 +70,29 @@ export function PortfolioCaseDialogHost({
         if (row) onOpenJob?.(row);
       }}
       onOpenInspectionCreated={(inspectionId) => {
-        const inspection = context.inspections.find((row) => row.id === inspectionId);
-        if (!inspection) return;
-        const row = inspectionJobRows([inspection])[0];
-        if (row) onOpenJob?.(row);
+        const openInspectionJob = (inspection: (typeof context.inspections)[number]) => {
+          const row = inspectionJobRows([inspection])[0];
+          if (row) onOpenJob?.(row);
+        };
+
+        const fromList = context.inspections.find((row) => row.id === inspectionId);
+        if (fromList) {
+          openInspectionJob(fromList);
+          return;
+        }
+
+        const propertyId = resolvePortfolioCasePropertyId(job, agentData);
+        if (!propertyId) return;
+
+        void resolveOpenInspectionForCycle({
+          propertyId,
+          cycleId: job.kind === 'leasing' ? job.id : undefined,
+          inspectionId,
+        }).then((resolved) => {
+          if (!resolved) return;
+          agentData.registerInspection(resolved);
+          openInspectionJob(resolved);
+        });
       }}
     />
   );

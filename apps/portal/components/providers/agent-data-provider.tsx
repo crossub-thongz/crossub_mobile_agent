@@ -91,7 +91,11 @@ import { buildRemindingQueue, getPropertyNeedActions } from '@/lib/property-acti
 import { buildSectionStatus } from '@/lib/section-status';
 import { buildTaskStatusList } from '@/lib/task-status-list';
 import { enrichPropertyAddresses, resolvePropertyDisplayAddress } from '@/lib/property-address';
-import { fetchAgentInspections } from '@/lib/inspections/fetch';
+import {
+  fetchAgentInspections,
+  fetchOpenInspectionSessions,
+  mergeOpenSessionsIntoInspections,
+} from '@/lib/inspections/fetch';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
@@ -337,12 +341,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const [apiError, setApiError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const hasLoadedOnceRef = useRef(false);
+  const refreshInFlightRef = useRef(false);
 
   const refresh = useCallback(async (options?: { force?: boolean }) => {
     if (status !== 'authed') {
       setLoading(false);
       return;
     }
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+
     const isInitialLoad = !hasLoadedOnceRef.current;
     const force = options?.force === true;
     const showBlockingLoad = isInitialLoad || force;
@@ -413,8 +421,17 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           : null,
       );
       try {
-        const liveInspections = await fetchAgentInspections(propsForMessages);
-        setApiInspections(liveInspections);
+        if (showBlockingLoad) {
+          const liveInspections = await fetchAgentInspections(propsForMessages, {
+            includeStaffRecords: true,
+          });
+          setApiInspections(liveInspections);
+        } else {
+          const sessions = await fetchOpenInspectionSessions();
+          setApiInspections((prev) =>
+            mergeOpenSessionsIntoInspections(prev, propsForMessages, sessions),
+          );
+        }
       } catch {
         setApiInspections(
           portRes.status === 'fulfilled' && portRes.value.inspections?.length
@@ -441,6 +458,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       setApiError(message);
     } finally {
       hasLoadedOnceRef.current = true;
+      refreshInFlightRef.current = false;
       if (showBlockingLoad) setLoading(false);
       else setRefreshing(false);
     }
