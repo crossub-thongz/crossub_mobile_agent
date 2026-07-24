@@ -39,6 +39,9 @@ export interface LeasingOpenInspection {
   preferredScheduledTime?: string;
   preferredScheduledTimeEnd?: string;
   preferredNotes?: string;
+  startedEarly?: boolean;
+  startedEarlyAt?: string;
+  originalScheduledStart?: string;
   viewingSessionId?: string;
   pushedToAgentApp: boolean;
   agentConducted?: boolean;

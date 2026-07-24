@@ -99,6 +99,28 @@ export function formatInspectionDurationHours(
   return `${hours.toFixed(1)} hours`;
 }
 
+type OpenInspectionEarlyStartSource = {
+  startedEarly?: boolean;
+  startedEarlyAt?: string;
+  originalScheduledStart?: string;
+};
+
+/** Human label when the inspector began before the originally scheduled window. */
+export function formatOpenInspectionEarlyStartNotice(
+  source: OpenInspectionEarlyStartSource,
+): string | null {
+  if (!source.startedEarly) return null;
+  const original = source.originalScheduledStart;
+  const startedAt = source.startedEarlyAt;
+  if (original && startedAt) {
+    return `Inspector started early at ${formatTime(startedAt)} (originally scheduled from ${formatTime(original)})`;
+  }
+  if (startedAt) {
+    return `Inspector started early at ${formatTime(startedAt)}`;
+  }
+  return 'Inspector started early';
+}
+
 export function canCancelLetting(
   detail: LeasingPropertyDetail,
   linkedInspection?: { scheduledAt?: string; inspector?: string },

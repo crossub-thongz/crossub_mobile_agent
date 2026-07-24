@@ -5,6 +5,7 @@ import { Calendar, FileText, User } from 'lucide-react';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { formatInspectionDurationHours, formatLettingRent } from '@/lib/leasing/open-inspection-display';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { OpenInspectionEarlyStartNotice } from '@/components/open-inspection/open-inspection-early-start-notice';
 
 function FactTile({ label, value, icon: Icon }: { label: string; value: string; icon?: React.ElementType }) {
   return (
@@ -36,6 +37,12 @@ export function OpenInspectionScheduledStage({ session }: { session: OpenInspect
   return (
     <section className="rounded-2xl border bg-card p-4">
       <h2 className="mb-3 text-sm font-semibold">Scheduled</h2>
+      <OpenInspectionEarlyStartNotice
+        startedEarly={session.startedEarly}
+        startedEarlyAt={session.startedEarlyAt}
+        originalScheduledStart={session.originalScheduledStart}
+        className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:text-amber-50"
+      />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <FactTile
           label="Rent"

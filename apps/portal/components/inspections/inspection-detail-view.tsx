@@ -32,7 +32,7 @@ import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-
 import { OpenInspectionOpenStage } from '@/components/open-inspection/open-inspection-open-stage';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
-import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
+import { OpenInspectionEarlyStartNotice } from '@/components/open-inspection/open-inspection-early-start-notice';
 import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
@@ -577,6 +577,12 @@ export function InspectionDetailView({
 
       {insp.type === 'OPEN' && leasingDetail?.openInspection.scheduledTime && !isOpenResultsStep ? (
         <InfoSection title="Confirmed viewing">
+          <OpenInspectionEarlyStartNotice
+            startedEarly={leasingDetail.openInspection.startedEarly}
+            startedEarlyAt={leasingDetail.openInspection.startedEarlyAt}
+            originalScheduledStart={leasingDetail.openInspection.originalScheduledStart}
+            className="mb-3"
+          />
           <InfoRow
             label="Scheduled time"
             value={formatInspectionTimeRange(
