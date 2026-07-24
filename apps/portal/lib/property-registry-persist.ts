@@ -44,6 +44,7 @@ export interface PropertyRegistryDraftPayload {
   bedrooms: string;
   bathrooms: string;
   parking: string;
+  routineInspectionFrequency?: 2 | 3;
   landlords: PropertyPartyContact[];
   tenants: PropertyPartyContact[];
   rentPeriod: string;
@@ -122,6 +123,7 @@ export function buildRegistryDraftPayload(
     bedrooms: form.bedrooms,
     bathrooms: form.bathrooms,
     parking: form.parking,
+    routineInspectionFrequency: form.routineInspectionFrequency,
     landlords: form.landlords,
     tenants: form.tenants,
     rentPeriod: form.leasing.rentPeriod,
@@ -207,6 +209,8 @@ export function hydrateRegistryFormFromProperty(
     bathrooms: draft?.bathrooms ?? countToString(property.bathrooms),
     parking: draft?.parking ?? countToString(property.carSpaces),
     furnished: draft?.furnished ?? furnishedChoice(property.furnished),
+    routineInspectionFrequency:
+      draft?.routineInspectionFrequency === 3 ? 3 : 2,
     landlords: draft?.landlords ?? [
       {
         name: property.homeOwnerName === '—' ? '' : property.homeOwnerName,
@@ -321,7 +325,11 @@ export function buildRegistryApiBody(
       managementSynced.managementRateGst === 'exclude'
         ? managementSynced.managementRateGst
         : undefined,
-    managementFees: management.fees.filter((f) => f.feeType || f.amount.trim()),
+    managementFees: form.management.fees.filter((f) => f.feeType || f.amount.trim()),
+    routineInspectionFrequency:
+      values.leaseStatus && values.leaseStatus !== 'vacant'
+        ? values.routineInspectionFrequency
+        : undefined,
     registryIntakeComplete: options.complete ? true : undefined,
     registryDraft: options.complete
       ? null

@@ -295,6 +295,11 @@ export function CreateInspectionWizard({
     flow: 'in_person' as 'self' | 'in_person',
     inspectorName: '',
   });
+  const [existingRoutineSchedule, setExistingRoutineSchedule] = useState<{
+    id: string;
+    frequency: number;
+    frequencyMonths: number;
+  } | null>(null);
 
   const [vacatingCaseId, setVacatingCaseId] = useState('');
   const [outgoingInspector, setOutgoingInspector] = useState('Pending assignment');
@@ -349,6 +354,19 @@ export function CreateInspectionWizard({
       }
 
       if (inspectionType === 'ROUTINE') {
+        if (apiConnected) {
+          try {
+            const { schedule } = await routineInspectionApi.getByProperty(propertyRow.id);
+            if (cancelled) return;
+            if (schedule) {
+              setExistingRoutineSchedule(schedule);
+              return;
+            }
+          } catch {
+            // Fall through to the create form when lookup fails.
+          }
+        }
+        setExistingRoutineSchedule(null);
         if (!cancelled) {
           setRoutine(
             buildRoutineInspectionPrefill(propertyRow, {
@@ -700,6 +718,10 @@ export function CreateInspectionWizard({
       }
 
       if (inspectionType === 'ROUTINE') {
+        if (existingRoutineSchedule) {
+          toast.error('Routine inspection already created for this property');
+          return;
+        }
         const schedule = await routineInspectionApi.create({
           propertyId: property.id,
           flow: 'in_person',
@@ -908,7 +930,19 @@ export function CreateInspectionWizard({
               ) : null}
 
               {inspectionType === 'ROUTINE' ? (
-                <RoutineInspectionForm routine={routine} onChange={setRoutine} />
+                existingRoutineSchedule ? (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+                    <p className="font-medium">Routine inspection already created</p>
+                    <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                      This property already has a routine schedule (
+                      {existingRoutineSchedule.frequency}× per year, every{' '}
+                      {existingRoutineSchedule.frequencyMonths} months). Open the existing case
+                      from the property profile or Inspection module.
+                    </p>
+                  </div>
+                ) : (
+                  <RoutineInspectionForm routine={routine} onChange={setRoutine} />
+                )
               ) : null}
 
               {inspectionType === 'OUTGOING' && property ? (
@@ -926,7 +960,12 @@ export function CreateInspectionWizard({
 
               <Button
                 className="h-11 w-full rounded-xl"
-                disabled={submitting || prefillLoading || !apiConnected}
+                disabled={
+                  submitting ||
+                  prefillLoading ||
+                  !apiConnected ||
+                  (inspectionType === 'ROUTINE' && Boolean(existingRoutineSchedule))
+                }
                 onClick={() => void submit()}
               >
                 {submitting ? (

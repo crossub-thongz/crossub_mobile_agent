@@ -60,6 +60,16 @@ const unwrap = async (
 ): Promise<ServerRoutineScheduleView> => (await p).schedule;
 
 export const routineInspectionApi = {
+  getByProperty: (propertyId: string) =>
+    api.get<{
+      schedule: {
+        id: string;
+        frequency: number;
+        frequencyMonths: number;
+        nextInspectionDate: string | null;
+      } | null;
+    }>(`${BASE}/by-property/${propertyId}`),
+
   create: (input: CreateRoutineScheduleInput) =>
     unwrap(api.post<{ schedule: ServerRoutineScheduleView }>(BASE, input)),
 

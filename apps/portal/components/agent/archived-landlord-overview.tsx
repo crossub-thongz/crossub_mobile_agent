@@ -40,6 +40,40 @@ function formatBond(amount?: number): string {
   return formatCurrency(amount);
 }
 
+function formatRoutineCadenceLine(
+  frequency?: number,
+  frequencyMonths?: number,
+): string | null {
+  const parts: string[] = [];
+  if (frequency != null) parts.push(`${frequency}× per year`);
+  if (frequencyMonths != null) parts.push(`Every ${frequencyMonths} months`);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+function NextRoutineStatValue({
+  date,
+  frequency,
+  frequencyMonths,
+}: {
+  date?: string;
+  frequency?: number;
+  frequencyMonths?: number;
+}) {
+  const cadence = formatRoutineCadenceLine(frequency, frequencyMonths);
+  return (
+    <div>
+      <p className="text-sm font-semibold tabular-nums">
+        {date ? formatDate(date) : '—'}
+      </p>
+      {cadence ? (
+        <p className="text-muted-foreground mt-0.5 text-[10px] font-normal leading-snug">
+          {cadence}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ArchivedLandlordOverview({
   landlord,
 }: {
@@ -105,25 +139,11 @@ export function ArchivedLandlordOverview({
           <StatCell
             label="Next routine"
             value={
-              overview?.nextRoutineInspectionDate
-                ? formatDate(overview.nextRoutineInspectionDate)
-                : '—'
-            }
-          />
-          <StatCell
-            label="Annual visits"
-            value={
-              overview?.routineInspectionFrequency != null
-                ? `${overview.routineInspectionFrequency}× per year`
-                : '—'
-            }
-          />
-          <StatCell
-            label="Cycle interval"
-            value={
-              overview?.routineInspectionFrequencyMonths != null
-                ? `Every ${overview.routineInspectionFrequencyMonths} months`
-                : '—'
+              <NextRoutineStatValue
+                date={overview?.nextRoutineInspectionDate}
+                frequency={overview?.routineInspectionFrequency}
+                frequencyMonths={overview?.routineInspectionFrequencyMonths}
+              />
             }
           />
         </div>

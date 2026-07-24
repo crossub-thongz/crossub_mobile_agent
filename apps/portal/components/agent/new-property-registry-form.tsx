@@ -148,6 +148,8 @@ export interface NewPropertyRegistryValues {
   bathrooms: string;
   parking: string;
   furnished: FurnishedChoice;
+  /** Routine inspections per year (2 or 3) — applies when property is occupied. */
+  routineInspectionFrequency: 2 | 3;
   landlords: PropertyPartyContact[];
   tenants: PropertyPartyContact[];
   strata: StrataDetailsValues;
@@ -382,6 +384,7 @@ export function NewPropertyRegistryForm({
     bathrooms: '',
     parking: '',
     furnished: '',
+    routineInspectionFrequency: 2,
     landlords: [emptyPartyContact()],
     tenants: [emptyPartyContact()],
     strata: { ...EMPTY_STRATA_DETAILS },
@@ -1007,6 +1010,25 @@ export function NewPropertyRegistryForm({
               </select>
             </FormField>
           </div>
+
+          {form.leaseStatus && form.leaseStatus !== 'vacant' ? (
+            <FormField label="Routine inspection frequency" required>
+              <select
+                value={form.routineInspectionFrequency}
+                onChange={(e) =>
+                  set('routineInspectionFrequency', Number(e.target.value) as 2 | 3)
+                }
+                className={selectClass}
+                required
+              >
+                <option value={2}>Twice per year (every 6 months)</option>
+                <option value={3}>Three times per year (every 4 months)</option>
+              </select>
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                Creates the property&apos;s routine inspection schedule when registration completes.
+              </p>
+            </FormField>
+          ) : null}
 
           <div className="grid grid-cols-3 gap-3">
             <FormField label="Beds" required>

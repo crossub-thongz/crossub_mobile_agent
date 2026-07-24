@@ -187,6 +187,7 @@ export type CreateAgentPropertyInput = {
   replaceLandlord?: boolean;
   registryIntakeComplete?: boolean;
   registryDraft?: Record<string, unknown> | null;
+  routineInspectionFrequency?: 2 | 3;
 };
 
 export type UpdateAgentPropertyInput = CreateAgentPropertyInput;

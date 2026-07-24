@@ -140,6 +140,40 @@ function BondStatValue({
   );
 }
 
+function formatRoutineCadenceLine(
+  frequency?: number | null,
+  frequencyMonths?: number | null,
+): string | null {
+  const parts: string[] = [];
+  if (frequency != null) parts.push(`${frequency}× per year`);
+  if (frequencyMonths != null) parts.push(`Every ${frequencyMonths} months`);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+function NextRoutineStatValue({
+  date,
+  frequency,
+  frequencyMonths,
+}: {
+  date?: string;
+  frequency?: number | null;
+  frequencyMonths?: number | null;
+}) {
+  const cadence = formatRoutineCadenceLine(frequency, frequencyMonths);
+  return (
+    <div>
+      <p className="text-sm font-semibold tabular-nums">
+        {date ? formatDate(date) : '—'}
+      </p>
+      {cadence ? (
+        <p className="text-muted-foreground mt-0.5 text-[10px] font-normal leading-snug">
+          {cadence}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function sliceDate(value?: string | null): string {
   return value?.slice(0, 10) ?? '';
 }
@@ -461,22 +495,12 @@ export function PropertyTenancyManagementSections({
           />
           <StatCell
             label="Next routine"
-            value={tenancyDates.nextRoutine ? formatDate(tenancyDates.nextRoutine) : '—'}
-          />
-          <StatCell
-            label="Annual visits"
             value={
-              tenancyDates.routineAnnualVisits != null
-                ? `${tenancyDates.routineAnnualVisits}× per year`
-                : '—'
-            }
-          />
-          <StatCell
-            label="Cycle interval"
-            value={
-              tenancyDates.routineCycleMonths != null
-                ? `Every ${tenancyDates.routineCycleMonths} months`
-                : '—'
+              <NextRoutineStatValue
+                date={tenancyDates.nextRoutine || undefined}
+                frequency={tenancyDates.routineAnnualVisits}
+                frequencyMonths={tenancyDates.routineCycleMonths}
+              />
             }
           />
         </div>
