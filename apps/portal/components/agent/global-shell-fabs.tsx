@@ -179,7 +179,7 @@ export function ShellHeaderQuickActions({
   );
 }
 
-/** Mobile floating Gii launcher — hidden on property detail (inline Gii panel instead). */
+/** Mobile floating Gii launcher — centered rectangular pill above the bottom tab bar. */
 export function MobileGiiFab({ pathname }: { pathname: string }) {
   const activePanel = useShellDockStore((s) => s.activePanel);
   const openGii = useShellDockStore((s) => s.openGii);
@@ -189,8 +189,8 @@ export function MobileGiiFab({ pathname }: { pathname: string }) {
 
   return (
     <div
-      className="pointer-events-none fixed left-1/2 z-[60] w-full max-w-lg -translate-x-1/2 px-4 lg:hidden"
-      style={{ bottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
+      className="pointer-events-none fixed left-1/2 z-[60] flex w-full max-w-lg -translate-x-1/2 justify-center lg:hidden"
+      style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <button
         type="button"
@@ -198,12 +198,13 @@ export function MobileGiiFab({ pathname }: { pathname: string }) {
         aria-label={MOBILE_GII_BUTTON.label}
         onClick={() => openGii()}
         className={cn(
-          'pointer-events-auto ml-auto flex size-14 items-center justify-center rounded-full',
+          'pointer-events-auto flex h-11 min-w-[8.75rem] items-center justify-center gap-2 rounded-xl px-5',
           'bg-gradient-to-br from-primary via-emerald-500 to-teal-600 text-white',
-          'shadow-lg shadow-primary/35 ring-4 ring-background transition active:scale-95',
+          'shadow-lg shadow-primary/30 ring-2 ring-background transition active:scale-[0.98]',
         )}
       >
-        <MOBILE_GII_BUTTON.icon className="size-6" aria-hidden />
+        <MOBILE_GII_BUTTON.icon className="size-5 shrink-0" aria-hidden />
+        <span className="text-sm font-semibold tracking-tight">Gii</span>
       </button>
     </div>
   );

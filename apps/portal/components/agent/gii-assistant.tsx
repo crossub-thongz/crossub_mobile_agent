@@ -123,7 +123,6 @@ export function GiiAssistant({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const pageScrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   const initialPromptHandledRef = useRef(false);
@@ -134,7 +133,8 @@ export function GiiAssistant({
   const isEmbedded = variant === 'embedded';
   const isModal = variant === 'modal';
   const isInline = isPanel || isEmbedded;
-  const usePageScroll = isEmbedded || isModal;
+  /** Property embed scrolls the page; modal/panel keep the composer pinned with inner scroll. */
+  const usePageScroll = isEmbedded;
 
   const pathPropertyId = propertyIdFromPath(pathname);
   const scopedProperty = useMemo(() => {
@@ -279,24 +279,6 @@ export function GiiAssistant({
       return () => window.removeEventListener('scroll', onScroll);
     }
 
-    if (isModal) {
-      const pageEl = pageScrollRef.current;
-      const innerEl = scrollContainerRef.current;
-      const onScroll = () => {
-        const el =
-          pageEl && pageEl.scrollHeight > pageEl.clientHeight + 1 ? pageEl : innerEl;
-        if (!el) return;
-        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        stickToBottomRef.current = distanceFromBottom < 120;
-      };
-      pageEl?.addEventListener('scroll', onScroll, { passive: true });
-      innerEl?.addEventListener('scroll', onScroll, { passive: true });
-      return () => {
-        pageEl?.removeEventListener('scroll', onScroll);
-        innerEl?.removeEventListener('scroll', onScroll);
-      };
-    }
-
     const el = scrollContainerRef.current;
     if (!el) return;
     const onScroll = () => {
@@ -305,14 +287,14 @@ export function GiiAssistant({
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [isEmbedded, isModal, open]);
+  }, [isEmbedded, open]);
 
   // New turns follow the conversation; use instant scroll on embedded Android paths.
   useEffect(() => {
     if (lines.length === 0) return;
     stickToBottomRef.current = true;
-    scrollChatToBottom(usePageScroll ? 'auto' : 'smooth');
-  }, [lines, scrollChatToBottom, usePageScroll]);
+    scrollChatToBottom(isEmbedded ? 'auto' : 'smooth');
+  }, [isEmbedded, lines, scrollChatToBottom]);
 
   // Live briefing refreshes (5s poll) — page-scroll surfaces only; never yank scroll position.
   useEffect(() => {
@@ -500,8 +482,8 @@ export function GiiAssistant({
           : isPanel
             ? 'h-full max-h-full min-h-0 w-full overflow-hidden border-l'
             : cn(
-                'w-full max-w-lg border shadow-2xl',
-                'max-lg:min-h-full max-lg:overflow-visible max-lg:rounded-none',
+                'flex w-full max-w-lg flex-col border shadow-2xl',
+                'max-lg:h-dvh max-lg:max-h-dvh max-lg:min-h-0 max-lg:overflow-hidden max-lg:rounded-none',
                 'lg:h-[min(92vh,680px)] lg:min-h-0 lg:overflow-hidden lg:rounded-3xl',
                 'rounded-t-3xl sm:rounded-3xl',
               ),
@@ -553,9 +535,7 @@ export function GiiAssistant({
         ref={scrollContainerRef}
         className={cn(
           'space-y-3 px-4 py-3',
-          usePageScroll
-            ? cn(isModal && 'lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain')
-            : 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+          usePageScroll ? undefined : 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
         )}
       >
         {!data.loading && !giiLaunch?.initialPrompt ? (
@@ -679,7 +659,7 @@ export function GiiAssistant({
         <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
 
-      <div className="shrink-0 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="bg-background sticky bottom-0 z-10 shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         {!sending && !hasUserMessages ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {suggestedPrompts.map((item) => (
@@ -777,8 +757,7 @@ export function GiiAssistant({
   return (
     <>
       <div
-        ref={pageScrollRef}
-        className="fixed inset-0 z-[95] overflow-y-auto bg-black/55 p-0 backdrop-blur-sm lg:flex lg:items-end lg:justify-center lg:overflow-hidden sm:p-4"
+        className="fixed inset-0 z-[95] bg-black/55 p-0 backdrop-blur-sm max-lg:overflow-hidden lg:flex lg:items-end lg:justify-center lg:overflow-hidden sm:p-4"
       >
         {shell}
       </div>
