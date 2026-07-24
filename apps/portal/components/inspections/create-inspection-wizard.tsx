@@ -48,6 +48,7 @@ import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { routineInspectionApi } from '@/lib/routine-inspection-api';
 import { terminationApi } from '@/lib/termination-case-api';
+import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
 import {
   getOpenListingContext,

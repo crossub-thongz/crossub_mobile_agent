@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { AlertTriangle, Bell, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Bell, Pencil, Trash2 } from 'lucide-react';
 
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { Button } from '@/components/ui/button';

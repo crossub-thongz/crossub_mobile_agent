@@ -39,7 +39,12 @@ import {
   buildRegistryApiBody,
   type PropertyRegistryAutosaveState,
 } from '@/lib/property-registry-persist';
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, mapNetworkUploadProgress } from '@/lib/file-upload';
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_LABEL,
+  fileToBase64WithProgress,
+  mapNetworkUploadProgress,
+} from '@/lib/file-upload';
 import {
   needsPasswordChange,
   needsSystemAccessAgreement,

@@ -9,6 +9,7 @@ import {
   type LeasingKeyCustody,
   type LeasingLifecycleStep,
 } from '@/lib/leasing/constants';
+import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { ReferenceCheckRecommendation } from '@/lib/leasing/reference-check-draft';
 import { parseReferenceCheckDraft } from '@/lib/leasing/reference-check-draft';
 import { fileNameFromDocumentUrl } from '@/lib/leasing-applicant-upload.util';

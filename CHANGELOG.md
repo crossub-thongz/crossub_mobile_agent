@@ -3,6 +3,7 @@
 ## 2026-07-24
 
 ### Fixed
+- **Properties page crashed with "AlertCircle is not defined."** The red incomplete-property pill added earlier today used `AlertCircle` in `components/agent/property-list-table.tsx` without importing it, so every render of the Property list threw and the error boundary swallowed the whole page. Icon is now imported. Three more missing imports of the same shape were found by type-checking and fixed before they could bite: `workflowCaseReferenceLabel` in `app/vacating/page.tsx` (would have crashed End leasing for any user with an active case), `inspectionReferenceLabel` in `components/inspections/create-inspection-wizard.tsx` (crash on the outgoing-inspection fallback path), and `fileToBase64WithProgress` in `components/providers/agent-data-provider.tsx` (crash on message attachment upload). `next.config.mjs` sets `typescript.ignoreBuildErrors: true`, so none of these failed the build — run `npx tsc --noEmit | grep TS2304` in `apps/portal` to catch this class before deploying.
 - Gii's mic no longer cuts off the last word. Releasing the button called `SpeechRecognition.stop()` immediately, which closes the utterance on the spot; the recogniser now stays open for a 500 ms buffer (`VOICE_STOP_BUFFER_MS`, `constants/voice-input.ts`) while the waveform settles, and pressing again inside that window cancels the pending stop and continues the same utterance instead of discarding it. Leaving the panel mid-utterance now aborts the recogniser and clears the pending timer.
 
 ### Changed

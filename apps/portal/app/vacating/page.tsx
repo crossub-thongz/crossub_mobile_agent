@@ -11,6 +11,7 @@ import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import { vacatingWorkflowProgress } from '@/lib/case-workflows';
 import { vacatingToJobRow } from '@/lib/portfolio-case-dialog';
 import { formatDate } from '@/lib/utils';
+import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 
 export default function VacatingPage() {
   const { vacating } = useAgentData();
