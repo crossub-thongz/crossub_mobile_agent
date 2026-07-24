@@ -31,13 +31,17 @@ export async function confirmMaintenanceResponsibility(
     preferredContractorId?: string;
     preferredContractorIds?: string[];
     ccEmails?: string[];
+    rfqMessage?: { subject: string; bodyText: string };
+    previewContractorName?: string;
   },
 ) {
+  const isLandlord = responsibility === 'landlord';
   await setMaintenanceResponsibility(requestId, responsibility, {
     ccEmails: options?.ccEmails,
+    skipRecipientEmail: isLandlord,
   });
 
-  if (responsibility === 'landlord') {
+  if (isLandlord) {
     const contractorIds =
       options?.preferredContractorIds?.filter(Boolean) ??
       (options?.preferredContractorId ? [options.preferredContractorId] : []);
@@ -50,6 +54,8 @@ export async function confirmMaintenanceResponsibility(
     }
     await inviteMaintenanceContractorsForRfq(requestId, contractorIds, {
       replaceExisting: true,
+      rfqMessage: options?.rfqMessage,
+      previewContractorName: options?.previewContractorName,
     });
     await transitionMaintenanceCase(requestId, 'pending_quotation');
   }

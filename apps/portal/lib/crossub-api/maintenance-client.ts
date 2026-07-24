@@ -62,12 +62,14 @@ export async function setMaintenanceResponsibility(
   responsibility: MaintenanceWorkflowResponsibility,
   options?: {
     ccEmails?: string[];
+    skipRecipientEmail?: boolean;
   },
 ): Promise<ApiMaintenanceState> {
   return api.patch<ApiMaintenanceState>(`/maintenance/requests/${requestId}/responsibility`, {
     responsibility,
     actorRole: AGENT_ROLE,
     ...(options?.ccEmails?.length ? { ccEmails: options.ccEmails } : {}),
+    ...(options?.skipRecipientEmail ? { skipRecipientEmail: true } : {}),
   });
 }
 
@@ -181,15 +183,33 @@ export async function assignPreferredMaintenanceContractor(
   });
 }
 
+export async function fetchContractorRfqEmailDraft(
+  requestId: string,
+  contractorName?: string,
+): Promise<{ subject: string; bodyText: string; sampleContractorName: string }> {
+  const qs = contractorName ? `?contractorName=${encodeURIComponent(contractorName)}` : '';
+  return api.get(`/maintenance/requests/${requestId}/contractor-rfq-email-draft${qs}`);
+}
+
 export async function inviteMaintenanceContractorsForRfq(
   requestId: string,
   preferredContractorIds: string[],
-  options?: { replaceExisting?: boolean },
+  options?: {
+    replaceExisting?: boolean;
+    rfqMessage?: { subject: string; bodyText: string };
+    previewContractorName?: string;
+  },
 ): Promise<ApiMaintenanceState> {
   return api.post<ApiMaintenanceState>(`/maintenance/requests/${requestId}/invite-contractors`, {
     preferredContractorIds,
     actorRole: AGENT_ROLE,
     ...(options?.replaceExisting ? { replaceExisting: true } : {}),
+    ...(options?.rfqMessage
+      ? {
+          rfqMessage: options.rfqMessage,
+          previewContractorName: options.previewContractorName,
+        }
+      : {}),
   });
 }
 

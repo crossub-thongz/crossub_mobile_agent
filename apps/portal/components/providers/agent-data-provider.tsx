@@ -46,6 +46,13 @@ import {
   mapNetworkUploadProgress,
 } from '@/lib/file-upload';
 import {
+  queueAgentDocumentUpload,
+} from '@/lib/agent-pending-document-uploads';
+import {
+  flushAgentDocumentUploads,
+  pendingAgentDocumentUploadToLocalDoc,
+} from '@/lib/agent-pending-document-flush';
+import {
   needsPasswordChange,
   needsSystemAccessAgreement,
 } from '@/lib/system-access-agreement';
@@ -524,6 +531,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     user?.mustChangePassword,
     postAuthReady,
   ]);
+
+  useEffect(() => {
+    if (!postAuthReady || !apiConnected) return;
+    void flushAgentDocumentUploads().then((count) => {
+      if (count > 0) void refresh();
+    });
+  }, [postAuthReady, apiConnected, refresh]);
 
   // Background portfolio sync — same 5s cadence as the inspector app roster poll.
   useEffect(() => {
@@ -1246,18 +1260,19 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         }
         return;
       }
-      // Offline: keep a blob URL so View/Download work on this device.
-      const objectUrl = URL.createObjectURL(file);
-      const doc: AgentDocument = {
+      // Offline: queue in IndexedDB and keep a blob URL for local preview until sync.
+      const record = {
         id: `upload-${Date.now()}`,
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
         title: displayTitle,
-        propertyAddress,
         category,
-        uploadedAt: new Date().toISOString(),
-        href: objectUrl,
-        downloadUrl: objectUrl,
+        propertyAddress,
+        propertyId: options?.propertyId ?? prop?.id,
+        blob: file,
       };
-      addUploadedDocument(doc);
+      await queueAgentDocumentUpload(record);
+      addUploadedDocument(pendingAgentDocumentUploadToLocalDoc(record));
     },
     [apiConnected, properties, refresh, addUploadedDocument],
   );

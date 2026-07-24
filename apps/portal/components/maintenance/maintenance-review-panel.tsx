@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 
 import { ResponsibilityBadge } from '@/components/maintenance-workspace/badges';
 import { MaintenanceResponsibilityLandlordPanel } from '@/components/maintenance/maintenance-responsibility-landlord-panel';
+import {
+  MaintenanceContractorRfqEmailEditor,
+  type ContractorRfqEmailDraft,
+} from '@/components/maintenance/maintenance-contractor-rfq-email-editor';
 import { MaintenanceReviewEvidencePanel } from '@/components/maintenance/maintenance-review-evidence-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -13,7 +17,11 @@ import { Input } from '@/components/ui/input';
 import { confirmMaintenanceResponsibility, requestMoreMaintenanceEvidence } from '@/lib/maintenance/maintenance-case-ops';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import { resolveInvitedContractorIds, resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
-import type { MaintenanceWorkflowResponsibility } from '@/lib/crossub-api/maintenance-client';
+import {
+  fetchMaintenanceContractorSuggestions,
+  type MaintenanceContractorSuggestion,
+  type MaintenanceWorkflowResponsibility,
+} from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { Property } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -53,14 +61,27 @@ export function MaintenanceReviewPanel({
   const [pendingResponsibility, setPendingResponsibility] =
     useState<MaintenanceWorkflowResponsibility | null>(null);
   const [pendingContractorIds, setPendingContractorIds] = useState<string[]>([]);
+  const [contractorRfqEmail, setContractorRfqEmail] = useState<ContractorRfqEmailDraft | null>(null);
+  const [contractorSuggestions, setContractorSuggestions] = useState<MaintenanceContractorSuggestion[]>([]);
   const [emailCcInput, setEmailCcInput] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setPendingResponsibility(null);
     setPendingContractorIds([]);
+    setContractorRfqEmail(null);
     setEmailCcInput('');
   }, [ctx.item.id]);
+
+  useEffect(() => {
+    if (!apiConnected) {
+      setContractorSuggestions([]);
+      return;
+    }
+    void fetchMaintenanceContractorSuggestions(ctx.item.id)
+      .then(setContractorSuggestions)
+      .catch(() => setContractorSuggestions([]));
+  }, [ctx.item.id, apiConnected]);
 
   const agencyId = property?.agencyId;
   const invitedContractorIds = resolveInvitedContractorIds(ctx);
@@ -83,6 +104,13 @@ export function MaintenanceReviewPanel({
       toast.error('Select at least one tradesman for landlord responsibility.');
       return;
     }
+    if (
+      isLandlord &&
+      (!contractorRfqEmail?.subject?.trim() || !contractorRfqEmail?.bodyText?.trim())
+    ) {
+      toast.error('Add contractor email subject and message before sending.');
+      return;
+    }
 
     setBusy(true);
     try {
@@ -90,6 +118,13 @@ export function MaintenanceReviewPanel({
       await confirmMaintenanceResponsibility(ctx.item.id, pendingResponsibility, {
         preferredContractorIds: isLandlord ? pendingContractorIds : undefined,
         ccEmails,
+        rfqMessage: isLandlord && contractorRfqEmail
+          ? {
+              subject: contractorRfqEmail.subject.trim(),
+              bodyText: contractorRfqEmail.bodyText.trim(),
+            }
+          : undefined,
+        previewContractorName: contractorRfqEmail?.sampleContractorName ?? previewContractorName,
       });
       toast.success(
         isLandlord
@@ -98,6 +133,7 @@ export function MaintenanceReviewPanel({
       );
       setPendingResponsibility(null);
       setPendingContractorIds([]);
+      setContractorRfqEmail(null);
       setEmailCcInput('');
       await onCaseUpdated?.();
     } catch {
@@ -126,11 +162,22 @@ export function MaintenanceReviewPanel({
 
   const handleSelectResponsibility = (value: MaintenanceWorkflowResponsibility) => {
     setPendingResponsibility(value);
+    setContractorRfqEmail(null);
     if (value !== 'landlord') setPendingContractorIds([]);
   };
 
+  const previewContractorName =
+    pendingContractorIds.length > 0
+      ? contractorSuggestions.find((row) => row.id === pendingContractorIds[0])?.name
+      : undefined;
+
   const confirmDisabled =
-    !pendingResponsibility || busy || (isLandlord && pendingContractorIds.length === 0);
+    !pendingResponsibility ||
+    busy ||
+    (isLandlord &&
+      (pendingContractorIds.length === 0 ||
+        !contractorRfqEmail?.subject?.trim() ||
+        !contractorRfqEmail?.bodyText?.trim()));
 
   return (
     <div className="space-y-4">
@@ -147,8 +194,8 @@ export function MaintenanceReviewPanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="mb-2 text-sm font-semibold">Responsibility review</p>
         <p className="text-muted-foreground mb-3 text-xs">
-          Confirm whether the repair is landlord, tenant, or strata responsibility. A notification
-          email is sent when you confirm — no draft preview is shown here.
+          Confirm whether the repair is landlord, tenant, or strata responsibility. For landlord
+          jobs, an editable contractor quote-request email is sent when you confirm.
         </p>
         <dl className="grid gap-3 text-xs sm:grid-cols-2">
           <div>
@@ -203,14 +250,25 @@ export function MaintenanceReviewPanel({
               </div>
 
               {isLandlord ? (
-                <MaintenanceResponsibilityLandlordPanel
-                  requestId={ctx.item.id}
-                  agencyId={agencyId}
-                  apiConnected={apiConnected}
-                  selectedContractorIds={pendingContractorIds}
-                  onChangeSelectedContractorIds={setPendingContractorIds}
-                  disabled={busy}
-                />
+                <>
+                  <MaintenanceResponsibilityLandlordPanel
+                    requestId={ctx.item.id}
+                    agencyId={agencyId}
+                    apiConnected={apiConnected}
+                    selectedContractorIds={pendingContractorIds}
+                    onChangeSelectedContractorIds={setPendingContractorIds}
+                    disabled={busy}
+                  />
+                  {pendingContractorIds.length > 0 ? (
+                    <MaintenanceContractorRfqEmailEditor
+                      requestId={ctx.item.id}
+                      previewContractorName={previewContractorName}
+                      value={contractorRfqEmail}
+                      onChange={setContractorRfqEmail}
+                      disabled={busy}
+                    />
+                  ) : null}
+                </>
               ) : null}
 
               {showCcField ? (
