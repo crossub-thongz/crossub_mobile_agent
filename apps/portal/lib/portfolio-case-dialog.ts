@@ -23,7 +23,6 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import type { SystemSearchResult } from '@/lib/agent-system-search';
 
 export type PortfolioAgentData = {
   properties: Property[];
@@ -289,46 +288,6 @@ export function needActionToJobRow(
     return review ? rentReviewToJobRow(review, data.rentReviewDecisions) : null;
   }
 
-  return null;
-}
-
-/** Map a Gii local-search hit onto the portfolio job popup when it references a case row. */
-export function searchResultToJobRow(
-  result: SystemSearchResult,
-  data: PortfolioAgentData,
-): PropertyJobRow | null {
-  if (result.id.startsWith('maint-')) {
-    const item = data.maintenanceAll.find((row) => row.id === result.id.slice(6));
-    return item ? maintenanceToJobRow(item) : null;
-  }
-  if (result.id.startsWith('insp-')) {
-    const item = data.inspections.find((row) => row.id === result.id.slice(5));
-    return item ? inspectionToJobRow(item) : null;
-  }
-  if (result.id.startsWith('rr-')) {
-    const item = data.rentReviews.find((row) => row.id === result.id.slice(3));
-    return item ? rentReviewToJobRow(item, data.rentReviewDecisions) : null;
-  }
-  if (result.id.startsWith('vac-')) {
-    const item = data.vacating.find((row) => row.id === result.id.slice(4));
-    if (!item) return null;
-    const workflowCase = leasingCasesForProperty(item.propertyId, data).find(
-      (row) => row.id === item.id && row.category === 'end_leasing',
-    );
-    return workflowCase ? leasingWorkflowJobRows([workflowCase])[0] ?? null : null;
-  }
-  if (result.id.startsWith('ts-')) {
-    const item = data.tenantSelections.find((row) => row.id === result.id.slice(3));
-    if (!item?.propertyId) return null;
-    const workflowCase = leasingCasesForProperty(item.propertyId, data).find(
-      (row) => row.id === item.id,
-    );
-    return workflowCase ? leasingWorkflowJobRows([workflowCase])[0] ?? null : null;
-  }
-  if (result.id.startsWith('tri-')) {
-    const item = data.tribunalCases.find((row) => row.id === result.id.slice(4));
-    return item ? tribunalToJobRow(item) : null;
-  }
   return null;
 }
 
