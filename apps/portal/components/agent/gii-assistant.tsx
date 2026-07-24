@@ -683,7 +683,7 @@ export function GiiAssistant({
             Listening… release when done
           </div>
         ) : null}
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-2 max-lg:flex-col max-lg:items-stretch">
           <Textarea
             ref={composerRef}
             value={query}
@@ -701,7 +701,7 @@ export function GiiAssistant({
             }
             rows={isEmbedded ? 3 : 4}
             className={cn(
-              'flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none',
+              'flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none max-lg:w-full',
               isEmbedded ? 'min-h-16 max-h-[160px]' : 'min-h-24 max-h-[220px]',
             )}
             autoFocus={isPanel}
@@ -710,7 +710,7 @@ export function GiiAssistant({
             <button
               type="button"
               onClick={() => void runQuery(query)}
-              className="mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95"
+              className="mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl"
               aria-label="Send message"
             >
               <Send className="size-5" />
@@ -730,7 +730,8 @@ export function GiiAssistant({
               className={cn(
                 'mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
                 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
-                listening && 'ring-4 ring-primary/35 scale-110',
+                'max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl',
+                listening && 'ring-4 ring-primary/35 scale-110 max-lg:scale-100',
               )}
               aria-label={listening ? 'Stop recording' : 'Hold to speak'}
             >
