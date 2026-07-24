@@ -9,6 +9,7 @@ import { OpenLeasingGenerateReportButton } from '@/components/leasing-workflow/o
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
 import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
+import { OpenInspectionKeyCustodySection } from '@/components/open-inspection/open-inspection-key-custody-section';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
@@ -403,15 +404,25 @@ export function LeasingStepOpenInspection({
           propertyId={detail.propertyId}
           viewingSessionId={oi.viewingSessionId}
           apiConnected={apiConnected}
+          inspectionId={oi.inspectionId ?? linkedInspection?.id}
         />
       ) : null}
 
       {openSession && (isScheduled || isScheduledStep || showOpenReport) && !oi.agentConducted ? (
-        <OpenInspectionApplicantPanel
-          session={openSession}
-          onSessionChange={setOpenSession}
-          readOnly
-        />
+        <>
+          <OpenInspectionKeyCustodySection
+            inspectionId={
+              openSession.inspectionId ?? oi.inspectionId ?? linkedInspection?.id
+            }
+            apiConnected={apiConnected}
+            inspectionComplete={openSession.sessionStatus === 'closed'}
+          />
+            <OpenInspectionApplicantPanel
+            session={openSession}
+            onSessionChange={setOpenSession}
+            readOnly
+          />
+        </>
       ) : null}
 
       {canShowGenerateReport ? (

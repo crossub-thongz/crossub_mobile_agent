@@ -10,10 +10,12 @@ export function OpenInspectionApplicantLinksPanel({
   propertyId,
   viewingSessionId,
   apiConnected,
+  inspectionId,
 }: {
   propertyId: string;
   viewingSessionId: string;
   apiConnected: boolean;
+  inspectionId?: string | null;
 }) {
   const [session, setSession] = useState<OpenInspectionSession>(
     () => ({ id: viewingSessionId, propertyId }) as OpenInspectionSession,
@@ -29,5 +31,12 @@ export function OpenInspectionApplicantLinksPanel({
       });
   }, [apiConnected, viewingSessionId, propertyId]);
 
-  return <OpenInspectionOpenStage session={session} onSessionChange={setSession} />;
+  return (
+    <OpenInspectionOpenStage
+      session={session}
+      onSessionChange={setSession}
+      apiConnected={apiConnected}
+      inspectionId={inspectionId}
+    />
+  );
 }

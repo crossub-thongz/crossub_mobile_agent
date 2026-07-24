@@ -3,8 +3,10 @@
 import { useMemo } from 'react';
 
 import { OpenInspectionCheckInList } from '@/components/open-inspection/open-inspection-check-in-list';
+import { OpenInspectionKeyCustodySection } from '@/components/open-inspection/open-inspection-key-custody-section';
 import { OpenInspectionLinkQrBlock } from '@/components/open-inspection/open-inspection-link-qr-block';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { SessionStatusEnum } from '@/constants/open-inspection-ops';
 import {
   resolveOpenInspectionApplyUrl,
   resolveOpenInspectionCheckInUrl,
@@ -13,12 +15,19 @@ import {
 export function OpenInspectionOpenStage({
   session,
   onSessionChange,
+  apiConnected = true,
+  inspectionId: inspectionIdOverride,
 }: {
   session: OpenInspectionSession;
   onSessionChange?: (session: OpenInspectionSession) => void;
+  apiConnected?: boolean;
+  /** Fallback when the session payload has not yet resolved the pool inspection id. */
+  inspectionId?: string | null;
 }) {
   const checkInUrl = useMemo(() => resolveOpenInspectionCheckInUrl(session), [session]);
   const applyUrl = useMemo(() => resolveOpenInspectionApplyUrl(session), [session]);
+  const inspectionComplete = session.sessionStatus === SessionStatusEnum.CLOSED;
+  const resolvedInspectionId = inspectionIdOverride ?? session.inspectionId;
 
   return (
     <section className="space-y-3 rounded-2xl border bg-card p-4">
@@ -26,6 +35,11 @@ export function OpenInspectionOpenStage({
       <p className="text-muted-foreground text-xs leading-relaxed">
         Share these links and QR codes with prospects during the viewing window.
       </p>
+      <OpenInspectionKeyCustodySection
+        inspectionId={resolvedInspectionId}
+        apiConnected={apiConnected}
+        inspectionComplete={inspectionComplete}
+      />
       {checkInUrl ? (
         <>
           <OpenInspectionLinkQrBlock

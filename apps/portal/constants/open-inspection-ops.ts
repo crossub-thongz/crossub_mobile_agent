@@ -170,6 +170,8 @@ export interface OpenInspectionSession {
   applyUrl?: string;
   /** Public tenant-app URL for prospect check-in at the viewing. */
   checkInUrl?: string;
+  /** Linked OPEN pool inspection (inspector mobile job) for this viewing session. */
+  inspectionId?: string;
   /** True once the linked leasing cycle's open report has been generated. */
   openReportGenerated?: boolean;
   reviewCompletedAt?: string;
