@@ -17,6 +17,7 @@ import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-
 import { PropertyRemindersDialog } from '@/components/agent/property-reminders-dialog';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyTabBar } from '@/components/agent/property-tab-bar';
+import { PropertyTabNeedActionsBanner } from '@/components/agent/property-tab-need-actions-banner';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyAccountingTab } from '@/components/agent/property-accounting-tab';
 import { PropertyTribunalTab } from '@/components/agent/property-tribunal-tab';
@@ -60,6 +61,7 @@ import {
   propertyDetailTabsForAgency,
   type PropertyDetailTab,
 } from '@/lib/portal-service-level';
+import { countNeedActionsByTab } from '@/lib/need-action-tabs';
 
 type Tab = PropertyDetailTab;
 
@@ -208,6 +210,11 @@ export default function PropertyDetailPage() {
   const needActions = useMemo(
     () => (property ? getPropertyActions(property.id) : []),
     [property, getPropertyActions],
+  );
+
+  const needActionCountsByTab = useMemo(
+    () => countNeedActionsByTab(needActions),
+    [needActions],
   );
 
   const propertyDeletedLeasingCycles = useMemo(
@@ -402,7 +409,16 @@ export default function PropertyDetailPage() {
           />
         </div>
 
-        <PropertyTabBar tabs={propertyTabs} active={tab} onChange={setTab} />
+        <PropertyTabBar
+          tabs={propertyTabs}
+          active={tab}
+          onChange={setTab}
+          needActionCounts={needActionCountsByTab}
+        />
+
+        {tab !== 'Gii' ? (
+          <PropertyTabNeedActionsBanner tab={tab} needActions={needActions} />
+        ) : null}
 
         {tab === 'Gii' ? (
           <div className="lg:hidden">

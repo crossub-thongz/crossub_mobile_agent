@@ -79,18 +79,32 @@ function groupedTabs<T extends string>(tabs: readonly T[]): T[][] {
   return groups;
 }
 
+function TabNeedActionBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="bg-destructive pointer-events-none absolute -top-0.5 -right-0.5 flex min-w-[1rem] items-center justify-center rounded-full px-0.5 text-[9px] font-bold leading-none text-white ring-2 ring-background"
+      aria-hidden
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
 function PropertyTabButton<T extends string>({
   tab,
   active,
   onChange,
   variant,
   buttonRef,
+  needActionCount = 0,
 }: {
   tab: T;
   active: T;
   onChange: (tab: T) => void;
   variant: 'mobile' | 'desktop';
   buttonRef?: (el: HTMLButtonElement | null) => void;
+  needActionCount?: number;
 }) {
   const Icon = TAB_ICONS[tab] ?? Building2;
   const isActive = active === tab;
@@ -99,6 +113,11 @@ function PropertyTabButton<T extends string>({
       ? (TAB_SHORT_LABELS[tab] ?? TAB_DISPLAY_LABELS[tab] ?? tab)
       : (TAB_DISPLAY_LABELS[tab] ?? tab);
 
+  const ariaLabel =
+    needActionCount > 0
+      ? `${label}, ${needActionCount} need action${needActionCount === 1 ? '' : 's'}`
+      : label;
+
   if (variant === 'mobile') {
     return (
       <button
@@ -106,6 +125,7 @@ function PropertyTabButton<T extends string>({
         type="button"
         onClick={() => onChange(tab)}
         aria-current={isActive ? 'page' : undefined}
+        aria-label={ariaLabel}
         className={cn(
           'flex min-w-[4.75rem] shrink-0 snap-center flex-col items-center gap-1 px-2 py-2.5 transition-colors',
           isActive ? 'text-primary' : 'text-muted-foreground active:text-foreground',
@@ -113,11 +133,12 @@ function PropertyTabButton<T extends string>({
       >
         <span
           className={cn(
-            'flex size-9 items-center justify-center rounded-xl transition-colors',
+            'relative flex size-9 items-center justify-center rounded-xl transition-colors',
             isActive ? 'bg-primary/12 text-primary' : 'bg-muted/40',
           )}
         >
           <Icon className="size-4" aria-hidden />
+          <TabNeedActionBadge count={needActionCount} />
         </span>
         <span
           className={cn(
@@ -144,15 +165,30 @@ function PropertyTabButton<T extends string>({
       type="button"
       onClick={() => onChange(tab)}
       aria-current={isActive ? 'page' : undefined}
+      aria-label={ariaLabel}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-colors',
+        'relative flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-colors',
         isActive
           ? 'border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20'
           : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
       )}
     >
-      <Icon className="size-3.5" aria-hidden />
+      <span className="relative">
+        <Icon className="size-3.5" aria-hidden />
+        <TabNeedActionBadge count={needActionCount} />
+      </span>
       {label}
+      {needActionCount > 0 ? (
+        <span
+          className={cn(
+            'rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+            isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-destructive/15 text-destructive',
+          )}
+          aria-hidden
+        >
+          {needActionCount > 99 ? '99+' : needActionCount}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -161,10 +197,12 @@ export function PropertyTabBar<T extends string>({
   tabs,
   active,
   onChange,
+  needActionCounts,
 }: {
   tabs: readonly T[];
   active: T;
   onChange: (tab: T) => void;
+  needActionCounts?: Partial<Record<T, number>>;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -211,6 +249,7 @@ export function PropertyTabBar<T extends string>({
                   active={active}
                   onChange={onChange}
                   variant="mobile"
+                  needActionCount={needActionCounts?.[tab] ?? 0}
                   buttonRef={(el) => {
                     if (el) tabRefs.current.set(tab, el);
                     else tabRefs.current.delete(tab);
@@ -232,6 +271,7 @@ export function PropertyTabBar<T extends string>({
             active={active}
             onChange={onChange}
             variant="desktop"
+            needActionCount={needActionCounts?.[tab] ?? 0}
           />
         ))}
       </div>
