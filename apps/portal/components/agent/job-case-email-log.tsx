@@ -141,6 +141,34 @@ function resolveEmailAttachments(
 
   const sessionId = resolveOpenReportSessionId(email);
   const inspectionId = inspectionIdFromCaseEmailId(email.id);
+  if (attachments.length === 0) {
+    if (
+      sessionId &&
+      (email.kind === 'open_report_landlord' ||
+        email.kind === 'open_report_agent' ||
+        email.kind === 'open_inspection_report')
+    ) {
+      attachments = [
+        {
+          name: `open-report-${sessionId.slice(0, 8)}.pdf`,
+          mimeType: 'application/pdf',
+        },
+      ];
+    } else if (
+      inspectionId &&
+      (email.kind === 'ingoing_report_distributed' ||
+        email.kind === 'outgoing_report_distributed' ||
+        email.kind === 'open_inspection_report')
+    ) {
+      attachments = [
+        {
+          name: 'inspection-report.pdf',
+          mimeType: 'application/pdf',
+        },
+      ];
+    }
+  }
+
   return enrichJobCaseEmailAttachments(attachments, (attachment) => {
     if (sessionId) {
       if (

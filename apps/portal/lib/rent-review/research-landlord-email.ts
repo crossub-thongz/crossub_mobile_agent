@@ -122,6 +122,7 @@ export function researchPackDraftAttachmentUrls(
   const noticeName = noticeOfRentIncreaseAttachmentName(reviewId);
   return {
     'CROSSUB-Rent-Review-Report.html': `${base}/research-report.html`,
+    'CROSSUB-Notice-of-Rent-Review.html': `${base}/research-report.html`,
     [noticeName]: `${base}/notice-of-rent-increase.pdf?${params.toString()}`,
   };
 }

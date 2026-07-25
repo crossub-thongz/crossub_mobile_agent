@@ -1,5 +1,9 @@
 import { TERMINATION_TYPE, TENANT_SETTLEMENT_CONFIRMATION, TERMINATION_CASE_STATUS } from '@/constants/end-leasing';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import {
+  buildLandlordTerminationNoticeEmailRecord,
+  enrichEndLeasingEmailRecords,
+} from '@/lib/end-leasing/end-leasing-case-email';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { EndLeasingOverviewEmail, TerminationCaseDetail } from '@/lib/end-leasing/types';
@@ -526,6 +530,8 @@ function emailRecordsForStepOnly(
           kind: 'vacating_reply',
         });
       }
+      const terminationNotice = buildLandlordTerminationNoticeEmailRecord(caseData);
+      if (terminationNotice) records.push(terminationNotice);
       return records;
     }
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
@@ -630,6 +636,7 @@ export function endLeasingEmailRecordsForStep(
   const fromOutgoing =
     stepIdx >= END_LEASING_AGENT_STEP_ORDER.indexOf(END_LEASING_AGENT_STEP.OUTGOING_INSPECTION);
 
+  let records: JobCaseEmailRecord[];
   if (fromOutgoing) {
     const byId = new Map<string, JobCaseEmailRecord>();
     for (let i = 0; i <= stepIdx; i++) {
@@ -638,8 +645,10 @@ export function endLeasingEmailRecordsForStep(
         byId.set(record.id, record);
       }
     }
-    return dedupeJobCaseEmails([...byId.values()]);
+    records = dedupeJobCaseEmails([...byId.values()]);
+  } else {
+    records = dedupeJobCaseEmails(emailRecordsForStepOnly(caseData, step));
   }
 
-  return dedupeJobCaseEmails(emailRecordsForStepOnly(caseData, step));
+  return enrichEndLeasingEmailRecords(caseData, records);
 }

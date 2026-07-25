@@ -25,6 +25,7 @@ import {
   type MaintenanceAgentStep,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { enrichMaintenanceEmailRecords } from '@/lib/maintenance/maintenance-case-email';
 import { cn } from '@/lib/utils';
 
 function StepContent({
@@ -164,8 +165,13 @@ export function MaintenanceAgentWorkflowPanel({
   const resolvedViewingStepId = viewingStep?.id ?? workflow.liveStepId;
   const isLiveStep = resolvedViewingStepId === workflow.liveStepId;
   const stageEmails = useMemo(
-    () => maintenanceEmailRecordsForStep(ctx, resolvedViewingStepId),
-    [ctx, resolvedViewingStepId],
+    () =>
+      enrichMaintenanceEmailRecords(
+        item.id,
+        attachments,
+        maintenanceEmailRecordsForStep(ctx, resolvedViewingStepId),
+      ),
+    [attachments, ctx, item.id, resolvedViewingStepId],
   );
 
   return (

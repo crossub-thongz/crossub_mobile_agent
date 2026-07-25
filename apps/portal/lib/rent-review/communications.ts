@@ -6,6 +6,8 @@ import {
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { researchPackDraftAttachmentUrls } from '@/lib/rent-review/research-landlord-email';
 
+const NOTICE_OF_RENT_REVIEW_HTML = 'CROSSUB-Notice-of-Rent-Review.html';
+
 const COMM_AUDIT_KINDS = new Set([
   'landlord_research_email',
   'agent_research_email',
@@ -14,7 +16,13 @@ const COMM_AUDIT_KINDS = new Set([
   'agent_counter_offer_email',
   'tenant_accept_signed_lease_agent_email',
   'tenant_accept_signed_lease_admin_email',
+  'accounting_complete_signed_lease_agent_email',
   'accounting_complete_signed_lease_admin_email',
+  'tenant_counter_submitted_agent_email',
+  'tenant_declined_agent_email',
+  'tenant_declined_admin_email',
+  'agent_accepted_counter_tenant_email',
+  'agent_non_negotiable_tenant_email',
 ]);
 
 interface RentReviewEmailSnapshot {
@@ -84,6 +92,25 @@ function enrichAttachmentUrls(
           auditId,
           attachment.name,
         ),
+      };
+    }
+
+    if (
+      attachment.name === NOTICE_OF_RENT_REVIEW_HTML ||
+      attachment.name === 'CROSSUB-Rent-Review-Report.html'
+    ) {
+      return {
+        ...attachment,
+        mimeType: mimeType ?? 'text/html',
+        url: `/api/v1/agent/properties/${detail.propertyId}/workflows/rent-review/${detail.id}/research-report.html`,
+      };
+    }
+
+    if (/^notice-of-rent-increase-/i.test(attachment.name)) {
+      return {
+        ...attachment,
+        mimeType: mimeType ?? 'application/pdf',
+        url: `/api/v1/agent/properties/${detail.propertyId}/workflows/rent-review/${detail.id}/notice-of-rent-increase.pdf`,
       };
     }
 

@@ -1,5 +1,9 @@
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
-import { inspectionCaseEmailRecords } from '@/lib/inspection/agent-workflow-email';
+import {
+  enrichFieldInspectionCaseEmails,
+  filterRedundantOpenInspectionPoolEmails,
+  filterRedundantOpenSessionEmails,
+} from '@/lib/inspection/field-inspection-case-email';
 import { mergeJobCaseEmailSources, type JobCaseEmailRecord } from '@/lib/job-case-email';
 import {
   leasingEmailRecordsForStep,
@@ -70,10 +74,18 @@ export function resolveOpenPoolInspectionId(args: {
 export function openInspectionSupplementalEmails(args: {
   openSession?: OpenInspectionSession | null;
   poolInspectionRecord?: InspectionRecord | null;
+  primaryEmails?: JobCaseEmailRecord[];
 }): JobCaseEmailRecord[] {
-  const sessionEmails = args.openSession ? openInspectionSessionEmails(args.openSession) : [];
-  const persisted = inspectionCaseEmailRecords(args.poolInspectionRecord);
-  return mergeJobCaseEmailSources(sessionEmails, persisted);
+  const primary = args.primaryEmails ?? [];
+  const sessionEmails = filterRedundantOpenSessionEmails(
+    primary,
+    args.openSession ? openInspectionSessionEmails(args.openSession) : [],
+  );
+  const poolEmails = filterRedundantOpenInspectionPoolEmails(
+    primary,
+    enrichFieldInspectionCaseEmails(args.poolInspectionRecord),
+  );
+  return mergeJobCaseEmailSources(sessionEmails, poolEmails);
 }
 
 /** Leasing step history plus open session / pool inspection persisted mail. */
@@ -83,11 +95,13 @@ export function leasingStageEmailsWithOpenSupplement(args: {
   openSession?: OpenInspectionSession | null;
   poolInspectionRecord?: InspectionRecord | null;
 }): JobCaseEmailRecord[] {
+  const leasingEmails = leasingEmailRecordsForStep(args.detail, args.step);
   return mergeJobCaseEmailSources(
-    leasingEmailRecordsForStep(args.detail, args.step),
+    leasingEmails,
     openInspectionSupplementalEmails({
       openSession: args.openSession,
       poolInspectionRecord: args.poolInspectionRecord,
+      primaryEmails: leasingEmails,
     }),
   );
 }
@@ -105,6 +119,7 @@ export function linkedOpenLeasingEmails(args: {
     openInspectionSupplementalEmails({
       openSession: args.openSession,
       poolInspectionRecord: args.poolInspectionRecord,
+      primaryEmails: leasingEmails,
     }),
   );
 }

@@ -42,6 +42,42 @@ export function inspectionIdFromCaseEmailId(emailId: string): string | null {
  * Open inspection history builds attachments client-side; field inspections store
  * only email metadata on `caseEmails` — the report PDF URL comes from the inspection row.
  */
+function isAgentRoleRecipient(record: JobCaseEmailRecord): boolean {
+  const hay = `${record.to} ${record.toEmail ?? ''}`.toLowerCase();
+  return hay.includes('agent') || hay.includes('account manager');
+}
+
+/** Drop pool-persisted agent report rows when leasing synthesis already has one. */
+export function filterRedundantOpenInspectionPoolEmails(
+  primaryEmails: JobCaseEmailRecord[],
+  poolEmails: JobCaseEmailRecord[],
+): JobCaseEmailRecord[] {
+  const hasAgentReport = primaryEmails.some(
+    (email) => email.kind === 'open_report_agent' && isAgentRoleRecipient(email),
+  );
+  if (!hasAgentReport) return poolEmails;
+
+  return poolEmails.filter((email) => {
+    if (email.kind !== 'open_inspection_report') return true;
+    return !isAgentRoleRecipient(email);
+  });
+}
+
+/** Drop session-synthesized rows already covered by leasing-cycle email records. */
+export function filterRedundantOpenSessionEmails(
+  primaryEmails: JobCaseEmailRecord[],
+  sessionEmails: JobCaseEmailRecord[],
+): JobCaseEmailRecord[] {
+  const primaryKinds = new Set(primaryEmails.map((email) => email.kind).filter(Boolean));
+  return sessionEmails.filter((email) => {
+    if (!email.kind) return true;
+    if (email.kind === 'open_inspection_scheduled' && primaryKinds.has('open_inspection_scheduled')) {
+      return false;
+    }
+    return true;
+  });
+}
+
 export function enrichFieldInspectionCaseEmails(
   record: InspectionRecord | null | undefined,
 ): JobCaseEmailRecord[] {
