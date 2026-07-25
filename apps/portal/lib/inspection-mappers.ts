@@ -12,7 +12,25 @@ import {
 import type { InspectionRecord } from '@/lib/inspections-types';
 import { workflowEventToTimelineEntry } from '@/lib/open-inspection/linked-case-history';
 import type { Inspection } from '@/lib/types';
+import type { TimelineEntry } from '@/lib/types';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+
+export function caseAuditToTimeline(
+  entries: InspectionRecord['caseAudit'],
+): TimelineEntry[] {
+  return (entries ?? []).map((entry) => ({
+    id: entry.id,
+    at: entry.at,
+    actor: entry.actor,
+    actorRole: entry.actor.toLowerCase().includes('tenant')
+      ? 'tenant'
+      : entry.actor.includes('@')
+        ? 'agent'
+        : 'system',
+    title: entry.label,
+    source: 'system' as const,
+  }));
+}
 
 const RECORD_TYPE_VIEW: Record<string, Inspection['type']> = {
   INGOING: 'INGOING',
@@ -57,6 +75,7 @@ function reportStatusFromRecord(
 
 export function mapInspectionRecordToView(record: InspectionRecord): Inspection {
   const type = RECORD_TYPE_VIEW[record.type] ?? 'ROUTINE';
+  const timeline = caseAuditToTimeline(record.caseAudit);
   return {
     id: record.id,
     trackingNumber: inspectionReferenceLabel(record.id, type),
@@ -75,7 +94,10 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     reportStatus: reportStatusFromRecord(record.status, record.reportUrl),
     reportUrl: record.reportUrl ?? undefined,
     createdAt: record.createdAt,
-    timeline: [],
+    completedAt: record.completedDate ?? undefined,
+    routineMode: record.routineFlow ?? undefined,
+    cancelReason: record.cancelReason ?? undefined,
+    timeline,
     source: 'inspection',
   };
 }

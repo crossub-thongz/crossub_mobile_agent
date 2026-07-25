@@ -50,6 +50,10 @@ export type ServerRoutineScheduleAuditEntry = {
   changedAt: string;
 };
 
+export type RestartRoutineInspectionInput = StartRoutineInspectionInput & {
+  reason: string;
+};
+
 export type ServerRoutineScheduleView = {
   id: string;
   propertyId: string;
@@ -62,6 +66,7 @@ export type ServerRoutineScheduleView = {
     id: string;
     status: string;
     reportUrl: string | null;
+    completedDate?: string | null;
     declineReason?: string | null;
     previousSubmission?: {
       submittedAt: string;
@@ -106,6 +111,14 @@ export const routineInspectionApi = {
     unwrap(
       api.post<{ schedule: ServerRoutineScheduleView }>(
         `${BASE}/${scheduleId}/start`,
+        input,
+      ),
+    ),
+
+  restart: (scheduleId: string, input: RestartRoutineInspectionInput) =>
+    unwrap(
+      api.post<{ schedule: ServerRoutineScheduleView }>(
+        `${BASE}/${scheduleId}/restart`,
         input,
       ),
     ),

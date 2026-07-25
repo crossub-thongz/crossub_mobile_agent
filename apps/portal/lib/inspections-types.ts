@@ -48,6 +48,9 @@ export interface InspectionRecord {
     actor: string
     at: string
   }>
+  routineFlow?: 'self' | 'in_person' | null
+  cancelReason?: string | null
+  cancelledAt?: string | null
   areaCount: number
   photoCount: number
   createdAt: string

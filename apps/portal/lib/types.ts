@@ -470,6 +470,10 @@ export interface Inspection {
   areaOutcomes?: { area: string; outcome: string; note?: string }[];
   maintenanceEscalations?: { label: string; severity: Priority }[];
   routineMode?: 'self' | 'in_person';
+  /** When a routine inspection instance was finalised (ISO). */
+  completedAt?: string;
+  /** Reason recorded when a routine case was cancelled. */
+  cancelReason?: string;
   /** OPEN inspections only — who runs the viewing */
   openConductedBy?: 'agent' | 'crossub';
   /** OPEN inspections only — occupied vs vacant/new listing */

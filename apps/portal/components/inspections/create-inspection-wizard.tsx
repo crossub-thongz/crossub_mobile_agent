@@ -47,7 +47,7 @@ import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { routineInspectionApi, type RoutineScheduleByProperty } from '@/lib/routine-inspection-api';
-import { routineScheduleNeedsNewInstance } from '@/lib/routine/routine-instance-state';
+import { routineScheduleNeedsNewInstance, isActiveRoutineInspectionStatus } from '@/lib/routine/routine-instance-state';
 import { terminationApi } from '@/lib/termination-case-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
@@ -795,7 +795,18 @@ export function CreateInspectionWizard({
             schedule.currentInspection?.status ??
             existingRoutineSchedule.currentInspectionStatus;
           const needsNewInstance = routineScheduleNeedsNewInstance(instanceStatus);
-          if (needsNewInstance) {
+          if (isActiveRoutineInspectionStatus(instanceStatus)) {
+            schedule = await routineInspectionApi.restart(existingRoutineSchedule.id, {
+              scheduledDate: routine.scheduledDate,
+              inspectorName:
+                routine.flow === 'in_person'
+                  ? routine.inspectorName.trim() || undefined
+                  : undefined,
+              reason:
+                'Superseded — agent scheduled a new routine inspection case from the portal.',
+            });
+            toast.success('Previous routine case cancelled — new case created');
+          } else if (needsNewInstance) {
             schedule = await routineInspectionApi.start(existingRoutineSchedule.id, {
               scheduledDate: routine.scheduledDate,
               inspectorName:
