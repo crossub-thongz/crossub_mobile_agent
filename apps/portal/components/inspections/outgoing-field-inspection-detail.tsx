@@ -21,7 +21,6 @@ import {
 } from '@/components/agent/workflow-progress-rail';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
-import { InspectionCompareEvidenceSection } from '@/components/inspections/inspection-compare-evidence-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { propertyDetail } from '@/constants/routes';
@@ -39,10 +38,10 @@ import type {
   OnSiteProgression,
 } from '@/lib/inspections-types';
 import {
-  canViewInspectionReport,
   deriveAgentAckState,
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
+import { isInspectionReportReadyForView } from '@/lib/inspections/inspection-report-ready';
 import {
   AGENT_OUTGOING_GATE_HINT,
   AGENT_OUTGOING_GATE_LABEL,
@@ -63,7 +62,6 @@ type OutgoingSnapshot = {
   progression: OnSiteProgression | null;
   detail: InspectionDetail | null;
   reportUrl: string | null;
-  hasFindings: boolean;
   tenantAttendance: TenantOutgoingAttendanceStatus;
   terminationCaseId: string | null;
   agentAcknowledged: boolean;
@@ -125,7 +123,6 @@ export function OutgoingFieldInspectionDetail({
     progression: null,
     detail: null,
     reportUrl: null,
-    hasFindings: false,
     tenantAttendance: 'pending',
     terminationCaseId: linkedVacating?.id ?? null,
     agentAcknowledged: false,
@@ -162,19 +159,6 @@ export function OutgoingFieldInspectionDetail({
         record?.reportUrl ??
         inspection.reportUrl ??
         null;
-      let hasFindings = Boolean(
-        record && ((record.areaCount ?? 0) > 0 || (record.photoCount ?? 0) > 0),
-      );
-      if (detail) {
-        hasFindings =
-          hasFindings ||
-          Boolean(
-            detail.areas.length > 0 ||
-              detail.inspectionPhotos.length > 0 ||
-              detail.areaCount > 0 ||
-              detail.photoCount > 0,
-          );
-      }
 
       const terminationCaseId =
         terminationCase?.inspection.inspectionId === inspection.id
@@ -212,7 +196,6 @@ export function OutgoingFieldInspectionDetail({
         progression,
         detail,
         reportUrl,
-        hasFindings,
         tenantAttendance: terminationCase?.inspection.tenantAttendance ?? 'pending',
         terminationCaseId,
         agentAcknowledged: terminationCase?.reportComparison.agentAcknowledged ?? false,
@@ -246,8 +229,8 @@ export function OutgoingFieldInspectionDetail({
   const {
     record,
     progression,
+    detail,
     reportUrl,
-    hasFindings,
     tenantAttendance,
     terminationCaseId,
     agentAcknowledged,
@@ -260,7 +243,8 @@ export function OutgoingFieldInspectionDetail({
   const keyCollected = custody?.collectComplete ?? collectPhotos.length > 0;
   const keyReturned = custody?.returnComplete ?? returnPhotos.length > 0;
   const reportSubmitted = isReportSubmitted(record, progression);
-  const reportReady = canViewInspectionReport(record, progression, { reportUrl, hasFindings });
+  const reportReady =
+    reportSubmitted && isInspectionReportReadyForView(detail, { reportUrl });
   const agentAck = deriveAgentAckState(record, {
     agentAcknowledged,
     agentAcknowledgedAt,
@@ -600,11 +584,6 @@ export function OutgoingFieldInspectionDetail({
                   propertyLabel={inspection.propertyAddress}
                   inspectionType="outgoing"
                   canDownload
-                />
-                <InspectionCompareEvidenceSection
-                  detail={snapshot.detail}
-                  currentLabel="Outgoing"
-                  title="Outgoing vs latest ingoing"
                 />
               </div>
             ) : (

@@ -24,7 +24,6 @@ import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delet
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
-import { IngoingReportFindingsSection } from '@/components/inspections/ingoing-report-findings-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
@@ -37,10 +36,10 @@ import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import {
-  canViewInspectionReport,
   deriveTenantAckState,
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
+import { isInspectionReportReadyForView } from '@/lib/inspections/inspection-report-ready';
 import {
   AGENT_INGOING_GATE_HINT,
   AGENT_INGOING_GATE_LABEL,
@@ -67,7 +66,6 @@ type IngoingSnapshot = {
   signName: string | null;
   signUrl: string | null;
   reportUrl: string | null;
-  hasFindings: boolean;
   leasingTenantApproved: boolean;
   tenantName: string | null;
   tenantEmail: string | null;
@@ -131,7 +129,6 @@ export function IngoingInspectionAgentDetail({
     signName: null,
     signUrl: null,
     reportUrl: null,
-    hasFindings: false,
     leasingTenantApproved: false,
     tenantName: null,
     tenantEmail: null,
@@ -160,20 +157,6 @@ export function IngoingInspectionAgentDetail({
       const signUrl: string | null = detail?.signUrl ?? null;
       let reportUrl: string | null =
         detail?.reportUrl ?? progression?.reportUrl ?? record?.reportUrl ?? inspection.reportUrl ?? null;
-      let hasFindings = Boolean(
-        record && ((record.areaCount ?? 0) > 0 || (record.photoCount ?? 0) > 0),
-      );
-
-      if (detail) {
-        hasFindings =
-          hasFindings ||
-          Boolean(
-            detail.areas.length > 0 ||
-              detail.inspectionPhotos.length > 0 ||
-              detail.areaCount > 0 ||
-              detail.photoCount > 0,
-          );
-      }
 
       let leasingTenantApproved = false;
       let tenantName: string | null = record?.tenantName?.trim() || null;
@@ -228,7 +211,6 @@ export function IngoingInspectionAgentDetail({
         signName,
         signUrl,
         reportUrl,
-        hasFindings,
         leasingTenantApproved,
         tenantName,
         tenantEmail,
@@ -256,7 +238,7 @@ export function IngoingInspectionAgentDetail({
 
   useLivePoll(refreshSnapshot, apiConnected);
 
-  const { record, progression, detail, signName, signUrl, reportUrl, hasFindings, leasingTenantApproved } =
+  const { record, progression, detail, signName, signUrl, reportUrl, leasingTenantApproved } =
     snapshot;
 
   const custody = progression?.keyCustody;
@@ -265,7 +247,9 @@ export function IngoingInspectionAgentDetail({
   const keyCollected = custody?.collectComplete ?? collectPhotos.length > 0;
   const keyReturned = custody?.returnComplete ?? returnPhotos.length > 0;
   const reportSubmitted = isReportSubmitted(record, progression);
-  const reportReady = canViewInspectionReport(record, progression, { reportUrl, hasFindings });
+  const reportReady =
+    isReportSubmitted(record, progression) &&
+    isInspectionReportReadyForView(detail, { reportUrl });
   const tenantAck = deriveTenantAckState(record, signName, signUrl, {
     tenantReportSigned: record?.tenantReportSigned,
     leasingTenantApproved,
@@ -559,17 +543,13 @@ export function IngoingInspectionAgentDetail({
                   inspectionType="ingoing"
                   canDownload
                 />
-                <IngoingReportFindingsSection detail={detail} isLoading={loading} />
               </div>
             ) : keyCollected ? (
-              <div className="space-y-3">
-                <BoolStatus
-                  done={false}
-                  doneLabel="Report submitted"
-                  pendingLabel="Waiting for the inspector to submit the field report…"
-                />
-                <IngoingReportFindingsSection detail={detail} isLoading={loading} />
-              </div>
+              <BoolStatus
+                done={false}
+                doneLabel="Report submitted"
+                pendingLabel="Waiting for the inspector to submit the field report…"
+              />
             ) : (
               <BoolStatus
                 done={false}

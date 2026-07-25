@@ -34,12 +34,7 @@ export function isReportSubmitted(
   );
 }
 
-function hasInspectionFindings(record: InspectionRecord | null): boolean {
-  if (!record) return false;
-  return (record.areaCount ?? 0) > 0 || (record.photoCount ?? 0) > 0;
-}
-
-/** Mirrors crossub_web `InspectionReportPanel` — PDF URL or synced findings. */
+/** Mirrors crossub_web `InspectionReportPanel` — PDF available once the report is filed. */
 export function canViewInspectionReport(
   record: InspectionRecord | null,
   progression: OnSiteProgression | null,
@@ -50,9 +45,8 @@ export function canViewInspectionReport(
 ): boolean {
   if (!isReportSubmitted(record, progression)) return false;
   const reportUrl = options?.reportUrl ?? progression?.reportUrl ?? record?.reportUrl;
-  if (reportUrl) return true;
-  if (options?.hasFindings) return true;
-  return hasInspectionFindings(record);
+  if (reportUrl?.trim()) return true;
+  return isReportSubmitted(record, progression);
 }
 
 export function deriveTenantAckState(
