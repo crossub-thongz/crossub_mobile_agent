@@ -19,8 +19,8 @@ import {
 import { toast } from 'sonner';
 
 import { ContactDetails } from '@/components/agent/contact-details';
-import { MessageBody } from '@/components/agent/message-body';
 import { MessageCompose } from '@/components/agent/message-compose';
+import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { PhonePanel } from '@/components/agent/phone-panel';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -213,40 +213,9 @@ function ThreadDetailPanel({
             tenantContact={thread.tenantContact}
           />
         </div>
-        {thread.messages.map((msg) => {
-          const isAgent = msg.sentByAgent || !msg.from.includes('CROSSUB');
-          return (
-            <div
-              key={msg.id}
-              className={cn('flex', isAgent ? 'justify-end' : 'justify-start')}
-            >
-              <div
-                className={cn(
-                  'max-w-[85%] rounded-2xl px-3 py-2 text-sm',
-                  isAgent
-                    ? 'bg-primary text-primary-foreground'
-                    : 'border bg-card',
-                )}
-              >
-                <div className="mb-1 flex items-center gap-2 text-[10px] opacity-80">
-                  <span className="font-medium">{msg.from}</span>
-                  {msg.channel && (
-                    <span className="flex items-center gap-0.5">
-                      {msg.channel === 'email' ? (
-                        <Mail className="size-2.5" />
-                      ) : (
-                        <MessageSquare className="size-2.5" />
-                      )}
-                      {msg.channel}
-                    </span>
-                  )}
-                  <span>{formatDateTime(msg.at)}</span>
-                </div>
-                <MessageBody body={msg.body} />
-              </div>
-            </div>
-          );
-        })}
+        {thread.messages.map((msg) => (
+          <MessageThreadBubble key={msg.id} msg={msg} rounded="2xl" />
+        ))}
       </div>
 
       {canReply ? (

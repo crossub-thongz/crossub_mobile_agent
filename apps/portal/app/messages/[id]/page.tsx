@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { notFound, useParams, useSearchParams } from 'next/navigation';
-import { Mail, MessageSquare, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ContactDetails } from '@/components/agent/contact-details';
-import { MessageBody } from '@/components/agent/message-body';
 import { MessageCompose } from '@/components/agent/message-compose';
+import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,6 @@ import {
   buildThreadMentionCandidates,
   extractMentions,
 } from '@/lib/message-mentions';
-import { cn, formatDateTime } from '@/lib/utils';
 
 export default function MessageDetailPage() {
   const params = useParams();
@@ -104,33 +103,9 @@ export default function MessageDetailPage() {
     >
       <div className="flex flex-col">
         <div className="space-y-3">
-          {thread.messages.map((msg) => {
-            const isAgent = msg.sentByAgent || !msg.from.includes('CROSSUB');
-            return (
-              <div
-                key={msg.id}
-                className={cn(
-                  'max-w-[90%] rounded-xl px-3 py-2 text-sm',
-                  isAgent ? 'bg-primary/15 ml-auto' : 'bg-secondary mr-auto',
-                )}
-              >
-                <div className="mb-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  {msg.channel === 'email' ? (
-                    <Mail className="size-3" />
-                  ) : (
-                    <MessageSquare className="size-3" />
-                  )}
-                  {msg.from} · {formatDateTime(msg.at)}
-                </div>
-                <MessageBody body={msg.body} />
-                {msg.mentions && msg.mentions.length > 0 && (
-                  <p className="text-muted-foreground mt-1.5 text-[10px]">
-                    Tagged: {msg.mentions.map((m) => `@${m.name}`).join(', ')}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+          {thread.messages.map((msg) => (
+            <MessageThreadBubble key={msg.id} msg={msg} maxWidth="max-w-[90%]" />
+          ))}
           <div ref={messagesEndRef} />
         </div>
 

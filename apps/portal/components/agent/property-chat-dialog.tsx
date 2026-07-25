@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mail, MessageSquareText, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { MessageBody } from '@/components/agent/message-body';
+import { MessageCompose } from '@/components/agent/message-compose';
+import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import type { MessageCategory, ThreadMessage } from '@/lib/types';
@@ -216,32 +217,14 @@ export function PropertyChatDialog({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {appMessages.map((msg) => {
-                        const isAgent = msg.sentByAgent || !msg.from.includes('CROSSUB');
-                        return (
-                          <div
-                            key={msg.id}
-                            className={cn('flex', isAgent ? 'justify-end' : 'justify-start')}
-                          >
-                            <div
-                              className={cn(
-                                'max-w-[85%] rounded-xl px-3 py-2 text-xs',
-                                isAgent
-                                  ? 'bg-primary/10 text-foreground'
-                                  : 'bg-muted/50 text-foreground',
-                              )}
-                            >
-                              <div className="mb-1 flex items-center justify-between gap-3">
-                                <span className="font-semibold">{msg.from}</span>
-                                <span className="text-muted-foreground text-[10px]">
-                                  {formatDateTime(msg.at)}
-                                </span>
-                              </div>
-                              <MessageBody body={msg.body} className="text-xs leading-relaxed" />
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {appMessages.map((msg) => (
+                        <MessageThreadBubble
+                          key={msg.id}
+                          msg={msg}
+                          textSize="text-xs"
+                          maxWidth="max-w-[85%]"
+                        />
+                      ))}
                       <div ref={bottomRef} />
                     </div>
                   )}
