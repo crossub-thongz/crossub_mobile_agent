@@ -9,6 +9,8 @@ export function maintenanceSourceLabel(
     case 'agent_submission':
     case 'email':
       return 'Agent Created';
+    case 'staff_portal':
+      return 'Staff Created';
     default:
       return 'Unknown';
   }

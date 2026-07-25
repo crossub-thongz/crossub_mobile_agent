@@ -16,4 +16,5 @@ export const SOURCE_LABELS: Record<MaintenanceWorkspaceCase['source'], string> =
   tenant_app: 'Tenant App',
   agent_submission: 'Agent Submission',
   email: 'Email',
+  staff_portal: 'Staff Created',
 };

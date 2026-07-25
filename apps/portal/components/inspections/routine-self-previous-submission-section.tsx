@@ -33,12 +33,6 @@ export function RoutineSelfPreviousSubmissionSection({
   className?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const sectionCount = submission.sections.length;
-  const photoCount = submission.sections.reduce(
-    (total, section) => total + section.photos.length,
-    0,
-  );
-
   return (
     <section className={cn('rounded-2xl border bg-card', className)}>
       <button
@@ -50,11 +44,10 @@ export function RoutineSelfPreviousSubmissionSection({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <FileText className="text-muted-foreground size-4 shrink-0" />
-            <p className="text-sm font-semibold">First tenant submission</p>
+            <p className="text-sm font-semibold">Previous tenant submission</p>
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
-            {sectionCount} area{sectionCount === 1 ? '' : 's'} · {photoCount} photo
-            {photoCount === 1 ? '' : 's'}
+            Submitted {new Date(submission.submittedAt).toLocaleDateString()}
             {declineReason ? ' · declined — awaiting resubmit' : ''}
           </p>
         </div>
@@ -72,7 +65,7 @@ export function RoutineSelfPreviousSubmissionSection({
               Decline reason: {declineReason}
             </p>
           ) : null}
-          {submission.reportUrl && inspectionRecordId ? (
+          {inspectionRecordId ? (
             <InspectionReportDownloadActions
               inspectionId={inspectionRecordId}
               propertyLabel={propertyLabel}
@@ -81,38 +74,6 @@ export function RoutineSelfPreviousSubmissionSection({
               variant="inline"
             />
           ) : null}
-          <div className="space-y-3">
-            {submission.sections.map((section) => (
-              <div key={section.id} className="rounded-xl border bg-background/60 p-3">
-                <p className="text-sm font-medium">{section.room}</p>
-                {section.description ? (
-                  <p className="text-muted-foreground mt-1 text-xs">{section.description}</p>
-                ) : null}
-                {section.photos.length > 0 ? (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    {section.photos.map((url) => (
-                      <a
-                        key={url}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block overflow-hidden rounded-lg border"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={url}
-                          alt={`${section.room} photo`}
-                          className="aspect-[4/3] w-full object-cover"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground mt-2 text-xs">No photos uploaded.</p>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
       ) : null}
     </section>

@@ -33,6 +33,7 @@ export type ServerRoutineScheduleView = {
   propertyId: string;
   flow: 'self' | 'in_person';
   selfStatus: string | null;
+  inPersonStatus?: string | null;
   currentInspectionId: string | null;
   audit?: ServerRoutineScheduleAuditEntry[];
   currentInspection?: {

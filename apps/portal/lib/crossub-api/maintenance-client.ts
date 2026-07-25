@@ -111,6 +111,16 @@ export async function setMaintenanceCompletionEvidence(
   );
 }
 
+export async function setMaintenanceAgentApproval(
+  requestId: string,
+  approved: boolean,
+): Promise<ApiMaintenanceState> {
+  return api.patch<ApiMaintenanceState>(
+    `/maintenance/requests/${requestId}/agent-approval`,
+    { approved, actorRole: AGENT_ROLE },
+  );
+}
+
 export async function setMaintenanceTenantApproval(
   requestId: string,
   approved: boolean,

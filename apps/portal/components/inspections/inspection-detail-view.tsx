@@ -23,13 +23,12 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
-import { InspectionCompareEvidenceSection } from '@/components/inspections/inspection-compare-evidence-section';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { RoutineCaseStatusSection } from '@/components/inspections/routine-case-status-section';
 import { RoutineSelfInspectionReviewSection } from '@/components/inspections/routine-self-inspection-review-section';
 import { RoutineSelfPreviousSubmissionSection } from '@/components/inspections/routine-self-previous-submission-section';
 import { ChangeRoutineFlowDialog } from '@/components/inspections/change-routine-flow-dialog';
 import { RoutineAuditTrail } from '@/components/inspections/routine-audit-trail';
-import { RoutineInPersonKeyCustodySection } from '@/components/inspections/routine-in-person-key-custody-section';
 import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
 import { OpenInspectionOpenStage } from '@/components/open-inspection/open-inspection-open-stage';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
@@ -92,7 +91,7 @@ import {
   type ServerRoutineScheduleView,
 } from '@/lib/routine-inspection-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
-import type { InspectionDetail } from '@/lib/inspections-types';
+import type { RoutineFlow } from '@/lib/routine/routine-case-status';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -254,24 +253,14 @@ export function InspectionDetailView({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [flowChangeOpen, setFlowChangeOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
-  const [routineDetail, setRoutineDetail] = useState<InspectionDetail | null>(null);
   const [routineSchedule, setRoutineSchedule] = useState<ServerRoutineScheduleView | null>(null);
 
   useEffect(() => {
     if (!apiConnected || !insp || insp.type !== 'ROUTINE') {
-      setRoutineDetail(null);
       setRoutineSchedule(null);
       return;
     }
     let cancelled = false;
-    void inspectionsApi
-      .getDetail(insp.id)
-      .then((detail) => {
-        if (!cancelled) setRoutineDetail(detail);
-      })
-      .catch(() => {
-        if (!cancelled) setRoutineDetail(null);
-      });
     void routineInspectionApi
       .getByInspection(insp.id)
       .then((schedule) => {
@@ -360,6 +349,10 @@ export function InspectionDetailView({
     ? canCompleteOpenSessionReview(openSession)
     : false;
   const hasReport = reportGenerated || insp.reportStatus === 'sent' || Boolean(insp.reportUrl);
+  const routineFlow: RoutineFlow | null =
+    insp.type === 'ROUTINE'
+      ? (routineSchedule?.flow ?? insp.routineMode ?? null)
+      : null;
   const sources = openSession?.reportSourceCounts;
   const canDelete = apiConnected && canDeleteOpenInspection(insp);
   const property = insp.propertyId
@@ -681,36 +674,26 @@ export function InspectionDetailView({
         </InfoSection>
       ) : null}
 
-      {(insp.keyStatus || insp.tenantAck || insp.routineMode || insp.nextDueDate) && (
+      {insp.type === 'ROUTINE' ? (
+        <RoutineCaseStatusSection
+          flow={routineFlow}
+          schedule={routineSchedule}
+          hasReport={hasReport}
+          inspectionStatus={insp.status}
+          apiConnected={apiConnected}
+          onChangeFlow={() => setFlowChangeOpen(true)}
+        />
+      ) : (insp.keyStatus || insp.tenantAck || insp.nextDueDate) ? (
         <InfoSection title="Job details">
           {insp.keyStatus && <InfoRow label="Key status" value={insp.keyStatus} icon={Key} />}
           {insp.tenantAck && (
             <InfoRow label="Tenant acknowledgement" value={insp.tenantAck} icon={CheckCircle2} />
           )}
-          {insp.routineMode && (
-            <InfoRow
-              label="Routine mode"
-              value={insp.routineMode === 'self' ? 'Tenant self-inspection' : 'In-person'}
-            />
-          )}
           {insp.nextDueDate && (
             <InfoRow label="Next due" value={formatDateTime(insp.nextDueDate)} icon={Calendar} />
           )}
-          {apiConnected && routineSchedule && insp.type === 'ROUTINE' ? (
-            <div className="pt-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full text-xs"
-                onClick={() => setFlowChangeOpen(true)}
-              >
-                Change conduct mode
-              </Button>
-            </div>
-          ) : null}
         </InfoSection>
-      )}
+      ) : null}
 
       {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (
         <OpenInspectionWorkflowView
@@ -852,16 +835,6 @@ export function InspectionDetailView({
         />
       ) : null}
 
-      {insp.type === 'ROUTINE' &&
-      (routineSchedule?.flow ?? insp.routineMode) === 'in_person' &&
-      insp.id ? (
-        <RoutineInPersonKeyCustodySection
-          inspectionId={insp.id}
-          apiConnected={apiConnected}
-          inspectorAssigned={Boolean(insp.inspector && insp.inspector !== 'Unassigned')}
-        />
-      ) : null}
-
       {insp.type === 'ROUTINE' && routineSchedule?.currentInspection?.previousSubmission ? (
         <RoutineSelfPreviousSubmissionSection
           submission={routineSchedule.currentInspection.previousSubmission}
@@ -882,21 +855,6 @@ export function InspectionDetailView({
           schedule={routineSchedule}
           propertyLabel={insp.propertyAddress}
           onUpdated={setRoutineSchedule}
-        />
-      ) : null}
-
-      {insp.type === 'ROUTINE' && routineDetail ? (
-        <InspectionCompareEvidenceSection
-          detail={routineDetail}
-          currentLabel="Routine"
-          title={
-            (routineSchedule?.flow ?? insp.routineMode) === 'self'
-              ? 'Tenant self-inspection photos'
-              : 'Routine vs latest ingoing'
-          }
-          showReferenceIngoing={
-            (routineSchedule?.flow ?? insp.routineMode) !== 'self'
-          }
         />
       ) : null}
 

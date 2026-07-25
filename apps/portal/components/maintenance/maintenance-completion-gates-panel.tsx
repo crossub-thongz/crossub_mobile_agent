@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileText, Loader2, Play, X } from 'lucide-react';
+import { CheckCircle2, Download, FileText, ImagePlus, Loader2, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -14,8 +14,10 @@ import {
 } from '@/components/ui/dialog';
 import {
   deleteMaintenanceAttachment,
-  setMaintenanceCompletionEvidence,
+  setMaintenanceAgentApproval,
+  uploadMaintenanceAttachment,
 } from '@/lib/crossub-api/maintenance-client';
+import { fileToBase64 } from '@/lib/file-upload';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
@@ -72,6 +74,8 @@ export function MaintenanceCompletionGatesPanel({
   onUpdated?: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
+  const [pendingInvoiceFile, setPendingInvoiceFile] = useState<File | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<ApiMaintenanceAttachment | null>(
     null,
   );
@@ -121,6 +125,36 @@ export function MaintenanceCompletionGatesPanel({
     }
   };
 
+  const handleInvoiceUpload = async () => {
+    if (!pendingInvoiceFile || !canEdit) return;
+
+    const mime = pendingInvoiceFile.type || 'application/pdf';
+    if (!mime.startsWith('image/') && mime !== 'application/pdf') {
+      toast.error('Invoice must be a PDF or image');
+      return;
+    }
+
+    setInvoiceUploading(true);
+    try {
+      const contentBase64 = await fileToBase64(pendingInvoiceFile);
+      await uploadMaintenanceAttachment({
+        maintenanceRequestId: requestId,
+        kind: 'invoice',
+        fileName: pendingInvoiceFile.name,
+        mimeType: mime,
+        sizeBytes: pendingInvoiceFile.size,
+        contentBase64,
+      });
+      toast.success('Invoice uploaded');
+      setPendingInvoiceFile(null);
+      await onUpdated?.();
+    } catch {
+      toast.error('Invoice upload failed — try again');
+    } finally {
+      setInvoiceUploading(false);
+    }
+  };
+
   const allGatesCleared =
     hasCompletionEvidence &&
     agentApproved &&
@@ -130,30 +164,12 @@ export function MaintenanceCompletionGatesPanel({
 
   return (
     <div className="space-y-4">
-      {/* Completion evidence — view uploads; agent approves via checkbox below. */}
+      {/* Completion evidence — view contractor uploads only. */}
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Completion evidence" checked={hasCompletionEvidence} />
         <p className="text-muted-foreground text-xs">
           View completion photos uploaded by the contractor.
         </p>
-
-        {canEdit ? (
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              className="rounded"
-              checked={agentApproved}
-              disabled={busy}
-              onChange={(e) =>
-                void runGateUpdate(
-                  () => setMaintenanceCompletionEvidence(requestId, e.target.checked),
-                  e.target.checked ? 'Agent approval recorded' : 'Agent approval cleared',
-                )
-              }
-            />
-            <span className="font-medium">Agent approval received</span>
-          </label>
-        ) : null}
 
         <div className="rounded-lg border bg-background p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -178,12 +194,60 @@ export function MaintenanceCompletionGatesPanel({
         <p className="text-muted-foreground text-xs">View only — admin records tenant sign-off.</p>
       </section>
 
-      {/* Invoice Uploaded — view only for agents (contractor/admin upload). */}
+      {/* Agent approval — highlighted action for the managing agent. */}
+      <section
+        className={cn(
+          'space-y-3 rounded-xl border-2 p-4 shadow-sm',
+          agentApproved
+            ? 'border-emerald-500/40 bg-emerald-500/5'
+            : 'border-primary/50 bg-primary/10',
+        )}
+      >
+        <SectionHeader title="Agent approval received" checked={agentApproved} />
+        <p className="text-xs">
+          {agentApproved
+            ? 'You have approved the completion evidence for this job.'
+            : 'Review the completion evidence above, then confirm your approval to clear this gate.'}
+        </p>
+
+        {canEdit ? (
+          <label
+            className={cn(
+              'flex cursor-pointer items-center gap-3 rounded-lg border bg-background p-3 transition-colors',
+              agentApproved ? 'border-emerald-500/30' : 'border-primary/30 hover:bg-primary/5',
+            )}
+          >
+            <input
+              type="checkbox"
+              className="size-4 rounded border-primary accent-primary"
+              checked={agentApproved}
+              disabled={busy || !hasCompletionEvidence}
+              onChange={(e) =>
+                void runGateUpdate(
+                  () => setMaintenanceAgentApproval(requestId, e.target.checked),
+                  e.target.checked ? 'Agent approval recorded' : 'Agent approval cleared',
+                )
+              }
+            />
+            <span className="text-sm font-semibold">
+              I have reviewed and approve the completion evidence
+            </span>
+          </label>
+        ) : null}
+
+        {canEdit && !hasCompletionEvidence ? (
+          <p className="text-muted-foreground text-xs">
+            Waiting for contractor completion evidence before you can approve.
+          </p>
+        ) : null}
+      </section>
+
+      {/* Invoice uploaded — agent uploads the contractor invoice. */}
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Invoice Uploaded" checked={invoiceUploaded} />
         <p className="text-muted-foreground text-xs">
-          View the contractor invoice uploaded by the contractor or admin. Tap a file to
-          preview or download.
+          Upload the contractor invoice (PDF or image). The gate clears automatically once a file
+          is attached.
         </p>
 
         {ctx.workspaceCase.contractorInvoiceNumber ||
@@ -207,9 +271,50 @@ export function MaintenanceCompletionGatesPanel({
         ) : null}
 
         {invoiceAttachments.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-dashed bg-background px-3 py-4 text-center text-xs">
-            No invoice file attached yet — awaiting contractor or admin upload.
-          </p>
+          canEdit ? (
+            <div className="space-y-3 rounded-lg border border-dashed bg-background px-3 py-4">
+              <p className="text-muted-foreground text-center text-xs">
+                No invoice file attached yet.
+              </p>
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border bg-background px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary/40">
+                  {invoiceUploading ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <ImagePlus className="size-3.5" />
+                  )}
+                  Choose file
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    className="hidden"
+                    disabled={invoiceUploading || busy}
+                    onChange={(e) => setPendingInvoiceFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {pendingInvoiceFile ? (
+                  <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
+                    {pendingInvoiceFile.name}
+                  </span>
+                ) : null}
+              </div>
+              {pendingInvoiceFile ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  size="sm"
+                  disabled={invoiceUploading || busy}
+                  onClick={() => void handleInvoiceUpload()}
+                >
+                  {invoiceUploading ? 'Uploading…' : 'Confirm upload'}
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-muted-foreground rounded-lg border border-dashed bg-background px-3 py-4 text-center text-xs">
+              No invoice file attached yet.
+            </p>
+          )
         ) : (
           <div className="rounded-lg border bg-background p-3">
             <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">

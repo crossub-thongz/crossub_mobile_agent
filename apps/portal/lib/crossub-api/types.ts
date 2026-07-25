@@ -107,7 +107,7 @@ export interface ApiMaintenanceRequest {
   status: ApiMaintenanceStatus;
   createdAt: string;
   dueAt: string;
-  source: 'tenant_app' | 'agent_submission' | 'email';
+  source: 'tenant_app' | 'agent_submission' | 'email' | 'staff_portal';
   tenant?: ApiMaintenanceParty;
   agent?: ApiMaintenanceParty;
   assignedContractorId?: string;
