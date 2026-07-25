@@ -1,12 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, Mail } from 'lucide-react';
-import { toast } from 'sonner';
-
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { OpenInspectionCheckInVisitorDetails } from '@/components/open-inspection/open-inspection-check-in-visitor-details';
-import { Button } from '@/components/ui/button';
+import { OpenInspectionLandlordReportEmailButton } from '@/components/open-inspection/open-inspection-landlord-report-email-button';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
@@ -19,26 +15,8 @@ export function OpenInspectionReportStage({
   propertyLabel: string;
   onSessionChange?: (session: OpenInspectionSession) => void;
 }) {
-  const [sending, setSending] = useState(false);
   const reportReady = session.openReportGenerated === true;
   const visitors = session.visitors;
-  const landlordEmail = session.landlord?.email?.trim() || '';
-
-  const sendToLandlord = async () => {
-    setSending(true);
-    try {
-      const result = await openViewingsApi.sendReportToLandlord(
-        session.id,
-        landlordEmail || undefined,
-      );
-      onSessionChange?.(result.session);
-      toast.success('Open report emailed to landlord');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not email the report');
-    } finally {
-      setSending(false);
-    }
-  };
 
   return (
     <section className="space-y-4 rounded-2xl border bg-card p-4">
@@ -85,28 +63,10 @@ export function OpenInspectionReportStage({
             variant="inline"
             size="sm"
           />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            disabled={sending}
-            onClick={() => void sendToLandlord()}
-          >
-            {sending ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Mail className="size-3.5" />
-            )}
-            {sending ? 'Sending…' : 'Email report to landlord'}
-          </Button>
-          {landlordEmail ? (
-            <p className="text-muted-foreground text-xs">Sends to {landlordEmail}</p>
-          ) : (
-            <p className="text-muted-foreground text-xs">
-              Uses the landlord email on file for this property.
-            </p>
-          )}
+          <OpenInspectionLandlordReportEmailButton
+            session={session}
+            onSessionChange={onSessionChange}
+          />
         </div>
       ) : (
         <p className="text-muted-foreground text-xs leading-relaxed">

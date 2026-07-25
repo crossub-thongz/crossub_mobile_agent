@@ -1,3 +1,4 @@
+import type { JobCaseEmailRecord } from '@/lib/job-case-email';
 import type { Property, PropertyPartyContact } from '@/lib/types';
 
 export interface WorkflowEmailContact {
@@ -156,6 +157,202 @@ export function resolveEmailPartyRole(
   if (byName) return byName.role;
 
   return inferPartyRole(party, resolvedEmail);
+}
+
+/** Bracket label stored on synthesized records, e.g. `[Agent] Jane`. */
+export function formatWorkflowPartyWithRole(
+  role: string,
+  input?: { name?: string | null; email?: string | null },
+): { party: string; email?: string } {
+  const email = input?.email?.trim()?.includes('@') ? input.email.trim() : undefined;
+  const rawName = input?.name?.trim();
+  const name =
+    rawName &&
+    !rawName.includes('@') &&
+    !/^awaiting assignment$/i.test(rawName) &&
+    rawName.toLowerCase() !== 'unassigned'
+      ? rawName
+      : undefined;
+
+  if (email) {
+    return {
+      party: name ? `[${role}] ${name}` : `[${role}] ${email}`,
+      email,
+    };
+  }
+  if (name) return { party: `[${role}] ${name}` };
+  return { party: `[${role}] ${role}` };
+}
+
+export function formatAgentRecipient(input?: {
+  name?: string | null;
+  email?: string | null;
+}): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+  const { party, email } = formatWorkflowPartyWithRole('Agent', input);
+  return email ? { to: party, toEmail: email } : { to: party };
+}
+
+export function formatLandlordRecipient(input?: {
+  name?: string | null;
+  email?: string | null;
+}): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+  const { party, email } = formatWorkflowPartyWithRole('Landlord', input);
+  return email ? { to: party, toEmail: email } : { to: party };
+}
+
+export function formatTenantRecipient(input?: {
+  name?: string | null;
+  email?: string | null;
+}): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+  const { party, email } = formatWorkflowPartyWithRole('Tenant', input);
+  return email ? { to: party, toEmail: email } : { to: party };
+}
+
+export function formatContractorRecipient(input?: {
+  name?: string | null;
+  email?: string | null;
+}): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+  const { party, email } = formatWorkflowPartyWithRole('Contractor', input);
+  return email ? { to: party, toEmail: email } : { to: party };
+}
+
+const RECIPIENT_ROLE_BY_KIND: Record<string, string> = {
+  open_report_agent: 'Agent',
+  open_inspection_scheduled: 'Agent',
+  open_inspection_preference: 'Agent',
+  ai_report_ready: 'Agent',
+  agent_confirmation_reminder: 'Agent',
+  statutory_notice_alert: 'Agent',
+  agent_research_email: 'Agent',
+  lease_agreement_signed: 'Agent',
+  ingoing_report_distributed: 'Agent',
+  outgoing_report_distributed: 'Agent',
+  inspector_accepted: 'Agent',
+  open_report_landlord: 'Landlord',
+  landlord_research_email: 'Landlord',
+  landlord_quotation: 'Landlord',
+  quotation_landlord_email: 'Landlord',
+  viewer_invite: 'Tenant',
+  application_feedback: 'Tenant',
+  application_link_sent: 'Tenant',
+  bond_link: 'Tenant',
+  lease_agreement: 'Tenant',
+  tenant_login: 'Tenant',
+  tenant_notified: 'Tenant',
+  tenant_notices_dispatched: 'Tenant',
+  tenant_response_reminder: 'Tenant',
+  tenant_comparison: 'Tenant',
+  tenant_notice: 'Tenant',
+  quotation_contractor_feedback: 'Contractor',
+  contractor_feedback: 'Contractor',
+  handyman_notified: 'Contractor',
+  counter_offer: 'Contractor',
+  quotation_counter_offer: 'Contractor',
+  inspection_scheduled: 'Tenant',
+  timeline_email: 'Tenant',
+};
+
+function mergeWorkflowEmailContacts(
+  contacts: WorkflowEmailContact[],
+  options?: {
+    agentEmail?: string | null;
+    agentName?: string | null;
+  },
+): WorkflowEmailContact[] {
+  const merged = [...contacts];
+  const seen = new Set(merged.map((c) => c.email.toLowerCase()));
+  const agentEmail = options?.agentEmail?.trim();
+  if (agentEmail?.includes('@') && !seen.has(agentEmail.toLowerCase())) {
+    merged.push({
+      role: 'Agent',
+      email: agentEmail,
+      name: options?.agentName?.trim() || undefined,
+    });
+  }
+  return merged;
+}
+
+function resolveStoredPartyRole(
+  party: string,
+  email: string | undefined,
+  contacts: WorkflowEmailContact[],
+  kind?: string,
+): string | undefined {
+  if (parseRoleBracketLabel(party).role) return undefined;
+
+  const resolved =
+    resolveEmailPartyRole(party, email, contacts) ??
+    (kind ? RECIPIENT_ROLE_BY_KIND[kind] : undefined);
+
+  return resolved;
+}
+
+function applyPartyRoleBracket(
+  party: string,
+  email: string | undefined,
+  role: string,
+): { party: string; email?: string } {
+  const resolvedEmail = email?.trim() || extractEmailAddress(party);
+  const parsed = parseRoleBracketLabel(party);
+  const nameCandidate = parsed.remainder || party;
+  const name =
+    nameCandidate.includes('@') || nameCandidate.toLowerCase() === role.toLowerCase()
+      ? undefined
+      : nameCandidate.trim() || undefined;
+
+  return formatWorkflowPartyWithRole(role, { name, email: resolvedEmail ?? undefined });
+}
+
+/** Ensure every history row carries `[Role]` on To (and From when inferable). */
+export function attributeEmailPartyRoles(
+  records: JobCaseEmailRecord[],
+  options?: {
+    contacts?: WorkflowEmailContact[];
+    agentEmail?: string | null;
+    agentName?: string | null;
+  },
+): JobCaseEmailRecord[] {
+  const contacts = mergeWorkflowEmailContacts(options?.contacts ?? [], options);
+
+  return records.map((record) => {
+    const next = { ...record };
+
+    const toRole = resolveStoredPartyRole(next.to, next.toEmail, contacts, next.kind);
+    if (toRole) {
+      const enriched = applyPartyRoleBracket(next.to, next.toEmail, toRole);
+      next.to = enriched.party;
+      if (enriched.email) next.toEmail = enriched.email;
+    }
+
+    const fromRole = resolveStoredPartyRole(
+      next.from,
+      next.fromEmail ?? extractEmailAddress(next.from),
+      contacts,
+      next.kind,
+    );
+    if (fromRole && !parseRoleBracketLabel(next.from).role) {
+      const enriched = applyPartyRoleBracket(
+        next.from,
+        next.fromEmail ?? extractEmailAddress(next.from),
+        fromRole,
+      );
+      next.from = enriched.party;
+      if (enriched.email) next.fromEmail = enriched.email;
+    }
+
+    return next;
+  });
+}
+
+/** Lowercase portal role for deliverable email preview (mirrors Resend send pipeline). */
+export function resolveJobCaseRecipientRoleForPreview(
+  email: JobCaseEmailRecord,
+  contacts: WorkflowEmailContact[] = [],
+): string | undefined {
+  const role =
+    resolveEmailPartyRole(email.to, email.toEmail, contacts) ??
+    (email.kind ? RECIPIENT_ROLE_BY_KIND[email.kind] : undefined);
+  return role?.toLowerCase();
 }
 
 /** Standard preview line: `email@example.com [Role]` or `Name <email> [Role]`. */

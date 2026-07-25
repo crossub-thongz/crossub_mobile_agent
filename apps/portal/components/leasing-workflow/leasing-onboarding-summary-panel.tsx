@@ -6,8 +6,10 @@ import { ChevronDown, Mail, Phone, UserCheck } from 'lucide-react';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
-import { enrichLeasingEmailRecords, leasingEmailRecordsForStep } from '@/lib/leasing/agent-workflow-email';
+import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
+import { enrichLeasingEmailRecords } from '@/lib/leasing/agent-workflow-email';
 import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { leasingStageEmailsWithOpenSupplement } from '@/lib/open-inspection/linked-case-history';
 import {
   confirmedLeaseTerms,
   formatOnboardingAuditActor,
@@ -106,7 +108,7 @@ export function LeasingOnboardingSummaryPanel({ detail }: { detail: LeasingPrope
 
 /** Email history + audit for the onboarding step (replaces the old ingoing approval card). */
 export function LeasingOnboardingEmailAuditPanel({ detail }: { detail: LeasingPropertyDetail }) {
-  const { properties, agencies } = useAgentData();
+  const { properties, agencies, apiConnected } = useAgentData();
   const { user } = useAuth();
   const [auditExpanded, setAuditExpanded] = useState(false);
 
@@ -116,10 +118,23 @@ export function LeasingOnboardingEmailAuditPanel({ detail }: { detail: LeasingPr
     userEmail: user?.email,
     agencyContactEmail: agency?.contactEmail ?? detail.agentInfo.email,
   });
+  const { openSession, poolInspectionRecord } = useOpenInspectionEmailSources({
+    enabled: !detail.openInspection.agentConducted,
+    apiConnected,
+    leasingDetail: detail,
+    poll: true,
+  });
 
-  const stageEmails = useMemo(() => {
-    return leasingEmailRecordsForStep(detail, LEASING_LIFECYCLE_STEP.ONBOARDING);
-  }, [detail]);
+  const stageEmails = useMemo(
+    () =>
+      leasingStageEmailsWithOpenSupplement({
+        detail,
+        step: LEASING_LIFECYCLE_STEP.ONBOARDING,
+        openSession,
+        poolInspectionRecord,
+      }),
+    [detail, openSession, poolInspectionRecord],
+  );
 
   const auditEntries = useMemo(() => onboardingAuditEntries(detail), [detail]);
 

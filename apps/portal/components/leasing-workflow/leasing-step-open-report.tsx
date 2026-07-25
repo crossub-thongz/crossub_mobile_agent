@@ -30,6 +30,7 @@ export function LeasingStepOpenReport({ detail }: { detail: LeasingPropertyDetai
       openSession={openSession}
       className="rounded-xl border bg-card p-4"
       showPending
+      onSessionChange={setOpenSession}
     />
   );
 }

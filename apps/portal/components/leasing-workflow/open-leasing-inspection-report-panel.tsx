@@ -1,6 +1,7 @@
 'use client';
 
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { OpenInspectionLandlordReportEmailButton } from '@/components/open-inspection/open-inspection-landlord-report-email-button';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
@@ -21,12 +22,14 @@ export function OpenLeasingInspectionReportPanel({
   openSession,
   className,
   showPending = false,
+  onSessionChange,
 }: {
   detail: LeasingPropertyDetail;
   openSession?: OpenInspectionSession | null;
   className?: string;
   /** When true, render the section even before the PDF is ready (Report Available step). */
   showPending?: boolean;
+  onSessionChange?: (session: OpenInspectionSession) => void;
 }) {
   const ready = isLeasingOpenReportReady(detail) || openSession?.openReportGenerated === true;
   if (!ready && !showPending) {
@@ -69,6 +72,13 @@ export function OpenLeasingInspectionReportPanel({
           is complete.
         </p>
       )}
+      {ready && openSession ? (
+        <OpenInspectionLandlordReportEmailButton
+          session={openSession}
+          onSessionChange={onSessionChange}
+          className="mt-3"
+        />
+      ) : null}
       {sources ? (
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
           <p className="text-muted-foreground col-span-2 font-medium uppercase tracking-wide">

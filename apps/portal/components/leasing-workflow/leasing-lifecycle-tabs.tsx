@@ -15,14 +15,17 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { LEASING_LIFECYCLE_STEP, LEASING_AGENT_SELF_OPEN_LABEL, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
   enrichLeasingEmailRecords,
-  leasingEmailRecordsForStep,
 } from '@/lib/leasing/agent-workflow-email';
+import {
+  leasingStageEmailsWithOpenSupplement,
+} from '@/lib/open-inspection/linked-case-history';
 import {
   resolveLeasingWorkflowContentStep,
 } from '@/lib/leasing/letting-rail-progress';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { resolveRentReviewAgentEmail } from '@/lib/rent-review/agent-email';
+import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
 import { useLivePoll } from '@/lib/use-live-poll';
 
 export function LeasingLifecycleTabs({
@@ -105,7 +108,7 @@ function StepPanel({
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
-  const { properties, agencies } = useAgentData();
+  const { properties, agencies, apiConnected } = useAgentData();
   const { user } = useAuth();
   const property = properties.find((p) => p.id === detail.propertyId);
   const agency = agencies.find((a) => a.id === property?.agencyId);
@@ -113,14 +116,25 @@ function StepPanel({
     userEmail: user?.email,
     agencyContactEmail: agency?.contactEmail ?? detail.agentInfo.email,
   });
+  const { openSession, poolInspectionRecord } = useOpenInspectionEmailSources({
+    enabled: !detail.openInspection.agentConducted,
+    apiConnected,
+    leasingDetail: detail,
+    poll: true,
+  });
   const stageEmails = useMemo(
     () =>
       enrichLeasingEmailRecords(
-        leasingEmailRecordsForStep(detail, step),
+        leasingStageEmailsWithOpenSupplement({
+          detail,
+          step,
+          openSession,
+          poolInspectionRecord,
+        }),
         agentEmail,
         detail.agentInfo.name,
       ),
-    [agentEmail, detail, step],
+    [agentEmail, detail, openSession, poolInspectionRecord, step],
   );
 
   return (

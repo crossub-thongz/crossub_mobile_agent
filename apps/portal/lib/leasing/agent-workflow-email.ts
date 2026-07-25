@@ -5,10 +5,23 @@ import {
   type JobCaseEmailRecord,
 } from '@/lib/job-case-email';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
+import {
+  formatAgentRecipient,
+  formatLandlordRecipient,
+  formatTenantRecipient,
+  parseRoleBracketLabel,
+} from '@/lib/job-case-email-recipients';
 import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
 import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
 
-const CROSSUB_LEASING_FROM_EMAIL = 'leasing@crossub.com.au';
+import {
+  buildOpenInspectionReportDistributedBody,
+  formatOpenInspectionViewingWindow,
+  openInspectionCaseRef,
+  openInspectionReportAttachmentName,
+} from '@/lib/open-inspection-report-email';
+import { openViewingsApi } from '@/lib/open-viewings-api';
+import { formatCrossubOutboundSender } from '@/lib/workflow-outbound-mail';
 
 function normalizeEmail(value: string | undefined | null): string | undefined {
   const trimmed = value?.trim();
@@ -16,7 +29,7 @@ function normalizeEmail(value: string | undefined | null): string | undefined {
 }
 
 function crossubSender(): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
-  return { from: CROSSUB_LEASING_FROM_EMAIL, fromEmail: CROSSUB_LEASING_FROM_EMAIL };
+  return formatCrossubOutboundSender();
 }
 
 function agentSender(detail: LeasingPropertyDetail): Pick<JobCaseEmailRecord, 'from' | 'fromEmail'> {
@@ -27,15 +40,29 @@ function agentSender(detail: LeasingPropertyDetail): Pick<JobCaseEmailRecord, 'f
 }
 
 function agentRecipient(detail: LeasingPropertyDetail): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
-  const email = normalizeEmail(detail.agentInfo.email);
-  if (email) return { to: email, toEmail: email };
-  return { to: 'Managing Agent' };
+  return formatAgentRecipient({
+    email: detail.agentInfo.email,
+    name: detail.agentInfo.name,
+  });
 }
 
-function emailRecipient(value: string | undefined | null, fallback = '—'): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
+function emailRecipient(
+  value: string | undefined | null,
+  fallback = '—',
+  role?: 'Tenant' | 'Landlord' | 'Agent',
+): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
   const email = normalizeEmail(value);
-  if (email) return { to: email, toEmail: email };
   const label = value?.trim();
+  if (role === 'Tenant') {
+    return formatTenantRecipient({ email, name: label && !email ? label : undefined });
+  }
+  if (role === 'Landlord') {
+    return formatLandlordRecipient({ email, name: label && !email ? label : undefined });
+  }
+  if (role === 'Agent') {
+    return formatAgentRecipient({ email, name: label && !email ? label : undefined });
+  }
+  if (email) return { to: email, toEmail: email };
   return { to: label || fallback };
 }
 
@@ -47,7 +74,7 @@ function viewerInviteRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[
       subject: 'Open inspection invitation',
       body: invite.body,
       ...agentSender(detail),
-      ...emailRecipient(invite.email),
+      ...emailRecipient(invite.email, invite.email ?? '—', 'Tenant'),
       at: invite.sentAt,
       kind: 'viewer_invite',
     }));
@@ -55,24 +82,32 @@ function viewerInviteRecords(detail: LeasingPropertyDetail): JobCaseEmailRecord[
 
 function openReportToAgentRecord(detail: LeasingPropertyDetail): JobCaseEmailRecord | null {
   if (!detail.openReport.sentToAgent || !detail.openReport.sentToAgentAt) return null;
-  const attendeeCount = detail.openReport.attendeeCount ?? 0;
+  const oi = detail.openInspection;
+  const propertyLabel = detail.propertyAddress;
+  const sessionId = oi.viewingSessionId ?? detail.propertyId;
+  const body = buildOpenInspectionReportDistributedBody({
+    propertyLabel,
+    caseRef: openInspectionCaseRef(sessionId),
+    inspectorName: oi.inspectorName?.trim() || 'Inspector',
+    viewingWindow: oi.scheduledTime
+      ? formatOpenInspectionViewingWindow(oi.scheduledTime, oi.scheduledTimeEnd)
+      : 'TBC',
+  });
   return {
     id: `${detail.propertyId}-open-report-agent`,
-    subject: `Open inspection report — ${detail.propertyAddress}`,
-    body: [
-      'CROSSUB has completed the open inspection report for your review.',
-      '',
-      'Property',
-      `Address: ${detail.propertyAddress}`,
-      `Attendees recorded: ${attendeeCount}`,
-      '',
-      'Please open the agent portal → Open Report to review attendee notes and continue with applications.',
-      'Reply to this thread if you need CROSSUB to follow up with any attendees.',
-    ].join('\n'),
+    subject: `Open inspection report — ${propertyLabel}`,
+    body,
     ...crossubSender(),
     ...agentRecipient(detail),
     at: detail.openReport.sentToAgentAt,
     kind: 'open_report_agent',
+    attachments: [
+      {
+        name: openInspectionReportAttachmentName(sessionId),
+        mimeType: 'application/pdf',
+        url: openViewingsApi.reportPdfUrl(sessionId),
+      },
+    ],
   };
 }
 
@@ -80,12 +115,10 @@ function tenantRecipient(
   tenant: LeasingApplicationDetail | null,
 ): Pick<JobCaseEmailRecord, 'to' | 'toEmail'> {
   if (!tenant) return { to: '[Tenant] Tenant' };
-  const email = normalizeEmail(tenant.email);
-  const name = tenant.applicant?.trim() || 'Tenant';
-  if (email) {
-    return { to: `[Tenant] ${name}`, toEmail: email };
-  }
-  return { to: `[Tenant] ${name}` };
+  return formatTenantRecipient({
+    email: tenant.email,
+    name: tenant.applicant?.trim() || 'Tenant',
+  });
 }
 
 function formatMoneyAud(value?: number | null): string | null {
@@ -104,7 +137,7 @@ function applicationFeedbackRecords(detail: LeasingPropertyDetail): JobCaseEmail
       subject: `Application feedback — ${detail.propertyAddress}`,
       body: app.feedback ?? '',
       ...agentSender(detail),
-      ...emailRecipient(app.email, app.applicant),
+      ...emailRecipient(app.email, app.applicant, 'Tenant'),
       at: app.feedbackSentAt!,
       kind: 'application_feedback',
     }));
@@ -395,8 +428,18 @@ export function enrichLeasingEmailRecords(
       );
     }
     if (!next.toEmail && next.to.trim().toLowerCase() === 'managing agent' && agentEmail) {
-      next.to = agentEmail;
-      next.toEmail = agentEmail;
+      Object.assign(
+        next,
+        formatAgentRecipient({ email: agentEmail, name: fallbackAgentName }),
+      );
+    } else if (agentEmail) {
+      const toKey = (next.toEmail ?? next.to).trim().toLowerCase();
+      if (toKey === agentEmail.toLowerCase() && !parseRoleBracketLabel(next.to).role) {
+        Object.assign(
+          next,
+          formatAgentRecipient({ email: agentEmail, name: fallbackAgentName }),
+        );
+      }
     }
     return next;
   });

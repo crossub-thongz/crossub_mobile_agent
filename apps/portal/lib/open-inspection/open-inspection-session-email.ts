@@ -1,6 +1,13 @@
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { dedupeJobCaseEmails, type JobCaseEmailRecord } from '@/lib/job-case-email';
+import { openInspectionReportAttachmentName } from '@/lib/open-inspection-report-email';
+import { openViewingsApi } from '@/lib/open-viewings-api';
+import { formatCrossubOutboundSender } from '@/lib/workflow-outbound-mail';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
+import {
+  formatLandlordRecipient,
+  formatTenantRecipient,
+} from '@/lib/job-case-email-recipients';
 
 function agentSender(
   session: OpenInspectionSession,
@@ -16,28 +23,31 @@ export function openInspectionLandlordReportEmail(
   const propertyLabel = session.address?.trim() || session.property;
   const recipientEmail =
     session.landlordReportEmailedTo?.trim() || session.landlord?.email?.trim() || '';
-  const agent = agentSender(session);
+  const landlordName = session.landlord?.name?.trim() || 'Landlord';
+  const agentName = session.agent?.name?.trim() || 'Managing Agent';
   return {
     id: `${session.id}-landlord-report`,
     subject: `Open inspection report — ${propertyLabel}`,
     body: [
-      'Open inspection PDF report emailed to the property landlord.',
+      `Dear ${landlordName},`,
       '',
-      `Sent by: ${agent.from}`,
-      recipientEmail ? `Sent to: ${recipientEmail}` : '',
-      `Attached: open-report-${session.id.slice(0, 8)}.pdf`,
-    ]
-      .filter(Boolean)
-      .join('\n'),
-    ...agent,
-    to: session.landlord?.name?.trim() || recipientEmail || 'Landlord',
-    toEmail: recipientEmail || undefined,
+      `Please find attached the open inspection report for ${propertyLabel}.`,
+      '',
+      'Kind regards,',
+      agentName,
+    ].join('\n'),
+    ...formatCrossubOutboundSender(),
+    ...formatLandlordRecipient({
+      name: session.landlord?.name?.trim(),
+      email: recipientEmail || session.landlord?.email,
+    }),
     at: session.landlordReportEmailedAt,
     kind: 'open_report_landlord',
     attachments: [
       {
-        name: `open-report-${session.id.slice(0, 8)}.pdf`,
+        name: openInspectionReportAttachmentName(session.id),
         mimeType: 'application/pdf',
+        url: openViewingsApi.reportPdfUrl(session.id),
       },
     ],
   };
@@ -65,8 +75,10 @@ export function openInspectionApplyLinkEmails(
           : 'The email included the application link and an attached QR code.',
       ].join('\n'),
       ...agent,
-      to: visitor.email,
-      toEmail: visitor.email,
+      ...formatTenantRecipient({
+        email: visitor.email,
+        name: visitor.name,
+      }),
       at: visitor.applyLinkSentAt!,
       kind: 'application_link_sent',
     }));

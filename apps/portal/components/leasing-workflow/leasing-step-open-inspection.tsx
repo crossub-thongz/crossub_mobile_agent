@@ -440,6 +440,7 @@ export function LeasingStepOpenInspection({
           detail={detail}
           openSession={openSession}
           showPending
+          onSessionChange={setOpenSession}
         />
       ) : null}
 

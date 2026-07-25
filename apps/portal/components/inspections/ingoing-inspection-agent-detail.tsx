@@ -31,8 +31,7 @@ import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/const
 import { LEASING_INGOING_SCHEDULE_WINDOW_DAYS } from '@/lib/leasing/leasing-ingoing-handoff';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import {
-  inspectionCaseEmailRecords,
-  inspectionEmailRecordsForStep,
+  inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';
 import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
 import { inspectionsApi } from '@/lib/inspections-api';
@@ -60,7 +59,6 @@ import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDate, formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 
 type IngoingSnapshot = {
   record: InspectionRecord | null;
@@ -294,11 +292,7 @@ export function IngoingInspectionAgentDetail({
   }, [liveGateIndex]);
 
   const stageEmails = useMemo(
-    () =>
-      dedupeJobCaseEmails([
-        ...inspectionCaseEmailRecords(record),
-        ...inspectionEmailRecordsForStep(inspection),
-      ]),
+    () => inspectionJobCaseEmails(inspection, record),
     [inspection, record],
   );
 

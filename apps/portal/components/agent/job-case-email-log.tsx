@@ -17,18 +17,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { JobCaseEmailAttachment, JobCaseEmailRecord } from '@/lib/job-case-email';
+import { enrichJobCaseEmailAttachments } from '@/lib/job-case-email';
 import type { WorkflowEmailContact } from '@/lib/job-case-email-recipients';
 import { EmailPreviewParties } from '@/components/agent/email-preview-parties';
+import { JobCaseEmailBodyPreview } from '@/components/agent/job-case-email-body-preview';
 import {
   extractEmailAddress,
   formatEmailPartyPreview,
   formatWorkflowEmailContact,
   formatWorkflowEmailContactBlock,
 } from '@/lib/job-case-email-recipients';
-import {
-  attributeAgentOutboundEmails,
-  isAgentOutboundEmail,
-} from '@/lib/job-case-email-sender';
+import { isAgentOutboundEmail, prepareJobCaseEmailHistory } from '@/lib/job-case-email-sender';
+import { openViewingsApi } from '@/lib/open-viewings-api';
 import { cn, formatDateTime } from '@/lib/utils';
 
 export type CommComposeMode = 'view' | 'reply' | 'forward';
@@ -75,48 +75,80 @@ function emailPartyLine(email: JobCaseEmailRecord, contacts: WorkflowEmailContac
 function EmailListRow({
   email,
   contacts,
+  allEmails,
   onSelect,
 }: {
   email: JobCaseEmailRecord;
   contacts: WorkflowEmailContact[];
+  allEmails: JobCaseEmailRecord[];
   onSelect: () => void;
 }) {
   const direction = emailDirection(email);
   const Icon = direction === 'inbound' ? Reply : Mail;
+  const attachments = resolveEmailAttachments(email, allEmails);
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="hover:bg-muted/30 flex w-full items-start gap-3 px-3 py-3 text-left transition-colors"
-    >
-      <span
-        className={cn(
-          'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
-          direction === 'inbound' ? 'bg-sky-500/15 text-sky-700' : 'bg-amber-500/15 text-amber-700',
-        )}
+    <div className="hover:bg-muted/30 px-3 py-3 transition-colors">
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex w-full items-start gap-3 text-left"
       >
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{email.subject}</p>
-        <p className="text-muted-foreground mt-0.5 truncate text-xs">{emailPartyLine(email, contacts)}</p>
-        <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{formatDateTime(email.at)}</p>
-      </div>
-      <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />
-    </button>
+        <span
+          className={cn(
+            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
+            direction === 'inbound' ? 'bg-sky-500/15 text-sky-700' : 'bg-amber-500/15 text-amber-700',
+          )}
+        >
+          <Icon className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{email.subject}</p>
+          <p className="text-muted-foreground mt-0.5 truncate text-xs">{emailPartyLine(email, contacts)}</p>
+          <p className="text-muted-foreground mt-1 text-[11px] tabular-nums">{formatDateTime(email.at)}</p>
+        </div>
+        <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0" />
+      </button>
+      {attachments.length > 0 ? (
+        <div className="mt-2 pl-11">
+          <EmailAttachmentList attachments={attachments} variant="inline" />
+        </div>
+      ) : null}
+    </div>
   );
+}
+
+function resolveOpenReportSessionId(email: JobCaseEmailRecord): string | null {
+  if (email.id.endsWith('-landlord-report')) {
+    return email.id.slice(0, -'-landlord-report'.length);
+  }
+  return null;
 }
 
 function resolveEmailAttachments(
   email: JobCaseEmailRecord,
   allEmails: JobCaseEmailRecord[],
 ): JobCaseEmailAttachment[] {
-  if (email.attachments?.length) return email.attachments;
-  if (!email.inReplyToId) return [];
+  let attachments: JobCaseEmailAttachment[] = [];
+  if (email.attachments?.length) {
+    attachments = email.attachments;
+  } else if (email.inReplyToId) {
+    const parent = allEmails.find((record) => record.id === email.inReplyToId);
+    attachments = parent?.attachments ?? [];
+  }
 
-  const parent = allEmails.find((record) => record.id === email.inReplyToId);
-  return parent?.attachments ?? [];
+  const sessionId = resolveOpenReportSessionId(email);
+  return enrichJobCaseEmailAttachments(attachments, (attachment) => {
+    if (!sessionId) return undefined;
+    if (
+      email.kind === 'open_report_landlord' ||
+      email.kind === 'open_report_agent' ||
+      attachment.name.startsWith('open-report-')
+    ) {
+      return openViewingsApi.reportPdfUrl(sessionId);
+    }
+    return undefined;
+  });
 }
 
 function EmailAttachmentListFromRecord({
@@ -278,11 +310,7 @@ export function JobCaseEmailDetailDialog({
               toEmail={email.toEmail}
               contacts={recipientContacts}
             />
-            <div className="rounded-xl border bg-muted/20 p-3">
-              <pre className="text-foreground/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                {email.body}
-              </pre>
-            </div>
+            <JobCaseEmailBodyPreview email={email} contacts={recipientContacts} />
             <EmailAttachmentListFromRecord attachments={attachments} />
             {onSend ? (
               <div className="flex gap-2">
@@ -367,6 +395,8 @@ export function JobCaseEmailLog({
   onSend,
   enableComposeActions = false,
   recipientContacts = [],
+  agentEmail,
+  agentName,
   hideHeader = false,
 }: {
   title?: string;
@@ -374,13 +404,19 @@ export function JobCaseEmailLog({
   onSend?: (draft: CommSendDraft) => void;
   enableComposeActions?: boolean;
   recipientContacts?: WorkflowEmailContact[];
+  agentEmail?: string | null;
+  agentName?: string | null;
   hideHeader?: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const sorted = useMemo(
     () =>
-      attributeAgentOutboundEmails([...emails]).sort((a, b) => b.at.localeCompare(a.at)),
-    [emails],
+      prepareJobCaseEmailHistory([...emails], {
+        contacts: recipientContacts,
+        agentEmail,
+        agentName,
+      }).sort((a, b) => b.at.localeCompare(a.at)),
+    [emails, recipientContacts, agentEmail, agentName],
   );
   const selected = sorted.find((email) => email.id === selectedId) ?? null;
 
@@ -410,6 +446,7 @@ export function JobCaseEmailLog({
                 <EmailListRow
                   email={email}
                   contacts={recipientContacts}
+                  allEmails={sorted}
                   onSelect={() => setSelectedId(email.id)}
                 />
               </li>
@@ -485,6 +522,8 @@ export function JobCaseStageEmailHistory({
   onSend,
   enableComposeActions,
   recipientContacts,
+  agentEmail,
+  agentName,
   collapsible = true,
   defaultOpen = false,
 }: {
@@ -493,6 +532,8 @@ export function JobCaseStageEmailHistory({
   onSend?: (draft: CommSendDraft) => void;
   enableComposeActions?: boolean;
   recipientContacts?: WorkflowEmailContact[];
+  agentEmail?: string | null;
+  agentName?: string | null;
   collapsible?: boolean;
   defaultOpen?: boolean;
 }) {
@@ -502,8 +543,13 @@ export function JobCaseStageEmailHistory({
     setOpen(defaultOpen);
   }, [defaultOpen, title]);
   const attributedEmails = useMemo(
-    () => attributeAgentOutboundEmails(emails),
-    [emails],
+    () =>
+      prepareJobCaseEmailHistory(emails, {
+        contacts: recipientContacts,
+        agentEmail,
+        agentName,
+      }),
+    [emails, recipientContacts, agentEmail, agentName],
   );
   const emailCount = attributedEmails.length;
 
@@ -516,6 +562,8 @@ export function JobCaseStageEmailHistory({
           onSend={onSend}
           enableComposeActions={enableComposeActions}
           recipientContacts={recipientContacts}
+          agentEmail={agentEmail}
+          agentName={agentName}
         />
       </section>
     );
@@ -551,6 +599,8 @@ export function JobCaseStageEmailHistory({
             onSend={onSend}
             enableComposeActions={enableComposeActions}
             recipientContacts={recipientContacts}
+            agentEmail={agentEmail}
+            agentName={agentName}
             hideHeader
           />
         </div>

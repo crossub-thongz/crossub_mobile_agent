@@ -4,6 +4,7 @@ import {
   type JobCaseEmailRecord,
 } from '@/lib/job-case-email';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+import { researchPackDraftAttachmentUrls } from '@/lib/rent-review/research-landlord-email';
 
 const COMM_AUDIT_KINDS = new Set([
   'landlord_research_email',
@@ -55,6 +56,57 @@ export function rentReviewEmailAttachmentUrl(
   return `/api/v1/agent/properties/${propertyId}/workflows/rent-review/${reviewId}/communications/${auditId}/attachments/${encodeURIComponent(filename)}`;
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isPersistedAuditRecordId(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
+function enrichAttachmentUrls(
+  detail: RentReviewWorkflowDetail,
+  auditId: string,
+  attachments: JobCaseEmailRecord['attachments'],
+): JobCaseEmailRecord['attachments'] {
+  if (!attachments?.length || !detail.propertyId) return attachments;
+
+  return attachments.map((attachment) => {
+    const mimeType = attachment.mimeType ?? mimeTypeForAttachmentFilename(attachment.name);
+    if (attachment.url) return { ...attachment, mimeType };
+
+    if (isPersistedAuditRecordId(auditId)) {
+      return {
+        ...attachment,
+        mimeType,
+        url: rentReviewEmailAttachmentUrl(
+          detail.propertyId!,
+          detail.id,
+          auditId,
+          attachment.name,
+        ),
+      };
+    }
+
+    if (attachment.name.startsWith('residential-tenancy-agreement-')) {
+      return {
+        ...attachment,
+        mimeType,
+        url: `/api/v1/agent/properties/${detail.propertyId}/workflows/rent-review/${detail.id}/lease-extension-agreement.pdf`,
+      };
+    }
+
+    const draftUrls = researchPackDraftAttachmentUrls(
+      detail.propertyId,
+      detail.id,
+      detail.ai.suggestedWeekly ?? detail.proposedWeeklyRent ?? detail.currentWeeklyRent,
+    );
+    const draftUrl = draftUrls[attachment.name];
+    if (draftUrl) return { ...attachment, mimeType, url: draftUrl };
+
+    return { ...attachment, mimeType };
+  });
+}
+
 /** Add open/download URLs for persisted email attachments. */
 export function enrichRentReviewEmailRecords(
   detail: RentReviewWorkflowDetail,
@@ -65,36 +117,13 @@ export function enrichRentReviewEmailRecords(
   const byId = new Map(records.map((r) => [r.id, r]));
 
   const withUrls = records.map((record) => {
-    const sourceId = record.id;
-    const attachments = record.attachments?.map((attachment) => ({
-      ...attachment,
-      mimeType: attachment.mimeType ?? mimeTypeForAttachmentFilename(attachment.name),
-      url:
-        attachment.url ??
-        rentReviewEmailAttachmentUrl(
-          detail.propertyId!,
-          detail.id,
-          sourceId,
-          attachment.name,
-        ),
-    }));
+    const attachments = enrichAttachmentUrls(detail, record.id, record.attachments);
 
     let inheritedAttachments = attachments;
     if ((!inheritedAttachments || inheritedAttachments.length === 0) && record.inReplyToId) {
       const parent = byId.get(record.inReplyToId);
       if (parent?.attachments?.length) {
-        inheritedAttachments = parent.attachments.map((attachment) => ({
-          ...attachment,
-          mimeType: attachment.mimeType ?? mimeTypeForAttachmentFilename(attachment.name),
-          url:
-            attachment.url ??
-            rentReviewEmailAttachmentUrl(
-              detail.propertyId!,
-              detail.id,
-              parent.id,
-              attachment.name,
-            ),
-        }));
+        inheritedAttachments = enrichAttachmentUrls(detail, parent.id, parent.attachments);
       }
     }
 
@@ -134,9 +163,6 @@ export function commRecordsFromAuditLog(detail: RentReviewWorkflowDetail): JobCa
     records.sort((a, b) => b.at.localeCompare(a.at)),
   );
 }
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function resolveCommInReplyToAuditId(recordId: string | undefined): string | undefined {
   if (!recordId?.trim() || !UUID_RE.test(recordId)) return undefined;

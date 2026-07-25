@@ -1,5 +1,5 @@
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
-import { parseRoleBracketLabel } from '@/lib/job-case-email-recipients';
+import { parseRoleBracketLabel, attributeEmailPartyRoles, type WorkflowEmailContact } from '@/lib/job-case-email-recipients';
 
 /** Emails CROSSUB sends into the agent portal (keep From = CROSSUB). */
 const CROSSUB_INBOUND_KINDS = new Set([
@@ -115,4 +115,16 @@ export function attributeAgentOutboundEmails(
       ...formatAgentSender({ name, email }),
     };
   });
+}
+
+/** Normalize From/To party labels before rendering email history. */
+export function prepareJobCaseEmailHistory(
+  records: JobCaseEmailRecord[],
+  options?: {
+    contacts?: WorkflowEmailContact[];
+    agentEmail?: string | null;
+    agentName?: string | null;
+  },
+): JobCaseEmailRecord[] {
+  return attributeEmailPartyRoles(attributeAgentOutboundEmails(records), options);
 }

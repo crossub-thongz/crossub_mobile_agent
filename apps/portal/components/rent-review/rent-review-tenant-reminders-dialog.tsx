@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EmailPreviewParties } from '@/components/agent/email-preview-parties';
+import { JobCaseEmailBodyPreview } from '@/components/agent/job-case-email-body-preview';
 import {
   buildTenantReminderListItems,
   resolveTenantReminderSchedule,
@@ -96,11 +97,18 @@ function ReminderEmailPreview({
         to={reminder.to}
         contacts={contacts}
       />
-      <div className="rounded-xl border bg-muted/20 p-3">
-        <pre className="text-foreground/90 whitespace-pre-wrap font-sans text-xs leading-relaxed">
-          {reminder.body}
-        </pre>
-      </div>
+      <JobCaseEmailBodyPreview
+        email={{
+          id: reminder.entry.id,
+          subject: reminder.subject,
+          body: reminder.body,
+          from: reminder.from,
+          to: reminder.to,
+          at: reminder.entry.at,
+          kind: 'tenant_response_reminder',
+        }}
+        contacts={contacts}
+      />
     </div>
   );
 }

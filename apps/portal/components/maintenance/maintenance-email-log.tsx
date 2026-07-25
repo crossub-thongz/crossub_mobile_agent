@@ -2,6 +2,7 @@
 
 import { Mail } from 'lucide-react';
 
+import { JobCaseEmailBodyPreview } from '@/components/agent/job-case-email-body-preview';
 import type { MaintenanceEmailRecord } from '@/lib/maintenance/agent-workflow-model';
 import { formatDateTime } from '@/lib/utils';
 
@@ -42,9 +43,17 @@ export function MaintenanceEmailLog({
               <dd>{email.to}</dd>
             </div>
           </dl>
-          <pre className="text-muted-foreground max-h-32 overflow-y-auto text-[11px] leading-relaxed whitespace-pre-wrap font-sans">
-            {email.body}
-          </pre>
+          <JobCaseEmailBodyPreview
+            email={{
+              id: email.id,
+              subject: email.subject,
+              body: email.body,
+              from: email.from,
+              to: email.to,
+              at: email.at,
+              kind: email.kind,
+            }}
+          />
         </div>
       ))}
     </div>

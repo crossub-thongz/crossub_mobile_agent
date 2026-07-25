@@ -1,6 +1,6 @@
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
-import { commRecordsFromAuditLog } from '@/lib/rent-review/communications';
+import { commRecordsFromAuditLog, enrichRentReviewEmailRecords } from '@/lib/rent-review/communications';
 import {
   canResendTenantNotice,
   hasPendingTenantCounter,
@@ -888,7 +888,10 @@ function accumulateEmailRecordsThroughStep(
 
 /** Every email sent across the rent-review workflow (deduped, newest first). */
 export function allRentReviewEmailRecords(detail: RentReviewWorkflowDetail): RentReviewEmailRecord[] {
-  return accumulateEmailRecordsThroughStep(detail, RENT_REVIEW_AGENT_STEP.COMPLETED);
+  return enrichRentReviewEmailRecords(
+    detail,
+    accumulateEmailRecordsThroughStep(detail, RENT_REVIEW_AGENT_STEP.COMPLETED),
+  );
 }
 
 /** Emails through the viewed stage — each step accumulates all prior step mail. */
@@ -896,7 +899,7 @@ export function emailRecordsForStep(
   detail: RentReviewWorkflowDetail,
   step: RentReviewAgentStep,
 ): RentReviewEmailRecord[] {
-  return accumulateEmailRecordsThroughStep(detail, step);
+  return enrichRentReviewEmailRecords(detail, accumulateEmailRecordsThroughStep(detail, step));
 }
 
 /** @deprecated Use `allRentReviewEmailRecords` — kept for callers expecting the old name. */

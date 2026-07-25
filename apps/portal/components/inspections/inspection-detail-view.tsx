@@ -39,6 +39,7 @@ import { OpenInspectionSessionRail } from '@/components/open-inspection/open-ins
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
+import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
 import { DocumentViewer } from '@/components/agent/document-viewer';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Timeline } from '@/components/agent/timeline';
@@ -64,7 +65,7 @@ import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/
 import { formatInspectionDurationHours, formatInspectionTimeRange, needsOpenInspectionScheduleRequest, openInspectionStartReached } from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
-import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import {
@@ -77,7 +78,6 @@ import {
   cancelOpenInspectionJob,
 } from '@/lib/open-inspection-delete';
 import { canCompleteOpenSessionReview } from '@/lib/open-inspection-session-rail';
-import { mergeOpenInspectionSessionPoll } from '@/lib/open-inspection-session-sync';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import {
   OPEN_CONDUCTED_BY_LABEL,
@@ -86,7 +86,6 @@ import {
   shouldShowOpenInspectionTenantDetails,
 } from '@/lib/open-inspection';
 import { useInspectionDetailLiveSync } from '@/lib/use-inspection-detail-live-sync';
-import { useLivePoll } from '@/lib/use-live-poll';
 import { inspectionsApi } from '@/lib/inspections-api';
 import {
   routineInspectionApi,
@@ -153,11 +152,19 @@ export function InspectionDetailView({
   const base = baseFromList ?? fetchedBase;
   const isOpenViewingSource = base?.type === 'OPEN' && base?.source === 'open_viewing';
   const liveInsp = useInspectionDetailLiveSync(base, apiConnected && !isOpenViewingSource);
-  const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
 
   const leasingDetail = useLeasingWorkflowStore((s) =>
     base?.propertyId ? s.getDetail(base.propertyId) : undefined,
   );
+  const { openSession, poolInspectionRecord, mergeSessionUpdate } = useOpenInspectionEmailSources({
+    enabled: base?.type === 'OPEN',
+    apiConnected,
+    leasingDetail,
+    focusInspectionId: base?.id,
+    isViewingSessionSource: isOpenViewingSource,
+    poll: true,
+  });
+
   const ensureLeasingDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const activeLeasingCycle = useMemo(
     () =>
@@ -221,13 +228,27 @@ export function InspectionDetailView({
   const stageEmails = useMemo(() => {
     if (!insp) return [];
     if (insp.type === 'OPEN') {
-      const merged = linkedOpenLeasingEmails({ openSession, leasingDetail });
+      const merged = linkedOpenLeasingEmails({
+        openSession,
+        leasingDetail,
+        poolInspectionRecord,
+      });
       if (merged.length > 0) return merged;
       if (linkedLeasingCycleId) return [];
       return inspectionEmailRecordsForStep(insp);
     }
     return inspectionEmailRecordsForStep(insp);
-  }, [insp, linkedLeasingCycleId, leasingDetail, openSession]);
+  }, [insp, linkedLeasingCycleId, leasingDetail, openSession, poolInspectionRecord]);
+  const emailRecipientContacts = useMemo(() => {
+    const propertyRow = insp?.propertyId
+      ? properties.find((p) => p.id === insp.propertyId)
+      : undefined;
+    return buildPropertyWorkflowEmailContacts(propertyRow, {
+      tenantName: leasingDetail?.tenantName ?? propertyRow?.tenantName,
+      agentEmail: leasingDetail?.agentInfo.email,
+      agentName: leasingDetail?.agentInfo.name,
+    });
+  }, [insp?.propertyId, leasingDetail, properties]);
   const [completingReview, setCompletingReview] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -264,42 +285,6 @@ export function InspectionDetailView({
     };
   }, [apiConnected, insp?.id, insp?.type]);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
-
-  const syncOpenSession = useCallback(async () => {
-    if (!apiConnected || !base || base.type !== 'OPEN') {
-      setOpenSession(null);
-      return;
-    }
-    const applySession = (session: OpenInspectionSession) => {
-      setOpenSession((previous) => mergeOpenInspectionSessionPoll(previous, session));
-    };
-    if (base.source === 'open_viewing') {
-      try {
-        const session = await openViewingsApi.get(base.id);
-        applySession(session);
-      } catch {
-        /* keep last good session on transient poll errors */
-      }
-      return;
-    }
-    const sessionId = leasingDetail?.openInspection.viewingSessionId;
-    if (sessionId) {
-      try {
-        const session = await openViewingsApi.get(sessionId);
-        applySession(session);
-      } catch {
-        /* keep last good session on transient poll errors */
-      }
-      return;
-    }
-    setOpenSession(null);
-  }, [apiConnected, base, leasingDetail?.openInspection.viewingSessionId]);
-
-  useEffect(() => {
-    void syncOpenSession();
-  }, [syncOpenSession]);
-
-  useLivePoll(syncOpenSession, apiConnected && base?.type === 'OPEN');
 
   useRecordRecentCaseVisit({
     id: base?.id,
@@ -731,7 +716,7 @@ export function InspectionDetailView({
         <OpenInspectionWorkflowView
           session={openSession}
           propertyLabel={insp.propertyAddress}
-          onSessionChange={setOpenSession}
+          onSessionChange={mergeSessionUpdate}
         />
       ) : null}
 
@@ -740,7 +725,7 @@ export function InspectionDetailView({
       !isStandaloneOpenViewing &&
       leasingDetail?.openInspection.agentConducted &&
       !isOpenResultsStep ? (
-        <OpenInspectionOpenStage session={openSession} onSessionChange={setOpenSession} />
+        <OpenInspectionOpenStage session={openSession} onSessionChange={mergeSessionUpdate} />
       ) : null}
 
       {openSession && insp.type === 'OPEN' && !isStandaloneOpenViewing && !isOpenResultsStep ? (
@@ -748,7 +733,7 @@ export function InspectionDetailView({
           <OpenInspectionApplicantPanel
             session={openSession}
             onSessionChange={(session) => {
-              setOpenSession(session);
+              mergeSessionUpdate(session);
             }}
             readOnly
           />
@@ -763,7 +748,7 @@ export function InspectionDetailView({
                   setCompletingReview(true);
                   try {
                     const session = await openViewingsApi.completeReview(openSession.id);
-                    setOpenSession(session);
+                    mergeSessionUpdate(session);
                     toast.success('Review complete — open report generated');
                   } catch (err) {
                     toast.error(err instanceof Error ? err.message : 'Could not complete review');
@@ -863,6 +848,7 @@ export function InspectionDetailView({
         <OpenLeasingInspectionReportPanel
           detail={leasingDetail}
           openSession={openSession}
+          onSessionChange={mergeSessionUpdate}
         />
       ) : null}
 
@@ -934,9 +920,20 @@ export function InspectionDetailView({
       )}
 
       {insp.type === 'OPEN' ? (
-        <JobCaseStageEmailHistory emails={stageEmails} title="Email/message history" />
+        <JobCaseStageEmailHistory
+          emails={stageEmails}
+          title="Email/message history"
+          recipientContacts={emailRecipientContacts}
+          agentEmail={leasingDetail?.agentInfo.email}
+          agentName={leasingDetail?.agentInfo.name}
+        />
       ) : !isStandaloneOpenViewing ? (
-        <JobCaseStageEmailHistory emails={stageEmails} />
+        <JobCaseStageEmailHistory
+          emails={stageEmails}
+          recipientContacts={emailRecipientContacts}
+          agentEmail={leasingDetail?.agentInfo.email}
+          agentName={leasingDetail?.agentInfo.name}
+        />
       ) : null}
 
       <section className="rounded-2xl border bg-card">

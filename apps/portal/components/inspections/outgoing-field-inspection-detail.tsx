@@ -29,8 +29,7 @@ import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { TenantOutgoingAttendanceStatus } from '@/lib/end-leasing/types';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import {
-  inspectionCaseEmailRecords,
-  inspectionEmailRecordsForStep,
+  inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';
 import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
 import { inspectionsApi } from '@/lib/inspections-api';
@@ -58,7 +57,6 @@ import { terminationApi } from '@/lib/termination-case-api';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
-import { dedupeJobCaseEmails } from '@/lib/job-case-email';
 
 type OutgoingSnapshot = {
   record: InspectionRecord | null;
@@ -287,11 +285,7 @@ export function OutgoingFieldInspectionDetail({
   }, [liveGateIndex]);
 
   const stageEmails = useMemo(
-    () =>
-      dedupeJobCaseEmails([
-        ...inspectionCaseEmailRecords(record),
-        ...inspectionEmailRecordsForStep(inspection),
-      ]),
+    () => inspectionJobCaseEmails(inspection, record),
     [inspection, record],
   );
 
