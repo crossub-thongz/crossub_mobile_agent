@@ -2,12 +2,14 @@
 
 import { MaintenanceCompletedCaseArchive } from '@/components/maintenance/maintenance-completed-case-archive';
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
+import { MaintenanceTenantAcknowledgementPanel } from '@/components/maintenance/maintenance-tenant-acknowledgement-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import {
   getMaintenanceQuotationsForCase,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 
 export function MaintenanceJobCompletedPanel({
   ctx,
@@ -21,6 +23,16 @@ export function MaintenanceJobCompletedPanel({
   onCaseUpdated?: () => Promise<void>;
 }) {
   const { apiConnected } = useAgentData();
+
+  if (resolveMaintenanceResponsibility(ctx) === 'tenant') {
+    return (
+      <MaintenanceTenantAcknowledgementPanel
+        ctx={ctx}
+        onCaseUpdated={onCaseUpdated}
+        apiConnected={apiConnected}
+      />
+    );
+  }
 
   const quotations = getMaintenanceQuotationsForCase(ctx.workspaceCase);
   const status = ctx.workspaceCase.status;
