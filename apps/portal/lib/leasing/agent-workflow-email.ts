@@ -204,6 +204,66 @@ function buildLeaseAgreementSentBody(
   return lines.join('\n');
 }
 
+const KEY_COLLECTION_EMAIL_EVENT =
+  /key collection time and location|Agent set key collection|Tenant confirmed key collection/i;
+
+function leasingCycleRef(detail: LeasingPropertyDetail): string {
+  if (detail.cycleId) {
+    return `LC-${detail.cycleId.slice(0, 8).toUpperCase()}`;
+  }
+  return detail.propertyId;
+}
+
+function buildKeyCollectionEmailBody(
+  detail: LeasingPropertyDetail,
+  tenant: LeasingApplicationDetail | null,
+  keyTime: string,
+  keyLocation: string,
+): string {
+  const who = tenant?.applicant?.trim() || tenant?.email?.trim() || 'there';
+  const cycleRef = leasingCycleRef(detail);
+  return [
+    `Hi ${who},`,
+    '',
+    `Your keys for ${detail.propertyAddress} (${cycleRef}) are ready for collection.`,
+    '',
+    `Collection time: ${keyTime}`,
+    `Location: ${keyLocation}`,
+    '',
+    'Please bring photo ID. If you need to reschedule, contact your managing agent via the tenant portal.',
+    '',
+    '— CROSSUB Leasing',
+  ].join('\n');
+}
+
+function keyCollectionEmailRecord(
+  detail: LeasingPropertyDetail,
+  tenant: LeasingApplicationDetail | null,
+  tenantTo: Pick<JobCaseEmailRecord, 'to' | 'toEmail'>,
+): JobCaseEmailRecord | null {
+  const kc = detail.onboarding.keyCollection;
+  const keyTime = kc.time?.trim();
+  const keyLocation = kc.location?.trim();
+  if (!keyTime || !keyLocation) return null;
+
+  const event = [...(detail.timeline ?? [])]
+    .filter((e) => KEY_COLLECTION_EMAIL_EVENT.test(e.label))
+    .sort((a, b) => b.at.localeCompare(a.at))[0];
+
+  const at = event?.at ?? keyTime;
+  return {
+    id: event
+      ? `${detail.propertyId}-key-collection-${event.id}`
+      : `${detail.propertyId}-key-collection`,
+    subject: `Key collection — ${detail.propertyAddress}`,
+    body: buildKeyCollectionEmailBody(detail, tenant, keyTime, keyLocation),
+    ...crossubSender(),
+    ...tenantTo,
+    at,
+    kind: 'key_collection',
+  };
+}
+
 function buildSignedLeaseAgreementBody(
   detail: LeasingPropertyDetail,
   tenant: LeasingApplicationDetail | null,
@@ -243,6 +303,9 @@ function onboardingEmailRecords(detail: LeasingPropertyDetail): JobCaseEmailReco
       kind: 'bond_link',
     });
   }
+
+  const keyCollection = keyCollectionEmailRecord(detail, tenant, tenantTo);
+  if (keyCollection) records.push(keyCollection);
 
   const signing = detail.onboarding.agreement.signingStatus;
   if (signing !== 'not_sent') {

@@ -395,7 +395,7 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
           ...p.onboarding,
           keyCollection: {
             ...p.onboarding.keyCollection,
-            status: LEASING_ITEM_STATUS.DONE,
+            status: LEASING_ITEM_STATUS.WAITING,
             time,
             timeEnd,
             location,

@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type {
   LeasingKeyCollectionState,
   LeasingKeyCollectionTenantReport,
@@ -49,8 +48,7 @@ function hasTenantChecklistReport(keyCollection: LeasingKeyCollectionState): boo
 }
 
 function hasKeyCollectionReport(keyCollection: LeasingKeyCollectionState): boolean {
-  if (hasTenantChecklistReport(keyCollection)) return true;
-  return hasPhotoProof(keyCollection) && keyCollection.status === LEASING_ITEM_STATUS.DONE;
+  return hasTenantChecklistReport(keyCollection);
 }
 
 function photoFileName(url: string, index: number): string {
