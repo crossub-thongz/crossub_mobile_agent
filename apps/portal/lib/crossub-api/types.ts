@@ -161,6 +161,8 @@ export interface ApiMaintenanceRequest {
   contractorInvoiceAmount?: number;
   contractorInvoiceDate?: string;
   invoiceEmailedToAgentAt?: string;
+  /** Pre-uploaded intake photo URLs from staff/tenant create (R2). */
+  intakePhotoUrls?: string[];
 }
 
 export interface ApiMaintenanceAuditLogEntry {

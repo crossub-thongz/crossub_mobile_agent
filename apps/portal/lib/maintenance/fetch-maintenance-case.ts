@@ -8,6 +8,7 @@ import {
   type MappedMaintenance,
 } from '@/lib/data/map-maintenance';
 import { mergeMaintenanceCaseForLiveSync } from '@/lib/maintenance/merge-maintenance-case';
+import { mergeIntakePhotoAttachments } from '@/lib/maintenance/merge-intake-photo-attachments';
 import {
   getContractorRfqReminderUiState,
   shouldStopRfqReminderLoop,
@@ -135,10 +136,17 @@ export async function fetchMaintenanceCase(
     caseId,
   );
 
-  const attachments = mergeAttachmentsForCase(
+  const mergedAttachments = mergeAttachmentsForCase(
     bundledAttachments,
     state.maintenanceAttachments ?? [],
     caseId,
+  );
+  const attachments = mergeIntakePhotoAttachments(
+    caseId,
+    req.intakePhotoUrls,
+    mergedAttachments,
+    req.createdAt,
+    req.source === 'tenant_app' ? 'tenant' : req.source === 'staff_portal' ? 'admin' : 'agent',
   );
 
   return {

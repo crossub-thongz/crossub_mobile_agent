@@ -20,6 +20,7 @@ import {
 import { fileToBase64 } from '@/lib/file-upload';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
+import { completionReviewAttachments } from '@/lib/maintenance/merge-intake-photo-attachments';
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { cn } from '@/lib/utils';
 
@@ -89,11 +90,8 @@ export function MaintenanceCompletionGatesPanel({
   const canEdit = apiConnected && !isClosed && (isInProgress || isCompleted);
 
   const evidenceAttachments = useMemo(
-    () =>
-      attachments.filter(
-        (a) => a.maintenanceRequestId === requestId && a.kind === 'evidence',
-      ),
-    [attachments, requestId],
+    () => completionReviewAttachments(requestId, attachments, responsibility),
+    [attachments, requestId, responsibility],
   );
   const invoiceAttachments = useMemo(
     () =>
@@ -168,7 +166,9 @@ export function MaintenanceCompletionGatesPanel({
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <SectionHeader title="Completion evidence" checked={hasCompletionEvidence} />
         <p className="text-muted-foreground text-xs">
-          View completion photos uploaded by the contractor.
+          {responsibility === 'strata'
+            ? 'View completion evidence and intake photos uploaded for this strata job.'
+            : 'View completion photos uploaded by the contractor.'}
         </p>
 
         <div className="rounded-lg border bg-background p-3">
