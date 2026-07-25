@@ -61,7 +61,13 @@ import {
 } from '@/lib/leasing/letting-rail-progress';
 import { OpenNewLeasingCaseButton } from '@/components/leasing-workflow/open-new-leasing-case-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
-import { formatInspectionDurationHours, formatInspectionTimeRange, needsOpenInspectionScheduleRequest, openInspectionStartReached } from '@/lib/leasing/open-inspection-display';
+import {
+  formatInspectionDurationHours,
+  formatInspectionTimeRange,
+  isAssignedInspectorName,
+  needsOpenInspectionScheduleRequest,
+  openInspectionStartReached,
+} from '@/lib/leasing/open-inspection-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
@@ -651,8 +657,16 @@ export function InspectionDetailView({
               }
             />
           ) : null}
-          {leasingDetail.openInspection.inspectorName ? (
-            <InfoRow label="Inspector" value={leasingDetail.openInspection.inspectorName} icon={User} />
+          {leasingDetail.openInspection.scheduledTime ? (
+            isAssignedInspectorName(leasingDetail.openInspection.inspectorName) ? (
+              <InfoRow
+                label="Inspector"
+                value={leasingDetail.openInspection.inspectorName!}
+                icon={User}
+              />
+            ) : (
+              <InfoRow label="Inspector" value="Pending — task pool" icon={User} />
+            )
           ) : null}
           {canStartCrossubOpenNow && linkedLeasingCycleId ? (
             <div className="pt-2">
@@ -766,6 +780,11 @@ export function InspectionDetailView({
           session={openSession}
           propertyLabel={insp.propertyAddress}
           onSessionChange={mergeSessionUpdate}
+          fieldInspectorName={
+            leasingDetail && isAssignedInspectorName(leasingDetail.openInspection.inspectorName)
+              ? leasingDetail.openInspection.inspectorName
+              : undefined
+          }
         />
       ) : null}
 

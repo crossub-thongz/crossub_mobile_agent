@@ -1,11 +1,19 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Calendar, FileText, User } from 'lucide-react';
 
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
-import { formatInspectionDurationHours, formatLettingRent } from '@/lib/leasing/open-inspection-display';
+import { inspectionsApi } from '@/lib/inspections-api';
+import {
+  formatInspectionDurationHours,
+  formatLettingRent,
+  isAssignedInspectorName,
+} from '@/lib/leasing/open-inspection-display';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { OpenInspectionEarlyStartNotice } from '@/components/open-inspection/open-inspection-early-start-notice';
+
+const POOL_INSPECTOR_LABEL = 'Pending — task pool';
 
 function FactTile({ label, value, icon: Icon }: { label: string; value: string; icon?: React.ElementType }) {
   return (
@@ -19,7 +27,42 @@ function FactTile({ label, value, icon: Icon }: { label: string; value: string; 
   );
 }
 
-export function OpenInspectionScheduledStage({ session }: { session: OpenInspectionSession }) {
+export function OpenInspectionScheduledStage({
+  session,
+  fieldInspectorName,
+}: {
+  session: OpenInspectionSession;
+  /** CROSSUB field inspector from the linked pool job — not the managing agent on the session. */
+  fieldInspectorName?: string | null;
+}) {
+  const [resolvedInspector, setResolvedInspector] = useState<string | null | undefined>(
+    fieldInspectorName,
+  );
+
+  useEffect(() => {
+    setResolvedInspector(fieldInspectorName);
+  }, [fieldInspectorName]);
+
+  useEffect(() => {
+    if (fieldInspectorName !== undefined) return;
+    if (!session.inspectionId) {
+      setResolvedInspector(null);
+      return;
+    }
+    let cancelled = false;
+    void inspectionsApi
+      .get(session.inspectionId)
+      .then((record) => {
+        if (!cancelled) setResolvedInspector(record.inspectorName);
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedInspector(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fieldInspectorName, session.inspectionId]);
+
   const rental = session.rental;
   const inspectionTime =
     session.startTime && session.endTime
@@ -31,7 +74,9 @@ export function OpenInspectionScheduledStage({ session }: { session: OpenInspect
     session.startTime && session.endTime
       ? formatInspectionDurationHours(session.startTime, session.endTime)
       : null;
-  const inspectorName = session.agent?.name?.trim() || 'Unassigned';
+  const inspectorName = isAssignedInspectorName(resolvedInspector)
+    ? resolvedInspector!.trim()
+    : POOL_INSPECTOR_LABEL;
   const notes = session.shortNote?.trim() || '—';
 
   return (

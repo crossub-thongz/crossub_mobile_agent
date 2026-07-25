@@ -51,6 +51,8 @@ export interface InspectionRecord {
   routineFlow?: 'self' | 'in_person' | null
   cancelReason?: string | null
   cancelledAt?: string | null
+  /** Active agent decline — inspector must redo and resubmit. */
+  reportDeclineReason?: string | null
   areaCount: number
   photoCount: number
   createdAt: string

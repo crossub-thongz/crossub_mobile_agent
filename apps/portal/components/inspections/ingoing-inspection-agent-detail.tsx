@@ -24,6 +24,7 @@ import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delet
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { FieldInspectionReportReviewSection } from '@/components/inspections/field-inspection-report-review-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
@@ -365,6 +366,17 @@ export function IngoingInspectionAgentDetail({
           ) : null}
         </div>
       </section>
+
+      <FieldInspectionReportReviewSection
+        inspectionId={inspection.id}
+        record={record}
+        propertyLabel={inspection.propertyAddress}
+        inspectionType="ingoing"
+        reportUrl={reportUrl}
+        tenantReportSigned={record?.tenantReportSigned}
+        leasingTenantApproved={leasingTenantApproved}
+        onUpdated={refreshSnapshot}
+      />
 
       <section className="rounded-2xl border bg-card p-3">
         <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">

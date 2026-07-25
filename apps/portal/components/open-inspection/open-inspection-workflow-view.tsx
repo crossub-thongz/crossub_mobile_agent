@@ -15,10 +15,12 @@ export function OpenInspectionWorkflowView({
   session,
   propertyLabel,
   onSessionChange,
+  fieldInspectorName,
 }: {
   session: OpenInspectionSession;
   propertyLabel: string;
   onSessionChange: (session: OpenInspectionSession) => void;
+  fieldInspectorName?: string | null;
 }) {
   const { currentRailStep } = deriveOpenSessionRailProgress(session);
   const [viewedStep, setViewedStep] = useState<OpenSessionRailStep>(currentRailStep);
@@ -55,6 +57,7 @@ export function OpenInspectionWorkflowView({
         propertyLabel={propertyLabel}
         viewedStep={viewedStep}
         onSessionChange={onSessionChange}
+        fieldInspectorName={fieldInspectorName}
       />
     </div>
   );

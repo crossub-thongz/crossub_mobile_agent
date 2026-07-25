@@ -4,6 +4,7 @@ import type { OnSiteProgression } from '@/lib/inspections-types';
 
 /** Workflow phase slugs from `Inspection.workflowMeta.phase` (crossub_web). */
 export const FIELD_INSPECTION_PHASE = {
+  IN_PROGRESS: 'in_progress',
   REPORT_PENDING_REVIEW: 'report_pending_review',
   SENT_FOR_SIGNATURE: 'sent_for_signature',
   REPORT_SIGNED: 'report_signed',
@@ -137,4 +138,30 @@ export function deriveAgentAckState(
   }
 
   return { state: 'pending', label: 'Report submitted — agent review pending' };
+}
+
+/** Agent can decline an ingoing/outgoing inspector report awaiting review. */
+export function canRejectFieldInspectionReport(
+  record: InspectionRecord | null,
+  options?: {
+    tenantReportSigned?: boolean;
+    leasingTenantApproved?: boolean;
+    agentAcknowledged?: boolean;
+  },
+): boolean {
+  if (!record) return false;
+  if (record.type !== 'INGOING' && record.type !== 'OUTGOING') return false;
+  if (record.status !== 'COMPLETED') return false;
+
+  const phase = record.workflowPhase;
+  const hasReport = Boolean(record.reportUrl?.trim());
+  if (phase !== FIELD_INSPECTION_PHASE.REPORT_PENDING_REVIEW && !hasReport) {
+    return false;
+  }
+
+  if (options?.tenantReportSigned || record.tenantReportSigned) return false;
+  if (options?.leasingTenantApproved) return false;
+  if (options?.agentAcknowledged) return false;
+
+  return true;
 }

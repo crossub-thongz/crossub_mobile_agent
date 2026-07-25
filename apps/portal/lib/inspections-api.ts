@@ -101,4 +101,12 @@ export const inspectionsApi = {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '/api';
     return `${apiUrl}/inspections/${id}/report/pdf`;
   },
+
+  rejectReport: (
+    id: string,
+    input: { reason: string },
+  ): Promise<InspectionRecord> =>
+    api
+      .patch<{ inspection: InspectionRecord }>(`/inspections/${id}/reject-report`, input)
+      .then((r) => r.inspection),
 }

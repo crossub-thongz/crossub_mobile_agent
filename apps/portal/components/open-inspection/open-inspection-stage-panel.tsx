@@ -21,11 +21,13 @@ export function OpenInspectionStagePanel({
   propertyLabel,
   viewedStep,
   onSessionChange,
+  fieldInspectorName,
 }: {
   session: OpenInspectionSession;
   propertyLabel: string;
   viewedStep: OpenSessionRailStep;
   onSessionChange: (session: OpenInspectionSession) => void;
+  fieldInspectorName?: string | null;
 }) {
   const reportReady = session.openReportGenerated === true;
   const canCompleteReview = canCompleteOpenSessionReview(session);
@@ -34,7 +36,10 @@ export function OpenInspectionStagePanel({
   return (
     <div className="space-y-4">
       {viewedStep === OPEN_SESSION_RAIL_STEP.SCHEDULED ? (
-        <OpenInspectionScheduledStage session={session} />
+        <OpenInspectionScheduledStage
+          session={session}
+          fieldInspectorName={fieldInspectorName}
+        />
       ) : null}
 
       {viewedStep === OPEN_SESSION_RAIL_STEP.OPEN ? (
