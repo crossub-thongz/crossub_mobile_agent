@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { JobCaseEmailAttachment } from '@/lib/job-case-email';
+import { mimeTypeForAttachmentFilename } from '@/lib/job-case-email';
 import { ApiError, fetchApiBlobFromUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,19 @@ function apiErrorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof Error && error.message.trim()) return error.message;
   return 'Could not load attachment';
+}
+
+function isApiRelativeUrl(url: string): boolean {
+  const bare = url.split('?')[0] ?? url;
+  return bare.startsWith('/api/');
+}
+
+/** Public media / data URLs can render in img/iframe without an authenticated BFF fetch. */
+function canUseDirectAttachmentUrl(url: string): boolean {
+  if (url.startsWith('data:') || url.startsWith('blob:')) return true;
+  if (/^https?:\/\//i.test(url)) return true;
+  if (url.startsWith('/') && !isApiRelativeUrl(url)) return true;
+  return false;
 }
 
 export function EmailAttachmentList({
@@ -84,6 +98,13 @@ export function EmailAttachmentList({
     setLoadingName(attachment.name);
     try {
       const url = download ? withDownloadQuery(attachment.url) : attachment.url;
+      if (canUseDirectAttachmentUrl(url)) {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new ApiError(res.status, 'Could not load attachment');
+        }
+        return res.blob();
+      }
       return await fetchApiBlobFromUrl(url);
     } catch (error) {
       toast.error(apiErrorMessage(error));
@@ -94,6 +115,22 @@ export function EmailAttachmentList({
   };
 
   const openPreview = async (attachment: JobCaseEmailAttachment) => {
+    if (!attachment.url) return;
+
+    if (canUseDirectAttachmentUrl(attachment.url)) {
+      if (previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewBlob(null);
+      setPreviewName(attachment.name);
+      setPreviewMime(
+        attachment.mimeType ?? mimeTypeForAttachmentFilename(attachment.name),
+      );
+      setPreviewUrl(attachment.url);
+      setPreviewOpen(true);
+      return;
+    }
+
     const blob = await loadAttachmentBlob(attachment);
     if (!blob) return;
 
@@ -110,6 +147,18 @@ export function EmailAttachmentList({
   };
 
   const downloadAttachment = async (attachment: JobCaseEmailAttachment) => {
+    if (!attachment.url) return;
+    if (canUseDirectAttachmentUrl(attachment.url)) {
+      const anchor = document.createElement('a');
+      anchor.href = withDownloadQuery(attachment.url);
+      anchor.download = attachment.name;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      return;
+    }
     const blob = await loadAttachmentBlob(attachment, true);
     if (!blob) return;
     downloadBlob(blob, attachment.name);
@@ -216,8 +265,22 @@ export function EmailAttachmentList({
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                disabled={!previewBlob}
-                onClick={() => previewBlob && downloadBlob(previewBlob, previewName)}
+                disabled={!previewBlob && !previewUrl}
+                onClick={() => {
+                  if (previewBlob) {
+                    downloadBlob(previewBlob, previewName);
+                    return;
+                  }
+                  if (!previewUrl) return;
+                  const anchor = document.createElement('a');
+                  anchor.href = withDownloadQuery(previewUrl);
+                  anchor.download = previewName;
+                  anchor.target = '_blank';
+                  anchor.rel = 'noopener';
+                  document.body.appendChild(anchor);
+                  anchor.click();
+                  anchor.remove();
+                }}
               >
                 <Download className="size-3.5" />
                 Download

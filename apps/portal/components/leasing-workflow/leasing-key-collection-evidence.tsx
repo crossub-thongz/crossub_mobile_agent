@@ -48,7 +48,7 @@ function hasTenantChecklistReport(keyCollection: LeasingKeyCollectionState): boo
 }
 
 function hasKeyCollectionReport(keyCollection: LeasingKeyCollectionState): boolean {
-  return hasTenantChecklistReport(keyCollection);
+  return hasPhotoProof(keyCollection) || hasTenantChecklistReport(keyCollection);
 }
 
 function photoFileName(url: string, index: number): string {
@@ -169,15 +169,14 @@ export function LeasingKeyCollectionEvidencePanel({
           )}
         </EvidenceRow>
 
+        {checklistReady ? (
         <EvidenceRow
           label="Key collection report"
           available={reportReady}
           availableLabel={
-            checklistReady
-              ? report?.submittedAt
-                ? `Checklist submitted ${formatDateTime(report.submittedAt)}`
-                : 'Tenant handover checklist on file'
-              : 'Tenant report submitted with photo proof'
+            report?.submittedAt
+              ? `Checklist submitted ${formatDateTime(report.submittedAt)}`
+              : 'Tenant handover checklist on file'
           }
           missingLabel="Awaiting tenant key collection report"
         >
@@ -190,10 +189,11 @@ export function LeasingKeyCollectionEvidencePanel({
               onClick={() => setReportOpen(true)}
             >
               <ClipboardList className="size-3" />
-              {checklistReady ? 'View report' : 'View details'}
+              View report
             </Button>
           )}
         </EvidenceRow>
+        ) : null}
       </div>
 
       <Dialog open={photosOpen} onOpenChange={setPhotosOpen}>
