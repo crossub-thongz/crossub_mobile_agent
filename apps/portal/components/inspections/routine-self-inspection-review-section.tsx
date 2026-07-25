@@ -5,8 +5,11 @@ import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { inspectionsApi } from '@/lib/inspections-api';
+import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import {
   routineInspectionApi,
   type ServerRoutineScheduleView,
@@ -21,6 +24,7 @@ export function RoutineSelfInspectionReviewSection({
   propertyLabel: string;
   onUpdated: (next: ServerRoutineScheduleView) => void;
 }) {
+  const { refresh, registerInspection } = useAgentData();
   const [declineReason, setDeclineReason] = useState('');
   const [showDecline, setShowDecline] = useState(false);
   const [busy, setBusy] = useState<'approve' | 'decline' | null>(null);
@@ -49,6 +53,15 @@ export function RoutineSelfInspectionReviewSection({
               reason: declineReason.trim(),
             });
       onUpdated(updated);
+      if (action === 'approve' && inspectionId) {
+        try {
+          const record = await inspectionsApi.get(inspectionId);
+          registerInspection(mapInspectionRecordToView(record));
+        } catch {
+          // Portfolio refresh below will reconcile status from the API.
+        }
+      }
+      await refresh();
       setShowDecline(false);
       setDeclineReason('');
       toast.success(

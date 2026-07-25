@@ -101,6 +101,19 @@ export function outgoingInspectionWorkflowProgress(
   );
 }
 
+function resolveRoutineInspectionStepId(inspection: Inspection): string {
+  const api = inspection.apiStatus;
+  if (
+    api === INSPECTION_STATUS.COMPLETED ||
+    api === INSPECTION_STATUS.PUBLISHED ||
+    inspection.reportStatus === 'approved' ||
+    inspection.reportStatus === 'sent'
+  ) {
+    return 'completed';
+  }
+  return resolveInspectionStepId(api);
+}
+
 export function inspectionWorkflowProgress(inspection: Inspection): CaseWorkflowProgress {
   if (inspection.type === 'INGOING') {
     return ingoingInspectionWorkflowProgress(
@@ -125,6 +138,6 @@ export function inspectionWorkflowProgress(inspection: Inspection): CaseWorkflow
   return buildCaseWorkflowProgress(
     'Routine inspection workflow',
     INSPECTION_AGENT_STEPS,
-    resolveInspectionStepId(inspection.apiStatus),
+    resolveRoutineInspectionStepId(inspection),
   );
 }

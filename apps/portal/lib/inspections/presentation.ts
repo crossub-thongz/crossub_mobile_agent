@@ -54,6 +54,10 @@ export function isInspectionDone(inspection: Inspection): boolean {
 export function inspectionNeedsAction(inspection: Inspection): boolean {
   if (isInspectionDone(inspection)) return false;
 
+  if (inspection.type === 'ROUTINE' && inspection.apiStatus === INSPECTION_STATUS.FIRST_REVIEW) {
+    return true;
+  }
+
   if (
     inspection.type === 'OPEN' &&
     inspection.openConductedBy === 'agent' &&
@@ -91,6 +95,14 @@ export const INSPECTION_GROUP_LABEL: Record<InspectionListGroup, string> = {
 };
 
 export function inspectionNextAction(inspection: Inspection): InspectionNextAction | null {
+  if (isInspectionDone(inspection)) {
+    return {
+      title: 'Completed',
+      description: 'This routine inspection cycle is complete.',
+      tone: 'success',
+    };
+  }
+
   if (
     inspection.type === 'OPEN' &&
     inspection.openConductedBy === 'agent' &&
