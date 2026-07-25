@@ -209,6 +209,20 @@ export function CreateInspectionWizard({
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
   const prefillSessionRef = useRef<string | null>(null);
+  const agentDataRef = useRef({
+    properties,
+    leasingRecords,
+    leasingCycles,
+    vacating,
+    tenantSelections,
+  });
+  agentDataRef.current = {
+    properties,
+    leasingRecords,
+    leasingCycles,
+    vacating,
+    tenantSelections,
+  };
 
   useEffect(() => {
     if (validPreselected) {
@@ -318,10 +332,10 @@ export function CreateInspectionWizard({
   );
 
   useEffect(() => {
-    if (!propertyId || !inspectionType) return;
-
-    const propertyRow = properties.find((p) => p.id === propertyId);
-    if (!propertyRow) return;
+    if (!propertyId || !inspectionType) {
+      setPrefillLoading(false);
+      return;
+    }
 
     const session = `${propertyId}:${inspectionType}`;
     if (prefillSessionRef.current === session) {
@@ -329,17 +343,33 @@ export function CreateInspectionWizard({
       return;
     }
 
-    const lease = leasingRecords.find(
-      (r) =>
-        r.propertyId === propertyId && (r.status === 'current' || r.status === 'upcoming'),
-    );
-    const cycle = leasingCycles.find((c) => c.propertyId === propertyId);
-    const vacatingForProperty = vacating.filter((v) => v.propertyId === propertyId);
-    const tenantSelectionsForProperty = tenantSelections.filter((t) => t.propertyId === propertyId);
+    const {
+      properties: latestProperties,
+      leasingRecords: latestLeasingRecords,
+      leasingCycles: latestLeasingCycles,
+      vacating: latestVacating,
+      tenantSelections: latestTenantSelections,
+    } = agentDataRef.current;
+
+    const propertyRow = latestProperties.find((p) => p.id === propertyId);
+    if (!propertyRow) {
+      setPrefillLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setPrefillLoading(true);
     prefillSessionRef.current = session;
+
+    const lease = latestLeasingRecords.find(
+      (r) =>
+        r.propertyId === propertyId && (r.status === 'current' || r.status === 'upcoming'),
+    );
+    const cycle = latestLeasingCycles.find((c) => c.propertyId === propertyId);
+    const vacatingForProperty = latestVacating.filter((v) => v.propertyId === propertyId);
+    const tenantSelectionsForProperty = latestTenantSelections.filter(
+      (t) => t.propertyId === propertyId,
+    );
 
     const applyPrefill = async () => {
       try {
@@ -404,7 +434,6 @@ export function CreateInspectionWizard({
             setOpenConductedBy('crossub');
             setOpenAcknowledged(false);
             setOpenTenantNotified(false);
-            // Vacant / new listings have no tenant — treat as already moved out.
             setOpenTenantMovedOut(
               isPropertyVacant(propertyRow, lease ? [lease] : []) ? true : null,
             );
@@ -434,21 +463,8 @@ export function CreateInspectionWizard({
     void applyPrefill();
     return () => {
       cancelled = true;
-      if (prefillSessionRef.current === session) {
-        prefillSessionRef.current = null;
-      }
     };
-  }, [
-    propertyId,
-    inspectionType,
-    properties,
-    leasingRecords,
-    leasingCycles,
-    vacating,
-    tenantSelections,
-    leasingCycleIdProp,
-    apiConnected,
-  ]);
+  }, [propertyId, inspectionType, apiConnected]);
 
   const openListingContext = property ? getOpenListingContext(property) : null;
   const propertyIsVacant = property
@@ -917,14 +933,20 @@ export function CreateInspectionWizard({
       ) : null}
 
       {showForm ? (
-        <section className="space-y-4 rounded-xl border bg-card p-4">
+        <section className="relative space-y-4 rounded-xl border bg-card p-4">
           {prefillLoading ? (
-            <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
-              <Loader2 className="size-4 animate-spin" />
-              Prefilling form…
+            <div
+              className="bg-card/80 absolute inset-0 z-10 flex items-center justify-center rounded-xl backdrop-blur-[1px]"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                <Loader2 className="size-4 animate-spin" />
+                Prefilling form…
+              </div>
             </div>
-          ) : (
-            <>
+          ) : null}
+          <>
               {inspectionType === 'OPEN' && property ? (
                 <OpenInspectionForm
                   property={property}
@@ -1030,8 +1052,7 @@ export function CreateInspectionWizard({
                   'Create inspection'
                 )}
               </Button>
-            </>
-          )}
+          </>
         </section>
       ) : (
         <p className="text-muted-foreground text-center text-sm">
