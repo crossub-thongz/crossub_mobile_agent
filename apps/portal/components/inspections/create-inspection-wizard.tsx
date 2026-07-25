@@ -322,7 +322,10 @@ export function CreateInspectionWizard({
     if (!propertyRow) return;
 
     const session = `${propertyId}:${inspectionType}`;
-    if (prefillSessionRef.current === session) return;
+    if (prefillSessionRef.current === session) {
+      setPrefillLoading(false);
+      return;
+    }
 
     const lease = leasingRecords.find(
       (r) =>
@@ -337,90 +340,95 @@ export function CreateInspectionWizard({
     prefillSessionRef.current = session;
 
     const applyPrefill = async () => {
-      if (inspectionType === 'INGOING') {
-        const prefill = apiConnected
-          ? await fetchIngoingInspectionPrefill(
-              propertyRow,
-              lease,
-              cycle,
-              tenantSelectionsForProperty,
-            )
-          : buildIngoingInspectionPrefill(propertyRow, lease, cycle, {
-              tenantSelections: tenantSelectionsForProperty,
-            });
-        if (cancelled) return;
-        setIngoing(prefill);
-        setIngoingScheduledLocal(toDatetimeLocalValue(prefill.scheduledTime));
-      }
+      try {
+        if (inspectionType === 'INGOING') {
+          const prefill = apiConnected
+            ? await fetchIngoingInspectionPrefill(
+                propertyRow,
+                lease,
+                cycle,
+                tenantSelectionsForProperty,
+              )
+            : buildIngoingInspectionPrefill(propertyRow, lease, cycle, {
+                tenantSelections: tenantSelectionsForProperty,
+              });
+          if (cancelled) return;
+          setIngoing(prefill);
+          setIngoingScheduledLocal(toDatetimeLocalValue(prefill.scheduledTime));
+        }
 
-      if (inspectionType === 'ROUTINE') {
-        if (apiConnected) {
-          try {
-            const { schedule } = await routineInspectionApi.getByProperty(propertyRow.id);
-            if (cancelled) return;
-            if (schedule) {
-              setExistingRoutineSchedule(schedule);
-              return;
+        if (inspectionType === 'ROUTINE') {
+          if (apiConnected) {
+            try {
+              const { schedule } = await routineInspectionApi.getByProperty(propertyRow.id);
+              if (cancelled) return;
+              if (schedule) {
+                setExistingRoutineSchedule(schedule);
+                return;
+              }
+            } catch {
+              // Fall through to the create form when lookup fails.
             }
-          } catch {
-            // Fall through to the create form when lookup fails.
+          }
+          setExistingRoutineSchedule(null);
+          if (!cancelled) {
+            setRoutine(
+              buildRoutineInspectionPrefill(propertyRow, {
+                currentLease: lease,
+                tenantSelections: tenantSelectionsForProperty,
+              }),
+            );
           }
         }
-        setExistingRoutineSchedule(null);
-        if (!cancelled) {
-          setRoutine(
-            buildRoutineInspectionPrefill(propertyRow, {
-              currentLease: lease,
-              tenantSelections: tenantSelectionsForProperty,
-            }),
-          );
-        }
-      }
 
-      if (inspectionType === 'OPEN') {
-        if (!cancelled) {
-          const leasingPrefill = buildLeasingCyclePrefill(propertyRow, lease);
-          setOpenScheduledLocal(
-            toDatetimeLocalValue(
-              defaultOpenInspectionSchedule(propertyRow, cycle?.availableFrom),
-            ),
-          );
-          setOpenPreferredRentPerWeek(leasingPrefill.rentPerWeek);
-          setOpenPreferredAvailableFrom(leasingPrefill.availableFrom);
-          setOpenLeaseTermChoice('52');
-          setOpenCustomLeaseTermWeeks('');
-          setOpenConductedBy('crossub');
-          setOpenAcknowledged(false);
-          setOpenTenantNotified(false);
-          // Vacant / new listings have no tenant — treat as already moved out.
-          setOpenTenantMovedOut(
-            isPropertyVacant(propertyRow, lease ? [lease] : []) ? true : null,
-          );
-        }
-      }
-
-      if (inspectionType === 'OUTGOING') {
-        const activeCase = vacatingForProperty[0];
-        if (!cancelled) {
-          if (activeCase) {
-            const prefill = buildOutgoingInspectionPrefill(activeCase);
-            setVacatingCaseId(prefill.vacatingCaseId);
-            setOutgoingInspector(prefill.inspector);
-            setOutgoingScheduledLocal(toDatetimeLocalValue(prefill.scheduledAt));
-          } else {
-            setVacatingCaseId('');
-            setOutgoingInspector('Pending assignment');
-            setOutgoingScheduledLocal('');
+        if (inspectionType === 'OPEN') {
+          if (!cancelled) {
+            const leasingPrefill = buildLeasingCyclePrefill(propertyRow, lease);
+            setOpenScheduledLocal(
+              toDatetimeLocalValue(
+                defaultOpenInspectionSchedule(propertyRow, cycle?.availableFrom),
+              ),
+            );
+            setOpenPreferredRentPerWeek(leasingPrefill.rentPerWeek);
+            setOpenPreferredAvailableFrom(leasingPrefill.availableFrom);
+            setOpenLeaseTermChoice('52');
+            setOpenCustomLeaseTermWeeks('');
+            setOpenConductedBy('crossub');
+            setOpenAcknowledged(false);
+            setOpenTenantNotified(false);
+            // Vacant / new listings have no tenant — treat as already moved out.
+            setOpenTenantMovedOut(
+              isPropertyVacant(propertyRow, lease ? [lease] : []) ? true : null,
+            );
           }
         }
-      }
 
-      if (!cancelled) setPrefillLoading(false);
+        if (inspectionType === 'OUTGOING') {
+          const activeCase = vacatingForProperty[0];
+          if (!cancelled) {
+            if (activeCase) {
+              const prefill = buildOutgoingInspectionPrefill(activeCase);
+              setVacatingCaseId(prefill.vacatingCaseId);
+              setOutgoingInspector(prefill.inspector);
+              setOutgoingScheduledLocal(toDatetimeLocalValue(prefill.scheduledAt));
+            } else {
+              setVacatingCaseId('');
+              setOutgoingInspector('Pending assignment');
+              setOutgoingScheduledLocal('');
+            }
+          }
+        }
+      } finally {
+        if (!cancelled) setPrefillLoading(false);
+      }
     };
 
     void applyPrefill();
     return () => {
       cancelled = true;
+      if (prefillSessionRef.current === session) {
+        prefillSessionRef.current = null;
+      }
     };
   }, [
     propertyId,
@@ -724,7 +732,7 @@ export function CreateInspectionWizard({
         }
         const schedule = await routineInspectionApi.create({
           propertyId: property.id,
-          flow: 'in_person',
+          flow: routine.flow,
           frequency: routine.frequency,
           scheduledDate: routine.scheduledDate || undefined,
           tenantName: routine.tenantName.trim() || undefined,
@@ -1325,14 +1333,21 @@ function RoutineInspectionForm({
 }) {
   return (
     <div className="space-y-3">
-      <Field label="Inspection flow">
-        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
-          <p className="font-medium">In-person inspector visit</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            New routine inspections start in-person. Switch to tenant self-inspection later from
-            the case with a documented reason.
-          </p>
-        </div>
+      <Field label="Inspection flow *">
+        <select
+          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          value={routine.flow}
+          onChange={(e) =>
+            onChange({ ...routine, flow: e.target.value as 'self' | 'in_person' })
+          }
+        >
+          <option value="self">Tenant self-inspection</option>
+          <option value="in_person">In-person inspector visit</option>
+        </select>
+        <p className="text-muted-foreground text-xs">
+          Self-inspection sends the checklist to the tenant app. In-person creates a job for the
+          inspector pool when no inspector is named.
+        </p>
       </Field>
       <Field label="Frequency (per year) *">
         <select
