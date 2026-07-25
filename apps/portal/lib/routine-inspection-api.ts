@@ -17,6 +17,13 @@ export type ChangeRoutineFlowInput = {
   reasonNote: string;
 };
 
+export type OverrideRoutineScheduleInput = {
+  nextInspectionDate: string;
+  frequency: 2 | 3;
+  reason: string;
+  reasonNote?: string;
+};
+
 export type ServerRoutineScheduleAuditEntry = {
   id: string;
   field: string;
@@ -65,6 +72,7 @@ export const routineInspectionApi = {
     api.get<{
       schedule: {
         id: string;
+        flow: 'self' | 'in_person';
         frequency: number;
         frequencyMonths: number;
         nextInspectionDate: string | null;
@@ -73,6 +81,14 @@ export const routineInspectionApi = {
 
   create: (input: CreateRoutineScheduleInput) =>
     unwrap(api.post<{ schedule: ServerRoutineScheduleView }>(BASE, input)),
+
+  override: (scheduleId: string, input: OverrideRoutineScheduleInput) =>
+    unwrap(
+      api.patch<{ schedule: ServerRoutineScheduleView }>(
+        `${BASE}/${scheduleId}/override`,
+        input,
+      ),
+    ),
 
   changeFlow: (scheduleId: string, input: ChangeRoutineFlowInput) =>
     unwrap(api.patch<{ schedule: ServerRoutineScheduleView }>(`${BASE}/${scheduleId}/flow`, input)),

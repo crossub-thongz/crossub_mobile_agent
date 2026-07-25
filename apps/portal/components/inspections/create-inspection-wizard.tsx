@@ -297,8 +297,10 @@ export function CreateInspectionWizard({
   });
   const [existingRoutineSchedule, setExistingRoutineSchedule] = useState<{
     id: string;
+    flow: 'self' | 'in_person';
     frequency: number;
     frequencyMonths: number;
+    nextInspectionDate: string | null;
   } | null>(null);
 
   const [vacatingCaseId, setVacatingCaseId] = useState('');
@@ -358,12 +360,23 @@ export function CreateInspectionWizard({
         }
 
         if (inspectionType === 'ROUTINE') {
+          const basePrefill = buildRoutineInspectionPrefill(propertyRow, {
+            currentLease: lease,
+            tenantSelections: tenantSelectionsForProperty,
+          });
           if (apiConnected) {
             try {
               const { schedule } = await routineInspectionApi.getByProperty(propertyRow.id);
               if (cancelled) return;
               if (schedule) {
                 setExistingRoutineSchedule(schedule);
+                setRoutine({
+                  ...basePrefill,
+                  frequency: (schedule.frequency === 3 ? 3 : 2) as 2 | 3,
+                  flow: schedule.flow,
+                  scheduledDate:
+                    schedule.nextInspectionDate?.slice(0, 10) ?? basePrefill.scheduledDate,
+                });
                 return;
               }
             } catch {
@@ -372,12 +385,7 @@ export function CreateInspectionWizard({
           }
           setExistingRoutineSchedule(null);
           if (!cancelled) {
-            setRoutine(
-              buildRoutineInspectionPrefill(propertyRow, {
-                currentLease: lease,
-                tenantSelections: tenantSelectionsForProperty,
-              }),
-            );
+            setRoutine(basePrefill);
           }
         }
 
@@ -726,10 +734,55 @@ export function CreateInspectionWizard({
       }
 
       if (inspectionType === 'ROUTINE') {
+        const finalizeRoutineSchedule = async (schedule: Awaited<
+          ReturnType<typeof routineInspectionApi.create>
+        >) => {
+          const inspectionId = schedule.currentInspection?.id;
+          let view: Inspection | null = null;
+          if (inspectionId) {
+            try {
+              const record = await inspectionsApi.get(inspectionId);
+              view = mapInspectionRecordToView(record);
+            } catch {
+              view = null;
+            }
+          }
+          if (view) {
+            finalizeInspectionCreate(view);
+          } else {
+            void refresh();
+            if (navigateOnSuccess) {
+              if (inspectionId) {
+                router.push(inspectionDetail(inspectionId));
+              } else {
+                router.push(ROUTES.INSPECTIONS);
+              }
+            }
+          }
+        };
+
         if (existingRoutineSchedule) {
-          toast.error('Routine inspection already created for this property');
+          if (!routine.scheduledDate.trim()) {
+            throw new Error('Next inspection date is required');
+          }
+          let schedule = await routineInspectionApi.override(existingRoutineSchedule.id, {
+            nextInspectionDate: routine.scheduledDate,
+            frequency: routine.frequency,
+            reason: 'agent_requested_cycle',
+            reasonNote: 'Updated via agent portal routine scheduler',
+          });
+          if (routine.flow !== existingRoutineSchedule.flow) {
+            schedule = await routineInspectionApi.changeFlow(existingRoutineSchedule.id, {
+              flow: routine.flow,
+              reason: 'agent_requested_cycle',
+              reasonNote: 'Updated conduct mode via agent portal routine scheduler',
+            });
+          }
+          toast.success('Routine inspection schedule updated');
+          await finalizeRoutineSchedule(schedule);
           return;
         }
+
         const schedule = await routineInspectionApi.create({
           propertyId: property.id,
           flow: routine.flow,
@@ -740,29 +793,8 @@ export function CreateInspectionWizard({
           inspectorName:
             routine.flow === 'in_person' ? routine.inspectorName.trim() || undefined : undefined,
         });
-        const inspectionId = schedule.currentInspection?.id;
-        let view: Inspection | null = null;
-        if (inspectionId) {
-          try {
-            const record = await inspectionsApi.get(inspectionId);
-            view = mapInspectionRecordToView(record);
-          } catch {
-            view = null;
-          }
-        }
         toast.success('Routine inspection schedule created');
-        if (view) {
-          finalizeInspectionCreate(view);
-        } else {
-          void refresh();
-          if (navigateOnSuccess) {
-            if (inspectionId) {
-              router.push(inspectionDetail(inspectionId));
-            } else {
-              router.push(ROUTES.INSPECTIONS);
-            }
-          }
-        }
+        await finalizeRoutineSchedule(schedule);
         return;
       }
 
@@ -938,19 +970,27 @@ export function CreateInspectionWizard({
               ) : null}
 
               {inspectionType === 'ROUTINE' ? (
-                existingRoutineSchedule ? (
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
-                    <p className="font-medium">Routine inspection already created</p>
-                    <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                      This property already has a routine schedule (
-                      {existingRoutineSchedule.frequency}× per year, every{' '}
-                      {existingRoutineSchedule.frequencyMonths} months). Open the existing case
-                      from the property profile or Inspection module.
-                    </p>
-                  </div>
-                ) : (
-                  <RoutineInspectionForm routine={routine} onChange={setRoutine} />
-                )
+                <>
+                  {existingRoutineSchedule ? (
+                    <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm">
+                      <p className="font-medium">Update existing routine schedule</p>
+                      <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                        This property already has a routine schedule (
+                        {existingRoutineSchedule.frequency}× per year, every{' '}
+                        {existingRoutineSchedule.frequencyMonths} months
+                        {existingRoutineSchedule.nextInspectionDate
+                          ? ` · next due ${existingRoutineSchedule.nextInspectionDate.slice(0, 10)}`
+                          : ''}
+                        ). Saving will update the next inspection date and cadence settings below.
+                      </p>
+                    </div>
+                  ) : null}
+                  <RoutineInspectionForm
+                    routine={routine}
+                    onChange={setRoutine}
+                    isExistingSchedule={Boolean(existingRoutineSchedule)}
+                  />
+                </>
               ) : null}
 
               {inspectionType === 'OUTGOING' && property ? (
@@ -971,18 +1011,21 @@ export function CreateInspectionWizard({
                 disabled={
                   submitting ||
                   prefillLoading ||
-                  !apiConnected ||
-                  (inspectionType === 'ROUTINE' && Boolean(existingRoutineSchedule))
+                  !apiConnected
                 }
                 onClick={() => void submit()}
               >
                 {submitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Creating…
+                    {inspectionType === 'ROUTINE' && existingRoutineSchedule
+                      ? 'Updating…'
+                      : 'Creating…'}
                   </>
                 ) : inspectionType === 'OPEN' ? (
                   'Create'
+                ) : inspectionType === 'ROUTINE' && existingRoutineSchedule ? (
+                  'Update routine schedule'
                 ) : (
                   'Create inspection'
                 )}
@@ -1327,9 +1370,11 @@ function IngoingInspectionForm({
 function RoutineInspectionForm({
   routine,
   onChange,
+  isExistingSchedule = false,
 }: {
   routine: ReturnType<typeof buildRoutineInspectionPrefill>;
   onChange: (v: ReturnType<typeof buildRoutineInspectionPrefill>) => void;
+  isExistingSchedule?: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -1359,7 +1404,7 @@ function RoutineInspectionForm({
           <option value={3}>Three times per year (every 4 months)</option>
         </select>
       </Field>
-      <Field label="First scheduled date">
+      <Field label={isExistingSchedule ? 'Next inspection date *' : 'First scheduled date'}>
         <Input
           type="date"
           value={routine.scheduledDate}
