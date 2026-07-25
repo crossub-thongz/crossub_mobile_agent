@@ -24,6 +24,21 @@ export type OverrideRoutineScheduleInput = {
   reasonNote?: string;
 };
 
+export type StartRoutineInspectionInput = {
+  scheduledDate?: string;
+  inspectorName?: string;
+};
+
+export type RoutineScheduleByProperty = {
+  id: string;
+  flow: 'self' | 'in_person';
+  frequency: number;
+  frequencyMonths: number;
+  nextInspectionDate: string | null;
+  currentInspectionId?: string | null;
+  currentInspectionStatus?: string | null;
+};
+
 export type ServerRoutineScheduleAuditEntry = {
   id: string;
   field: string;
@@ -69,15 +84,9 @@ const unwrap = async (
 
 export const routineInspectionApi = {
   getByProperty: (propertyId: string) =>
-    api.get<{
-      schedule: {
-        id: string;
-        flow: 'self' | 'in_person';
-        frequency: number;
-        frequencyMonths: number;
-        nextInspectionDate: string | null;
-      } | null;
-    }>(`${BASE}/by-property/${propertyId}`),
+    api.get<{ schedule: RoutineScheduleByProperty | null }>(
+      `${BASE}/by-property/${propertyId}`,
+    ),
 
   create: (input: CreateRoutineScheduleInput) =>
     unwrap(api.post<{ schedule: ServerRoutineScheduleView }>(BASE, input)),
@@ -92,6 +101,14 @@ export const routineInspectionApi = {
 
   changeFlow: (scheduleId: string, input: ChangeRoutineFlowInput) =>
     unwrap(api.patch<{ schedule: ServerRoutineScheduleView }>(`${BASE}/${scheduleId}/flow`, input)),
+
+  start: (scheduleId: string, input: StartRoutineInspectionInput = {}) =>
+    unwrap(
+      api.post<{ schedule: ServerRoutineScheduleView }>(
+        `${BASE}/${scheduleId}/start`,
+        input,
+      ),
+    ),
 
   getByInspection: (inspectionId: string) =>
     unwrap(api.get<{ schedule: ServerRoutineScheduleView }>(`${BASE}/by-inspection/${inspectionId}`)),

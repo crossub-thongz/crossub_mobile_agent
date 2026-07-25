@@ -46,7 +46,8 @@ import {
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import { routineInspectionApi } from '@/lib/routine-inspection-api';
+import { routineInspectionApi, type RoutineScheduleByProperty } from '@/lib/routine-inspection-api';
+import { routineScheduleNeedsNewInstance } from '@/lib/routine/routine-instance-state';
 import { terminationApi } from '@/lib/termination-case-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
@@ -309,13 +310,8 @@ export function CreateInspectionWizard({
     flow: 'in_person' as 'self' | 'in_person',
     inspectorName: '',
   });
-  const [existingRoutineSchedule, setExistingRoutineSchedule] = useState<{
-    id: string;
-    flow: 'self' | 'in_person';
-    frequency: number;
-    frequencyMonths: number;
-    nextInspectionDate: string | null;
-  } | null>(null);
+  const [existingRoutineSchedule, setExistingRoutineSchedule] =
+    useState<RoutineScheduleByProperty | null>(null);
 
   const [vacatingCaseId, setVacatingCaseId] = useState('');
   const [outgoingInspector, setOutgoingInspector] = useState('Pending assignment');
@@ -794,7 +790,23 @@ export function CreateInspectionWizard({
               reasonNote: 'Updated conduct mode via agent portal routine scheduler',
             });
           }
-          toast.success('Routine inspection schedule updated');
+
+          const instanceStatus =
+            schedule.currentInspection?.status ??
+            existingRoutineSchedule.currentInspectionStatus;
+          const needsNewInstance = routineScheduleNeedsNewInstance(instanceStatus);
+          if (needsNewInstance) {
+            schedule = await routineInspectionApi.start(existingRoutineSchedule.id, {
+              scheduledDate: routine.scheduledDate,
+              inspectorName:
+                routine.flow === 'in_person'
+                  ? routine.inspectorName.trim() || undefined
+                  : undefined,
+            });
+            toast.success('Next routine inspection scheduled');
+          } else {
+            toast.success('Routine inspection schedule updated');
+          }
           await finalizeRoutineSchedule(schedule);
           return;
         }
@@ -995,16 +1007,32 @@ export function CreateInspectionWizard({
                 <>
                   {existingRoutineSchedule ? (
                     <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm">
-                      <p className="font-medium">Update existing routine schedule</p>
-                      <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                        This property already has a routine schedule (
-                        {existingRoutineSchedule.frequency}× per year, every{' '}
-                        {existingRoutineSchedule.frequencyMonths} months
-                        {existingRoutineSchedule.nextInspectionDate
-                          ? ` · next due ${existingRoutineSchedule.nextInspectionDate.slice(0, 10)}`
-                          : ''}
-                        ). Saving will update the next inspection date and cadence settings below.
-                      </p>
+                      {routineScheduleNeedsNewInstance(
+                        existingRoutineSchedule.currentInspectionStatus,
+                      ) ? (
+                        <>
+                          <p className="font-medium">Schedule next routine inspection</p>
+                          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                            The previous routine cycle is complete. Confirm the next inspection
+                            date and cadence below — a new routine case will be created (
+                            {existingRoutineSchedule.frequency}× per year, every{' '}
+                            {existingRoutineSchedule.frequencyMonths} months
+                            {existingRoutineSchedule.nextInspectionDate
+                              ? ` · next due ${existingRoutineSchedule.nextInspectionDate.slice(0, 10)}`
+                              : ''}
+                            ).
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-medium">Routine inspection in progress</p>
+                          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                            This property already has an active routine case. Saving will update
+                            the schedule settings only — open the current case from Inspections
+                            to continue work.
+                          </p>
+                        </>
+                      )}
                     </div>
                   ) : null}
                   <RoutineInspectionForm
@@ -1041,13 +1069,21 @@ export function CreateInspectionWizard({
                   <>
                     <Loader2 className="size-4 animate-spin" />
                     {inspectionType === 'ROUTINE' && existingRoutineSchedule
-                      ? 'Updating…'
+                      ? routineScheduleNeedsNewInstance(
+                          existingRoutineSchedule.currentInspectionStatus,
+                        )
+                        ? 'Scheduling…'
+                        : 'Updating…'
                       : 'Creating…'}
                   </>
                 ) : inspectionType === 'OPEN' ? (
                   'Create'
                 ) : inspectionType === 'ROUTINE' && existingRoutineSchedule ? (
-                  'Update routine schedule'
+                  routineScheduleNeedsNewInstance(
+                    existingRoutineSchedule.currentInspectionStatus,
+                  )
+                    ? 'Schedule next routine inspection'
+                    : 'Update routine schedule'
                 ) : (
                   'Create inspection'
                 )}
