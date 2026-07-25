@@ -49,6 +49,7 @@ import { propertyDetail, ROUTES, inspectionDetail } from '@/constants/routes';
 import type { DetailNavContext } from '@/lib/detail-navigation';
 import {
   inspectionEmailRecordsForStep,
+  inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';
 import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import {
@@ -91,6 +92,7 @@ import {
   type ServerRoutineScheduleView,
 } from '@/lib/routine-inspection-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
+import type { InspectionRecord } from '@/lib/inspections-types';
 import type { RoutineFlow } from '@/lib/routine/routine-case-status';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -224,6 +226,37 @@ export function InspectionDetailView({
     linkedLeasingCycleId,
     Boolean(insp?.type === 'OPEN' && linkedLeasingCycleId),
   );
+  const [routineSchedule, setRoutineSchedule] = useState<ServerRoutineScheduleView | null>(null);
+  const [routineInspectionRecord, setRoutineInspectionRecord] =
+    useState<InspectionRecord | null>(null);
+
+  useEffect(() => {
+    if (!apiConnected || !insp || insp.type !== 'ROUTINE') {
+      setRoutineSchedule(null);
+      setRoutineInspectionRecord(null);
+      return;
+    }
+    let cancelled = false;
+    void routineInspectionApi
+      .getByInspection(insp.id)
+      .then(async (schedule) => {
+        if (cancelled) return;
+        setRoutineSchedule(schedule);
+        const recordId = schedule.currentInspectionId ?? insp.id;
+        const record = await inspectionsApi.get(recordId).catch(() => null);
+        if (!cancelled) setRoutineInspectionRecord(record);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRoutineSchedule(null);
+          setRoutineInspectionRecord(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, insp?.id, insp?.type]);
+
   const stageEmails = useMemo(() => {
     if (!insp) return [];
     if (insp.type === 'OPEN') {
@@ -236,8 +269,18 @@ export function InspectionDetailView({
       if (linkedLeasingCycleId) return [];
       return inspectionEmailRecordsForStep(insp);
     }
+    if (insp.type === 'ROUTINE') {
+      return inspectionJobCaseEmails(insp, routineInspectionRecord);
+    }
     return inspectionEmailRecordsForStep(insp);
-  }, [insp, linkedLeasingCycleId, leasingDetail, openSession, poolInspectionRecord]);
+  }, [
+    insp,
+    linkedLeasingCycleId,
+    leasingDetail,
+    openSession,
+    poolInspectionRecord,
+    routineInspectionRecord,
+  ]);
   const emailRecipientContacts = useMemo(() => {
     const propertyRow = insp?.propertyId
       ? properties.find((p) => p.id === insp.propertyId)
@@ -253,26 +296,7 @@ export function InspectionDetailView({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [flowChangeOpen, setFlowChangeOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
-  const [routineSchedule, setRoutineSchedule] = useState<ServerRoutineScheduleView | null>(null);
 
-  useEffect(() => {
-    if (!apiConnected || !insp || insp.type !== 'ROUTINE') {
-      setRoutineSchedule(null);
-      return;
-    }
-    let cancelled = false;
-    void routineInspectionApi
-      .getByInspection(insp.id)
-      .then((schedule) => {
-        if (!cancelled) setRoutineSchedule(schedule);
-      })
-      .catch(() => {
-        if (!cancelled) setRoutineSchedule(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [apiConnected, insp?.id, insp?.type]);
   const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
 
   useRecordRecentCaseVisit({

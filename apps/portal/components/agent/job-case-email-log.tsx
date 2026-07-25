@@ -158,7 +158,8 @@ function resolveEmailAttachments(
       inspectionId &&
       (email.kind === 'ingoing_report_distributed' ||
         email.kind === 'outgoing_report_distributed' ||
-        email.kind === 'open_inspection_report')
+        email.kind === 'open_inspection_report' ||
+        email.kind === 'routine_inspection_report')
     ) {
       attachments = [
         {
@@ -184,6 +185,7 @@ function resolveEmailAttachments(
       (email.kind === 'ingoing_report_distributed' ||
         email.kind === 'outgoing_report_distributed' ||
         email.kind === 'open_inspection_report' ||
+        email.kind === 'routine_inspection_report' ||
         attachment.name.endsWith('.pdf'))
     ) {
       return inspectionsApi.reportPdfUrl(inspectionId);

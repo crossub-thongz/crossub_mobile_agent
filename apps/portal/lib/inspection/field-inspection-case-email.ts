@@ -12,6 +12,7 @@ const REPORT_DISTRIBUTION_KINDS = new Set([
   'ingoing_report_distributed',
   'outgoing_report_distributed',
   'open_inspection_report',
+  'routine_inspection_report',
 ]);
 
 function inspectionTypeForFilename(
@@ -32,7 +33,7 @@ function inspectionTypeForFilename(
 /** Extract inspection id from persisted case email ids (`*-report-{uuid}-*`). */
 export function inspectionIdFromCaseEmailId(emailId: string): string | null {
   const match = emailId.match(
-    /^(?:ingoing|outgoing|open)-report-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i,
+    /^(?:ingoing|outgoing|open|routine)-report-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i,
   );
   return match?.[1] ?? null;
 }
