@@ -29,6 +29,8 @@ import {
 } from '@/lib/job-case-email-recipients';
 import { isAgentOutboundEmail, prepareJobCaseEmailHistory } from '@/lib/job-case-email-sender';
 import { openViewingsApi } from '@/lib/open-viewings-api';
+import { inspectionsApi } from '@/lib/inspections-api';
+import { inspectionIdFromCaseEmailId } from '@/lib/inspection/field-inspection-case-email';
 import { cn, formatDateTime } from '@/lib/utils';
 
 export type CommComposeMode = 'view' | 'reply' | 'forward';
@@ -138,14 +140,25 @@ function resolveEmailAttachments(
   }
 
   const sessionId = resolveOpenReportSessionId(email);
+  const inspectionId = inspectionIdFromCaseEmailId(email.id);
   return enrichJobCaseEmailAttachments(attachments, (attachment) => {
-    if (!sessionId) return undefined;
+    if (sessionId) {
+      if (
+        email.kind === 'open_report_landlord' ||
+        email.kind === 'open_report_agent' ||
+        attachment.name.startsWith('open-report-')
+      ) {
+        return openViewingsApi.reportPdfUrl(sessionId);
+      }
+    }
     if (
-      email.kind === 'open_report_landlord' ||
-      email.kind === 'open_report_agent' ||
-      attachment.name.startsWith('open-report-')
+      inspectionId &&
+      (email.kind === 'ingoing_report_distributed' ||
+        email.kind === 'outgoing_report_distributed' ||
+        email.kind === 'open_inspection_report' ||
+        attachment.name.endsWith('.pdf'))
     ) {
-      return openViewingsApi.reportPdfUrl(sessionId);
+      return inspectionsApi.reportPdfUrl(inspectionId);
     }
     return undefined;
   });

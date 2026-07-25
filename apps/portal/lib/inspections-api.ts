@@ -95,4 +95,10 @@ export const inspectionsApi = {
   /** Server-generated or filed inspection report PDF. */
   downloadReportPdf: (id: string): Promise<Blob> =>
     api.getBlob(`/inspections/${id}/report/pdf`),
+
+  /** Authenticated PDF URL — routed through the BFF `/api` proxy. */
+  reportPdfUrl: (id: string) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '/api';
+    return `${apiUrl}/inspections/${id}/report/pdf`;
+  },
 }

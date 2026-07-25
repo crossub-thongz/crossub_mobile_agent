@@ -2,9 +2,9 @@ import { INSPECTION_STATUS } from '@/constants/api-enums';
 import {
   dedupeJobCaseEmails,
   mergeJobCaseEmailSources,
-  persistedCaseEmailRecords,
   type JobCaseEmailRecord,
 } from '@/lib/job-case-email';
+import { enrichFieldInspectionCaseEmails } from '@/lib/inspection/field-inspection-case-email';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
@@ -149,7 +149,7 @@ export function inspectionEmailRecordsForStep(
 export function inspectionCaseEmailRecords(
   record: InspectionRecord | null | undefined,
 ): JobCaseEmailRecord[] {
-  return dedupeJobCaseEmails(persistedCaseEmailRecords(record));
+  return dedupeJobCaseEmails(enrichFieldInspectionCaseEmails(record));
 }
 
 /** Persisted workflow emails plus step-synthesized inspection notifications. */
