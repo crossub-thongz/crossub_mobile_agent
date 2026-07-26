@@ -35,6 +35,7 @@ const AUTH_NO_REFRESH_PATHS = [
   '/auth/forgot-password',
   '/auth/reset-password',
   '/auth/register-agent',
+  '/auth/register-agent-invite',
   '/auth/register-inspector',
 ];
 

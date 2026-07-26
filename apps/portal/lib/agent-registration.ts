@@ -39,3 +39,27 @@ export function registerAgentErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return 'Registration failed.';
 }
+
+export interface AgentInvitePreview {
+  email: string;
+  agencyName: string;
+  contactName: string | null;
+  expired: boolean;
+  used: boolean;
+}
+
+export async function fetchAgentInvitePreview(token: string): Promise<AgentInvitePreview> {
+  const result = await api.get<{ invite: AgentInvitePreview }>(
+    `/auth/register-agent-invite/${encodeURIComponent(token)}`,
+  );
+  return result.invite;
+}
+
+export async function completeAgentInviteRegistration(
+  token: string,
+  acceptTerms: boolean,
+): Promise<{ user: AuthUser; temporaryPassword?: string; credentialsSent: boolean }> {
+  return api.post(`/auth/register-agent-invite/${encodeURIComponent(token)}`, {
+    acceptTerms,
+  });
+}
