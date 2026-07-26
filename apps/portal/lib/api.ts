@@ -1,4 +1,4 @@
-import { ROUTES } from '@/constants/routes';
+import { ROUTES, isPublicRoute } from '@/constants/routes';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
@@ -69,6 +69,8 @@ const clearSessionAndRedirectToLogin = async (): Promise<never> => {
     throw new ApiError(401, 'Session expired');
   }
 
+  const onPublicRoute = isPublicRoute(window.location.pathname);
+
   try {
     await fetch(`${API_URL}/auth/logout`, {
       method: 'POST',
@@ -77,6 +79,10 @@ const clearSessionAndRedirectToLogin = async (): Promise<never> => {
     });
   } catch {
     // Best effort — ?session=expired lets middleware allow /login with a stale cookie.
+  }
+
+  if (onPublicRoute) {
+    throw new ApiError(401, 'Session expired');
   }
 
   const dest = `${ROUTES.LOGIN}?session=expired`;

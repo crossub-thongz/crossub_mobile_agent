@@ -26,7 +26,7 @@ export function SystemAccessAgreementGate({ children }: { children: React.ReactN
     router.replace(ROUTES.SYSTEM_ACCESS_AGREEMENT);
   }, [mustSign, pathname, router]);
 
-  if (status === 'loading') return null;
+  if (status === 'loading' && !isPublicRoute(pathname)) return null;
   if (mustSign && !isPublicRoute(pathname)) return null;
 
   return <>{children}</>;

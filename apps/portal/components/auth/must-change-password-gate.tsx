@@ -37,7 +37,7 @@ export function MustChangePasswordGate({ children }: { children: React.ReactNode
     router.replace(ROUTES.CHANGE_PASSWORD);
   }, [mustChange, pathname, router]);
 
-  if (status === 'loading') return null;
+  if (status === 'loading' && !isPublicRoute(pathname)) return null;
   if (mustChange && !isPublicRoute(pathname)) return null;
 
   return <>{children}</>;

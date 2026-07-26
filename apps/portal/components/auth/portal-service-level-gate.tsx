@@ -24,7 +24,7 @@ export function PortalServiceLevelGate({ children }: { children: React.ReactNode
     router.replace(ROUTES.DASHBOARD);
   }, [blocked, router]);
 
-  if (loading) return null;
+  if (loading && !isPublicRoute(pathname)) return null;
   if (blocked) return null;
 
   return <>{children}</>;

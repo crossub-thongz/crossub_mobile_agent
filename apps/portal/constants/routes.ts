@@ -36,6 +36,7 @@ export const ROUTES = {
 export const PUBLIC_ROUTE_PATTERNS = [
   /^\/login\/?$/,
   /^\/register\/?$/,
+  /^\/register\/invite(\/|$)/,
   /^\/forgot-password\/?$/,
   /^\/reset-password(\/|$)/,
 ];
