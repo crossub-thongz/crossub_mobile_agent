@@ -17,6 +17,12 @@ export function needsPasswordChange(user: { mustChangePassword?: boolean }): boo
   return Boolean(user.mustChangePassword);
 }
 
+export function needsPasswordChangeWithoutCurrent(user: {
+  mustChangePasswordWithoutCurrent?: boolean;
+}): boolean {
+  return Boolean(user.mustChangePasswordWithoutCurrent);
+}
+
 /**
  * Post-login destination order:
  * 1) System access agreement (if required)
@@ -28,6 +34,7 @@ export function postAuthDestination(
     systemAccessAgreementRequired?: boolean;
     systemAccessAccepted?: boolean;
     mustChangePassword?: boolean;
+    mustChangePasswordWithoutCurrent?: boolean;
   },
   defaultRoute: string,
   agreementRoute: string,

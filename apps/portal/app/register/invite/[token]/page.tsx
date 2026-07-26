@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { Check, CheckCircle2, Copy, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -20,6 +20,36 @@ import {
 } from '@/lib/agent-registration';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import { ApiError } from '@/lib/api';
+import type { AuthUser } from '@/lib/auth-types';
+
+function EmailCopyRow({ email }: { email: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopied(true);
+      toast.success('Email copied');
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Could not copy email');
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <p className="min-w-0 truncate">Email: {email}</p>
+      <button
+        type="button"
+        onClick={() => void copy()}
+        className="text-muted-foreground shrink-0 rounded-md p-1 hover:bg-muted/50 hover:text-foreground"
+        aria-label="Copy email"
+      >
+        {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+      </button>
+    </div>
+  );
+}
 
 export default function AgentInviteRegisterPage() {
   const params = useParams<{ token: string }>();
@@ -30,9 +60,7 @@ export default function AgentInviteRegisterPage() {
   const [loading, setLoading] = useState(true);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(
-    null,
-  );
+  const [registeredUser, setRegisteredUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -53,20 +81,8 @@ export default function AgentInviteRegisterPage() {
     try {
       const result = await completeAgentInviteRegistration(token, true);
       await refresh();
-      if (result.temporaryPassword) {
-        setCredentials({ email: result.user.email, password: result.temporaryPassword });
-        toast.success('Account created — welcome email sent with your login details.');
-      } else {
-        toast.success('Account created — check your email for login details.');
-        router.replace(
-          postAuthDestination(
-            result.user,
-            ROUTES.DASHBOARD,
-            ROUTES.SYSTEM_ACCESS_AGREEMENT,
-            ROUTES.CHANGE_PASSWORD,
-          ),
-        );
-      }
+      setRegisteredUser(result.user);
+      toast.success('Account created — choose your password to continue.');
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(registerAgentErrorMessage(err));
@@ -112,7 +128,7 @@ export default function AgentInviteRegisterPage() {
     );
   }
 
-  if (credentials) {
+  if (registeredUser) {
     return (
       <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
         <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg">
@@ -121,19 +137,18 @@ export default function AgentInviteRegisterPage() {
             <p className="font-medium">Registration complete</p>
           </div>
           <p className="text-muted-foreground text-sm">
-            Your welcome email includes these login details. Please change your password after
-            signing in.
+            Your account is ready. Choose a password on the next step to secure your Agent Portal
+            access.
           </p>
-          <div className="mt-4 space-y-2 rounded-lg border bg-muted/30 p-3 font-mono text-sm">
-            <p>Email: {credentials.email}</p>
-            <p>Password: {credentials.password}</p>
+          <div className="mt-4 rounded-lg border bg-muted/30 p-3 font-mono text-sm">
+            <EmailCopyRow email={registeredUser.email} />
           </div>
           <Button
             className="mt-6 w-full"
             onClick={() =>
               router.replace(
                 postAuthDestination(
-                  { mustChangePassword: true },
+                  registeredUser,
                   ROUTES.DASHBOARD,
                   ROUTES.SYSTEM_ACCESS_AGREEMENT,
                   ROUTES.CHANGE_PASSWORD,
@@ -141,7 +156,7 @@ export default function AgentInviteRegisterPage() {
               )
             }
           >
-            Continue to Agent Portal
+            Choose password
           </Button>
         </div>
       </div>
@@ -166,8 +181,8 @@ export default function AgentInviteRegisterPage() {
           <strong>{invite.agencyName}</strong>.
         </p>
         <p className="text-muted-foreground mt-2 text-sm">
-          Accept the terms below to create your Agent Portal account. We will email your username
-          and a temporary password immediately after registration.
+          Accept the terms below to create your Agent Portal account. You&apos;ll choose your
+          password immediately after registration.
         </p>
 
         <div className="mt-6 rounded-lg border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">

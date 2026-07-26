@@ -58,7 +58,7 @@ export async function fetchAgentInvitePreview(token: string): Promise<AgentInvit
 export async function completeAgentInviteRegistration(
   token: string,
   acceptTerms: boolean,
-): Promise<{ user: AuthUser; temporaryPassword?: string; credentialsSent: boolean }> {
+): Promise<{ user: AuthUser; credentialsSent: boolean }> {
   return api.post(`/auth/register-agent-invite/${encodeURIComponent(token)}`, {
     acceptTerms,
   });

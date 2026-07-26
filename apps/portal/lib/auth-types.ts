@@ -13,6 +13,8 @@ export interface AuthUser {
   systemAccessAgreementVersion?: string | null;
   /** True when the account must set a new password before using the app. */
   mustChangePassword?: boolean;
+  /** Sales invite registration — set a new password without the generated temp password. */
+  mustChangePasswordWithoutCurrent?: boolean;
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;

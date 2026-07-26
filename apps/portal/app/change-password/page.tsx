@@ -3,7 +3,7 @@
 import { ArrowLeft, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -20,28 +20,37 @@ import { ApiError, api } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
 import {
   needsPasswordChange,
+  needsPasswordChangeWithoutCurrent,
   needsSystemAccessAgreement,
 } from '@/lib/system-access-agreement';
 
-const schema = z
-  .object({
-    currentPassword: z.string().min(1, 'Enter your current password'),
-    newPassword: z
-      .string()
-      .min(PASSWORD_MIN, `Min ${PASSWORD_MIN} characters`)
-      .max(PASSWORD_MAX),
-    confirmPassword: z.string().min(1, 'Confirm your new password'),
-  })
-  .refine((v) => v.newPassword === v.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  })
-  .refine((v) => v.currentPassword !== v.newPassword, {
-    message: 'New password must be different from the current password',
-    path: ['newPassword'],
-  });
+type FormValues = {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword: string;
+};
 
-type FormValues = z.infer<typeof schema>;
+function buildSchema(skipCurrentPassword: boolean) {
+  return z
+    .object({
+      currentPassword: skipCurrentPassword
+        ? z.string().optional()
+        : z.string().min(1, 'Enter your current password'),
+      newPassword: z
+        .string()
+        .min(PASSWORD_MIN, `Min ${PASSWORD_MIN} characters`)
+        .max(PASSWORD_MAX),
+      confirmPassword: z.string().min(1, 'Confirm your new password'),
+    })
+    .refine((v) => v.newPassword === v.confirmPassword, {
+      message: 'Passwords do not match',
+      path: ['confirmPassword'],
+    })
+    .refine((v) => skipCurrentPassword || v.currentPassword !== v.newPassword, {
+      message: 'New password must be different from the current password',
+      path: ['newPassword'],
+    });
+}
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -52,7 +61,9 @@ export default function ChangePasswordPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const forced = Boolean(user && needsPasswordChange(user));
+  const skipCurrentPassword = Boolean(user && needsPasswordChangeWithoutCurrent(user));
   const fromSettings = searchParams.get('from') === 'settings';
+  const schema = useMemo(() => buildSchema(skipCurrentPassword), [skipCurrentPassword]);
 
   useEffect(() => {
     if (status === 'guest') {
@@ -81,7 +92,6 @@ export default function ChangePasswordPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      // Keep the access cookie fresh before the authenticated change-password call.
       try {
         await api.post('/auth/refresh');
       } catch {
@@ -89,7 +99,7 @@ export default function ChangePasswordPage() {
       }
 
       await api.post<{ user: AuthUser }>('/auth/change-password', {
-        currentPassword: values.currentPassword,
+        ...(skipCurrentPassword ? {} : { currentPassword: values.currentPassword }),
         newPassword: values.newPassword,
       });
       await api.post('/auth/refresh');
@@ -120,7 +130,6 @@ export default function ChangePasswordPage() {
     );
   }
 
-  // If somehow still needing agreement, don't flash the form.
   if (needsSystemAccessAgreement(user)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -150,40 +159,46 @@ export default function ChangePasswordPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {forced ? 'Required before access' : 'Account security'}
             </p>
-            <h1 className="text-xl font-semibold text-foreground">Change password</h1>
+            <h1 className="text-xl font-semibold text-foreground">
+              {skipCurrentPassword ? 'Choose your password' : 'Change password'}
+            </h1>
           </div>
         </div>
 
         <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-          {forced
-            ? 'Your account was set up with a temporary password. Choose a new password to continue.'
-            : 'Enter your current password, then choose a new one.'}
+          {skipCurrentPassword
+            ? 'Choose a password for your Agent Portal account to continue.'
+            : forced
+              ? 'Your account was set up with a temporary password. Enter it below, then choose a new password.'
+              : 'Enter your current password, then choose a new one.'}
         </p>
 
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-1.5">
-            <Label htmlFor="currentPassword">Existing password</Label>
-            <div className="relative">
-              <Input
-                id="currentPassword"
-                type={showCurrent ? 'text' : 'password'}
-                autoComplete="current-password"
-                className="pr-10"
-                {...register('currentPassword')}
-              />
-              <button
-                type="button"
-                className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2"
-                onClick={() => setShowCurrent((v) => !v)}
-                aria-label={showCurrent ? 'Hide password' : 'Show password'}
-              >
-                {showCurrent ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
+          {!skipCurrentPassword ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="currentPassword">Existing password</Label>
+              <div className="relative">
+                <Input
+                  id="currentPassword"
+                  type={showCurrent ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  className="pr-10"
+                  {...register('currentPassword')}
+                />
+                <button
+                  type="button"
+                  className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                  onClick={() => setShowCurrent((v) => !v)}
+                  aria-label={showCurrent ? 'Hide password' : 'Show password'}
+                >
+                  {showCurrent ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+              {errors.currentPassword ? (
+                <p className="text-destructive text-xs">{errors.currentPassword.message}</p>
+              ) : null}
             </div>
-            {errors.currentPassword ? (
-              <p className="text-destructive text-xs">{errors.currentPassword.message}</p>
-            ) : null}
-          </div>
+          ) : null}
 
           <div className="space-y-1.5">
             <Label htmlFor="newPassword">New password</Label>
