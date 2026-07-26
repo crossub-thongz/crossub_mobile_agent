@@ -325,7 +325,7 @@ export function buildRegistryApiBody(
       managementSynced.managementRateGst === 'exclude'
         ? managementSynced.managementRateGst
         : undefined,
-    managementFees: form.management.fees.filter((f) => f.feeType || f.amount.trim()),
+    managementFees: management.fees.filter((f) => f.feeType || f.amount.trim()),
     routineInspectionFrequency:
       values.leaseStatus && values.leaseStatus !== 'vacant'
         ? values.routineInspectionFrequency

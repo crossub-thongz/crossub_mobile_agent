@@ -391,7 +391,12 @@ function jobCreatedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
   const hasCreatedAt = Boolean(ctx.workspaceCase.createdAt);
   const hasEmailRecords =
     emailNotifications(ctx.workspaceCase).length > 0 ||
-    ctx.workspaceCase.notifications.length > 0;
+    ctx.workspaceCase.notifications.some((n) => n.channel === 'email') ||
+    ctx.workspaceCase.auditEntries.some(
+      (e) =>
+        e.action === 'maintenance_job_created_email' ||
+        e.action === 'maintenance_job_created_agent_email',
+    );
 
   return [
     {
@@ -798,16 +803,69 @@ export function buildMaintenanceAgentWorkflow(
   };
 }
 
-/** Job-created is in-app only — do not invent a fake outbound email for history. */
+/** Job-created acknowledgment + agent notification emails from the audit trail. */
 export function buildJobCreatedEmails(
-  _ctx: MaintenanceWorkflowContext,
+  ctx: MaintenanceWorkflowContext,
 ): MaintenanceEmailRecord[] {
-  return [];
+  const byId = new Map<string, MaintenanceEmailRecord>();
+
+  for (const entry of ctx.workspaceCase.auditEntries) {
+    const parsed = parseJobCreatedEmailFromAudit(entry, ctx);
+    if (parsed) byId.set(parsed.id, parsed);
+  }
+
+  for (const n of ctx.workspaceCase.notifications) {
+    if (n.channel !== 'email') continue;
+    if (!/maintenance job|repair request|received your maintenance|new maintenance job/i.test(n.title)) {
+      continue;
+    }
+    const kind = /agent|managing agent/i.test(`${n.title} ${n.message}`)
+      ? 'job_created_agent'
+      : 'job_created_tenant_ack';
+    byId.set(n.id, mapEmailNotification(n, ctx.workspaceCase, kind));
+  }
+
+  return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at));
+}
+
+function parseJobCreatedEmailFromAudit(
+  entry: MaintenanceWorkspaceCase['auditEntries'][number],
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceEmailRecord | null {
+  if (
+    entry.action !== 'maintenance_job_created_email' &&
+    entry.action !== 'maintenance_job_created_agent_email'
+  ) {
+    return null;
+  }
+
+  const msg = entry.message.trim();
+  const match = msg.match(/^(.+?)\s+email sent\s*\(([^)]+)\)\.(?:[^\n]*\n)*\n+([\s\S]+)$/i);
+  if (!match) return null;
+
+  const body = match[3]?.trim() ?? '';
+  if (!body) return null;
+
+  const isAgent = entry.action === 'maintenance_job_created_agent_email';
+
+  return {
+    id: entry.id,
+    subject: match[2]?.trim() || 'Maintenance email',
+    body,
+    ...maintenanceAgentSender(ctx.workspaceCase),
+    to: isAgent
+      ? ctx.workspaceCase.agent?.email ?? 'Managing agent'
+      : ctx.workspaceCase.tenant?.email ?? ctx.workspaceCase.tenant?.name ?? 'Tenant',
+    at: entry.timestamp,
+    kind: isAgent ? 'job_created_agent' : 'job_created_tenant_ack',
+  };
 }
 
 const IMPORTANT_MAINTENANCE_EMAIL_KINDS = new Set([
   'responsibility_review',
   'responsibility_set',
+  'job_created_tenant_ack',
+  'job_created_agent',
   'rfq',
   'contractor_assigned',
   'quotation_submitted',
@@ -846,6 +904,13 @@ function parseGenericMaintenanceEmailFromAudit(
   entry: MaintenanceWorkspaceCase['auditEntries'][number],
   ctx: MaintenanceWorkflowContext,
 ): MaintenanceEmailRecord | null {
+  if (
+    entry.action === 'maintenance_job_created_email' ||
+    entry.action === 'maintenance_job_created_agent_email'
+  ) {
+    return null;
+  }
+
   const msg = entry.message.trim();
   const match = msg.match(/^(.+?)\s+email sent\s*\(([^)]+)\)\.(?:[^\n]*\n)*\n+([\s\S]+)$/i);
   if (!match) return null;
