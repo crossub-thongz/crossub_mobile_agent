@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { CalendarDays, ChevronRight, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronRight, Trash2 } from 'lucide-react';
 
 import {
   MODULE_TABLE_COLUMN_WIDTHS,
@@ -61,11 +61,19 @@ import type {
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import {
   tribunalCaseHasArrears,
+  tribunalPrimaryDaysOverdue,
   tribunalStatusBadgeVariant,
   tribunalStatusLabel,
   tribunalTypeLabel,
 } from '@/lib/tribunal-labels';
-import { cn, formatCurrency, formatDate, formatDateTime, formatScheduledAt } from '@/lib/utils';
+import {
+  cn,
+  daysUntilDate,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatScheduledAt,
+} from '@/lib/utils';
 
 function capitalize(value: string): string {
   if (!value) return '—';
@@ -491,6 +499,30 @@ export function RentReviewListTable({
   );
 }
 
+function TribunalTableCountdown({
+  days,
+  label,
+  tone = 'overdue',
+}: {
+  days: number;
+  label: string;
+  tone?: 'overdue' | 'upcoming' | 'muted';
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-[11px] font-medium',
+        tone === 'overdue' && days > 0 && 'text-rose-600 dark:text-rose-400',
+        tone === 'upcoming' && days >= 0 && 'text-amber-700 dark:text-amber-300',
+        tone === 'muted' && 'text-muted-foreground',
+      )}
+    >
+      <CalendarDays className="size-3.5 shrink-0" aria-hidden />
+      {label}
+    </span>
+  );
+}
+
 function TribunalArrearsCell({
   amount,
   daysOverdue,
@@ -508,19 +540,55 @@ function TribunalArrearsCell({
         {amount != null ? formatCurrency(amount) : '—'}
       </span>
       {daysOverdue != null ? (
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 text-[11px] font-medium',
-            daysOverdue > 0
-              ? 'text-rose-600 dark:text-rose-400'
-              : 'text-muted-foreground',
-          )}
-        >
-          <CalendarDays className="size-3.5 shrink-0" aria-hidden />
-          {daysOverdue} day{daysOverdue === 1 ? '' : 's'}
-        </span>
+        <TribunalTableCountdown
+          days={daysOverdue}
+          label={`${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`}
+          tone={daysOverdue > 0 ? 'overdue' : 'muted'}
+        />
       ) : null}
     </div>
+  );
+}
+
+function TribunalHearingCell({ hearingDate }: { hearingDate?: string | null }) {
+  if (!hearingDate?.trim()) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const daysUntil = daysUntilDate(hearingDate);
+  let countdownLabel: string | null = null;
+  let tone: 'overdue' | 'upcoming' | 'muted' = 'muted';
+
+  if (daysUntil != null) {
+    if (daysUntil > 0) {
+      countdownLabel = `In ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
+      tone = 'upcoming';
+    } else if (daysUntil === 0) {
+      countdownLabel = 'Today';
+      tone = 'upcoming';
+    } else {
+      countdownLabel = `${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? '' : 's'} ago`;
+      tone = 'muted';
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="tabular-nums font-medium">{formatDate(hearingDate)}</span>
+      {countdownLabel ? (
+        <TribunalTableCountdown days={daysUntil ?? 0} label={countdownLabel} tone={tone} />
+      ) : null}
+    </div>
+  );
+}
+
+function TribunalActionBadge({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+      <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+      Action required
+    </span>
   );
 }
 
@@ -573,18 +641,18 @@ export function TribunalListTable({
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                   <div>
                     <p className="text-muted-foreground mb-0.5">Claimed</p>
-                    <p className="font-medium tabular-nums">
-                      {c.amountClaimed != null ? formatCurrency(c.amountClaimed) : '—'}
-                    </p>
+                    <TribunalArrearsCell
+                      amount={c.amountClaimed ?? c.rentArrearsAmount}
+                      daysOverdue={tribunalPrimaryDaysOverdue(c)}
+                    />
                   </div>
                   <div>
                     <p className="text-muted-foreground mb-0.5">Hearing</p>
-                    <p className="font-medium tabular-nums">
-                      {c.hearingDate ? formatDate(c.hearingDate) : '—'}
-                    </p>
+                    <TribunalHearingCell hearingDate={c.hearingDate} />
                   </div>
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <TribunalActionBadge show={Boolean(c.requiresAction && c.status === 'active')} />
                   <StatusBadge
                     label={tribunalStatusLabel(c.apiStatus)}
                     variant={tribunalStatusBadgeVariant(c.apiStatus)}
@@ -630,18 +698,26 @@ export function TribunalListTable({
                         </ModuleTableTruncateText>
                       ) : null}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-sm font-medium tabular-nums">
-                      {c.amountClaimed != null ? formatCurrency(c.amountClaimed) : '—'}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-sm text-muted-foreground tabular-nums">
-                      {c.hearingDate ? formatDate(c.hearingDate) : '—'}
+                    <td className="whitespace-nowrap px-3 py-3 text-sm">
+                      <TribunalArrearsCell
+                        amount={c.amountClaimed ?? c.rentArrearsAmount}
+                        daysOverdue={tribunalPrimaryDaysOverdue(c)}
+                      />
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-sm">
-                      <StatusBadge
-                        label={tribunalStatusLabel(c.apiStatus)}
-                        variant={tribunalStatusBadgeVariant(c.apiStatus)}
-                        className="normal-case"
-                      />
+                      <TribunalHearingCell hearingDate={c.hearingDate} />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <TribunalActionBadge
+                          show={Boolean(c.requiresAction && c.status === 'active')}
+                        />
+                        <StatusBadge
+                          label={tribunalStatusLabel(c.apiStatus)}
+                          variant={tribunalStatusBadgeVariant(c.apiStatus)}
+                          className="normal-case"
+                        />
+                      </div>
                     </td>
                     {interactive ? (
                       <td className="px-3 py-3 text-right text-muted-foreground">

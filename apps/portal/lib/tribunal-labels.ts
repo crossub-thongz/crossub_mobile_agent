@@ -56,3 +56,18 @@ export function tribunalCaseHasArrears(caseRow: {
     caseRow.tribunalType === 'RENTAL_ARREARS'
   );
 }
+
+/** Best overdue-day count for list/table badges (rent → bill → bond). */
+export function tribunalPrimaryDaysOverdue(caseRow: {
+  rentArrearsDaysOverdue?: number | null;
+  billArrearsDaysOverdue?: number | null;
+  bondArrearsDaysOverdue?: number | null;
+}): number | null {
+  const values = [
+    caseRow.rentArrearsDaysOverdue,
+    caseRow.billArrearsDaysOverdue,
+    caseRow.bondArrearsDaysOverdue,
+  ].filter((value): value is number => value != null);
+  if (values.length === 0) return null;
+  return Math.max(...values);
+}

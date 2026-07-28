@@ -48,25 +48,19 @@ function NavLink({
           : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
       )}
     >
-      <span className="relative shrink-0">
-        <Icon className={cn('size-4', !active && 'opacity-70')} />
-        {badge && badge > 0 ? (
-          <MessageUnreadBadge
-            count={badge}
-            size="sm"
-            className="absolute -top-1.5 -right-2 ring-2 ring-card"
-          />
-        ) : null}
-      </span>
+      <Icon className={cn('size-4 shrink-0', !active && 'opacity-70')} />
       <span
         className={cn(
-          'flex-1 truncate',
+          'min-w-0 flex-1 truncate',
           compact &&
             'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
         )}
       >
         {label}
       </span>
+      {badge && badge > 0 ? (
+        <MessageUnreadBadge count={badge} size="sm" className="shrink-0 ring-2 ring-card" />
+      ) : null}
     </Link>
   );
 }
