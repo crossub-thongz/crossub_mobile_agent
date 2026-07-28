@@ -186,11 +186,11 @@ export default function AgentInviteRegisterPage() {
         </p>
 
         <div className="mt-6 rounded-lg border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">System access agreement</p>
+          <p className="font-medium text-foreground">Terms &amp; system access agreement</p>
           <p className="mt-2">
-            By registering you agree to use the CROSSUB platform in accordance with our terms of
-            service, privacy policy, and agency management agreement. You are responsible for
-            safeguarding your login credentials and all activity under your account.
+            By registering you agree to the CROSSUB terms of service, privacy policy, and the
+            agency portal access agreement (confidentiality and acceptable use). Your acceptance
+            is recorded once — you will not be asked to sign again after registration.
           </p>
         </div>
 
