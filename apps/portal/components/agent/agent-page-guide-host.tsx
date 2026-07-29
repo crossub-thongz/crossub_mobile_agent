@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 
 import { AgentPageGuideDialog } from '@/components/agent/agent-page-guide-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useAgentPageGuides } from '@/components/providers/agent-page-guide-provider';
 import {
   getAgentPageGuide,
   resolveAgentPageGuideId,
@@ -14,20 +15,16 @@ import { isPublicRoute } from '@/constants/routes';
 import { subscribeContextualAgentPageGuide } from '@/lib/agent-page-guide-context';
 import { PORTAL_WELCOME_DISMISSED_EVENT } from '@/lib/agent-page-guide-events';
 import { fetchPortalWelcomeStatus } from '@/lib/crossub-api/agent-client';
-import {
-  isAgentPageGuideSeen,
-  markAgentPageGuideSeen,
-} from '@/lib/agent-page-guide-state';
 
 /**
  * Shows a first-visit onboarding guide when the agent opens each main list page.
- * Guides appear for all authenticated users; they wait until the global welcome
- * modal is dismissed when that modal is showing.
+ * Completion state is stored on the user record via the API.
  */
 export function AgentPageGuideHost() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { status } = useAuth();
+  const { ready, isSeen, markSeen } = useAgentPageGuides();
   const [welcomeBlocking, setWelcomeBlocking] = useState(false);
   const [contextGuideId, setContextGuideId] = useState<AgentPageGuideId | null>(null);
   const [activeGuideId, setActiveGuideId] = useState<AgentPageGuideId | null>(null);
@@ -66,7 +63,13 @@ export function AgentPageGuideHost() {
   }, [status]);
 
   useEffect(() => {
-    if (status !== 'authed' || welcomeBlocking || !pathname || isPublicRoute(pathname)) {
+    if (
+      status !== 'authed' ||
+      !ready ||
+      welcomeBlocking ||
+      !pathname ||
+      isPublicRoute(pathname)
+    ) {
       setActiveGuideId(null);
       return;
     }
@@ -74,14 +77,14 @@ export function AgentPageGuideHost() {
     const pathnameGuideId = resolveAgentPageGuideId(pathname, searchParams);
     const guideId = contextGuideId ?? pathnameGuideId;
 
-    if (!guideId || isAgentPageGuideSeen(guideId)) {
+    if (!guideId || isSeen(guideId)) {
       setActiveGuideId(null);
       return;
     }
 
     const timer = window.setTimeout(() => setActiveGuideId(guideId), 450);
     return () => window.clearTimeout(timer);
-  }, [pathname, searchParams, contextGuideId, status, welcomeBlocking]);
+  }, [pathname, searchParams, contextGuideId, status, welcomeBlocking, ready, isSeen]);
 
   if (!activeGuideId) return null;
 
@@ -92,11 +95,11 @@ export function AgentPageGuideHost() {
       open
       guide={guide}
       onDismiss={() => {
-        markAgentPageGuideSeen(activeGuideId, 'completed');
+        void markSeen(activeGuideId, 'completed');
         setActiveGuideId(null);
       }}
       onSkip={() => {
-        markAgentPageGuideSeen(activeGuideId, 'skipped');
+        void markSeen(activeGuideId, 'skipped');
         setActiveGuideId(null);
       }}
     />

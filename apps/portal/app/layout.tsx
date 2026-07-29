@@ -16,6 +16,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AddToHomeScreenPrompt } from '@/components/agent/add-to-home-screen-prompt';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
+import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
 import './globals.css';
 
@@ -75,13 +76,15 @@ export default function RootLayout({
                   <AgentDataProvider>
                     <PortalServiceLevelGate>
                       <AgentNotificationDialogProvider>
-                        <AgentNotificationLiveAlert />
-                        <AddToHomeScreenPrompt />
-                        {children}
-                        <WelcomeOnboarding />
-                        <Suspense fallback={null}>
-                          <AgentPageGuideHost />
-                        </Suspense>
+                        <AgentPageGuideProvider>
+                          <AgentNotificationLiveAlert />
+                          <AddToHomeScreenPrompt />
+                          {children}
+                          <WelcomeOnboarding />
+                          <Suspense fallback={null}>
+                            <AgentPageGuideHost />
+                          </Suspense>
+                        </AgentPageGuideProvider>
                       </AgentNotificationDialogProvider>
                     </PortalServiceLevelGate>
                   </AgentDataProvider>

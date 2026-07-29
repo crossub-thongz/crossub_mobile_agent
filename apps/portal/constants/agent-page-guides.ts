@@ -40,10 +40,6 @@ export type AgentPageGuideContent = {
   tips: string[];
 };
 
-const STORAGE_PREFIX = 'crossub-agent-page-guide:v2:';
-
-export const AGENT_PAGE_GUIDE_STORAGE_PREFIX = STORAGE_PREFIX;
-
 export function resolveInspectionTypeGuideId(type: string | null | undefined): AgentPageGuideId {
   if (!type) return 'inspections';
   const normalized = type.toUpperCase();

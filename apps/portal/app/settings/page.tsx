@@ -6,17 +6,18 @@ import { ChevronRight, Moon, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AgentShell } from '@/components/layout/agent-shell';
+import { useAgentPageGuides } from '@/components/providers/agent-page-guide-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
-import { resetAgentPageGuides } from '@/lib/agent-page-guide-state';
 import { useAgentStore, type NotificationPrefs } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { hasFullManagementAccess } = useAgentData();
+  const { resetGuides } = useAgentPageGuides();
   const { resolvedTheme, setTheme } = useTheme();
   const prefs = useAgentStore((s) => s.notificationPrefs);
   const setPref = useAgentStore((s) => s.setNotificationPref);
@@ -118,7 +119,8 @@ export default function SettingsPage() {
           <div className="rounded-xl border bg-card p-4">
             <p className="text-sm font-medium">Page guides</p>
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              Short onboarding guides appear the first time you open each main section.
+              Short onboarding guides appear the first time you open each main section. Progress
+              is saved to your account.
             </p>
             <Button
               type="button"
@@ -126,9 +128,14 @@ export default function SettingsPage() {
               size="sm"
               className="mt-3"
               onClick={() => {
-                resetAgentPageGuides();
-                toast.success('Page guides reset — open a section to see its guide again');
-                router.push(ROUTES.DASHBOARD);
+                void resetGuides()
+                  .then(() => {
+                    toast.success('Page guides reset — open a section to see its guide again');
+                    router.push(ROUTES.DASHBOARD);
+                  })
+                  .catch(() => {
+                    toast.error('Could not reset page guides. Try again.');
+                  });
               }}
             >
               Replay page guides

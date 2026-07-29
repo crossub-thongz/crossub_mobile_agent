@@ -394,6 +394,12 @@ export type AgentPortalWelcomeStatus = {
   dismissed: boolean;
 };
 
+export type AgentPageGuideStatus = 'completed' | 'skipped';
+
+export type AgentPortalPageGuidesStatus = {
+  seen: Record<string, AgentPageGuideStatus>;
+};
+
 /** Sales onboarding gate for the in-app welcome tour. */
 export async function fetchPortalWelcomeStatus(): Promise<AgentPortalWelcomeStatus> {
   return agentFetch<AgentPortalWelcomeStatus>('/agent/onboarding/welcome');
@@ -401,6 +407,27 @@ export async function fetchPortalWelcomeStatus(): Promise<AgentPortalWelcomeStat
 
 export async function dismissPortalWelcome(): Promise<AgentPortalWelcomeStatus> {
   return agentFetch<AgentPortalWelcomeStatus>('/agent/onboarding/welcome/dismiss', {
+    method: 'POST',
+  });
+}
+
+/** Section guide completion state — synced per user on the server. */
+export async function fetchPageGuidesStatus(): Promise<AgentPortalPageGuidesStatus> {
+  return agentFetch<AgentPortalPageGuidesStatus>('/agent/onboarding/page-guides');
+}
+
+export async function markPageGuideSeen(
+  guideId: string,
+  status: AgentPageGuideStatus,
+): Promise<AgentPortalPageGuidesStatus> {
+  return agentFetch<AgentPortalPageGuidesStatus>('/agent/onboarding/page-guides/mark', {
+    method: 'POST',
+    body: JSON.stringify({ guideId, status }),
+  });
+}
+
+export async function resetPageGuides(): Promise<AgentPortalPageGuidesStatus> {
+  return agentFetch<AgentPortalPageGuidesStatus>('/agent/onboarding/page-guides/reset', {
     method: 'POST',
   });
 }
