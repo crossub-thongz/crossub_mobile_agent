@@ -10,7 +10,7 @@ import { contractorIdsMatch } from '@/lib/maintenance/resolve-contractor-display
 import type { MaintenanceRequest, Priority, TimelineEntry } from '@/lib/types';
 import { maintenanceDetail } from '@/constants/routes';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
-import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 
 const STATUS_LABEL: Record<string, string> = {
   under_review: 'Under review',
@@ -133,7 +133,7 @@ export function mapApiMaintenanceRequest(
 
   return {
     id: req.id,
-    trackingNumber: workflowCaseReferenceLabel(req.id, 'maintenance'),
+    trackingNumber: maintenanceReferenceLabel(req.orderNumber, req.id),
     propertyId: req.id,
     propertyAddress: req.address,
     title: req.issueType,

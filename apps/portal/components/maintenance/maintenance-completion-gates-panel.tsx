@@ -109,6 +109,21 @@ export function MaintenanceCompletionGatesPanel({
   const invoiceUploaded =
     Boolean(ctx.workspaceCase.invoiceUploaded) || invoiceAttachments.length > 0;
 
+  // Mirrors the API rule (`setAgentApprovalReceived` rejects approval with no evidence),
+  // so the gate must read as blocked rather than as an unticked action.
+  const canApprove = canEdit && hasCompletionEvidence;
+  const approvalBlocked = canEdit && !hasCompletionEvidence;
+
+  // A disabled input swallows its own clicks, so the label carries the handler and the
+  // input is click-through — otherwise tapping the box itself explains nothing.
+  const handleBlockedApprovalClick = () => {
+    if (!approvalBlocked) return;
+    toast.info('Completion evidence required', {
+      description:
+        'The contractor has not uploaded completion photos for this job yet. This gate unlocks as soon as they arrive.',
+    });
+  };
+
   const runGateUpdate = async (action: () => Promise<unknown>, success: string) => {
     if (!canEdit) return;
     setBusy(true);
@@ -152,11 +167,6 @@ export function MaintenanceCompletionGatesPanel({
       setInvoiceUploading(false);
     }
   };
-
-  // Mirrors the API rule (`setAgentApprovalReceived` rejects approval with no evidence),
-  // so the gate must read as blocked rather than as an unticked action.
-  const canApprove = canEdit && hasCompletionEvidence;
-  const approvalBlocked = canEdit && !hasCompletionEvidence;
 
   const allGatesCleared =
     hasCompletionEvidence &&
@@ -222,6 +232,7 @@ export function MaintenanceCompletionGatesPanel({
         {canEdit ? (
           <label
             aria-disabled={!canApprove}
+            onClick={handleBlockedApprovalClick}
             className={cn(
               'flex items-center gap-3 rounded-lg border bg-background p-3 transition-colors',
               canApprove
@@ -234,7 +245,7 @@ export function MaintenanceCompletionGatesPanel({
               type="checkbox"
               className={cn(
                 'size-4 rounded border-primary accent-primary',
-                canApprove ? 'cursor-pointer' : 'cursor-not-allowed',
+                canApprove ? 'cursor-pointer' : 'pointer-events-none cursor-not-allowed',
               )}
               checked={agentApproved}
               disabled={busy || !hasCompletionEvidence}

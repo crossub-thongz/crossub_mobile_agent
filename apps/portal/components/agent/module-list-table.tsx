@@ -26,7 +26,8 @@ export type ModuleTableColumn<T extends string> =
 
 /** Percentage or fixed widths for `table-fixed` columns — keeps tables within the main panel. */
 export const MODULE_TABLE_COLUMN_WIDTHS = {
-  maintenance: ['8%', '11%', '16%', '22%', '13%', '12%', '8%', '5%'],
+  // First column now holds the order number (`MR-00057`) — 8% clipped it to "MR-000…".
+  maintenance: ['10%', '11%', '16%', '21%', '13%', '12%', '8%', '5%'],
   inspections: ['7%', '22%', '8%', '11%', '11%', '11%', '14%', '5%'],
   inspectionsWithDelete: ['7%', '20%', '8%', '10%', '10%', '10%', '13%', '4%', '5%'],
   leasingCycles: ['24%', '15%', '14%', '10%', '12%', '12%', '5%'],

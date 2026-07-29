@@ -28,7 +28,8 @@ export function PropertyMaintenanceCaseDialog({
 }) {
   if (!request) return null;
 
-  const orderRef = workflowCaseReferenceLabel(request.id, 'maintenance');
+  const orderRef =
+    request.trackingNumber || workflowCaseReferenceLabel(request.id, 'maintenance');
 
   return (
     <CaseDetailDialog

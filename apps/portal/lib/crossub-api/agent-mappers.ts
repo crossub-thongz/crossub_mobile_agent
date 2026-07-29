@@ -41,7 +41,7 @@ import {
   TRIBUNAL_CASE_STATUS,
   VACATING_STATUS,
 } from '@/constants/api-enums';
-import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatPropertyFullAddress } from '@/lib/utils';
 import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
 import type {
@@ -376,7 +376,7 @@ export function mapAgentMaintenance(
     const body = m.categoryName ? (m.description ?? '') : parsed.body || (m.description ?? '');
     return {
       id: m.id,
-      trackingNumber: workflowCaseReferenceLabel(m.id, 'maintenance'),
+      trackingNumber: maintenanceReferenceLabel(m.orderNumber, m.id),
       propertyId: m.propertyId ?? '',
       propertyAddress: m.propertyAddress,
       title: issueType,
