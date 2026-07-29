@@ -63,3 +63,21 @@ export async function completeAgentInviteRegistration(
     acceptTerms,
   });
 }
+
+export async function fetchAgencyAgentInvitePreview(
+  token: string,
+): Promise<AgentInvitePreview> {
+  const result = await api.get<{ invite: AgentInvitePreview }>(
+    `/auth/register-agency-agent-invite/${encodeURIComponent(token)}`,
+  );
+  return result.invite;
+}
+
+export async function completeAgencyAgentInviteRegistration(
+  token: string,
+  acceptTerms: boolean,
+): Promise<{ user: AuthUser; credentialsSent: boolean }> {
+  return api.post(`/auth/register-agency-agent-invite/${encodeURIComponent(token)}`, {
+    acceptTerms,
+  });
+}

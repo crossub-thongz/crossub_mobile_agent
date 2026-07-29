@@ -119,6 +119,56 @@ export async function fetchAgency(agencyId: string): Promise<AgentAgency> {
   return data;
 }
 
+export type AgencyTeamMember = {
+  userId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  tier: 'PRINCIPAL' | 'AGENT';
+  assignedAt: string;
+  assignedPropertyCount: number;
+};
+
+export type AgencyTeamResponse = {
+  callerTier: 'PRINCIPAL' | 'AGENT';
+  members: AgencyTeamMember[];
+};
+
+export async function fetchAgencyTeam(agencyId: string): Promise<AgencyTeamResponse> {
+  return agentFetch<AgencyTeamResponse>(`/agent/agencies/${agencyId}/team`);
+}
+
+export async function inviteAgencyTeamMember(
+  agencyId: string,
+  body: { email: string; contactName?: string },
+): Promise<{ inviteSent: boolean; registrationUrl: string | null; alreadyRegistered: boolean | null }> {
+  return agentFetch(`/agent/agencies/${agencyId}/team/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function removeAgencyTeamMember(
+  agencyId: string,
+  userId: string,
+): Promise<AgencyTeamResponse> {
+  return agentFetch<AgencyTeamResponse>(`/agent/agencies/${agencyId}/team/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function assignPropertyAgent(
+  propertyId: string,
+  assignedAgentUserId: string | null,
+): Promise<AgentProperty> {
+  return agentFetch<AgentProperty>(`/agent/properties/${propertyId}/assigned-agent`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assignedAgentUserId }),
+  });
+}
+
 /** Properties across the assigned agencies (`GET /api/v1/agent/properties`). */
 export async function fetchProperties(): Promise<AgentProperty[]> {
   const data = await agentFetch<{ items: AgentProperty[] }>('/agent/properties');

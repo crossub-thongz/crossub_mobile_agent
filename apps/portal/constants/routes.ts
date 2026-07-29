@@ -37,6 +37,7 @@ export const PUBLIC_ROUTE_PATTERNS = [
   /^\/login\/?$/,
   /^\/register\/?$/,
   /^\/register\/invite(\/|$)/,
+  /^\/register\/team-invite(\/|$)/,
   /^\/forgot-password\/?$/,
   /^\/reset-password(\/|$)/,
 ];

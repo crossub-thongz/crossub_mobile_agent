@@ -262,6 +262,8 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
       typeof a.portalServiceLevel === 'string'
         ? (a.portalServiceLevel as Agency['portalServiceLevel'])
         : 'LEVEL_2_FULL_MANAGEMENT',
+    membershipTier:
+      (a as { membershipTier?: AgencyMembershipTier }).membershipTier ?? 'PRINCIPAL',
     propertyCount: 0,
     abn: asString(a.abn),
     licenceNumber: asString(a.licenceNumber),

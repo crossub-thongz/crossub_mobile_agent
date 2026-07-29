@@ -4,6 +4,7 @@ import { notFound, useParams } from 'next/navigation';
 import { Building2, Mail, Phone } from 'lucide-react';
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
+import { AgencyTeamPanel } from '@/components/agent/agency-team-panel';
 import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { PropertyListCard } from '@/components/agent/property-list-card';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -34,6 +35,7 @@ export default function AgencyDetailPage() {
   if (!agency) notFound();
 
   const agencyProperties = properties.filter((p) => p.agencyId === id);
+  const isPrincipal = agency.membershipTier !== 'AGENT';
   const occupied = agencyProperties.filter((p) => p.leaseStatus !== 'vacant').length;
   const vacant = agencyProperties.length - occupied;
 
@@ -108,6 +110,8 @@ export default function AgencyDetailPage() {
             </InfoRow>
           )}
         </InfoPanel>
+
+        <AgencyTeamPanel agencyId={id} canManage={isPrincipal} />
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">
