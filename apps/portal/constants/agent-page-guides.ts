@@ -46,6 +46,21 @@ export function resolveInspectionTypeGuideId(type: string | null | undefined): A
   return INSPECTION_TYPE_GUIDE_MAP[normalized] ?? 'inspections';
 }
 
+export function resolveLeasingTabGuideId(tab: string): AgentPageGuideId {
+  switch (tab) {
+    case 'rent-review':
+      return 'rent-review';
+    case 'end-leasing':
+      return 'vacating';
+    case 'transfer':
+    case 'history':
+      return 'leasing';
+    case 'new-leasing':
+    default:
+      return 'leasing';
+  }
+}
+
 export function resolveAgentPageGuideId(
   pathname: string,
   searchParams?: Pick<URLSearchParams, 'get'> | null,
@@ -198,11 +213,11 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
     pageName: 'Leasing',
     eyebrow: 'New tenancies',
     overview:
-      'Active leasing cycles across your portfolio — applicants, open inspections, onboarding, and ingoing handover.',
+      'Active leasing cycles across your portfolio — use the tabs for new leasing, rent review, end-leasing move-outs, transfer, and history.',
     steps: [
       {
-        title: 'Pick a property cycle',
-        description: 'Each row is a property moving through advertise → apply → onboard → move-in.',
+        title: 'Pick a tab',
+        description: 'New leasing, Rent review, End leasing, Transfer, and History each show a focused queue.',
       },
       {
         title: 'Advance the lifecycle',
@@ -454,11 +469,11 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
     pageName: 'Rent review',
     eyebrow: 'Rent increases',
     overview:
-      'Periodic and market rent reviews with landlord approval, notice generation, and lease variation.',
+      'Periodic and market rent reviews with landlord approval, notice generation, and lease variation — open from the Leasing tab or a property hub.',
     steps: [
       {
-        title: 'Select due reviews',
-        description: 'Properties approaching review dates appear here and on the property hub.',
+        title: 'Find due reviews',
+        description: 'Switch to the Rent review tab on Leasing to see properties approaching review dates.',
       },
       {
         title: 'Run the workflow',

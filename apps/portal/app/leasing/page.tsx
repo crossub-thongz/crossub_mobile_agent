@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeftRight, Building2, FileText, History, UserCheck } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { EndLeasingCasesList } from '@/components/agent/end-leasing-cases-list';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { PageIntro } from '@/components/agent/page-intro';
@@ -20,40 +21,59 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { resolveLeasingTabGuideId } from '@/constants/agent-page-guides';
 import {
   propertyNew,
   propertyTransfer,
   ROUTES,
 } from '@/constants/routes';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
-import { leasingCycleToJobRow, rentReviewToJobRow, tenantSelectionToJobRow } from '@/lib/portfolio-case-dialog';
+import { setContextualAgentPageGuide } from '@/lib/agent-page-guide-context';
+import {
+  leasingCycleToJobRow,
+  rentReviewToJobRow,
+  tenantSelectionToJobRow,
+} from '@/lib/portfolio-case-dialog';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
 const TABS = [
   { id: 'new-leasing', label: 'New leasing' },
   { id: 'transfer', label: 'Transfer' },
   { id: 'rent-review', label: 'Rent review' },
+  { id: 'end-leasing', label: 'End leasing' },
   { id: 'history', label: 'History' },
 ] as const;
 
 type LeasingTab = (typeof TABS)[number]['id'];
 
+const LEASING_TAB_IDS = new Set<string>(TABS.map((t) => t.id));
+
+function isLeasingTab(value: string | null): value is LeasingTab {
+  return value !== null && LEASING_TAB_IDS.has(value);
+}
+
 export default function LeasingPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const initialTab: LeasingTab =
-    tabParam === 'rent-review' ||
-    tabParam === 'history' ||
-    tabParam === 'transfer' ||
-    tabParam === 'new-leasing'
-      ? tabParam
-      : 'new-leasing';
+  const initialTab: LeasingTab = isLeasingTab(tabParam) ? tabParam : 'new-leasing';
 
   const [tab, setTab] = useState<LeasingTab>(initialTab);
   const [search, setSearch] = useState('');
-  const { tenantSelections, rentReviews, leasingRecords, leasingCycles, properties } = useAgentData();
+  const {
+    tenantSelections,
+    rentReviews,
+    leasingRecords,
+    leasingCycles,
+    properties,
+    vacating,
+  } = useAgentData();
   const { selectedJob, selectedId, openJob, closeJob, portfolioData, rentReviewDecisions } =
     usePortfolioCaseDialog();
+
+  useEffect(() => {
+    setContextualAgentPageGuide(resolveLeasingTabGuideId(tab));
+    return () => setContextualAgentPageGuide(null);
+  }, [tab]);
 
   const openLeasingCycle = useCallback(
     (cycle: (typeof leasingCycles)[number]) => {
@@ -99,6 +119,16 @@ export default function LeasingPage() {
     );
   }, [rentReviews, search]);
 
+  const filteredEndLeasing = useMemo(() => {
+    if (!search.trim()) return vacating;
+    const q = search.toLowerCase();
+    return vacating.filter(
+      (v) =>
+        v.propertyAddress.toLowerCase().includes(q) ||
+        v.id.toLowerCase().includes(q),
+    );
+  }, [vacating, search]);
+
   const filteredHistory = useMemo(() => {
     if (!search.trim()) return history;
     const q = search.toLowerCase();
@@ -112,7 +142,7 @@ export default function LeasingPage() {
   return (
     <AgentShell title="Leasing" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4 min-w-0">
-        <PageIntro description="New applications, rent reviews, and tenancy history across your portfolio." />
+        <PageIntro description="New applications, rent reviews, end-leasing move-outs, and tenancy history across your portfolio." />
 
         <div className="grid grid-cols-2 gap-2">
           <Button asChild variant="outline" className="w-full">
@@ -211,6 +241,17 @@ export default function LeasingPage() {
                 onItemClick={(item) => openJob(rentReviewToJobRow(item, rentReviewDecisions))}
               />
             )}
+          </section>
+        )}
+
+        {tab === 'end-leasing' && (
+          <section className="space-y-2">
+            <EndLeasingCasesList
+              cases={filteredEndLeasing}
+              selectedId={selectedId}
+              portfolioData={portfolioData}
+              onOpenCase={openJob}
+            />
           </section>
         )}
 
