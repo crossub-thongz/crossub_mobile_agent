@@ -153,6 +153,11 @@ export function MaintenanceCompletionGatesPanel({
     }
   };
 
+  // Mirrors the API rule (`setAgentApprovalReceived` rejects approval with no evidence),
+  // so the gate must read as blocked rather than as an unticked action.
+  const canApprove = canEdit && hasCompletionEvidence;
+  const approvalBlocked = canEdit && !hasCompletionEvidence;
+
   const allGatesCleared =
     hasCompletionEvidence &&
     agentApproved &&
@@ -200,26 +205,37 @@ export function MaintenanceCompletionGatesPanel({
           'space-y-3 rounded-xl border-2 p-4 shadow-sm',
           agentApproved
             ? 'border-emerald-500/40 bg-emerald-500/5'
-            : 'border-primary/50 bg-primary/10',
+            : approvalBlocked
+              ? 'border-border bg-muted/30'
+              : 'border-primary/50 bg-primary/10',
         )}
       >
         <SectionHeader title="Agent approval received" checked={agentApproved} />
         <p className="text-xs">
           {agentApproved
             ? 'You have approved the completion evidence for this job.'
-            : 'Review the completion evidence above, then confirm your approval to clear this gate.'}
+            : approvalBlocked
+              ? 'The contractor has not uploaded completion evidence yet. You can approve once it arrives.'
+              : 'Review the completion evidence above, then confirm your approval to clear this gate.'}
         </p>
 
         {canEdit ? (
           <label
+            aria-disabled={!canApprove}
             className={cn(
-              'flex cursor-pointer items-center gap-3 rounded-lg border bg-background p-3 transition-colors',
-              agentApproved ? 'border-emerald-500/30' : 'border-primary/30 hover:bg-primary/5',
+              'flex items-center gap-3 rounded-lg border bg-background p-3 transition-colors',
+              canApprove
+                ? 'cursor-pointer border-primary/30 hover:bg-primary/5'
+                : 'cursor-not-allowed border-border bg-muted/40 opacity-60',
+              agentApproved && 'border-emerald-500/30',
             )}
           >
             <input
               type="checkbox"
-              className="size-4 rounded border-primary accent-primary"
+              className={cn(
+                'size-4 rounded border-primary accent-primary',
+                canApprove ? 'cursor-pointer' : 'cursor-not-allowed',
+              )}
               checked={agentApproved}
               disabled={busy || !hasCompletionEvidence}
               onChange={(e) =>
@@ -232,12 +248,19 @@ export function MaintenanceCompletionGatesPanel({
             <span className="text-sm font-semibold">
               I have reviewed and approve the completion evidence
             </span>
+            {busy ? (
+              <Loader2 className="text-muted-foreground ml-auto size-4 shrink-0 animate-spin" />
+            ) : null}
           </label>
         ) : null}
 
-        {canEdit && !hasCompletionEvidence ? (
+        {approvalBlocked ? (
           <p className="text-muted-foreground text-xs">
             Waiting for contractor completion evidence before you can approve.
+          </p>
+        ) : canApprove && !agentApproved ? (
+          <p className="text-muted-foreground text-xs">
+            Ticking this saves straight away — there is no separate save step.
           </p>
         ) : null}
       </section>
@@ -330,11 +353,18 @@ export function MaintenanceCompletionGatesPanel({
 
       {/* Auto-close when all gates are checked */}
       {!isClosed && canEdit && responsibility !== 'tenant' ? (
-        <section className="space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <p className="text-muted-foreground text-center text-xs">
+        <section
+          className={cn(
+            'rounded-xl border p-4',
+            allGatesCleared
+              ? 'border-primary/30 bg-primary/5'
+              : 'border-dashed border-border bg-muted/30',
+          )}
+        >
+          <p className="text-muted-foreground text-xs leading-relaxed">
             {allGatesCleared
               ? 'All gates cleared — the case closes automatically.'
-              : 'Mark all completion gates — the case closes automatically once they are checked.'}
+              : 'Each gate saves the moment you complete it — there is nothing to submit here. The case closes automatically once all of them are checked.'}
           </p>
         </section>
       ) : null}

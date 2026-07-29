@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-29
+
+### Fixed
+- **The "I have reviewed and approve the completion evidence" checkbox looked clickable while it was disabled.** It is disabled until the contractor uploads completion evidence — the API rejects the approval otherwise (`setAgentApprovalReceived` throws "Upload completion evidence before recording agent approval") — but the row kept `cursor-pointer` and its hover highlight, and the whole gate stayed in the highlighted call-to-action treatment (`border-primary/50 bg-primary/10`) that marks it as the agent's next action. So the one card drawing the eye was the one that could not be actioned, and clicking it did nothing with no feedback. The row now takes `cursor-not-allowed`, a muted fill and reduced opacity while blocked, the section drops to a neutral surface, and the heading text says what is missing ("The contractor has not uploaded completion evidence yet. You can approve once it arrives") instead of instructing an action that cannot be taken.
+- **Nothing said the gates save themselves, so the panel read as if a save button was missing.** Ticking the checkbox writes immediately via `setMaintenanceAgentApproval` and toasts — there has never been a save step — but the only hint of that was the toast, which a blocked checkbox never reaches. The checkbox now shows an inline spinner while the write is in flight, and carries "Ticking this saves straight away — there is no separate save step" when it is actionable. The footer note was also styled like a disabled primary button (`border-primary/30 bg-primary/5`, centred text) sitting directly under the gates, which is what it was being mistaken for; it is now plainly a dashed note and states that each gate saves as it is completed.
+
 ## 2026-07-24
 
 ### Removed
