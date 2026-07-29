@@ -1,16 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, Moon, Sun } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useTheme } from '@/components/theme-provider';
+import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
+import { resetAgentPageGuides } from '@/lib/agent-page-guide-state';
 import { useAgentStore, type NotificationPrefs } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { hasFullManagementAccess } = useAgentData();
   const { resolvedTheme, setTheme } = useTheme();
   const prefs = useAgentStore((s) => s.notificationPrefs);
@@ -106,6 +111,30 @@ export default function SettingsPage() {
             Preferences are saved on this device and control which alerts appear in the
             notification bell and live pop-ups.
           </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold">Help</h2>
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-sm font-medium">Page guides</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              Short onboarding guides appear the first time you open each main section after
+              client onboarding is complete.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                resetAgentPageGuides();
+                toast.success('Page guides reset — open a section to see its guide again');
+                router.push(ROUTES.DASHBOARD);
+              }}
+            >
+              Replay page guides
+            </Button>
+          </div>
         </section>
 
         <section className="rounded-xl border bg-card divide-y">

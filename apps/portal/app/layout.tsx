@@ -14,6 +14,7 @@ import { ChunkReloadGuard } from '@/components/providers/chunk-reload-guard';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AddToHomeScreenPrompt } from '@/components/agent/add-to-home-screen-prompt';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
+import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
 import './globals.css';
 
@@ -77,6 +78,7 @@ export default function RootLayout({
                         <AddToHomeScreenPrompt />
                         {children}
                         <WelcomeOnboarding />
+                        <AgentPageGuideHost />
                       </AgentNotificationDialogProvider>
                     </PortalServiceLevelGate>
                   </AgentDataProvider>

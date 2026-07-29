@@ -377,6 +377,22 @@ export async function fetchPortfolio(): Promise<AgentPortfolio> {
   return data;
 }
 
+export type AgentPortalWelcomeStatus = {
+  eligible: boolean;
+  dismissed: boolean;
+};
+
+/** Sales onboarding gate for the in-app welcome tour. */
+export async function fetchPortalWelcomeStatus(): Promise<AgentPortalWelcomeStatus> {
+  return agentFetch<AgentPortalWelcomeStatus>('/agent/onboarding/welcome');
+}
+
+export async function dismissPortalWelcome(): Promise<AgentPortalWelcomeStatus> {
+  return agentFetch<AgentPortalWelcomeStatus>('/agent/onboarding/welcome/dismiss', {
+    method: 'POST',
+  });
+}
+
 export interface PreferredContractor {
   id: string;
   agencyId: string;

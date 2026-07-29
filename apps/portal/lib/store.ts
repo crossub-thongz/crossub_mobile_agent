@@ -124,8 +124,6 @@ interface AgentStore {
       initialAt?: string;
     },
   ) => string;
-  onboardingDismissed: boolean;
-  dismissOnboarding: () => void;
   uploadedDocuments: AgentDocument[];
   addUploadedDocument: (doc: AgentDocument) => void;
   notificationPrefs: NotificationPrefs;
@@ -291,8 +289,6 @@ export const useAgentStore = create<AgentStore>()(
         }));
         return thread.id;
       },
-      onboardingDismissed: false,
-      dismissOnboarding: () => set({ onboardingDismissed: true }),
       uploadedDocuments: [],
       addUploadedDocument: (doc) =>
         set((s) => ({ uploadedDocuments: [doc, ...s.uploadedDocuments] })),
