@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
+import { Suspense } from 'react';
 
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { SystemAccessAgreementGate } from '@/components/auth/system-access-agreement-gate';
@@ -78,7 +79,9 @@ export default function RootLayout({
                         <AddToHomeScreenPrompt />
                         {children}
                         <WelcomeOnboarding />
-                        <AgentPageGuideHost />
+                        <Suspense fallback={null}>
+                          <AgentPageGuideHost />
+                        </Suspense>
                       </AgentNotificationDialogProvider>
                     </PortalServiceLevelGate>
                   </AgentDataProvider>

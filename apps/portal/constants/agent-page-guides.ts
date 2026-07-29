@@ -7,6 +7,10 @@ export type AgentPageGuideId =
   | 'leasing'
   | 'maintenance'
   | 'inspections'
+  | 'inspections-open'
+  | 'inspections-ingoing'
+  | 'inspections-outgoing'
+  | 'inspections-routine'
   | 'accounting'
   | 'tribunal'
   | 'archive'
@@ -20,6 +24,13 @@ export type AgentPageGuideId =
   | 'tenants'
   | 'search';
 
+const INSPECTION_TYPE_GUIDE_MAP: Record<string, AgentPageGuideId> = {
+  OPEN: 'inspections-open',
+  INGOING: 'inspections-ingoing',
+  OUTGOING: 'inspections-outgoing',
+  ROUTINE: 'inspections-routine',
+};
+
 export type AgentPageGuideContent = {
   id: AgentPageGuideId;
   pageName: string;
@@ -29,15 +40,28 @@ export type AgentPageGuideContent = {
   tips: string[];
 };
 
-const STORAGE_PREFIX = 'crossub-agent-page-guide:v1:';
+const STORAGE_PREFIX = 'crossub-agent-page-guide:v2:';
 
 export const AGENT_PAGE_GUIDE_STORAGE_PREFIX = STORAGE_PREFIX;
 
-export function resolveAgentPageGuideId(pathname: string): AgentPageGuideId | null {
+export function resolveInspectionTypeGuideId(type: string | null | undefined): AgentPageGuideId {
+  if (!type) return 'inspections';
+  const normalized = type.toUpperCase();
+  return INSPECTION_TYPE_GUIDE_MAP[normalized] ?? 'inspections';
+}
+
+export function resolveAgentPageGuideId(
+  pathname: string,
+  searchParams?: Pick<URLSearchParams, 'get'> | null,
+): AgentPageGuideId | null {
   const parts = pathname.replace(/\/$/, '').split('/').filter(Boolean);
   if (parts.length !== 1) return null;
 
   const root = parts[0]!;
+  if (root === 'inspections') {
+    return resolveInspectionTypeGuideId(searchParams?.get('type'));
+  }
+
   const map: Record<string, AgentPageGuideId> = {
     dashboard: 'dashboard',
     properties: 'properties',
@@ -46,7 +70,6 @@ export function resolveAgentPageGuideId(pathname: string): AgentPageGuideId | nu
     communications: 'communications',
     leasing: 'leasing',
     maintenance: 'maintenance',
-    inspections: 'inspections',
     accounting: 'accounting',
     tribunal: 'tribunal',
     archive: 'archive',
@@ -226,19 +249,107 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
       'Schedule and track ingoing, outgoing, routine, and open inspections with inspector assignment and reports.',
     steps: [
       {
-        title: 'Book from a property',
-        description: 'Most inspections are created inside the property hub for the right context.',
+        title: 'Filter by type',
+        description: 'Use Open, Ingoing, Outgoing, or Routine chips to focus the list.',
       },
       {
-        title: 'Monitor status',
-        description: 'Scheduled, in progress, and completed jobs appear with inspector and date.',
+        title: 'Book from a property',
+        description: 'Most inspections are created inside the property hub for the right context.',
       },
       {
         title: 'Review reports',
         description: 'Open completed inspections for photos, ratings, and bond-risk flags.',
       },
     ],
-    tips: ['Routine schedules can be set when registering an occupied property.'],
+    tips: ['Each inspection type has its own workflow — switch filters to see type-specific guides.'],
+  },
+  'inspections-open': {
+    id: 'inspections-open',
+    pageName: 'Open inspections',
+    eyebrow: 'Leasing opens',
+    overview:
+      'Open inspections for vacant or advertising properties — schedule viewings, register attendees, and feed applicants into tenant selection.',
+    steps: [
+      {
+        title: 'Schedule the open',
+        description: 'Set date, time, and whether you or an inspector conducts the viewing.',
+      },
+      {
+        title: 'Run the session',
+        description: 'Check in visitors, capture interest, and note follow-ups during the open.',
+      },
+      {
+        title: 'Move to selection',
+        description: 'Shortlisted applicants flow into tenant selection and leasing onboarding.',
+      },
+    ],
+    tips: ['Open jobs link to the property leasing cycle when advertising is active.'],
+  },
+  'inspections-ingoing': {
+    id: 'inspections-ingoing',
+    pageName: 'Ingoing inspections',
+    eyebrow: 'Move-in condition',
+    overview:
+      'Document the property condition before a new tenant moves in — photos, areas, and ratings for the bond record.',
+    steps: [
+      {
+        title: 'Book before move-in',
+        description: 'Schedule within the leasing handover window so keys can be released on time.',
+      },
+      {
+        title: 'Assign an inspector',
+        description: 'Field inspectors complete the report; review and approve when submitted.',
+      },
+      {
+        title: 'Complete handover',
+        description: 'Approved ingoing reports unlock onboarding steps on the leasing workflow.',
+      },
+    ],
+    tips: ['Ingoing inspections are usually created from the property leasing workflow.'],
+  },
+  'inspections-outgoing': {
+    id: 'inspections-outgoing',
+    pageName: 'Outgoing inspections',
+    eyebrow: 'End of tenancy',
+    overview:
+      'Final condition reports when a tenant vacates — compare against ingoing evidence for bond claims.',
+    steps: [
+      {
+        title: 'Schedule around vacate',
+        description: 'Book the outgoing after keys are returned or the agreed vacate date.',
+      },
+      {
+        title: 'Review damage flags',
+        description: 'Inspector findings highlight bond-risk items for landlord approval.',
+      },
+      {
+        title: 'Close the vacate file',
+        description: 'Completed outgoing reports feed end-leasing and bond settlement steps.',
+      },
+    ],
+    tips: ['Outgoing jobs often start from the End leasing workflow on a property.'],
+  },
+  'inspections-routine': {
+    id: 'inspections-routine',
+    pageName: 'Routine inspections',
+    eyebrow: 'Periodic checks',
+    overview:
+      'Scheduled periodic inspections for occupied properties — track compliance, condition trends, and landlord reporting.',
+    steps: [
+      {
+        title: 'Set the schedule',
+        description: 'Routine frequency is configured when registering an occupied property.',
+      },
+      {
+        title: 'Monitor due dates',
+        description: 'Upcoming and overdue routine jobs appear in Active filters and need-action.',
+      },
+      {
+        title: 'Review submissions',
+        description: 'Approve inspector reports and share summaries with landlords when required.',
+      },
+    ],
+    tips: ['Declined or rescheduled routine jobs stay on the property inspection history.'],
   },
   accounting: {
     id: 'accounting',
@@ -366,7 +477,7 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
   },
   vacating: {
     id: 'vacating',
-    pageName: 'Vacating',
+    pageName: 'End leasing',
     eyebrow: 'End of tenancy',
     overview:
       'Vacate confirmations, outgoing inspections, bond processing, and maintenance close-out.',

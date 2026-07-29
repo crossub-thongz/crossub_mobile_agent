@@ -118,8 +118,7 @@ export default function SettingsPage() {
           <div className="rounded-xl border bg-card p-4">
             <p className="text-sm font-medium">Page guides</p>
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              Short onboarding guides appear the first time you open each main section after
-              client onboarding is complete.
+              Short onboarding guides appear the first time you open each main section.
             </p>
             <Button
               type="button"

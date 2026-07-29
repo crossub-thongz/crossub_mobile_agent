@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ClipboardList, DoorOpen } from 'lucide-react';
 import { toast } from 'sonner';
@@ -39,6 +39,8 @@ import { inspectionToJobRow } from '@/lib/portfolio-case-dialog';
 import type { Inspection } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
+import { resolveInspectionTypeGuideId } from '@/constants/agent-page-guides';
+import { setContextualAgentPageGuide } from '@/lib/agent-page-guide-context';
 
 const TYPE_FILTERS = [
   { id: 'all', label: 'All types' },
@@ -79,6 +81,13 @@ export function InspectionsHub({
   const [deleteTarget, setDeleteTarget] = useState<Inspection | null>(null);
 
   const createOption = INSPECTION_CREATE_TYPE_OPTIONS.find((option) => option.id === createType);
+
+  useEffect(() => {
+    const guideId =
+      typeFilter === 'all' ? 'inspections' : resolveInspectionTypeGuideId(typeFilter);
+    setContextualAgentPageGuide(guideId);
+    return () => setContextualAgentPageGuide(null);
+  }, [typeFilter]);
 
   const counts = useMemo(() => inspectionSummaryCounts(inspections), [inspections]);
 

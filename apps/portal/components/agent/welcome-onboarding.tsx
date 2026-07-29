@@ -13,6 +13,7 @@ import {
   fetchPortalWelcomeStatus,
   type AgentPortalWelcomeStatus,
 } from '@/lib/crossub-api/agent-client';
+import { notifyPortalWelcomeDismissed } from '@/lib/agent-page-guide-events';
 
 export function WelcomeOnboarding() {
   const { user, status } = useAuth();
@@ -50,10 +51,12 @@ export function WelcomeOnboarding() {
     try {
       const result = await dismissPortalWelcome();
       setWelcomeStatus(result);
+      notifyPortalWelcomeDismissed();
     } catch {
       setWelcomeStatus((current) =>
         current ? { ...current, dismissed: true } : current,
       );
+      notifyPortalWelcomeDismissed();
     } finally {
       setDismissing(false);
     }

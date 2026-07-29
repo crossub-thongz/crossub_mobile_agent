@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { AgentPageGuideDialog } from '@/components/agent/agent-page-guide-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -11,6 +11,8 @@ import {
   type AgentPageGuideId,
 } from '@/constants/agent-page-guides';
 import { isPublicRoute } from '@/constants/routes';
+import { subscribeContextualAgentPageGuide } from '@/lib/agent-page-guide-context';
+import { PORTAL_WELCOME_DISMISSED_EVENT } from '@/lib/agent-page-guide-events';
 import { fetchPortalWelcomeStatus } from '@/lib/crossub-api/agent-client';
 import {
   isAgentPageGuideSeen,
@@ -18,44 +20,60 @@ import {
 } from '@/lib/agent-page-guide-state';
 
 /**
- * Shows a first-visit onboarding guide when the agent opens each main list page,
- * after Sales onboarding is complete and the global welcome tour is dismissed.
+ * Shows a first-visit onboarding guide when the agent opens each main list page.
+ * Guides appear for all authenticated users; they wait until the global welcome
+ * modal is dismissed when that modal is showing.
  */
 export function AgentPageGuideHost() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { status } = useAuth();
-  const [portalReady, setPortalReady] = useState(false);
+  const [welcomeBlocking, setWelcomeBlocking] = useState(false);
+  const [contextGuideId, setContextGuideId] = useState<AgentPageGuideId | null>(null);
   const [activeGuideId, setActiveGuideId] = useState<AgentPageGuideId | null>(null);
+
+  useEffect(() => subscribeContextualAgentPageGuide(setContextGuideId), []);
 
   useEffect(() => {
     if (status !== 'authed') {
-      setPortalReady(false);
+      setWelcomeBlocking(false);
       return;
     }
 
     let cancelled = false;
+
+    const syncWelcomeBlock = (eligible: boolean, dismissed: boolean) => {
+      if (!cancelled) {
+        setWelcomeBlocking(eligible && !dismissed);
+      }
+    };
+
     void fetchPortalWelcomeStatus()
       .then((result) => {
-        if (!cancelled) {
-          setPortalReady(result.eligible && result.dismissed);
-        }
+        syncWelcomeBlock(result.eligible, result.dismissed);
       })
       .catch(() => {
-        if (!cancelled) setPortalReady(false);
+        if (!cancelled) setWelcomeBlocking(false);
       });
+
+    const onWelcomeDismissed = () => setWelcomeBlocking(false);
+    window.addEventListener(PORTAL_WELCOME_DISMISSED_EVENT, onWelcomeDismissed);
 
     return () => {
       cancelled = true;
+      window.removeEventListener(PORTAL_WELCOME_DISMISSED_EVENT, onWelcomeDismissed);
     };
   }, [status]);
 
   useEffect(() => {
-    if (!portalReady || !pathname || isPublicRoute(pathname)) {
+    if (status !== 'authed' || welcomeBlocking || !pathname || isPublicRoute(pathname)) {
       setActiveGuideId(null);
       return;
     }
 
-    const guideId = resolveAgentPageGuideId(pathname);
+    const pathnameGuideId = resolveAgentPageGuideId(pathname, searchParams);
+    const guideId = contextGuideId ?? pathnameGuideId;
+
     if (!guideId || isAgentPageGuideSeen(guideId)) {
       setActiveGuideId(null);
       return;
@@ -63,7 +81,7 @@ export function AgentPageGuideHost() {
 
     const timer = window.setTimeout(() => setActiveGuideId(guideId), 450);
     return () => window.clearTimeout(timer);
-  }, [pathname, portalReady]);
+  }, [pathname, searchParams, contextGuideId, status, welcomeBlocking]);
 
   if (!activeGuideId) return null;
 
