@@ -97,6 +97,8 @@ export interface ApiMaintenanceParty {
 
 export interface ApiMaintenanceRequest {
   id: string;
+  /** Human order number (`MR-00057`); absent on rows that predate order numbering. */
+  orderNumber?: string;
   propertyId?: string;
   agencyId?: string;
   issueType: string;

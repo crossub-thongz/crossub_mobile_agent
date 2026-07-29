@@ -45,6 +45,20 @@ export function workflowCaseReferenceLabel(
   return formatPrefixedReference(id.trim(), WORKFLOW_CASE_REF_PREFIX[kind]);
 }
 
+/**
+ * Maintenance jobs carry a real order number from the API (`MR-00057`) — the one
+ * printed on emails, invoices and the staff console. Show it whenever it exists and
+ * keep the synthetic `M-` ref only for rows that predate order numbering.
+ */
+export function maintenanceReferenceLabel(
+  orderNumber: string | null | undefined,
+  id: string,
+): string {
+  const trimmed = orderNumber?.trim();
+  if (trimmed) return trimmed;
+  return workflowCaseReferenceLabel(id, 'maintenance');
+}
+
 export function inspectionCaseReferenceLabel(
   id: string,
   kind: InspectionCaseRefKind,
