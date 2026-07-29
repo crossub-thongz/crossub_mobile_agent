@@ -2,6 +2,11 @@
 
 ## 2026-07-29
 
+### Added
+- **A tenant-responsibility case the tenant rejected now reads as "Tenant rejected" instead of one more closed job** (officer ask, demo feedback). Both answers close the case, so on status alone a tenant who accepted the charge and one who disputed it looked identical — and only one of the two can come back as a complaint or a tribunal matter. The label replaces the workflow step in the list table and the mobile cards, the row takes an amber left border and tint (ranked below needs-approval, which is live work), the case dialog leads with it instead of "Closed", and the tenant's own reason is the badge's hover title. A **Tenant rejected** filter chip was added alongside All / Needs approval / In progress / Completed; it matches on the recorded answer, since filtering on status would return every finished case.
+- `lib/maintenance/tenant-rejected.ts` holds the predicate, label and tone. Deliberately not folded into the workflow step model: the stepper describes the work a case went through, and a rejection is an outcome, not a sixth step.
+- `AgentMaintenance` is locally augmented with `tenantResponsibilityResponse` (the same pattern already used for `closureReason` / `updatedAt`) because the API ships the field ahead of the next `@crossub-thongz/api-contract` publish — drop the augmentation once the generated `AgentMaintenanceDto` carries it.
+
 ### Changed
 - **Maintenance now shows the real order number (`MR-00057`) instead of the synthetic `M-38019438` reference.** `trackingNumber` was built by `workflowCaseReferenceLabel`, which just strips the digits out of the row's UUID and prefixes `M-` — a number that appears nowhere else in the business. The API has carried the genuine `orderNumber` all along (`toMaintenanceRequest` emits it, and `AgentMaintenanceDto.orderNumber` is in contract 0.12.1); both mappers simply dropped it. New `maintenanceReferenceLabel(orderNumber, id)` prefers the order number and keeps the synthetic ref only for rows that predate order numbering, and both `agent-mappers` and `data/map-maintenance` now use it. The list, the mobile cards, the case dialog subtitle and every job-row helper read `trackingNumber`, so all of them follow. The ID column went 8% → 10% (address 22% → 21%) because 8% clipped the value to "MR-000…".
 

@@ -396,6 +396,18 @@ export function mapAgentMaintenance(
         return Number.isFinite(n) ? n : undefined;
       })(),
       requiresApproval: m.status === MAINTENANCE_STATUS.QUOTING,
+      ...(m.tenantResponsibilityResponse
+        ? {
+            tenantResponsibilityResponse: {
+              agreed: m.tenantResponsibilityResponse.agreed,
+              respondedAt: m.tenantResponsibilityResponse.respondedAt,
+              ...(m.tenantResponsibilityResponse.reason
+                ? { reason: m.tenantResponsibilityResponse.reason }
+                : {}),
+              ...(m.tenantResponsibilityResponse.auto ? { auto: true } : {}),
+            },
+          }
+        : {}),
       createdAt: m.createdAt,
       updatedAt: m.updatedAt ?? m.createdAt ?? undefined,
       deleteReason: m.closureReason ?? undefined,

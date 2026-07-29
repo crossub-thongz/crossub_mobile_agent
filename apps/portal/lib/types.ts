@@ -437,6 +437,19 @@ export interface MaintenanceRequest {
   submittedQuotationId?: string;
   invoiceUploaded?: boolean;
   completionEvidenceUploaded?: boolean;
+  /**
+   * The tenant's answer on a tenant-responsibility job. Recorded on both outcomes, so
+   * `agreed: false` is what marks a case as **Tenant rejected** rather than plain Closed.
+   * Absent on other responsibility lanes and on jobs answered before it was persisted.
+   */
+  tenantResponsibilityResponse?: {
+    agreed: boolean;
+    respondedAt: string;
+    /** Why the tenant disagreed — the API requires one on a disagreement. */
+    reason?: string;
+    /** True when the 48-hour window expired and the system agreed on their behalf. */
+    auto?: boolean;
+  };
   scheduleStepStartedAt?: string;
   scheduleProposal?: {
     contractorId: string;

@@ -99,6 +99,13 @@ export interface ApiMaintenanceRequest {
   id: string;
   /** Human order number (`MR-00057`); absent on rows that predate order numbering. */
   orderNumber?: string;
+  /** The tenant's answer on a tenant-responsibility job — `agreed: false` means Tenant rejected. */
+  tenantResponsibilityResponse?: {
+    agreed: boolean;
+    respondedAt: string;
+    reason?: string;
+    auto?: boolean;
+  };
   propertyId?: string;
   agencyId?: string;
   issueType: string;

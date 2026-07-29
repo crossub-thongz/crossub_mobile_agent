@@ -15,6 +15,13 @@ import {
   ModuleTableTruncateText,
   moduleTableCellClassName,
 } from '@/components/agent/module-list-table';
+import {
+  isTenantRejectedMaintenance,
+  TENANT_REJECTED_BADGE_CLASS,
+  TENANT_REJECTED_LABEL,
+  TENANT_REJECTED_ROW_CLASS,
+  tenantRejectionTitle,
+} from '@/lib/maintenance/tenant-rejected';
 import { WorkflowCaseListSeeder } from '@/components/agent/workflow-case-list-seeder';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { Button } from '@/components/ui/button';
@@ -158,6 +165,7 @@ export function MaintenanceListTable({
           const progress = maintenanceWorkflowProgress(m);
           const openItem = onItemClick ? () => onItemClick(m) : undefined;
           const selected = selectedId === m.id;
+          const tenantRejected = isTenantRejectedMaintenance(m);
           const body = (
             <>
               <div className="flex items-start justify-between gap-2">
@@ -171,7 +179,13 @@ export function MaintenanceListTable({
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                 <span className="text-muted-foreground tabular-nums">{m.trackingNumber}</span>
-                <span className="text-primary font-medium">{progress.currentStepLabel}</span>
+                {tenantRejected ? (
+                  <span className={TENANT_REJECTED_BADGE_CLASS} title={tenantRejectionTitle(m)}>
+                    {TENANT_REJECTED_LABEL}
+                  </span>
+                ) : (
+                  <span className="text-primary font-medium">{progress.currentStepLabel}</span>
+                )}
                 <span
                   className={cn(
                     'font-semibold uppercase',
@@ -189,6 +203,7 @@ export function MaintenanceListTable({
           const className = cn(
             'block rounded-xl border bg-card p-3 shadow-sm transition active:scale-[0.99]',
             m.requiresApproval && 'border-destructive/30 bg-destructive/[0.03]',
+            tenantRejected && !m.requiresApproval && TENANT_REJECTED_ROW_CLASS,
             selected && 'border-primary ring-primary/20 ring-2',
           );
           if (openItem) {
@@ -239,6 +254,7 @@ export function MaintenanceListTable({
               const progress = maintenanceWorkflowProgress(m);
               const interactive = Boolean(onItemClick);
               const openItem = onItemClick ? () => onItemClick(m) : undefined;
+              const tenantRejected = isTenantRejectedMaintenance(m);
               return (
                 <ModuleInteractiveTableRow
                   key={m.id}
@@ -246,7 +262,12 @@ export function MaintenanceListTable({
                   selected={selectedId === m.id}
                   newCaseModule="maintenance"
                   newCaseId={m.id}
-                  className={cn(m.requiresApproval && 'bg-destructive/[0.03]')}
+                  className={cn(
+                    m.requiresApproval && 'bg-destructive/[0.03]',
+                    // Ranked below needs-approval: that is live work, this is a finished case an
+                    // officer may still have to answer for.
+                    tenantRejected && !m.requiresApproval && TENANT_REJECTED_ROW_CLASS,
+                  )}
                 >
                   <td className={moduleTableCellClassName('text-muted-foreground text-xs tabular-nums')}>
                     <ModuleTableTruncateText>{m.trackingNumber}</ModuleTableTruncateText>
@@ -270,8 +291,19 @@ export function MaintenanceListTable({
                   <td className={moduleTableCellClassName('text-muted-foreground')}>
                     <ModuleTableTruncateText lines={2}>{m.propertyAddress}</ModuleTableTruncateText>
                   </td>
-                  <td className={moduleTableCellClassName('text-primary text-xs font-medium')}>
-                    <ModuleTableTruncateText>{progress.currentStepLabel}</ModuleTableTruncateText>
+                  <td className={moduleTableCellClassName('text-xs font-medium')}>
+                    {tenantRejected ? (
+                      <span
+                        className={TENANT_REJECTED_BADGE_CLASS}
+                        title={tenantRejectionTitle(m)}
+                      >
+                        {TENANT_REJECTED_LABEL}
+                      </span>
+                    ) : (
+                      <ModuleTableTruncateText className="text-primary">
+                        {progress.currentStepLabel}
+                      </ModuleTableTruncateText>
+                    )}
                   </td>
                   <td className={moduleTableCellClassName('text-muted-foreground text-xs')}>
                     <ModuleTableTruncateText>{capitalize(m.responsibility)}</ModuleTableTruncateText>

@@ -166,6 +166,7 @@ export function mapApiMaintenanceRequest(
     submittedQuotationId: submittedQuote?.id,
     invoiceUploaded: req.invoiceUploaded,
     completionEvidenceUploaded: req.completionEvidenceUploaded,
+    tenantResponsibilityResponse: req.tenantResponsibilityResponse,
     agentApprovalReceived: req.agentApprovalReceived,
     auditTimeline: auditToTimeline(reqAudit),
     apiNotifications: reqNotifications,

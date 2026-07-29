@@ -14,12 +14,14 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import { maintenanceToJobRow } from '@/lib/portfolio-case-dialog';
+import { isTenantRejectedMaintenance } from '@/lib/maintenance/tenant-rejected';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'approval', label: 'Needs approval' },
   { id: 'progress', label: 'In progress' },
   { id: 'completed', label: 'Completed' },
+  { id: 'tenant_rejected', label: 'Tenant rejected' },
 ] as const;
 
 export default function MaintenancePage() {
@@ -29,6 +31,7 @@ export default function MaintenancePage() {
     if (urlFilter === 'approval') return 'approval';
     if (urlFilter === 'completed') return 'completed';
     if (urlFilter === 'progress') return 'progress';
+    if (urlFilter === 'tenant_rejected') return 'tenant_rejected';
     return 'all';
   });
   const [search, setSearch] = useState('');
@@ -52,6 +55,9 @@ export default function MaintenancePage() {
           m.status.toLowerCase().includes('complete') ||
           m.status.toLowerCase().includes('closed'),
       );
+    // These are closed jobs, so filtering on status would return every finished case. The
+    // tenant's recorded answer is the only thing that separates them.
+    if (filter === 'tenant_rejected') items = items.filter(isTenantRejectedMaintenance);
     if (search.trim()) {
       const q = search.toLowerCase();
       items = items.filter(
@@ -95,7 +101,9 @@ export default function MaintenancePage() {
             description={
               filter === 'approval'
                 ? 'Nothing waiting for your approval right now.'
-                : 'Open maintenance requests will appear here.'
+                : filter === 'tenant_rejected'
+                  ? 'No tenant has disputed a responsibility decision.'
+                  : 'Open maintenance requests will appear here.'
             }
           />
         ) : (

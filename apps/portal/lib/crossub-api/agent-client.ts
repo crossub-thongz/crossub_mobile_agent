@@ -16,6 +16,18 @@ export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
   closureReason?: string | null;
   updatedAt?: string | null;
+  /**
+   * The tenant's answer on a tenant-responsibility job — `agreed: false` is what marks a case as
+   * Tenant rejected rather than plain Closed. Declared here rather than read from the contract
+   * because the API ships it ahead of the next `@crossub-thongz/api-contract` publish; drop this
+   * line once the generated `AgentMaintenanceDto` carries it.
+   */
+  tenantResponsibilityResponse?: {
+    agreed: boolean;
+    respondedAt: string;
+    reason: string | null;
+    auto: boolean;
+  } | null;
 };
 export type AgentRentReview = components['schemas']['AgentRentReviewDto'] & {
   leaseStart?: string | null;
