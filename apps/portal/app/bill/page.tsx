@@ -14,6 +14,7 @@ import {
   listAgentInvoiceHistory,
   payAgentBillingCharge,
   payAgentMonthlyInvoice,
+  payAllAgentBilling,
   type AgentBillingCharge,
   type AgentBillingMonthlyInvoice,
   type AgentBillingSummary,
@@ -64,6 +65,20 @@ export default function BillPage() {
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [payingKey, setPayingKey] = useState<string | null>(null);
+  const [payingAll, setPayingAll] = useState(false);
+
+  const payableCharges = useMemo(() => charges.filter(isPayableCharge), [charges]);
+  const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
+
+  const outstandingTotal = useMemo(
+    () =>
+      payableCharges.reduce((sum, row) => sum + row.amount, 0) +
+      payableInvoices.reduce((sum, row) => sum + row.amountDue, 0),
+    [payableCharges, payableInvoices],
+  );
+
+  const outstandingCount = payableCharges.length + payableInvoices.length;
+  const showPayAll = outstandingCount >= 2;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,11 +120,26 @@ export default function BillPage() {
     return rows.sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
   }, [charges, invoices]);
 
-  const outstandingCount = useMemo(() => {
-    const chargeDue = charges.filter(isPayableCharge).length;
-    const invoiceDue = invoices.filter(isPayableInvoice).length;
-    return chargeDue + invoiceDue;
-  }, [charges, invoices]);
+  const outstandingCountDisplay = outstandingCount;
+
+  const payAll = async () => {
+    setPayingAll(true);
+    try {
+      const result = await payAllAgentBilling();
+      if (result.paymentComplete) {
+        toast.success(
+          `Paid ${result.paidChargeCount + result.paidInvoiceCount} bill(s) — ${formatCurrency(result.totalAmountAud)}`,
+        );
+        await load();
+      } else {
+        toast.message('Complete payment in Stripe to finish.');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setPayingAll(false);
+    }
+  };
 
   const payCharge = async (chargeId: string) => {
     setPayingKey(`charge-${chargeId}`);
@@ -168,13 +198,13 @@ export default function BillPage() {
           </div>
         ) : null}
 
-        {summary && summary.outstandingInvoiceAmount > 0 ? (
+        {summary && (summary.outstandingInvoiceAmount > 0 || outstandingTotal > 0) ? (
           <div className="rounded-xl border bg-card p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Outstanding balance
             </p>
             <p className="mt-1 text-3xl font-semibold tabular-nums">
-              {formatCurrency(summary.outstandingInvoiceAmount)}
+              {formatCurrency(outstandingTotal || summary.outstandingInvoiceAmount)}
             </p>
             {summary.openInvoiceNumber ? (
               <p className="mt-1 text-sm text-muted-foreground">
@@ -184,15 +214,29 @@ export default function BillPage() {
                   : null}
               </p>
             ) : null}
+            {showPayAll ? (
+              <Button
+                className="mt-4 w-full sm:w-auto"
+                onClick={() => void payAll()}
+                disabled={payingAll || payingKey != null}
+              >
+                {payingAll ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <CreditCard className="size-4" />
+                )}
+                Pay all ({outstandingCount} bills · {formatCurrency(outstandingTotal)})
+              </Button>
+            ) : null}
           </div>
         ) : null}
 
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">
             All payments
-            {outstandingCount > 0 ? (
+            {outstandingCountDisplay > 0 ? (
               <span className="text-muted-foreground ml-2 text-xs font-normal">
-                {outstandingCount} awaiting payment
+                {outstandingCountDisplay} awaiting payment
               </span>
             ) : null}
           </h2>

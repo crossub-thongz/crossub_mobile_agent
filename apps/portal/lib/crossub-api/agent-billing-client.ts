@@ -87,6 +87,23 @@ export async function payAgentMonthlyInvoice(
   });
 }
 
+export type AgentBillingPayAllResult = {
+  paidChargeCount: number;
+  paidInvoiceCount: number;
+  totalAmountAud: number;
+  paymentComplete: boolean;
+  clientSecret?: string | null;
+};
+
+export async function payAllAgentBilling(opts?: {
+  devConfirm?: boolean;
+}): Promise<AgentBillingPayAllResult> {
+  return agentFetch('/agent/billing/pay-all', {
+    method: 'POST',
+    body: JSON.stringify({ devConfirm: opts?.devConfirm ?? true }),
+  });
+}
+
 /** Quote and pay (dev auto-pay when Stripe is not configured). Returns paid charge id. */
 export async function ensurePrepaidCharge(input: AgentBillingQuoteInput): Promise<string | null> {
   const summary = await fetchAgentBillingSummary();

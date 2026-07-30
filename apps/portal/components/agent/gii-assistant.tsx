@@ -837,12 +837,7 @@ export function GiiAssistant({
             onRemove={removePendingAttachment}
             disabled={sending || voiceActive}
           />
-          <div className="flex items-end gap-2 max-lg:flex-col max-lg:items-stretch">
-            <GiiAttachButton
-              onPick={addAttachmentFiles}
-              disabled={sending || voiceActive || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
-              className="mb-0.5 max-lg:hidden"
-            />
+          <div className="flex items-end gap-2">
             <Textarea
               ref={composerRef}
               value={query}
@@ -860,29 +855,29 @@ export function GiiAssistant({
               }
               rows={isEmbedded ? 3 : 4}
               className={cn(
-                'flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none max-lg:w-full',
+                'min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none',
                 isEmbedded ? 'min-h-16 max-h-[160px]' : 'min-h-24 max-h-[220px]',
               )}
               autoFocus={isPanel}
               disabled={sending || voiceActive}
             />
-            {query.trim() || pendingAttachments.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => void runQuery(query)}
-                disabled={sending}
-                className="mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl disabled:opacity-50"
-                aria-label="Send message"
-              >
-                <Send className="size-5" />
-              </button>
-            ) : (
-              <>
-                <GiiAttachButton
-                  onPick={addAttachmentFiles}
-                  disabled={sending || voiceActive || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
-                  className="mb-0.5 hidden max-lg:mb-0 max-lg:flex max-lg:h-11 max-lg:w-full max-lg:rounded-2xl"
-                />
+            <div className="mb-0.5 flex shrink-0 flex-col items-center gap-1.5">
+              <GiiAttachButton
+                onPick={addAttachmentFiles}
+                disabled={sending || voiceActive || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
+                className="size-9"
+              />
+              {query.trim() || pendingAttachments.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void runQuery(query)}
+                  disabled={sending}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50"
+                  aria-label="Send message"
+                >
+                  <Send className="size-5" />
+                </button>
+              ) : (
                 <button
                   type="button"
                   onPointerDown={(e) => {
@@ -895,21 +890,20 @@ export function GiiAssistant({
                   }}
                   onPointerCancel={stopVoice}
                   className={cn(
-                    'mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md',
+                    'flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md',
                     'transition-all duration-300 ease-out active:scale-95',
-                    'max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl',
                     voiceActive
                       ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
                       : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
-                    listening && 'animate-voice-pulse-ring scale-110 max-lg:scale-100',
-                    wrappingUp && 'scale-105 max-lg:scale-100',
+                    listening && 'animate-voice-pulse-ring scale-110',
+                    wrappingUp && 'scale-105',
                   )}
                   aria-label={voiceActive ? VOICE_BUTTON_ARIA_LABEL.ACTIVE : VOICE_BUTTON_ARIA_LABEL.IDLE}
                 >
                   {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-5" />}
                 </button>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
         <p className="text-muted-foreground mt-1.5 text-[10px]">
