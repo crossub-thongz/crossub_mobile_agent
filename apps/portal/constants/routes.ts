@@ -26,6 +26,7 @@ export const ROUTES = {
   SEARCH: '/search',
   PROFILE: '/profile',
   SETTINGS: '/settings',
+  BILL: '/bill',
   SYSTEM_ACCESS_AGREEMENT: '/system-access-agreement',
   TENANT_SELECTION: '/tenant-selection',
   TENANTS: '/tenants',

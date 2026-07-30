@@ -5,6 +5,7 @@ import {
   FileText,
   FolderArchive,
   LayoutDashboard,
+  Receipt,
   Settings,
   Wrench,
 } from 'lucide-react';
@@ -34,9 +35,10 @@ export const MORE_NAV: NavItem[] = [
   { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive, portalAccess: 'full' },
 ];
 
-/** Pinned below workflow modules — settings. */
+/** Pinned below workflow modules — settings & billing. */
 export const MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
+  { href: ROUTES.BILL, label: 'Bill', icon: Receipt },
 ];
 
 /** @deprecated Sidebar no longer shows Message Center — empty for import compat. */

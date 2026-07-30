@@ -12,6 +12,7 @@ import {
 
 const BILLING_EXEMPT = [
   ROUTES.LOGIN,
+  ROUTES.BILL,
   ROUTES.BILLING_OVERDUE,
   ROUTES.CHANGE_PASSWORD,
   ROUTES.SYSTEM_ACCESS_AGREEMENT,
@@ -57,7 +58,7 @@ export function BillingBlockedGate({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!checked || !blocked || onExemptPage || isPublicRoute(pathname)) return;
-    router.replace(ROUTES.BILLING_OVERDUE);
+    router.replace(ROUTES.BILL);
   }, [blocked, checked, onExemptPage, pathname, router]);
 
   if (status === 'loading' && !isPublicRoute(pathname)) return null;

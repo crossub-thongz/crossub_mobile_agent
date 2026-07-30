@@ -69,6 +69,14 @@ export async function listAgentOpenInvoices(): Promise<AgentBillingMonthlyInvoic
   return agentFetch('/agent/billing/invoices');
 }
 
+export async function listAgentChargeHistory(): Promise<AgentBillingCharge[]> {
+  return agentFetch('/agent/billing/charges');
+}
+
+export async function listAgentInvoiceHistory(): Promise<AgentBillingMonthlyInvoice[]> {
+  return agentFetch('/agent/billing/invoices/history');
+}
+
 export async function payAgentMonthlyInvoice(
   invoiceId: string,
   opts?: { devConfirm?: boolean },
