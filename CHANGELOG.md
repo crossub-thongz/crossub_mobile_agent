@@ -2,6 +2,13 @@
 
 ## 2026-07-30
 
+### Fixed
+- **Workflow email printed its HTML in message threads and notifications.** The API composes conversation and notification bodies as *email* bodies — plain text plus an inline portal CTA button appended at send time — so a maintenance letter mirrored into a thread ended, under "Kind regards, CROSSUB Maintenance", with a raw `<p style="margin:16px 0;"><a href="…" class="crossub-email-cta" style="display:inline-block;padding:12px 20px;background:#10b981;…">Open Tenant (Mobile)</a></p>`. This app renders text, not HTML. Bodies now pass through `toPlainTextBody` in `agent-mappers.ts` before they reach a screen — thread messages, the inbox preview, and notification bodies — which covers the thread bubbles, the property chat dialog's email pane and the live notification alert, since all of those read the mapped view-model. The staff console showed the same defect on the same case (MR-00112).
+- The portal CTA is dropped rather than converted: it is always a button to a role app's *root*, carrying no per-recipient token and nothing an agent reading the thread can act on. Every other link keeps its address as `label (url)` — a one-job upload link or a document link is the whole point of the message it sits in.
+
+### Added
+- `lib/message-body.ts` + `constants/email-body.ts`, ported from the tenant app (which has had this conversion all along) so the two apps behave identically. Verified against the exact MR-00112 body.
+
 ### Changed
 - **A rejected case now reports "Tenant rejected" as its status, not "In progress".** The API stopped closing these — a refusal parks the case, because the fault is still unrepaired and only who pays is contested — so the row keeps an active Prisma status (`SCHEDULED`) and the label mapped straight to "In progress". That said no work was progressing and flatly contradicted the Tenant rejected badge sitting on the same row. Assigned once in `mapAgentMaintenance` (`isOpenTenantRejectedCase`), so every table, filter, property job list and KPI that reads `status` agrees without repeating the check.
 - Consequently a parked refusal moves out of **Completed** and into the open work it actually is: it appears under the In progress filter and in the property's active jobs, and the dashboard pie counts it as in-progress rather than completed. Counting a disputed, unrepaired job as done was the previous behaviour.

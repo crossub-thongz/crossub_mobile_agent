@@ -41,6 +41,7 @@ import {
   TRIBUNAL_CASE_STATUS,
   VACATING_STATUS,
 } from '@/constants/api-enums';
+import { toPlainTextBody } from '@/lib/message-body';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { TENANT_REJECTED_LABEL } from '@/lib/maintenance/tenant-rejected';
 import { formatPropertyFullAddress } from '@/lib/utils';
@@ -794,7 +795,9 @@ export function mapAgentMessages(
       id: m.id,
       at: m.at,
       from: m.from,
-      body: m.body,
+      // API bodies are email-shaped (plain text + an inline portal CTA button), and the thread
+      // bubble renders text — without this the markup prints verbatim under the sign-off.
+      body: toPlainTextBody(m.body),
       channel: threadMessageChannel(m.channel),
       sentByAgent: m.fromSelf,
       mentions: [],
@@ -814,7 +817,12 @@ export function mapAgentMessages(
       taskType: category,
       messageCategory: category,
       relatedCaseId: t.caseId ?? undefined,
-      lastMessage: t.lastMessage ?? messages[messages.length - 1]?.body ?? '',
+      // The DTO's own preview is raw; the fallback is already converted above. Kept as a
+      // null check, not a truthiness one, so an empty preview stays empty as before.
+      lastMessage:
+        t.lastMessage != null
+          ? toPlainTextBody(t.lastMessage)
+          : (messages[messages.length - 1]?.body ?? ''),
       lastAt: t.lastAt ?? messages[messages.length - 1]?.at ?? '',
       unread: t.unread,
       channel: threadChannel(messages),
@@ -852,7 +860,8 @@ export function mapAgentNotifications(
     id: n.id,
     type: NOTIFICATION_TYPE_VIEW[n.type] ?? 'update',
     title: n.title,
-    body: n.body,
+    // Notification bodies are the same email-shaped copy as thread messages.
+    body: toPlainTextBody(n.body),
     propertyAddress: n.propertyAddress ?? '',
     taskType: '',
     status: '',
