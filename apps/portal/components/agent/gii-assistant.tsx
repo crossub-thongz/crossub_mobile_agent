@@ -7,6 +7,11 @@ import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
+import {
+  GiiAttachButton,
+  GiiAttachmentPreviewRow,
+  GiiComposerDropOverlay,
+} from '@/components/agent/gii-composer-attachments';
 import { GiiPropertyJobsCard } from '@/components/agent/gii-property-jobs-card';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -36,8 +41,22 @@ import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   sendGiiMessage,
   type GiiAssessment,
+  type GiiChatMessage,
   type GiiContext,
 } from '@/lib/crossub-api/gii-client';
+import {
+  createPendingAttachment,
+  filterGiiAttachmentFiles,
+  GII_MAX_ATTACHMENT_BYTES,
+  GII_MAX_ATTACHMENTS,
+  pendingToApiAttachments,
+  pendingToView,
+  revokePendingAttachment,
+  revokePendingAttachments,
+  type GiiApiAttachment,
+  type GiiChatAttachmentView,
+  type GiiPendingAttachment,
+} from '@/lib/gii-attachments';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -69,6 +88,9 @@ type ChatLine = {
   briefing?: GiiBriefing | null;
   lodgedRef?: string | null;
   pending?: boolean;
+  attachments?: GiiChatAttachmentView[];
+  /** Base64 payloads resent with history so Gii can keep reading prior attachments. */
+  sentAttachments?: GiiApiAttachment[];
 };
 
 /** Only the transcript goes to the server — local search results are a client concern. */
@@ -140,6 +162,8 @@ export function GiiAssistant({
   const { selectedJob, openJob, closeJob, portfolioData } = usePortfolioCaseDialog();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [query, setQuery] = useState('');
+  const [pendingAttachments, setPendingAttachments] = useState<GiiPendingAttachment[]>([]);
+  const [composerDragActive, setComposerDragActive] = useState(false);
   const [voicePhase, setVoicePhase] = useState<VoicePhase>(VOICE_PHASE.IDLE);
   const [sending, setSending] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
@@ -154,6 +178,8 @@ export function GiiAssistant({
   // The subject carried between turns. A ref: it must never be stale inside runQuery, and
   // it does not need to trigger a render.
   const contextRef = useRef<GiiContext | null>(null);
+  const pendingAttachmentsRef = useRef<GiiPendingAttachment[]>([]);
+  pendingAttachmentsRef.current = pendingAttachments;
   const listening = voicePhase === VOICE_PHASE.LISTENING;
   const wrappingUp = voicePhase === VOICE_PHASE.WRAPPING;
   /** The mic stays "hot" through the release buffer — the recogniser is still open. */
@@ -264,8 +290,59 @@ export function GiiAssistant({
   useEffect(() => {
     if (!scopedProperty?.id) return;
     setLines([]);
+    setPendingAttachments((prev) => {
+      revokePendingAttachments(prev);
+      return [];
+    });
     initialPromptHandledRef.current = false;
   }, [scopedProperty?.id]);
+
+  useEffect(
+    () => () => {
+      revokePendingAttachments(pendingAttachmentsRef.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (open) return;
+    revokePendingAttachments(pendingAttachmentsRef.current);
+    setPendingAttachments([]);
+    setLines((prev) => {
+      for (const line of prev) {
+        for (const att of line.attachments ?? []) {
+          if (att.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(att.previewUrl);
+        }
+      }
+      return [];
+    });
+  }, [open]);
+
+  const addAttachmentFiles = useCallback((files: File[]) => {
+    const { added, rejected, overLimit } = filterGiiAttachmentFiles(
+      files,
+      pendingAttachments.length,
+    );
+    if (rejected.length || overLimit) {
+      toast.error(
+        `Attach up to ${GII_MAX_ATTACHMENTS} PDFs or images (max ${Math.round(GII_MAX_ATTACHMENT_BYTES / (1024 * 1024))} MB each).`,
+      );
+    }
+    if (!added.length) return;
+    const next = added
+      .map(createPendingAttachment)
+      .filter((att): att is GiiPendingAttachment => att != null);
+    if (!next.length) return;
+    setPendingAttachments((prev) => [...prev, ...next]);
+  }, [pendingAttachments.length]);
+
+  const removePendingAttachment = useCallback((id: string) => {
+    setPendingAttachments((prev) => {
+      const target = prev.find((att) => att.id === id);
+      if (target) revokePendingAttachment(target);
+      return prev.filter((att) => att.id !== id);
+    });
+  }, []);
 
   useEffect(() => {
     const el = composerRef.current;
@@ -337,19 +414,23 @@ export function GiiAssistant({
    * than under their own turn, so they stayed there, attached to whatever Gii said next.
    * A one-line "email sent" came with nine cards below it.
    */
-  const runQuery = useCallback(async (text: string) => {
+  const runQuery = useCallback(async (text: string, attachmentFiles = pendingAttachments) => {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    const hasAttachments = attachmentFiles.length > 0;
+    if ((!trimmed && !hasAttachments) || sending) return;
 
-    const userLine: ChatLine = { id: `u-${idSeq()}`, role: 'user', text: trimmed };
+    const attachmentViews = attachmentFiles.map(pendingToView);
+    const userLine: ChatLine = {
+      id: `u-${idSeq()}`,
+      role: 'user',
+      text: trimmed || '(attachment)',
+      attachments: attachmentViews.length ? attachmentViews : undefined,
+    };
     const pendingId = `a-${idSeq()}`;
 
-    // Snapshot the transcript BEFORE this turn's placeholder is added, or the placeholder
-    // text ("Thinking…") is sent to the model as if it had said it.
-    const history = [...lines, userLine]
+    const historyBase = [...lines, userLine]
       .filter((l) => !l.pending)
-      .slice(-MAX_HISTORY)
-      .map((l) => ({ role: l.role, content: l.text }));
+      .slice(-MAX_HISTORY);
 
     setLines((prev) => [
       ...prev,
@@ -357,9 +438,34 @@ export function GiiAssistant({
       { id: pendingId, role: 'assistant', text: 'Thinking…', pending: true },
     ]);
     setQuery('');
+    setPendingAttachments((prev) =>
+      prev.filter((att) => !attachmentFiles.some((sent) => sent.id === att.id)),
+    );
     setSending(true);
 
     try {
+      const apiAttachments = hasAttachments
+        ? await pendingToApiAttachments(attachmentFiles)
+        : undefined;
+
+      const history: GiiChatMessage[] = historyBase.map((l) => ({
+        role: l.role,
+        content: l.text,
+        ...(l.id === userLine.id && apiAttachments?.length
+          ? { attachments: apiAttachments }
+          : l.sentAttachments?.length
+            ? { attachments: l.sentAttachments }
+            : {}),
+      }));
+
+      if (apiAttachments?.length) {
+        setLines((prev) =>
+          prev.map((l) =>
+            l.id === userLine.id ? { ...l, sentAttachments: apiAttachments } : l,
+          ),
+        );
+      }
+
       const res = await sendGiiMessage({ messages: history, context: contextRef.current });
       if (res.assessment?.propertyId) {
         contextRef.current = {
@@ -395,7 +501,7 @@ export function GiiAssistant({
     } finally {
       setSending(false);
     }
-  }, [data, lines, sending]);
+  }, [lines, pendingAttachments, sending]);
 
   // Launch prompt from property hub / phone book — runs once when Gii opens.
   useEffect(() => {
@@ -631,6 +737,27 @@ export function GiiAssistant({
                 line.pending && 'text-muted-foreground animate-pulse',
               )}
             >
+              {line.attachments?.length ? (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {line.attachments.map((att) =>
+                    att.previewUrl ? (
+                      <img
+                        key={att.fileName}
+                        src={att.previewUrl}
+                        alt={att.fileName}
+                        className="max-h-24 max-w-full rounded-lg border border-white/20 object-cover"
+                      />
+                    ) : (
+                      <span
+                        key={att.fileName}
+                        className="rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-medium"
+                      >
+                        {att.fileName}
+                      </span>
+                    ),
+                  )}
+                </div>
+              ) : null}
               {line.text}
             </div>
 
@@ -683,68 +810,110 @@ export function GiiAssistant({
             {listening ? VOICE_STATUS_LABEL.LISTENING : VOICE_STATUS_LABEL.WRAPPING}
           </div>
         ) : null}
-        <div className="flex items-end gap-2 max-lg:flex-col max-lg:items-stretch">
-          <Textarea
-            ref={composerRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void runQuery(query);
-              }
-            }}
-            placeholder={
-              scopedProperty
-                ? 'Ask Gii to create a job or check this property…'
-                : 'Ask Gii anything…'
-            }
-            rows={isEmbedded ? 3 : 4}
-            className={cn(
-              'flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none max-lg:w-full',
-              isEmbedded ? 'min-h-16 max-h-[160px]' : 'min-h-24 max-h-[220px]',
-            )}
-            autoFocus={isPanel}
+        <div
+          className="relative"
+          onDragEnter={(e) => {
+            e.preventDefault();
+            if (!sending && !voiceActive) setComposerDragActive(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!sending && !voiceActive) setComposerDragActive(true);
+          }}
+          onDragLeave={(e) => {
+            if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+            setComposerDragActive(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setComposerDragActive(false);
+            if (sending || voiceActive) return;
+            addAttachmentFiles([...(e.dataTransfer.files ?? [])]);
+          }}
+        >
+          <GiiComposerDropOverlay active={composerDragActive} />
+          <GiiAttachmentPreviewRow
+            attachments={pendingAttachments}
+            onRemove={removePendingAttachment}
+            disabled={sending || voiceActive}
           />
-          {query.trim() ? (
-            <button
-              type="button"
-              onClick={() => void runQuery(query)}
-              className="mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl"
-              aria-label="Send message"
-            >
-              <Send className="size-5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                startVoice();
+          <div className="flex items-end gap-2 max-lg:flex-col max-lg:items-stretch">
+            <GiiAttachButton
+              onPick={addAttachmentFiles}
+              disabled={sending || voiceActive || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
+              className="mb-0.5 max-lg:hidden"
+            />
+            <Textarea
+              ref={composerRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void runQuery(query);
+                }
               }}
-              onPointerUp={stopVoice}
-              onPointerLeave={() => {
-                if (voiceActive) stopVoice();
-              }}
-              onPointerCancel={stopVoice}
+              placeholder={
+                scopedProperty
+                  ? 'Ask Gii to create a job or check this property…'
+                  : 'Ask Gii anything…'
+              }
+              rows={isEmbedded ? 3 : 4}
               className={cn(
-                'mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md',
-                'transition-all duration-300 ease-out active:scale-95',
-                'max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl',
-                voiceActive
-                  ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
-                  : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
-                listening && 'animate-voice-pulse-ring scale-110 max-lg:scale-100',
-                wrappingUp && 'scale-105 max-lg:scale-100',
+                'flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none max-lg:w-full',
+                isEmbedded ? 'min-h-16 max-h-[160px]' : 'min-h-24 max-h-[220px]',
               )}
-              aria-label={voiceActive ? VOICE_BUTTON_ARIA_LABEL.ACTIVE : VOICE_BUTTON_ARIA_LABEL.IDLE}
-            >
-              {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-5" />}
-            </button>
-          )}
+              autoFocus={isPanel}
+              disabled={sending || voiceActive}
+            />
+            {query.trim() || pendingAttachments.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void runQuery(query)}
+                disabled={sending}
+                className="mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl disabled:opacity-50"
+                aria-label="Send message"
+              >
+                <Send className="size-5" />
+              </button>
+            ) : (
+              <>
+                <GiiAttachButton
+                  onPick={addAttachmentFiles}
+                  disabled={sending || voiceActive || pendingAttachments.length >= GII_MAX_ATTACHMENTS}
+                  className="mb-0.5 hidden max-lg:mb-0 max-lg:flex max-lg:h-11 max-lg:w-full max-lg:rounded-2xl"
+                />
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    startVoice();
+                  }}
+                  onPointerUp={stopVoice}
+                  onPointerLeave={() => {
+                    if (voiceActive) stopVoice();
+                  }}
+                  onPointerCancel={stopVoice}
+                  className={cn(
+                    'mb-0.5 flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md',
+                    'transition-all duration-300 ease-out active:scale-95',
+                    'max-lg:mb-0 max-lg:h-11 max-lg:w-full max-lg:rounded-2xl',
+                    voiceActive
+                      ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
+                      : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                    listening && 'animate-voice-pulse-ring scale-110 max-lg:scale-100',
+                    wrappingUp && 'scale-105 max-lg:scale-100',
+                  )}
+                  aria-label={voiceActive ? VOICE_BUTTON_ARIA_LABEL.ACTIVE : VOICE_BUTTON_ARIA_LABEL.IDLE}
+                >
+                  {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-5" />}
+                </button>
+              </>
+            )}
+          </div>
         </div>
         <p className="text-muted-foreground mt-1.5 text-[10px]">
-          Enter to send · Shift+Enter for a new line
+          Enter to send · Shift+Enter for a new line · Attach PDFs or images
         </p>
       </div>
     </div>

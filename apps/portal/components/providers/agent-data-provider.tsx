@@ -208,7 +208,7 @@ interface AgentDataContextValue {
   portalAccessReady: boolean;
   /** True when at least one assigned agency has Level 2 (full management) access. */
   hasFullManagementAccess: boolean;
-  /** True when every assigned agency is Level 1 (inspection-only). */
+  /** True when every assigned agency is Level 1 (inspection and tribunal only). */
   isInspectionOnlyAgent: boolean;
   inspections: Inspection[];
   rentReviews: RentReviewCase[];

@@ -102,6 +102,8 @@ export type RequestAgentOpenInspectionInput = {
   keyCollectLocation?: string;
   /** Begin the viewing window immediately (testing) — skips Saturday validation. */
   startNow?: boolean;
+  /** Prepaid CROSSUB platform charge — required when billing prepaid is enabled. */
+  platformChargeId?: string;
 };
 
 export async function requestAgentOpenInspection(

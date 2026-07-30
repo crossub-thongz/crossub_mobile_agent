@@ -19,6 +19,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
 import { createAgentIngoingInspection, createAgentLeasingCycle, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
+import { ensurePrepaidCharge } from '@/lib/crossub-api/agent-billing-client';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import {
@@ -563,10 +564,16 @@ export function CreateInspectionWizard({
           if (new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)) {
             throw new Error('Viewing end time must be after the start time');
           }
+          const platformChargeId = await ensurePrepaidCharge({
+            serviceType: 'open_inspection',
+            propertyId: property.id,
+            leasingCycleId: cycleId,
+          });
           const result = await requestAgentOpenInspection(property.id, cycleId, {
             preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
             preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
             preferredNotes: openPreferredNotes.trim() || undefined,
+            ...(platformChargeId ? { platformChargeId } : {}),
           });
           toast.success('Open inspection scheduled');
           const inspection = await resolveCreatedOpenInspection(
@@ -642,10 +649,16 @@ export function CreateInspectionWizard({
             });
             cycleId = created.id;
           }
+          const platformChargeId = await ensurePrepaidCharge({
+            serviceType: 'open_inspection',
+            propertyId: property.id,
+            leasingCycleId: cycleId,
+          });
           const result = await requestAgentOpenInspection(property.id, cycleId, {
             preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
             preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
             preferredNotes: openPreferredNotes.trim() || undefined,
+            ...(platformChargeId ? { platformChargeId } : {}),
           });
           toast.success(
             leasingCycle?.id

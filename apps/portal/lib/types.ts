@@ -144,7 +144,7 @@ export interface Agency {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
-  /** Agent portal service tier — Level 1 is inspection-only; Level 2 is full management. */
+  /** Agent portal service tier — Level 1 is inspection and tribunal; Level 2 is full management. */
   portalServiceLevel?: AgentPortalServiceLevel;
   /** Principal can manage team; agent sees assigned properties only. */
   membershipTier?: AgencyMembershipTier;

@@ -30,7 +30,7 @@ export const MORE_NAV: NavItem[] = [
   { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },
   { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' },
-  { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText, portalAccess: 'full' },
+  { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
   { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive, portalAccess: 'full' },
 ];
 

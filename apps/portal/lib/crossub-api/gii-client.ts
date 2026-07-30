@@ -10,13 +10,22 @@ import { crossub } from './client';
  * recomputing or re-rounding anything (notably `dailyRentDisplay`).
  */
 
-export type GiiChatMessage = components['schemas']['GiiChatMessageDto'];
+export type GiiChatMessage = components['schemas']['GiiChatMessageDto'] & {
+  attachments?: GiiChatAttachment[];
+};
 export type GiiChatResponse = components['schemas']['GiiChatResponseDto'];
 export type GiiAssessment = components['schemas']['GiiAssessmentDto'];
 export type GiiTermProgress = components['schemas']['GiiTermProgressDto'];
 export type GiiBreakFee = components['schemas']['GiiBreakFeeDto'];
 export type GiiNotice = components['schemas']['GiiNoticeDto'];
 export type GiiRentOwed = components['schemas']['GiiRentOwedDto'];
+
+/** PDF/image payload for one Gii turn — only on the latest user message. */
+export type GiiChatAttachment = {
+  fileName: string;
+  mediaType: string;
+  base64: string;
+};
 
 /** The subject carried between turns — Gii is stateless and tool results do not persist. */
 export interface GiiContext {
@@ -36,6 +45,8 @@ export async function sendGiiMessage(args: {
     body: {
       messages: args.messages,
       ...(args.context?.propertyId ? { context: args.context } : {}),
+    } as components['schemas']['GiiChatRequestDto'] & {
+      messages: GiiChatMessage[];
     },
   });
   if (error || !data) throw new Error('Gii is unavailable');
