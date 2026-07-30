@@ -2,10 +2,15 @@
  * "Tenant rejected" — a tenant-responsibility case the tenant refused (officer ask, demo
  * feedback 29 Jul 2026).
  *
- * Either answer to a tenant-responsibility decision closes the job, so on status alone a tenant
- * who accepted the charge and one who disputed it look identical — and only one of the two can
- * come back as a complaint or a tribunal matter. The API now records the answer on the job, so
- * the distinction is a fact to read rather than something to infer from the audit trail.
+ * A refusal now PARKS the case rather than closing it: the fault is still unrepaired and only who
+ * pays is contested, so the API holds the job open on an active status awaiting an officer. Two
+ * eras therefore exist — parked cases, and refusals answered before that change, which closed —
+ * and the tenant's recorded answer identifies both. That answer is a fact on the job, not
+ * something to infer from the audit trail.
+ *
+ * `TENANT_REJECTED_LABEL` is also the status a PARKED case reports, assigned once in
+ * `mapAgentMaintenance` (`isOpenTenantRejectedCase`) so every table, filter and KPI that reads
+ * `status` agrees without each one repeating the check. Closed refusals keep their real status.
  *
  * Deliberately NOT folded into the workflow step model: the stepper describes what work the case
  * went through, and a rejection is an outcome, not a sixth step. It replaces the step label in
@@ -24,7 +29,7 @@ export const TENANT_REJECTED_ROW_CLASS =
 export const TENANT_REJECTED_BADGE_CLASS =
   'inline-flex items-center rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300';
 
-/** True when this job closed because the tenant DISAGREED with the responsibility call. */
+/** True when the tenant DISAGREED with the responsibility call — parked or (legacy) closed. */
 export function isTenantRejectedMaintenance(request: MaintenanceRequest): boolean {
   return request.tenantResponsibilityResponse?.agreed === false;
 }

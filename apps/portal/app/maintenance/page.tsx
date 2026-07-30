@@ -55,8 +55,10 @@ export default function MaintenancePage() {
           m.status.toLowerCase().includes('complete') ||
           m.status.toLowerCase().includes('closed'),
       );
-    // These are closed jobs, so filtering on status would return every finished case. The
-    // tenant's recorded answer is the only thing that separates them.
+    // Matched on the tenant's recorded answer, not on status: a parked refusal reports "Tenant
+    // rejected" but one answered before the API stopped closing these still reports Completed,
+    // and both belong here. Those parked cases also fall into `progress` above, which is correct
+    // — they are open work, even though nothing is progressing until an officer rules on them.
     if (filter === 'tenant_rejected') items = items.filter(isTenantRejectedMaintenance);
     if (search.trim()) {
       const q = search.toLowerCase();

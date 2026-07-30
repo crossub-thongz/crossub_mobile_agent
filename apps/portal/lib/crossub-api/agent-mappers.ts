@@ -42,6 +42,7 @@ import {
   VACATING_STATUS,
 } from '@/constants/api-enums';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
+import { TENANT_REJECTED_LABEL } from '@/lib/maintenance/tenant-rejected';
 import { formatPropertyFullAddress } from '@/lib/utils';
 import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
 import type {
@@ -341,6 +342,26 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
 // Maintenance
 // ---------------------------------------------------------------------------
 
+/**
+ * A refused tenant-responsibility case the API is holding OPEN.
+ *
+ * The API no longer closes a case when the tenant disagrees — the fault is still unrepaired and
+ * only who pays is contested — so it parks the job and the row keeps an active Prisma status
+ * (`SCHEDULED`). Labelling that "In progress" is worse than useless: no work is progressing, and
+ * it flatly contradicts the Tenant rejected badge on the same row.
+ *
+ * Deliberately scoped to open cases. Refusals answered before that change DID close the case, and
+ * they are genuinely `COMPLETED` — relabelling those would drag settled history back into the
+ * property's active work and out of the Completed filter. They keep their real status and carry
+ * the badge, which is the same split the staff console draws.
+ */
+function isOpenTenantRejectedCase(m: AgentMaintenance): boolean {
+  if (m.tenantResponsibilityResponse?.agreed !== false) return false;
+  return (
+    m.status !== MAINTENANCE_STATUS.COMPLETED && m.status !== MAINTENANCE_STATUS.CANCELLED
+  );
+}
+
 const MAINTENANCE_STATUS_LABEL: Record<AgentMaintenance['status'], string> = {
   [MAINTENANCE_STATUS.OPEN]: 'Open',
   [MAINTENANCE_STATUS.APPROVED]: 'Approved',
@@ -384,7 +405,9 @@ export function mapAgentMaintenance(
       status:
         m.status === MAINTENANCE_STATUS.CANCELLED
           ? 'Deleted'
-          : (MAINTENANCE_STATUS_LABEL[m.status] ?? m.status),
+          : isOpenTenantRejectedCase(m)
+            ? TENANT_REJECTED_LABEL
+            : (MAINTENANCE_STATUS_LABEL[m.status] ?? m.status),
       apiStatus: m.status,
       priority,
       responsibility: 'pending',

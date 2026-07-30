@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-30
+
+### Changed
+- **A rejected case now reports "Tenant rejected" as its status, not "In progress".** The API stopped closing these — a refusal parks the case, because the fault is still unrepaired and only who pays is contested — so the row keeps an active Prisma status (`SCHEDULED`) and the label mapped straight to "In progress". That said no work was progressing and flatly contradicted the Tenant rejected badge sitting on the same row. Assigned once in `mapAgentMaintenance` (`isOpenTenantRejectedCase`), so every table, filter, property job list and KPI that reads `status` agrees without repeating the check.
+- Consequently a parked refusal moves out of **Completed** and into the open work it actually is: it appears under the In progress filter and in the property's active jobs, and the dashboard pie counts it as in-progress rather than completed. Counting a disputed, unrepaired job as done was the previous behaviour.
+- Scoped to cases the API is holding open. Refusals answered before that change genuinely closed (`COMPLETED`), so they keep their real status and carry only the badge — the same forward-only split the staff console draws, and it keeps settled history out of the active lists.
+- The Tenant rejected filter chip still matches on the tenant's recorded answer rather than status, which is now what makes it work across both eras.
+
 ## 2026-07-29
 
 ### Added
