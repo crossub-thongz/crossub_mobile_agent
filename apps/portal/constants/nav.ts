@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Building2,
   ClipboardList,
+  FileSignature,
   FileText,
   FolderArchive,
   LayoutDashboard,
@@ -27,6 +28,7 @@ export const PRIMARY_NAV: NavItem[] = [
 
 /** Workflow modules under the sidebar “More” section. */
 export const MORE_NAV: NavItem[] = [
+  { href: ROUTES.AGREEMENTS, label: 'Agreements', icon: FileSignature },
   { href: ROUTES.LEASING, label: 'Leasing', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },

@@ -1023,3 +1023,38 @@ export async function fetchAgentTenants(): Promise<AgentTenantAccount[]> {
   );
   return result.items;
 }
+
+export type AgentSalesAgreement = {
+  id: string;
+  leadId: string;
+  title: string;
+  status: 'sent' | 'returned' | 'signed' | 'declined' | 'viewed' | 'draft';
+  agencyName: string;
+  sentAt: string | null;
+  agentReturnedAt: string | null;
+  documentUrl: string | null;
+  returnedDocumentUrl: string | null;
+  returnedDocumentName: string | null;
+  agentReturnNotes: string | null;
+  assignedSalesperson: string;
+};
+
+export async function fetchSalesAgreements(): Promise<AgentSalesAgreement[]> {
+  return agentFetch<AgentSalesAgreement[]>('/agent/sales-agreements');
+}
+
+export async function returnSalesAgreement(
+  agreementId: string,
+  input: {
+    notes?: string;
+    fileName?: string;
+    mimeType?: string;
+    sizeBytes?: number;
+    contentBase64?: string;
+  },
+): Promise<AgentSalesAgreement> {
+  return agentFetch<AgentSalesAgreement>(`/agent/sales-agreements/${agreementId}/return`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}

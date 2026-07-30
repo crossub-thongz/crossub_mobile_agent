@@ -33,6 +33,7 @@ export const ROUTES = {
   TENANTS_NEW: '/tenants/new',
   PROPERTY_TRANSFER: '/leasing/transfer',
   ARCHIVE: '/archive',
+  AGREEMENTS: '/agreements',
 } as const;
 
 export const PUBLIC_ROUTE_PATTERNS = [
