@@ -25,13 +25,12 @@ export function AgentPageGuideDialog({
   onDismiss: () => void;
   onSkip: () => void;
 }) {
+  const handleOpenChange = (next: boolean) => {
+    if (!next) onSkip();
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onSkip();
-      }}
-    >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         elevated
         className="flex max-h-[min(85vh,720px)] max-w-md flex-col gap-0 overflow-hidden p-0 sm:max-w-md"

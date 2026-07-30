@@ -13,6 +13,13 @@ import {
 import { useAuth } from '@/components/providers/auth-provider';
 import type { AgentPageGuideId } from '@/constants/agent-page-guides';
 import {
+  clearCachedPageGuides,
+  markCachedPageGuide,
+  mergePageGuideSeenMaps,
+  readCachedPageGuides,
+  writeCachedPageGuides,
+} from '@/lib/agent-page-guide-cache';
+import {
   fetchPageGuidesStatus,
   markPageGuideSeen as markPageGuideSeenApi,
   resetPageGuides as resetPageGuidesApi,
@@ -29,12 +36,13 @@ type AgentPageGuideContextValue = {
 const AgentPageGuideContext = createContext<AgentPageGuideContextValue | null>(null);
 
 export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
-  const { status } = useAuth();
+  const { user, status } = useAuth();
+  const userId = user?.id ?? null;
   const [seen, setSeen] = useState<Record<string, AgentPageGuideStatus>>({});
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (status !== 'authed') {
+    if (status !== 'authed' || !userId) {
       setSeen({});
       setReady(false);
       return;
@@ -43,16 +51,23 @@ export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     setReady(false);
 
+    const cached = readCachedPageGuides(userId);
+    if (Object.keys(cached).length > 0) {
+      setSeen(cached);
+    }
+
     void fetchPageGuidesStatus()
       .then((result) => {
         if (!cancelled) {
-          setSeen(result.seen);
+          const merged = mergePageGuideSeenMaps(cached, result.seen);
+          setSeen(merged);
+          writeCachedPageGuides(userId, merged);
           setReady(true);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setSeen({});
+          setSeen(cached);
           setReady(true);
         }
       });
@@ -60,7 +75,7 @@ export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [status]);
+  }, [status, userId]);
 
   const isSeen = useCallback(
     (guideId: AgentPageGuideId) => {
@@ -72,25 +87,36 @@ export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
 
   const markSeen = useCallback(
     async (guideId: AgentPageGuideId, guideStatus: AgentPageGuideStatus) => {
-      setSeen((current) => ({ ...current, [guideId]: guideStatus }));
+      if (!userId) return;
+
+      const optimistic = markCachedPageGuide(userId, guideId, guideStatus);
+      setSeen(optimistic);
+
       try {
         const result = await markPageGuideSeenApi(guideId, guideStatus);
-        setSeen(result.seen);
+        const merged = mergePageGuideSeenMaps(optimistic, result.seen);
+        setSeen(merged);
+        writeCachedPageGuides(userId, merged);
       } catch {
-        setSeen((current) => {
-          const next = { ...current };
-          delete next[guideId];
-          return next;
-        });
+        // Keep optimistic + cached state — do not re-show the guide when the API is unavailable.
       }
     },
-    [],
+    [userId],
   );
 
   const resetGuides = useCallback(async () => {
-    const result = await resetPageGuidesApi();
-    setSeen(result.seen);
-  }, []);
+    if (!userId) return;
+
+    try {
+      const result = await resetPageGuidesApi();
+      setSeen(result.seen);
+      writeCachedPageGuides(userId, result.seen);
+    } catch {
+      clearCachedPageGuides(userId);
+      setSeen({});
+      throw new Error('Failed to reset page guides');
+    }
+  }, [userId]);
 
   const value = useMemo(
     () => ({ ready, isSeen, markSeen, resetGuides }),

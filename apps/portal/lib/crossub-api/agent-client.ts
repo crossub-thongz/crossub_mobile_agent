@@ -1,6 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 
-import { ApiError, apiV1 } from '@/lib/api';
+import { ApiError, api, apiV1 } from '@/lib/api';
 import { fileToBase64WithProgress } from '@/lib/file-upload';
 
 import { crossub } from './client';
@@ -399,25 +399,23 @@ export async function dismissPortalWelcome(): Promise<AgentPortalWelcomeStatus> 
   });
 }
 
-/** Section guide completion state — synced per user on the server. */
+/** Section guide completion state — synced per user on the server (auth route, any role). */
 export async function fetchPageGuidesStatus(): Promise<AgentPortalPageGuidesStatus> {
-  return agentFetch<AgentPortalPageGuidesStatus>('/agent/onboarding/page-guides');
+  return api.get<AgentPortalPageGuidesStatus>('/auth/agent-portal/page-guides');
 }
 
 export async function markPageGuideSeen(
   guideId: string,
   status: AgentPageGuideStatus,
 ): Promise<AgentPortalPageGuidesStatus> {
-  return agentFetch<AgentPortalPageGuidesStatus>('/agent/onboarding/page-guides/mark', {
-    method: 'POST',
-    body: JSON.stringify({ guideId, status }),
+  return api.post<AgentPortalPageGuidesStatus>('/auth/agent-portal/page-guides/mark', {
+    guideId,
+    status,
   });
 }
 
 export async function resetPageGuides(): Promise<AgentPortalPageGuidesStatus> {
-  return agentFetch<AgentPortalPageGuidesStatus>('/agent/onboarding/page-guides/reset', {
-    method: 'POST',
-  });
+  return api.post<AgentPortalPageGuidesStatus>('/auth/agent-portal/page-guides/reset');
 }
 
 export interface PreferredContractor {

@@ -89,19 +89,19 @@ export function AgentPageGuideHost() {
   if (!activeGuideId) return null;
 
   const guide = getAgentPageGuide(activeGuideId);
+  const guideId = activeGuideId;
+
+  const closeGuide = (status: 'completed' | 'skipped') => {
+    setActiveGuideId(null);
+    void markSeen(guideId, status);
+  };
 
   return (
     <AgentPageGuideDialog
       open
       guide={guide}
-      onDismiss={() => {
-        void markSeen(activeGuideId, 'completed');
-        setActiveGuideId(null);
-      }}
-      onSkip={() => {
-        void markSeen(activeGuideId, 'skipped');
-        setActiveGuideId(null);
-      }}
+      onDismiss={() => closeGuide('completed')}
+      onSkip={() => closeGuide('skipped')}
     />
   );
 }
