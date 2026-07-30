@@ -20,9 +20,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { fileToBase64WithProgress } from '@/lib/file-upload';
 import {
+  fetchSalesAgreementAccessStatus,
   fetchSalesAgreements,
   returnSalesAgreement,
   type AgentSalesAgreement,
+  type AgentSalesAgreementAccessStatus,
 } from '@/lib/crossub-api/agent-client';
 import { formatDateTime } from '@/lib/utils';
 
@@ -55,6 +57,7 @@ function statusVariant(status: AgentSalesAgreement['status']): 'default' | 'succ
 export default function AgreementsPage() {
   const [filter, setFilter] = useState('all');
   const [agreements, setAgreements] = useState<AgentSalesAgreement[]>([]);
+  const [access, setAccess] = useState<AgentSalesAgreementAccessStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [returnTarget, setReturnTarget] = useState<AgentSalesAgreement | null>(null);
@@ -67,10 +70,15 @@ export default function AgreementsPage() {
     setLoading(true);
     setError(null);
     try {
-      const rows = await fetchSalesAgreements();
+      const [rows, accessStatus] = await Promise.all([
+        fetchSalesAgreements(),
+        fetchSalesAgreementAccessStatus(),
+      ]);
       setAgreements(rows);
+      setAccess(accessStatus);
     } catch {
       setAgreements([]);
+      setAccess(null);
       setError('Could not load agreements.');
     } finally {
       setLoading(false);
@@ -133,6 +141,22 @@ export default function AgreementsPage() {
   return (
     <AgentShell title="Agreements">
       <div className="space-y-4">
+        {access?.blocked ? (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            {access.awaitingSalesApproval ? (
+              <p>
+                Your signed agreement has been returned to your salesperson. The Agent App will
+                unlock once they review and approve it.
+              </p>
+            ) : (
+              <p>
+                Complete the service agreement below before using the Agent App. Review each
+                document, sign offline if needed, then return the signed copy to your salesperson.
+                They must approve it before you can access the rest of the portal.
+              </p>
+            )}
+          </div>
+        ) : null}
         <p className="text-sm text-muted-foreground">
           Service agreements sent from CROSSUB Sales for your agency. Review each document, sign
           offline if needed, then return the signed copy to your salesperson.
@@ -178,6 +202,12 @@ export default function AgreementsPage() {
                     {agreement.agentReturnedAt ? (
                       <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
                         Returned {formatDateTime(agreement.agentReturnedAt)}
+                      </p>
+                    ) : null}
+                    {agreement.status === 'returned' ? (
+                      <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                        Waiting for {agreement.assignedSalesperson || 'your salesperson'} to approve
+                        this agreement.
                       </p>
                     ) : null}
                     {agreement.agentReturnNotes ? (

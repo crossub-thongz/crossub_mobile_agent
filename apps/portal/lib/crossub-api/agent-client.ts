@@ -1039,6 +1039,16 @@ export type AgentSalesAgreement = {
   assignedSalesperson: string;
 };
 
+export type AgentSalesAgreementAccessStatus = {
+  blocked: boolean;
+  pendingCount: number;
+  awaitingSalesApproval: boolean;
+};
+
+export async function fetchSalesAgreementAccessStatus(): Promise<AgentSalesAgreementAccessStatus> {
+  return agentFetch<AgentSalesAgreementAccessStatus>('/agent/sales-agreements/access-status');
+}
+
 export async function fetchSalesAgreements(): Promise<AgentSalesAgreement[]> {
   return agentFetch<AgentSalesAgreement[]>('/agent/sales-agreements');
 }
