@@ -11,6 +11,11 @@ export const PORTAL_SERVICE_LEVEL_LABEL: Record<AgentPortalServiceLevel, string>
   LEVEL_2_FULL_MANAGEMENT: 'Full management',
 };
 
+export const PORTAL_SERVICE_LEVEL_TAG: Record<AgentPortalServiceLevel, string> = {
+  LEVEL_1_INSPECTION_ONLY: 'Level 1',
+  LEVEL_2_FULL_MANAGEMENT: 'Level 2',
+};
+
 export const DEFAULT_PORTAL_SERVICE_LEVEL: AgentPortalServiceLevel =
   'LEVEL_2_FULL_MANAGEMENT';
 

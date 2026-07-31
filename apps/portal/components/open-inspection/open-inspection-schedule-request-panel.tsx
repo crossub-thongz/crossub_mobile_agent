@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ensurePrepaidCharge } from '@/lib/crossub-api/agent-billing-client';
 import { requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { finalizeAgentOpenInspectionSchedule } from '@/lib/open-inspection/finalize-agent-open-schedule';
 import {
@@ -58,16 +57,7 @@ export function OpenInspectionScheduleRequestPanel({
     body: Parameters<typeof requestAgentOpenInspection>[2],
     successMessage: string,
   ) => {
-    const platformChargeId = await ensurePrepaidCharge({
-      serviceType: 'open_inspection',
-      propertyId,
-      leasingCycleId: cycleId,
-    });
-
-    const result = await requestAgentOpenInspection(propertyId, cycleId, {
-      ...body,
-      ...(platformChargeId ? { platformChargeId } : {}),
-    });
+    const result = await requestAgentOpenInspection(propertyId, cycleId, body);
     toast.success(successMessage);
 
     const inspectionId = await finalizeAgentOpenInspectionSchedule({

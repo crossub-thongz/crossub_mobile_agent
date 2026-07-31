@@ -1,0 +1,518 @@
+/* Platform pricing page — section accents, cards, and entrance motion */
+
+.pricing-page {
+  --pricing-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes pricing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pricing-shimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.pricing-animate-in {
+  animation: pricing-fade-up 0.55s var(--pricing-ease) both;
+}
+
+.pricing-animate-in-delay-1 {
+  animation-delay: 0.06s;
+}
+.pricing-animate-in-delay-2 {
+  animation-delay: 0.12s;
+}
+.pricing-animate-in-delay-3 {
+  animation-delay: 0.18s;
+}
+.pricing-animate-in-delay-4 {
+  animation-delay: 0.24s;
+}
+
+/* Account banner */
+.pricing-account-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--primary) 14%, var(--card)) 0%,
+    var(--card) 45%,
+    color-mix(in oklab, var(--chart-5) 8%, var(--card)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in oklab, var(--primary) 20%, transparent),
+    0 8px 24px -12px color-mix(in oklab, var(--primary) 25%, transparent);
+}
+
+.pricing-account-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    color-mix(in oklab, var(--primary) 12%, transparent) 50%,
+    transparent 60%
+  );
+  background-size: 200% 100%;
+  animation: pricing-shimmer 8s linear infinite;
+  pointer-events: none;
+}
+
+.pricing-account-level-tag {
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 color-mix(in oklab, white 30%, transparent);
+}
+
+.pricing-account-banner[data-level='level-1'] {
+  border-color: color-mix(in oklab, #06b6d4 35%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #06b6d4 12%, var(--card)) 0%,
+    var(--card) 45%,
+    color-mix(in oklab, var(--primary) 6%, var(--card)) 100%
+  );
+}
+
+.pricing-account-banner[data-level='level-2'] {
+  border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+}
+
+/* Section shells */
+.pricing-section {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 4%, transparent);
+  transition:
+    box-shadow 0.25s var(--pricing-ease),
+    border-color 0.25s var(--pricing-ease);
+}
+
+.pricing-section:hover {
+  box-shadow: 0 10px 32px -16px color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+.pricing-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--pricing-accent-bar, var(--primary));
+}
+
+.pricing-section[data-accent='cyan'] {
+  --pricing-accent-bar: #06b6d4;
+  --pricing-accent-soft: color-mix(in oklab, #06b6d4 10%, var(--card));
+  --pricing-accent-border: color-mix(in oklab, #06b6d4 28%, var(--border));
+  --pricing-accent-icon-bg: color-mix(in oklab, #06b6d4 16%, transparent);
+  --pricing-accent-icon-fg: #0891b2;
+}
+
+.pricing-section[data-accent='violet'] {
+  --pricing-accent-bar: #8b5cf6;
+  --pricing-accent-soft: color-mix(in oklab, #8b5cf6 10%, var(--card));
+  --pricing-accent-border: color-mix(in oklab, #8b5cf6 28%, var(--border));
+  --pricing-accent-icon-bg: color-mix(in oklab, #8b5cf6 16%, transparent);
+  --pricing-accent-icon-fg: #7c3aed;
+}
+
+.pricing-section[data-accent='emerald'] {
+  --pricing-accent-bar: var(--primary);
+  --pricing-accent-soft: color-mix(in oklab, var(--primary) 10%, var(--card));
+  --pricing-accent-border: color-mix(in oklab, var(--primary) 28%, var(--border));
+  --pricing-accent-icon-bg: color-mix(in oklab, var(--primary) 16%, transparent);
+  --pricing-accent-icon-fg: var(--primary);
+}
+
+.dark .pricing-section[data-accent='cyan'] {
+  --pricing-accent-icon-fg: #22d3ee;
+}
+.dark .pricing-section[data-accent='violet'] {
+  --pricing-accent-icon-fg: #a78bfa;
+}
+
+.pricing-section__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1.25rem 1.25rem 0;
+}
+
+.pricing-section__icon {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.875rem;
+  background: var(--pricing-accent-icon-bg);
+  color: var(--pricing-accent-icon-fg);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 25%, transparent);
+}
+
+.pricing-section__body {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.pricing-section__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid var(--pricing-accent-border);
+  background: var(--pricing-accent-soft);
+  padding: 0.2rem 0.65rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pricing-accent-icon-fg);
+}
+
+/* Bullet list */
+.pricing-check-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pricing-check-list li {
+  position: relative;
+  padding-left: 1.35rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+.pricing-check-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.45rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: var(--pricing-accent-icon-fg, var(--primary));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--pricing-accent-icon-fg, var(--primary)) 18%, transparent);
+}
+
+/* Allowance chips */
+.pricing-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pricing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--pricing-accent-border);
+  background: var(--pricing-accent-soft);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.pricing-chip strong {
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+/* Rate cards */
+.pricing-rate-grid {
+  display: grid;
+  gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .pricing-rate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pricing-rate-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--rate-accent, var(--primary)) 6%, var(--card)) 0%,
+    var(--card) 100%
+  );
+  padding: 1rem 1rem 1.05rem;
+  transition:
+    transform 0.22s var(--pricing-ease),
+    box-shadow 0.22s var(--pricing-ease),
+    border-color 0.22s var(--pricing-ease);
+}
+
+.pricing-rate-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--rate-accent, var(--primary)) 35%, var(--border));
+  box-shadow: 0 12px 28px -18px color-mix(in oklab, var(--rate-accent, var(--primary)) 35%, transparent);
+}
+
+.pricing-rate-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--rate-accent, var(--primary));
+  opacity: 0.85;
+}
+
+.pricing-rate-card[data-rate='routine'] {
+  --rate-accent: var(--primary);
+}
+
+.pricing-rate-card[data-rate='open'] {
+  --rate-accent: #f59e0b;
+}
+
+.pricing-rate-card[data-rate='tribunal'] {
+  --rate-accent: #ef4444;
+}
+
+.pricing-rate-card--wide {
+  grid-column: 1 / -1;
+}
+
+.pricing-rate-card--standalone {
+  width: 100%;
+}
+
+.pricing-rate-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  background: color-mix(in oklab, var(--rate-accent, var(--primary)) 14%, transparent);
+  color: var(--rate-accent, var(--primary));
+  margin-bottom: 0.5rem;
+}
+
+.pricing-rate-card__price {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+/* Open inspection tiers */
+.pricing-tier-split {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 480px) {
+  .pricing-tier-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pricing-tier {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in oklab, var(--foreground) 2%, var(--card));
+}
+
+.pricing-tier[data-tier='standard'] {
+  border-color: color-mix(in oklab, #f59e0b 30%, var(--border));
+  background: color-mix(in oklab, #f59e0b 8%, var(--card));
+}
+
+.pricing-tier[data-tier='premium'] {
+  border-color: color-mix(in oklab, #ef4444 28%, var(--border));
+  background: color-mix(in oklab, #ef4444 7%, var(--card));
+}
+
+.pricing-tier__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.pricing-tier__value {
+  margin-top: 0.2rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--foreground);
+}
+
+.pricing-example-box {
+  margin-top: 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px dashed color-mix(in oklab, var(--foreground) 12%, var(--border));
+  background: color-mix(in oklab, var(--foreground) 3%, var(--card));
+  padding: 0.65rem 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.6875rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+
+.pricing-example-box strong {
+  color: var(--foreground);
+}
+
+/* Full service example callout */
+.pricing-callout {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklab, #8b5cf6 30%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #8b5cf6 10%, var(--card)) 0%,
+    color-mix(in oklab, #8b5cf6 4%, var(--card)) 100%
+  );
+  padding: 1rem 1.1rem;
+}
+
+.pricing-callout__formula {
+  margin-top: 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in oklab, #8b5cf6 18%, var(--border));
+  background: color-mix(in oklab, var(--foreground) 2%, var(--card));
+  padding: 0.75rem 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+}
+
+/* Bed tables */
+.pricing-bed-table-grid {
+  display: grid;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (min-width: 640px) {
+  .pricing-bed-table-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pricing-bed-table-column {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pricing-bed-table-column__title {
+  min-height: 2.75rem;
+}
+
+@media (min-width: 640px) {
+  .pricing-bed-table-column__title {
+    min-height: 3.25rem;
+  }
+}
+
+.pricing-bed-table-column .pricing-bed-table-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pricing-bed-table-wrap {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--card);
+}
+
+.pricing-bed-table-wrap table {
+  width: 100%;
+  min-width: 20rem;
+  height: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  table-layout: fixed;
+}
+
+.pricing-bed-table-wrap thead {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--primary) 8%, var(--muted)) 0%,
+    var(--muted) 100%
+  );
+}
+
+.pricing-bed-table-wrap th {
+  padding: 0.55rem 0.85rem;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.pricing-bed-table-wrap td {
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+.pricing-bed-table-wrap tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--foreground) 2%, transparent);
+}
+
+.pricing-bed-table-wrap tbody tr:hover {
+  background: color-mix(in oklab, var(--primary) 6%, transparent);
+}
+
+.pricing-bed-table-wrap td:last-child {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.pricing-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}

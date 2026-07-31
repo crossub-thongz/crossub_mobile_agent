@@ -20,7 +20,11 @@ import {
   MAX_UPLOAD_LABEL,
 } from '@/lib/file-upload';
 import { cn } from '@/lib/utils';
-import { CrossubServiceFeeNotice } from '@/components/agent/crossub-service-fee-notice';
+import {
+  CrossubPlatformFeeSummaryRow,
+  CrossubServiceFeeNotice,
+  CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT,
+} from '@/components/agent/crossub-service-fee-notice';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
@@ -251,19 +255,20 @@ export function PropertyManagementFeesSection({
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
-      <CrossubServiceFeeNotice
-        managementRatePercent={
-          managementRateRaw.trim() ? Number(managementRateRaw.replace(/,/g, '')) : null
-        }
-        weeklyRentAud={weeklyRentAud}
-      />
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold">Fees</p>
-            <p className="text-muted-foreground text-xs">
-              Add management agreement fees with rate or amount and GST for each line.
-            </p>
+            <CrossubServiceFeeNotice
+              forceShow
+              compact
+              managementRatePercent={
+                managementRateRaw.trim()
+                  ? Number(managementRateRaw.replace(/,/g, ''))
+                  : null
+              }
+              weeklyRentAud={weeklyRentAud}
+            />
           </div>
           <Button
             type="button"
@@ -324,7 +329,15 @@ export function PropertyManagementFeesSection({
                         step={isRate || isLettingFee ? 0.1 : 0.01}
                         value={row.amount}
                         onChange={(e) => updateFee(row.id, { amount: e.target.value })}
-                        placeholder={isRate ? 'e.g. 5.5' : isLettingFee ? 'e.g. 1' : '0.00'}
+                        placeholder={
+                          row.feeType === 'management_fee'
+                            ? String(CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT)
+                            : isRate
+                              ? 'e.g. 5.5'
+                              : isLettingFee
+                                ? 'e.g. 1'
+                                : '0.00'
+                        }
                         disabled={disabled}
                         className="min-w-0 flex-1"
                       />
@@ -397,9 +410,24 @@ export function PropertyManagementFeesSection({
                 </div>
               );
             })}
+            <CrossubPlatformFeeSummaryRow
+              managementRatePercent={
+                managementRateRaw.trim()
+                  ? Number(managementRateRaw.replace(/,/g, ''))
+                  : null
+              }
+              weeklyRentAud={weeklyRentAud}
+            />
           </div>
         )}
       </div>
+      <CrossubServiceFeeNotice
+        forceShow
+        managementRatePercent={
+          managementRateRaw.trim() ? Number(managementRateRaw.replace(/,/g, '')) : null
+        }
+        weeklyRentAud={weeklyRentAud}
+      />
     </div>
   );
 }

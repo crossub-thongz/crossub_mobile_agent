@@ -5,6 +5,10 @@ import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
+  CrossubPlatformFeeSummaryRow,
+  CrossubServiceFeeNotice,
+} from '@/components/agent/crossub-service-fee-notice';
+import {
   MANAGEMENT_FEE_OPTIONS,
   type ManagementFeeRow,
   type ManagementRateGst,
@@ -301,6 +305,12 @@ export function PropertyFeesTab({
 
   const displayFees = editing ? draftFees : fees;
 
+  const managementFeeRow = displayFees.find((row) => row.feeType === 'management_fee');
+  const managementRatePercent =
+    managementFeeRow?.amount.trim() ?
+      Number(managementFeeRow.amount.replace(/,/g, ''))
+    : property.managementRatePercent ?? null;
+
   const startEdit = () => {
     setDraftFees(fees.map((row) => ({ ...row })));
     setEditing(true);
@@ -390,11 +400,14 @@ export function PropertyFeesTab({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-2">
           <h2 className="text-base font-semibold">Fees</h2>
-          <p className="text-muted-foreground text-xs">
-            Fees from property registration. Add new fees or edit existing ones.
-          </p>
+          <CrossubServiceFeeNotice
+            forceShow
+            compact
+            managementRatePercent={managementRatePercent}
+            weeklyRentAud={property.rentWeekly}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {editing ? (
@@ -531,6 +544,16 @@ export function PropertyFeesTab({
           </div>
         </>
       )}
+
+      <CrossubPlatformFeeSummaryRow
+        managementRatePercent={managementRatePercent}
+        weeklyRentAud={property.rentWeekly}
+      />
+      <CrossubServiceFeeNotice
+        forceShow
+        managementRatePercent={managementRatePercent}
+        weeklyRentAud={property.rentWeekly}
+      />
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">

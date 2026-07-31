@@ -20,7 +20,6 @@ import { suggestedOutgoingInspectionIsoFromDate } from '@/lib/inspections/outgoi
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import { terminationApi } from '@/lib/termination-case-api';
-import { ensurePrepaidCharge } from '@/lib/crossub-api/agent-billing-client';
 import { LEASING_ITEM_STATUS, LEASING_UI } from '@/lib/leasing/constants';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -71,14 +70,9 @@ export function EndLeasingOutgoingInspectionPanel({
     setCreateBusy(true);
     try {
       const anchor = endLeasingKeyReturnDate(caseData) ?? endLeasingVacateDate(caseData);
-      const platformChargeId = await ensurePrepaidCharge({
-        serviceType: 'outgoing_inspection',
-        propertyId,
-      });
       const updated = await terminationApi.scheduleInspection(caseData.id, {
         inspector: 'Pending assignment',
         date: suggestedOutgoingInspectionIsoFromDate(anchor),
-        ...(platformChargeId ? { platformChargeId } : {}),
       });
       applyCase(updated);
       const inspectionId = updated.inspection?.inspectionId;

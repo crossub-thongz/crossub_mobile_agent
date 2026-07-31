@@ -51,7 +51,10 @@ export type AgentBillingPricingCatalog = {
     openInspection: {
       firstThree: string;
       fourthOnwards: string;
+      exampleRent500FirstIncGstAud?: number;
+      /** @deprecated use exampleRent500FirstIncGstAud */
       exampleRent500IncGstAud?: number;
+      exampleRent500FourthIncGstAud?: number;
     };
     fieldInspectionsCompactExGst: Record<string, number>;
     fieldInspectionsHouseExGst: Record<string, number | string>;
@@ -150,8 +153,8 @@ export async function payAllAgentBilling(opts?: {
 }
 
 /**
- * Quote platform charge — prepaid (Level 1: pay now) or postpaid accrual (Level 2: invoice).
- * Returns null when the service is included in the Full Service allowance.
+ * Quote and pay a platform charge upfront — used for tribunal (inspections bill on inspector accept).
+ * Returns null when billing is disabled or the service is included in Full Service allowance.
  */
 export async function ensurePlatformCharge(input: AgentBillingQuoteInput): Promise<string | null> {
   const summary = await fetchAgentBillingSummary();
