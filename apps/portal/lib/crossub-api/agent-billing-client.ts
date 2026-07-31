@@ -15,12 +15,53 @@ export type AgentBillingCharge = {
 
 export type AgentBillingSummary = {
   prepaidEnabled: boolean;
+  portalServiceLevel?: string;
+  inspectionsCollectionMode?: 'prepaid' | 'postpaid';
+  serviceFeePercent?: number;
   billingBlocked: boolean;
   outstandingInvoiceAmount: number;
   openInvoiceId?: string | null;
   openInvoiceNumber?: string | null;
   nextInvoiceDueDate?: string | null;
   hasDefaultPaymentMethod: boolean;
+};
+
+export type AgentBillingPricingCatalog = {
+  portalServiceLevel: string;
+  level1: {
+    label: string;
+    collectionMode: string;
+    description: string;
+  };
+  level2: {
+    label: string;
+    collectionMode: string;
+    description: string;
+    includedPerPropertyPerYear: Record<string, number>;
+    serviceFeePercent: number;
+    serviceFeeExample: {
+      weeklyRentAud: number;
+      managementRatePercent: number;
+      agentIncomeAud: number;
+      crossubFeeAud: number;
+    };
+  };
+  inspections: {
+    routineIncGstAud: number;
+    openInspection: {
+      firstThree: string;
+      fourthOnwards: string;
+      exampleRent500IncGstAud?: number;
+    };
+    fieldInspectionsCompactExGst: Record<string, number>;
+    fieldInspectionsHouseExGst: Record<string, number | string>;
+    tribunal: {
+      standardExGstAud: number;
+      includedHours: number;
+      extraHourlyExGstAud: number;
+      gstPercent: number;
+    };
+  };
 };
 
 export type AgentBillingMonthlyInvoice = {
@@ -45,10 +86,14 @@ export async function fetchAgentBillingSummary(): Promise<AgentBillingSummary> {
   return agentFetch('/agent/billing');
 }
 
+export async function fetchAgentBillingPricing(): Promise<AgentBillingPricingCatalog> {
+  return agentFetch('/agent/billing/pricing');
+}
+
 export async function quoteAgentBillingCharge(
   body: AgentBillingQuoteInput,
-): Promise<AgentBillingCharge> {
-  const result = await agentFetch<{ charge: AgentBillingCharge }>('/agent/billing/quote', {
+): Promise<AgentBillingCharge | null> {
+  const result = await agentFetch<{ charge: AgentBillingCharge | null }>('/agent/billing/quote', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -104,12 +149,25 @@ export async function payAllAgentBilling(opts?: {
   });
 }
 
-/** Quote and pay (dev auto-pay when Stripe is not configured). Returns paid charge id. */
-export async function ensurePrepaidCharge(input: AgentBillingQuoteInput): Promise<string | null> {
+/**
+ * Quote platform charge — prepaid (Level 1: pay now) or postpaid accrual (Level 2: invoice).
+ * Returns null when the service is included in the Full Service allowance.
+ */
+export async function ensurePlatformCharge(input: AgentBillingQuoteInput): Promise<string | null> {
   const summary = await fetchAgentBillingSummary();
   if (!summary.prepaidEnabled) return null;
 
   const charge = await quoteAgentBillingCharge(input);
+  if (!charge) return null;
+
+  if (
+    summary.inspectionsCollectionMode === 'postpaid' ||
+    charge.collectionMode === 'postpaid'
+  ) {
+    if (charge.status === 'accrued' || charge.status === 'paid') return charge.id;
+    return charge.id;
+  }
+
   if (charge.status === 'paid') return charge.id;
 
   const paid = await payAgentBillingCharge(charge.id);
@@ -118,3 +176,6 @@ export async function ensurePrepaidCharge(input: AgentBillingQuoteInput): Promis
   }
   return paid.charge.id;
 }
+
+/** @deprecated use ensurePlatformCharge */
+export const ensurePrepaidCharge = ensurePlatformCharge;

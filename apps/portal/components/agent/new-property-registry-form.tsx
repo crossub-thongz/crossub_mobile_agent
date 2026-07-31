@@ -1150,6 +1150,11 @@ export function NewPropertyRegistryForm({
             values={form.management}
             onChange={patchManagement}
             disabled={formBusy}
+            weeklyRentAud={
+              form.leasing.rentAmount.trim()
+                ? Number(form.leasing.rentAmount.replace(/,/g, ''))
+                : undefined
+            }
           />
         </div>
       ) : null}

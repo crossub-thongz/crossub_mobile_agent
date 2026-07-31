@@ -20,6 +20,7 @@ import {
   MAX_UPLOAD_LABEL,
 } from '@/lib/file-upload';
 import { cn } from '@/lib/utils';
+import { CrossubServiceFeeNotice } from '@/components/agent/crossub-service-fee-notice';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
@@ -129,7 +130,7 @@ export const EMPTY_MANAGEMENT_DETAILS: ManagementDetailsValues = {
   managementRatePercent: '',
   managementRateGst: '',
   fees: [
-    { id: 'fee-management', feeType: 'management_fee', valueMode: 'rate', amount: '', gst: '' },
+    { id: 'fee-management', feeType: 'management_fee', valueMode: 'rate', amount: '4', gst: '' },
     { id: 'fee-letting', feeType: 'letting_fee', valueMode: 'amount', amount: '', gst: '' },
     { id: 'fee-admin', feeType: 'administration_fee', valueMode: 'rate', amount: '', gst: '' },
   ],
@@ -209,11 +210,16 @@ export function PropertyManagementFeesSection({
   values,
   onChange,
   disabled,
+  weeklyRentAud,
 }: {
   values: ManagementDetailsValues;
   onChange: (patch: Partial<ManagementDetailsValues>) => void;
   disabled?: boolean;
+  /** Weekly rent for CROSSUB fee example (defaults to $500). */
+  weeklyRentAud?: number | null;
 }) {
+  const managementFeeRow = values.fees.find((row) => row.feeType === 'management_fee');
+  const managementRateRaw = managementFeeRow?.amount || values.managementRatePercent;
   const updateFee = (id: string, patch: Partial<ManagementFeeRow>) => {
     onChange({
       fees: values.fees.map((row) => (row.id === id ? { ...row, ...patch } : row)),
@@ -245,6 +251,12 @@ export function PropertyManagementFeesSection({
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
+      <CrossubServiceFeeNotice
+        managementRatePercent={
+          managementRateRaw.trim() ? Number(managementRateRaw.replace(/,/g, '')) : null
+        }
+        weeklyRentAud={weeklyRentAud}
+      />
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

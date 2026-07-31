@@ -27,6 +27,7 @@ export const ROUTES = {
   PROFILE: '/profile',
   SETTINGS: '/settings',
   BILL: '/bill',
+  PRICING: '/pricing',
   SYSTEM_ACCESS_AGREEMENT: '/system-access-agreement',
   TENANT_SELECTION: '/tenant-selection',
   TENANTS: '/tenants',
