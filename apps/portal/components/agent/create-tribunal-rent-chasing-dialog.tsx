@@ -24,6 +24,7 @@ import {
   type AgentTribunalRentChasingPrefill,
   type CreateAgentTribunalRentChasingInput,
 } from '@/lib/crossub-api/agent-workflow-client';
+import { ensurePrepaidCharge } from '@/lib/crossub-api/agent-billing-client';
 import {
   RENT_PERIOD_OPTIONS,
   type RentPeriodChoice,
@@ -467,7 +468,14 @@ export function CreateTribunalRentChasingDialog({
         return;
       }
 
-      const result = await createAgentTribunalRentChasing(propertyId, body);
+      const platformChargeId = await ensurePrepaidCharge({
+        serviceType: 'tribunal',
+        propertyId,
+      });
+      const result = await createAgentTribunalRentChasing(propertyId, {
+        ...body,
+        ...(platformChargeId ? { platformChargeId } : {}),
+      });
       toast.success('Tribunal case created');
       onOpenChange(false);
       onCreated?.(result.id);

@@ -5,7 +5,9 @@ import { agentFetch } from './agent-client';
 export type AgentWorkflowCreateResult = { id: string; openInspectionId?: string };
 
 export type CreateAgentTribunalRentChasingInput =
-  components['schemas']['AgentCreateTribunalRentChasingDto'];
+  components['schemas']['AgentCreateTribunalRentChasingDto'] & {
+    platformChargeId?: string;
+  };
 
 const base = (propertyId: string) =>
   `/agent/properties/${encodeURIComponent(propertyId)}/workflows`;
@@ -72,6 +74,7 @@ export type CreateAgentIngoingInspectionInput = {
   accessInstructions?: string;
   notes?: string;
   leaseApprovalRef?: string;
+  platformChargeId?: string;
 };
 
 export async function createAgentLeasingCycle(

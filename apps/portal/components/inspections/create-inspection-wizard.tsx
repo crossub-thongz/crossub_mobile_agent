@@ -724,6 +724,10 @@ export function CreateInspectionWizard({
         const scheduledTime = ingoingScheduledLocal
           ? new Date(ingoingScheduledLocal).toISOString()
           : ingoing.scheduledTime || undefined;
+        const platformChargeId = await ensurePrepaidCharge({
+          serviceType: 'ingoing_inspection',
+          propertyId: property.id,
+        });
         const created = await createAgentIngoingInspection(property.id, {
           moveInDate: ingoing.moveInDate,
           scheduledTime,
@@ -733,6 +737,7 @@ export function CreateInspectionWizard({
           priority: ingoing.priority,
           accessInstructions: ingoing.accessInstructions.trim() || undefined,
           notes: ingoing.notes?.trim() || undefined,
+          ...(platformChargeId ? { platformChargeId } : {}),
         });
         let view: Inspection;
         try {
@@ -759,6 +764,14 @@ export function CreateInspectionWizard({
       }
 
       if (inspectionType === 'ROUTINE') {
+        const prepaidRoutineCharge = async () => {
+          const chargeId = await ensurePrepaidCharge({
+            serviceType: 'routine_inspection',
+            propertyId: property.id,
+          });
+          return chargeId ? { platformChargeId: chargeId } : {};
+        };
+
         const finalizeRoutineSchedule = async (schedule: Awaited<
           ReturnType<typeof routineInspectionApi.create>
         >) => {
@@ -817,6 +830,7 @@ export function CreateInspectionWizard({
                   : undefined,
               reason:
                 'Superseded — agent scheduled a new routine inspection case from the portal.',
+              ...(await prepaidRoutineCharge()),
             });
             toast.success('Previous routine case cancelled — new case created');
           } else if (needsNewInstance) {
@@ -826,6 +840,7 @@ export function CreateInspectionWizard({
                 routine.flow === 'in_person'
                   ? routine.inspectorName.trim() || undefined
                   : undefined,
+              ...(await prepaidRoutineCharge()),
             });
             toast.success('Next routine inspection scheduled');
           } else {
@@ -844,6 +859,7 @@ export function CreateInspectionWizard({
           tenantEmail: routine.tenantEmail.trim() || undefined,
           inspectorName:
             routine.flow === 'in_person' ? routine.inspectorName.trim() || undefined : undefined,
+          ...(routine.flow === 'in_person' ? await prepaidRoutineCharge() : {}),
         });
         toast.success('Routine inspection schedule created');
         await finalizeRoutineSchedule(schedule);
@@ -853,9 +869,14 @@ export function CreateInspectionWizard({
       if (inspectionType === 'OUTGOING') {
         if (!vacatingCaseId) throw new Error('Select a vacating case');
         if (!outgoingScheduledLocal) throw new Error('Scheduled date is required');
+        const platformChargeId = await ensurePrepaidCharge({
+          serviceType: 'outgoing_inspection',
+          propertyId: property.id,
+        });
         const updatedCase = await terminationApi.scheduleInspection(vacatingCaseId, {
           inspector: outgoingInspector.trim() || 'Pending assignment',
           date: new Date(outgoingScheduledLocal).toISOString(),
+          ...(platformChargeId ? { platformChargeId } : {}),
         });
         const inspectionId = updatedCase.inspection?.inspectionId ?? undefined;
         let view: Inspection | null = null;

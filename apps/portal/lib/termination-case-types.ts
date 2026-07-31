@@ -294,6 +294,7 @@ export interface TerminationListResult {
 export interface ScheduleInspectionInput {
   inspector: string
   date: string
+  platformChargeId?: string
 }
 
 export interface UpdateReportComparisonInput {

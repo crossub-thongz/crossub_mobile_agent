@@ -9,6 +9,7 @@ export type CreateRoutineScheduleInput = {
   tenantName?: string;
   tenantEmail?: string;
   inspectorName?: string;
+  platformChargeId?: string;
 };
 
 export type ChangeRoutineFlowInput = {
@@ -27,6 +28,7 @@ export type OverrideRoutineScheduleInput = {
 export type StartRoutineInspectionInput = {
   scheduledDate?: string;
   inspectorName?: string;
+  platformChargeId?: string;
 };
 
 export type RoutineScheduleByProperty = {
