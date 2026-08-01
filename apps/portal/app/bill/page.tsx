@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PageIntro } from '@/components/agent/page-intro';
+import {
+  StripePaymentDialog,
+  type StripePaymentDialogState,
+} from '@/components/billing/stripe-payment-dialog';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +23,7 @@ import {
   type AgentBillingMonthlyInvoice,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
+import { getStripePublishableKey } from '@/lib/stripe-client';
 import { cn, formatCurrency } from '@/lib/utils';
 
 type PaymentRow =
@@ -59,6 +64,31 @@ function isPayableInvoice(row: AgentBillingMonthlyInvoice): boolean {
   return row.status === 'sent' || row.status === 'overdue';
 }
 
+type PayIntentResult = {
+  paymentComplete: boolean;
+  clientSecret?: string | null;
+};
+
+function resolvePaymentFlow(
+  result: PayIntentResult,
+  dialog: Omit<StripePaymentDialogState, 'clientSecret'>,
+  setPaymentDialog: (state: StripePaymentDialogState | null) => void,
+): 'complete' | 'dialog' | 'failed' {
+  if (result.paymentComplete) return 'complete';
+
+  if (result.clientSecret) {
+    setPaymentDialog({ ...dialog, clientSecret: result.clientSecret });
+    return 'dialog';
+  }
+
+  if (!getStripePublishableKey()) {
+    toast.error('Card payments are not configured on this environment.');
+  } else {
+    toast.error('Could not start payment. Try again or contact CROSSUB support.');
+  }
+  return 'failed';
+}
+
 export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
@@ -66,6 +96,7 @@ export default function BillPage() {
   const [loading, setLoading] = useState(true);
   const [payingKey, setPayingKey] = useState<string | null>(null);
   const [payingAll, setPayingAll] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
 
   const payableCharges = useMemo(() => charges.filter(isPayableCharge), [charges]);
   const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
@@ -102,6 +133,15 @@ export default function BillPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'return') return;
+
+    toast.success('Payment received — updating your balance…');
+    void load();
+    window.history.replaceState({}, '', '/bill');
+  }, [load]);
+
   const payments = useMemo(() => {
     const rows: PaymentRow[] = [
       ...charges.map((row) => ({
@@ -122,17 +162,32 @@ export default function BillPage() {
 
   const outstandingCountDisplay = outstandingCount;
 
+  const handlePaymentSuccess = async () => {
+    toast.success('Payment complete');
+    await load();
+    // Webhook may mark the charge paid a moment after Stripe confirms.
+    window.setTimeout(() => void load(), 2000);
+  };
+
   const payAll = async () => {
     setPayingAll(true);
     try {
-      const result = await payAllAgentBilling();
-      if (result.paymentComplete) {
+      const result = await payAllAgentBilling({ devConfirm: false });
+      const outcome = resolvePaymentFlow(
+        result,
+        {
+          title: 'Pay all outstanding bills',
+          description: `${outstandingCount} bill(s) · ${formatCurrency(result.totalAmountAud)}`,
+          amountAud: result.totalAmountAud,
+        },
+        setPaymentDialog,
+      );
+
+      if (outcome === 'complete') {
         toast.success(
           `Paid ${result.paidChargeCount + result.paidInvoiceCount} bill(s) — ${formatCurrency(result.totalAmountAud)}`,
         );
         await load();
-      } else {
-        toast.message('Complete payment in Stripe to finish.');
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Payment failed');
@@ -141,15 +196,23 @@ export default function BillPage() {
     }
   };
 
-  const payCharge = async (chargeId: string) => {
+  const payCharge = async (chargeId: string, row: AgentBillingCharge) => {
     setPayingKey(`charge-${chargeId}`);
     try {
-      const result = await payAgentBillingCharge(chargeId);
-      if (result.paymentComplete) {
+      const result = await payAgentBillingCharge(chargeId, { devConfirm: false });
+      const outcome = resolvePaymentFlow(
+        result,
+        {
+          title: serviceLabel(row.serviceType),
+          description: row.description,
+          amountAud: row.amount,
+        },
+        setPaymentDialog,
+      );
+
+      if (outcome === 'complete') {
         toast.success('Payment complete');
         await load();
-      } else {
-        toast.message('Complete payment in Stripe to finish.');
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Payment failed');
@@ -158,15 +221,23 @@ export default function BillPage() {
     }
   };
 
-  const payInvoice = async (invoiceId: string) => {
+  const payInvoice = async (invoiceId: string, row: AgentBillingMonthlyInvoice) => {
     setPayingKey(`invoice-${invoiceId}`);
     try {
-      const result = await payAgentMonthlyInvoice(invoiceId);
-      if (result.paymentComplete) {
+      const result = await payAgentMonthlyInvoice(invoiceId, { devConfirm: false });
+      const outcome = resolvePaymentFlow(
+        result,
+        {
+          title: 'Monthly platform invoice',
+          description: row.invoiceNumber,
+          amountAud: row.amountDue,
+        },
+        setPaymentDialog,
+      );
+
+      if (outcome === 'complete') {
         toast.success('Invoice paid');
         await load();
-      } else {
-        toast.message('Complete payment in Stripe to finish.');
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Payment failed');
@@ -218,7 +289,7 @@ export default function BillPage() {
               <Button
                 className="mt-4 w-full sm:w-auto"
                 onClick={() => void payAll()}
-                disabled={payingAll || payingKey != null}
+                disabled={payingAll || payingKey != null || paymentDialog != null}
               >
                 {payingAll ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -292,8 +363,8 @@ export default function BillPage() {
                       {payable ? (
                         <Button
                           size="sm"
-                          onClick={() => void payCharge(row.id)}
-                          disabled={payingKey === entry.id}
+                          onClick={() => void payCharge(row.id, row)}
+                          disabled={payingKey === entry.id || paymentDialog != null}
                         >
                           {payingKey === entry.id ? (
                             <Loader2 className="size-3.5 animate-spin" />
@@ -338,8 +409,8 @@ export default function BillPage() {
                     {payable ? (
                       <Button
                         size="sm"
-                        onClick={() => void payInvoice(row.id)}
-                        disabled={payingKey === entry.id}
+                        onClick={() => void payInvoice(row.id, row)}
+                        disabled={payingKey === entry.id || paymentDialog != null}
                       >
                         {payingKey === entry.id ? (
                           <Loader2 className="size-3.5 animate-spin" />
@@ -356,6 +427,14 @@ export default function BillPage() {
           </ul>
         )}
       </div>
+
+      <StripePaymentDialog
+        state={paymentDialog}
+        onOpenChange={(open) => {
+          if (!open) setPaymentDialog(null);
+        }}
+        onSuccess={handlePaymentSuccess}
+      />
     </AgentShell>
   );
 }
