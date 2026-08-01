@@ -8,8 +8,7 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
-import { PropertyDiscardDraftDialog } from '@/components/agent/property-discard-draft-dialog';
-import { PropertyEndManagementDialog } from '@/components/agent/property-end-management-dialog';
+import { PropertyRemoveDialog } from '@/components/agent/property-remove-dialog';
 import { PropertyListView } from '@/components/agent/property-list-view';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
@@ -50,18 +49,15 @@ export default function PropertiesPage() {
   );
   const [search, setSearch] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Property | null>(null);
-  const [endingManagement, setEndingManagement] = useState(false);
-  const [discardingDraft, setDiscardingDraft] = useState(false);
-
-  const pendingDraftDelete = pendingDelete?.registryIntakeComplete === false;
+  const [removing, setRemoving] = useState(false);
 
   const isArchivedView = filter === 'archived';
 
   useEffect(() => {
-    if (isArchivedView && apiConnected) {
+    if (apiConnected) {
       void refreshArchivedProperties();
     }
-  }, [isArchivedView, apiConnected, refreshArchivedProperties]);
+  }, [apiConnected, refreshArchivedProperties]);
 
   const list = useMemo(() => {
     let items = isArchivedView ? [...archivedProperties] : [...properties];
@@ -105,31 +101,32 @@ export default function PropertiesPage() {
     [getPropertyActions],
   );
 
-  const confirmDiscardDraft = async () => {
+  const confirmDeletePermanently = async () => {
     if (!pendingDelete) return;
-    setDiscardingDraft(true);
+    setRemoving(true);
     try {
       await deleteDraftProperty(pendingDelete.id);
-      toast.success('Draft property deleted');
+      toast.success('Property deleted permanently');
       setPendingDelete(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not delete draft property');
+      toast.error(err instanceof Error ? err.message : 'Could not delete property');
     } finally {
-      setDiscardingDraft(false);
+      setRemoving(false);
     }
   };
 
   const confirmEndManagement = async (endOfManagementDate: string) => {
     if (!pendingDelete) return;
-    setEndingManagement(true);
+    setRemoving(true);
     try {
       await endPropertyManagement(pendingDelete.id, endOfManagementDate);
-      toast.success('Property management ended');
+      toast.success('Property archived — open the Archived filter to view it');
       setPendingDelete(null);
+      setFilter('archived');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not end property management');
     } finally {
-      setEndingManagement(false);
+      setRemoving(false);
     }
   };
 
@@ -171,7 +168,7 @@ export default function PropertiesPage() {
               search || filter !== 'all'
                 ? 'Try a different search or filter.'
                 : isArchivedView
-                  ? 'Properties appear here after you end management on them.'
+                  ? 'Properties appear here after you end management on them. Permanently deleted properties are removed entirely and will not show here.'
                   : 'Add a property to start managing landlords and tenants.'
             }
             action={
@@ -202,24 +199,15 @@ export default function PropertiesPage() {
         )}
       </div>
 
-      <PropertyDiscardDraftDialog
-        property={pendingDraftDelete ? pendingDelete : null}
-        open={pendingDelete != null && pendingDraftDelete}
+      <PropertyRemoveDialog
+        property={pendingDelete}
+        open={pendingDelete != null}
         onOpenChange={(open) => {
           if (!open) setPendingDelete(null);
         }}
-        onConfirm={confirmDiscardDraft}
-        saving={discardingDraft}
-      />
-
-      <PropertyEndManagementDialog
-        property={!pendingDraftDelete ? pendingDelete : null}
-        open={pendingDelete != null && !pendingDraftDelete}
-        onOpenChange={(open) => {
-          if (!open) setPendingDelete(null);
-        }}
-        onConfirm={confirmEndManagement}
-        saving={endingManagement}
+        onEndManagement={confirmEndManagement}
+        onDeletePermanently={confirmDeletePermanently}
+        saving={removing}
       />
     </AgentShell>
   );

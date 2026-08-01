@@ -58,11 +58,13 @@ export function PropertyListCard({
         }
         title="Messages"
       >
-        <Bell className="size-5" strokeWidth={2} />
+        <Bell className="size-[1.125rem]" strokeWidth={2} />
         {messageUnread > 0 ? (
-          <span className="bg-[#fa5151] pointer-events-none absolute top-0 right-0 flex min-w-[1.125rem] translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-background">
-            {messageUnread > 99 ? '99+' : messageUnread}
-          </span>
+          <MessageUnreadBadge
+            count={messageUnread}
+            size="sm"
+            className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 ring-2 ring-background"
+          />
         ) : null}
       </Link>
 

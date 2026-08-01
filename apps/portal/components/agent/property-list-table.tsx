@@ -43,7 +43,7 @@ function NotificationIconBadge({
   return (
     <span
       className={cn(
-        'pointer-events-none absolute -top-1 -right-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-card',
+        'pointer-events-none absolute top-0 right-0 z-10 flex h-4 min-w-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-card',
         variant === 'message' ? 'bg-[#fa5151]' : 'bg-destructive',
       )}
     >
@@ -73,7 +73,7 @@ function TableIconLink({
     <Link
       href={href}
       className={cn(
-        'relative isolate flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-secondary/60',
+        'relative flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-secondary/60',
         active ? activeClassName : 'text-muted-foreground hover:text-foreground',
       )}
       aria-label={label}
@@ -186,8 +186,8 @@ export function PropertyListTable({
           <col className="w-[11%]" />
           <col className="w-[9%]" />
           <col className="w-[10%]" />
-          <col className="w-[5%]" />
-          <col className="w-[12%]" />
+          <col className="w-[6rem]" />
+          <col className="w-[6.5rem]" />
         </colgroup>
         <thead>
           <tr className="border-b bg-muted/30">
@@ -340,28 +340,24 @@ export function PropertyListTable({
                         : '—'}
                     </td>
                   ) : (
-                    <td className="px-2 py-2.5 text-center align-middle lg:px-3 lg:py-3">
-                      <TableIconLink
-                        href={messagesForProperty(property.id)}
-                        label={
-                          messageUnread > 0
-                            ? `${messageUnread} unread message${messageUnread === 1 ? '' : 's'} for this property`
-                            : 'View messages for this property'
-                        }
-                        title="Messages"
-                        active={messageUnread > 0}
-                        activeClassName="text-primary"
-                        badge={
-                          <NotificationIconBadge count={messageUnread} variant="message" />
-                        }
-                      >
-                        <Bell className="size-5" strokeWidth={2} />
-                      </TableIconLink>
-                    </td>
-                  )}
-                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
-                    <div className="flex items-center justify-end gap-0.5 overflow-visible pr-1 pt-1">
-                      {!isArchived ? (
+                    <td className="px-2 py-2.5 align-middle lg:px-3 lg:py-3">
+                      <div className="mx-auto flex w-fit items-center justify-center gap-1">
+                        <TableIconLink
+                          href={messagesForProperty(property.id)}
+                          label={
+                            messageUnread > 0
+                              ? `${messageUnread} unread message${messageUnread === 1 ? '' : 's'} for this property`
+                              : 'View messages for this property'
+                          }
+                          title="Messages"
+                          active={messageUnread > 0}
+                          activeClassName="text-primary"
+                          badge={
+                            <NotificationIconBadge count={messageUnread} variant="message" />
+                          }
+                        >
+                          <Bell className="size-4" strokeWidth={2} />
+                        </TableIconLink>
                         <TableIconLink
                           href={needActionsForProperty(property.id)}
                           label={
@@ -378,7 +374,11 @@ export function PropertyListTable({
                         >
                           <AlertTriangle className="size-4" strokeWidth={2} />
                         </TableIconLink>
-                      ) : null}
+                      </div>
+                    </td>
+                  )}
+                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
+                    <div className="flex items-center justify-end gap-0.5">
                       <Button variant="ghost" size="icon" className="size-8" asChild>
                         <Link
                           href={rowHref(property)}
@@ -398,7 +398,8 @@ export function PropertyListTable({
                           size="icon"
                           className="text-destructive hover:bg-destructive/10 hover:text-destructive size-8"
                           onClick={() => onDelete(property)}
-                          aria-label={`Delete ${property.address}`}
+                          aria-label={`Remove ${property.address}`}
+                          title="Remove property"
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
