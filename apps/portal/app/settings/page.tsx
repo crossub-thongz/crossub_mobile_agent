@@ -117,6 +117,19 @@ export default function SettingsPage() {
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">Help</h2>
           <div className="rounded-xl border bg-card p-4">
+            <p className="text-sm font-medium">FAQ</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              Common questions about leasing, maintenance, inspections, rent review, billing, and
+              portal access.
+            </p>
+            <Link
+              href={ROUTES.FAQ}
+              className="text-primary mt-3 inline-block text-sm font-medium"
+            >
+              View FAQ →
+            </Link>
+          </div>
+          <div className="rounded-xl border bg-card p-4">
             <p className="text-sm font-medium">Page guides</p>
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
               Short onboarding guides appear the first time you open each main section. Progress

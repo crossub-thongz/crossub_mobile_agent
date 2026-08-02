@@ -26,6 +26,7 @@ export const ROUTES = {
   SEARCH: '/search',
   PROFILE: '/profile',
   SETTINGS: '/settings',
+  FAQ: '/faq',
   BILL: '/bill',
   PRICING: '/pricing',
   SYSTEM_ACCESS_AGREEMENT: '/system-access-agreement',

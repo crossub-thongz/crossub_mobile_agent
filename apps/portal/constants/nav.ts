@@ -5,6 +5,7 @@ import {
   FileSignature,
   FileText,
   FolderArchive,
+  HelpCircle,
   LayoutDashboard,
   Receipt,
   Settings,
@@ -41,6 +42,7 @@ export const MORE_NAV: NavItem[] = [
 /** Pinned below workflow modules — settings & billing. */
 export const MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
+  { href: ROUTES.FAQ, label: 'FAQ', icon: HelpCircle },
   { href: ROUTES.PRICING, label: 'Pricing', icon: Tags },
   { href: ROUTES.BILL, label: 'Bill', icon: Receipt },
 ];
