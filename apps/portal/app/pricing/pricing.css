@@ -516,3 +516,55 @@
   line-height: 1.45;
   color: var(--muted-foreground);
 }
+
+.pricing-included-usage {
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--color-violet-500) 22%, var(--border));
+  background: color-mix(in oklab, var(--color-violet-500) 5%, var(--background));
+  padding: 0.85rem 1rem;
+}
+
+.pricing-included-usage__table {
+  width: 100%;
+  min-width: 28rem;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.pricing-included-usage__table th {
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.pricing-included-usage__table td {
+  padding: 0.55rem 0.65rem;
+  border-top: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  vertical-align: top;
+}
+
+.pricing-included-usage__table td:first-child {
+  max-width: 14rem;
+}
+
+.pricing-allowance {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pricing-allowance--free strong {
+  color: var(--foreground);
+}
+
+.pricing-allowance--used {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}

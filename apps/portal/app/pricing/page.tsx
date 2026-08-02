@@ -118,6 +118,33 @@ function BedTable({
   );
 }
 
+function AllowanceCell({
+  usage,
+}: {
+  usage: { included: number; used: number; remaining: number };
+}) {
+  if (usage.remaining > 0) {
+    return (
+      <span className="pricing-allowance pricing-allowance--free">
+        <strong>{usage.remaining}</strong> free
+        <span className="text-muted-foreground font-normal">
+          {' '}
+          / {usage.included}
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="pricing-allowance pricing-allowance--used" title="Allowance used — further jobs are invoiced">
+      Used
+      <span className="text-muted-foreground font-normal">
+        {' '}
+        ({usage.used}/{usage.included})
+      </span>
+    </span>
+  );
+}
+
 export default function PricingPage() {
   const [catalog, setCatalog] = useState<AgentBillingPricingCatalog | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,6 +178,8 @@ export default function PricingPage() {
     openInspection?.exampleRent500FirstIncGstAud ?? openInspection?.exampleRent500IncGstAud;
   const openExampleFourth = openInspection?.exampleRent500FourthIncGstAud;
   const included = catalog?.level2.includedPerPropertyPerYear;
+  const includedUsage = catalog?.level2.includedUsageByProperty ?? [];
+  const usageYear = includedUsage[0]?.calendarYear ?? new Date().getFullYear();
 
   return (
     <AgentShell>
@@ -266,6 +295,53 @@ export default function PricingPage() {
                     Open inspections and tribunal are always charged separately.
                   </p>
                 </div>
+              ) : null}
+
+              {isLevel2 && includedUsage.length > 0 ? (
+                <div className="pricing-included-usage">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+                    Your included inspections remaining ({usageYear})
+                  </p>
+                  <p className="text-muted-foreground mb-3 text-xs leading-relaxed">
+                    Included jobs do not appear on Bill — they are free until you use your yearly
+                    allowance. After that, charges accrue to your monthly invoice.
+                  </p>
+                  <div className="pricing-included-usage__scroll overflow-x-auto">
+                    <table className="pricing-included-usage__table">
+                      <thead>
+                        <tr>
+                          <th>Property</th>
+                          <th>Routine</th>
+                          <th>Ingoing</th>
+                          <th>Outgoing</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {includedUsage.map((row) => (
+                          <tr key={row.propertyId}>
+                            <td className="font-medium">{row.propertyLabel}</td>
+                            <td>
+                              <AllowanceCell usage={row.routine} />
+                            </td>
+                            <td>
+                              <AllowanceCell usage={row.ingoing} />
+                            </td>
+                            <td>
+                              <AllowanceCell usage={row.outgoing} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+
+              {isLevel2 && includedUsage.length === 0 ? (
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Included inspection allowances apply per property. Add a property to see how many
+                  free routine, ingoing, and outgoing inspections you have left this year.
+                </p>
               ) : null}
 
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/6 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">

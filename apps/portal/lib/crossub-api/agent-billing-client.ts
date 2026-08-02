@@ -45,6 +45,8 @@ export type AgentBillingPricingCatalog = {
       agentIncomeAud: number;
       crossubFeeAud: number;
     };
+    /** Level 2 only — remaining included inspections per property this calendar year. */
+    includedUsageByProperty?: AgentBillingIncludedUsageRow[];
   };
   inspections: {
     routineIncGstAud: number;
@@ -76,6 +78,21 @@ export type AgentBillingMonthlyInvoice = {
   status: string;
   amountDue: number;
   paidAt?: string | null;
+};
+
+export type AgentBillingIncludedAllowanceUsage = {
+  included: number;
+  used: number;
+  remaining: number;
+};
+
+export type AgentBillingIncludedUsageRow = {
+  propertyId: string;
+  propertyLabel: string;
+  calendarYear: number;
+  routine: AgentBillingIncludedAllowanceUsage;
+  ingoing: AgentBillingIncludedAllowanceUsage;
+  outgoing: AgentBillingIncludedAllowanceUsage;
 };
 
 export type AgentBillingQuoteInput = {
