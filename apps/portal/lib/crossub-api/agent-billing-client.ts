@@ -62,8 +62,10 @@ export type AgentBillingPricingCatalog = {
     fieldInspectionsHouseExGst: Record<string, number | string>;
     tribunal: {
       standardExGstAud: number;
+      standardIncGstAud: number;
       includedHours: number;
       extraHourlyExGstAud: number;
+      extraHourlyIncGstAud: number;
       gstPercent: number;
     };
   };

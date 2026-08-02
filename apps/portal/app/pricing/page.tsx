@@ -458,22 +458,22 @@ export default function PricingPage() {
                 </div>
                 <p className="font-medium">Tribunal</p>
                 <p className="pricing-rate-card__price mt-1">
-                  {formatCurrency(catalog.inspections.tribunal.standardExGstAud)}{' '}
-                  <span className="text-muted-foreground text-sm font-normal">ex GST</span>
+                  {formatCurrency(catalog.inspections.tribunal.standardIncGstAud)}{' '}
+                  <span className="text-muted-foreground text-sm font-normal">inc GST</span>
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                   Standard session includes {catalog.inspections.tribunal.includedHours} hours.
                   Additional time{' '}
-                  {formatCurrency(catalog.inspections.tribunal.extraHourlyExGstAud)}/hr ex GST +{' '}
-                  {catalog.inspections.tribunal.gstPercent}% GST at invoice.
+                  {formatCurrency(catalog.inspections.tribunal.extraHourlyIncGstAud)}/hr inc GST.
                 </p>
               </div>
 
               <div className="pricing-footnote pricing-animate-in-delay-4">
                 <Info className="mt-0.5 size-4 shrink-0 text-primary" />
                 <span>
-                  All ingoing and outgoing amounts are ex GST;{' '}
-                  {catalog.inspections.tribunal.gstPercent}% GST is added at invoice.
+                  Ingoing and outgoing amounts are ex GST;{' '}
+                  {catalog.inspections.tribunal.gstPercent}% GST is added at invoice. Tribunal
+                  rates shown include GST.
                 </span>
               </div>
             </PricingSection>
