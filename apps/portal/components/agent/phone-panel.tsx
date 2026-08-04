@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Phone, PhoneCall, Search, X } from 'lucide-react';
+import { Phone, PhoneCall, Search, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { DialPad } from '@/components/agent/dial-pad';
+import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,11 +14,12 @@ import {
   type AgentPhonebookGroup,
 } from '@/lib/agent-phonebook';
 import { placePhoneCall } from '@/lib/phone';
-import { cn } from '@/lib/utils';
+import { useShellDockStore } from '@/lib/shell-dock-store';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 const TABS = [
-  { id: 'dial' as const, label: 'Dial pad' },
   { id: 'contacts' as const, label: 'Contacts' },
+  { id: 'account-manager' as const, label: 'Account Manager' },
 ];
 
 const CONTACT_GROUPS: AgentPhonebookGroup[] = ['tenant', 'landlord', 'agency'];
@@ -36,11 +37,12 @@ export function PhonePanel({
   propertyId?: string;
 }) {
   const { properties, agencies } = useAgentData();
-  const [tab, setTab] = useState<'dial' | 'contacts'>(() =>
-    propertyId ? 'contacts' : 'dial',
-  );
-  const [dialNumber, setDialNumber] = useState('');
+  const openGii = useShellDockStore((s) => s.openGii);
+  const closePanel = useShellDockStore((s) => s.closePanel);
+  const [tab, setTab] = useState<(typeof TABS)[number]['id']>('contacts');
   const [search, setSearch] = useState('');
+
+  const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
 
   const phonebook = useMemo(() => {
     const all = buildAgentPhonebook(properties, agencies);
@@ -48,9 +50,7 @@ export function PhonePanel({
     return phonebookContactsForProperty(propertyId, all);
   }, [properties, agencies, propertyId]);
 
-  const propertyLabel = propertyId
-    ? properties.find((p) => p.id === propertyId)?.address
-    : undefined;
+  const propertyLabel = property ? formatPropertyFullAddress(property) : undefined;
 
   const filteredContacts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -70,6 +70,16 @@ export function PhonePanel({
     toast.success(`Calling ${name ?? number}…`);
   };
 
+  const openGiiAccountManager = () => {
+    onClose?.();
+    closePanel();
+    if (propertyId && property) {
+      openGii({ propertyId, propertyAddress: formatPropertyFullAddress(property) });
+      return;
+    }
+    openGii();
+  };
+
   return (
     <div className={cn('flex min-h-0 flex-col', className)}>
       {variant === 'sheet' && onClose ? (
@@ -77,9 +87,7 @@ export function PhonePanel({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Phone className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <p className="text-sm font-semibold">
-                {propertyId ? 'Property contacts' : 'Calls'}
-              </p>
+              <p className="text-sm font-semibold">Contacts & Account Manager</p>
             </div>
             {propertyLabel ? (
               <p className="text-muted-foreground mt-0.5 truncate text-xs">{propertyLabel}</p>
@@ -109,18 +117,7 @@ export function PhonePanel({
         ))}
       </div>
 
-      {tab === 'dial' ? (
-        <DialPad
-          value={dialNumber}
-          onChange={setDialNumber}
-          onDigit={(digit) => setDialNumber((n) => n + digit)}
-          onBackspace={() => setDialNumber((n) => n.slice(0, -1))}
-          onClear={() => setDialNumber('')}
-          onCall={() => handleCall(dialNumber)}
-          listenToKeyboard
-          className={variant === 'embedded' ? 'min-h-[440px]' : undefined}
-        />
-      ) : (
+      {tab === 'contacts' ? (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="border-border/60 relative shrink-0 border-b p-2">
             <Search className="text-muted-foreground absolute top-1/2 left-4 size-3.5 -translate-y-1/2" />
@@ -170,6 +167,27 @@ export function PhonePanel({
               })
             )}
           </ul>
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Your CROSSUB Account Manager — message the team or ask Gii for help with this portfolio.
+          </p>
+          {propertyId ? (
+            <TalkToStaffSupportButton propertyId={propertyId} onOpened={onClose} />
+          ) : (
+            <p className="text-muted-foreground rounded-xl border border-dashed px-3 py-3 text-sm">
+              Open a property to start a property-scoped message with your Account Manager.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={openGiiAccountManager}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+          >
+            <Sparkles className="size-4 shrink-0" />
+            Ask Gii, your Account Manager
+          </button>
         </div>
       )}
     </div>

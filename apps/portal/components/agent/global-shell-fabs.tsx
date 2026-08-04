@@ -48,6 +48,12 @@ const SHELL_MESSAGE_BUTTON = {
   icon: Plus,
 } as const;
 
+const SHELL_PHONE_BUTTON = {
+  id: 'phone' as const,
+  label: 'Phone',
+  icon: Phone,
+} as const;
+
 function isActiveChatPath(pathname: string): boolean {
   return /^\/messages\/[^/]+$/.test(pathname) && !pathname.startsWith('/messages/new');
 }
@@ -80,13 +86,15 @@ function useShellQuickActions(pathname: string) {
 
   const visibleButtons = [
     SHELL_GII_BUTTON,
-    ...(hideCommunication || !hasFullManagementAccess ? [] : [SHELL_MESSAGE_BUTTON]),
+    ...(hideCommunication || !hasFullManagementAccess
+      ? []
+      : [SHELL_MESSAGE_BUTTON, SHELL_PHONE_BUTTON]),
   ];
 
   return { activePanel, togglePanel, openGii, visibleButtons };
 }
 
-/** Quick actions for the shell header — Gii and + Message. */
+/** Quick actions for the shell header — Gii, + Message, and Phone. */
 export function ShellHeaderQuickActions({
   pathname,
   inline = true,
@@ -122,6 +130,10 @@ export function ShellHeaderQuickActions({
       }
       return;
     }
+    if (btnId === 'phone') {
+      togglePanel('phone');
+      return;
+    }
     togglePanel('message-menu');
   };
 
@@ -135,13 +147,29 @@ export function ShellHeaderQuickActions({
       {visibleButtons.map((btn) => {
         const Icon = btn.icon;
         const isActive =
-          btn.id === 'gii' ? activePanel === 'gii' : activePanel === 'message-menu';
+          btn.id === 'gii'
+            ? activePanel === 'gii'
+            : btn.id === 'phone'
+              ? activePanel === 'phone'
+              : activePanel === 'message-menu';
         return (
           <button
             key={btn.id}
             type="button"
-            title={btn.id === 'message-menu' ? 'Message' : btn.label}
-            aria-label={btn.id === 'message-menu' ? 'Message' : btn.label}
+            title={
+              btn.id === 'message-menu'
+                ? 'Message'
+                : btn.id === 'phone'
+                  ? 'Contacts & Account Manager'
+                  : btn.label
+            }
+            aria-label={
+              btn.id === 'message-menu'
+                ? 'Message'
+                : btn.id === 'phone'
+                  ? 'Contacts and Account Manager'
+                  : btn.label
+            }
             aria-pressed={isActive}
             onClick={() => handleClick(btn.id)}
             className={headerQuickActionClass(isActive, inline)}
@@ -171,7 +199,7 @@ function MessageActionSheet({
   onClose: () => void;
   propertyId?: string;
 }) {
-  const [view, setView] = useState<'main' | 'new-message' | 'phone'>('main');
+  const [view, setView] = useState<'main' | 'new-message'>('main');
   const [pendingWorkflow, setPendingWorkflow] = useState<{
     actionId: PropertyWorkflowActionId;
     propertyId?: string;
@@ -213,22 +241,6 @@ function MessageActionSheet({
         }}
         initialPropertyId={pendingWorkflow?.propertyId}
       />
-    );
-  }
-
-  if (view === 'phone') {
-    return (
-      <>
-        <QuickCreateWorkflowDialog
-          actionId={pendingWorkflow?.actionId ?? null}
-          open={pendingWorkflow != null}
-          onOpenChange={(next) => {
-            if (!next) setPendingWorkflow(null);
-          }}
-          initialPropertyId={pendingWorkflow?.propertyId}
-        />
-        <PhoneDockSheet open onClose={() => setView('main')} propertyId={propertyId} />
-      </>
     );
   }
 
@@ -350,17 +362,6 @@ function MessageActionSheet({
                     </div>
                   </section>
                 ) : null}
-
-                <section>
-                  <button
-                    type="button"
-                    onClick={() => setView('phone')}
-                    className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
-                  >
-                    <Phone className="text-emerald-600 size-4 shrink-0 dark:text-emerald-400" />
-                    <span className="font-medium">Calls</span>
-                  </button>
-                </section>
               </div>
             )}
           </div>
@@ -380,6 +381,11 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
     <>
       <MessageActionSheet
         open={activePanel === 'message-menu'}
+        onClose={closePanel}
+        propertyId={propertyId}
+      />
+      <PhoneDockSheet
+        open={activePanel === 'phone'}
         onClose={closePanel}
         propertyId={propertyId}
       />
