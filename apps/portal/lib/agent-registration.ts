@@ -1,5 +1,7 @@
 import { api, ApiError } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
+import type { AgentPortalServiceLevel } from '@/lib/portal-service-level';
+import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
 
 export interface RegisterAgentInput {
   email: string;
@@ -9,6 +11,18 @@ export interface RegisterAgentInput {
   agencyName: string;
   agencyCompany?: string;
   phone?: string;
+  abn?: string;
+  licenceNumber?: string;
+  officeAddress?: string;
+  portalServiceLevel: AgentPortalServiceLevel;
+  acceptTerms: boolean;
+}
+
+/** Default platform pricing for the registration flow (public, no auth). */
+export async function fetchRegisterAgentPricing(): Promise<
+  Omit<AgentBillingPricingCatalog, 'portalServiceLevel'>
+> {
+  return api.get('/auth/register-agent-pricing');
 }
 
 /** Register via the shared API — creates User + Agency + assignment in crossub_web. */
@@ -23,6 +37,11 @@ export async function registerAgentAccount(
     agencyName: input.agencyName.trim(),
     agencyCompany: input.agencyCompany?.trim() || undefined,
     phone: input.phone?.trim() || undefined,
+    abn: input.abn?.trim() || undefined,
+    licenceNumber: input.licenceNumber?.trim() || undefined,
+    officeAddress: input.officeAddress?.trim() || undefined,
+    portalServiceLevel: input.portalServiceLevel,
+    acceptTerms: input.acceptTerms,
   });
   return result.user;
 }
