@@ -3,6 +3,10 @@
 ## 2026-08-04
 
 ### Fixed
+- **The mic button's waveform never once reflected the mic — a running CSS animation silently beat the inline style driving it.** `@keyframes voice-wave` animates `transform`, and an animation wins over an inline `transform` on the same element, so the measured level was computed, passed down, and discarded every frame while the bars waved to a fixed 0.85s rhythm. Whichever source is driving now, the other stands down: with a meter the bars scale from the real level (with a 150ms transition to match the sample rate, and a per-bar weight so four bars don't move as one block); without one they fall back to the animation.
+- **The button stops being red the moment the mic closes.** Red now means "the mic is open" and nothing else — holding it through transcription read as still recording, which made a one-second wait look like the app ignoring you. Transcribing shows a settled grey state and its own aria-label.
+
+### Fixed
 - **Capture runs with Chrome's audio processing off.** `echoCancellation`, `noiseSuppression` and `autoGainControl` are on by default, and on some setups — virtual devices, conferencing drivers, certain headsets — echo cancellation alone is enough to hand back a stream of pure silence. Speech recognition also does better on the raw signal than a gated, gain-ridden one, so this is the fix and the better input at once.
 - **The level meter reads a cloned track instead of the recorder's own.** One track feeding both a `MediaRecorder` and a Web Audio graph is a combination Chrome has historically handed silence to; a meter that steals from the recording would be worse than no meter.
 - **The silence threshold dropped to an RMS of 1.5.** It decides both when to stop and whether to call someone's mic dead, and being too high is costly both ways — it cuts off a softly-spoken agent and it calls a quiet-but-working input broken. A silent room still reads under 1.

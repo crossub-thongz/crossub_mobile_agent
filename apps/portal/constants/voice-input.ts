@@ -69,11 +69,19 @@ export type VoicePhase = (typeof VOICE_PHASE)[keyof typeof VOICE_PHASE];
  * plus a per-bar delay read as speech rather than as a metronome.
  */
 export const VOICE_WAVE_BARS = [
-  { heightPx: 10, delayMs: 0 },
-  { heightPx: 18, delayMs: 120 },
-  { heightPx: 22, delayMs: 240 },
-  { heightPx: 13, delayMs: 360 },
+  { heightPx: 10, delayMs: 0, weight: 0.8 },
+  { heightPx: 18, delayMs: 120, weight: 1.15 },
+  { heightPx: 22, delayMs: 240, weight: 1 },
+  { heightPx: 13, delayMs: 360, weight: 0.65 },
 ] as const;
+
+/**
+ * Resting scale of a bar at silence, and how hard the measured level pushes it. `weight`
+ * above spreads the same level across the bars so it still reads as a waveform rather than
+ * four bars moving as one block.
+ */
+export const VOICE_WAVE_REST_SCALE = 0.3;
+export const VOICE_WAVE_LEVEL_GAIN = 1.4;
 
 /** Status line above the composer. */
 export const VOICE_STATUS_LABEL = {
@@ -84,6 +92,7 @@ export const VOICE_STATUS_LABEL = {
 export const VOICE_BUTTON_ARIA_LABEL = {
   IDLE: 'Tap to speak',
   ACTIVE: 'Listening — tap to send',
+  WRAPPING: 'Transcribing what you said',
 } as const;
 
 /**

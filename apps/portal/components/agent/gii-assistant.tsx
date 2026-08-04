@@ -25,6 +25,8 @@ import {
   VOICE_PHASE,
   VOICE_STATUS_LABEL,
   VOICE_WAVE_BARS,
+  VOICE_WAVE_LEVEL_GAIN,
+  VOICE_WAVE_REST_SCALE,
   type VoicePhase,
 } from '@/constants/voice-input';
 import {
@@ -113,7 +115,20 @@ const idSeq = () => (lineSeq += 1);
  * browser is capturing a voice or capturing nothing, which is precisely the question someone
  * has when the mic "isn't working". `settling` runs them down instead of cutting them.
  */
-function VoiceWave({ settling, level = 0 }: { settling: boolean; level?: number }) {
+function VoiceWave({
+  settling,
+  level = null,
+}: {
+  settling: boolean;
+  /** Measured 0–1 mic level, or null when this path has no meter (browser recogniser). */
+  level?: number | null;
+}) {
+  // A running CSS animation beats an inline style on the same property, so the keyframes and
+  // a measured level cannot both drive `transform` — the animation would silently win and the
+  // bars would wave at a fixed rhythm no matter what the mic heard. Whichever is driving,
+  // the other stands down.
+  const reactive = level !== null && !settling;
+
   return (
     <span className="flex h-6 items-center justify-center gap-[3px]" aria-hidden="true">
       {VOICE_WAVE_BARS.map((bar) => (
@@ -121,13 +136,19 @@ function VoiceWave({ settling, level = 0 }: { settling: boolean; level?: number 
           key={bar.delayMs}
           className={cn(
             'block w-[3px] origin-center rounded-full bg-white',
-            settling ? 'animate-voice-wave-settle' : 'animate-voice-wave',
+            settling && 'animate-voice-wave-settle',
+            reactive && 'transition-transform duration-150 ease-out',
+            !settling && !reactive && 'animate-voice-wave',
           )}
           style={{
             height: `${bar.heightPx}px`,
             animationDelay: `${bar.delayMs}ms`,
-            // Floor keeps the bars visible at rest; the rest is what the mic is hearing.
-            transform: settling ? undefined : `scaleY(${0.35 + level * 0.65})`,
+            transform: reactive
+              ? `scaleY(${Math.min(
+                  1,
+                  VOICE_WAVE_REST_SCALE + level * bar.weight * VOICE_WAVE_LEVEL_GAIN,
+                )})`
+              : undefined,
           }}
         />
       ))}
@@ -226,7 +247,7 @@ export function GiiAssistant({
   const [composerDragActive, setComposerDragActive] = useState(false);
   const [voicePhase, setVoicePhase] = useState<VoicePhase>(VOICE_PHASE.IDLE);
   /** Live mic level (0–1) driving the waveform, so a dead input is visible immediately. */
-  const [voiceLevel, setVoiceLevel] = useState(0);
+  const [voiceLevel, setVoiceLevel] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const voiceCaptureRef = useRef<GiiVoiceCapture | null>(null);
@@ -717,25 +738,25 @@ export function GiiAssistant({
       onListening: () => setVoicePhase(VOICE_PHASE.LISTENING),
       onWrapping: () => {
         setVoicePhase(VOICE_PHASE.WRAPPING);
-        setVoiceLevel(0);
+        setVoiceLevel(null);
       },
       onIdle: () => {
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
-        setVoiceLevel(0);
+        setVoiceLevel(null);
       },
       onLevel: setVoiceLevel,
       onTranscript: (text) => setQuery(text),
       onComplete: (text) => {
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
-        setVoiceLevel(0);
+        setVoiceLevel(null);
         void runQuery(text);
       },
       onError: (message) => {
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
-        setVoiceLevel(0);
+        setVoiceLevel(null);
         toast.error(message);
       },
     });
@@ -890,14 +911,20 @@ export function GiiAssistant({
                         disabled={wrappingUp}
                         className={cn(
                           'flex size-10 shrink-0 touch-none items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
-                          voiceActive
-                            ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
-                            : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                          // Red means "the mic is open" and nothing else. Holding it through
+                          // transcription reads as still recording, so the wait looks like
+                          // the app ignoring you rather than working.
+                          listening && 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600',
+                          wrappingUp && 'bg-gradient-to-br from-slate-400 to-slate-500',
+                          !voiceActive &&
+                            'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
                         )}
                         aria-label={
-                          voiceActive
-                            ? VOICE_BUTTON_ARIA_LABEL.ACTIVE
-                            : VOICE_BUTTON_ARIA_LABEL.IDLE
+                          wrappingUp
+                            ? VOICE_BUTTON_ARIA_LABEL.WRAPPING
+                            : listening
+                              ? VOICE_BUTTON_ARIA_LABEL.ACTIVE
+                              : VOICE_BUTTON_ARIA_LABEL.IDLE
                         }
                         aria-pressed={listening}
                       >
@@ -1213,13 +1240,19 @@ export function GiiAssistant({
                   className={cn(
                     'flex size-11 shrink-0 touch-none items-center justify-center rounded-full text-white shadow-md',
                     'transition-all duration-300 ease-out active:scale-95',
-                    voiceActive
-                      ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
-                      : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
-                    listening && 'animate-voice-pulse-ring scale-110',
-                    wrappingUp && 'scale-105',
+                    // Red is "the mic is open", never "please wait" — see the compact button.
+                    listening &&
+                      'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600 animate-voice-pulse-ring scale-110',
+                    wrappingUp && 'bg-gradient-to-br from-slate-400 to-slate-500 scale-105',
+                    !voiceActive && 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
                   )}
-                  aria-label={voiceActive ? VOICE_BUTTON_ARIA_LABEL.ACTIVE : VOICE_BUTTON_ARIA_LABEL.IDLE}
+                  aria-label={
+                    wrappingUp
+                      ? VOICE_BUTTON_ARIA_LABEL.WRAPPING
+                      : listening
+                        ? VOICE_BUTTON_ARIA_LABEL.ACTIVE
+                        : VOICE_BUTTON_ARIA_LABEL.IDLE
+                  }
                   aria-pressed={listening}
                 >
                   {voiceActive ? <VoiceWave settling={wrappingUp} level={voiceLevel} /> : <Mic className="size-5" />}
