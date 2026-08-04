@@ -148,11 +148,17 @@ export default function AgreementsPage() {
                 Your signed agreement has been returned to your salesperson. The Agent App will
                 unlock once they review and approve it.
               </p>
+            ) : access.pendingCount > 0 ? (
+              <p>
+                Your Agent Portal access is limited to service agreements until your salesperson
+                confirms the signed copy. Review each document below, sign offline if needed, then
+                return the signed copy to your salesperson.
+              </p>
             ) : (
               <p>
-                Complete the service agreement below before using the Agent App. Review each
-                document, sign offline if needed, then return the signed copy to your salesperson.
-                They must approve it before you can access the rest of the portal.
+                Your Agent Portal access is limited to this page until your service agreement is
+                confirmed. Your salesperson will send the document here for you to review and
+                return.
               </p>
             )}
           </div>

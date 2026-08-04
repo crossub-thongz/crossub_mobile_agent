@@ -68,26 +68,23 @@ export function ModuleCommunications({
           type="button"
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
-          className="hover:bg-secondary/30 -mx-1 flex min-w-0 flex-1 items-start gap-2 rounded-lg px-1 py-0.5 text-left transition md:pointer-events-none md:cursor-default md:hover:bg-transparent"
+          className="hover:bg-secondary/30 -mx-1 flex min-w-0 flex-1 items-start gap-2 rounded-lg px-1 py-0.5 text-left transition"
         >
           <ChevronDown
             className={cn(
-              'text-muted-foreground mt-0.5 size-4 shrink-0 transition-transform md:hidden',
+              'text-muted-foreground mt-0.5 size-4 shrink-0 transition-transform',
               open && 'rotate-180',
             )}
             aria-hidden
           />
           <div className="min-w-0">
             <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px] md:hidden">
+            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px]">
               {open
                 ? `${items.length} message${items.length === 1 ? '' : 's'}`
                 : latestItem
                   ? latestItem.subject
                   : emptyHint ?? 'No emails or messages yet'}
-            </p>
-            <p className="text-muted-foreground mt-0.5 hidden text-[11px] md:block">
-              {items.length} message{items.length === 1 ? '' : 's'}
             </p>
           </div>
         </button>
@@ -108,7 +105,7 @@ export function ModuleCommunications({
         </div>
       </div>
 
-      <div className={cn('px-4 pb-4', !open && 'hidden md:block')}>
+      <div className={cn('px-4 pb-4', !open && 'hidden')}>
         {items.length === 0 ? (
           <p className="text-muted-foreground text-xs">
             {emptyHint ?? 'No emails or messages for this module yet.'}
@@ -135,7 +132,6 @@ export function ModuleCommunications({
                   )}
                 </div>
                 <p className="font-medium">{m.subject}</p>
-                <p className="text-muted-foreground line-clamp-2">{m.lastMessage}</p>
                 <p className="text-muted-foreground mt-1 text-[10px]">{formatDateTime(m.lastAt)}</p>
               </Link>
             ))}

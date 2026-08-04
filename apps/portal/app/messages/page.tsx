@@ -42,7 +42,7 @@ function MessageThreadRow({ thread }: { thread: MessageThread }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <p
             className={cn(
               'truncate text-sm',
@@ -55,9 +55,6 @@ function MessageThreadRow({ thread }: { thread: MessageThread }) {
             {formatRelative(thread.lastAt)}
           </span>
         </div>
-        <p className="text-muted-foreground line-clamp-1 text-xs">
-          {thread.lastMessage || thread.tenantName || thread.homeOwnerName}
-        </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
@@ -88,26 +85,23 @@ function PropertyMessageGroupSection({
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="hover:bg-secondary/30 flex w-full items-center gap-2 px-3 py-3 text-left transition md:pointer-events-none md:cursor-default md:hover:bg-transparent"
+        className="hover:bg-secondary/30 flex w-full items-center gap-2 px-3 py-3 text-left transition"
       >
         <ChevronDown
           className={cn(
-            'text-muted-foreground size-4 shrink-0 transition-transform md:hidden',
+            'text-muted-foreground size-4 shrink-0 transition-transform',
             open && 'rotate-180',
           )}
           aria-hidden
         />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-semibold">{group.propertyAddress}</h2>
-          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px] md:hidden">
+          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px]">
             {open
               ? `${group.threads.length} thread${group.threads.length === 1 ? '' : 's'}`
               : latestThread
                 ? latestThread.subject
                 : 'No threads'}
-          </p>
-          <p className="text-muted-foreground mt-0.5 hidden text-[11px] md:block">
-            {group.threads.length} thread{group.threads.length === 1 ? '' : 's'}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -116,13 +110,13 @@ function PropertyMessageGroupSection({
               {group.unreadTotal}
             </span>
           ) : null}
-          <span className="text-muted-foreground hidden text-[11px] tabular-nums md:inline">
+          <span className="text-muted-foreground text-[11px] tabular-nums">
             {group.threads.length}
           </span>
         </div>
       </button>
 
-      <div className={cn('border-t', !open && 'hidden md:block')}>
+      <div className={cn('border-t', !open && 'hidden')}>
         <div className="divide-border divide-y">
           {group.threads.map((thread) => (
             <MessageThreadRow key={thread.id} thread={thread} />
@@ -238,7 +232,6 @@ export default function MessagesPage() {
               <PropertyMessageGroupSection
                 key={group.propertyId ?? group.propertyAddress}
                 group={group}
-                defaultOpen={Boolean(propertyFilter)}
               />
             ))}
           </div>

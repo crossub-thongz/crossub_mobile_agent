@@ -31,47 +31,22 @@ import {
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS } from '@/lib/portal-service-level';
 import { unreadMessagesForProperty } from '@/lib/communications-log';
+import { propertyIdFromPath } from '@/lib/property-path';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { useAgentStore } from '@/lib/store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
-const DOCK_BUTTONS = [
-  {
-    id: 'communication' as const,
-    label: 'Messages',
-    icon: MessageSquare,
-    activeClass: 'border-primary/40 bg-primary/10 text-primary',
-  },
-  {
-    id: 'phone' as const,
-    label: 'Calls',
-    icon: Phone,
-    activeClass:
-      'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  },
-  {
-    id: 'quick' as const,
-    label: 'Quick create',
-    icon: Plus,
-    activeClass:
-      'border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-400',
-  },
-] as const;
-
-const MOBILE_GII_BUTTON = {
+const SHELL_GII_BUTTON = {
   id: 'gii' as const,
-  label: 'Account Manager',
+  label: 'Gii',
   icon: Sparkles,
-  activeClass:
-    'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
 } as const;
 
-function propertyIdFromPath(pathname: string): string | undefined {
-  const match = pathname.match(/^\/properties\/([^/]+)$/);
-  const id = match?.[1];
-  if (!id || id === 'new') return undefined;
-  return id;
-}
+const SHELL_MESSAGE_BUTTON = {
+  id: 'message-menu' as const,
+  label: 'Message',
+  icon: Plus,
+} as const;
 
 function isActiveChatPath(pathname: string): boolean {
   return /^\/messages\/[^/]+$/.test(pathname) && !pathname.startsWith('/messages/new');
@@ -101,18 +76,17 @@ function useShellQuickActions(pathname: string) {
   const { hasFullManagementAccess } = useAgentData();
   const activePanel = useShellDockStore((s) => s.activePanel);
   const togglePanel = useShellDockStore((s) => s.togglePanel);
+  const openGii = useShellDockStore((s) => s.openGii);
 
-  const visibleButtons = DOCK_BUTTONS.filter((button) => {
-    if (button.id === 'communication' && (hideCommunication || !hasFullManagementAccess)) {
-      return false;
-    }
-    return true;
-  });
+  const visibleButtons = [
+    SHELL_GII_BUTTON,
+    ...(hideCommunication || !hasFullManagementAccess ? [] : [SHELL_MESSAGE_BUTTON]),
+  ];
 
-  return { activePanel, togglePanel, visibleButtons };
+  return { activePanel, togglePanel, openGii, visibleButtons };
 }
 
-/** Quick actions for the shell header — Messages, Calls, Quick create. */
+/** Quick actions for the shell header — Gii and + Message. */
 export function ShellHeaderQuickActions({
   pathname,
   inline = true,
@@ -122,7 +96,7 @@ export function ShellHeaderQuickActions({
   inline?: boolean;
 }) {
   const propertyId = propertyIdFromPath(pathname);
-  const { activePanel, togglePanel, visibleButtons } = useShellQuickActions(pathname);
+  const { activePanel, togglePanel, openGii, visibleButtons } = useShellQuickActions(pathname);
   const { messages, properties } = useAgentData();
 
   const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
@@ -139,12 +113,16 @@ export function ShellHeaderQuickActions({
 
   if (visibleButtons.length === 0) return null;
 
-  const handlePanelClick = (btnId: (typeof DOCK_BUTTONS)[number]['id']) => {
-    if (btnId === 'communication' && propertyId) {
-      togglePanel('communication');
+  const handleClick = (btnId: (typeof visibleButtons)[number]['id']) => {
+    if (btnId === 'gii') {
+      if (propertyId && property) {
+        openGii({ propertyId, propertyAddress: formatPropertyFullAddress(property) });
+      } else {
+        openGii();
+      }
       return;
     }
-    togglePanel(btnId);
+    togglePanel('message-menu');
   };
 
   return (
@@ -156,20 +134,25 @@ export function ShellHeaderQuickActions({
     >
       {visibleButtons.map((btn) => {
         const Icon = btn.icon;
-        const isActive = activePanel === btn.id;
+        const isActive =
+          btn.id === 'gii' ? activePanel === 'gii' : activePanel === 'message-menu';
         return (
           <button
             key={btn.id}
             type="button"
-            title={btn.label}
-            aria-label={btn.label}
+            title={btn.id === 'message-menu' ? 'Message' : btn.label}
+            aria-label={btn.id === 'message-menu' ? 'Message' : btn.label}
             aria-pressed={isActive}
-            onClick={() => handlePanelClick(btn.id)}
+            onClick={() => handleClick(btn.id)}
             className={headerQuickActionClass(isActive, inline)}
           >
             <Icon className={inline ? 'size-4' : 'size-5'} />
-            {!inline ? <span className="max-w-full truncate">{btn.label}</span> : null}
-            {btn.id === 'communication' ? (
+            {!inline ? (
+              <span className="max-w-full truncate">
+                {btn.id === 'message-menu' ? 'Message' : btn.label}
+              </span>
+            ) : null}
+            {btn.id === 'message-menu' ? (
               <UnreadBadge count={messageUnread} variant="header" />
             ) : null}
           </button>
@@ -179,34 +162,211 @@ export function ShellHeaderQuickActions({
   );
 }
 
-/** Mobile floating Gii launcher — centered rectangular pill above the bottom tab bar. */
-export function MobileGiiFab({ pathname }: { pathname: string }) {
-  const activePanel = useShellDockStore((s) => s.activePanel);
-  const openGii = useShellDockStore((s) => s.openGii);
-  const mobileGiiOpen = activePanel === 'gii';
+function MessageActionSheet({
+  open,
+  onClose,
+  propertyId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  propertyId?: string;
+}) {
+  const [view, setView] = useState<'main' | 'new-message' | 'phone'>('main');
+  const [pendingWorkflow, setPendingWorkflow] = useState<{
+    actionId: PropertyWorkflowActionId;
+    propertyId?: string;
+  } | null>(null);
+  const router = useRouter();
+  const { messages, properties, hasFullManagementAccess } = useAgentData();
+  const hiddenBuiltinQuickActionIds = useAgentStore((s) => s.hiddenBuiltinQuickActionIds);
+  const customQuickActions = useAgentStore((s) => s.customQuickActions);
 
-  if (propertyIdFromPath(pathname) || mobileGiiOpen) return null;
+  const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
+  const propertyUnread =
+    propertyId && property
+      ? unreadMessagesForProperty(
+          propertyId,
+          messages,
+          formatPropertyFullAddress(property),
+        )
+      : 0;
+
+  const actions = useMemo(() => {
+    const hidden = new Set(hiddenBuiltinQuickActionIds);
+    if (!hasFullManagementAccess) {
+      for (const id of INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS) hidden.add(id);
+    }
+    return resolveQuickActions([...hidden], customQuickActions, propertyId);
+  }, [hiddenBuiltinQuickActionIds, customQuickActions, propertyId, hasFullManagementAccess]);
+
+  useEffect(() => {
+    if (!open) setView('main');
+  }, [open]);
+
+  if (!open) {
+    return (
+      <QuickCreateWorkflowDialog
+        actionId={pendingWorkflow?.actionId ?? null}
+        open={pendingWorkflow != null}
+        onOpenChange={(next) => {
+          if (!next) setPendingWorkflow(null);
+        }}
+        initialPropertyId={pendingWorkflow?.propertyId}
+      />
+    );
+  }
+
+  if (view === 'phone') {
+    return (
+      <>
+        <QuickCreateWorkflowDialog
+          actionId={pendingWorkflow?.actionId ?? null}
+          open={pendingWorkflow != null}
+          onOpenChange={(next) => {
+            if (!next) setPendingWorkflow(null);
+          }}
+          initialPropertyId={pendingWorkflow?.propertyId}
+        />
+        <PhoneDockSheet open onClose={() => setView('main')} propertyId={propertyId} />
+      </>
+    );
+  }
+
+  const sheetTitle =
+    view === 'new-message' ? 'New message' : 'Message';
 
   return (
-    <div
-      className="pointer-events-none fixed left-1/2 z-[60] flex w-full max-w-lg -translate-x-1/2 justify-center lg:hidden"
-      style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom) + 0.75rem)' }}
-    >
-      <button
-        type="button"
-        title={MOBILE_GII_BUTTON.label}
-        aria-label={MOBILE_GII_BUTTON.label}
-        onClick={() => openGii()}
-        className={cn(
-          'pointer-events-auto flex h-11 min-w-[8.75rem] items-center justify-center gap-2 rounded-xl px-5',
-          'bg-gradient-to-br from-primary via-emerald-500 to-teal-600 text-white',
-          'shadow-lg shadow-primary/30 ring-2 ring-background transition active:scale-[0.98]',
-        )}
-      >
-        <MOBILE_GII_BUTTON.icon className="size-5 shrink-0" aria-hidden />
-        <span className="text-sm font-semibold tracking-tight">Gii</span>
-      </button>
-    </div>
+    <>
+      <QuickCreateWorkflowDialog
+        actionId={pendingWorkflow?.actionId ?? null}
+        open={pendingWorkflow != null}
+        onOpenChange={(next) => {
+          if (!next) setPendingWorkflow(null);
+        }}
+        initialPropertyId={pendingWorkflow?.propertyId}
+      />
+      <div className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4">
+        <div className="flex max-h-[min(82vh,640px)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+            <p className="text-sm font-semibold">{sheetTitle}</p>
+            <button type="button" onClick={onClose} aria-label="Close">
+              <X className="text-muted-foreground size-5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            {propertyId && property && view === 'new-message' ? (
+              <PropertyNewMessageRecipients
+                property={property}
+                onBack={() => setView('main')}
+                onOpened={onClose}
+              />
+            ) : (
+              <div className="space-y-4">
+                <section>
+                  <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+                    Messages
+                  </p>
+                  <div className="space-y-2">
+                    {propertyId && (
+                      <TalkToStaffSupportButton propertyId={propertyId} onOpened={onClose} />
+                    )}
+                    {propertyId && property ? (
+                      <>
+                        <Link
+                          href={messagesForProperty(propertyId)}
+                          onClick={onClose}
+                          className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+                        >
+                          <Building2 className="text-primary size-4 shrink-0" />
+                          <span className="min-w-0 flex-1 text-left">Property conversations</span>
+                          {propertyUnread > 0 ? (
+                            <span className="bg-destructive shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                              {propertyUnread}
+                            </span>
+                          ) : null}
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setView('new-message')}
+                          className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+                        >
+                          <MessageSquare className="text-primary size-4 shrink-0" />
+                          New message
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href={messagesNew()}
+                          onClick={onClose}
+                          className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+                        >
+                          <MessageSquare className="text-primary size-4 shrink-0" />
+                          New message
+                        </Link>
+                        <Link
+                          href={ROUTES.MESSAGES}
+                          onClick={onClose}
+                          className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+                        >
+                          <MessageSquare className="text-primary size-4 shrink-0" />
+                          All conversations
+                          {messages.some((m) => m.unread > 0) && (
+                            <span className="bg-destructive ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                              {messages.reduce((s, m) => s + m.unread, 0)}
+                            </span>
+                          )}
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                {actions.length > 0 ? (
+                  <section>
+                    <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+                      Actions
+                    </p>
+                    <div className="space-y-1">
+                      {actions.map(({ id, label, href, workflowActionId, icon: Icon }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => {
+                            if (workflowActionId) {
+                              setPendingWorkflow({ actionId: workflowActionId, propertyId });
+                              onClose();
+                              return;
+                            }
+                            onClose();
+                            router.push(href);
+                          }}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm hover:bg-secondary"
+                        >
+                          <Icon className="text-primary size-4 shrink-0" />
+                          <span className="font-medium">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                <section>
+                  <button
+                    type="button"
+                    onClick={() => setView('phone')}
+                    className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
+                  >
+                    <Phone className="text-emerald-600 size-4 shrink-0 dark:text-emerald-400" />
+                    <span className="font-medium">Calls</span>
+                  </button>
+                </section>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -218,23 +378,12 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
 
   return (
     <>
-      <MobileGiiFab pathname={pathname} />
-      <CommunicationDockSheet
-        open={activePanel === 'communication'}
+      <MessageActionSheet
+        open={activePanel === 'message-menu'}
         onClose={closePanel}
         propertyId={propertyId}
       />
-      <PhoneDockSheet
-        open={activePanel === 'phone'}
-        onClose={closePanel}
-        propertyId={propertyId}
-      />
-      <QuickCreateDockSheet
-        open={activePanel === 'quick'}
-        onClose={closePanel}
-        propertyId={propertyId}
-      />
-      {mobileGiiOpen && !propertyId ? (
+      {mobileGiiOpen && !propertyId && !isActiveChatPath(pathname) ? (
         <div className="lg:hidden">
           <GiiAssistant open variant="modal" onClose={closePanel} />
         </div>

@@ -47,5 +47,13 @@ export const MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.BILL, label: 'Bill', icon: Receipt },
 ];
 
+/** Mobile bottom bar — Dashboard & Properties live in the overflow menu. */
+export const MOBILE_MENU_NAV: NavItem[] = [
+  { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
+  { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
+  ...MORE_NAV,
+  ...MORE_NAV_FOOTER,
+];
+
 /** @deprecated Sidebar no longer shows Message Center — empty for import compat. */
 export const DESKTOP_NAV: NavItem[] = [];

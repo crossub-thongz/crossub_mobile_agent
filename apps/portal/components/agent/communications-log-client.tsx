@@ -13,13 +13,12 @@ import {
   PhoneCall,
   RefreshCw,
   Search,
-  Send,
   Unlink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ContactDetails } from '@/components/agent/contact-details';
-import { MessageCompose } from '@/components/agent/message-compose';
+import { MessageThreadWorkspace } from '@/components/agent/message-thread-workspace';
 import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { PhonePanel } from '@/components/agent/phone-panel';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -95,7 +94,6 @@ function ThreadListItem({
         )}
       </div>
       <p className="text-muted-foreground line-clamp-2 text-xs">{thread.propertyAddress}</p>
-      <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">{thread.lastMessage}</p>
       <div className="text-muted-foreground mt-1 flex items-center justify-between text-[10px]">
         <span>{category}</span>
         <span>{formatRelative(thread.lastAt)}</span>
@@ -114,11 +112,6 @@ function ThreadDetailPanel({
   canReply: boolean;
 }) {
   const [reply, setReply] = useState('');
-  const messagesScrollRef = useRef<HTMLDivElement>(null);
-  const messageCount = thread.messages.length;
-  const prevThreadIdRef = useRef(thread.id);
-  const prevMessageCountRef = useRef(messageCount);
-
   const mentionCandidates = useMemo(
     () =>
       buildThreadMentionCandidates({
@@ -127,23 +120,6 @@ function ThreadDetailPanel({
       }),
     [thread.homeOwnerName, thread.tenantName],
   );
-
-  useEffect(() => {
-    const el = messagesScrollRef.current;
-    if (!el) return;
-
-    const threadChanged = prevThreadIdRef.current !== thread.id;
-    const newMessage = messageCount > prevMessageCountRef.current;
-
-    prevThreadIdRef.current = thread.id;
-    prevMessageCountRef.current = messageCount;
-
-    if (threadChanged) {
-      el.scrollTop = el.scrollHeight;
-    } else if (newMessage) {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-    }
-  }, [thread.id, messageCount]);
 
   const handleSend = () => {
     const text = reply.trim();
@@ -201,44 +177,33 @@ function ThreadDetailPanel({
         </div>
       </div>
 
-      <div
-        ref={messagesScrollRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4"
-      >
-        <div className="rounded-lg border bg-card p-3 text-xs">
-          <ContactDetails
-            homeOwnerName={thread.homeOwnerName}
-            homeOwnerContact={thread.homeOwnerContact}
-            tenantName={thread.tenantName}
-            tenantContact={thread.tenantContact}
-          />
-        </div>
-        {thread.messages.map((msg) => (
-          <MessageThreadBubble key={msg.id} msg={msg} rounded="2xl" />
-        ))}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <MessageThreadWorkspace
+          thread={thread}
+          reply={reply}
+          onReplyChange={setReply}
+          onReplySend={handleSend}
+          replyPlaceholder={canReply ? 'Reply to thread…' : 'Read-only thread'}
+          dockLayout="panel"
+          replyEnabled={canReply}
+        >
+          <div className="space-y-4 px-4 pt-4">
+            <div className="rounded-lg border bg-card p-3 text-xs">
+              <ContactDetails
+                homeOwnerName={thread.homeOwnerName}
+                homeOwnerContact={thread.homeOwnerContact}
+                tenantName={thread.tenantName}
+                tenantContact={thread.tenantContact}
+              />
+            </div>
+            <div className="space-y-3">
+              {thread.messages.map((msg) => (
+                <MessageThreadBubble key={msg.id} msg={msg} rounded="2xl" />
+              ))}
+            </div>
+          </div>
+        </MessageThreadWorkspace>
       </div>
-
-      {canReply ? (
-        <div className="bg-background shrink-0 border-t p-4 pr-16">
-          <MessageCompose
-            value={reply}
-            onChange={setReply}
-            onSubmit={handleSend}
-            homeOwnerName={thread.homeOwnerName}
-            tenantName={thread.tenantName}
-            placeholder="Reply to thread…"
-            rows={3}
-          />
-          <Button className="mt-2 w-full" onClick={handleSend} disabled={!reply.trim()}>
-            <Send className="mr-2 size-4" />
-            Send
-          </Button>
-        </div>
-      ) : (
-        <div className="text-muted-foreground shrink-0 border-t px-4 py-3 text-center text-xs">
-          Archived email threads are read-only in the app.
-        </div>
-      )}
     </div>
   );
 }

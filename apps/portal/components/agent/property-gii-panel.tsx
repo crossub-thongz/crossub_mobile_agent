@@ -31,7 +31,11 @@ export function PropertyGiiPanel({
       className="flex flex-col rounded-2xl border bg-card shadow-sm lg:hidden"
       aria-label="Gii property manager"
     >
-      <GiiAssistant open variant="embedded" />
+      <GiiAssistant
+        open
+        variant="embedded"
+        scope={{ propertyId, propertyAddress }}
+      />
     </section>
   );
 }

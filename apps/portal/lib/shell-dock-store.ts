@@ -2,15 +2,23 @@
 
 import { create } from 'zustand';
 
-export type ShellDockPanel = 'communication' | 'phone' | 'quick' | 'gii' | null;
+export type ShellDockPanel = 'communication' | 'phone' | 'quick' | 'gii' | 'message-menu' | null;
 
 /** Optional launch payload when opening Gii from a property hub or list. */
 export type GiiLaunchContext = {
   propertyId?: string;
   propertyAddress?: string;
+  /** Pre-built message thread context — resent on every Gii turn so the agent need not paste it. */
+  messageContext?: string;
   /** Sent as the first user turn when Gii opens. */
   initialPrompt?: string;
 };
+
+/** Scoped embed overrides (message detail, property page) — merged with `giiLaunch` from the shell store. */
+export type GiiScope = Pick<
+  GiiLaunchContext,
+  'propertyId' | 'propertyAddress' | 'messageContext' | 'initialPrompt'
+>;
 
 type ShellDockStore = {
   activePanel: ShellDockPanel;
@@ -30,11 +38,11 @@ export const useShellDockStore = create<ShellDockStore>((set) => ({
       giiLaunch: id === 'gii' ? state.giiLaunch : state.giiLaunch,
     })),
   closePanel: () => set({ activePanel: null }),
-  openGii: (launch) =>
-    set({
+  openGii: (launch?: GiiLaunchContext | null) =>
+    set((state) => ({
       activePanel: 'gii',
-      giiLaunch: launch ?? null,
-    }),
+      giiLaunch: launch === undefined ? state.giiLaunch : launch,
+    })),
   clearGiiLaunch: () => set({ giiLaunch: null }),
 }));
 

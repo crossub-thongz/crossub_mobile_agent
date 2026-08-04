@@ -7,8 +7,9 @@ import { LogOut } from 'lucide-react';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
+import { ShellPrimaryNav } from '@/components/layout/shell-primary-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
+import { MOBILE_MENU_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { filterNavByAccess } from '@/lib/portal-service-level';
@@ -75,10 +76,7 @@ export function AgentSidebar({
   const pathname = usePathname();
   const { hasFullManagementAccess, needActionItems } = useAgentData();
   const propertyNeedActionCount = needActionItems.length;
-  const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
-  const moreNav = filterNavByAccess(MORE_NAV, hasFullManagementAccess);
-  const moreFooterNav = filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess);
-  const allCompactLinks = [...primaryNav, ...moreNav, ...moreFooterNav];
+  const menuNav = filterNavByAccess(MOBILE_MENU_NAV, hasFullManagementAccess);
 
   return (
     <aside
@@ -109,51 +107,44 @@ export function AgentSidebar({
               Main
             </p>
             <ul className="space-y-0.5">
-              {primaryNav.map((item) => (
+              <ShellPrimaryNav pathname={pathname} variant="sidebar" />
+            </ul>
+
+            <p className="text-muted-foreground mt-5 mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide">
+              Menu
+            </p>
+            <ul className="space-y-0.5">
+              {menuNav.map((item) => (
                 <li key={item.href}>
                   <NavLink
                     {...item}
                     active={isActive(pathname, item.href)}
+                    badge={
+                      item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <ul className="space-y-1">
+              <ShellPrimaryNav pathname={pathname} variant="sidebar" />
+            </ul>
+            <ul className="mt-4 space-y-1">
+              {menuNav.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    {...item}
+                    active={isActive(pathname, item.href)}
+                    compact
                     badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
                   />
                 </li>
               ))}
             </ul>
-
-            <p className="text-muted-foreground mt-5 mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide">
-              More
-            </p>
-            <ul className="space-y-0.5">
-              {moreNav.map((item) => (
-                <li key={item.href}>
-                  <NavLink {...item} active={isActive(pathname, item.href)} />
-                </li>
-              ))}
-            </ul>
-
-            {moreFooterNav.length > 0 ? (
-              <ul className="border-border mt-4 space-y-0.5 border-t pt-3">
-                {moreFooterNav.map((item) => (
-                  <li key={item.href}>
-                    <NavLink {...item} active={isActive(pathname, item.href)} />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </>
-        ) : (
-          <ul className="space-y-1">
-            {allCompactLinks.map((item) => (
-              <li key={item.href}>
-                <NavLink
-                  {...item}
-                  active={isActive(pathname, item.href)}
-                  compact
-                  badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
-                />
-              </li>
-            ))}
-          </ul>
         )}
       </nav>
 

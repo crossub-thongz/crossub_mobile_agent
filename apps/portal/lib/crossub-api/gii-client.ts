@@ -30,6 +30,7 @@ export type GiiChatAttachment = {
 /** The subject carried between turns — Gii is stateless and tool results do not persist. */
 export interface GiiContext {
   propertyId?: string;
+  propertyLabel?: string;
   moveOutDate?: string;
 }
 

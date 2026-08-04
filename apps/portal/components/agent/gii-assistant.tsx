@@ -7,12 +7,14 @@ import { toast } from 'sonner';
 
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
+import { GiiChatGreeting, GiiChatLine } from '@/components/agent/gii-chat-line';
 import {
   GiiAttachButton,
   GiiAttachmentPreviewRow,
   GiiComposerDropOverlay,
 } from '@/components/agent/gii-composer-attachments';
 import { GiiPropertyJobsCard } from '@/components/agent/gii-property-jobs-card';
+import { MessageCompose } from '@/components/agent/message-compose';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -30,7 +32,9 @@ import {
   PORTFOLIO_GII_PROMPTS,
   PROPERTY_GII_PROMPTS,
 } from '@/constants/gii-prompts';
+import { MESSAGE_GII_PROMPTS } from '@/constants/gii-message-prompts';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
+import { buildGiiPropertyContext } from '@/lib/gii-property-context';
 import { selectPropertyInProgressJobs } from '@/lib/gii-property-jobs';
 import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
@@ -57,15 +61,9 @@ import {
   type GiiChatAttachmentView,
   type GiiPendingAttachment,
 } from '@/lib/gii-attachments';
-import { useShellDockStore } from '@/lib/shell-dock-store';
+import { propertyIdFromPath } from '@/lib/property-path';
+import { useShellDockStore, type GiiScope } from '@/lib/shell-dock-store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
-
-function propertyIdFromPath(pathname: string): string | undefined {
-  const match = pathname.match(/^\/properties\/([^/]+)$/);
-  const id = match?.[1];
-  if (!id || id === 'new') return undefined;
-  return id;
-}
 
 function buildAccountManagerGreeting(
   address: string,
@@ -148,10 +146,35 @@ export function GiiAssistant({
   open,
   onClose,
   variant = 'modal',
+  scope,
+  children,
+  messageReply,
+  dockFixed = true,
+  dockLayout,
+  replyEnabled = true,
 }: {
   open: boolean;
   onClose?: () => void;
-  variant?: 'modal' | 'panel' | 'embedded';
+  variant?: 'modal' | 'panel' | 'embedded' | 'message-dock';
+  /** Embed overrides — property/message pages pass scope directly instead of via the shell store. */
+  scope?: GiiScope;
+  /** Message thread bubbles rendered above the Gii transcript (message-dock only). */
+  children?: React.ReactNode;
+  /** Reply compose wired into the sticky dock (message-dock only). */
+  messageReply?: {
+    value: string;
+    onChange: (value: string) => void;
+    onSend: () => void;
+    homeOwnerName: string;
+    tenantName: string;
+    placeholder?: string;
+  };
+  /** Pin dock to viewport (mobile message page) vs panel footer (desktop message center). */
+  dockFixed?: boolean;
+  /** `panel` = dock spans full column width at the bottom of a split pane. */
+  dockLayout?: 'viewport' | 'panel';
+  /** When false, only the Gii composer is shown (read-only threads). */
+  replyEnabled?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -159,9 +182,21 @@ export function GiiAssistant({
   const { user } = useAuth();
   const giiLaunch = useShellDockStore((s) => s.giiLaunch);
   const clearGiiLaunch = useShellDockStore((s) => s.clearGiiLaunch);
+
+  const effectiveLaunch = useMemo(
+    () => ({
+      propertyId: scope?.propertyId ?? giiLaunch?.propertyId,
+      propertyAddress: scope?.propertyAddress ?? giiLaunch?.propertyAddress,
+      messageContext: scope?.messageContext ?? giiLaunch?.messageContext,
+      initialPrompt: scope?.initialPrompt ?? giiLaunch?.initialPrompt,
+    }),
+    [giiLaunch, scope],
+  );
+  const messageScoped = Boolean(effectiveLaunch.messageContext?.trim());
   const { selectedJob, openJob, closeJob, portfolioData } = usePortfolioCaseDialog();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [query, setQuery] = useState('');
+  const [dockTab, setDockTab] = useState<'gii' | 'reply'>('gii');
   const [pendingAttachments, setPendingAttachments] = useState<GiiPendingAttachment[]>([]);
   const [composerDragActive, setComposerDragActive] = useState(false);
   const [voicePhase, setVoicePhase] = useState<VoicePhase>(VOICE_PHASE.IDLE);
@@ -178,6 +213,9 @@ export function GiiAssistant({
   // The subject carried between turns. A ref: it must never be stale inside runQuery, and
   // it does not need to trigger a render.
   const contextRef = useRef<GiiContext | null>(null);
+  const messageContextRef = useRef<string | null>(null);
+  const propertyContextRef = useRef<string | null>(null);
+  messageContextRef.current = effectiveLaunch.messageContext?.trim() || null;
   const pendingAttachmentsRef = useRef<GiiPendingAttachment[]>([]);
   pendingAttachmentsRef.current = pendingAttachments;
   const listening = voicePhase === VOICE_PHASE.LISTENING;
@@ -186,27 +224,29 @@ export function GiiAssistant({
   const voiceActive = voicePhase !== VOICE_PHASE.IDLE;
   const isPanel = variant === 'panel';
   const isEmbedded = variant === 'embedded';
+  const isMessageDock = variant === 'message-dock';
+  const isPanelDock = dockLayout === 'panel' || (!dockFixed && dockLayout !== 'viewport');
   const isModal = variant === 'modal';
   const isInline = isPanel || isEmbedded;
-  /** Property embed scrolls the page; modal/panel keep the composer pinned with inner scroll. */
-  const usePageScroll = isEmbedded;
+  /** Property embed and message dock scroll the page; modal/panel keep the composer pinned with inner scroll. */
+  const usePageScroll = isEmbedded || isMessageDock;
 
   const pathPropertyId = propertyIdFromPath(pathname);
   const scopedProperty = useMemo(() => {
-    const id = giiLaunch?.propertyId ?? pathPropertyId;
+    const id = effectiveLaunch.propertyId ?? pathPropertyId;
     if (!id) return null;
     return (
       data.properties.find((p) => p.id === id) ??
       data.archivedProperties.find((p) => p.id === id) ??
       null
     );
-  }, [data.archivedProperties, data.properties, giiLaunch?.propertyId, pathPropertyId]);
+  }, [data.archivedProperties, data.properties, effectiveLaunch.propertyId, pathPropertyId]);
 
   const scopedAddress = useMemo(() => {
-    if (giiLaunch?.propertyAddress?.trim()) return giiLaunch.propertyAddress.trim();
+    if (effectiveLaunch.propertyAddress?.trim()) return effectiveLaunch.propertyAddress.trim();
     if (!scopedProperty) return null;
     return formatPropertyFullAddress(scopedProperty);
-  }, [giiLaunch?.propertyAddress, scopedProperty]);
+  }, [effectiveLaunch.propertyAddress, scopedProperty]);
 
   // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
   // progress" set the Overview tab shows (one shared selector, so the two never disagree),
@@ -257,6 +297,11 @@ export function GiiAssistant({
   );
 
   const greetingText = useMemo(() => {
+    if (messageScoped && scopedAddress) {
+      const name = user?.firstName?.trim();
+      const lead = name ? `Hi ${name}` : 'Hi';
+      return `${lead} — I have this message thread and the property details for ${scopedAddress}. Ask me about the message, draft a reply, or clarify next steps — you don't need to paste any context.`;
+    }
     if (scopedProperty && scopedAddress) {
       return buildAccountManagerGreeting(
         scopedAddress,
@@ -267,7 +312,14 @@ export function GiiAssistant({
     return liveBriefing.subtitle
       ? `${liveBriefing.greeting}\n\n${liveBriefing.subtitle}`
       : liveBriefing.greeting;
-  }, [propertyJobs.length, liveBriefing, scopedAddress, scopedProperty, user?.firstName]);
+  }, [
+    messageScoped,
+    propertyJobs.length,
+    liveBriefing,
+    scopedAddress,
+    scopedProperty,
+    user?.firstName,
+  ]);
 
   // What the greeting count and the empty-states key off — jobs on a property, else the
   // portfolio need-action briefing.
@@ -275,17 +327,60 @@ export function GiiAssistant({
 
   const hasUserMessages = useMemo(() => lines.some((l) => l.role === 'user'), [lines]);
 
-  const suggestedPrompts = scopedProperty ? PROPERTY_GII_PROMPTS : PORTFOLIO_GII_PROMPTS;
+  const suggestedPrompts = messageScoped
+    ? MESSAGE_GII_PROMPTS
+    : scopedProperty
+      ? PROPERTY_GII_PROMPTS
+      : PORTFOLIO_GII_PROMPTS;
+
+  const propertyContext = useMemo(() => {
+    if (messageScoped) return null;
+    if (scopedProperty) {
+      return buildGiiPropertyContext({
+        property: scopedProperty,
+        address: scopedAddress ?? undefined,
+        needActions: briefingItems,
+        inProgressJobs: propertyJobs,
+      });
+    }
+    if (effectiveLaunch.propertyId && effectiveLaunch.propertyAddress?.trim()) {
+      return [
+        `Property id: ${effectiveLaunch.propertyId}`,
+        `Property address: ${effectiveLaunch.propertyAddress.trim()}`,
+        '',
+        'The agent is viewing this listing. Answer about this property directly — do not ask them to repeat the address or identify the listing.',
+      ].join('\n');
+    }
+    return null;
+  }, [
+    briefingItems,
+    effectiveLaunch.propertyAddress,
+    effectiveLaunch.propertyId,
+    messageScoped,
+    propertyJobs,
+    scopedAddress,
+    scopedProperty,
+  ]);
+
+  propertyContextRef.current = propertyContext;
 
   useEffect(() => {
     if (scopedProperty?.id) {
-      contextRef.current = { propertyId: scopedProperty.id };
+      contextRef.current = {
+        propertyId: scopedProperty.id,
+        propertyLabel: scopedAddress ?? formatPropertyFullAddress(scopedProperty),
+      };
       return;
     }
-    if (!giiLaunch?.propertyId) {
-      contextRef.current = null;
+    if (effectiveLaunch.propertyId) {
+      contextRef.current = {
+        propertyId: effectiveLaunch.propertyId,
+        propertyLabel: effectiveLaunch.propertyAddress?.trim(),
+      };
+      return;
     }
-  }, [giiLaunch?.propertyId, scopedProperty?.id]);
+    contextRef.current = null;
+  }, [effectiveLaunch.propertyAddress, effectiveLaunch.propertyId, scopedAddress, scopedProperty]);
 
   useEffect(() => {
     if (!scopedProperty?.id) return;
@@ -448,7 +543,7 @@ export function GiiAssistant({
         ? await pendingToApiAttachments(attachmentFiles)
         : undefined;
 
-      const history: GiiChatMessage[] = historyBase.map((l) => ({
+      const mapped: GiiChatMessage[] = historyBase.map((l) => ({
         role: l.role,
         content: l.text,
         ...(l.id === userLine.id && apiAttachments?.length
@@ -457,6 +552,23 @@ export function GiiAssistant({
             ? { attachments: l.sentAttachments }
             : {}),
       }));
+
+      const invisibleContext = messageContextRef.current ?? propertyContextRef.current;
+      const contextSeed: GiiChatMessage | null = invisibleContext
+        ? {
+            role: 'user',
+            content: `[Context — ${
+              messageContextRef.current
+                ? 'property, listing, and message thread'
+                : 'property and listing details'
+            }. Use this information; do not ask the agent to repeat it.]\n\n${invisibleContext}`,
+          }
+        : null;
+
+      const history: GiiChatMessage[] = [
+        ...(contextSeed ? [contextSeed] : []),
+        ...mapped,
+      ].slice(-MAX_HISTORY);
 
       if (apiAttachments?.length) {
         setLines((prev) =>
@@ -505,14 +617,26 @@ export function GiiAssistant({
 
   // Launch prompt from property hub / phone book — runs once when Gii opens.
   useEffect(() => {
-    if (!open || data.loading || !giiLaunch?.initialPrompt || initialPromptHandledRef.current) {
+    if (
+      !open ||
+      data.loading ||
+      !effectiveLaunch.initialPrompt ||
+      initialPromptHandledRef.current
+    ) {
       return;
     }
     initialPromptHandledRef.current = true;
-    const prompt = giiLaunch.initialPrompt;
-    clearGiiLaunch();
+    const prompt = effectiveLaunch.initialPrompt;
+    if (!scope?.initialPrompt) clearGiiLaunch();
     void runQuery(prompt);
-  }, [clearGiiLaunch, data.loading, giiLaunch?.initialPrompt, open, runQuery]);
+  }, [
+    clearGiiLaunch,
+    data.loading,
+    effectiveLaunch.initialPrompt,
+    open,
+    runQuery,
+    scope?.initialPrompt,
+  ]);
 
   useEffect(() => {
     if (!open) {
@@ -520,8 +644,23 @@ export function GiiAssistant({
     }
   }, [open]);
 
-  /** Ask Gii conversationally about a briefing row — it resolves the property and lists its cases. */
+  /** Ask Gii conversationally about a briefing row — scoped to that property automatically. */
   const askAboutRow = (row: PropertyNeedAction) => {
+    const rowProperty =
+      data.properties.find((p) => p.id === row.propertyId) ??
+      data.archivedProperties.find((p) => p.id === row.propertyId) ??
+      null;
+
+    contextRef.current = { propertyId: row.propertyId, propertyLabel: row.propertyAddress };
+    propertyContextRef.current = rowProperty
+      ? buildGiiPropertyContext({ property: rowProperty, address: row.propertyAddress })
+      : [
+          `Property id: ${row.propertyId}`,
+          `Property address: ${row.propertyAddress}`,
+          '',
+          'The agent selected this listing. Answer about this property directly — do not ask them to repeat the address.',
+        ].join('\n');
+
     void runQuery(`Give me an update on ${row.propertyAddress} — ${row.label}.`);
   };
 
@@ -615,6 +754,216 @@ export function GiiAssistant({
 
   if (!open) return null;
 
+  if (isMessageDock) {
+    const scrollContent = (
+      <>
+        {children}
+        {(lines.length > 0 || (!hasUserMessages && !data.loading)) && (
+          <div className="mt-4 space-y-3">
+            {!hasUserMessages && !data.loading ? (
+              <GiiChatGreeting text={greetingText} />
+            ) : null}
+            {lines.map((line) => (
+              <div key={line.id} className="space-y-2">
+                <GiiChatLine role={line.role} text={line.text} pending={line.pending} />
+                {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
+              </div>
+            ))}
+            <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
+          </div>
+        )}
+      </>
+    );
+
+    const dockShell = (
+      <>
+          {replyEnabled ? (
+            <div className="mb-2 flex gap-1 rounded-lg bg-secondary/60 p-0.5">
+              <button
+                type="button"
+                onClick={() => setDockTab('gii')}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition',
+                  dockTab === 'gii'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Sparkles className="size-3.5" />
+                Gii
+              </button>
+              <button
+                type="button"
+                onClick={() => setDockTab('reply')}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition',
+                  dockTab === 'reply'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Send className="size-3.5" />
+                Reply
+              </button>
+            </div>
+          ) : null}
+
+          {dockTab === 'gii' || !replyEnabled ? (
+            <>
+              {!sending && !hasUserMessages ? (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {suggestedPrompts.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => void runQuery(item.prompt)}
+                      className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[10px] font-medium transition hover:border-primary/30 hover:bg-primary/5"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div
+                className="relative"
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  if (!sending && !voiceActive) setComposerDragActive(true);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (!sending && !voiceActive) setComposerDragActive(true);
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  setComposerDragActive(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setComposerDragActive(false);
+                  if (sending || voiceActive) return;
+                  addAttachmentFiles([...(e.dataTransfer.files ?? [])]);
+                }}
+              >
+                <GiiComposerDropOverlay active={composerDragActive} />
+                <div className="flex items-end gap-2">
+                  <Textarea
+                    ref={composerRef}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        void runQuery(query);
+                      }
+                    }}
+                    placeholder="Ask Gii about this message…"
+                    rows={2}
+                    className="min-h-14 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-3 py-2.5 text-sm leading-relaxed shadow-none"
+                    disabled={sending || voiceActive}
+                  />
+                  <div className="mb-0.5 flex shrink-0 flex-col items-center gap-1.5">
+                    <GiiAttachButton
+                      onPick={addAttachmentFiles}
+                      disabled={
+                        sending || voiceActive || pendingAttachments.length >= GII_MAX_ATTACHMENTS
+                      }
+                      className="size-8"
+                    />
+                    {query.trim() || pendingAttachments.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => void runQuery(query)}
+                        disabled={sending}
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50"
+                        aria-label="Ask Gii"
+                      >
+                        <Send className="size-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          startVoice();
+                        }}
+                        onPointerUp={stopVoice}
+                        onPointerLeave={() => {
+                          if (voiceActive) stopVoice();
+                        }}
+                        onPointerCancel={stopVoice}
+                        className={cn(
+                          'flex size-10 shrink-0 items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
+                          voiceActive
+                            ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
+                            : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
+                        )}
+                        aria-label="Voice input"
+                      >
+                        {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-4" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : messageReply ? (
+            <div className="space-y-2">
+              <MessageCompose
+                value={messageReply.value}
+                onChange={messageReply.onChange}
+                onSubmit={messageReply.onSend}
+                placeholder={messageReply.placeholder ?? 'Reply via app…'}
+                homeOwnerName={messageReply.homeOwnerName}
+                tenantName={messageReply.tenantName}
+                rows={2}
+              />
+              <button
+                type="button"
+                className="bg-primary text-primary-foreground flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50"
+                disabled={!messageReply.value.trim()}
+                onClick={messageReply.onSend}
+              >
+                <Send className="size-4" />
+                Send
+              </button>
+            </div>
+          ) : null}
+      </>
+    );
+
+    const dockClassName = cn(
+      'border-border bg-background/95 z-10 w-full shrink-0 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur supports-[backdrop-filter]:bg-background/90',
+      isPanelDock
+        ? undefined
+        : cn(
+            'fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-1/2 max-w-lg -translate-x-1/2',
+            'lg:sticky lg:bottom-0 lg:left-0 lg:max-w-none lg:translate-x-0 lg:shadow-none',
+          ),
+    );
+
+    return (
+      <>
+        {isPanelDock ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {scrollContent}
+            </div>
+            <div className={dockClassName}>{dockShell}</div>
+          </div>
+        ) : (
+          <>
+            <div className="pb-[calc(12rem+env(safe-area-inset-bottom))] lg:pb-4">
+              {scrollContent}
+            </div>
+            <div className={dockClassName}>{dockShell}</div>
+          </>
+        )}
+        <PortfolioCaseDialogHost job={selectedJob} onClose={closeJob} onOpenJob={openJob} />
+      </>
+    );
+  }
+
   const shell = (
     <div
       className={cn(
@@ -644,11 +993,13 @@ export function GiiAssistant({
           <div className="min-w-0">
             <p className="text-sm font-bold">Gii</p>
             <p className="text-muted-foreground truncate text-[10px]">
-              {isEmbedded || isPanel
-                ? 'Your Account Manager'
-                : scopedAddress
-                  ? `Account Manager · ${scopedAddress}`
-                  : `Your Account Manager · ${multilingualHint()}`}
+              {messageScoped
+                ? 'Message assistant · context loaded'
+                : isEmbedded || isPanel
+                  ? 'Your Account Manager'
+                  : scopedAddress
+                    ? `Account Manager · ${scopedAddress}`
+                    : `Your Account Manager · ${multilingualHint()}`}
             </p>
           </div>
         </div>
@@ -680,18 +1031,16 @@ export function GiiAssistant({
           usePageScroll ? undefined : 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
         )}
       >
-        {!data.loading && !giiLaunch?.initialPrompt ? (
+        {!data.loading && !effectiveLaunch.initialPrompt ? (
           <div className="space-y-2">
             {!hasUserMessages ? (
-              <div className="bg-secondary mr-auto max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
-                {greetingText}
-              </div>
+              <GiiChatGreeting text={greetingText} />
             ) : null}
-            {scopedProperty ? (
+            {!messageScoped && scopedProperty ? (
               propertyJobs.length > 0 ? (
                 <GiiPropertyJobsCard jobs={propertyJobs} onOpen={openJob} />
               ) : null
-            ) : !liveBriefing.isEmpty ? (
+            ) : !messageScoped && !liveBriefing.isEmpty ? (
               <GiiBriefingCard
                 briefing={liveBriefing}
                 onNavigate={onClose}
@@ -716,7 +1065,11 @@ export function GiiAssistant({
           </div>
         ) : null}
 
-        {lines.length === 0 && !data.loading && briefingIsEmpty && !giiLaunch?.initialPrompt ? (
+        {lines.length === 0 &&
+        !data.loading &&
+        briefingIsEmpty &&
+        !effectiveLaunch.initialPrompt &&
+        !messageScoped ? (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-muted-foreground max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
@@ -728,38 +1081,12 @@ export function GiiAssistant({
 
         {lines.map((line) => (
           <div key={line.id} className="space-y-2">
-            <div
-              className={cn(
-                'max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
-                line.role === 'user'
-                  ? 'bg-primary text-primary-foreground ml-auto'
-                  : 'bg-secondary mr-auto text-foreground',
-                line.pending && 'text-muted-foreground animate-pulse',
-              )}
-            >
-              {line.attachments?.length ? (
-                <div className="mb-2 flex flex-wrap gap-2">
-                  {line.attachments.map((att) =>
-                    att.previewUrl ? (
-                      <img
-                        key={att.fileName}
-                        src={att.previewUrl}
-                        alt={att.fileName}
-                        className="max-h-24 max-w-full rounded-lg border border-white/20 object-cover"
-                      />
-                    ) : (
-                      <span
-                        key={att.fileName}
-                        className="rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-medium"
-                      >
-                        {att.fileName}
-                      </span>
-                    ),
-                  )}
-                </div>
-              ) : null}
-              {line.text}
-            </div>
+            <GiiChatLine
+              role={line.role}
+              text={line.text}
+              pending={line.pending}
+              attachments={line.attachments}
+            />
 
             {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
 
