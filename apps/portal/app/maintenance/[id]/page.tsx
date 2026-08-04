@@ -92,6 +92,7 @@ export default function MaintenanceDetailPage() {
         workspaceCase={workspaceCase}
         backHref={back.href}
         backLabel={back.label}
+        assignedToName={property?.propertyManager}
         liveSyncing={apiConnected}
         syncing={syncing}
         remindersSent={remindersSent}

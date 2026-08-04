@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { CaseAssignedToRow } from '@/components/agent/case-assigned-to-field';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -70,6 +71,9 @@ function RentReviewDetailContent({
     detail.propertyId ?? '',
     detail.propertyAddress,
   );
+  const propertyManager = detail.propertyId
+    ? properties.find((p) => p.id === detail.propertyId)?.propertyManager
+    : undefined;
 
   const handleUpdated = (_updated: RentReviewWorkflowDetail) => {
     onUpdated?.();
@@ -96,6 +100,7 @@ function RentReviewDetailContent({
                   {detail.rentReviewDate ? formatDate(detail.rentReviewDate) : '—'}
                 </p>
               </div>
+              <CaseAssignedToRow assignedToName={propertyManager ?? detail.managingAgentLabel} />
             </div>
           </section>
 

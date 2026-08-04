@@ -52,12 +52,14 @@ export function MaintenanceWorkspace({
   syncing,
   remindersSent = 0,
   reminderEta,
+  assignedToName,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   backHref: string;
   backLabel: string;
   onApproveQuote?: () => void | Promise<void>;
   onDeclineQuote?: (reason: string) => void | Promise<void>;
+  assignedToName?: string | null;
   quoteAmount?: number;
   contractorName?: string;
   quoteExpiry?: string;
@@ -271,6 +273,7 @@ export function MaintenanceWorkspace({
               tenantName={workspaceCase.tenant?.name ?? '—'}
               tenantEmail={workspaceCase.tenant?.email}
               tenantPhone={workspaceCase.tenant?.phone}
+              assignedToName={assignedToName}
               priority={workspaceCase.priority}
               responsibility={workspaceCase.responsibility ?? null}
               sourceLabel={SOURCE_LABELS[workspaceCase.source]}

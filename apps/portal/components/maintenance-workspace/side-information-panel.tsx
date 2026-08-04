@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 
+import { CaseAssignedToField } from '@/components/agent/case-assigned-to-field';
+
 import { PriorityBadge, ResponsibilityBadge } from './badges';
 
 type TenantProps = {
@@ -16,6 +18,7 @@ type MetaProps = {
   sourceLabel: string;
   statusBoxClassName: string;
   statusBoxContent: ReactNode;
+  assignedToName?: string | null;
 };
 
 type Props = TenantProps & MetaProps;
@@ -24,23 +27,27 @@ export function WorkspacePeoplePanel({
   tenantName,
   tenantEmail,
   tenantPhone,
-}: TenantProps) {
+  assignedToName,
+}: TenantProps & { assignedToName?: string | null }) {
   return (
-    <div className="rounded-lg border border-border bg-background p-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Tenant Information
-      </p>
-      <p className="mt-1.5 text-sm font-semibold text-foreground">{tenantName || '—'}</p>
-      <div className="mt-1 space-y-0.5">
-        {tenantEmail ? (
-          <p className="text-[11px] break-words text-muted-foreground">{tenantEmail}</p>
-        ) : null}
-        {tenantPhone ? (
-          <p className="text-[11px] break-words text-muted-foreground">{tenantPhone}</p>
-        ) : null}
-        {!tenantEmail && !tenantPhone ? (
-          <p className="text-[11px] text-muted-foreground">—</p>
-        ) : null}
+    <div className="space-y-3">
+      <CaseAssignedToField assignedToName={assignedToName} />
+      <div className="rounded-lg border border-border bg-background p-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Tenant Information
+        </p>
+        <p className="mt-1.5 text-sm font-semibold text-foreground">{tenantName || '—'}</p>
+        <div className="mt-1 space-y-0.5">
+          {tenantEmail ? (
+            <p className="text-[11px] break-words text-muted-foreground">{tenantEmail}</p>
+          ) : null}
+          {tenantPhone ? (
+            <p className="text-[11px] break-words text-muted-foreground">{tenantPhone}</p>
+          ) : null}
+          {!tenantEmail && !tenantPhone ? (
+            <p className="text-[11px] text-muted-foreground">—</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -110,6 +117,7 @@ export function WorkspaceSideInformationPanel(props: Props) {
         tenantName={props.tenantName}
         tenantEmail={props.tenantEmail}
         tenantPhone={props.tenantPhone}
+        assignedToName={props.assignedToName}
       />
       <WorkspaceMetaPanel
         priority={props.priority}

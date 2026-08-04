@@ -543,6 +543,9 @@ export function InspectionDetailView({
             value={insp.scheduledAt ? formatDateTime(insp.scheduledAt) : 'Not set'}
           />
           <FactTile icon={User} label="Inspector" value={inspectorLabel} />
+          {property?.propertyManager ? (
+            <FactTile icon={User} label="Assigned to" value={property.propertyManager} />
+          ) : null}
           {typeof insp.visitorCount === 'number' && (
             <FactTile
               icon={Users}

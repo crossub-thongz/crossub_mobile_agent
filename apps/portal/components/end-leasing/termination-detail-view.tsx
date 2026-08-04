@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { CaseAssignedToRow } from '@/components/agent/case-assigned-to-field';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
@@ -74,6 +75,7 @@ function TerminationDetailContent({
       suburb: caseData.property.suburb,
     }),
   );
+  const propertyManager = properties.find((p) => p.id === caseData.propertyId)?.propertyManager;
 
   return (
     <div className="space-y-4">
@@ -97,6 +99,7 @@ function TerminationDetailContent({
                 <p className="text-muted-foreground">Refund</p>
                 <p className="font-medium tabular-nums">{formatCurrency(caseData.refundAmount)}</p>
               </div>
+              <CaseAssignedToRow assignedToName={propertyManager ?? caseData.agentName} />
             </div>
             <p className="text-muted-foreground mt-3 text-xs">{caseData.nextAction}</p>
           </section>
