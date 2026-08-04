@@ -7,7 +7,6 @@ import {
   Building2,
   MessageSquare,
   Phone,
-  Plus,
   RotateCcw,
   Settings2,
   Sparkles,
@@ -45,7 +44,7 @@ const SHELL_GII_BUTTON = {
 const SHELL_MESSAGE_BUTTON = {
   id: 'message-menu' as const,
   label: 'Message',
-  icon: Plus,
+  icon: MessageSquare,
 } as const;
 
 const SHELL_PHONE_BUTTON = {
@@ -121,9 +120,7 @@ export function ShellHeaderQuickActions({
 
   if (visibleButtons.length === 0) return null;
 
-  const hasDesktopQuickActions = visibleButtons.some(
-    (btn) => btn.id !== 'gii' && btn.id !== 'message-menu',
-  );
+  const hasDesktopQuickActions = visibleButtons.some((btn) => btn.id !== 'gii');
 
   const handleClick = (btnId: (typeof visibleButtons)[number]['id']) => {
     if (btnId === 'gii') {
@@ -151,7 +148,7 @@ export function ShellHeaderQuickActions({
     >
       {visibleButtons.map((btn) => {
         const Icon = btn.icon;
-        const hideOnDesktop = btn.id === 'gii' || btn.id === 'message-menu';
+        const hideOnDesktop = btn.id === 'gii';
         const isActive =
           btn.id === 'gii'
             ? activePanel === 'gii'
