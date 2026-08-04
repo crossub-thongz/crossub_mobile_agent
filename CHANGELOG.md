@@ -2,6 +2,9 @@
 
 ## 2026-08-04
 
+### Changed
+- **The silence window that ends a dictation is 2 seconds, down from 5.** Nothing is uploaded until it elapses, so it was pure dead time on every dictation and the bulk of the wait between finishing a sentence and seeing the transcript. Two seconds still survives the pause someone takes mid-thought; tapping the mic sends immediately and skips it entirely.
+
 ### Fixed
 - **The mic button's waveform never once reflected the mic — a running CSS animation silently beat the inline style driving it.** `@keyframes voice-wave` animates `transform`, and an animation wins over an inline `transform` on the same element, so the measured level was computed, passed down, and discarded every frame while the bars waved to a fixed 0.85s rhythm. Whichever source is driving now, the other stands down: with a meter the bars scale from the real level (with a 150ms transition to match the sample rate, and a per-bar weight so four bars don't move as one block); without one they fall back to the animation.
 - **The button stops being red the moment the mic closes.** Red now means "the mic is open" and nothing else — holding it through transcription read as still recording, which made a one-second wait look like the app ignoring you. Transcribing shows a settled grey state and its own aria-label.

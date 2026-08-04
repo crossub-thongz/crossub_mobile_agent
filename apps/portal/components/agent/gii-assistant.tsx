@@ -723,7 +723,7 @@ export function GiiAssistant({
   };
 
   /**
-   * Tap to start, tap again to send. The session also ends itself on five seconds of silence,
+   * Tap to start, tap again to send. The session also ends itself on a short run of silence,
    * so a mic left listening closes on its own.
    */
   const toggleVoice = () => {

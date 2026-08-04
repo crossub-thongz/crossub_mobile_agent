@@ -577,7 +577,7 @@ export function startGiiVoiceCapture(options: {
     });
     // On the recorder path there are no transcript events to reset a timer, so the audio
     // meter is the only silence signal. On the browser path both stay armed: whichever sees
-    // five quiet seconds first is right, and a recogniser that has gone quiet while the meter
+    // the quiet window elapse first is right, and a recogniser that has gone quiet while the meter
     // still hears speech is exactly the case worth ending and reporting.
     if (useRecorder && silenceTimer) {
       clearTimeout(silenceTimer);

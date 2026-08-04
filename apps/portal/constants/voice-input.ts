@@ -11,8 +11,15 @@
  * closes itself instead of listening to an empty room.
  */
 
-/** Silence that ends the session and sends whatever was heard. */
-export const VOICE_SILENCE_TIMEOUT_MS = 5_000;
+/**
+ * Silence that ends the session and sends whatever was heard.
+ *
+ * Two seconds: this window is dead time on every dictation — nothing is uploaded until it
+ * elapses — so it was the bulk of the wait between finishing a sentence and seeing the
+ * transcript. Short enough to feel immediate, long enough to survive the pause someone takes
+ * mid-thought. Tapping the mic still sends instantly and skips it entirely.
+ */
+export const VOICE_SILENCE_TIMEOUT_MS = 2_000;
 
 /**
  * Ceiling on one dictation, in case the room is noisy enough that the silence watch never
