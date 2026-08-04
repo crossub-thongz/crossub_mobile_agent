@@ -725,6 +725,19 @@ export function GiiAssistant({
     voiceCaptureRef.current?.release();
   };
 
+  const onMicPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    startVoice();
+  };
+
+  const onMicPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    stopVoice();
+  };
+
   useEffect(
     () => () => {
       voiceCaptureRef.current?.abort();
@@ -863,17 +876,14 @@ export function GiiAssistant({
                     ) : (
                       <button
                         type="button"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          startVoice();
-                        }}
-                        onPointerUp={stopVoice}
+                        onPointerDown={onMicPointerDown}
+                        onPointerUp={onMicPointerUp}
                         onPointerLeave={() => {
                           if (voiceActive) stopVoice();
                         }}
-                        onPointerCancel={stopVoice}
+                        onPointerCancel={onMicPointerUp}
                         className={cn(
-                          'flex size-10 shrink-0 items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
+                          'flex size-10 shrink-0 touch-none items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
                           voiceActive
                             ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
                             : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
@@ -1187,17 +1197,14 @@ export function GiiAssistant({
               ) : (
                 <button
                   type="button"
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    startVoice();
-                  }}
-                  onPointerUp={stopVoice}
+                  onPointerDown={onMicPointerDown}
+                  onPointerUp={onMicPointerUp}
                   onPointerLeave={() => {
                     if (voiceActive) stopVoice();
                   }}
-                  onPointerCancel={stopVoice}
+                  onPointerCancel={onMicPointerUp}
                   className={cn(
-                    'flex size-11 shrink-0 items-center justify-center rounded-full text-white shadow-md',
+                    'flex size-11 shrink-0 touch-none items-center justify-center rounded-full text-white shadow-md',
                     'transition-all duration-300 ease-out active:scale-95',
                     voiceActive
                       ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'

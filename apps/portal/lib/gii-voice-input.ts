@@ -24,7 +24,7 @@ function voiceErrorMessage(code: string): string {
     return 'Microphone access is blocked — allow mic permission and try again';
   }
   if (code === 'network') {
-    return 'Voice recognition unavailable — check your connection or type your question';
+    return 'Voice recognition unavailable — use Chrome, check your connection, or type your question';
   }
   if (code === 'no-speech') {
     return 'Could not hear you clearly — try again or type your question';
@@ -33,19 +33,15 @@ function voiceErrorMessage(code: string): string {
 }
 
 export type GiiVoiceCapture = {
-  /** Pointer released — finish after the stop buffer. */
   release: () => void;
-  /** Pressed again during the release buffer — keep the same utterance going. */
   resumeHold: () => void;
-  /** True between release and the stop buffer firing. */
   isWrapping: () => boolean;
-  /** Tear down immediately (unmount). */
   abort: () => void;
 };
 
 /**
- * Hold-to-talk speech capture. Uses short recognition passes restarted while the button
- * is held — more reliable in Chrome than `continuous: true`, which often throws `network`.
+ * Hold-to-talk speech capture. Chrome cannot reliably restart the same
+ * SpeechRecognition after a network/onend error — each pass uses a fresh instance.
  */
 export function startGiiVoiceCapture(options: {
   lang?: string;
@@ -66,11 +62,11 @@ export function startGiiVoiceCapture(options: {
   const SpeechRecognitionCtor =
     window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognitionCtor) {
-    options.onError('Voice input is not supported in this browser');
+    options.onError('Voice input is not supported in this browser — try Chrome');
     return null;
   }
 
-  let recognition: SpeechRecognition | null = new SpeechRecognitionCtor();
+  let recognition: SpeechRecognition | null = null;
   let holding = true;
   let handled = false;
   let stopTimer: ReturnType<typeof setTimeout> | null = null;
@@ -89,22 +85,16 @@ export function startGiiVoiceCapture(options: {
     }
   };
 
-  const teardown = (abortRecognition: boolean) => {
-    clearTimers();
-    holding = false;
-    const rec = recognition;
-    recognition = null;
-    if (abortRecognition && rec) {
-      try {
-        rec.abort();
-      } catch {
-        // ignore
-      }
+  const detachRecognition = (rec: SpeechRecognition) => {
+    rec.onstart = null;
+    rec.onend = null;
+    rec.onerror = null;
+    rec.onresult = null;
+    try {
+      rec.abort();
+    } catch {
+      // ignore
     }
-    if (activeVoiceSession?.abort === abortSession) {
-      activeVoiceSession = null;
-    }
-    options.onIdle();
   };
 
   const finish = (submit: boolean, errorCode?: string) => {
@@ -112,20 +102,15 @@ export function startGiiVoiceCapture(options: {
     handled = true;
     clearTimers();
     holding = false;
-    const text = finalTranscript.trim();
-    const rec = recognition;
-    recognition = null;
-    if (rec) {
-      try {
-        rec.abort();
-      } catch {
-        // ignore
-      }
+    if (recognition) {
+      detachRecognition(recognition);
+      recognition = null;
     }
     if (activeVoiceSession?.abort === abortSession) {
       activeVoiceSession = null;
     }
     options.onIdle();
+    const text = finalTranscript.trim();
     if (submit && text) {
       options.onComplete(text);
       return;
@@ -135,18 +120,13 @@ export function startGiiVoiceCapture(options: {
     }
   };
 
-  const scheduleRestart = () => {
-    if (!holding || handled || !recognition) return;
+  const scheduleRestart = (delayMs = 220) => {
+    if (!holding || handled) return;
     if (restartTimer) return;
     restartTimer = setTimeout(() => {
       restartTimer = null;
-      if (!holding || handled || !recognition) return;
-      try {
-        recognition.start();
-      } catch {
-        scheduleRestart();
-      }
-    }, 80);
+      beginPass();
+    }, delayMs);
   };
 
   const bindRecognition = (rec: SpeechRecognition) => {
@@ -178,15 +158,22 @@ export function startGiiVoiceCapture(options: {
       if (handled) return;
       if (event.error === 'aborted') return;
       lastError = event.error;
-      const captured = (finalTranscript + '').trim();
+
+      const captured = finalTranscript.trim();
       if (captured && !holding) {
         finish(true);
         return;
       }
+
       if (holding && (event.error === 'network' || event.error === 'no-speech')) {
-        scheduleRestart();
+        if (recognition === rec) {
+          detachRecognition(rec);
+          recognition = null;
+        }
+        scheduleRestart(event.error === 'network' ? 320 : 180);
         return;
       }
+
       if (!holding) {
         finish(false, event.error);
       }
@@ -194,6 +181,9 @@ export function startGiiVoiceCapture(options: {
 
     rec.onend = () => {
       if (handled) return;
+      if (recognition === rec) {
+        recognition = null;
+      }
       if (holding) {
         scheduleRestart();
         return;
@@ -202,39 +192,67 @@ export function startGiiVoiceCapture(options: {
     };
   };
 
-  bindRecognition(recognition);
+  const beginPass = () => {
+    if (handled || !holding) return;
+
+    if (recognition) {
+      detachRecognition(recognition);
+      recognition = null;
+    }
+
+    const rec = new SpeechRecognitionCtor();
+    recognition = rec;
+    bindRecognition(rec);
+
+    try {
+      rec.start();
+    } catch {
+      if (recognition === rec) {
+        recognition = null;
+      }
+      scheduleRestart();
+    }
+  };
 
   const abortSession = () => {
     if (handled) return;
     handled = true;
-    teardown(true);
+    clearTimers();
+    holding = false;
+    if (recognition) {
+      detachRecognition(recognition);
+      recognition = null;
+    }
+    if (activeVoiceSession?.abort === abortSession) {
+      activeVoiceSession = null;
+    }
+    options.onIdle();
   };
 
   activeVoiceSession = { abort: abortSession };
-
-  try {
-    recognition.start();
-  } catch {
-    activeVoiceSession = null;
-    recognition = null;
-    options.onError('Could not start voice input — try again or type your question');
-    options.onIdle();
-    return null;
-  }
+  beginPass();
 
   return {
     release: () => {
       if (handled || !holding) return;
       holding = false;
+      if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = null;
+      }
       options.onWrapping();
       stopTimer = setTimeout(() => {
         stopTimer = null;
-        if (handled || !recognition) return;
-        try {
-          recognition.stop();
-        } catch {
-          finish(finalTranscript.trim().length > 0, lastError);
+        if (handled) return;
+        if (recognition) {
+          try {
+            recognition.stop();
+          } catch {
+            finish(finalTranscript.trim().length > 0, lastError);
+          }
+          return;
         }
+        finish(finalTranscript.trim().length > 0, lastError);
       }, VOICE_STOP_BUFFER_MS);
     },
     resumeHold: () => {
@@ -244,6 +262,9 @@ export function startGiiVoiceCapture(options: {
         stopTimer = null;
       }
       holding = true;
+      if (!recognition && !restartTimer) {
+        beginPass();
+      }
       options.onListening();
     },
     isWrapping: () => !handled && !holding && stopTimer !== null,
