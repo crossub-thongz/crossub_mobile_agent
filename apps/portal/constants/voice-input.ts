@@ -1,21 +1,38 @@
 /**
- * Push-to-talk tuning for Gii's mic button.
+ * Tap-to-talk tuning for Gii's mic button.
  *
- * Web Speech closes the utterance the moment `stop()` is called, so releasing the button
- * mid-word truncates the transcript — the last word simply never arrives. We hold the
- * recogniser open for a short buffer after release: long enough to catch a trailing word,
- * short enough that the button still feels like it responded to the release.
+ * Tap once to start listening, tap again to send. Holding the button was the earlier design
+ * and it failed the way a hold always does on a desktop composer: a tap is what people
+ * actually do, and a 200 ms hold gives a recogniser nothing to work with — so every attempt
+ * came back "could not hear you clearly". A toggle also frees the agent to think mid-sentence
+ * without their thumb committing them to a length.
  *
- * While the button is held, audio is recorded locally then sent to the server for
- * transcription (Deepgram/Whisper) — visible in DevTools and reliable unlike Web Speech.
+ * The session ends on its own after VOICE_SILENCE_TIMEOUT_MS of silence, so a forgotten mic
+ * closes itself instead of listening to an empty room.
  */
-export const VOICE_STOP_BUFFER_MS = 500;
+
+/** Silence that ends the session and sends whatever was heard. */
+export const VOICE_SILENCE_TIMEOUT_MS = 5_000;
+
+/**
+ * Ceiling on one dictation, in case the room is noisy enough that the silence watch never
+ * trips. Long enough for any question an agent would actually dictate.
+ */
+export const VOICE_MAX_SESSION_MS = 120_000;
+
+/**
+ * How often the recorded stream is sampled for silence, and how loud it has to be to count as
+ * speech. Byte time-domain samples sit at 128 for pure silence, so this is RMS *deviation*
+ * from that midpoint: a quiet room reads 0–2, speech reads well into double figures.
+ */
+export const VOICE_SILENCE_SAMPLE_MS = 150;
+export const VOICE_SPEECH_RMS_THRESHOLD = 3;
 
 /** Phases of the mic button — never compare against raw strings. */
 export const VOICE_PHASE = {
   IDLE: 'idle',
   LISTENING: 'listening',
-  /** Released, but the recogniser stays open for VOICE_STOP_BUFFER_MS. */
+  /** Stopped, and waiting on the transcript. */
   WRAPPING: 'wrapping',
 } as const;
 
@@ -34,13 +51,13 @@ export const VOICE_WAVE_BARS = [
 
 /** Status line above the composer. */
 export const VOICE_STATUS_LABEL = {
-  LISTENING: 'Listening… release when done',
+  LISTENING: 'Listening… tap the mic when you are done',
   WRAPPING: 'Got that — transcribing…',
 } as const;
 
 export const VOICE_BUTTON_ARIA_LABEL = {
-  IDLE: 'Hold to speak',
-  ACTIVE: 'Listening — release to send',
+  IDLE: 'Tap to speak',
+  ACTIVE: 'Listening — tap to send',
 } as const;
 
 /**
@@ -55,14 +72,16 @@ export const VOICE_MIN_CLIP_BYTES = 800;
 
 /** Everything the mic can tell the agent. Kept here so the wording stays consistent. */
 export const VOICE_ERROR = {
-  BUSY: 'Microphone is already active — release the other Gii mic first',
+  BUSY: 'Microphone is already listening — stop the other Gii mic first',
   UNSUPPORTED: 'Voice input is not supported in this browser — try Chrome',
   MIC_BLOCKED: 'Microphone access is blocked — allow mic permission and try again',
   RECORD_FAILED: 'Could not record audio — try again or type your question',
   NO_SPEECH: 'Could not hear you clearly — try again or type your question',
-  TOO_SHORT: 'Could not hear you clearly — hold the mic a little longer or type your question',
+  TOO_SHORT: 'Could not hear you clearly — speak a little longer or type your question',
   /** Both paths are out: no server ASR on this environment and no recogniser in this browser. */
-  NO_TRANSCRIBER:
-    'Voice input needs Chrome on this server — type your question for now',
+  NO_TRANSCRIBER: 'Voice input needs Chrome on this server — type your question for now',
+  /** The browser recogniser could not reach its speech service (Chrome uses Google's). */
+  ASR_UNREACHABLE:
+    'Voice recognition could not be reached — check your connection or type your question',
   FAILED: 'Could not transcribe your voice — check your connection or type your question',
 } as const;

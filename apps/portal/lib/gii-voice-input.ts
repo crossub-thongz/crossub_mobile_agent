@@ -1,7 +1,10 @@
 import {
   VOICE_ERROR,
+  VOICE_MAX_SESSION_MS,
   VOICE_MIN_CLIP_BYTES,
-  VOICE_STOP_BUFFER_MS,
+  VOICE_SILENCE_SAMPLE_MS,
+  VOICE_SILENCE_TIMEOUT_MS,
+  VOICE_SPEECH_RMS_THRESHOLD,
 } from '@/constants/voice-input';
 import { fetchGiiVoiceStatus, transcribeGiiVoice } from '@/lib/crossub-api/gii-client';
 import {
@@ -10,7 +13,7 @@ import {
   type GiiBrowserSpeech,
 } from '@/lib/gii-browser-speech';
 
-/** One mic session app-wide — two Gii panels must not record at once. */
+/** One mic session app-wide — two Gii panels must not listen at once. */
 let activeVoiceSession: { abort: () => void } | null = null;
 
 export function giiVoiceSessionActive(): boolean {
@@ -64,7 +67,7 @@ async function resolveServerAsr(): Promise<boolean> {
   return statusProbe;
 }
 
-/** Warm the capability probe when the Gii panel opens, so the first mic press is instant. */
+/** Warm the capability probe when the Gii panel opens, so the first mic tap is instant. */
 export function primeGiiVoiceStatus(): void {
   if (typeof window === 'undefined') return;
   void resolveServerAsr();
@@ -90,27 +93,89 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
+/**
+ * Watch a live mic stream and call back once it has been quiet for `timeoutMs`.
+ *
+ * The recorder path has no transcript to time silence against — the words only arrive after
+ * the upload — so silence is measured from the audio itself. Returns a teardown function;
+ * an environment without Web Audio simply never trips (the session cap still bounds it).
+ */
+function watchForSilence(
+  stream: MediaStream,
+  timeoutMs: number,
+  onSilent: () => void,
+): () => void {
+  const AudioCtor =
+    typeof window === 'undefined'
+      ? undefined
+      : window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+  if (!AudioCtor) return () => {};
+
+  let ctx: AudioContext;
+  try {
+    ctx = new AudioCtor();
+  } catch {
+    return () => {};
+  }
+
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 2048;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  const samples = new Uint8Array(analyser.fftSize);
+
+  let quietFor = 0;
+  const timer = setInterval(() => {
+    analyser.getByteTimeDomainData(samples);
+    let sumSquares = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const deviation = samples[i]! - 128;
+      sumSquares += deviation * deviation;
+    }
+    const rms = Math.sqrt(sumSquares / samples.length);
+
+    if (rms >= VOICE_SPEECH_RMS_THRESHOLD) {
+      quietFor = 0;
+      return;
+    }
+    quietFor += VOICE_SILENCE_SAMPLE_MS;
+    if (quietFor >= timeoutMs) onSilent();
+  }, VOICE_SILENCE_SAMPLE_MS);
+
+  return () => {
+    clearInterval(timer);
+    void ctx.close().catch(() => {});
+  };
+}
+
 export type GiiVoiceCapture = {
-  release: () => void;
-  resumeHold: () => void;
-  isWrapping: () => boolean;
+  /** Stop listening and send whatever was heard. */
+  stop: () => void;
+  /** Drop the session without sending. */
   abort: () => void;
+  /** True once listening has ended and the transcript is still being settled. */
+  isSettling: () => boolean;
 };
 
 /**
- * Hold-to-talk for Gii, over whichever transcriber this environment actually has.
+ * Tap-to-talk for Gii, over whichever transcriber this environment actually has.
+ *
+ * Tap starts the session; `stop()` ends it and sends. It also ends itself after
+ * VOICE_SILENCE_TIMEOUT_MS of silence, measured from the audio on the recorder path and from
+ * transcript activity on the browser path — a mic left on should not sit there listening.
  *
  * Server ASR (Deepgram/Whisper) is preferred — accurate, works in every browser, no Google
- * round-trip — but it only exists where an ASR key is configured. So the browser's own
- * recogniser runs as the fallback, and the two are chosen BEFORE recording starts:
+ * round-trip — but it only exists where an ASR key is configured, so the browser's own
+ * recogniser stands behind it. Which one runs is decided BEFORE recording starts:
  *
  * - server available → record and upload (the browser recogniser stays out of it).
  * - server unavailable → browser recogniser only; no pointless upload.
  * - probe itself failed → run both and prefer the server's answer, so an unreachable probe
- *   costs a little extra work rather than the press.
+ *   costs a little extra work rather than the session.
  *
- * The one case that fails is neither being available, and that is reported on the press
- * rather than after the agent has finished speaking.
+ * The one case that fails is neither being available, and that is reported on the tap rather
+ * than after the agent has finished speaking.
  */
 export function startGiiVoiceCapture(options: {
   lang?: string;
@@ -149,11 +214,26 @@ export function startGiiVoiceCapture(options: {
   let recorder: MediaRecorder | null = null;
   let chunks: Blob[] = [];
   let speech: GiiBrowserSpeech | null = null;
-  let holding = true;
+  let listening = true;
   let handled = false;
-  let stopTimer: ReturnType<typeof setTimeout> | null = null;
   let recordingMime = pickRecorderMimeType() || 'audio/webm';
   let resolving = false;
+  let stopSilenceWatch: (() => void) | null = null;
+  let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+  let sessionCap: ReturnType<typeof setTimeout> | null = null;
+
+  const clearTimers = () => {
+    stopSilenceWatch?.();
+    stopSilenceWatch = null;
+    if (silenceTimer) {
+      clearTimeout(silenceTimer);
+      silenceTimer = null;
+    }
+    if (sessionCap) {
+      clearTimeout(sessionCap);
+      sessionCap = null;
+    }
+  };
 
   const cleanupStream = () => {
     stream?.getTracks().forEach((t) => t.stop());
@@ -165,6 +245,7 @@ export function startGiiVoiceCapture(options: {
     if (activeVoiceSession?.abort === abortSession) {
       activeVoiceSession = null;
     }
+    clearTimers();
     cleanupStream();
     speech?.abort();
     speech = null;
@@ -174,10 +255,7 @@ export function startGiiVoiceCapture(options: {
   const fail = (message: string) => {
     if (handled) return;
     handled = true;
-    if (stopTimer) {
-      clearTimeout(stopTimer);
-      stopTimer = null;
-    }
+    listening = false;
     finishIdle();
     options.onError(message);
   };
@@ -185,10 +263,7 @@ export function startGiiVoiceCapture(options: {
   const complete = (text: string) => {
     if (handled) return;
     handled = true;
-    if (stopTimer) {
-      clearTimeout(stopTimer);
-      stopTimer = null;
-    }
+    listening = false;
     finishIdle();
     options.onComplete(text);
   };
@@ -217,12 +292,14 @@ export function startGiiVoiceCapture(options: {
     }
   };
 
-  /** Settle the hold: server transcript first, browser transcript behind it. */
+  /** Settle the session: server transcript first, browser transcript behind it. */
   const resolveTranscript = async () => {
     if (handled || resolving) return;
     resolving = true;
+    clearTimers();
 
     const heardLocally = speech ? await speech.stop() : '';
+    const asrError = speech?.lastError() ?? '';
     if (handled) return;
 
     const clip = useRecorder ? new Blob(chunks, { type: recordingMime }) : null;
@@ -246,7 +323,7 @@ export function startGiiVoiceCapture(options: {
       return;
     }
 
-    // Nothing came back. A mis-tap, a silent hold and a failed call each read differently.
+    // Nothing came back. Each dead end reads differently to the agent holding the phone.
     if (clip && !clipUsable) {
       fail(VOICE_ERROR.TOO_SHORT);
       return;
@@ -255,10 +332,20 @@ export function startGiiVoiceCapture(options: {
       fail(serverAsrAvailable === false ? VOICE_ERROR.NO_TRANSCRIBER : VOICE_ERROR.FAILED);
       return;
     }
+    if (speech && asrError === 'network') {
+      fail(VOICE_ERROR.ASR_UNREACHABLE);
+      return;
+    }
     fail(VOICE_ERROR.NO_SPEECH);
   };
 
-  const stopRecording = () => {
+  /** End the session and hand off to the transcriber. Idempotent. */
+  const stopListening = () => {
+    if (handled || !listening) return;
+    listening = false;
+    clearTimers();
+    options.onWrapping();
+
     if (!useRecorder || !recorder || recorder.state === 'inactive') {
       void resolveTranscript();
       return;
@@ -273,13 +360,16 @@ export function startGiiVoiceCapture(options: {
     }
   };
 
+  /** The browser path times silence from transcript activity — it has no audio to measure. */
+  const restartTranscriptSilenceTimer = () => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(stopListening, VOICE_SILENCE_TIMEOUT_MS);
+  };
+
   const abortSession = () => {
     if (handled) return;
     handled = true;
-    if (stopTimer) {
-      clearTimeout(stopTimer);
-      stopTimer = null;
-    }
+    listening = false;
     chunks = [];
     finishIdle();
   };
@@ -288,7 +378,7 @@ export function startGiiVoiceCapture(options: {
 
   void (async () => {
     // The probe usually resolved when the panel opened; awaiting it costs nothing then, and
-    // on a cold first press it is what stops us recording audio nobody can transcribe.
+    // on a cold first tap it is what stops us recording audio nobody can transcribe.
     if (serverAsrAvailable === null) await resolveServerAsr();
     if (handled) return;
 
@@ -299,19 +389,26 @@ export function startGiiVoiceCapture(options: {
       return;
     }
 
+    // A stop that beat the startup already moved the UI on — don't drag it back.
+    const announceListening = () => {
+      if (!handled && listening) options.onListening();
+    };
+
     if (useBrowserAsr) {
       speech = startBrowserSpeech({
         lang: options.lang ?? resolveSpeechLanguage(),
         onInterim: (text) => {
-          if (!handled && text) options.onTranscript(text);
+          if (handled || !listening) return;
+          if (text) options.onTranscript(text);
+          restartTranscriptSilenceTimer();
         },
       });
+      if (speech) restartTranscriptSilenceTimer();
     }
 
-    // A release that beat the startup already moved the UI on — don't drag it back.
-    const announceListening = () => {
-      if (!handled && holding) options.onListening();
-    };
+    if (handled || !listening) return;
+
+    sessionCap = setTimeout(stopListening, VOICE_MAX_SESSION_MS);
 
     if (!useRecorder) {
       if (!speech) {
@@ -324,7 +421,7 @@ export function startGiiVoiceCapture(options: {
 
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (handled || !holding) {
+      if (handled || !listening) {
         cleanupStream();
         return;
       }
@@ -337,13 +434,20 @@ export function startGiiVoiceCapture(options: {
         if (event.data.size > 0) chunks.push(event.data);
       };
       recorder.onerror = () => {
-        // The browser recogniser may still be listening — let the release settle it.
+        // The browser recogniser may still be listening — let the stop settle it.
         if (!speech) fail(VOICE_ERROR.RECORD_FAILED);
       };
       recorder.start(200);
+
+      // Audio-measured silence supersedes the transcript timer on this path.
+      if (silenceTimer) {
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
+      }
+      stopSilenceWatch = watchForSilence(stream, VOICE_SILENCE_TIMEOUT_MS, stopListening);
       announceListening();
     } catch {
-      // The browser recogniser holds its own mic grant, so if it is running the press can
+      // The browser recogniser holds its own mic grant, so if it is running the session can
       // still land — only drop out when there is nothing else listening.
       if (speech) {
         useRecorder = false;
@@ -355,25 +459,8 @@ export function startGiiVoiceCapture(options: {
   })();
 
   return {
-    release: () => {
-      if (handled || !holding) return;
-      holding = false;
-      options.onWrapping();
-      stopTimer = setTimeout(() => {
-        stopTimer = null;
-        stopRecording();
-      }, VOICE_STOP_BUFFER_MS);
-    },
-    resumeHold: () => {
-      if (handled || holding || resolving) return;
-      if (stopTimer) {
-        clearTimeout(stopTimer);
-        stopTimer = null;
-      }
-      holding = true;
-      options.onListening();
-    },
-    isWrapping: () => !handled && !holding && stopTimer !== null,
+    stop: stopListening,
     abort: abortSession,
+    isSettling: () => !handled && !listening,
   };
 }

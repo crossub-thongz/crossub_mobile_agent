@@ -9,13 +9,20 @@ import { BROWSER_ASR_SETTLE_MS } from '@/constants/voice-input';
  * not read to an agent as a broken mic. It is deliberately silent: every failure here is
  * absorbed and surfaces as an empty transcript, so the caller decides what the agent is told.
  *
- * Chrome ends a recognition session on its own after a pause, so a hold that spans a pause
- * needs a fresh instance each time — hence the restart loop rather than one long session.
+ * Chrome ends a recognition session on its own even in continuous mode, so a dictation that
+ * spans a pause needs a fresh instance to carry on — hence the restart loop. Text finalised
+ * by a pass is committed before the next one starts, so restarting never loses a word.
  */
 
 export type GiiBrowserSpeech = {
   /** Everything finalised so far. */
   transcript: () => string;
+  /**
+   * The last recogniser error code, or ''. Only meaningful when the transcript came back
+   * empty: `network` means Chrome could not reach its speech service, which is a different
+   * thing to tell an agent than "I did not hear you".
+   */
+  lastError: () => string;
   /** Stop listening and resolve with the settled transcript. Safe to call twice. */
   stop: () => Promise<string>;
   /** Drop the session and the transcript. */
@@ -48,6 +55,7 @@ export function startBrowserSpeech(options: {
   let restartTimer: ReturnType<typeof setTimeout> | null = null;
   let settle: ((text: string) => void) | null = null;
   let settleTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastErrorCode = '';
 
   const clearTimers = () => {
     if (restartTimer) {
@@ -113,7 +121,10 @@ export function startBrowserSpeech(options: {
     recognition = rec;
     passText = '';
     rec.lang = options.lang;
-    rec.continuous = false;
+    // Tap-to-talk holds the session open across pauses, so the recogniser has to as well —
+    // one utterance per pass would drop whatever was said while it was restarting. The
+    // restart loop below stays as the safety net: Chrome still ends sessions on its own.
+    rec.continuous = true;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
@@ -133,6 +144,7 @@ export function startBrowserSpeech(options: {
 
     rec.onerror = (event) => {
       if (event.error === 'aborted') return;
+      lastErrorCode = event.error;
       // `network` and `no-speech` are routine mid-hold; anything else ends this pass too.
       if (recognition === rec) {
         detach(rec);
@@ -169,6 +181,7 @@ export function startBrowserSpeech(options: {
 
   return {
     transcript: captured,
+    lastError: () => lastErrorCode,
     stop: () => {
       if (stopped) return Promise.resolve(captured());
       stopped = true;

@@ -692,13 +692,17 @@ export function GiiAssistant({
     onClose?.();
   };
 
-  const startVoice = () => {
-    if (voiceCaptureRef.current?.isWrapping()) {
-      voiceCaptureRef.current.resumeHold();
-      setVoicePhase(VOICE_PHASE.LISTENING);
+  /**
+   * Tap to start, tap again to send. The session also ends itself on five seconds of silence,
+   * so a mic left listening closes on its own.
+   */
+  const toggleVoice = () => {
+    const active = voiceCaptureRef.current;
+    if (active) {
+      // Already settling — the second tap has nothing left to stop.
+      active.stop();
       return;
     }
-    if (voiceCaptureRef.current) return;
 
     const capture = startGiiVoiceCapture({
       onListening: () => setVoicePhase(VOICE_PHASE.LISTENING),
@@ -720,23 +724,6 @@ export function GiiAssistant({
       },
     });
     if (capture) voiceCaptureRef.current = capture;
-  };
-
-  const stopVoice = () => {
-    voiceCaptureRef.current?.release();
-  };
-
-  const onMicPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    startVoice();
-  };
-
-  const onMicPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-    stopVoice();
   };
 
   useEffect(
@@ -883,19 +870,20 @@ export function GiiAssistant({
                     ) : (
                       <button
                         type="button"
-                        onPointerDown={onMicPointerDown}
-                        onPointerUp={onMicPointerUp}
-                        onPointerLeave={() => {
-                          if (voiceActive) stopVoice();
-                        }}
-                        onPointerCancel={onMicPointerUp}
+                        onClick={toggleVoice}
+                        disabled={wrappingUp}
                         className={cn(
                           'flex size-10 shrink-0 touch-none items-center justify-center rounded-full text-white shadow-md transition active:scale-95',
                           voiceActive
                             ? 'bg-gradient-to-br from-rose-500 via-red-500 to-rose-600'
                             : 'bg-gradient-to-br from-primary via-emerald-500 to-teal-600',
                         )}
-                        aria-label="Voice input"
+                        aria-label={
+                          voiceActive
+                            ? VOICE_BUTTON_ARIA_LABEL.ACTIVE
+                            : VOICE_BUTTON_ARIA_LABEL.IDLE
+                        }
+                        aria-pressed={listening}
                       >
                         {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-4" />}
                       </button>
@@ -1204,12 +1192,8 @@ export function GiiAssistant({
               ) : (
                 <button
                   type="button"
-                  onPointerDown={onMicPointerDown}
-                  onPointerUp={onMicPointerUp}
-                  onPointerLeave={() => {
-                    if (voiceActive) stopVoice();
-                  }}
-                  onPointerCancel={onMicPointerUp}
+                  onClick={toggleVoice}
+                  disabled={wrappingUp}
                   className={cn(
                     'flex size-11 shrink-0 touch-none items-center justify-center rounded-full text-white shadow-md',
                     'transition-all duration-300 ease-out active:scale-95',
@@ -1220,6 +1204,7 @@ export function GiiAssistant({
                     wrappingUp && 'scale-105',
                   )}
                   aria-label={voiceActive ? VOICE_BUTTON_ARIA_LABEL.ACTIVE : VOICE_BUTTON_ARIA_LABEL.IDLE}
+                  aria-pressed={listening}
                 >
                   {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-5" />}
                 </button>
