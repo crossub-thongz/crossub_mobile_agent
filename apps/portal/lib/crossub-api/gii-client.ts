@@ -2,6 +2,8 @@ import type { components } from '@crossub-thongz/api-contract';
 
 import { crossub } from './client';
 
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
+
 /**
  * Gii — the AI assistant, over the typed mobile contract.
  *
@@ -59,4 +61,24 @@ export async function sendGiiMessage(args: {
   });
   if (error || !data) throw new Error('Gii is unavailable');
   return data;
+}
+
+/** Hold-to-talk audio → text via the server ASR (shows in Network tab; works when Web Speech is blocked). */
+export async function transcribeGiiVoice(args: {
+  audioBase64: string;
+  mediaType: string;
+  languageHint?: string;
+}): Promise<{ text: string; provider?: string }> {
+  const res = await fetch(`${API_BASE}/agent/gii/transcribe`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) {
+    const err = new Error('Transcription failed') as Error & { status: number };
+    err.status = res.status;
+    throw err;
+  }
+  return res.json() as Promise<{ text: string; provider?: string }>;
 }

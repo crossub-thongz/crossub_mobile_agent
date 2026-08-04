@@ -1,6 +1,7 @@
 import { VOICE_STOP_BUFFER_MS } from '@/constants/voice-input';
+import { transcribeGiiVoice } from '@/lib/crossub-api/gii-client';
 
-/** One browser speech session app-wide — two Gii panels must not open the mic together. */
+/** One mic session app-wide — two Gii panels must not record at once. */
 let activeVoiceSession: { abort: () => void } | null = null;
 
 export function giiVoiceSessionActive(): boolean {
@@ -19,17 +20,25 @@ export function resolveSpeechLanguage(): string {
   return lang;
 }
 
-function voiceErrorMessage(code: string): string {
-  if (code === 'not-allowed') {
-    return 'Microphone access is blocked — allow mic permission and try again';
-  }
-  if (code === 'network') {
-    return 'Voice recognition unavailable — use Chrome, check your connection, or type your question';
-  }
-  if (code === 'no-speech') {
-    return 'Could not hear you clearly — try again or type your question';
-  }
-  return 'Could not hear you clearly — try again or type your question';
+function languageHintForTranscription(): string | undefined {
+  const lang = resolveSpeechLanguage();
+  if (lang.startsWith('zh')) return 'zh';
+  if (lang.startsWith('en')) return 'en';
+  return undefined;
+}
+
+function pickRecorderMimeType(): string {
+  if (typeof MediaRecorder === 'undefined') return '';
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/mpeg'];
+  return candidates.find((t) => MediaRecorder.isTypeSupported(t)) ?? '';
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+  return btoa(binary);
 }
 
 export type GiiVoiceCapture = {
@@ -40,8 +49,8 @@ export type GiiVoiceCapture = {
 };
 
 /**
- * Hold-to-talk speech capture. Chrome cannot reliably restart the same
- * SpeechRecognition after a network/onend error — each pass uses a fresh instance.
+ * Hold-to-talk: record with MediaRecorder, transcribe on the server (Deepgram/Whisper).
+ * Unlike Chrome Web Speech, this shows a real fetch in DevTools and does not depend on Google.
  */
 export function startGiiVoiceCapture(options: {
   lang?: string;
@@ -59,200 +68,155 @@ export function startGiiVoiceCapture(options: {
     return null;
   }
 
-  const SpeechRecognitionCtor =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognitionCtor) {
-    options.onError('Voice input is not supported in this browser — try Chrome');
+  if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    options.onError('Voice input is not supported in this browser');
     return null;
   }
 
-  let recognition: SpeechRecognition | null = null;
+  let stream: MediaStream | null = null;
+  let recorder: MediaRecorder | null = null;
+  let chunks: Blob[] = [];
   let holding = true;
   let handled = false;
   let stopTimer: ReturnType<typeof setTimeout> | null = null;
-  let restartTimer: ReturnType<typeof setTimeout> | null = null;
-  let finalTranscript = '';
-  let lastError = '';
+  let recordingMime = pickRecorderMimeType() || 'audio/webm';
+  let transcribing = false;
 
-  const clearTimers = () => {
+  const cleanupStream = () => {
+    stream?.getTracks().forEach((t) => t.stop());
+    stream = null;
+    recorder = null;
+  };
+
+  const finishIdle = () => {
+    if (activeVoiceSession?.abort === abortSession) {
+      activeVoiceSession = null;
+    }
+    cleanupStream();
+    options.onIdle();
+  };
+
+  const fail = (message: string) => {
+    if (handled) return;
+    handled = true;
     if (stopTimer) {
       clearTimeout(stopTimer);
       stopTimer = null;
     }
-    if (restartTimer) {
-      clearTimeout(restartTimer);
-      restartTimer = null;
-    }
+    finishIdle();
+    options.onError(message);
   };
 
-  const detachRecognition = (rec: SpeechRecognition) => {
-    rec.onstart = null;
-    rec.onend = null;
-    rec.onerror = null;
-    rec.onresult = null;
-    try {
-      rec.abort();
-    } catch {
-      // ignore
-    }
-  };
-
-  const finish = (submit: boolean, errorCode?: string) => {
+  const complete = (text: string) => {
     if (handled) return;
     handled = true;
-    clearTimers();
-    holding = false;
-    if (recognition) {
-      detachRecognition(recognition);
-      recognition = null;
+    if (stopTimer) {
+      clearTimeout(stopTimer);
+      stopTimer = null;
     }
-    if (activeVoiceSession?.abort === abortSession) {
-      activeVoiceSession = null;
-    }
-    options.onIdle();
-    const text = finalTranscript.trim();
-    if (submit && text) {
-      options.onComplete(text);
+    finishIdle();
+    options.onComplete(text);
+  };
+
+  const transcribeRecording = async () => {
+    if (handled || transcribing) return;
+    transcribing = true;
+    const blob = new Blob(chunks, { type: recordingMime });
+    chunks = [];
+
+    if (blob.size < 800) {
+      fail('Could not hear you clearly — hold the mic a little longer or type your question');
       return;
     }
-    if (!text) {
-      options.onError(voiceErrorMessage(errorCode ?? lastError ?? 'no-speech'));
-    }
-  };
-
-  const scheduleRestart = (delayMs = 220) => {
-    if (!holding || handled) return;
-    if (restartTimer) return;
-    restartTimer = setTimeout(() => {
-      restartTimer = null;
-      beginPass();
-    }, delayMs);
-  };
-
-  const bindRecognition = (rec: SpeechRecognition) => {
-    rec.lang = options.lang ?? resolveSpeechLanguage();
-    rec.continuous = false;
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-
-    rec.onstart = () => {
-      if (handled) return;
-      options.onListening();
-    };
-
-    rec.onresult = (event) => {
-      if (handled) return;
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const piece = event.results[i]?.[0]?.transcript ?? '';
-        if (event.results[i]?.isFinal) {
-          finalTranscript += piece;
-        } else {
-          interim += piece;
-        }
-      }
-      options.onTranscript((finalTranscript + interim).trim());
-    };
-
-    rec.onerror = (event) => {
-      if (handled) return;
-      if (event.error === 'aborted') return;
-      lastError = event.error;
-
-      const captured = finalTranscript.trim();
-      if (captured && !holding) {
-        finish(true);
-        return;
-      }
-
-      if (holding && (event.error === 'network' || event.error === 'no-speech')) {
-        if (recognition === rec) {
-          detachRecognition(rec);
-          recognition = null;
-        }
-        scheduleRestart(event.error === 'network' ? 320 : 180);
-        return;
-      }
-
-      if (!holding) {
-        finish(false, event.error);
-      }
-    };
-
-    rec.onend = () => {
-      if (handled) return;
-      if (recognition === rec) {
-        recognition = null;
-      }
-      if (holding) {
-        scheduleRestart();
-        return;
-      }
-      finish(true);
-    };
-  };
-
-  const beginPass = () => {
-    if (handled || !holding) return;
-
-    if (recognition) {
-      detachRecognition(recognition);
-      recognition = null;
-    }
-
-    const rec = new SpeechRecognitionCtor();
-    recognition = rec;
-    bindRecognition(rec);
 
     try {
-      rec.start();
-    } catch {
-      if (recognition === rec) {
-        recognition = null;
+      const audioBase64 = await blobToBase64(blob);
+      const result = await transcribeGiiVoice({
+        audioBase64,
+        mediaType: recordingMime,
+        languageHint: languageHintForTranscription(),
+      });
+      const text = result.text.trim();
+      if (text) {
+        options.onTranscript(text);
+        complete(text);
+        return;
       }
-      scheduleRestart();
+      fail('Could not hear you clearly — try again or type your question');
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      if (status === 503) {
+        fail(
+          'Voice transcription is not available on this server yet — type your question for now',
+        );
+        return;
+      }
+      fail('Could not transcribe your voice — check your connection or type your question');
+    }
+  };
+
+  const stopRecording = () => {
+    if (!recorder || recorder.state === 'inactive') {
+      void transcribeRecording();
+      return;
+    }
+    recorder.onstop = () => {
+      void transcribeRecording();
+    };
+    try {
+      recorder.stop();
+    } catch {
+      void transcribeRecording();
     }
   };
 
   const abortSession = () => {
     if (handled) return;
     handled = true;
-    clearTimers();
-    holding = false;
-    if (recognition) {
-      detachRecognition(recognition);
-      recognition = null;
+    if (stopTimer) {
+      clearTimeout(stopTimer);
+      stopTimer = null;
     }
-    if (activeVoiceSession?.abort === abortSession) {
-      activeVoiceSession = null;
-    }
-    options.onIdle();
+    chunks = [];
+    finishIdle();
   };
 
   activeVoiceSession = { abort: abortSession };
-  beginPass();
+
+  void (async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (handled || !holding) {
+        cleanupStream();
+        return;
+      }
+      recorder = recordingMime
+        ? new MediaRecorder(stream, { mimeType: recordingMime })
+        : new MediaRecorder(stream);
+      recordingMime = recorder.mimeType || recordingMime;
+      chunks = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        fail('Could not record audio — try again or type your question');
+      };
+      recorder.start(200);
+      options.onListening();
+    } catch {
+      activeVoiceSession = null;
+      fail('Microphone access is blocked — allow mic permission and try again');
+    }
+  })();
 
   return {
     release: () => {
       if (handled || !holding) return;
       holding = false;
-      if (restartTimer) {
-        clearTimeout(restartTimer);
-        restartTimer = null;
-      }
       options.onWrapping();
       stopTimer = setTimeout(() => {
         stopTimer = null;
-        if (handled) return;
-        if (recognition) {
-          try {
-            recognition.stop();
-          } catch {
-            finish(finalTranscript.trim().length > 0, lastError);
-          }
-          return;
-        }
-        finish(finalTranscript.trim().length > 0, lastError);
+        stopRecording();
       }, VOICE_STOP_BUFFER_MS);
     },
     resumeHold: () => {
@@ -262,9 +226,6 @@ export function startGiiVoiceCapture(options: {
         stopTimer = null;
       }
       holding = true;
-      if (!recognition && !restartTimer) {
-        beginPass();
-      }
       options.onListening();
     },
     isWrapping: () => !handled && !holding && stopTimer !== null,
