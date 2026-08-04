@@ -42,10 +42,17 @@ export async function sendGiiMessage(args: {
   messages: GiiChatMessage[];
   context?: GiiContext | null;
 }): Promise<GiiChatResponse> {
+  const apiContext = args.context?.propertyId
+    ? {
+        propertyId: args.context.propertyId,
+        ...(args.context.moveOutDate ? { moveOutDate: args.context.moveOutDate } : {}),
+      }
+    : undefined;
+
   const { data, error } = await crossub.POST('/agent/gii/chat', {
     body: {
       messages: args.messages,
-      ...(args.context?.propertyId ? { context: args.context } : {}),
+      ...(apiContext ? { context: apiContext } : {}),
     } as components['schemas']['GiiChatRequestDto'] & {
       messages: GiiChatMessage[];
     },
