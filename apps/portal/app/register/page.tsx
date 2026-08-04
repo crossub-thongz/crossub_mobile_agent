@@ -238,7 +238,12 @@ export default function RegisterPage() {
         <p className="text-muted-foreground text-sm">Agent registration</p>
       </div>
 
-      <div className="w-full max-w-lg rounded-xl border bg-card p-6 shadow-lg sm:p-8">
+      <div
+        className={cn(
+          'w-full rounded-xl border bg-card p-6 shadow-lg sm:p-8',
+          step === 'Service & pricing' ? 'max-w-3xl' : 'max-w-lg',
+        )}
+      >
         <StepIndicator current={step} />
 
         {step === 'Your details' ? (
