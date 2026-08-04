@@ -58,7 +58,13 @@ let serverAsrAvailable: boolean | null = null;
 let statusProbe: Promise<boolean | null> | null = null;
 
 async function resolveServerAsr(): Promise<boolean | null> {
-  if (serverAsrAvailable !== null) return serverAsrAvailable;
+  // `true` is sticky; `false` deliberately is not.
+  //
+  // A tab open while the key is being added to the server would otherwise hold "no ASR" for
+  // as long as it stays open, and keep saying so however many times the agent taps — the one
+  // person who does not know a deploy just happened is the one using the app. Re-probing on
+  // a negative costs one small GET on the path that is already failing.
+  if (serverAsrAvailable === true) return true;
   if (!statusProbe) {
     statusProbe = fetchGiiVoiceStatus()
       .then((status) => {
@@ -253,10 +259,9 @@ export function startGiiVoiceCapture(options: {
     options.onError(VOICE_ERROR.UNSUPPORTED);
     return null;
   }
-  if (serverAsrAvailable === false && !browserAsr) {
-    options.onError(VOICE_ERROR.NO_TRANSCRIBER);
-    return null;
-  }
+  // No early refusal on a cached `false` — the probe re-runs below, and a server that has
+  // since gained a key should be found on this tap rather than after a reload. The startup
+  // block reports NO_TRANSCRIBER once there is a fresh answer to report it from.
 
   // Upload only where it can be transcribed; listen locally unless the server has it covered.
   // Both are re-decided once the capability probe lands (see the startup block below).
