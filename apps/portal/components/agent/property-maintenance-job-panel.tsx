@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
+import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
@@ -13,6 +14,7 @@ import {
 import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import type { MaintenanceRequest, Property } from '@/lib/types';
+import { formatPropertyFullAddress } from '@/lib/utils';
 
 function mergeMaintenanceItem(
   item: MaintenanceRequest,
@@ -87,7 +89,12 @@ export function PropertyMaintenanceJobPanel({
   }, [refresh, refreshCase]);
 
   return (
-    <MaintenanceAgentWorkflowPanel
+    <div className="space-y-4">
+      <CaseAddressAssignedBar
+        address={formatPropertyFullAddress(property)}
+        assignedToName={property.propertyManager}
+      />
+      <MaintenanceAgentWorkflowPanel
       ctx={workflowCtx}
       item={displayItem}
       property={property}
@@ -100,5 +107,6 @@ export function PropertyMaintenanceJobPanel({
       workflowRequest={workflowRequest}
       quotations={quotations}
     />
+    </div>
   );
 }

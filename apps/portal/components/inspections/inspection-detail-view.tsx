@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { RoutineCaseStatusSection } from '@/components/inspections/routine-case-status-section';
 import { RoutineSelfInspectionReviewSection } from '@/components/inspections/routine-self-inspection-review-section';
@@ -511,8 +512,12 @@ export function InspectionDetailView({
               </span>
               <StatusBadge label={insp.status} />
             </div>
-            <h1 className="text-base font-semibold leading-snug">{insp.propertyAddress}</h1>
-            <p className="text-muted-foreground text-xs">Case ref {insp.trackingNumber}</p>
+            <CaseAddressAssignedBar
+              address={insp.propertyAddress}
+              assignedToName={property?.propertyManager}
+              titleClassName="text-base font-semibold leading-snug"
+              subtitle={<p className="text-muted-foreground text-xs">Case ref {insp.trackingNumber}</p>}
+            />
             {insp.propertyId && (
               <Link
                 href={propertyDetail(insp.propertyId)}
@@ -543,9 +548,6 @@ export function InspectionDetailView({
             value={insp.scheduledAt ? formatDateTime(insp.scheduledAt) : 'Not set'}
           />
           <FactTile icon={User} label="Inspector" value={inspectorLabel} />
-          {property?.propertyManager ? (
-            <FactTile icon={User} label="Assigned to" value={property.propertyManager} />
-          ) : null}
           {typeof insp.visitorCount === 'number' && (
             <FactTile
               icon={Users}

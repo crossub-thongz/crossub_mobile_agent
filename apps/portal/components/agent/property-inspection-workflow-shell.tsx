@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Timeline } from '@/components/agent/timeline';
 import { WorkflowCategoryTabs } from '@/components/agent/workflow-category-tabs';
 import { Button } from '@/components/ui/button';
-import { CaseAssignedToRow } from '@/components/agent/case-assigned-to-field';
+import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import {
   INSPECTION_CATEGORY_LABEL,
   INSPECTION_WORKFLOW_CATEGORIES,
@@ -17,11 +17,9 @@ import { formatScheduledAt } from '@/lib/utils';
 function InspectionCaseDetail({
   item,
   onViewDetails,
-  assignedToName,
 }: {
   item: PropertyInspectionWorkflowCase;
   onViewDetails: (id: string) => void;
-  assignedToName?: string | null;
 }) {
   const inspection = item.inspection;
 
@@ -38,10 +36,6 @@ function InspectionCaseDetail({
         <p className="text-muted-foreground text-xs capitalize">
           Report: {inspection.reportStatus}
         </p>
-        {item.detail ? (
-          <p className="text-muted-foreground text-xs">{item.detail}</p>
-        ) : null}
-        <CaseAssignedToRow assignedToName={assignedToName} />
       </div>
 
       {inspection.timeline.length > 0 ? (
@@ -66,13 +60,11 @@ function InspectionCaseDetail({
 export function PropertyInspectionWorkflowShell({
   cases,
   onViewDetails,
-  assignedToName,
   emptyTitle = 'No inspections',
   emptyDescription = 'When an inspection is scheduled, it will appear here.',
 }: {
   cases: PropertyInspectionWorkflowCase[];
   onViewDetails: (inspectionId: string) => void;
-  assignedToName?: string | null;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -145,7 +137,6 @@ export function PropertyInspectionWorkflowShell({
               key={item.id}
               item={item}
               onViewDetails={onViewDetails}
-              assignedToName={assignedToName}
             />
           ))}
         </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
-import { CaseAssignedToRow } from '@/components/agent/case-assigned-to-field';
+import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
@@ -85,11 +85,17 @@ function TerminationDetailContent({
             <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
               Case ref {workflowCaseReferenceLabel(caseData.id, 'end_leasing')}
             </p>
-            <h1 className="mt-1 text-base font-semibold">{displayAddress}</h1>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {caseData.tenant.name}
-              {caseData.vacateDate ? ` · Vacate ${formatDate(caseData.vacateDate)}` : ''}
-            </p>
+            <CaseAddressAssignedBar
+              address={displayAddress}
+              assignedToName={propertyManager ?? caseData.agentName}
+              titleClassName="mt-1 text-base font-semibold"
+              subtitle={
+                <p className="text-muted-foreground text-xs">
+                  {caseData.tenant.name}
+                  {caseData.vacateDate ? ` · Vacate ${formatDate(caseData.vacateDate)}` : ''}
+                </p>
+              }
+            />
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div>
                 <p className="text-muted-foreground">Bond held</p>
@@ -99,7 +105,6 @@ function TerminationDetailContent({
                 <p className="text-muted-foreground">Refund</p>
                 <p className="font-medium tabular-nums">{formatCurrency(caseData.refundAmount)}</p>
               </div>
-              <CaseAssignedToRow assignedToName={propertyManager ?? caseData.agentName} />
             </div>
             <p className="text-muted-foreground mt-3 text-xs">{caseData.nextAction}</p>
           </section>

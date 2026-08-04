@@ -3,7 +3,7 @@
 import { Trash2 } from 'lucide-react';
 
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
-import { CaseAssignedToRow } from '@/components/agent/case-assigned-to-field';
+import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { RentReviewWorkflowTimeline } from '@/components/rent-review/rent-review-workflow-timeline';
 import { VacatingWorkflowTimeline } from '@/components/vacating-workflow/vacating-workflow-timeline';
@@ -37,14 +37,17 @@ function LeasingCaseDialogSummary({
       <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
         {item.label}
       </p>
-      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">
-        {formatPropertyFullAddress(property)}
-      </p>
-      {item.detail ? (
-        <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{item.detail}</p>
-      ) : null}
+      <CaseAddressAssignedBar
+        address={formatPropertyFullAddress(property)}
+        assignedToName={property.propertyManager}
+        titleClassName="mt-1 line-clamp-2 text-sm font-semibold leading-snug"
+        subtitle={
+          item.detail ? (
+            <p className="text-muted-foreground line-clamp-2 text-xs">{item.detail}</p>
+          ) : null
+        }
+      />
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        <CaseAssignedToRow assignedToName={property.propertyManager} />
         {vacatingCase?.vacateDate ? (
           <span className="text-muted-foreground">
             Vacate {formatDate(vacatingCase.vacateDate)}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
-import { CaseAssignedToRow } from '@/components/agent/case-assigned-to-field';
+import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -87,8 +87,12 @@ function RentReviewDetailContent({
             <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
               Case ref {workflowCaseReferenceLabel(detail.id, 'rent_review')}
             </p>
-            <h1 className="mt-1 text-base font-semibold">{displayAddress}</h1>
-            <p className="text-muted-foreground mt-1 text-xs">{detail.tenantName}</p>
+            <CaseAddressAssignedBar
+              address={displayAddress}
+              assignedToName={propertyManager ?? detail.managingAgentLabel}
+              titleClassName="mt-1 text-base font-semibold"
+              subtitle={<p className="text-muted-foreground text-xs">{detail.tenantName}</p>}
+            />
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div>
                 <p className="text-muted-foreground">Current rent</p>
@@ -100,7 +104,6 @@ function RentReviewDetailContent({
                   {detail.rentReviewDate ? formatDate(detail.rentReviewDate) : '—'}
                 </p>
               </div>
-              <CaseAssignedToRow assignedToName={propertyManager ?? detail.managingAgentLabel} />
             </div>
           </section>
 

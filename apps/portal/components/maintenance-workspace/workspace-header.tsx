@@ -5,6 +5,7 @@ import { AlertTriangle, Bell, ChevronLeft, Clock, Flag } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn, formatDateTime } from '@/lib/utils';
+import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { STATUS_LABELS } from '@/lib/maintenance-workspace/status-labels';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import { isCaseOverdue, getMinutesRemainingForCase } from '@/lib/maintenance-workspace/sla';
@@ -39,6 +40,7 @@ export function WorkspaceHeader({
   syncing,
   onOpenChat,
   onToggleFlag,
+  assignedToName,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   caseFlagged: boolean;
@@ -46,6 +48,7 @@ export function WorkspaceHeader({
   backLabel: string;
   liveSyncing?: boolean;
   syncing?: boolean;
+  assignedToName?: string | null;
   onOpenChat: () => void;
   onToggleFlag: () => void;
 }) {
@@ -72,7 +75,11 @@ export function WorkspaceHeader({
           <h1 className="text-foreground text-xl font-semibold tracking-tight md:text-2xl">
             {workspaceCase.issueType}
           </h1>
-          <p className="text-muted-foreground text-left text-sm leading-relaxed">{workspaceCase.address}</p>
+          <CaseAddressAssignedBar
+            address={workspaceCase.address}
+            assignedToName={assignedToName}
+            titleClassName="text-sm font-medium"
+          />
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-[11px]">
             <span>
               Case ref{' '}

@@ -264,6 +264,7 @@ export function MaintenanceWorkspace({
         syncing={syncing}
         onOpenChat={() => setBottomNavTab('chat')}
         onToggleFlag={toggleFlag}
+        assignedToName={assignedToName}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
@@ -273,7 +274,6 @@ export function MaintenanceWorkspace({
               tenantName={workspaceCase.tenant?.name ?? '—'}
               tenantEmail={workspaceCase.tenant?.email}
               tenantPhone={workspaceCase.tenant?.phone}
-              assignedToName={assignedToName}
               priority={workspaceCase.priority}
               responsibility={workspaceCase.responsibility ?? null}
               sourceLabel={SOURCE_LABELS[workspaceCase.source]}
