@@ -121,6 +121,10 @@ export function ShellHeaderQuickActions({
 
   if (visibleButtons.length === 0) return null;
 
+  const hasDesktopQuickActions = visibleButtons.some(
+    (btn) => btn.id !== 'gii' && btn.id !== 'message-menu',
+  );
+
   const handleClick = (btnId: (typeof visibleButtons)[number]['id']) => {
     if (btnId === 'gii') {
       if (propertyId && property) {
@@ -142,10 +146,12 @@ export function ShellHeaderQuickActions({
       className={cn(
         'bg-primary flex shrink-0 items-center',
         inline ? 'gap-0.5 rounded-lg p-0.5' : 'gap-0.5 px-2 py-1',
+        !hasDesktopQuickActions && 'lg:hidden',
       )}
     >
       {visibleButtons.map((btn) => {
         const Icon = btn.icon;
+        const hideOnDesktop = btn.id === 'gii' || btn.id === 'message-menu';
         const isActive =
           btn.id === 'gii'
             ? activePanel === 'gii'
@@ -172,7 +178,7 @@ export function ShellHeaderQuickActions({
             }
             aria-pressed={isActive}
             onClick={() => handleClick(btn.id)}
-            className={headerQuickActionClass(isActive, inline)}
+            className={cn(headerQuickActionClass(isActive, inline), hideOnDesktop && 'lg:hidden')}
           >
             <Icon className={inline ? 'size-4' : 'size-5'} />
             {!inline ? (

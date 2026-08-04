@@ -190,10 +190,11 @@ export function PricingRateCatalog({
                   <br />
                   CROSSUB fee {formatCurrency(example.agentIncomeAud)} ×{' '}
                   {catalog.level2.serviceFeePercent}% ={' '}
+                  {formatCurrency(example.crossubFeeAud)} / week × 4 weeks ={' '}
                   <strong className="text-foreground">
-                    {formatCurrency(example.crossubFeeAud)}
+                    {formatCurrency(example.crossubFeeAud * 4)}
                   </strong>{' '}
-                  per week (invoiced monthly)
+                  per month
                 </div>
               </div>
             ) : null}

@@ -24,7 +24,6 @@ import {
   VOICE_BUTTON_ARIA_LABEL,
   VOICE_PHASE,
   VOICE_STATUS_LABEL,
-  VOICE_STOP_BUFFER_MS,
   VOICE_WAVE_BARS,
   type VoicePhase,
 } from '@/constants/voice-input';
@@ -34,6 +33,11 @@ import {
 } from '@/constants/gii-prompts';
 import { MESSAGE_GII_PROMPTS } from '@/constants/gii-message-prompts';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
+import {
+  resolveSpeechLanguage,
+  startGiiVoiceCapture,
+  type GiiVoiceCapture,
+} from '@/lib/gii-voice-input';
 import { buildGiiPropertyContext } from '@/lib/gii-property-context';
 import { selectPropertyInProgressJobs } from '@/lib/gii-property-jobs';
 import { buildNeedActionGroups } from '@/lib/need-action-groups';
@@ -102,18 +106,6 @@ const COMPOSER_MAX_PX = 220;
 let lineSeq = 0;
 const idSeq = () => (lineSeq += 1);
 
-function resolveSpeechLanguage(): string {
-  if (typeof navigator === 'undefined') return 'en-AU';
-  const lang = navigator.language || 'en-AU';
-  if (lang.startsWith('zh')) return lang.includes('TW') ? 'zh-TW' : 'zh-CN';
-  if (lang.startsWith('ms')) return 'ms-MY';
-  if (lang.startsWith('vi')) return 'vi-VN';
-  if (lang.startsWith('ja')) return 'ja-JP';
-  if (lang.startsWith('ko')) return 'ko-KR';
-  if (lang.startsWith('en')) return 'en-AU';
-  return lang;
-}
-
 /**
  * Replaces the mic glyph while the recogniser is open, so the listening state is visible at
  * a glance. `settling` runs the bars down over the release buffer instead of cutting them.
@@ -140,6 +132,31 @@ function multilingualHint(): string {
   if (lang.startsWith('zh')) return 'Gii 支持中文语音和文字输入。';
   if (lang.startsWith('ms')) return 'Gii menyokong input suara dan teks dalam Bahasa Melayu.';
   return 'Type a question, or hold the mic to speak.';
+}
+
+/** API cap — keep invisible context payloads under this (see GiiChatMessageDto @MaxLength). */
+const GII_CHAT_MESSAGE_MAX_CHARS = 4000;
+
+function truncateGiiChatContent(content: string): string {
+  if (content.length <= GII_CHAT_MESSAGE_MAX_CHARS) return content;
+  return `${content.slice(0, GII_CHAT_MESSAGE_MAX_CHARS - 40).trimEnd()}\n\n[…truncated]`;
+}
+
+/** True when the agent's message is predominantly CJK (Chinese, etc.). */
+function agentWritesInChinese(text: string): boolean {
+  const cjk = (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
+  const latin = (text.match(/[a-zA-Z]/g) ?? []).length;
+  return cjk > 0 && cjk >= latin;
+}
+
+function replyLanguageDirective(recentUserText: string): string {
+  if (agentWritesInChinese(recentUserText)) {
+    return (
+      'Reply in Chinese. The message thread and records below may be in English — ' +
+      'summarize and explain in Chinese; keep addresses, dates and dollar amounts as written.'
+    );
+  }
+  return 'Reply in the same language as the agent\'s messages in this conversation.';
 }
 
 export function GiiAssistant({
@@ -202,9 +219,7 @@ export function GiiAssistant({
   const [voicePhase, setVoicePhase] = useState<VoicePhase>(VOICE_PHASE.IDLE);
   const [sending, setSending] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  /** Pending `stop()` scheduled on release — its presence *is* the "wrapping up" flag. */
-  const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceCaptureRef = useRef<GiiVoiceCapture | null>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -557,11 +572,13 @@ export function GiiAssistant({
       const contextSeed: GiiChatMessage | null = invisibleContext
         ? {
             role: 'user',
-            content: `[Context — ${
-              messageContextRef.current
-                ? 'property, listing, and message thread'
-                : 'property and listing details'
-            }. Use this information; do not ask the agent to repeat it.]\n\n${invisibleContext}`,
+            content: truncateGiiChatContent(
+              `[Context — ${
+                messageContextRef.current
+                  ? 'property, listing, and message thread'
+                  : 'property and listing details'
+              }. Use this information; do not ask the agent to repeat it. ${replyLanguageDirective(trimmed)}]\n\n${invisibleContext}`,
+            ),
           }
         : null;
 
@@ -674,80 +691,43 @@ export function GiiAssistant({
     onClose?.();
   };
 
-  const clearStopTimer = () => {
-    if (stopTimerRef.current) {
-      clearTimeout(stopTimerRef.current);
-      stopTimerRef.current = null;
-    }
-  };
-
-  const endVoiceSession = () => {
-    clearStopTimer();
-    recognitionRef.current = null;
-    setVoicePhase(VOICE_PHASE.IDLE);
-  };
-
   const startVoice = () => {
-    // Pressed again inside the release buffer — cancel the pending stop and keep the same
-    // utterance going rather than throwing away what has been captured so far.
-    if (stopTimerRef.current) {
-      clearStopTimer();
+    if (voiceCaptureRef.current?.isWrapping()) {
+      voiceCaptureRef.current.resumeHold();
       setVoicePhase(VOICE_PHASE.LISTENING);
       return;
     }
-    // A session is already open; `start()` would throw InvalidStateError.
-    if (recognitionRef.current) return;
-    const SpeechRecognitionCtor =
-      typeof window !== 'undefined'
-        ? window.SpeechRecognition || window.webkitSpeechRecognition
-        : undefined;
-    if (!SpeechRecognitionCtor) {
-      toast.error('Voice input is not supported in this browser');
-      return;
-    }
-    const recognition = new SpeechRecognitionCtor();
-    recognition.lang = resolveSpeechLanguage();
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onstart = () => setVoicePhase(VOICE_PHASE.LISTENING);
-    recognition.onend = endVoiceSession;
-    recognition.onerror = (event) => {
-      const aborted = event.error === 'aborted';
-      endVoiceSession();
-      // `abort()` on unmount is our own doing — don't blame the speaker for it.
-      if (!aborted) toast.error('Could not hear you clearly — try again or type your question');
-    };
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript ?? '';
-      if (transcript) void runQuery(transcript);
-    };
-    recognitionRef.current = recognition;
-    recognition.start();
+    if (voiceCaptureRef.current) return;
+
+    const capture = startGiiVoiceCapture({
+      onListening: () => setVoicePhase(VOICE_PHASE.LISTENING),
+      onWrapping: () => setVoicePhase(VOICE_PHASE.WRAPPING),
+      onIdle: () => {
+        voiceCaptureRef.current = null;
+        setVoicePhase(VOICE_PHASE.IDLE);
+      },
+      onTranscript: (text) => setQuery(text),
+      onComplete: (text) => {
+        voiceCaptureRef.current = null;
+        setVoicePhase(VOICE_PHASE.IDLE);
+        void runQuery(text);
+      },
+      onError: (message) => {
+        voiceCaptureRef.current = null;
+        setVoicePhase(VOICE_PHASE.IDLE);
+        toast.error(message);
+      },
+    });
+    if (capture) voiceCaptureRef.current = capture;
   };
 
-  /**
-   * Releasing the button does NOT close the recogniser straight away. Web Speech drops the
-   * utterance the instant `stop()` lands, so an immediate stop eats the final word. We keep
-   * it open for VOICE_STOP_BUFFER_MS while the waveform settles.
-   */
   const stopVoice = () => {
-    if (!recognitionRef.current || stopTimerRef.current) return;
-    setVoicePhase(VOICE_PHASE.WRAPPING);
-    stopTimerRef.current = setTimeout(() => {
-      stopTimerRef.current = null;
-      try {
-        recognitionRef.current?.stop(); // `onend` flips the phase back to idle
-      } catch {
-        endVoiceSession();
-      }
-    }, VOICE_STOP_BUFFER_MS);
+    voiceCaptureRef.current?.release();
   };
 
-  // Leaving the panel mid-utterance must not leave a live recogniser or a pending stop behind.
   useEffect(
     () => () => {
-      if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
-      recognitionRef.current?.abort();
+      voiceCaptureRef.current?.abort();
     },
     [],
   );

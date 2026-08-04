@@ -1,14 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
   Building2,
+  Check,
+  ChevronDown,
   ClipboardList,
   FileText,
   Gavel,
   KeyRound,
+  LayoutGrid,
+  MessageSquare,
   Percent,
   RefreshCw,
   Sparkles,
@@ -20,6 +25,7 @@ import { cn } from '@/lib/utils';
 
 const TAB_ICONS: Record<string, LucideIcon> = {
   Gii: Sparkles,
+  Message: MessageSquare,
   Documents: FileText,
   Fees: Percent,
   'Rent Review': RefreshCw,
@@ -35,6 +41,7 @@ const TAB_ICONS: Record<string, LucideIcon> = {
 /** User-facing labels (internal tab ids stay stable for routing). */
 const TAB_DISPLAY_LABELS: Record<string, string> = {
   Gii: 'Gii',
+  Message: 'Message',
   Documents: 'Documents',
   Fees: 'Fees',
   'Rent Review': 'Rent Review',
@@ -49,41 +56,25 @@ const TAB_DISPLAY_LABELS: Record<string, string> = {
 /** Compact labels for narrow mobile columns. */
 const TAB_SHORT_LABELS: Record<string, string> = {
   Gii: 'Gii',
+  Message: 'Message',
   Documents: 'Docs',
   Fees: 'Fees',
-  'Rent Review': 'Rent Review',
+  'Rent Review': 'Rent',
   Leasing: 'Leasing',
   Maintenance: 'Repair',
   Inspection: 'Inspect',
-  Accounting: 'Accounting',
+  Accounting: 'Accounts',
   Tribunal: 'Tribunal',
   Archive: 'Archive',
 };
 
-const TAB_GROUP_ORDER = [
-  ['Gii'],
-  ['Documents', 'Fees'],
-  ['Rent Review', 'Leasing', 'Maintenance', 'Inspection'],
-  ['Accounting', 'Tribunal', 'Archive'],
-] as const;
-
-function groupedTabs<T extends string>(tabs: readonly T[]): T[][] {
-  const tabSet = new Set(tabs);
-  const groups = TAB_GROUP_ORDER.map((group) =>
-    group.filter((tab): tab is T => tabSet.has(tab as T)),
-  ).filter((group) => group.length > 0);
-
-  const grouped = new Set(groups.flat());
-  const remainder = tabs.filter((tab) => !grouped.has(tab));
-  if (remainder.length > 0) groups.push([...remainder]);
-  return groups;
-}
+export type PropertyViewTab<T extends string> = T | 'Message';
 
 function TabNeedActionBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <span
-      className="bg-destructive pointer-events-none absolute -top-0.5 -right-0.5 flex min-w-[1rem] items-center justify-center rounded-full px-0.5 text-[9px] font-bold leading-none text-white ring-2 ring-background"
+      className="bg-destructive pointer-events-none absolute -top-1 -right-1 flex min-w-[1rem] items-center justify-center rounded-full px-0.5 text-[9px] font-bold leading-none text-white"
       aria-hidden
     >
       {count > 99 ? '99+' : count}
@@ -96,14 +87,12 @@ function PropertyTabButton<T extends string>({
   active,
   onChange,
   variant,
-  buttonRef,
   needActionCount = 0,
 }: {
   tab: T;
   active: T;
   onChange: (tab: T) => void;
   variant: 'mobile' | 'desktop';
-  buttonRef?: (el: HTMLButtonElement | null) => void;
   needActionCount?: number;
 }) {
   const Icon = TAB_ICONS[tab] ?? Building2;
@@ -118,50 +107,8 @@ function PropertyTabButton<T extends string>({
       ? `${label}, ${needActionCount} need action${needActionCount === 1 ? '' : 's'}`
       : label;
 
-  if (variant === 'mobile') {
-    return (
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => onChange(tab)}
-        aria-current={isActive ? 'page' : undefined}
-        aria-label={ariaLabel}
-        className={cn(
-          'flex min-w-[4.75rem] shrink-0 snap-center flex-col items-center gap-1 px-2 py-2.5 transition-colors',
-          isActive ? 'text-primary' : 'text-muted-foreground active:text-foreground',
-        )}
-      >
-        <span
-          className={cn(
-            'relative flex size-9 items-center justify-center rounded-xl transition-colors',
-            isActive ? 'bg-primary/12 text-primary' : 'bg-muted/40',
-          )}
-        >
-          <Icon className="size-4" aria-hidden />
-          <TabNeedActionBadge count={needActionCount} />
-        </span>
-        <span
-          className={cn(
-            'max-w-[4.75rem] truncate text-[10px] leading-tight font-medium',
-            isActive && 'font-semibold',
-          )}
-        >
-          {label}
-        </span>
-        <span
-          className={cn(
-            'h-0.5 w-5 rounded-full transition-all',
-            isActive ? 'bg-primary scale-100 opacity-100' : 'scale-75 opacity-0',
-          )}
-          aria-hidden
-        />
-      </button>
-    );
-  }
-
   return (
     <button
-      ref={buttonRef}
       type="button"
       onClick={() => onChange(tab)}
       aria-current={isActive ? 'page' : undefined}
@@ -193,26 +140,245 @@ function PropertyTabButton<T extends string>({
   );
 }
 
+function tabShortLabel(tab: string): string {
+  return TAB_SHORT_LABELS[tab] ?? TAB_DISPLAY_LABELS[tab] ?? tab;
+}
+
+function PropertySectionPicker<T extends string>({
+  open,
+  onClose,
+  tabs,
+  active,
+  onSelect,
+  needActionCounts,
+}: {
+  open: boolean;
+  onClose: () => void;
+  tabs: readonly T[];
+  active: PropertyViewTab<T>;
+  onSelect: (tab: PropertyViewTab<T>) => void;
+  needActionCounts?: Partial<Record<T, number>>;
+}) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const activeItemRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      activeItemRef.current?.scrollIntoView({ block: 'nearest' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, active]);
+
+  if (!open || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="pointer-events-auto fixed inset-0 z-[90] flex flex-col justify-end lg:hidden">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40"
+        aria-label="Close section picker"
+        onClick={onClose}
+      />
+      <div className="relative z-10 flex max-h-[min(85dvh,calc(100dvh-5rem))] min-h-0 flex-col px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="property-section-picker-title"
+          className="animate-in slide-in-from-bottom-4 fade-in-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-card shadow-2xl duration-200"
+        >
+          <p
+            id="property-section-picker-title"
+            className="text-muted-foreground shrink-0 border-b px-4 py-2.5 text-center text-xs font-medium"
+          >
+            Property section
+          </p>
+          <ul
+            ref={listRef}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y"
+          >
+            {tabs.map((tab, index) => {
+              const selected = active === tab;
+              const count = needActionCounts?.[tab] ?? 0;
+              const label = TAB_DISPLAY_LABELS[tab] ?? tab;
+
+              return (
+                <li key={tab}>
+                  <button
+                    ref={selected ? activeItemRef : undefined}
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onSelect(tab as PropertyViewTab<T>);
+                    }}
+                    aria-current={selected ? 'page' : undefined}
+                    className={cn(
+                      'flex w-full items-center justify-center gap-2 px-4 py-3.5 text-[15px] transition-colors active:bg-secondary/80',
+                      index > 0 && 'border-t border-border/60',
+                      selected ? 'font-semibold text-primary' : 'font-medium text-foreground',
+                    )}
+                  >
+                    {selected ? <Check className="size-4 shrink-0" aria-hidden /> : null}
+                    <span>{label}</span>
+                    {count > 0 ? (
+                      <span className="bg-destructive rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {count > 99 ? '99+' : count}
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="animate-in slide-in-from-bottom-4 fade-in-0 mt-2 shrink-0 rounded-2xl bg-card py-3.5 text-center text-[15px] font-semibold shadow-lg duration-200 active:bg-secondary/80"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function PropertyMobileSegmentBar<T extends string>({
+  active,
+  onChange,
+  onOpenSections,
+  sectionPickerOpen,
+  messageAlertCount,
+  activeSectionLabel,
+  activeSectionIcon: ActiveSectionIcon,
+  sectionActive,
+}: {
+  active: PropertyViewTab<T>;
+  onChange: (tab: PropertyViewTab<T>) => void;
+  onOpenSections: () => void;
+  sectionPickerOpen: boolean;
+  messageAlertCount: number;
+  activeSectionLabel: string;
+  activeSectionIcon: LucideIcon;
+  sectionActive: boolean;
+}) {
+  const isGiiActive = active === 'Gii';
+  const isMessageActive = active === 'Message';
+
+  return (
+    <div className="px-3 py-2.5">
+      <div className="bg-muted/45 flex rounded-xl p-1">
+        <button
+          type="button"
+          onClick={() => onChange('Gii' as PropertyViewTab<T>)}
+          aria-current={isGiiActive ? 'page' : undefined}
+          className={cn(
+            'flex min-w-0 flex-1 items-center justify-center rounded-lg py-2 text-xs font-semibold transition-all',
+            isGiiActive
+              ? 'bg-background text-primary shadow-sm'
+              : 'text-muted-foreground active:text-foreground',
+          )}
+        >
+          Gii
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange('Message')}
+          aria-current={isMessageActive ? 'page' : undefined}
+          className={cn(
+            'relative flex min-w-0 flex-1 items-center justify-center rounded-lg py-2 text-xs font-semibold transition-all',
+            isMessageActive
+              ? 'bg-background text-primary shadow-sm'
+              : 'text-muted-foreground active:text-foreground',
+          )}
+        >
+          Message
+          {messageAlertCount > 0 ? (
+            <span className="bg-destructive absolute -top-0.5 right-2 flex min-w-[1rem] items-center justify-center rounded-full px-1 text-[9px] font-bold text-white">
+              {messageAlertCount > 99 ? '99+' : messageAlertCount}
+            </span>
+          ) : null}
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSections}
+          aria-expanded={sectionPickerOpen}
+          aria-current={sectionActive ? 'page' : undefined}
+          className={cn(
+            'flex min-w-0 flex-[1.15] items-center justify-center gap-0.5 rounded-lg py-2 pl-1.5 pr-1 text-xs font-semibold transition-all',
+            sectionActive || sectionPickerOpen
+              ? 'bg-background text-primary shadow-sm'
+              : 'text-muted-foreground active:text-foreground',
+          )}
+        >
+          <ActiveSectionIcon className="size-3 shrink-0" aria-hidden />
+          <span className="truncate">{activeSectionLabel}</span>
+          <ChevronDown
+            className={cn(
+              'size-3 shrink-0 opacity-60 transition-transform',
+              sectionPickerOpen && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PropertyTabBar<T extends string>({
   tabs,
   active,
   onChange,
   needActionCounts,
+  messageAlertCount = 0,
 }: {
   tabs: readonly T[];
-  active: T;
-  onChange: (tab: T) => void;
+  active: PropertyViewTab<T>;
+  onChange: (tab: PropertyViewTab<T>) => void;
   needActionCounts?: Partial<Record<T, number>>;
+  /** Need-action + unread alerts rolled into the Message tab (mobile). */
+  messageAlertCount?: number;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
-  const groups = useMemo(() => groupedTabs(tabs), [tabs]);
+  const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
+
+  const overflowTabs = useMemo(
+    () => tabs.filter((tab) => tab !== 'Gii' && tab !== 'Message'),
+    [tabs],
+  );
+  const isGiiActive = active === 'Gii';
+  const isMessageActive = active === 'Message';
+  const sectionActive =
+    !isGiiActive && !isMessageActive && overflowTabs.includes(active as T);
+
+  const activeSectionLabel = sectionActive
+    ? tabShortLabel(active as string)
+    : 'Sections';
+  const ActiveSectionIcon = sectionActive
+    ? (TAB_ICONS[active as string] ?? LayoutGrid)
+    : LayoutGrid;
 
   useEffect(() => {
-    const el = tabRefs.current.get(active);
-    if (!el || !scrollRef.current) return;
-    el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    setSectionPickerOpen(false);
   }, [active]);
+
+  /** Never leave the page scroll-locked — picker uses a fixed overlay only. */
+  useEffect(() => {
+    if (sectionPickerOpen) return;
+    document.body.style.removeProperty('overflow');
+  }, [sectionPickerOpen]);
+
+  useEffect(() => {
+    return () => {
+      document.body.style.removeProperty('overflow');
+    };
+  }, []);
+
+  const closeSectionPicker = () => {
+    setSectionPickerOpen(false);
+    document.body.style.removeProperty('overflow');
+  };
 
   return (
     <div
@@ -224,56 +390,47 @@ export function PropertyTabBar<T extends string>({
       )}
     >
       <div className="relative lg:hidden">
-        <div
-          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent"
-          aria-hidden
+        <PropertyMobileSegmentBar
+          active={active}
+          onChange={onChange}
+          onOpenSections={() =>
+            setSectionPickerOpen((open) => {
+              if (open) document.body.style.removeProperty('overflow');
+              return !open;
+            })
+          }
+          sectionPickerOpen={sectionPickerOpen}
+          messageAlertCount={messageAlertCount}
+          activeSectionLabel={activeSectionLabel}
+          activeSectionIcon={ActiveSectionIcon}
+          sectionActive={sectionActive}
         />
 
-        <div
-          ref={scrollRef}
-          className="scrollbar-none flex snap-x snap-mandatory items-center gap-0 overflow-x-auto px-4 py-1"
-        >
-          {groups.map((group, groupIndex) => (
-            <div key={group.join('-')} className="flex shrink-0 items-center">
-              {groupIndex > 0 ? (
-                <div className="bg-border/70 mx-1 h-8 w-px shrink-0" aria-hidden />
-              ) : null}
-              {group.map((tab) => (
-                <PropertyTabButton
-                  key={tab}
-                  tab={tab}
-                  active={active}
-                  onChange={onChange}
-                  variant="mobile"
-                  needActionCount={needActionCounts?.[tab] ?? 0}
-                  buttonRef={(el) => {
-                    if (el) tabRefs.current.set(tab, el);
-                    else tabRefs.current.delete(tab);
-                  }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        <PropertySectionPicker
+          open={sectionPickerOpen}
+          onClose={closeSectionPicker}
+          tabs={overflowTabs}
+          active={active}
+          onSelect={onChange}
+          needActionCounts={needActionCounts}
+        />
       </div>
 
       <div className="scrollbar-none hidden flex-wrap gap-2 lg:flex">
         {tabs
-          .filter((tab) => tab !== 'Gii')
+          .filter((tab) => tab !== 'Gii' && tab !== 'Message')
           .map((tab) => (
-          <PropertyTabButton
-            key={tab}
-            tab={tab}
-            active={active}
-            onChange={onChange}
-            variant="desktop"
-            needActionCount={needActionCounts?.[tab] ?? 0}
-          />
-        ))}
+            <PropertyTabButton
+              key={tab}
+              tab={tab}
+              active={
+                overflowTabs.includes(active as T) ? (active as T) : ('' as T)
+              }
+              onChange={(next) => onChange(next as PropertyViewTab<T>)}
+              variant="desktop"
+              needActionCount={needActionCounts?.[tab] ?? 0}
+            />
+          ))}
       </div>
     </div>
   );

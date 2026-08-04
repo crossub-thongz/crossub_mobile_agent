@@ -5,6 +5,9 @@
  * mid-word truncates the transcript — the last word simply never arrives. We hold the
  * recogniser open for a short buffer after release: long enough to catch a trailing word,
  * short enough that the button still feels like it responded to the release.
+ *
+ * While the button is held, short recognition passes restart automatically — more reliable
+ * in Chrome than a single long `continuous: true` session (which often throws `network`).
  */
 export const VOICE_STOP_BUFFER_MS = 500;
 

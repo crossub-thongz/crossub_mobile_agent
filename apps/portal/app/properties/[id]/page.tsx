@@ -16,7 +16,8 @@ import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job
 import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-tab';
 import { PropertyRemindersDialog } from '@/components/agent/property-reminders-dialog';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
-import { PropertyTabBar } from '@/components/agent/property-tab-bar';
+import { PropertyMessageTab } from '@/components/agent/property-message-tab';
+import { PropertyTabBar, type PropertyViewTab } from '@/components/agent/property-tab-bar';
 import { PropertyTabNeedActionsBanner } from '@/components/agent/property-tab-need-actions-banner';
 import { PropertyChatDialog } from '@/components/agent/property-chat-dialog';
 import { PropertyAccountingTab } from '@/components/agent/property-accounting-tab';
@@ -62,10 +63,13 @@ import {
   type PropertyDetailTab,
 } from '@/lib/portal-service-level';
 import { countNeedActionsByTab } from '@/lib/need-action-tabs';
+import { unreadMessagesForProperty } from '@/lib/communications-log';
 
 type Tab = PropertyDetailTab;
+type ViewTab = PropertyViewTab<Tab>;
 
-function normalizeTab(raw: string | null, allowedTabs: readonly Tab[]): Tab {
+function normalizeTab(raw: string | null, allowedTabs: readonly Tab[]): ViewTab {
+  if (raw === 'Message') return 'Message';
   if (raw === 'Overview' || raw === 'Tenancy' || raw === 'Communication') {
     if (allowedTabs.includes('Leasing')) return 'Leasing';
     return allowedTabs[0] ?? 'Documents';
@@ -95,6 +99,7 @@ export default function PropertyDetailPage() {
     leasingCycles,
     tribunalCases,
     archive,
+    messages,
     getPropertyActions,
     refresh,
     agentPortfolioId,
@@ -147,7 +152,7 @@ export default function PropertyDetailPage() {
         : [...PROPERTY_DETAIL_TABS],
     [agencies, property],
   );
-  const [tab, setTab] = useState<Tab>('Documents');
+  const [tab, setTab] = useState<ViewTab>('Documents');
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
   const [selectedRentReviewId, setSelectedRentReviewId] = useState<string | null>(null);
   const [leasingChatOpen, setLeasingChatOpen] = useState(false);
@@ -184,12 +189,12 @@ export default function PropertyDetailPage() {
     setTab(normalizeTab(searchParams.get('tab'), propertyTabs));
   }, [searchParams, propertyTabs]);
 
-  /** Desktop uses the shell sidebar for Gii — never keep the mobile-only Gii tab active. */
+  /** Desktop uses the shell sidebar for Gii — never keep mobile-only tabs active. */
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const desktop = window.matchMedia('(min-width: 1024px)');
     const sync = () => {
-      if (desktop.matches && tab === 'Gii') setTab('Documents');
+      if (desktop.matches && (tab === 'Gii' || tab === 'Message')) setTab('Documents');
     };
     sync();
     desktop.addEventListener('change', sync);
@@ -216,6 +221,16 @@ export default function PropertyDetailPage() {
     () => countNeedActionsByTab(needActions),
     [needActions],
   );
+
+  const messageAlertCount = useMemo(() => {
+    if (!property) return 0;
+    const unread = unreadMessagesForProperty(
+      property.id,
+      messages,
+      formatPropertyFullAddress(property),
+    );
+    return needActions.length + unread;
+  }, [messages, needActions.length, property]);
 
   const propertyDeletedLeasingCycles = useMemo(
     () => archive.cancelledLeasingCycles.filter((c) => c.propertyId === id),
@@ -414,9 +429,10 @@ export default function PropertyDetailPage() {
           active={tab}
           onChange={setTab}
           needActionCounts={needActionCountsByTab}
+          messageAlertCount={messageAlertCount}
         />
 
-        {tab !== 'Gii' ? (
+        {tab !== 'Gii' && tab !== 'Message' ? (
           <PropertyTabNeedActionsBanner tab={tab} needActions={needActions} />
         ) : null}
 
@@ -424,6 +440,14 @@ export default function PropertyDetailPage() {
           <div className="lg:hidden">
             <PropertyGiiPanel propertyId={id} propertyAddress={fullAddress} />
           </div>
+        ) : null}
+
+        {tab === 'Message' ? (
+          <PropertyMessageTab
+            propertyId={id}
+            propertyAddress={fullAddress}
+            needActions={needActions}
+          />
         ) : null}
 
         {tab === 'Documents' && (

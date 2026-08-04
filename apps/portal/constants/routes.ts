@@ -45,6 +45,7 @@ export const PUBLIC_ROUTE_PATTERNS = [
   /^\/register\/team-invite(\/|$)/,
   /^\/forgot-password\/?$/,
   /^\/reset-password(\/|$)/,
+  /^\/verify-email(\/|$)/,
 ];
 
 export const isPublicRoute = (pathname: string): boolean =>

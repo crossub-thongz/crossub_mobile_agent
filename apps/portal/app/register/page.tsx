@@ -171,7 +171,7 @@ export default function RegisterPage() {
         acceptTerms: true,
       });
       await refresh();
-      toast.success('Account created — welcome to CROSSUB.');
+      toast.success('Account created — check your email to verify your address.');
       router.replace(
         postAuthDestination(
           user,

@@ -12,20 +12,24 @@ import { useEffect, useRef, useState, Suspense } from 'react';
 
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
+import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
-import { ShellPrimaryNav } from '@/components/layout/shell-primary-nav';
 import { ShellBackButton } from '@/components/layout/shell-back-button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { MOBILE_MENU_NAV } from '@/constants/nav';
+import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess } from '@/lib/portal-service-level';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
-import { useShellDockStore } from '@/lib/shell-dock-store';
 import { cn, displayName } from '@/lib/utils';
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === ROUTES.DASHBOARD) return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function AgentShell({
   children,
@@ -66,10 +70,13 @@ export function AgentShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(56);
-  const activePanel = useShellDockStore((s) => s.activePanel);
-  const closePanel = useShellDockStore((s) => s.closePanel);
-  const { hasFullManagementAccess, unreadNotificationCount } = useAgentData();
-  const mobileMenuNav = filterNavByAccess(MOBILE_MENU_NAV, hasFullManagementAccess);
+  const { hasFullManagementAccess, unreadNotificationCount, needActionItems } = useAgentData();
+  const propertyNeedActionCount = needActionItems.length;
+  const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
+  const moreNav = [
+    ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
+    ...filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess),
+  ];
 
   useEffect(() => {
     const el = headerRef.current;
@@ -95,17 +102,6 @@ export function AgentShell({
   useEffect(() => {
     setMoreOpen(false);
   }, [pathname]);
-
-  useEffect(() => {
-    if (activePanel) setMoreOpen(false);
-  }, [activePanel]);
-
-  const toggleMenu = () => {
-    setMoreOpen((open) => {
-      if (!open) closePanel();
-      return !open;
-    });
-  };
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -144,18 +140,6 @@ export function AgentShell({
               {!hideGlobalFabs && !title ? (
                 <ShellHeaderQuickActions pathname={pathname} />
               ) : null}
-              <button
-                type="button"
-                onClick={toggleMenu}
-                className={cn(
-                  'flex size-9 items-center justify-center rounded-lg transition-colors',
-                  moreOpen ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary',
-                )}
-                aria-label="Menu"
-                aria-expanded={moreOpen}
-              >
-                <Menu className="size-5" />
-              </button>
               <AgentNotificationBell unreadCount={unreadNotificationCount} />
               <ThemeToggle />
               <Link
@@ -326,7 +310,7 @@ export function AgentShell({
             />
             <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-1/2 z-[60] w-full max-w-lg -translate-x-1/2 rounded-t-2xl border border-b-0 bg-card px-4 pt-4 pb-2 shadow-2xl lg:hidden">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold">Menu</p>
+                <p className="text-sm font-semibold">More</p>
                 <button
                   type="button"
                   onClick={() => setMoreOpen(false)}
@@ -338,7 +322,7 @@ export function AgentShell({
               </div>
               <div className="max-h-[50vh] overflow-y-auto">
                 <div className="flex flex-col gap-0.5 pb-2">
-                  {mobileMenuNav.map(({ href, label }) => (
+                  {moreNav.map(({ href, label }) => (
                     <Link
                       key={href}
                       href={href}
@@ -367,8 +351,44 @@ export function AgentShell({
             immersive && 'hidden',
           )}
         >
-          <div className="flex h-16 items-stretch px-4">
-            <ShellPrimaryNav pathname={pathname} variant="tabbar" />
+          <div className="flex h-16 items-stretch justify-around px-1">
+            {primaryNav.map(({ href, label, icon: Icon }) => {
+              const active = isActive(pathname, href);
+              const needActionBadge = href === ROUTES.PROPERTIES ? propertyNeedActionCount : 0;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
+                    active ? 'text-primary' : 'text-muted-foreground',
+                  )}
+                >
+                  <span className="relative">
+                    <Icon className={cn('size-5', active && 'stroke-[2.5]')} />
+                    {needActionBadge > 0 ? (
+                      <MessageUnreadBadge
+                        count={needActionBadge}
+                        size="sm"
+                        className="absolute -top-1.5 -right-2 ring-2 ring-background"
+                      />
+                    ) : null}
+                  </span>
+                  <span className="max-w-full truncate text-center leading-tight">{label}</span>
+                </Link>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              className={cn(
+                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
+                moreOpen ? 'text-primary' : 'text-muted-foreground',
+              )}
+            >
+              <Menu className={cn('size-5', moreOpen && 'stroke-[2.5]')} />
+              <span>More</span>
+            </button>
           </div>
         </nav>
 

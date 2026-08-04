@@ -15,6 +15,7 @@ export interface AuthUser {
   mustChangePassword?: boolean;
   /** Sales invite registration — set a new password without the generated temp password. */
   mustChangePasswordWithoutCurrent?: boolean;
+  emailVerified?: boolean;
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;

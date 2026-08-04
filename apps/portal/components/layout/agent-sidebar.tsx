@@ -7,7 +7,6 @@ import { LogOut } from 'lucide-react';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
-import { ShellPrimaryNav } from '@/components/layout/shell-primary-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MOBILE_MENU_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
@@ -104,13 +103,6 @@ export function AgentSidebar({
         {!compact ? (
           <>
             <p className="text-muted-foreground mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide">
-              Main
-            </p>
-            <ul className="space-y-0.5">
-              <ShellPrimaryNav pathname={pathname} variant="sidebar" />
-            </ul>
-
-            <p className="text-muted-foreground mt-5 mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide">
               Menu
             </p>
             <ul className="space-y-0.5">
@@ -128,23 +120,18 @@ export function AgentSidebar({
             </ul>
           </>
         ) : (
-          <>
-            <ul className="space-y-1">
-              <ShellPrimaryNav pathname={pathname} variant="sidebar" />
-            </ul>
-            <ul className="mt-4 space-y-1">
-              {menuNav.map((item) => (
-                <li key={item.href}>
-                  <NavLink
-                    {...item}
-                    active={isActive(pathname, item.href)}
-                    compact
-                    badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
-                  />
-                </li>
-              ))}
-            </ul>
-          </>
+          <ul className="space-y-1">
+            {menuNav.map((item) => (
+              <li key={item.href}>
+                <NavLink
+                  {...item}
+                  active={isActive(pathname, item.href)}
+                  compact
+                  badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
+                />
+              </li>
+            ))}
+          </ul>
         )}
       </nav>
 

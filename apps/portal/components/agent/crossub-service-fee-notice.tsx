@@ -101,7 +101,8 @@ export function CrossubServiceFeeNotice({
         </p>
         <p>
           CROSSUB charge {formatCurrency(worked.agentIncome)} × {serviceFeePercent}% ={' '}
-          <strong>{formatCurrency(worked.crossubFee)}</strong> / week (invoiced monthly)
+          {formatCurrency(worked.crossubFee)} / week × 4 weeks ={' '}
+          <strong>{formatCurrency(worked.crossubFee * 4)}</strong> / month
         </p>
       </div>
       <p className="text-muted-foreground mt-2 text-xs">
@@ -142,9 +143,11 @@ export function CrossubPlatformFeeSummaryRow({
       </div>
       <div className="space-y-1">
         <p className="text-[11px] uppercase tracking-wider text-muted-foreground">At this property</p>
-        <p className="text-sm font-semibold tabular-nums">{formatCurrency(crossubFee)} / week</p>
+        <p className="text-sm font-semibold tabular-nums">
+          {formatCurrency(crossubFee * 4)} / month
+        </p>
         <p className="text-muted-foreground text-xs">
-          on {formatCurrency(rent)} rent @ {rate}%
+          {formatCurrency(crossubFee)} / week on {formatCurrency(rent)} rent @ {rate}%
         </p>
       </div>
       <div className="space-y-1 sm:col-span-2 lg:col-span-1">
