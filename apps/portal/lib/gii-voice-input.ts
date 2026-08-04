@@ -46,21 +46,26 @@ function languageHintForTranscription(): string | undefined {
 
 /**
  * Server ASR is per-environment (it needs a Deepgram/OpenAI key), so the app asks once and
- * remembers. Only a definitive answer is cached: a failed probe stays unknown so a network
- * blip does not pin the session to the fallback for good.
+ * remembers.
+ *
+ * Only a definitive answer is cached. A blip, or an API too old to have the probe, leaves
+ * this unknown — and unknown means TRY, because the transcribe endpoint shipped before the
+ * probe did: an environment can be transcribing happily while answering 404 here. Concluding
+ * "no server ASR" from a missing probe would route every session to the browser recogniser
+ * and never once call the endpoint that works.
  */
 let serverAsrAvailable: boolean | null = null;
-let statusProbe: Promise<boolean> | null = null;
+let statusProbe: Promise<boolean | null> | null = null;
 
-async function resolveServerAsr(): Promise<boolean> {
+async function resolveServerAsr(): Promise<boolean | null> {
   if (serverAsrAvailable !== null) return serverAsrAvailable;
   if (!statusProbe) {
     statusProbe = fetchGiiVoiceStatus()
       .then((status) => {
-        serverAsrAvailable = status.available;
+        if (status.available !== null) serverAsrAvailable = status.available;
         return status.available;
       })
-      .catch(() => false)
+      .catch(() => null)
       .finally(() => {
         statusProbe = null;
       });
@@ -213,10 +218,12 @@ export type GiiVoiceCapture = {
  * round-trip — but it only exists where an ASR key is configured, so the browser's own
  * recogniser stands behind it. Which one runs is decided BEFORE recording starts:
  *
- * - server available → record and upload (the browser recogniser stays out of it).
- * - server unavailable → browser recogniser only; no pointless upload.
- * - probe itself failed → run both and prefer the server's answer, so an unreachable probe
- *   costs a little extra work rather than the session.
+ * - server available → record and upload.
+ * - server unavailable → browser recogniser only, owning the mic alone; no pointless upload.
+ * - status unknown → the recorder goes first, because the transcribe endpoint predates the
+ *   status probe and may well work; a 503 settles it and the next tap uses the recogniser.
+ *
+ * Exactly one of them runs per session — see the startup block for why that matters.
  *
  * The one case that fails is neither being available, and that is reported on the tap rather
  * than after the agent has finished speaking.
@@ -371,8 +378,16 @@ export function startGiiVoiceCapture(options: {
     // Nothing came back. Each dead end is a different thing for the agent to do about it, and
     // the meter is what tells them apart: whether any sound reached the browser at all
     // separates a mic that is not capturing from words that could not be made out.
+    // Order matters: the server having no ASR is the most actionable fact available, and it
+    // outranks the browser recogniser's complaint — on a network where Google is unreachable
+    // the recogniser ALWAYS reports `network`, and letting that win would point every agent
+    // at their own connection when the fix is one key on the server.
+    if (serverAsrAvailable === false) {
+      fail(VOICE_ERROR.NO_TRANSCRIBER);
+      return;
+    }
     if (serverErrored && !speech) {
-      fail(serverAsrAvailable === false ? VOICE_ERROR.NO_TRANSCRIBER : VOICE_ERROR.FAILED);
+      fail(VOICE_ERROR.FAILED);
       return;
     }
     if (speech && asrError === 'network') {
@@ -433,8 +448,14 @@ export function startGiiVoiceCapture(options: {
     if (serverAsrAvailable === null) await resolveServerAsr();
     if (handled) return;
 
+    // Exactly one capture path per session, never both. Holding a `getUserMedia` stream while
+    // the browser recogniser is listening is a documented way to provoke its `network` error,
+    // and the recogniser owning the mic alone is the configuration that worked here.
+    //
+    // So when the server's status is unknown, the recorder goes first: a 503 from the upload
+    // teaches us the truth once, and every tap after that uses the recogniser on its own.
     useRecorder = recorderSupported && serverAsrAvailable !== false;
-    useBrowserAsr = browserAsr && serverAsrAvailable !== true;
+    useBrowserAsr = browserAsr && !useRecorder;
     if (!useRecorder && !useBrowserAsr) {
       fail(VOICE_ERROR.NO_TRANSCRIBER);
       return;
@@ -461,9 +482,23 @@ export function startGiiVoiceCapture(options: {
 
     sessionCap = setTimeout(stopListening, VOICE_MAX_SESSION_MS);
 
-    // A stream is opened on BOTH paths. The recorder path needs it to record; the browser
-    // path opens one purely to meter, because "is anything reaching the mic" is the fact that
-    // turns a dead end into an answer — and without it that path is blind.
+    // The metering stream is opened ONLY where we already need one to record.
+    //
+    // It is tempting to open one on the browser path too, for the diagnosis it gives — and
+    // that is exactly what must not happen. The configuration that worked in this app never
+    // touched `getUserMedia`: the recogniser owned the mic alone. Holding a second capture
+    // alongside it is a documented way to provoke the `network` error, so metering that path
+    // risks *causing* the failure it was added to explain. Silence there is timed from
+    // transcript activity instead.
+    if (!useRecorder) {
+      if (!speech) {
+        fail(VOICE_ERROR.NO_TRANSCRIBER);
+        return;
+      }
+      announceListening();
+      return;
+    }
+
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {

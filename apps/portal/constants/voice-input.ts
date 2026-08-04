@@ -84,8 +84,12 @@ export const VOICE_ERROR = {
   RECORD_FAILED: 'Could not record audio — try again or type your question',
   NO_SPEECH: 'Could not hear you clearly — try again or type your question',
   TOO_SHORT: 'Could not hear you clearly — speak a little longer or type your question',
-  /** Both paths are out: no server ASR on this environment and no recogniser in this browser. */
-  NO_TRANSCRIBER: 'Voice input needs Chrome on this server — type your question for now',
+  /**
+   * The server told us it has no ASR. Says so plainly rather than blaming the browser: where
+   * the browser recogniser is blocked, this key is the only thing that makes voice work, and
+   * an agent reading "try Chrome" would go round that loop forever.
+   */
+  NO_TRANSCRIBER: 'Voice transcription is not set up on this server — type your question for now',
   /** The browser recogniser could not reach its speech service (Chrome uses Google's). */
   ASR_UNREACHABLE:
     'Voice recognition could not be reached — check your connection or type your question',

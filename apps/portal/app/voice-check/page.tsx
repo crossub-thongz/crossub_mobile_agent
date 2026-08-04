@@ -153,24 +153,56 @@ export default function VoiceCheckPage() {
     set('server', 'running', 'Asking the API…');
     try {
       const status = await fetchGiiVoiceStatus();
-      if (status.available) {
+      if (status.available === true) {
         set('server', 'pass', `Available via ${status.provider ?? 'configured provider'}.`);
+      } else if (status.available === false) {
+        set(
+          'server',
+          'fail',
+          'This API has no speech provider configured. Set DEEPGRAM_API_KEY on the API service — where the browser recogniser is blocked, that key is the only thing that makes voice work.',
+        );
       } else {
         set(
           'server',
           'warn',
-          'Not configured on this environment — the mic falls back to the browser recogniser (Chrome/Edge only). Set DEEPGRAM_API_KEY on the API to enable it.',
+          'This API predates the status endpoint, so it cannot say — but POST /transcribe may still work, and the app will try it. Set DEEPGRAM_API_KEY on the API service if voice is failing.',
         );
       }
     } catch {
       set('server', 'warn', 'Could not ask the API (not signed in, or endpoint not deployed).');
     }
 
+    // Verdict on the signal stage, and RELEASE the mic before testing the recogniser.
+    //
+    // The recogniser has to own the mic alone. Testing it while this page still holds a
+    // `getUserMedia` stream is a documented way to provoke the very `network` error we are
+    // trying to attribute — a check that creates its own failure proves nothing.
+    if (AudioCtor) {
+      if (peakRms >= VOICE_SPEECH_RMS_THRESHOLD) {
+        set('signal', 'pass', `Peak level ${peakRms.toFixed(1)} — the mic is capturing.`);
+      } else {
+        set(
+          'signal',
+          'warn',
+          `Peak level ${peakRms.toFixed(1)} so far (needs ${VOICE_SPEECH_RMS_THRESHOLD}). If you have not spoken yet, that is expected — speak during the next stage.`,
+        );
+      }
+    }
+    meterTimer && clearInterval(meterTimer);
+    void ctx?.close().catch(() => {});
+    stream.getTracks().forEach((t) => t.stop());
+    setLevel(0);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     // 5) Can the browser recogniser hear and reach its service? -------------
     if (!canRecognise) {
       set('recogniser', 'warn', 'Not available in this browser.');
     } else {
-      set('recogniser', 'running', 'Listening for 10 seconds…');
+      set(
+        'recogniser',
+        'running',
+        'Listening for 10 seconds, with the mic to itself — say a few words now.',
+      );
       const speech = startBrowserSpeech({
         lang: resolveSpeechLanguage(),
         onInterim: (text) => setHeard(text),
@@ -186,7 +218,7 @@ export default function VoiceCheckPage() {
           set(
             'recogniser',
             'fail',
-            'Reported `network`: the browser could not reach its speech service. On Chrome that service is Google\'s — a network or policy block here is what kills voice.',
+            'Reported `network` with the mic to itself, so nothing local provoked it: this browser genuinely cannot reach its speech service. On Chrome that service is Google\'s. Voice cannot work through the browser here — the server needs DEEPGRAM_API_KEY.',
           );
         else
           set(
@@ -197,23 +229,6 @@ export default function VoiceCheckPage() {
       }
     }
 
-    // Verdict on the signal stage, now that there has been time to speak.
-    if (AudioCtor) {
-      if (peakRms >= VOICE_SPEECH_RMS_THRESHOLD) {
-        set('signal', 'pass', `Peak level ${peakRms.toFixed(1)} — the mic is capturing.`);
-      } else {
-        set(
-          'signal',
-          'fail',
-          `Peak level ${peakRms.toFixed(1)} (needs ${VOICE_SPEECH_RMS_THRESHOLD}). Nothing is reaching the browser — check the input device in your OS sound settings, and whether another app is holding the mic.`,
-        );
-      }
-    }
-
-    meterTimer && clearInterval(meterTimer);
-    void ctx?.close().catch(() => {});
-    stream.getTracks().forEach((t) => t.stop());
-    setLevel(0);
     setRunning(false);
   };
 

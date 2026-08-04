@@ -121,10 +121,12 @@ export function startBrowserSpeech(options: {
     recognition = rec;
     passText = '';
     rec.lang = options.lang;
-    // Tap-to-talk holds the session open across pauses, so the recogniser has to as well —
-    // one utterance per pass would drop whatever was said while it was restarting. The
-    // restart loop below stays as the safety net: Chrome still ends sessions on its own.
-    rec.continuous = true;
+    // Single-utterance, deliberately. This is the configuration that demonstrably worked in
+    // this app before July 24; Chrome's continuous mode is the less-travelled path and has a
+    // long history of failing with `network` where single-utterance succeeds. The restart
+    // loop is what carries a session across pauses, so nothing is lost by staying on the
+    // mode that works.
+    rec.continuous = false;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 

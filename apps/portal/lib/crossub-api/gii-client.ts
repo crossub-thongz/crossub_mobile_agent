@@ -67,17 +67,21 @@ export async function sendGiiMessage(args: {
  * Can this environment transcribe hold-to-talk audio?
  *
  * Asked before recording, because server ASR and the browser recogniser capture differently
- * and there is no second chance once the agent has spoken. An older API that predates the
- * endpoint answers 404 — treated the same as "no", which is exactly right.
+ * and there is no second chance once the agent has spoken.
+ *
+ * `available: null` means **unknown**, and a 404 is exactly that — not "no". The probe is
+ * newer than `POST /transcribe`, so an API that predates it can still transcribe perfectly
+ * well; reading its 404 as a refusal would send the app to the browser recogniser and never
+ * even try the endpoint that works. Only the server's own `false` is a real no.
  */
 export async function fetchGiiVoiceStatus(): Promise<{
-  available: boolean;
+  available: boolean | null;
   provider?: string | null;
 }> {
   const res = await fetch(`${API_BASE}/agent/gii/voice-status`, {
     credentials: 'include',
   });
-  if (!res.ok) return { available: false };
+  if (!res.ok) return { available: null };
   return res.json() as Promise<{ available: boolean; provider?: string | null }>;
 }
 
