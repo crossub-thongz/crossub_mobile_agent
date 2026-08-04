@@ -46,6 +46,9 @@ export const PUBLIC_ROUTE_PATTERNS = [
   /^\/forgot-password\/?$/,
   /^\/reset-password(\/|$)/,
   /^\/verify-email(\/|$)/,
+  // Mic self-check. Public on purpose: it diagnoses hardware and browser support, reads no
+  // account data, and the people who need it are the ones a broken mic is blocking.
+  /^\/voice-check\/?$/,
 ];
 
 export const isPublicRoute = (pathname: string): boolean =>

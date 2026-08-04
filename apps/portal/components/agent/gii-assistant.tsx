@@ -108,20 +108,27 @@ let lineSeq = 0;
 const idSeq = () => (lineSeq += 1);
 
 /**
- * Replaces the mic glyph while the recogniser is open, so the listening state is visible at
- * a glance. `settling` runs the bars down over the release buffer instead of cutting them.
+ * Replaces the mic glyph while the recogniser is open. The bars ride the real mic level
+ * rather than animating on their own: a decorative waveform looks identical whether the
+ * browser is capturing a voice or capturing nothing, which is precisely the question someone
+ * has when the mic "isn't working". `settling` runs them down instead of cutting them.
  */
-function VoiceWave({ settling }: { settling: boolean }) {
+function VoiceWave({ settling, level = 0 }: { settling: boolean; level?: number }) {
   return (
     <span className="flex h-6 items-center justify-center gap-[3px]" aria-hidden="true">
       {VOICE_WAVE_BARS.map((bar) => (
         <span
           key={bar.delayMs}
           className={cn(
-            'block w-[3px] rounded-full bg-white',
+            'block w-[3px] origin-center rounded-full bg-white',
             settling ? 'animate-voice-wave-settle' : 'animate-voice-wave',
           )}
-          style={{ height: `${bar.heightPx}px`, animationDelay: `${bar.delayMs}ms` }}
+          style={{
+            height: `${bar.heightPx}px`,
+            animationDelay: `${bar.delayMs}ms`,
+            // Floor keeps the bars visible at rest; the rest is what the mic is hearing.
+            transform: settling ? undefined : `scaleY(${0.35 + level * 0.65})`,
+          }}
         />
       ))}
     </span>
@@ -132,7 +139,7 @@ function multilingualHint(): string {
   const lang = resolveSpeechLanguage();
   if (lang.startsWith('zh')) return 'Gii 支持中文语音和文字输入。';
   if (lang.startsWith('ms')) return 'Gii menyokong input suara dan teks dalam Bahasa Melayu.';
-  return 'Type a question, or hold the mic to speak.';
+  return 'Type a question, or tap the mic to speak.';
 }
 
 /** API cap — keep invisible context payloads under this (see GiiChatMessageDto @MaxLength). */
@@ -218,6 +225,8 @@ export function GiiAssistant({
   const [pendingAttachments, setPendingAttachments] = useState<GiiPendingAttachment[]>([]);
   const [composerDragActive, setComposerDragActive] = useState(false);
   const [voicePhase, setVoicePhase] = useState<VoicePhase>(VOICE_PHASE.IDLE);
+  /** Live mic level (0–1) driving the waveform, so a dead input is visible immediately. */
+  const [voiceLevel, setVoiceLevel] = useState(0);
   const [sending, setSending] = useState(false);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const voiceCaptureRef = useRef<GiiVoiceCapture | null>(null);
@@ -706,20 +715,27 @@ export function GiiAssistant({
 
     const capture = startGiiVoiceCapture({
       onListening: () => setVoicePhase(VOICE_PHASE.LISTENING),
-      onWrapping: () => setVoicePhase(VOICE_PHASE.WRAPPING),
+      onWrapping: () => {
+        setVoicePhase(VOICE_PHASE.WRAPPING);
+        setVoiceLevel(0);
+      },
       onIdle: () => {
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
+        setVoiceLevel(0);
       },
+      onLevel: setVoiceLevel,
       onTranscript: (text) => setQuery(text),
       onComplete: (text) => {
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
+        setVoiceLevel(0);
         void runQuery(text);
       },
       onError: (message) => {
         voiceCaptureRef.current = null;
         setVoicePhase(VOICE_PHASE.IDLE);
+        setVoiceLevel(0);
         toast.error(message);
       },
     });
@@ -885,7 +901,7 @@ export function GiiAssistant({
                         }
                         aria-pressed={listening}
                       >
-                        {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-4" />}
+                        {voiceActive ? <VoiceWave settling={wrappingUp} level={voiceLevel} /> : <Mic className="size-4" />}
                       </button>
                     )}
                   </div>
@@ -1206,7 +1222,7 @@ export function GiiAssistant({
                   aria-label={voiceActive ? VOICE_BUTTON_ARIA_LABEL.ACTIVE : VOICE_BUTTON_ARIA_LABEL.IDLE}
                   aria-pressed={listening}
                 >
-                  {voiceActive ? <VoiceWave settling={wrappingUp} /> : <Mic className="size-5" />}
+                  {voiceActive ? <VoiceWave settling={wrappingUp} level={voiceLevel} /> : <Mic className="size-5" />}
                 </button>
               )}
             </div>

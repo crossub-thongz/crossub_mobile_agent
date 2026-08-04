@@ -1,5 +1,6 @@
 import {
   VOICE_ERROR,
+  VOICE_LEVEL_FULL_SCALE_RMS,
   VOICE_MAX_SESSION_MS,
   VOICE_MIN_CLIP_BYTES,
   VOICE_SILENCE_SAMPLE_MS,
@@ -93,32 +94,63 @@ async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
+export type MicLevelWatch = {
+  stop: () => void;
+  /**
+   * True once the meter actually took a reading. A meter that never ran knows nothing — and
+   * must not be mistaken for one reporting silence.
+   */
+  ran: () => boolean;
+  /** True once the mic has delivered anything above the speech threshold. */
+  heardSound: () => boolean;
+};
+
 /**
- * Watch a live mic stream and call back once it has been quiet for `timeoutMs`.
+ * Meter a live mic stream: report its level, and call back once it has been quiet for
+ * `timeoutMs`.
  *
- * The recorder path has no transcript to time silence against — the words only arrive after
- * the upload — so silence is measured from the audio itself. Returns a teardown function;
- * an environment without Web Audio simply never trips (the session cap still bounds it).
+ * Two jobs, both needed. The recorder path has no transcript to time silence against — the
+ * words only arrive after the upload — so silence has to be measured from the audio itself.
+ * And whether any sound reached the browser AT ALL is the one fact that separates "we could
+ * not make out your words" from "your mic is not capturing", which are the same message to a
+ * user and completely different problems.
+ *
+ * **Nothing here may stop a session unless the meter is provably running.** An AudioContext
+ * that starts suspended reports pure silence forever, and a detector that cannot hear must
+ * never be the thing that cuts someone off mid-sentence — so silence only accrues while the
+ * context is `running`, and an environment without Web Audio simply never trips it.
  */
-function watchForSilence(
+function watchMicLevel(
   stream: MediaStream,
-  timeoutMs: number,
-  onSilent: () => void,
-): () => void {
+  options: {
+    timeoutMs: number;
+    onSilent: () => void;
+    onLevel?: (level: number) => void;
+  },
+): MicLevelWatch {
   const AudioCtor =
     typeof window === 'undefined'
       ? undefined
       : window.AudioContext ??
         (window as unknown as { webkitAudioContext?: typeof AudioContext })
           .webkitAudioContext;
-  if (!AudioCtor) return () => {};
+  const inert: MicLevelWatch = {
+    stop: () => {},
+    ran: () => false,
+    heardSound: () => false,
+  };
+  if (!AudioCtor) return inert;
 
   let ctx: AudioContext;
   try {
     ctx = new AudioCtor();
   } catch {
-    return () => {};
+    return inert;
   }
+
+  // Created inside an async continuation, a context can land suspended even though the tap
+  // that started all this was a real user gesture.
+  if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
 
   const analyser = ctx.createAnalyser();
   analyser.fftSize = 2048;
@@ -126,7 +158,13 @@ function watchForSilence(
   const samples = new Uint8Array(analyser.fftSize);
 
   let quietFor = 0;
+  let heardSound = false;
+  let sampled = false;
+
   const timer = setInterval(() => {
+    if (ctx.state !== 'running') return;
+    sampled = true;
+
     analyser.getByteTimeDomainData(samples);
     let sumSquares = 0;
     for (let i = 0; i < samples.length; i++) {
@@ -134,18 +172,24 @@ function watchForSilence(
       sumSquares += deviation * deviation;
     }
     const rms = Math.sqrt(sumSquares / samples.length);
+    options.onLevel?.(Math.min(1, rms / VOICE_LEVEL_FULL_SCALE_RMS));
 
     if (rms >= VOICE_SPEECH_RMS_THRESHOLD) {
+      heardSound = true;
       quietFor = 0;
       return;
     }
     quietFor += VOICE_SILENCE_SAMPLE_MS;
-    if (quietFor >= timeoutMs) onSilent();
+    if (quietFor >= options.timeoutMs) options.onSilent();
   }, VOICE_SILENCE_SAMPLE_MS);
 
-  return () => {
-    clearInterval(timer);
-    void ctx.close().catch(() => {});
+  return {
+    stop: () => {
+      clearInterval(timer);
+      void ctx.close().catch(() => {});
+    },
+    ran: () => sampled,
+    heardSound: () => heardSound,
   };
 }
 
@@ -185,6 +229,8 @@ export function startGiiVoiceCapture(options: {
   onTranscript: (text: string) => void;
   onComplete: (text: string) => void;
   onError: (message: string) => void;
+  /** 0–1 mic level, ~7×/second. Drives the button so "listening" is observable, not implied. */
+  onLevel?: (level: number) => void;
 }): GiiVoiceCapture | null {
   if (typeof window === 'undefined') return null;
 
@@ -218,13 +264,12 @@ export function startGiiVoiceCapture(options: {
   let handled = false;
   let recordingMime = pickRecorderMimeType() || 'audio/webm';
   let resolving = false;
-  let stopSilenceWatch: (() => void) | null = null;
+  let meter: MicLevelWatch | null = null;
   let silenceTimer: ReturnType<typeof setTimeout> | null = null;
   let sessionCap: ReturnType<typeof setTimeout> | null = null;
 
   const clearTimers = () => {
-    stopSilenceWatch?.();
-    stopSilenceWatch = null;
+    meter?.stop();
     if (silenceTimer) {
       clearTimeout(silenceTimer);
       silenceTimer = null;
@@ -323,11 +368,9 @@ export function startGiiVoiceCapture(options: {
       return;
     }
 
-    // Nothing came back. Each dead end reads differently to the agent holding the phone.
-    if (clip && !clipUsable) {
-      fail(VOICE_ERROR.TOO_SHORT);
-      return;
-    }
+    // Nothing came back. Each dead end is a different thing for the agent to do about it, and
+    // the meter is what tells them apart: whether any sound reached the browser at all
+    // separates a mic that is not capturing from words that could not be made out.
     if (serverErrored && !speech) {
       fail(serverAsrAvailable === false ? VOICE_ERROR.NO_TRANSCRIBER : VOICE_ERROR.FAILED);
       return;
@@ -336,7 +379,15 @@ export function startGiiVoiceCapture(options: {
       fail(VOICE_ERROR.ASR_UNREACHABLE);
       return;
     }
-    fail(VOICE_ERROR.NO_SPEECH);
+    if (meter?.heardSound()) {
+      fail(VOICE_ERROR.TRANSCRIBER_EMPTY);
+      return;
+    }
+    if (meter?.ran()) {
+      fail(VOICE_ERROR.MIC_SILENT);
+      return;
+    }
+    fail(clip && !clipUsable ? VOICE_ERROR.TOO_SHORT : VOICE_ERROR.NO_SPEECH);
   };
 
   /** End the session and hand off to the transcriber. Idempotent. */
@@ -410,52 +461,70 @@ export function startGiiVoiceCapture(options: {
 
     sessionCap = setTimeout(stopListening, VOICE_MAX_SESSION_MS);
 
-    if (!useRecorder) {
-      if (!speech) {
-        fail(VOICE_ERROR.NO_TRANSCRIBER);
-        return;
-      }
-      announceListening();
-      return;
-    }
-
+    // A stream is opened on BOTH paths. The recorder path needs it to record; the browser
+    // path opens one purely to meter, because "is anything reaching the mic" is the fact that
+    // turns a dead end into an answer — and without it that path is blind.
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (handled || !listening) {
-        cleanupStream();
-        return;
-      }
-      recorder = recordingMime
-        ? new MediaRecorder(stream, { mimeType: recordingMime })
-        : new MediaRecorder(stream);
-      recordingMime = recorder.mimeType || recordingMime;
-      chunks = [];
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunks.push(event.data);
-      };
-      recorder.onerror = () => {
-        // The browser recogniser may still be listening — let the stop settle it.
-        if (!speech) fail(VOICE_ERROR.RECORD_FAILED);
-      };
-      recorder.start(200);
-
-      // Audio-measured silence supersedes the transcript timer on this path.
-      if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-      }
-      stopSilenceWatch = watchForSilence(stream, VOICE_SILENCE_TIMEOUT_MS, stopListening);
-      announceListening();
     } catch {
-      // The browser recogniser holds its own mic grant, so if it is running the session can
-      // still land — only drop out when there is nothing else listening.
+      // Permission covers both paths, but the recogniser holds its own grant — if it is
+      // already listening the session can still land, just without a meter.
       if (speech) {
         useRecorder = false;
         announceListening();
         return;
       }
       fail(VOICE_ERROR.MIC_BLOCKED);
+      return;
     }
+
+    if (handled || !listening) {
+      cleanupStream();
+      return;
+    }
+
+    if (useRecorder) {
+      try {
+        recorder = recordingMime
+          ? new MediaRecorder(stream, { mimeType: recordingMime })
+          : new MediaRecorder(stream);
+        recordingMime = recorder.mimeType || recordingMime;
+        chunks = [];
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) chunks.push(event.data);
+        };
+        recorder.onerror = () => {
+          // The browser recogniser may still be listening — let the stop settle it.
+          if (!speech) fail(VOICE_ERROR.RECORD_FAILED);
+        };
+        recorder.start(200);
+      } catch {
+        if (!speech) {
+          fail(VOICE_ERROR.RECORD_FAILED);
+          return;
+        }
+        useRecorder = false;
+      }
+    }
+
+    // Measured silence supersedes the transcript timer wherever we have audio to measure.
+    meter = watchMicLevel(stream, {
+      timeoutMs: VOICE_SILENCE_TIMEOUT_MS,
+      onSilent: stopListening,
+      onLevel: (level) => {
+        if (!handled && listening) options.onLevel?.(level);
+      },
+    });
+    // On the recorder path there are no transcript events to reset a timer, so the audio
+    // meter is the only silence signal. On the browser path both stay armed: whichever sees
+    // five quiet seconds first is right, and a recogniser that has gone quiet while the meter
+    // still hears speech is exactly the case worth ending and reporting.
+    if (useRecorder && silenceTimer) {
+      clearTimeout(silenceTimer);
+      silenceTimer = null;
+    }
+
+    announceListening();
   })();
 
   return {

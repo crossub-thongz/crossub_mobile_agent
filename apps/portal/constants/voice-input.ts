@@ -28,6 +28,12 @@ export const VOICE_MAX_SESSION_MS = 120_000;
 export const VOICE_SILENCE_SAMPLE_MS = 150;
 export const VOICE_SPEECH_RMS_THRESHOLD = 3;
 
+/**
+ * RMS treated as a full-height meter. Conversational speech at a laptop mic sits around
+ * 10–30, so this keeps the bars lively without pinning them at the ceiling.
+ */
+export const VOICE_LEVEL_FULL_SCALE_RMS = 24;
+
 /** Phases of the mic button — never compare against raw strings. */
 export const VOICE_PHASE = {
   IDLE: 'idle',
@@ -83,5 +89,11 @@ export const VOICE_ERROR = {
   /** The browser recogniser could not reach its speech service (Chrome uses Google's). */
   ASR_UNREACHABLE:
     'Voice recognition could not be reached — check your connection or type your question',
+  /** The meter never saw a sound: the browser is capturing from a dead or muted input. */
+  MIC_SILENT:
+    'No sound is reaching the microphone — check the input device your browser is using, or whether another app has the mic',
+  /** Audio definitely arrived, but no transcriber made words out of it. */
+  TRANSCRIBER_EMPTY:
+    'Your mic is working, but nothing could be transcribed — try again or type your question',
   FAILED: 'Could not transcribe your voice — check your connection or type your question',
 } as const;

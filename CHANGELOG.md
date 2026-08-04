@@ -2,6 +2,16 @@
 
 ## 2026-08-04
 
+### Fixed
+- **The silence watch could end a session while the agent was still talking.** An `AudioContext` created inside an async continuation can land `suspended` even though the tap that started it was a real user gesture, and a suspended analyser reports pure silence forever — so the 5-second rule fired on someone mid-sentence and then reported not hearing them, which was true only of the detector. The context is resumed explicitly, and **silence now only accrues while the meter is provably running**: a detector that cannot hear must never be the thing that cuts someone off. Where the meter cannot run at all, the session simply is not stopped by silence.
+- **A mic capturing nothing no longer reads as "could not hear you clearly".** Whether any sound reached the browser is the one fact separating a dead or muted input from words that could not be made out, and both were the same sentence. A stream is now opened on both paths — the browser-recogniser path opens one purely to meter, since without it that path is blind — and the message says which: no sound reaching the mic (check the input device, or whether another app has it) versus the mic working but nothing transcribable.
+
+### Changed
+- **The waveform on the mic button rides the real input level instead of animating on its own.** A decorative animation looks identical whether the browser is capturing a voice or capturing silence — which is exactly the question someone has when the mic "isn't working". The bars now move with what the mic hears, so a dead input is visible in the first second rather than inferred from a failure five seconds later.
+
+### Added
+- **`/voice-check` — a public mic self-check.** Voice can fail at five separate places and every one of them reached the agent as the same sentence. The page runs each stage in order and shows which one stopped: browser support, mic permission, whether any sound is arriving (with a live level meter), whether this environment has server transcription, and whether the browser's own recogniser can reach its speech service. Public on purpose — it reads no account data, and the people who need it are the ones a broken mic is blocking.
+
 ### Changed
 - **Gii's mic is tap-to-start, tap-again-to-send.** Holding was the earlier design and it failed the way a hold always does on a desktop composer: a tap is what people actually do, and the ~200 ms it lasts gives a recogniser nothing to work with — so every attempt came back "could not hear you clearly", which is exactly what the recogniser had been told. The button is now a toggle, and the session ends itself after **5 seconds of silence** so a forgotten mic closes rather than listening to an empty room. Silence is measured from the audio itself on the server path (a Web Audio analyser on the recording stream — the words only arrive after the upload, so there is no transcript to time against) and from transcript activity on the browser path. A 2-minute cap bounds a session in a room too noisy for the silence watch to trip.
 - `onPointerLeave` no longer ends the session — under a toggle, moving the pointer off the button is not a decision to stop. The mic is disabled only while a transcript is settling, so a second tap can never race the first.
