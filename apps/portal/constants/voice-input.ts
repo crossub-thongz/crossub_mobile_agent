@@ -42,3 +42,27 @@ export const VOICE_BUTTON_ARIA_LABEL = {
   IDLE: 'Hold to speak',
   ACTIVE: 'Listening — release to send',
 } as const;
+
+/**
+ * How long we wait for the browser recogniser to settle after `stop()` before taking whatever
+ * it has. Chrome usually fires `onend` within a few hundred ms; this is the ceiling so a mic
+ * press can never hang the composer.
+ */
+export const BROWSER_ASR_SETTLE_MS = 1_500;
+
+/** Smallest recording worth uploading — anything less is a mis-tap, not speech. */
+export const VOICE_MIN_CLIP_BYTES = 800;
+
+/** Everything the mic can tell the agent. Kept here so the wording stays consistent. */
+export const VOICE_ERROR = {
+  BUSY: 'Microphone is already active — release the other Gii mic first',
+  UNSUPPORTED: 'Voice input is not supported in this browser — try Chrome',
+  MIC_BLOCKED: 'Microphone access is blocked — allow mic permission and try again',
+  RECORD_FAILED: 'Could not record audio — try again or type your question',
+  NO_SPEECH: 'Could not hear you clearly — try again or type your question',
+  TOO_SHORT: 'Could not hear you clearly — hold the mic a little longer or type your question',
+  /** Both paths are out: no server ASR on this environment and no recogniser in this browser. */
+  NO_TRANSCRIBER:
+    'Voice input needs Chrome on this server — type your question for now',
+  FAILED: 'Could not transcribe your voice — check your connection or type your question',
+} as const;

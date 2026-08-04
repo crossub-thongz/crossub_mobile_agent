@@ -63,6 +63,24 @@ export async function sendGiiMessage(args: {
   return data;
 }
 
+/**
+ * Can this environment transcribe hold-to-talk audio?
+ *
+ * Asked before recording, because server ASR and the browser recogniser capture differently
+ * and there is no second chance once the agent has spoken. An older API that predates the
+ * endpoint answers 404 — treated the same as "no", which is exactly right.
+ */
+export async function fetchGiiVoiceStatus(): Promise<{
+  available: boolean;
+  provider?: string | null;
+}> {
+  const res = await fetch(`${API_BASE}/agent/gii/voice-status`, {
+    credentials: 'include',
+  });
+  if (!res.ok) return { available: false };
+  return res.json() as Promise<{ available: boolean; provider?: string | null }>;
+}
+
 /** Hold-to-talk audio → text via the server ASR (shows in Network tab; works when Web Speech is blocked). */
 export async function transcribeGiiVoice(args: {
   audioBase64: string;

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-04
+
+### Fixed
+- **Holding Gii's mic recorded audio nothing could transcribe, then told the agent to type instead.** The hold-to-talk path uploads the clip to the API for server ASR, and the API only has an ASR on environments carrying a Deepgram/OpenAI key — so on a deploy without one, every press ran the full record → upload → 503 round trip and ended in "Voice transcription is not available on this server yet". The mic was doing exactly what it was built to do and still failed every time. The browser's own recogniser now stands behind the server, and the choice is made **before** recording, because the two capture differently and there is no second chance once someone has finished speaking: server available → record and upload; server unavailable → recognise locally, with no pointless upload; probe unreachable → run both and prefer the server's answer. The only remaining failure is neither being available, and it is now reported on the press rather than after the sentence.
+- **A mis-tap, a silent hold and a failed call no longer share one message.** Too short to be speech, heard nothing, could not reach the server, and nothing on this environment can transcribe are four different things for an agent to do something about; they were one line. All of the mic's wording now lives in `VOICE_ERROR` in `constants/voice-input.ts`.
+- **A blocked recorder no longer kills a press the local recogniser could have finished.** `getUserMedia` failing while the browser recogniser is already listening drops the upload half and keeps listening, instead of ending the hold on a permission error that only applied to one of the two paths.
+
+### Added
+- `lib/gii-browser-speech.ts` — the fallback recogniser, restarted per utterance because Chrome ends a session on its own after a pause. Deliberately silent: every failure inside it surfaces as an empty transcript so the caller decides what the agent is told. It also restores the live text in the composer while speaking, which the server path cannot show until the clip is uploaded.
+- The Gii panel asks `GET /agent/gii/voice-status` once when it opens (`primeGiiVoiceStatus`) and remembers the answer, so the first mic press already knows which way to record. A 503 or 404 mid-session updates it in place — an API that predates the endpoint reads as "no server ASR", which is correct.
+
 ## 2026-07-30
 
 ### Fixed

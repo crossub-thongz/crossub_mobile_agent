@@ -34,6 +34,7 @@ import {
 import { MESSAGE_GII_PROMPTS } from '@/constants/gii-message-prompts';
 import { buildGiiBriefing, type GiiBriefing } from '@/lib/gii-briefing';
 import {
+  primeGiiVoiceStatus,
   resolveSpeechLanguage,
   startGiiVoiceCapture,
   type GiiVoiceCapture,
@@ -744,6 +745,12 @@ export function GiiAssistant({
     },
     [],
   );
+
+  // Ask once, while the panel opens, which transcriber this environment has — by the time the
+  // agent reaches the mic the answer is in, so the first press records the right way.
+  useEffect(() => {
+    if (open) primeGiiVoiceStatus();
+  }, [open]);
 
   if (!open) return null;
 
