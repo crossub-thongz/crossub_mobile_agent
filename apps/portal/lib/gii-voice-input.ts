@@ -1,4 +1,6 @@
 import {
+  micSilentMessage,
+  VOICE_CAPTURE_CONSTRAINTS,
   VOICE_ERROR,
   VOICE_LEVEL_FULL_SCALE_RMS,
   VOICE_MAX_SESSION_MS,
@@ -269,6 +271,10 @@ export function startGiiVoiceCapture(options: {
   let useBrowserAsr = browserAsr && serverAsrAvailable !== true;
 
   let stream: MediaStream | null = null;
+  /** Clone fed to the level meter, so it never contends with the recorder for the track. */
+  let meterStream: MediaStream | null = null;
+  /** Named in the "no sound" message — the wrong input is the usual cause. */
+  let captureDeviceLabel: string | null = null;
   let recorder: MediaRecorder | null = null;
   let chunks: Blob[] = [];
   let speech: GiiBrowserSpeech | null = null;
@@ -294,7 +300,9 @@ export function startGiiVoiceCapture(options: {
 
   const cleanupStream = () => {
     stream?.getTracks().forEach((t) => t.stop());
+    meterStream?.getTracks().forEach((t) => t.stop());
     stream = null;
+    meterStream = null;
     recorder = null;
   };
 
@@ -407,7 +415,7 @@ export function startGiiVoiceCapture(options: {
       return;
     }
     if (meter?.ran()) {
-      fail(VOICE_ERROR.MIC_SILENT);
+      fail(micSilentMessage(captureDeviceLabel));
       return;
     }
     fail(clip && !clipUsable ? VOICE_ERROR.TOO_SHORT : VOICE_ERROR.NO_SPEECH);
@@ -508,7 +516,9 @@ export function startGiiVoiceCapture(options: {
     }
 
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: VOICE_CAPTURE_CONSTRAINTS,
+      });
     } catch {
       // Permission covers both paths, but the recogniser holds its own grant — if it is
       // already listening the session can still land, just without a meter.
@@ -525,6 +535,8 @@ export function startGiiVoiceCapture(options: {
       cleanupStream();
       return;
     }
+
+    captureDeviceLabel = stream.getAudioTracks()[0]?.label ?? null;
 
     if (useRecorder) {
       try {
@@ -550,8 +562,13 @@ export function startGiiVoiceCapture(options: {
       }
     }
 
+    // Meter a CLONE, not the recorder's own stream. One track feeding both a MediaRecorder
+    // and a Web Audio graph is a combination Chrome has historically handed silence to, and a
+    // meter that steals from the recording would be worse than no meter at all.
+    meterStream = stream.clone();
+
     // Measured silence supersedes the transcript timer wherever we have audio to measure.
-    meter = watchMicLevel(stream, {
+    meter = watchMicLevel(meterStream, {
       timeoutMs: VOICE_SILENCE_TIMEOUT_MS,
       onSilent: stopListening,
       onLevel: (level) => {

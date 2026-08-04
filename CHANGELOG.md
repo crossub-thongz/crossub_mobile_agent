@@ -3,6 +3,15 @@
 ## 2026-08-04
 
 ### Fixed
+- **Capture runs with Chrome's audio processing off.** `echoCancellation`, `noiseSuppression` and `autoGainControl` are on by default, and on some setups — virtual devices, conferencing drivers, certain headsets — echo cancellation alone is enough to hand back a stream of pure silence. Speech recognition also does better on the raw signal than a gated, gain-ridden one, so this is the fix and the better input at once.
+- **The level meter reads a cloned track instead of the recorder's own.** One track feeding both a `MediaRecorder` and a Web Audio graph is a combination Chrome has historically handed silence to; a meter that steals from the recording would be worse than no meter.
+- **The silence threshold dropped to an RMS of 1.5.** It decides both when to stop and whether to call someone's mic dead, and being too high is costly both ways — it cuts off a softly-spoken agent and it calls a quiet-but-working input broken. A silent room still reads under 1.
+
+### Changed
+- **"No sound is reaching the microphone" now names the device**: *your browser is listening to "Aggregate Device"*. When a mic does nothing the cause is usually that the browser picked a different input than the one being spoken into, and that is invisible until the name is put in front of you.
+- `/voice-check` lists every input Chrome can see and marks the one in use, so the wrong-device case is one glance rather than a hunt through system settings.
+
+### Fixed
 - **A tab open while the server gains a speech key no longer holds "not set up on this server" until it is reloaded.** The capability answer was cached for the life of the page either way, so an app opened before the key landed kept refusing every tap afterwards — and the person least likely to know a deploy had just happened is the one using the app. `true` still sticks; a negative re-probes on the next tap, which costs one small GET on a path that is already failing. The press-time refusal was removed for the same reason: it decided from the stale answer before the fresh one could arrive.
 
 ### Fixed

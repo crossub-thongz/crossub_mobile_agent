@@ -26,7 +26,27 @@ export const VOICE_MAX_SESSION_MS = 120_000;
  * from that midpoint: a quiet room reads 0–2, speech reads well into double figures.
  */
 export const VOICE_SILENCE_SAMPLE_MS = 150;
-export const VOICE_SPEECH_RMS_THRESHOLD = 3;
+/**
+ * Low on purpose. It decides two things — when to stop on silence, and whether to tell
+ * someone their mic is dead — and being too high is costly in both directions: it cuts off a
+ * softly-spoken agent, and it calls a quiet-but-working input broken. A quiet room still
+ * reads under 1.
+ */
+export const VOICE_SPEECH_RMS_THRESHOLD = 1.5;
+
+/**
+ * Capture constraints for the recording stream.
+ *
+ * Chrome's processing chain is on by default, and on some setups — virtual devices,
+ * conferencing drivers, certain headsets — `echoCancellation` is enough to hand back a
+ * stream of pure silence. ASR also prefers the raw signal to a gated, gain-ridden one, so
+ * turning all three off is both the fix and the better input.
+ */
+export const VOICE_CAPTURE_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: false,
+  noiseSuppression: false,
+  autoGainControl: false,
+};
 
 /**
  * RMS treated as a full-height meter. Conversational speech at a laptop mic sits around
@@ -96,8 +116,20 @@ export const VOICE_ERROR = {
   /** The meter never saw a sound: the browser is capturing from a dead or muted input. */
   MIC_SILENT:
     'No sound is reaching the microphone — check the input device your browser is using, or whether another app has the mic',
+  /** Fallback when the device has no label (permission granted but nothing to name). */
+  MIC_SILENT_UNNAMED_DEVICE: 'the default input',
   /** Audio definitely arrived, but no transcriber made words out of it. */
   TRANSCRIBER_EMPTY:
     'Your mic is working, but nothing could be transcribed — try again or type your question',
   FAILED: 'Could not transcribe your voice — check your connection or type your question',
 } as const;
+
+/**
+ * Naming the device is the whole diagnosis. "No sound is reaching the microphone" leaves
+ * someone hunting; "Chrome is listening to *Aggregate Device*" tells them in one read that
+ * the browser picked the wrong input, which is the usual cause.
+ */
+export function micSilentMessage(deviceLabel?: string | null): string {
+  const device = deviceLabel?.trim() || VOICE_ERROR.MIC_SILENT_UNNAMED_DEVICE;
+  return `No sound is reaching the microphone — your browser is listening to “${device}”. Pick a different input in Chrome's site settings, or check whether another app has the mic.`;
+}

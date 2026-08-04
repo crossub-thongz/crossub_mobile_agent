@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import {
+  VOICE_CAPTURE_CONSTRAINTS,
   VOICE_LEVEL_FULL_SCALE_RMS,
   VOICE_SILENCE_SAMPLE_MS,
   VOICE_SPEECH_RMS_THRESHOLD,
@@ -95,7 +96,9 @@ export default function VoiceCheckPage() {
     set('permission', 'running', 'Waiting for the browser prompt…');
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: VOICE_CAPTURE_CONSTRAINTS,
+      });
     } catch (err) {
       set(
         'permission',
@@ -106,10 +109,26 @@ export default function VoiceCheckPage() {
       return;
     }
     const track = stream.getAudioTracks()[0];
+
+    // Every input Chrome can see, with the chosen one marked. When a mic "does nothing" the
+    // answer is usually that the browser is listening to a different device than the person
+    // is speaking into — and that is invisible until the list is put in front of them.
+    let deviceList = '';
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter((d) => d.kind === 'audioinput');
+      deviceList = inputs
+        .map((d, i) => `${d.label === track?.label ? '→ ' : '  '}${d.label || `input ${i + 1}`}`)
+        .join('\n');
+    } catch {
+      // Enumeration is a nicety; the check goes on without it.
+    }
+
     set(
       'permission',
       'pass',
-      `Granted · input: ${track?.label || 'unnamed device'}${track?.muted ? ' · REPORTED MUTED' : ''}`,
+      `Granted · in use: ${track?.label || 'unnamed device'}${track?.muted ? ' · REPORTED MUTED' : ''}` +
+        (deviceList ? `\n\nInputs Chrome can see (→ = in use):\n${deviceList}` : ''),
     );
 
     // 3) Is anything actually arriving? -------------------------------------
@@ -284,7 +303,7 @@ export default function VoiceCheckPage() {
               </span>
             </div>
             {stage.detail ? (
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
                 {stage.detail}
               </p>
             ) : null}
