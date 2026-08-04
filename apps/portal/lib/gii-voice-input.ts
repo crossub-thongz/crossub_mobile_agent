@@ -339,11 +339,14 @@ export function startGiiVoiceCapture(options: {
         mediaType: recordingMime,
         languageHint: languageHintForTranscription(),
       });
+      // Reaching the endpoint at all proves the capability, whatever this clip contained.
       serverAsrAvailable = true;
       return { text: result.text.trim() || null, errored: false };
     } catch (err) {
       const status = (err as { status?: number }).status;
-      // 503 (no ASR key) and 404 (an API that predates the endpoint) both mean: stop asking.
+      // 404 means the endpoint is absent. 503 means the server says it cannot transcribe —
+      // trusted only because the server no longer returns it for an empty transcript, which
+      // used to take voice out of service for a whole session over one quiet clip.
       if (status === 503 || status === 404) serverAsrAvailable = false;
       return { text: null, errored: true };
     }
