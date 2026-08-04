@@ -30,7 +30,7 @@ export const PRIMARY_NAV: NavItem[] = [
 
 /** Workflow modules under the sidebar “More” section. */
 export const MORE_NAV: NavItem[] = [
-  { href: ROUTES.AGREEMENTS, label: 'Agreements', icon: FileSignature },
+  { href: ROUTES.AGREEMENTS, label: 'Agreements', icon: FileSignature, portalAccess: 'full' },
   { href: ROUTES.LEASING, label: 'Leasing', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
   { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },

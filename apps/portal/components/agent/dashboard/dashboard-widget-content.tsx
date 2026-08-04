@@ -15,6 +15,7 @@ import {
 } from '@/components/agent/dashboard-recent-lists';
 import { propertyNew, ROUTES } from '@/constants/routes';
 import { DASHBOARD_WIDGET_BY_ID, type DashboardWidgetId } from '@/lib/dashboard-widgets';
+import { isDashboardKpiWidgetAllowedForAgent } from '@/lib/portal-service-level';
 import { Button } from '@/components/ui/button';
 
 import type { DashboardWidgetRenderContext } from './dashboard-widget-types';
@@ -50,13 +51,7 @@ export function DashboardWidgetContent({
     case 'need_action':
       return <DashboardNeedActionPreview showTitle={false} className="h-full" />;
     case 'quick_add_property':
-      return context.hasFullManagementAccess ? (
-        <QuickAddPropertyWidget />
-      ) : (
-        <p className="text-muted-foreground flex h-full items-center justify-center text-xs">
-          Full management access required.
-        </p>
-      );
+      return <QuickAddPropertyWidget />;
     case 'kpi_properties':
     case 'kpi_maintenance':
     case 'kpi_inspections':
@@ -67,6 +62,7 @@ export function DashboardWidgetContent({
         <DashboardKpiWidget
           widgetId={widgetId as DashboardKpiWidgetKey}
           k={context.dashboardKpis}
+          hasFullManagementAccess={context.hasFullManagementAccess}
           className="h-full"
         />
       );

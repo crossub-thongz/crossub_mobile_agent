@@ -615,7 +615,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const portalAccessReady = apiAgencies !== null;
 
   const hasFullManagementAccess = useMemo(
-    () => !portalAccessReady || computeFullManagementAccess(agencies),
+    () => portalAccessReady && computeFullManagementAccess(agencies),
     [portalAccessReady, agencies],
   );
 

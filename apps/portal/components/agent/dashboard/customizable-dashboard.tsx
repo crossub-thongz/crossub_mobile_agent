@@ -87,7 +87,10 @@ export function CustomizableDashboard({ context }: { context: DashboardWidgetRen
   const widgets = useMemo(() => {
     const list = [...snapshot.widgets];
     return list.filter((id) => {
-      if (id === 'quick_add_property' && !context.hasFullManagementAccess) return false;
+      if (id === 'quick_add_property') return true;
+      if (!isDashboardKpiWidgetAllowedForAgent(id, context.hasFullManagementAccess)) {
+        return false;
+      }
       return true;
     });
   }, [context.hasFullManagementAccess, snapshot.widgets]);

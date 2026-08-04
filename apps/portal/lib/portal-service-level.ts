@@ -86,8 +86,48 @@ export const FULL_MANAGEMENT_ROUTE_PREFIXES = [
   ROUTES.REPORTS,
   ROUTES.MESSAGES,
   ROUTES.COMMUNICATIONS,
-  '/properties/new',
+  ROUTES.AGREEMENTS,
 ] as const;
+
+/** Dashboard portfolio charts visible on Level 1 (inspection + tribunal only). */
+export const INSPECTION_ONLY_DASHBOARD_CHART_KEYS = [
+  'properties',
+  'inspection',
+  'tribunal',
+] as const;
+
+export type DashboardChartKey =
+  | 'properties'
+  | 'maintenance'
+  | 'inspection'
+  | 'tribunal'
+  | 'leasing'
+  | 'accounting';
+
+export function isDashboardChartAllowedForAgent(
+  chartKey: DashboardChartKey,
+  hasFullAccess: boolean,
+): boolean {
+  if (hasFullAccess) return true;
+  return (INSPECTION_ONLY_DASHBOARD_CHART_KEYS as readonly string[]).includes(chartKey);
+}
+
+export function isDashboardKpiWidgetAllowedForAgent(
+  widgetId: string,
+  hasFullAccess: boolean,
+): boolean {
+  const map: Record<string, DashboardChartKey> = {
+    kpi_properties: 'properties',
+    kpi_maintenance: 'maintenance',
+    kpi_inspections: 'inspection',
+    kpi_tribunal: 'tribunal',
+    kpi_leasing: 'leasing',
+    kpi_accounting: 'accounting',
+  };
+  const key = map[widgetId];
+  if (!key) return true;
+  return isDashboardChartAllowedForAgent(key, hasFullAccess);
+}
 
 export function isFullManagementRoute(pathname: string): boolean {
   return FULL_MANAGEMENT_ROUTE_PREFIXES.some(
@@ -105,7 +145,6 @@ export function filterNavByAccess<T extends { portalAccess?: PortalNavAccess }>(
 }
 
 export const INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS: BuiltinQuickActionId[] = [
-  'add-property',
   'add-tenant',
   'maintenance',
   'rent-review',

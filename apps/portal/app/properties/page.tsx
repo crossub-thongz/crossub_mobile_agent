@@ -36,7 +36,6 @@ export default function PropertiesPage() {
     archivedProperties,
     agencies,
     accounting,
-    hasFullManagementAccess,
     apiConnected,
     endPropertyManagement,
     deleteDraftProperty,
@@ -144,7 +143,7 @@ export default function PropertiesPage() {
         </div>
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
-        {hasFullManagementAccess && !isArchivedView && (
+        {!isArchivedView && (
           <Button className="w-full rounded-xl sm:w-auto" size="lg" asChild>
             <Link href={propertyNew()}>
               <Plus className="size-4" />
@@ -172,7 +171,7 @@ export default function PropertiesPage() {
                   : 'Add a property to start managing landlords and tenants.'
             }
             action={
-              hasFullManagementAccess && !search && filter === 'all' ? (
+              !search && filter === 'all' && !isArchivedView ? (
                 <Button size="sm" asChild>
                   <Link href={propertyNew()}>Add property</Link>
                 </Button>
@@ -194,7 +193,7 @@ export default function PropertiesPage() {
                   : propertyDetail(property.id)
             }
             onDelete={setPendingDelete}
-            canManage={hasFullManagementAccess && apiConnected && !isArchivedView}
+            canManage={apiConnected && !isArchivedView}
           />
         )}
       </div>

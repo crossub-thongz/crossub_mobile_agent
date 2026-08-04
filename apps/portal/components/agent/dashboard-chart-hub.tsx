@@ -14,6 +14,10 @@ import {
 } from 'lucide-react';
 
 import type { DashboardKpis } from '@/lib/types';
+import {
+  isDashboardChartAllowedForAgent,
+  type DashboardChartKey,
+} from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
 type Segment = { label: string; value: number; color: string; href?: string };
@@ -364,6 +368,12 @@ const CHART_DEFINITIONS = [
 type ChartDefinition = (typeof CHART_DEFINITIONS)[number];
 type ChartKey = ChartDefinition['key'];
 
+function filterChartDefinitions(hasFullManagementAccess: boolean) {
+  return CHART_DEFINITIONS.filter((item) =>
+    isDashboardChartAllowedForAgent(item.key as DashboardChartKey, hasFullManagementAccess),
+  );
+}
+
 function BreakdownSlide({
   definition,
   k,
@@ -424,15 +434,22 @@ function BreakdownSlide({
   );
 }
 
-function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
-  const [activeKey, setActiveKey] = useState<ChartKey>(CHART_DEFINITIONS[0].key);
+function MobilePortfolioBreakdown({
+  k,
+  hasFullManagementAccess,
+}: {
+  k: DashboardKpis;
+  hasFullManagementAccess: boolean;
+}) {
+  const charts = filterChartDefinitions(hasFullManagementAccess);
+  const [activeKey, setActiveKey] = useState<ChartKey>(charts[0]?.key ?? CHART_DEFINITIONS[0].key);
   const carouselRef = useRef<HTMLDivElement>(null);
   const chipRefs = useRef(new Map<ChartKey, HTMLButtonElement>());
   const scrollSyncRef = useRef(false);
 
   const activeIndex = Math.max(
     0,
-    CHART_DEFINITIONS.findIndex((item) => item.key === activeKey),
+    charts.findIndex((item) => item.key === activeKey),
   );
 
   const scrollChipIntoView = useCallback((key: ChartKey) => {
@@ -455,30 +472,30 @@ function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
 
   const selectKey = useCallback(
     (key: ChartKey) => {
-      const index = CHART_DEFINITIONS.findIndex((item) => item.key === key);
+      const index = charts.findIndex((item) => item.key === key);
       if (index < 0) return;
       setActiveKey(key);
       scrollCarouselToIndex(index);
       scrollChipIntoView(key);
     },
-    [scrollCarouselToIndex, scrollChipIntoView],
+    [charts, scrollCarouselToIndex, scrollChipIntoView],
   );
 
   const syncActiveFromCarousel = useCallback(() => {
     const el = carouselRef.current;
     if (!el || el.clientWidth <= 0) return;
     const index = Math.min(
-      CHART_DEFINITIONS.length - 1,
+      charts.length - 1,
       Math.max(0, Math.round(el.scrollLeft / el.clientWidth)),
     );
-    const nextKey = CHART_DEFINITIONS[index]?.key;
+    const nextKey = charts[index]?.key;
     if (!nextKey) return;
     setActiveKey((current) => {
       if (current === nextKey) return current;
       scrollChipIntoView(nextKey);
       return nextKey;
     });
-  }, [scrollChipIntoView]);
+  }, [charts, scrollChipIntoView]);
 
   useEffect(() => {
     const el = carouselRef.current;
@@ -585,7 +602,7 @@ function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
           aria-hidden
         />
         <div className="scrollbar-none flex gap-1.5 overflow-x-auto px-3 py-2.5">
-          {CHART_DEFINITIONS.map((item) => {
+          {charts.map((item) => {
             const TabIcon = item.icon;
             const isActive = item.key === activeKey;
             const itemTotal = item.segments(k).reduce((sum, segment) => sum + segment.value, 0);
@@ -628,7 +645,7 @@ function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
         className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
         aria-label="Portfolio breakdown categories"
       >
-        {CHART_DEFINITIONS.map((definition) => (
+        {charts.map((definition) => (
           <div key={definition.key} className="w-full min-w-full shrink-0 snap-center snap-always">
             <BreakdownSlide definition={definition} k={k} />
           </div>
@@ -636,7 +653,7 @@ function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
       </div>
 
       <div className="flex items-center justify-center gap-1.5 border-t px-4 py-2.5">
-        {CHART_DEFINITIONS.map((item, index) => (
+        {charts.map((item, index) => (
           <button
             key={item.key}
             type="button"
@@ -656,13 +673,13 @@ function MobilePortfolioBreakdown({ k }: { k: DashboardKpis }) {
   );
 }
 
-function mobileKpiTiles(k: DashboardKpis) {
+function mobileKpiTiles(k: DashboardKpis, hasFullManagementAccess: boolean) {
   const maintenanceActive = k.maintenance.pendingApproval + k.maintenance.inProgress;
   const inspectionPending = inspectionPendingTotal(k.inspection);
   const leasingOpen = k.leasing.newLeasing + k.leasing.upcomingRentReviews + k.leasing.leaseRenewals;
   const tribunalOpen = k.tribunal.active + k.tribunal.actionRequired;
 
-  return [
+  const tiles = [
     {
       title: 'Properties',
       icon: Building2,
@@ -718,6 +735,20 @@ function mobileKpiTiles(k: DashboardKpis) {
       tone: tribunalOpen > 0 ? ('warn' as const) : ('default' as const),
     },
   ];
+
+  return tiles.filter((tile) => {
+    const keyMap: Record<string, DashboardChartKey> = {
+      Properties: 'properties',
+      Maintenance: 'maintenance',
+      Inspections: 'inspection',
+      Tribunal: 'tribunal',
+      Leasing: 'leasing',
+      Arrears: 'accounting',
+    };
+    const key = keyMap[tile.title];
+    if (!key) return true;
+    return isDashboardChartAllowedForAgent(key, hasFullManagementAccess);
+  });
 }
 
 export type DashboardKpiWidgetKey =
@@ -741,13 +772,23 @@ export function DashboardKpiWidget({
   widgetId,
   k,
   className,
+  hasFullManagementAccess = true,
 }: {
   widgetId: DashboardKpiWidgetKey;
   k: DashboardKpis;
   className?: string;
+  hasFullManagementAccess?: boolean;
 }) {
   const definition = CHART_DEFINITIONS.find((item) => item.key === WIDGET_TO_KEY[widgetId]);
   if (!definition) return null;
+  if (
+    !isDashboardChartAllowedForAgent(
+      definition.key as DashboardChartKey,
+      hasFullManagementAccess,
+    )
+  ) {
+    return null;
+  }
 
   return (
     <ChartCard
@@ -760,8 +801,15 @@ export function DashboardKpiWidget({
   );
 }
 
-export function DashboardChartHub({ k }: { k: DashboardKpis }) {
-  const tiles = mobileKpiTiles(k);
+export function DashboardChartHub({
+  k,
+  hasFullManagementAccess = true,
+}: {
+  k: DashboardKpis;
+  hasFullManagementAccess?: boolean;
+}) {
+  const charts = filterChartDefinitions(hasFullManagementAccess);
+  const tiles = mobileKpiTiles(k, hasFullManagementAccess);
 
   return (
     <section className="space-y-3">
@@ -778,10 +826,10 @@ export function DashboardChartHub({ k }: { k: DashboardKpis }) {
         ))}
       </div>
 
-      <MobilePortfolioBreakdown k={k} />
+      <MobilePortfolioBreakdown k={k} hasFullManagementAccess={hasFullManagementAccess} />
 
       <div className="hidden grid-cols-2 gap-2 md:grid lg:gap-3">
-        {CHART_DEFINITIONS.map((definition) => (
+        {charts.map((definition) => (
           <ChartCard
             key={definition.key}
             title={definition.title}
