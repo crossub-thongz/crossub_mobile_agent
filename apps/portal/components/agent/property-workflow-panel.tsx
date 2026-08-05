@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
 import {
   createAgentLeasingCycle,
   createAgentMaintenanceRequest,
@@ -131,6 +132,7 @@ export function PropertyWorkflowPanel({
   onCustomAction?: (actionId: PropertyWorkflowActionId) => boolean;
 }) {
   const { primaryAgency } = useAgentData();
+  const { blockIfUnverified } = useEmailVerificationGuard();
 
   const ctx = useMemo(
     () =>
@@ -160,6 +162,13 @@ export function PropertyWorkflowPanel({
   const [activeAction, setActiveAction] = useState<PropertyWorkflowActionId | null>(null);
   const { properties } = useAgentData();
 
+  const openWorkflowAction = (actionId: PropertyWorkflowActionId, disabled?: boolean) => {
+    if (disabled) return;
+    if (onCustomAction?.(actionId)) return;
+    if (blockIfUnverified()) return;
+    setActiveAction(actionId);
+  };
+
   if (actions.length === 0) return null;
 
   const description =
@@ -182,11 +191,7 @@ export function PropertyWorkflowPanel({
             <WorkflowActionButton
               key={action.id}
               action={action}
-              onClick={() => {
-                if (action.disabled) return;
-                if (onCustomAction?.(action.id)) return;
-                setActiveAction(action.id);
-              }}
+              onClick={() => openWorkflowAction(action.id, action.disabled)}
             />
           ))}
         </div>
@@ -201,11 +206,7 @@ export function PropertyWorkflowPanel({
               <WorkflowActionButton
                 key={action.id}
                 action={action}
-                onClick={() => {
-                  if (action.disabled) return;
-                  if (onCustomAction?.(action.id)) return;
-                  setActiveAction(action.id);
-                }}
+                onClick={() => openWorkflowAction(action.id, action.disabled)}
               />
             ))}
           </div>
@@ -294,6 +295,7 @@ export function PropertyWorkflowCreateDialog({
   onSuccess: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
   const { refresh, apiConnected, endPropertyManagement } = useAgentData();
+  const { blockIfUnverified } = useEmailVerificationGuard();
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
 
@@ -369,6 +371,10 @@ export function PropertyWorkflowCreateDialog({
   useEffect(() => {
     if (!open) {
       formPrefillSessionRef.current = null;
+      return;
+    }
+    if (blockIfUnverified()) {
+      onOpenChange(false);
       return;
     }
     if (!actionId) return;
@@ -491,6 +497,8 @@ export function PropertyWorkflowCreateDialog({
       active = false;
     };
   }, [
+    blockIfUnverified,
+    onOpenChange,
     open,
     actionId,
     property,

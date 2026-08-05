@@ -9,12 +9,14 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { ROUTES } from '@/constants/routes';
+import { useAuth } from '@/components/providers/auth-provider';
 import { ApiError, api } from '@/lib/api';
 
 export default function VerifyEmailPage() {
   const params = useParams<{ token: string }>();
   const token = params.token?.trim() ?? '';
   const router = useRouter();
+  const { refresh } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'invalid'>(
     token ? 'loading' : 'invalid',
   );
@@ -26,6 +28,8 @@ export default function VerifyEmailPage() {
     void (async () => {
       try {
         await api.post('/auth/verify-email', { token });
+        if (cancelled) return;
+        await refresh();
         if (cancelled) return;
         setStatus('success');
         toast.success('Email verified — you’re all set.');
@@ -43,7 +47,7 @@ export default function VerifyEmailPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [refresh, token]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">

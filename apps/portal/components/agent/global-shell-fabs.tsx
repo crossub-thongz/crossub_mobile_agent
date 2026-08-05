@@ -33,6 +33,8 @@ import { unreadMessagesForProperty } from '@/lib/communications-log';
 import { propertyIdFromPath } from '@/lib/property-path';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { useAgentStore } from '@/lib/store';
+import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
+import { isEmailVerificationBlockedHref } from '@/lib/email-verification';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 const SHELL_GII_BUTTON = {
@@ -209,6 +211,7 @@ function MessageActionSheet({
   } | null>(null);
   const router = useRouter();
   const { messages, properties, hasFullManagementAccess } = useAgentData();
+  const { blockIfUnverified } = useEmailVerificationGuard();
   const hiddenBuiltinQuickActionIds = useAgentStore((s) => s.hiddenBuiltinQuickActionIds);
   const customQuickActions = useAgentStore((s) => s.customQuickActions);
 
@@ -302,7 +305,10 @@ function MessageActionSheet({
                         </Link>
                         <button
                           type="button"
-                          onClick={() => setView('new-message')}
+                          onClick={() => {
+                            if (blockIfUnverified()) return;
+                            setView('new-message');
+                          }}
                           className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
                         >
                           <MessageSquare className="text-primary size-4 shrink-0" />
@@ -313,7 +319,13 @@ function MessageActionSheet({
                       <>
                         <Link
                           href={messagesNew()}
-                          onClick={onClose}
+                          onClick={(event) => {
+                            if (blockIfUnverified()) {
+                              event.preventDefault();
+                              return;
+                            }
+                            onClose();
+                          }}
                           className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
                         >
                           <MessageSquare className="text-primary size-4 shrink-0" />
@@ -349,10 +361,12 @@ function MessageActionSheet({
                           type="button"
                           onClick={() => {
                             if (workflowActionId) {
+                              if (blockIfUnverified()) return;
                               setPendingWorkflow({ actionId: workflowActionId, propertyId });
                               onClose();
                               return;
                             }
+                            if (isEmailVerificationBlockedHref(href) && blockIfUnverified()) return;
                             onClose();
                             router.push(href);
                           }}
@@ -461,6 +475,7 @@ function CommunicationDockSheet({
 }) {
   const [view, setView] = useState<'menu' | 'new-message'>('menu');
   const { messages, properties } = useAgentData();
+  const { blockIfUnverified } = useEmailVerificationGuard();
 
   const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
   const propertyUnread =
@@ -514,7 +529,10 @@ function CommunicationDockSheet({
               </Link>
               <button
                 type="button"
-                onClick={() => setView('new-message')}
+                onClick={() => {
+                  if (blockIfUnverified()) return;
+                  setView('new-message');
+                }}
                 className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
               >
                 <MessageSquare className="text-primary size-4 shrink-0" />
@@ -526,7 +544,13 @@ function CommunicationDockSheet({
           <div className="space-y-2">
             <Link
               href={messagesNew()}
-              onClick={onClose}
+              onClick={(event) => {
+                if (blockIfUnverified()) {
+                  event.preventDefault();
+                  return;
+                }
+                onClose();
+              }}
               className="flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm hover:bg-secondary"
             >
               <MessageSquare className="text-primary size-4" />
@@ -570,6 +594,7 @@ function QuickCreateDockSheet({
   } | null>(null);
   const router = useRouter();
   const { hasFullManagementAccess } = useAgentData();
+  const { blockIfUnverified } = useEmailVerificationGuard();
   const hiddenBuiltinQuickActionIds = useAgentStore((s) => s.hiddenBuiltinQuickActionIds);
   const customQuickActions = useAgentStore((s) => s.customQuickActions);
   const toggleBuiltinQuickAction = useAgentStore((s) => s.toggleBuiltinQuickAction);
@@ -652,10 +677,12 @@ function QuickCreateDockSheet({
                     type="button"
                     onClick={() => {
                       if (workflowActionId) {
+                        if (blockIfUnverified()) return;
                         setPendingWorkflow({ actionId: workflowActionId, propertyId });
                         close();
                         return;
                       }
+                      if (isEmailVerificationBlockedHref(href) && blockIfUnverified()) return;
                       close();
                       router.push(href);
                     }}

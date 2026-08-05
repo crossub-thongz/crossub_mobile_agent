@@ -11,6 +11,7 @@ import {
 import { useEffect, useRef, useState, Suspense } from 'react';
 
 import { ConnectionBanner } from '@/components/agent/connection-banner';
+import { EmailVerificationBanner } from '@/components/agent/email-verification-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
@@ -291,6 +292,7 @@ export function AgentShell({
               ['--shell-header-offset' as string]: `${headerHeight + 16}px`,
             }}
           >
+            {user ? <EmailVerificationBanner /> : null}
             {showConnectionBanner && user && (
               <div className="mb-4">
                 <ConnectionBanner />

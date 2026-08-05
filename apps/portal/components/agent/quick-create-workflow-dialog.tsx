@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
 import {
   buildPropertyWorkflowContext,
   tabActionsFor,
@@ -73,6 +74,7 @@ export function QuickCreateWorkflowDialog({
     tenantSelections,
     refresh,
   } = useAgentData();
+  const { blockIfUnverified } = useEmailVerificationGuard();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -146,6 +148,10 @@ export function QuickCreateWorkflowDialog({
       reset();
       return;
     }
+    if (blockIfUnverified()) {
+      onOpenChange(false);
+      return;
+    }
     setSelectedPropertyId(initialPropertyId);
     if (initialPropertyId) {
       setFormOpen(true);
@@ -154,7 +160,7 @@ export function QuickCreateWorkflowDialog({
       setFormOpen(false);
       setPickerOpen(true);
     }
-  }, [open, initialPropertyId, actionId]);
+  }, [blockIfUnverified, open, initialPropertyId, actionId, onOpenChange]);
 
   useEffect(() => {
     if (!open || !formOpen || !actionId || !propertyId) return;
