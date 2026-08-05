@@ -122,6 +122,8 @@ export interface Property {
   registryDraft?: Record<string, unknown> | null;
   vacateDate?: string;
   rentPaidUntil?: string;
+  /** Rent payment reference for bank transfers (agency initials + property ref). */
+  paymentReference?: string;
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;

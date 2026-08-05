@@ -109,6 +109,7 @@ type ExtendedAgentProperty = AgentProperty & {
   vacateDate?: string | null;
   nextRentReviewAt?: string | null;
   rentPaidUntil?: string | null;
+  paymentReference?: string | null;
 };
 
 function readFurnished(dto: AgentProperty): boolean | undefined {
@@ -218,6 +219,11 @@ export function mapAgentProperty(
       (dto as AgentProperty & { rentPaidUntil?: string | null }).rentPaidUntil ??
       list.rentPaidUntil ??
       ext.rentPaidUntil ??
+      undefined,
+    paymentReference:
+      (dto as AgentProperty & { paymentReference?: string | null }).paymentReference ??
+      list.paymentReference ??
+      ext.paymentReference ??
       undefined,
     openTasks: 0,
     inspectionStatus: '—',

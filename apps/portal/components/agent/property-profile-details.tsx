@@ -214,6 +214,19 @@ export function PropertyProfileDetails({
               />
               <StatCell label="Lease status" value={profileLeaseStatus} />
             </div>
+            {property.paymentReference ? (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                  Rent payment reference
+                </p>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-wide text-amber-950 dark:text-amber-50">
+                  {property.paymentReference}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug">
+                  Quote this reference when paying rent by bank transfer.
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">
