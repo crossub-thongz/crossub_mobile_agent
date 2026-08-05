@@ -234,7 +234,7 @@ export default function RegisterPage() {
         <ThemeToggle />
       </div>
       <div className="mb-8 flex flex-col items-center gap-2">
-        <CrossubLogo size="lg" showTagline />
+        <CrossubLogo href="" size="lg" showTagline className="items-center" />
         <p className="text-muted-foreground text-sm">Agent registration</p>
       </div>
 
