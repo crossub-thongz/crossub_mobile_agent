@@ -24,6 +24,14 @@ export type AgentBillingSummary = {
   openInvoiceNumber?: string | null;
   nextInvoiceDueDate?: string | null;
   hasDefaultPaymentMethod: boolean;
+  defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
+};
+
+export type AgentBillingDefaultPaymentMethod = {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
 };
 
 export type AgentBillingPricingCatalog = {
@@ -168,6 +176,19 @@ export async function payAllAgentBilling(opts?: {
   return agentFetch('/agent/billing/pay-all', {
     method: 'POST',
     body: JSON.stringify({ devConfirm: opts?.devConfirm ?? true }),
+  });
+}
+
+export async function createAgentPaymentMethodSetup(): Promise<{ clientSecret: string }> {
+  return agentFetch('/agent/billing/payment-method/setup', { method: 'POST' });
+}
+
+export async function confirmAgentPaymentMethodSetup(
+  setupIntentId: string,
+): Promise<{ hasDefaultPaymentMethod: boolean; defaultPaymentMethod: AgentBillingDefaultPaymentMethod }> {
+  return agentFetch('/agent/billing/payment-method/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ setupIntentId }),
   });
 }
 

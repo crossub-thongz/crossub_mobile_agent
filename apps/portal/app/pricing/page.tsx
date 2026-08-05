@@ -3,11 +3,8 @@
 import {
   Building2,
   CalendarCheck,
-  ClipboardList,
   DoorOpen,
-  Gavel,
   Home,
-  Info,
   Loader2,
   Sparkles,
   Zap,
@@ -17,6 +14,8 @@ import { useEffect, useState } from 'react';
 import { PageIntro } from '@/components/agent/page-intro';
 import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { PricingOrderHost } from '@/components/pricing/pricing-order-host';
+import { PricingRateCatalog } from '@/components/pricing/pricing-rate-catalog';
 import {
   fetchAgentBillingPricing,
   type AgentBillingPricingCatalog,
@@ -68,53 +67,6 @@ function PricingSection({
       </div>
       <div className="pricing-section__body space-y-4 text-sm">{children}</div>
     </section>
-  );
-}
-
-function BedTable({
-  title,
-  rows,
-  icon: Icon = Home,
-}: {
-  title: string;
-  rows: Record<string, number | string>;
-  icon?: React.ComponentType<{ className?: string }>;
-}) {
-  const labels: Record<string, string> = {
-    studio: 'Studio',
-    oneBed: '1 bed',
-    twoBed: '2 bed',
-    threeBed: '3 bed',
-    fourBed: '4 bed',
-    fiveBed: '5 bed',
-    fiveBedPlus: '6+ bed',
-  };
-
-  return (
-    <div className="pricing-bed-table-column">
-      <p className="pricing-bed-table-column__title flex items-start gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        <Icon className="mt-0.5 size-3.5 shrink-0 text-primary" />
-        <span>{title}</span>
-      </p>
-      <div className="pricing-bed-table-wrap overflow-x-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>Bedrooms</th>
-              <th>Ex GST (each)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(rows).map(([key, value]) => (
-              <tr key={key}>
-                <td>{labels[key] ?? key}</td>
-                <td>{typeof value === 'number' ? formatCurrency(value) : value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
 
@@ -173,10 +125,6 @@ export default function PricingPage() {
 
   const isLevel2 = portalLevel === 'LEVEL_2_FULL_MANAGEMENT';
   const example = catalog?.level2.serviceFeeExample;
-  const openInspection = catalog?.inspections.openInspection;
-  const openExampleFirst =
-    openInspection?.exampleRent500FirstIncGstAud ?? openInspection?.exampleRent500IncGstAud;
-  const openExampleFourth = openInspection?.exampleRent500FourthIncGstAud;
   const included = catalog?.level2.includedPerPropertyPerYear;
   const includedUsage = catalog?.level2.includedUsageByProperty ?? [];
   const usageYear = includedUsage[0]?.calendarYear ?? new Date().getFullYear();
@@ -378,106 +326,21 @@ export default function PricingPage() {
               ) : null}
             </PricingSection>
 
-            <PricingSection
-              accent="emerald"
-              icon={ClipboardList}
-              badge="Rates"
-              title="Inspection & tribunal rates"
-              subtitle="All amounts shown in AUD. GST applies as noted on each line."
-              delayClass="pricing-animate-in-delay-3"
-            >
-              <div className="pricing-rate-grid">
-                <div className="pricing-rate-card" data-rate="routine">
-                  <div className="pricing-rate-card__icon">
-                    <CalendarCheck className="size-4" />
-                  </div>
-                  <p className="font-medium">Routine inspection</p>
-                  <p className="pricing-rate-card__price mt-1">
-                    {formatCurrency(catalog.inspections.routineIncGstAud)}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">inc GST · flat rate</p>
-                </div>
-
-                <div className="pricing-rate-card pricing-rate-card--wide" data-rate="open">
-                  <div className="pricing-rate-card__icon">
-                    <DoorOpen className="size-4" />
-                  </div>
-                  <p className="font-medium">Open inspection</p>
-                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                    Percentage of weekly rent, counted per property (each occurrence in a leasing
-                    cycle).
-                  </p>
-
-                  <div className="pricing-tier-split">
-                    <div className="pricing-tier" data-tier="standard">
-                      <p className="pricing-tier__label">1st · 2nd · 3rd</p>
-                      <p className="pricing-tier__value">
-                        {openInspection?.firstThree ?? '50% of weekly rent + GST'}
-                      </p>
-                    </div>
-                    <div className="pricing-tier" data-tier="premium">
-                      <p className="pricing-tier__label">4th onwards</p>
-                      <p className="pricing-tier__value">
-                        {openInspection?.fourthOnwards ?? '100% of weekly rent + GST'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {openExampleFirst != null || openExampleFourth != null ? (
-                    <div className="pricing-example-box">
-                      {openExampleFirst != null ? (
-                        <p>
-                          e.g. $500/week rent — 1st open inspection (50%) ={' '}
-                          <strong>{formatCurrency(openExampleFirst)}</strong> inc GST
-                        </p>
-                      ) : null}
-                      {openExampleFourth != null ? (
-                        <p className={openExampleFirst != null ? 'mt-1' : undefined}>
-                          e.g. $500/week rent — 4th open inspection onwards (100%) ={' '}
-                          <strong>{formatCurrency(openExampleFourth)}</strong> inc GST
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="pricing-bed-table-grid">
-                <BedTable
-                  title="Ingoing / outgoing — apartment, unit, townhouse, studio"
-                  rows={catalog.inspections.fieldInspectionsCompactExGst}
-                />
-                <BedTable
-                  title="Ingoing / outgoing — house"
-                  rows={catalog.inspections.fieldInspectionsHouseExGst}
-                />
-              </div>
-
-              <div className="pricing-rate-card pricing-rate-card--standalone" data-rate="tribunal">
-                <div className="pricing-rate-card__icon">
-                  <Gavel className="size-4" />
-                </div>
-                <p className="font-medium">Tribunal</p>
-                <p className="pricing-rate-card__price mt-1">
-                  {formatCurrency(catalog.inspections.tribunal.standardIncGstAud)}{' '}
-                  <span className="text-muted-foreground text-sm font-normal">inc GST</span>
-                </p>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  Standard session includes {catalog.inspections.tribunal.includedHours} hours.
-                  Additional time{' '}
-                  {formatCurrency(catalog.inspections.tribunal.extraHourlyIncGstAud)}/hr inc GST.
-                </p>
-              </div>
-
-              <div className="pricing-footnote pricing-animate-in-delay-4">
-                <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-                <span>
-                  Ingoing and outgoing amounts are ex GST;{' '}
-                  {catalog.inspections.tribunal.gstPercent}% GST is added at invoice. Tribunal
-                  rates shown include GST.
-                </span>
-              </div>
-            </PricingSection>
+            {catalog ? (
+              <PricingOrderHost>
+                {(orderActions) => {
+                  const { portalServiceLevel: _level, ...ratesCatalog } = catalog;
+                  return (
+                    <PricingRateCatalog
+                      catalog={ratesCatalog}
+                      showPlanSummaries={false}
+                      orderActions={orderActions}
+                      className="pricing-animate-in-delay-3"
+                    />
+                  );
+                }}
+              </PricingOrderHost>
+            ) : null}
           </>
         ) : null}
       </div>

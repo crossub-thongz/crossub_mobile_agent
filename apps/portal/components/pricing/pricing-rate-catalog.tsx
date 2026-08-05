@@ -8,10 +8,13 @@ import {
   Gavel,
   Home,
   Info,
+  Plus,
   Sparkles,
   Zap,
 } from 'lucide-react';
 
+import type { PricingOrderActions } from '@/components/pricing/pricing-order-host';
+import { Button } from '@/components/ui/button';
 import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -28,6 +31,28 @@ const BED_LABELS: Record<string, string> = {
   fiveBed: '5 bed',
   fiveBedPlus: '6+ bed',
 };
+
+function PricingAddButton({
+  onClick,
+  label = 'Add',
+}: {
+  onClick?: () => void;
+  label?: string;
+}) {
+  if (!onClick) return null;
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      className="pricing-rate-card__add mt-3 w-full"
+      onClick={onClick}
+    >
+      <Plus className="size-3.5" />
+      {label}
+    </Button>
+  );
+}
 
 function BedTable({
   title,
@@ -106,10 +131,12 @@ export function PricingRateCatalog({
   catalog,
   className,
   showPlanSummaries = true,
+  orderActions,
 }: {
   catalog: PricingCatalog;
   className?: string;
   showPlanSummaries?: boolean;
+  orderActions?: PricingOrderActions;
 }) {
   const openInspection = catalog.inspections.openInspection;
   const openExampleFirst =
@@ -219,6 +246,7 @@ export function PricingRateCatalog({
               {formatCurrency(catalog.inspections.routineIncGstAud)}
             </p>
             <p className="text-muted-foreground mt-0.5 text-xs">inc GST · flat rate</p>
+            <PricingAddButton onClick={orderActions?.addRoutine} label="Add routine" />
           </div>
 
           <div className="pricing-rate-card pricing-rate-card--wide" data-rate="open">
@@ -259,6 +287,27 @@ export function PricingRateCatalog({
                 ) : null}
               </div>
             ) : null}
+            <PricingAddButton onClick={orderActions?.addOpen} label="Add open inspection" />
+          </div>
+        </div>
+
+        <div className="pricing-field-inspection-order">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Ingoing / outgoing field inspections
+            </p>
+            {orderActions ? (
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={orderActions.addIngoing}>
+                  <Plus className="size-3.5" />
+                  Add ingoing
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={orderActions.addOutgoing}>
+                  <Plus className="size-3.5" />
+                  Add outgoing
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -290,6 +339,7 @@ export function PricingRateCatalog({
             {formatCurrency(tribunal.extraHourlyIncGstAud)}/hr inc GST (
             {formatCurrency(tribunal.extraHourlyExGstAud)}/hr ex GST).
           </p>
+          <PricingAddButton onClick={orderActions?.addTribunal} label="Add tribunal" />
         </div>
 
         <div className="pricing-rate-card pricing-rate-card--standalone" data-rate="service-fee">

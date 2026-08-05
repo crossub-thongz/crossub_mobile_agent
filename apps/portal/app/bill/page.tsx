@@ -10,9 +10,15 @@ import {
   StripePaymentDialog,
   type StripePaymentDialogState,
 } from '@/components/billing/stripe-payment-dialog';
+import {
+  StripeSetupDialog,
+  type StripeSetupDialogState,
+} from '@/components/billing/stripe-setup-dialog';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import {
+  confirmAgentPaymentMethodSetup,
+  createAgentPaymentMethodSetup,
   fetchAgentBillingSummary,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
@@ -60,6 +66,14 @@ function isPayableCharge(row: AgentBillingCharge): boolean {
   return row.status === 'awaiting_payment';
 }
 
+function formatCardBrand(brand: string): string {
+  return brand.charAt(0).toUpperCase() + brand.slice(1);
+}
+
+function formatCardExpiry(expMonth: number, expYear: number): string {
+  return `${String(expMonth).padStart(2, '0')}/${String(expYear).slice(-2)}`;
+}
+
 function isPayableInvoice(row: AgentBillingMonthlyInvoice): boolean {
   return row.status === 'sent' || row.status === 'overdue';
 }
@@ -97,6 +111,10 @@ export default function BillPage() {
   const [payingKey, setPayingKey] = useState<string | null>(null);
   const [payingAll, setPayingAll] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const [setupDialog, setSetupDialog] = useState<StripeSetupDialogState | null>(null);
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+
+  const stripeConfigured = Boolean(getStripePublishableKey());
 
   const payableCharges = useMemo(() => charges.filter(isPayableCharge), [charges]);
   const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
@@ -142,6 +160,24 @@ export default function BillPage() {
     window.history.replaceState({}, '', '/bill');
   }, [load]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const setupIntentId = params.get('setup_intent');
+    if (params.get('setup') !== 'return' || !setupIntentId) return;
+
+    void (async () => {
+      try {
+        await confirmAgentPaymentMethodSetup(setupIntentId);
+        toast.success('Default payment method saved');
+        await load();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not save payment method');
+      } finally {
+        window.history.replaceState({}, '', '/bill');
+      }
+    })();
+  }, [load]);
+
   const payments = useMemo(() => {
     const rows: PaymentRow[] = [
       ...charges.map((row) => ({
@@ -167,6 +203,28 @@ export default function BillPage() {
     await load();
     // Webhook may mark the charge paid a moment after Stripe confirms.
     window.setTimeout(() => void load(), 2000);
+  };
+
+  const handlePaymentMethodSuccess = async () => {
+    toast.success('Default payment method saved');
+    await load();
+  };
+
+  const startAddPaymentMethod = async () => {
+    if (!stripeConfigured) {
+      toast.error('Card payments are not configured on this environment.');
+      return;
+    }
+
+    setSavingPaymentMethod(true);
+    try {
+      const { clientSecret } = await createAgentPaymentMethodSetup();
+      setSetupDialog({ clientSecret });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not start payment method setup');
+    } finally {
+      setSavingPaymentMethod(false);
+    }
   };
 
   const payAll = async () => {
@@ -265,6 +323,57 @@ export default function BillPage() {
                 Pay your outstanding service invoice below to restore full access to the Agent
                 app.
               </p>
+            </div>
+          </div>
+        ) : null}
+
+        {stripeConfigured ? (
+          <div className="rounded-xl border bg-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Default payment method
+                </p>
+                {summary?.defaultPaymentMethod ? (
+                  <>
+                    <p className="mt-1 text-sm font-medium">
+                      {formatCardBrand(summary.defaultPaymentMethod.brand)} ending in{' '}
+                      {summary.defaultPaymentMethod.last4}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Expires{' '}
+                      {formatCardExpiry(
+                        summary.defaultPaymentMethod.expMonth,
+                        summary.defaultPaymentMethod.expYear,
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Save a card for faster checkout on platform bills.
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant={summary?.defaultPaymentMethod ? 'outline' : 'default'}
+                size="sm"
+                onClick={() => void startAddPaymentMethod()}
+                disabled={
+                  savingPaymentMethod ||
+                  paymentDialog != null ||
+                  setupDialog != null ||
+                  payingKey != null ||
+                  payingAll
+                }
+              >
+                {savingPaymentMethod ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <CreditCard className="size-4" />
+                )}
+                {summary?.defaultPaymentMethod ? 'Update payment method' : 'Add payment method'}
+              </Button>
             </div>
           </div>
         ) : null}
@@ -434,6 +543,14 @@ export default function BillPage() {
           if (!open) setPaymentDialog(null);
         }}
         onSuccess={handlePaymentSuccess}
+      />
+
+      <StripeSetupDialog
+        state={setupDialog}
+        onOpenChange={(open) => {
+          if (!open) setSetupDialog(null);
+        }}
+        onSuccess={handlePaymentMethodSuccess}
       />
     </AgentShell>
   );

@@ -329,6 +329,16 @@
   color: var(--foreground);
 }
 
+.pricing-rate-card__add {
+  position: relative;
+  z-index: 1;
+}
+
+.pricing-field-inspection-order {
+  margin-top: 0.25rem;
+  padding: 0.75rem 0 0.25rem;
+}
+
 /* Open inspection tiers */
 .pricing-tier-split {
   display: grid;
