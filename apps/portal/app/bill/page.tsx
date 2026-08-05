@@ -250,8 +250,8 @@ export default function BillPage() {
     <AgentShell title="Bill">
       <div className="space-y-5">
         <PageIntro
-          title="CROSSUB platform billing"
-          description="Prepaid service charges and monthly platform invoices for your agency."
+          title="CROSSUB SERVICES billing"
+          description="Prepaid service charges and monthly service invoices for your agency."
         />
 
         {summary?.billingBlocked ? (
@@ -262,7 +262,7 @@ export default function BillPage() {
                 Account locked — invoice overdue
               </p>
               <p className="mt-1 text-sm text-amber-800/90 dark:text-amber-200/90">
-                Pay your outstanding platform invoice below to restore full access to the Agent
+                Pay your outstanding service invoice below to restore full access to the Agent
                 app.
               </p>
             </div>
@@ -324,7 +324,7 @@ export default function BillPage() {
         ) : payments.length === 0 ? (
           <EmptyState
             title="No payments yet"
-            description="Prepaid inspections, tribunal sessions, and monthly platform invoices will appear here."
+            description="Prepaid inspections, tribunal sessions, and monthly service invoices will appear here."
           />
         ) : (
           <ul className="divide-y rounded-xl border bg-card">
