@@ -1,5 +1,6 @@
-/**
- * Tap-to-talk tuning for Gii's mic button.
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+
+/** Tap-to-talk tuning for the assistant mic button. */
  *
  * Tap once to start listening, tap again to send. Holding the button was the earlier design
  * and it failed the way a hold always does on a desktop composer: a tap is what people
@@ -114,7 +115,7 @@ export const VOICE_MIN_CLIP_BYTES = 800;
 
 /** Everything the mic can tell the agent. Kept here so the wording stays consistent. */
 export const VOICE_ERROR = {
-  BUSY: 'Microphone is already listening — stop the other Gii mic first',
+  BUSY: `Microphone is already listening — stop the other ${CROS_ASSISTANT_NAME} mic first`,
   UNSUPPORTED: 'Voice input is not supported in this browser — try Chrome',
   MIC_BLOCKED: 'Microphone access is blocked — allow mic permission and try again',
   RECORD_FAILED: 'Could not record audio — try again or type your question',

@@ -1,3 +1,5 @@
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+
 export type AgentFaqItem = {
   question: string;
   answer: string;
@@ -176,9 +178,8 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
           'The bell shows approvals, urgent maintenance, inspection updates, and billing alerts. Adjust categories under Settings → Notifications — preferences save on this device.',
       },
       {
-        question: 'What is Gii?',
-        answer:
-          'Gii is the built-in AI assistant on desktop. Ask for property briefings, workflow help, or drafting support. It appears in the right panel on larger screens.',
+        question: `What is ${CROS_ASSISTANT_NAME}?`,
+        answer: `${CROS_ASSISTANT_NAME} is the built-in AI assistant on desktop. Ask for property briefings, workflow help, or drafting support. It appears in the right panel on larger screens.`,
       },
     ],
   },

@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Mic, Send, Sparkles, X } from 'lucide-react';
+import { Building2, Mic, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
 import { GiiChatGreeting, GiiChatLine } from '@/components/agent/gii-chat-line';
@@ -20,8 +21,8 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import {
-  VOICE_BUTTON_ARIA_LABEL,
   VOICE_PHASE,
   VOICE_STATUS_LABEL,
   VOICE_WAVE_BARS,
@@ -158,8 +159,8 @@ function VoiceWave({
 
 function multilingualHint(): string {
   const lang = resolveSpeechLanguage();
-  if (lang.startsWith('zh')) return 'Gii 支持中文语音和文字输入。';
-  if (lang.startsWith('ms')) return 'Gii menyokong input suara dan teks dalam Bahasa Melayu.';
+  if (lang.startsWith('zh')) return `${CROS_ASSISTANT_NAME} 支持中文语音和文字输入。`;
+  if (lang.startsWith('ms')) return `${CROS_ASSISTANT_NAME} menyokong input suara dan teks dalam Bahasa Melayu.`;
   return 'Type a question, or tap the mic to speak.';
 }
 
@@ -813,8 +814,8 @@ export function GiiAssistant({
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <Sparkles className="size-3.5" />
-                Gii
+                <CrosAssistantLogo size="sm" />
+                {CROS_ASSISTANT_NAME}
               </button>
               <button
                 type="button"
@@ -881,7 +882,7 @@ export function GiiAssistant({
                         void runQuery(query);
                       }
                     }}
-                    placeholder="Ask Gii about this message…"
+                    placeholder={`Ask ${CROS_ASSISTANT_NAME} about this message…`}
                     rows={2}
                     className="min-h-14 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-3 py-2.5 text-sm leading-relaxed shadow-none"
                     disabled={sending || voiceActive}
@@ -900,7 +901,7 @@ export function GiiAssistant({
                         onClick={() => void runQuery(query)}
                         disabled={sending}
                         className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition active:scale-95 disabled:opacity-50"
-                        aria-label="Ask Gii"
+                        aria-label={`Ask ${CROS_ASSISTANT_NAME}`}
                       >
                         <Send className="size-4" />
                       </button>
@@ -1015,11 +1016,9 @@ export function GiiAssistant({
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-emerald-600 text-primary-foreground shadow-md">
-            <Sparkles className="size-4" />
-          </div>
+          <CrosAssistantLogoBadge size="xl" />
           <div className="min-w-0">
-            <p className="text-sm font-bold">Gii</p>
+            <p className="text-sm font-bold">{CROS_ASSISTANT_NAME}</p>
             <p className="text-muted-foreground truncate text-[10px]">
               {messageScoped
                 ? 'Message assistant · context loaded'
@@ -1036,7 +1035,7 @@ export function GiiAssistant({
             type="button"
             onClick={onClose}
             className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
-            aria-label="Close Gii"
+            aria-label={`Close ${CROS_ASSISTANT_NAME}`}
           >
             <X className="size-5" />
           </button>
@@ -1081,10 +1080,8 @@ export function GiiAssistant({
 
         {lines.length === 0 && data.loading ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-emerald-500/10 text-primary">
-              <Sparkles className="size-6" />
-            </div>
-            <p className="text-sm font-semibold">Ask Gii, your Account Manager</p>
+            <CrosAssistantLogoBadge size="2xl" className="mb-4" />
+            <p className="text-sm font-semibold">Ask {CROS_ASSISTANT_NAME}, your Account Manager</p>
             <p className="text-muted-foreground mt-1.5 max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
                 ? 'Jobs in progress appear above. Tap any to open, or ask me about this property.'
@@ -1101,7 +1098,7 @@ export function GiiAssistant({
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-muted-foreground max-w-[260px] text-xs leading-relaxed">
               {scopedProperty
-                ? 'Ask Gii to create a job or check this property.'
+                ? `Ask ${CROS_ASSISTANT_NAME} to create a job or check this property.`
                 : multilingualHint()}
             </p>
           </div>
@@ -1205,8 +1202,8 @@ export function GiiAssistant({
               }}
               placeholder={
                 scopedProperty
-                  ? 'Ask Gii to create a job or check this property…'
-                  : 'Ask Gii anything…'
+                  ? `Ask ${CROS_ASSISTANT_NAME} to create a job or check this property…`
+                  : `Ask ${CROS_ASSISTANT_NAME} anything…`
               }
               rows={isEmbedded ? 3 : 4}
               className={cn(

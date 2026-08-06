@@ -1,10 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Phone, PhoneCall, Search, Sparkles, X } from 'lucide-react';
+import { Phone, PhoneCall, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Input } from '@/components/ui/input';
 import {
@@ -185,8 +187,8 @@ export function PhonePanel({
             onClick={openGiiAccountManager}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
           >
-            <Sparkles className="size-4 shrink-0" />
-            Ask Gii, your Account Manager
+            <CrosAssistantLogo size="sm" className="size-4 shrink-0" />
+            Ask {CROS_ASSISTANT_NAME}, your Account Manager
           </button>
         </div>
       )}

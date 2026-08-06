@@ -1,8 +1,10 @@
 'use client';
 
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
+import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { unreadMessagesForProperty } from '@/lib/communications-log';
 import { propertyIdFromPath } from '@/lib/property-path';
@@ -75,13 +77,12 @@ export function ShellPrimaryNav({
           className={cn(baseClass, giiActive ? activeClass : idleClass, variant === 'tabbar' && 'w-full')}
           aria-pressed={giiActive}
         >
-          <Sparkles
-            className={cn(
-              variant === 'tabbar' ? 'size-5' : 'size-4 shrink-0',
-              giiActive && variant === 'tabbar' && 'stroke-[2.5]',
-            )}
+          <CrosAssistantLogo
+            size={variant === 'tabbar' ? 'md' : 'sm'}
           />
-          <span className={variant === 'tabbar' ? undefined : 'flex-1 truncate text-left'}>Gii</span>
+          <span className={variant === 'tabbar' ? undefined : 'flex-1 truncate text-left'}>
+            {CROS_ASSISTANT_NAME}
+          </span>
         </button>
       </ItemWrapper>
       {!hideMessage ? (

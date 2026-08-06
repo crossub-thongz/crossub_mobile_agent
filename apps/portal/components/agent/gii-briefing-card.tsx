@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, ListTodo, Sparkles } from 'lucide-react';
+import { AlertTriangle, ListTodo } from 'lucide-react';
 
+import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { CATEGORY_ICON } from '@/constants/gii-briefing';
 import { ROUTES } from '@/constants/routes';
 import type { GiiBriefing } from '@/lib/gii-briefing';
@@ -81,8 +83,8 @@ export function GiiBriefingCard({
                     onClick={() => onAsk(row)}
                     className="inline-flex h-7 items-center gap-1 rounded-md bg-primary/10 px-2.5 text-[11px] font-medium text-primary transition hover:bg-primary/15"
                   >
-                    <Sparkles className="size-3" />
-                    Ask Gii
+                    <CrosAssistantLogo size="xs" className="size-3" />
+                    Ask {CROS_ASSISTANT_NAME}
                   </button>
                 ) : null}
                 {onOpen ? (

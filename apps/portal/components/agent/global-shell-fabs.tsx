@@ -9,12 +9,13 @@ import {
   Phone,
   RotateCcw,
   Settings2,
-  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
 
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
+import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { PhonePanel } from '@/components/agent/phone-panel';
 import { PropertyNewMessageRecipients } from '@/components/agent/property-new-message-recipients';
 import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
@@ -39,8 +40,7 @@ import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 const SHELL_GII_BUTTON = {
   id: 'gii' as const,
-  label: 'Gii',
-  icon: Sparkles,
+  label: CROS_ASSISTANT_NAME,
 } as const;
 
 const SHELL_MESSAGE_BUTTON = {
@@ -149,7 +149,7 @@ export function ShellHeaderQuickActions({
       )}
     >
       {visibleButtons.map((btn) => {
-        const Icon = btn.icon;
+        const Icon = 'icon' in btn ? btn.icon : null;
         const hideOnDesktop = btn.id === 'gii';
         const isActive =
           btn.id === 'gii'
@@ -179,7 +179,11 @@ export function ShellHeaderQuickActions({
             onClick={() => handleClick(btn.id)}
             className={cn(headerQuickActionClass(isActive, inline), hideOnDesktop && 'lg:hidden')}
           >
-            <Icon className={inline ? 'size-4' : 'size-5'} />
+            {btn.id === 'gii' ? (
+              <CrosAssistantLogo size={inline ? 'md' : 'lg'} />
+            ) : Icon ? (
+              <Icon className={inline ? 'size-4' : 'size-5'} />
+            ) : null}
             {!inline ? (
               <span className="max-w-full truncate">
                 {btn.id === 'message-menu' ? 'Message' : btn.label}

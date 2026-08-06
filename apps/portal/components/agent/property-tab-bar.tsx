@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 const TAB_ICONS: Record<string, LucideIcon> = {
   Gii: Sparkles,
@@ -40,7 +41,7 @@ const TAB_ICONS: Record<string, LucideIcon> = {
 
 /** User-facing labels (internal tab ids stay stable for routing). */
 const TAB_DISPLAY_LABELS: Record<string, string> = {
-  Gii: 'Gii',
+  Gii: CROS_ASSISTANT_NAME,
   Message: 'Message',
   Documents: 'Documents',
   Fees: 'Fees',
@@ -55,7 +56,7 @@ const TAB_DISPLAY_LABELS: Record<string, string> = {
 
 /** Compact labels for narrow mobile columns. */
 const TAB_SHORT_LABELS: Record<string, string> = {
-  Gii: 'Gii',
+  Gii: CROS_ASSISTANT_NAME,
   Message: 'Message',
   Documents: 'Docs',
   Fees: 'Fees',
@@ -280,7 +281,7 @@ function PropertyMobileSegmentBar<T extends string>({
               : 'text-muted-foreground active:text-foreground',
           )}
         >
-          Gii
+          {CROS_ASSISTANT_NAME}
         </button>
         <button
           type="button"

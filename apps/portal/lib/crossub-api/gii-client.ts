@@ -1,4 +1,5 @@
 import type { components } from '@crossub-thongz/api-contract';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
 import { crossub } from './client';
 
@@ -59,7 +60,7 @@ export async function sendGiiMessage(args: {
       messages: GiiChatMessage[];
     },
   });
-  if (error || !data) throw new Error('Gii is unavailable');
+  if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} is unavailable`);
   return data;
 }
 

@@ -8,6 +8,7 @@ import {
   VOICE_SILENCE_SAMPLE_MS,
   VOICE_SPEECH_RMS_THRESHOLD,
 } from '@/constants/voice-input';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { fetchGiiVoiceStatus } from '@/lib/crossub-api/gii-client';
 import { browserSpeechSupported, startBrowserSpeech } from '@/lib/gii-browser-speech';
 import { resolveSpeechLanguage } from '@/lib/gii-voice-input';
@@ -254,7 +255,7 @@ export default function VoiceCheckPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 p-6">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold">Gii mic check</h1>
+        <h1 className="text-xl font-semibold">{CROS_ASSISTANT_NAME} mic check</h1>
         <p className="text-sm text-muted-foreground">
           Runs each stage of voice input in order and shows which one stops. Takes about 15
           seconds — allow the mic, then talk while it listens.

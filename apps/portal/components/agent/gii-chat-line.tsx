@@ -1,7 +1,7 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
-
+import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import type { GiiChatAttachmentView } from '@/lib/gii-attachments';
 import { cn } from '@/lib/utils';
 
@@ -63,8 +63,8 @@ export function GiiChatLine({
     <div className={cn('flex w-full justify-start', className)}>
       <div className="max-w-[92%]">
         <p className="text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
-          <Sparkles className="size-3 shrink-0" aria-hidden />
-          Gii
+          <CrosAssistantLogo size="sm" className="shrink-0" />
+          {CROS_ASSISTANT_NAME}
         </p>
         <div
           className={cn(
@@ -84,8 +84,8 @@ export function GiiChatGreeting({ text, className }: { text: string; className?:
     <div className={cn('flex w-full justify-start', className)}>
       <div className="max-w-[92%]">
         <p className="text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1 text-[10px] font-semibold tracking-wide uppercase">
-          <Sparkles className="size-3 shrink-0" aria-hidden />
-          Gii
+          <CrosAssistantLogo size="sm" className="shrink-0" />
+          {CROS_ASSISTANT_NAME}
         </p>
         <p className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/8 to-emerald-500/8 px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-wrap text-foreground">
           {text}
