@@ -1037,6 +1037,8 @@ export type AgentSalesAgreement = {
   returnedDocumentName: string | null;
   agentReturnNotes: string | null;
   assignedSalesperson: string;
+  salesRejectedAt: string | null;
+  salesRejectionReason: string | null;
 };
 
 export type AgentSalesAgreementAccessStatus = {

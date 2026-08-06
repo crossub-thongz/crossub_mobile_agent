@@ -33,6 +33,7 @@ const FILTERS = [
   { id: 'pending', label: 'Awaiting signature' },
   { id: 'returned', label: 'Returned' },
   { id: 'signed', label: 'Signed' },
+  { id: 'declined', label: 'Rejected' },
 ];
 
 function statusLabel(status: AgentSalesAgreement['status']): string {
@@ -43,6 +44,8 @@ function statusLabel(status: AgentSalesAgreement['status']): string {
       return 'Returned to sales';
     case 'signed':
       return 'Signed';
+    case 'declined':
+      return 'Rejected by sales';
     default:
       return status.replace(/_/g, ' ');
   }
@@ -51,6 +54,7 @@ function statusLabel(status: AgentSalesAgreement['status']): string {
 function statusVariant(status: AgentSalesAgreement['status']): 'default' | 'success' | 'approval' {
   if (status === 'sent') return 'approval';
   if (status === 'returned' || status === 'signed') return 'success';
+  if (status === 'declined') return 'default';
   return 'default';
 }
 
@@ -94,6 +98,7 @@ export default function AgreementsPage() {
       if (filter === 'pending') return row.status === 'sent';
       if (filter === 'returned') return row.status === 'returned';
       if (filter === 'signed') return row.status === 'signed';
+      if (filter === 'declined') return row.status === 'declined';
       return true;
     });
   }, [agreements, filter]);
@@ -214,6 +219,16 @@ export default function AgreementsPage() {
                       <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
                         Waiting for {agreement.assignedSalesperson || 'your salesperson'} to approve
                         this agreement.
+                      </p>
+                    ) : null}
+                    {agreement.status === 'declined' ? (
+                      <p className="mt-2 text-xs text-rose-700 dark:text-rose-300">
+                        {agreement.salesRejectionReason
+                          ? `Rejected: ${agreement.salesRejectionReason}`
+                          : 'Your salesperson rejected this signed copy. A new agreement will be sent for you to sign.'}
+                        {agreement.salesRejectedAt
+                          ? ` · ${formatDateTime(agreement.salesRejectedAt)}`
+                          : null}
                       </p>
                     ) : null}
                     {agreement.agentReturnNotes ? (
