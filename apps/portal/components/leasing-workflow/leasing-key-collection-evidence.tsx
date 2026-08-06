@@ -197,7 +197,7 @@ export function LeasingKeyCollectionEvidencePanel({
       </div>
 
       <Dialog open={photosOpen} onOpenChange={setPhotosOpen}>
-        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-2xl">
+        <DialogContent elevated className="max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-2xl">
           <DialogHeader className="border-b border-border/60 px-6 py-5">
             <DialogTitle className="text-base font-semibold">Key collection photos</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
@@ -239,7 +239,7 @@ export function LeasingKeyCollectionEvidencePanel({
       </Dialog>
 
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
+        <DialogContent elevated className="max-h-[90vh] w-[calc(100%-2rem)] gap-0 overflow-hidden border-border bg-card p-0 sm:max-w-md">
           <DialogHeader className="border-b border-border/60 px-6 py-5">
             <DialogTitle className="text-base font-semibold">
               Tenant key collection report

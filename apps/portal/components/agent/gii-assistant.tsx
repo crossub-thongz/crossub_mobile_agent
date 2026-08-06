@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import {
+  VOICE_BUTTON_ARIA_LABEL,
   VOICE_PHASE,
   VOICE_STATUS_LABEL,
   VOICE_WAVE_BARS,

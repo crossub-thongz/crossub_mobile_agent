@@ -1,6 +1,7 @@
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 
-/** Tap-to-talk tuning for the assistant mic button. */
+/**
+ * Tap-to-talk tuning for the assistant mic button.
  *
  * Tap once to start listening, tap again to send. Holding the button was the earlier design
  * and it failed the way a hold always does on a desktop composer: a tap is what people
