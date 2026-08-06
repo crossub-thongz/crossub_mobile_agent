@@ -161,16 +161,16 @@ export default function AgreementsPage() {
               </p>
             ) : (
               <p>
-                Your Agent Portal access is limited to this page until your service agreement is
-                confirmed. Your salesperson will send the document here for you to review and
-                return.
+                Complete registration, then review your CROSSUB Service Agreement here. Sign
+                offline and return the signed copy to unlock the rest of the Agent Portal.
               </p>
             )}
           </div>
         ) : null}
         <p className="text-sm text-muted-foreground">
-          Service agreements sent from CROSSUB Sales for your agency. Review each document, sign
-          offline if needed, then return the signed copy to your salesperson.
+          Your CROSSUB Service Agreement (included with your registration invite). Review the
+          document, sign offline if needed, then upload and return the signed copy to your
+          salesperson.
         </p>
 
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
@@ -187,7 +187,7 @@ export default function AgreementsPage() {
             title="No agreements"
             description={
               filter === 'all'
-                ? 'When Sales sends a service agreement for your agency, it will appear here.'
+                ? 'Your service agreement appears here after registration. It is also attached to your registration invite email.'
                 : 'Nothing matches this filter.'
             }
           />
