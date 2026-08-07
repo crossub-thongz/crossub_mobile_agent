@@ -65,13 +65,25 @@ const REPAIR_COL_QUOTE = 'w-28';
 const REPAIR_COL_COMPANY = 'w-44';
 const REPAIR_COL_ACTION = 'w-10';
 
-type MaintenanceColumnMode = 'hidden' | 'pending_ack';
+type MaintenanceColumnMode = 'hidden' | 'pending_ack' | 'actions';
 
-function MaintenancePendingAckCell() {
+function MaintenanceReviewStatusCell({
+  row,
+  reviewPending,
+}: {
+  row: ReportComparisonRepairItem;
+  reviewPending: boolean;
+}) {
   return (
     <td className="px-2 py-2">
       <span className="text-muted-foreground text-[10px] leading-snug">
-        Pending Tenant Acknowledgement
+        {row.maintenanceRequestId
+          ? 'End of Lease job opened'
+          : row.handymanName
+            ? `${row.handymanName} selected`
+            : reviewPending
+              ? 'CROSSUB assigning contractor'
+              : '—'}
       </span>
     </td>
   );
@@ -1190,7 +1202,9 @@ function QuoteResponsibilitySection({
   canEditAgentComment = false,
   showQuoteColumns = true,
   hideQuoteColumns = false,
+  hideQuoteAmountColumn = false,
   maintenanceColumnMode = 'hidden',
+  tenantReviewPending = false,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -1210,10 +1224,12 @@ function QuoteResponsibilitySection({
   /** @deprecated Prefer `hideQuoteColumns`. */
   showQuoteColumns?: boolean;
   hideQuoteColumns?: boolean;
+  hideQuoteAmountColumn?: boolean;
   maintenanceColumnMode?: MaintenanceColumnMode;
+  tenantReviewPending?: boolean;
 }) {
   const showQuoteCols = hideQuoteColumns === true ? false : showQuoteColumns !== false;
-  const showMaintenanceColumn = maintenanceColumnMode === 'pending_ack';
+  const showMaintenanceColumn = maintenanceColumnMode !== 'hidden';
 
   return (
     <section className="rounded-xl border bg-card">
@@ -1239,7 +1255,9 @@ function QuoteResponsibilitySection({
           readOnly={readOnly}
           busy={busy}
           hideQuoteColumns={!showQuoteCols}
+          hideQuoteAmountColumn={hideQuoteAmountColumn}
           maintenanceColumnMode={maintenanceColumnMode}
+          tenantReviewPending={tenantReviewPending}
         />
         {readOnly ? (
           <p className="text-muted-foreground mt-2 text-[10px]">
@@ -1451,10 +1469,12 @@ function RepairItemsTable({
   readOnly = false,
   lockedHint,
   hideQuoteColumns = false,
+  hideQuoteAmountColumn = false,
   hideTitle = false,
   showAddRow = true,
   busy = false,
   maintenanceColumnMode = 'hidden',
+  tenantReviewPending = false,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -1466,12 +1486,17 @@ function RepairItemsTable({
   readOnly?: boolean;
   lockedHint?: string;
   hideQuoteColumns?: boolean;
+  hideQuoteAmountColumn?: boolean;
   hideTitle?: boolean;
   showAddRow?: boolean;
   busy?: boolean;
   maintenanceColumnMode?: MaintenanceColumnMode;
+  tenantReviewPending?: boolean;
 }) {
-  const showMaintenanceColumn = maintenanceColumnMode === 'pending_ack';
+  const showMaintenanceColumn = maintenanceColumnMode !== 'hidden';
+  const showQuoteAmountColumn = !hideQuoteColumns && !hideQuoteAmountColumn;
+  const showCompanyColumn = !hideQuoteColumns;
+  const quoteColumnCount = showQuoteAmountColumn && showCompanyColumn ? 2 : showCompanyColumn ? 1 : 0;
 
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -1507,8 +1532,12 @@ function RepairItemsTable({
               <th className="px-3 py-2 font-semibold">Description</th>
               {!hideQuoteColumns ? (
                 <>
-                  <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>$</th>
-                  <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Company</th>
+                  {showQuoteAmountColumn ? (
+                    <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>$</th>
+                  ) : null}
+                  {showCompanyColumn ? (
+                    <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Contractor</th>
+                  ) : null}
                 </>
               ) : null}
               {showMaintenanceColumn ? (
@@ -1522,7 +1551,8 @@ function RepairItemsTable({
               <tr>
                 <td
                   colSpan={
-                    (hideQuoteColumns ? 3 : 5) +
+                    3 +
+                    quoteColumnCount +
                     (showMaintenanceColumn ? 1 : 0) +
                     (readOnly ? 0 : 1)
                   }
@@ -1543,15 +1573,21 @@ function RepairItemsTable({
                       </td>
                       {!hideQuoteColumns ? (
                         <>
-                          <td className={`${REPAIR_COL_QUOTE} px-3 py-2`}>
-                            <MaintenanceQuoteCell row={row} />
-                          </td>
-                          <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
-                            {row.handymanName || '—'}
-                          </td>
+                          {showQuoteAmountColumn ? (
+                            <td className={`${REPAIR_COL_QUOTE} px-3 py-2`}>
+                              <MaintenanceQuoteCell row={row} />
+                            </td>
+                          ) : null}
+                          {showCompanyColumn ? (
+                            <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
+                              {row.handymanName || '—'}
+                            </td>
+                          ) : null}
                         </>
                       ) : null}
-                      {showMaintenanceColumn ? <MaintenancePendingAckCell /> : null}
+                      {showMaintenanceColumn ? (
+                        <MaintenanceReviewStatusCell row={row} reviewPending={tenantReviewPending} />
+                      ) : null}
                     </>
                   ) : (
                     <>
@@ -1575,32 +1611,38 @@ function RepairItemsTable({
                       </td>
                       {!hideQuoteColumns ? (
                         <>
-                          <td className={`${REPAIR_COL_QUOTE} px-3 py-2`}>
-                            <Input
-                              className="h-8 text-xs"
-                              value={row.quote ?? ''}
-                              placeholder="$0.00"
-                              disabled={busy}
-                              onChange={(e) => updateRow(index, { quote: e.target.value })}
-                            />
-                            {maintenanceQuoteNote(row) ? (
-                              <p className="text-muted-foreground mt-1 text-[10px] leading-snug">
-                                {maintenanceQuoteNote(row)}
-                              </p>
-                            ) : null}
-                          </td>
-                          <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
-                            <HandymanField
-                              row={row}
-                              contractors={contractors}
-                              agencyId={agencyId}
-                              onContractorsChange={onContractorsChange}
-                              onChange={(patch) => updateRow(index, patch)}
-                            />
-                          </td>
+                          {showQuoteAmountColumn ? (
+                            <td className={`${REPAIR_COL_QUOTE} px-3 py-2`}>
+                              <Input
+                                className="h-8 text-xs"
+                                value={row.quote ?? ''}
+                                placeholder="$0.00"
+                                disabled={busy}
+                                onChange={(e) => updateRow(index, { quote: e.target.value })}
+                              />
+                              {maintenanceQuoteNote(row) ? (
+                                <p className="text-muted-foreground mt-1 text-[10px] leading-snug">
+                                  {maintenanceQuoteNote(row)}
+                                </p>
+                              ) : null}
+                            </td>
+                          ) : null}
+                          {showCompanyColumn ? (
+                            <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
+                              <HandymanField
+                                row={row}
+                                contractors={contractors}
+                                agencyId={agencyId}
+                                onContractorsChange={onContractorsChange}
+                                onChange={(patch) => updateRow(index, patch)}
+                              />
+                            </td>
+                          ) : null}
                         </>
                       ) : null}
-                      {showMaintenanceColumn ? <MaintenancePendingAckCell /> : null}
+                      {showMaintenanceColumn ? (
+                        <MaintenanceReviewStatusCell row={row} reviewPending={tenantReviewPending} />
+                      ) : null}
                       <td className={`${REPAIR_COL_ACTION} px-2 py-2`}>
                         <Button
                           type="button"
@@ -2150,6 +2192,9 @@ export function EndLeasingReportComparisonPanel({
           ? rc.tenantResponsibilityReviewStatus
           : 'pending'
         : 'none';
+    const landlordMaintenanceReady = rc.landlordResponsibilityAgentAcknowledged === true;
+    const landlordReviewStage =
+      landlordMaintenanceReady && rc.tenantQuoteResponse !== 'accepted';
 
     return (
       <div className="space-y-4">
@@ -2187,16 +2232,18 @@ export function EndLeasingReportComparisonPanel({
           onChange={setTenantItems}
           readOnly
           showQuoteColumns
+          hideQuoteAmountColumn={tenantResponsibilityReviewStatus === 'pending'}
+          tenantReviewPending={tenantResponsibilityReviewStatus === 'pending'}
           busy={busy}
           staffComment={tenantStaffComment}
           agentComment={tenantAgentComment}
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
           canEditAgentComment
           maintenanceColumnMode={
-            tenantResponsibilityReviewStatus !== 'none' &&
-            tenantResponsibilityReviewStatus !== 'accepted'
-              ? 'pending_ack'
-              : 'hidden'
+            tenantResponsibilityReviewStatus === 'none' ||
+            tenantResponsibilityReviewStatus === 'declined'
+              ? 'hidden'
+              : 'actions'
           }
         />
         <QuoteResponsibilitySection
@@ -2208,11 +2255,14 @@ export function EndLeasingReportComparisonPanel({
           onChange={setLandlordItems}
           readOnly
           showQuoteColumns
+          hideQuoteAmountColumn={landlordReviewStage}
+          tenantReviewPending={landlordReviewStage}
           busy={busy}
           staffComment={landlordStaffComment}
           agentComment={landlordAgentComment}
           onSendAgentComment={(message) => sendAgentComment('landlord', message)}
           canEditAgentComment
+          maintenanceColumnMode={landlordMaintenanceReady ? 'actions' : 'hidden'}
         />
         <section className="rounded-xl border bg-card p-4 text-right">
           <p className="text-sm font-semibold">Maintenance quotation</p>
