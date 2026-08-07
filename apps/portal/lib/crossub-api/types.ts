@@ -166,6 +166,10 @@ export interface ApiMaintenanceRequest {
   scheduleStepStartedAt?: string;
   scheduleProposal?: ApiMaintenanceScheduleProposal;
   scheduleEscalated?: boolean;
+  /** End of Lease landlord-responsibility — visit times go to agent for approval. */
+  endLeasingLandlordResp?: boolean;
+  /** End of Lease maintenance — tenant completion sign-off gate is skipped. */
+  endLeasingMaintenance?: boolean;
   contractorInvoiceNumber?: string;
   contractorInvoiceAmount?: number;
   contractorInvoiceDate?: string;

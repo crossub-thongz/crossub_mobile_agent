@@ -93,5 +93,7 @@ export function mergeMaintenanceCaseForLiveSync(
     scheduleStepStartedAt: workflow.scheduleStepStartedAt ?? prisma.scheduleStepStartedAt,
     scheduleProposal: workflow.scheduleProposal ?? prisma.scheduleProposal,
     scheduleEscalated: workflow.scheduleEscalated ?? prisma.scheduleEscalated,
+    endLeasingLandlordResp: prisma.endLeasingLandlordResp ?? workflow.endLeasingLandlordResp,
+    endLeasingMaintenance: prisma.endLeasingMaintenance ?? workflow.endLeasingMaintenance,
   };
 }

@@ -1294,7 +1294,7 @@ function maintenanceQuoteNote(row: ReportComparisonRepairItem): string | null {
   if (!row.maintenanceRequestId?.trim() || !row.quote?.trim() || !row.handymanName?.trim()) {
     return null;
   }
-  return `Quoted from ${row.handymanName.trim()} (maintenance job)`;
+  return `Quoted from (maintenance job)`;
 }
 
 function rowUsesMaintenanceBackedQuote(row: ReportComparisonRepairItem): boolean {

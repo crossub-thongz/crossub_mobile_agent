@@ -78,7 +78,14 @@ function StepContent({
         />
       );
     case MAINTENANCE_AGENT_STEP.SCHEDULE:
-      return <MaintenanceSchedulePanel ctx={ctx} contractors={contractors} />;
+      return (
+        <MaintenanceSchedulePanel
+          ctx={ctx}
+          contractors={contractors}
+          onCaseUpdated={onCaseUpdated}
+          apiConnected={apiConnected}
+        />
+      );
     case MAINTENANCE_AGENT_STEP.IN_PROGRESS:
       return (
         <MaintenanceInProgressPanel

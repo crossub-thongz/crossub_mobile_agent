@@ -517,10 +517,13 @@ function getQuoteSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubPro
 
 function scheduleSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubProgressItem[] {
   const proposal = ctx.item.scheduleProposal;
+  const agentScheduleApproval = ctx.item.endLeasingLandlordResp === true;
   return [
     {
       id: 'contractor_contacted',
-      label: 'Contractor emailed with tenant contact',
+      label: agentScheduleApproval
+        ? 'Contractor emailed with agent contact'
+        : 'Contractor emailed with tenant contact',
       done: ctx.workspaceCase.status === 'pending_schedule' || Boolean(proposal),
     },
     {
@@ -530,8 +533,11 @@ function scheduleSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubPro
     },
     {
       id: 'tenant_confirm',
-      label:
-        proposal?.tenantDecision === 'declined'
+      label: agentScheduleApproval
+        ? proposal?.tenantDecision === 'declined'
+          ? 'Agent declined visit time'
+          : 'Agent approved visit time'
+        : proposal?.tenantDecision === 'declined'
           ? 'Tenant declined visit time'
           : 'Tenant approved visit time',
       done:
@@ -539,6 +545,21 @@ function scheduleSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubPro
         proposal?.tenantDecision === 'declined',
     },
   ];
+}
+
+function tenantSignOffGateApplies(ctx: MaintenanceWorkflowContext): boolean {
+  return ctx.item.endLeasingMaintenance !== true;
+}
+
+function tenantSignOffSubProgressItem(
+  ctx: MaintenanceWorkflowContext,
+): MaintenanceSubProgressItem | null {
+  if (!tenantSignOffGateApplies(ctx)) return null;
+  return {
+    id: 'tenant_signoff',
+    label: 'Tenant Sign-Off Received',
+    done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
+  };
 }
 
 function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubProgressItem[] {
@@ -580,11 +601,7 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
         label: 'Agent approval received',
         done: Boolean(ctx.workspaceCase.agentApprovalReceived),
       },
-      {
-        id: 'tenant_signoff',
-        label: 'Tenant Sign-Off Received',
-        done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
-      },
+      ...(tenantSignOffSubProgressItem(ctx) ? [tenantSignOffSubProgressItem(ctx)!] : []),
       {
         id: 'invoice',
         label: 'Invoice Uploaded',
@@ -640,11 +657,7 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
       label: 'Agent approval received',
       done: Boolean(ctx.workspaceCase.agentApprovalReceived),
     },
-    {
-      id: 'tenant_signoff',
-      label: 'Tenant Sign-Off Received',
-      done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
-    },
+    ...(tenantSignOffSubProgressItem(ctx) ? [tenantSignOffSubProgressItem(ctx)!] : []),
     {
       id: 'invoice',
       label: 'Invoice Uploaded',
@@ -694,11 +707,7 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
         label: 'Agent approval received',
         done: Boolean(ctx.workspaceCase.agentApprovalReceived),
       },
-      {
-        id: 'tenant_signoff',
-        label: 'Tenant Sign-Off Received',
-        done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
-      },
+      ...(tenantSignOffSubProgressItem(ctx) ? [tenantSignOffSubProgressItem(ctx)!] : []),
       {
         id: 'invoice',
         label: 'Invoice Uploaded',
@@ -723,11 +732,7 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
       label: 'Agent approval received',
       done: Boolean(ctx.workspaceCase.agentApprovalReceived),
     },
-    {
-      id: 'tenant_signoff',
-      label: 'Tenant Sign-Off Received',
-      done: Boolean(ctx.workspaceCase.tenantApprovalReceived),
-    },
+    ...(tenantSignOffSubProgressItem(ctx) ? [tenantSignOffSubProgressItem(ctx)!] : []),
     {
       id: 'sync_invoice',
       label: 'Invoice Uploaded',

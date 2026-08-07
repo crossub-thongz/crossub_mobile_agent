@@ -462,6 +462,10 @@ export interface MaintenanceRequest {
     tenantDeclineReason?: string;
   };
   scheduleEscalated?: boolean;
+  /** End of Lease landlord-responsibility — visit times go to agent for approval. */
+  endLeasingLandlordResp?: boolean;
+  /** End of Lease maintenance — tenant completion sign-off gate is skipped. */
+  endLeasingMaintenance?: boolean;
   /** Recorded when the case was deleted/cancelled. */
   deleteReason?: string;
   deletedAt?: string;

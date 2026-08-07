@@ -182,6 +182,8 @@ export function mapApiMaintenanceRequest(
     scheduleStepStartedAt: req.scheduleStepStartedAt,
     scheduleProposal: req.scheduleProposal,
     scheduleEscalated: req.scheduleEscalated,
+    endLeasingLandlordResp: req.endLeasingLandlordResp,
+    endLeasingMaintenance: req.endLeasingMaintenance,
   };
 }
 

@@ -356,6 +356,19 @@ export async function runMaintenanceSlaTick(): Promise<ApiMaintenanceState> {
   return api.post<ApiMaintenanceState>('/maintenance/sla/tick', { actorRole: AGENT_ROLE });
 }
 
+export async function respondMaintenanceSchedule(args: {
+  requestId: string;
+  decision: 'approved' | 'declined';
+  declineReason?: string;
+}): Promise<ApiMaintenanceState> {
+  return api.post<ApiMaintenanceState>('/maintenance/schedule/tenant-response', {
+    requestId: args.requestId,
+    decision: args.decision,
+    declineReason: args.declineReason,
+    actorRole: AGENT_ROLE,
+  });
+}
+
 export async function fulfillContractorEvidenceRequest(args: {
   requestId: string;
   evidenceRequestId: string;

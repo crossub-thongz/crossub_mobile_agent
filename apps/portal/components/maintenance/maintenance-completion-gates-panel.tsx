@@ -104,7 +104,10 @@ export function MaintenanceCompletionGatesPanel({
   const hasCompletionEvidence =
     evidenceAttachments.length > 0 || Boolean(ctx.workspaceCase.completionEvidenceUploaded);
   const agentApproved = Boolean(ctx.workspaceCase.agentApprovalReceived);
-  const tenantSignOff = Boolean(ctx.workspaceCase.tenantApprovalReceived);
+  const tenantSignOffGateApplies = ctx.item.endLeasingMaintenance !== true;
+  const tenantSignOff = tenantSignOffGateApplies
+    ? Boolean(ctx.workspaceCase.tenantApprovalReceived)
+    : true;
   // Gate is checked by upload itself — no manual checkbox for agents.
   const invoiceUploaded =
     Boolean(ctx.workspaceCase.invoiceUploaded) || invoiceAttachments.length > 0;
@@ -204,10 +207,12 @@ export function MaintenanceCompletionGatesPanel({
       </section>
 
       {/* Tenant Sign-Off Received */}
+      {tenantSignOffGateApplies ? (
       <section className="space-y-2 rounded-xl border bg-card p-4">
         <SectionHeader title="Tenant Sign-Off Received" checked={tenantSignOff} />
         <p className="text-muted-foreground text-xs">View only — admin records tenant sign-off.</p>
       </section>
+      ) : null}
 
       {/* Agent approval — highlighted action for the managing agent. */}
       <section
