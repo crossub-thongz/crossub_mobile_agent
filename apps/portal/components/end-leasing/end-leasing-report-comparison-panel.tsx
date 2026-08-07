@@ -201,6 +201,83 @@ function TenantQuoteResponsePanel({
   );
 }
 
+function TenantBondDeductionAckSentPanel({
+  items,
+  settlementSummary,
+  sentAt,
+  tenantQuoteResponse,
+  tenantQuoteResponseAt,
+  declineReason,
+}: {
+  items: ReportComparisonRepairItem[];
+  settlementSummary: ReportComparisonSettlementSummary | null | undefined;
+  sentAt?: string | null;
+  tenantQuoteResponse?: TenantQuoteResponse | null;
+  tenantQuoteResponseAt?: string | null;
+  declineReason?: string | null;
+}) {
+  const response = tenantQuoteResponse ?? 'pending';
+
+  return (
+    <section className="space-y-3 rounded-xl border bg-card p-4">
+      <div>
+        <p className="text-sm font-semibold">Bond deduction acknowledgement sent to tenant</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          CROSSUB sent this quote summary to the tenant
+          {sentAt ? ` on ${formatDateTime(sentAt)}` : ''}. Bond deduct shows whether each item
+          may be taken from the rental bond.
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded-xl border text-xs">
+        <table className="w-full table-fixed text-left">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              <th className="w-28 px-3 py-2 font-semibold">Bond deduct</th>
+              <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
+              <th className="px-3 py-2 font-semibold">Description</th>
+              <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((row, index) => (
+              <tr key={`bond-ack-sent-${index}`} className="border-t align-top">
+                <td className="px-3 py-2">
+                  {row.bondDeductible === true ? 'Yes' : 'No'}
+                </td>
+                <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
+                <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
+                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>{row.quote || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {settlementSummary ? <SettlementSummaryPanel summary={settlementSummary} /> : null}
+      {response === 'pending' ? (
+        <p className="text-muted-foreground text-xs">Awaiting tenant response in the Tenant app.</p>
+      ) : (
+        <div
+          className={`rounded-lg border px-3 py-2 text-xs ${
+            response === 'accepted'
+              ? 'border-primary/30 bg-primary/5'
+              : 'border-destructive/30 bg-destructive/5'
+          }`}
+        >
+          <p className="font-semibold">{TENANT_QUOTE_RESPONSE_LABEL[response]}</p>
+          {tenantQuoteResponseAt ? (
+            <p className="text-muted-foreground mt-1">Recorded {formatDateTime(tenantQuoteResponseAt)}</p>
+          ) : null}
+          {declineReason ? (
+            <p className="mt-2 whitespace-pre-wrap">
+              <span className="font-medium">Tenant reason:</span> {declineReason}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SettlementSummaryPanel({ summary }: { summary: ReportComparisonSettlementSummary }) {
   const totalDeductions =
     summary.unpaidRent + summary.unpaidBills + summary.maintenanceCost;
@@ -1654,6 +1731,7 @@ export function EndLeasingReportComparisonPanel({
 
   const rc = caseData.reportComparison;
   const tenantQuoteEmailSent = Boolean(rc.tenantRepairQuoteEmail?.sentAt);
+  const tenantBondAckSent = Boolean(rc.tenantBondDeductionAckEmail?.sentAt);
   const tenantAgreed = rc.tenantQuoteResponse === 'accepted';
   const showCompare = mode === 'compare';
   const showQuote = mode === 'quote';
@@ -1860,6 +1938,16 @@ export function EndLeasingReportComparisonPanel({
             Send quotes
           </Button>
         </div>
+        {tenantBondAckSent ? (
+          <TenantBondDeductionAckSentPanel
+            items={tenantItems}
+            settlementSummary={rc.settlementSummary}
+            sentAt={rc.tenantBondDeductionAckEmail?.sentAt}
+            tenantQuoteResponse={rc.tenantQuoteResponse}
+            tenantQuoteResponseAt={rc.tenantQuoteResponseAt}
+            declineReason={rc.tenantQuoteDeclineReason}
+          />
+        ) : null}
       </div>
     );
   }
