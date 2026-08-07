@@ -19,6 +19,7 @@ import type {
   TerminationListResult,
   UpdateMakeGoodInput,
   UpdateReportComparisonInput,
+  ReportComparisonRepairItemInput,
   RepairQuoteEmailAudience,
   ComparisonSummaryEmailAudience,
 } from '@/lib/termination-case-types';
@@ -108,6 +109,8 @@ function mapRepairItems(
     quote: item.quote ?? undefined,
     handymanId: item.handymanId ?? null,
     handymanName: item.handymanName ?? undefined,
+    maintenanceRequestId: item.maintenanceRequestId ?? null,
+    bondDeductible: item.bondDeductible === true ? true : undefined,
   }));
 }
 
@@ -404,6 +407,7 @@ export function mapTerminationCase(
         s.reportComparison?.landlordPropertyUpdateEmail,
       ),
       tenantRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.tenantRepairQuoteEmail),
+      tenantBondDeductionAckEmail: mapOverviewEmail(s.reportComparison?.tenantBondDeductionAckEmail),
       landlordRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.landlordRepairQuoteEmail),
       agentRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.agentRepairQuoteEmail),
       agentQuoteConfirmed: s.reportComparison?.agentQuoteConfirmed ?? false,
@@ -630,6 +634,25 @@ export const terminationApi = {
       api.post<{ case: ServerTerminationCase }>(
         `/end-leasing/cases/${id}/report-comparison/send-quote-email`,
         { audience },
+      ),
+    ),
+
+  syncMaintenanceQuotesFromJobs: (id: string): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.post<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/sync-maintenance-quotes`,
+        {},
+      ),
+    ),
+
+  sendTenantBondDeductionAcknowledgement: (
+    id: string,
+    tenantResponsibility: ReportComparisonRepairItemInput[],
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.post<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/send-tenant-bond-acknowledgement`,
+        { tenantResponsibility },
       ),
     ),
 

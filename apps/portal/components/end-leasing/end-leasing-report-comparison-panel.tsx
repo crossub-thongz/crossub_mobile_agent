@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle2,
@@ -22,6 +22,14 @@ import { toast } from 'sonner';
 
 import { AddHandymanDialog } from '@/components/end-leasing/add-handyman-dialog';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
@@ -252,7 +260,7 @@ function TenantBondDeductionAckSentPanel({
       <div>
         <p className="text-sm font-semibold">Bond deduction acknowledgement sent to tenant</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          CROSSUB sent this quote summary to the tenant
+          Sent to the tenant
           {sentAt ? ` on ${formatDateTime(sentAt)}` : ''}. Bond deduct shows whether each item
           may be taken from the rental bond.
         </p>
@@ -356,6 +364,253 @@ function SettlementSummaryPanel({ summary }: { summary: ReportComparisonSettleme
             </span>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function parseQuoteAmount(quote: string | undefined | null): number {
+  if (!quote?.trim()) return 0;
+  const normalized = quote.replace(/[^0-9.-]/g, '');
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function TenantSendQuotationDialog({
+  open,
+  onOpenChange,
+  items,
+  bondHeld,
+  settlementSummary,
+  busy,
+  onSend,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: ReportComparisonRepairItem[];
+  bondHeld: number;
+  settlementSummary: ReportComparisonSettlementSummary | null | undefined;
+  busy: boolean;
+  onSend: (items: ReportComparisonRepairItem[]) => void | Promise<void>;
+}) {
+  const [draftItems, setDraftItems] = useState<ReportComparisonRepairItem[]>(items);
+
+  useEffect(() => {
+    if (open) {
+      setDraftItems(
+        items.map((item) => ({
+          ...item,
+          bondDeductible: item.bondDeductible === true,
+        })),
+      );
+    }
+  }, [open, items]);
+
+  const maintenanceCost = draftItems
+    .filter((item) => item.bondDeductible)
+    .reduce((sum, item) => sum + parseQuoteAmount(item.quote), 0);
+  const unpaidRent = settlementSummary?.unpaidRent ?? 0;
+  const unpaidBills = settlementSummary?.unpaidBills ?? 0;
+  const totalDeductions = unpaidRent + unpaidBills + maintenanceCost;
+  const netRefund = Math.max(0, bondHeld - totalDeductions);
+  const debtAmount = Math.max(0, totalDeductions - bondHeld);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
+        <DialogHeader>
+          <DialogTitle>Send quotation to tenant</DialogTitle>
+          <DialogDescription>
+            Review the bond calculation and tick which items may be deducted from the rental bond
+            before sending to the tenant app and email.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="overflow-x-auto rounded-xl border text-xs">
+            <table className="w-full table-fixed text-left">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th className="w-28 px-3 py-2 font-semibold">Bond deduct</th>
+                  <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
+                  <th className="px-3 py-2 font-semibold">Description</th>
+                  <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+                </tr>
+              </thead>
+              <tbody>
+                {draftItems.map((row, index) => (
+                  <tr key={`bond-ack-${index}`} className="border-t align-top">
+                    <td className="px-3 py-2">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border"
+                          checked={row.bondDeductible === true}
+                          onChange={(event) => {
+                            setDraftItems((prev) =>
+                              prev.map((item, i) =>
+                                i === index
+                                  ? { ...item, bondDeductible: event.target.checked }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                        <span className="sr-only">Deduct from bond</span>
+                      </label>
+                    </td>
+                    <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area}</td>
+                    <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
+                    <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                      {row.quote || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <SettlementSummaryPanel
+            summary={{
+              unpaidRent,
+              unpaidBills,
+              maintenanceCost,
+              bondHeld,
+              netRefund,
+              debtAmount,
+            }}
+          />
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={busy || draftItems.length === 0}
+            onClick={() => void onSend(draftItems)}
+          >
+            {busy ? 'Sending…' : 'Send quotation to tenant'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function LandlordSendQuotationDialog({
+  open,
+  onOpenChange,
+  items,
+  busy,
+  onSend,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: ReportComparisonRepairItem[];
+  busy: boolean;
+  onSend: () => void | Promise<void>;
+}) {
+  const totalQuoted = items.reduce((sum, item) => sum + parseQuoteAmount(item.quote), 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
+        <DialogHeader>
+          <DialogTitle>Send quotation to landlord</DialogTitle>
+          <DialogDescription>
+            Review landlord-responsibility quotes before emailing the property owner. They will
+            receive the summary via email and the Landlord app.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="overflow-x-auto rounded-xl border text-xs">
+            <table className="w-full table-fixed text-left">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
+                  <th className="px-3 py-2 font-semibold">Description</th>
+                  <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+                  <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Contractor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((row, index) => (
+                  <tr key={`landlord-quote-${index}`} className="border-t align-top">
+                    <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
+                    <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
+                    <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                      {row.quote || '—'}
+                    </td>
+                    <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
+                      {row.handymanName || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="rounded-xl border bg-muted/20 px-4 py-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                Total quoted
+              </span>
+              <span className="text-base font-semibold tabular-nums">
+                {formatCurrency(totalQuoted)}
+              </span>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="button" disabled={busy || items.length === 0} onClick={() => void onSend()}>
+            {busy ? 'Sending…' : 'Send quotation to landlord'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function LandlordQuotationSentPanel({
+  items,
+  sentAt,
+}: {
+  items: ReportComparisonRepairItem[];
+  sentAt?: string | null;
+}) {
+  return (
+    <section className="space-y-3 rounded-xl border bg-card p-4">
+      <div>
+        <p className="text-sm font-semibold">Landlord quotation sent</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Sent to the property owner{sentAt ? ` on ${formatDateTime(sentAt)}` : ''} via email and
+          the Landlord app.
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded-xl border text-xs">
+        <table className="w-full table-fixed text-left">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
+              <th className="px-3 py-2 font-semibold">Description</th>
+              <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+              <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Contractor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((row, index) => (
+              <tr key={`landlord-quote-sent-${index}`} className="border-t align-top">
+                <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
+                <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
+                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                  <MaintenanceQuoteCell row={row} />
+                </td>
+                <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>{row.handymanName || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
@@ -1205,6 +1460,7 @@ function QuoteResponsibilitySection({
   hideQuoteAmountColumn = false,
   maintenanceColumnMode = 'hidden',
   tenantReviewPending = false,
+  tableFooter,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -1227,6 +1483,7 @@ function QuoteResponsibilitySection({
   hideQuoteAmountColumn?: boolean;
   maintenanceColumnMode?: MaintenanceColumnMode;
   tenantReviewPending?: boolean;
+  tableFooter?: ReactNode;
 }) {
   const showQuoteCols = hideQuoteColumns === true ? false : showQuoteColumns !== false;
   const showMaintenanceColumn = maintenanceColumnMode !== 'hidden';
@@ -1274,6 +1531,9 @@ function QuoteResponsibilitySection({
           actionBusy={busy}
           agentCommentLabel={canEditAgentComment ? 'Your comments' : 'Agent comments'}
         />
+        {tableFooter ? (
+          <div className="mt-3 flex justify-end">{tableFooter}</div>
+        ) : null}
       </div>
     </section>
   );
@@ -1355,6 +1615,16 @@ function normalizeRepairItems(
       handymanName,
     };
   });
+}
+
+function normalizeBondAckRepairItems(
+  items: ReportComparisonRepairItem[],
+  contractors: PreferredContractor[] = [],
+): ReportComparisonRepairItemInput[] {
+  return items.filter(hasRepairContent).map((item) => ({
+    ...normalizeRepairItems([item], contractors)[0]!,
+    bondDeductible: item.bondDeductible === true,
+  }));
 }
 
 /** Prefer local draft rows while the user is still typing (autosave responses can be stale). */
@@ -1812,6 +2082,8 @@ export function EndLeasingReportComparisonPanel({
     caseData.reportComparison.landlordResponsibilityAgentComment ?? '',
   );
   const [busy, setBusy] = useState(false);
+  const [sendQuotationDialogOpen, setSendQuotationDialogOpen] = useState(false);
+  const [sendLandlordQuotationDialogOpen, setSendLandlordQuotationDialogOpen] = useState(false);
 
   const refreshReports = useCallback(async () => {
     if (!apiConnected) return;
@@ -2007,6 +2279,63 @@ export function EndLeasingReportComparisonPanel({
     }
   };
 
+  const sendTenantBondAcknowledgement = async (ackItems: ReportComparisonRepairItem[]) => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.sendTenantBondDeductionAcknowledgement(
+        caseData.id,
+        normalizeBondAckRepairItems(ackItems, contractors),
+      );
+      applyUpdatedCase(updated);
+      setSendQuotationDialogOpen(false);
+      toast.success('Quotation sent to tenant');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openSendQuotationDialog = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.syncMaintenanceQuotesFromJobs(caseData.id);
+      applyUpdatedCase(updated);
+      setSendQuotationDialogOpen(true);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openSendLandlordQuotationDialog = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.syncMaintenanceQuotesFromJobs(caseData.id);
+      applyUpdatedCase(updated);
+      setSendLandlordQuotationDialogOpen(true);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendLandlordQuotation = async () => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'landlord');
+      applyUpdatedCase(updated);
+      setSendLandlordQuotationDialogOpen(false);
+      toast.success('Landlord quotation sent');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const applyUpdatedCase = (updated: TerminationCaseDetail) => {
     applyCase(updated);
     setTenantItems((prev) =>
@@ -2064,13 +2393,73 @@ export function EndLeasingReportComparisonPanel({
   };
 
   const rc = caseData.reportComparison;
-  const tenantQuoteEmailSent = Boolean(rc.tenantRepairQuoteEmail?.sentAt);
   const tenantBondAckSent = Boolean(rc.tenantBondDeductionAckEmail?.sentAt);
+  const tenantQuoteEmailSent =
+    Boolean(rc.tenantRepairQuoteEmail?.sentAt) || tenantBondAckSent;
   const tenantAgreed = rc.tenantQuoteResponse === 'accepted';
   const showCompare = mode === 'compare';
   const showQuote = mode === 'quote';
   const showTenantResponse = mode === 'tenant-response';
   const showInspectorReadonly = mode === 'inspector-readonly';
+
+  const tenantResponsibilityReviewStatus =
+    rc.tenantResponsibilityAgentAcknowledged === true &&
+    (rc.tenantResponsibility?.length ?? 0) > 0
+      ? rc.tenantResponsibilityReviewStatus === 'accepted' ||
+        rc.tenantResponsibilityReviewStatus === 'declined' ||
+        rc.tenantResponsibilityReviewStatus === 'pending'
+        ? rc.tenantResponsibilityReviewStatus
+        : 'pending'
+      : 'none';
+  const tenantMaintenanceReady = tenantResponsibilityReviewStatus === 'accepted';
+  const landlordMaintenanceReady = rc.landlordResponsibilityAgentAcknowledged === true;
+  const endLeasingQuotesReadyForTenant =
+    tenantItems.length > 0 &&
+    tenantItems.every(
+      (item) =>
+        Boolean(
+          item.maintenanceRequestId?.trim() &&
+            item.quote?.trim() &&
+            item.handymanName?.trim(),
+        ),
+    );
+  const endLeasingLandlordQuotesReady =
+    landlordItems.length > 0 &&
+    landlordItems.every(
+      (item) =>
+        Boolean(
+          item.maintenanceRequestId?.trim() &&
+            item.quote?.trim() &&
+            item.handymanName?.trim(),
+        ),
+    );
+  const landlordQuotationSent = Boolean(rc.landlordRepairQuoteEmail?.sentAt);
+  const canSendQuotationToTenant =
+    tenantMaintenanceReady &&
+    endLeasingQuotesReadyForTenant &&
+    (!tenantBondAckSent || rc.tenantQuoteResponse === 'declined');
+  const canSendLandlordQuotation =
+    landlordMaintenanceReady && endLeasingLandlordQuotesReady && !landlordQuotationSent;
+  const sendQuotationButtonLabel = tenantBondAckSent
+    ? rc.tenantQuoteResponse === 'pending'
+      ? 'Quotation sent — awaiting tenant'
+      : rc.tenantQuoteResponse === 'accepted'
+        ? 'Quotation accepted by tenant'
+        : rc.tenantQuoteResponse === 'declined'
+          ? 'Re-send quotation to tenant'
+          : 'Quotation sent to tenant'
+    : !tenantMaintenanceReady
+      ? 'Awaiting tenant responsibility review'
+      : !endLeasingQuotesReadyForTenant
+        ? 'Complete maintenance quotes first'
+        : 'Send quotation to tenant';
+  const sendLandlordQuotationButtonLabel = landlordQuotationSent
+    ? 'Quotation sent to landlord'
+    : !landlordMaintenanceReady
+      ? 'Agree landlord responsibilities first'
+      : !endLeasingLandlordQuotesReady
+        ? 'Complete maintenance quotes first'
+        : 'Send quotation to landlord';
 
   const inspectorReadOnlyItems = useMemo(() => {
     const saved = caseData.reportComparison.tenantResponsibility;
@@ -2080,6 +2469,24 @@ export function EndLeasingReportComparisonPanel({
       extractTenantResponsibilityFromOutgoing(outgoingDetail),
     );
   }, [caseData.reportComparison.tenantResponsibility, outgoingDetail]);
+
+  useEffect(() => {
+    if (!showQuote || !apiConnected) return;
+    const tenantSync = tenantResponsibilityReviewStatus === 'accepted';
+    const landlordSync = rc.landlordResponsibilityAgentAcknowledged === true;
+    if (!tenantSync && !landlordSync) return;
+    void terminationApi
+      .syncMaintenanceQuotesFromJobs(caseData.id)
+      .then((updated) => applyUpdatedCase(updated))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh quotes when entering quote step
+  }, [
+    apiConnected,
+    caseData.id,
+    showQuote,
+    tenantResponsibilityReviewStatus,
+    rc.landlordResponsibilityAgentAcknowledged,
+  ]);
 
   useEffect(() => {
     if (!apiConnected || !tenantQuoteEmailSent || rc.tenantQuoteResponse !== 'pending') return;
@@ -2197,17 +2604,6 @@ export function EndLeasingReportComparisonPanel({
   }
 
   if (showQuote) {
-    const tenantResponsibilityReviewStatus =
-      rc.tenantResponsibilityAgentAcknowledged === true &&
-      (rc.tenantResponsibility?.length ?? 0) > 0
-        ? rc.tenantResponsibilityReviewStatus === 'accepted' ||
-          rc.tenantResponsibilityReviewStatus === 'declined' ||
-          rc.tenantResponsibilityReviewStatus === 'pending'
-          ? rc.tenantResponsibilityReviewStatus
-          : 'pending'
-        : 'none';
-    const landlordMaintenanceReady = rc.landlordResponsibilityAgentAcknowledged === true;
-
     return (
       <div className="space-y-4">
         <CompareReportPdfRow
@@ -2224,7 +2620,7 @@ export function EndLeasingReportComparisonPanel({
               {tenantResponsibilityReviewStatus === 'pending'
                 ? 'Awaiting tenant review in the Make-good step.'
                 : tenantResponsibilityReviewStatus === 'accepted'
-                  ? 'Tenant acknowledged — pending quotation from CROSSUB.'
+                  ? 'Tenant acknowledged — send the maintenance quotation when quotes are ready.'
                   : 'Tenant disagreed with the responsibility list.'}
             </p>
             {rc.tenantResponsibilityDeclineReason ? (
@@ -2243,6 +2639,13 @@ export function EndLeasingReportComparisonPanel({
           onContractorsChange={setContractors}
           onChange={setTenantItems}
           readOnly
+          lockedHint={
+            !tenantMaintenanceReady
+              ? 'Awaiting tenant responsibility review'
+              : !endLeasingQuotesReadyForTenant
+                ? 'Complete End of Lease maintenance quotes, then send the quotation to the tenant'
+                : 'Send the quotation to the tenant app and email when ready'
+          }
           showQuoteColumns
           hideQuoteAmountColumn={tenantResponsibilityReviewStatus === 'pending'}
           tenantReviewPending={tenantResponsibilityReviewStatus === 'pending'}
@@ -2257,6 +2660,29 @@ export function EndLeasingReportComparisonPanel({
               ? 'actions'
               : 'hidden'
           }
+          tableFooter={
+            tenantResponsibilityReviewStatus === 'accepted' ? (
+              <Button
+                type="button"
+                size="sm"
+                variant={
+                  tenantBondAckSent && rc.tenantQuoteResponse === 'accepted'
+                    ? 'default'
+                    : 'secondary'
+                }
+                className={
+                  tenantBondAckSent && rc.tenantQuoteResponse === 'accepted'
+                    ? 'h-9 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
+                    : 'h-9 gap-1.5 text-xs'
+                }
+                disabled={busy || !canSendQuotationToTenant}
+                onClick={() => void openSendQuotationDialog()}
+              >
+                <Send className="size-3.5" />
+                {sendQuotationButtonLabel}
+              </Button>
+            ) : null
+          }
         />
         <QuoteResponsibilitySection
           title="Landlord Responsibility"
@@ -2266,6 +2692,13 @@ export function EndLeasingReportComparisonPanel({
           onContractorsChange={setContractors}
           onChange={setLandlordItems}
           readOnly
+          lockedHint={
+            !landlordMaintenanceReady
+              ? 'Agree with the landlord responsibility list first'
+              : !endLeasingLandlordQuotesReady
+                ? 'Complete End of Lease maintenance quotes, then send the quotation to the landlord'
+                : 'Send landlord-responsibility quotes to the owner via email and Landlord app'
+          }
           showQuoteColumns
           hideQuoteAmountColumn={false}
           tenantReviewPending={false}
@@ -2275,31 +2708,77 @@ export function EndLeasingReportComparisonPanel({
           onSendAgentComment={(message) => sendAgentComment('landlord', message)}
           canEditAgentComment
           maintenanceColumnMode={landlordMaintenanceReady ? 'actions' : 'hidden'}
+          tableFooter={
+            landlordMaintenanceReady ? (
+              <Button
+                type="button"
+                size="sm"
+                variant={landlordQuotationSent ? 'default' : 'secondary'}
+                className={
+                  landlordQuotationSent
+                    ? 'h-9 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
+                    : 'h-9 gap-1.5 text-xs'
+                }
+                disabled={busy || !canSendLandlordQuotation}
+                onClick={() => void openSendLandlordQuotationDialog()}
+              >
+                <Send className="size-3.5" />
+                {sendLandlordQuotationButtonLabel}
+              </Button>
+            ) : null
+          }
         />
-        <section className="rounded-xl border bg-card p-4 text-right">
-          <p className="text-sm font-semibold">Maintenance quotation</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {rc.tenantRepairQuoteEmail?.sentAt
-              ? rc.tenantQuoteResponse === 'accepted'
-                ? 'Tenant accepted the End of Lease maintenance quotation.'
-                : rc.tenantQuoteResponse === 'declined'
-                  ? 'Tenant disagreed with the quotation — CROSSUB staff will revise and re-send.'
-                  : 'Quotation sent to tenant — awaiting reply.'
-              : tenantResponsibilityReviewStatus === 'accepted'
-                ? 'CROSSUB staff obtain contractor quotes via End of Lease Maintenance, then send the quotation to the tenant.'
-                : 'Awaiting tenant acknowledgement of the responsibility list.'}
-          </p>
-        </section>
-        {tenantBondAckSent || rc.tenantRepairQuoteEmail?.sentAt ? (
-          <TenantBondDeductionAckSentPanel
-            items={tenantItems}
-            settlementSummary={rc.settlementSummary}
-            sentAt={rc.tenantBondDeductionAckEmail?.sentAt}
-            tenantQuoteResponse={rc.tenantQuoteResponse}
-            tenantQuoteResponseAt={rc.tenantQuoteResponseAt}
-            declineReason={rc.tenantQuoteDeclineReason}
+        {landlordQuotationSent ? (
+          <LandlordQuotationSentPanel
+            items={landlordItems}
+            sentAt={rc.landlordRepairQuoteEmail?.sentAt}
           />
         ) : null}
+        {tenantBondAckSent || rc.tenantRepairQuoteEmail?.sentAt ? (
+          <>
+            <TenantBondDeductionAckSentPanel
+              items={tenantItems}
+              settlementSummary={rc.settlementSummary}
+              sentAt={rc.tenantBondDeductionAckEmail?.sentAt ?? rc.tenantRepairQuoteEmail?.sentAt}
+              tenantQuoteResponse={rc.tenantQuoteResponse}
+              tenantQuoteResponseAt={rc.tenantQuoteResponseAt}
+              declineReason={rc.tenantQuoteDeclineReason}
+            />
+            <TenantQuoteResponsePanel
+              response={rc.tenantQuoteResponse}
+              responseAt={rc.tenantQuoteResponseAt}
+              declineReason={rc.tenantQuoteDeclineReason}
+              replyExcerpt={rc.tenantQuoteReplyExcerpt}
+              commConversationId={
+                rc.tenantBondDeductionAckEmail?.commConversationId ??
+                rc.tenantRepairQuoteEmail?.commConversationId
+              }
+              busy={busy}
+              onCheckReply={() => void checkTenantReply()}
+              onAgree={() => void recordTenantAgree()}
+              onDisagree={() => void recordTenantDisagree()}
+            />
+          </>
+        ) : null}
+        {tenantAgreed && rc.settlementSummary ? (
+          <SettlementSummaryPanel summary={rc.settlementSummary} />
+        ) : null}
+        <TenantSendQuotationDialog
+          open={sendQuotationDialogOpen}
+          onOpenChange={setSendQuotationDialogOpen}
+          items={tenantItems}
+          bondHeld={caseData.settlement.bondHeld ?? 0}
+          settlementSummary={rc.settlementSummary}
+          busy={busy}
+          onSend={(items) => void sendTenantBondAcknowledgement(items)}
+        />
+        <LandlordSendQuotationDialog
+          open={sendLandlordQuotationDialogOpen}
+          onOpenChange={setSendLandlordQuotationDialogOpen}
+          items={landlordItems}
+          busy={busy}
+          onSend={() => void sendLandlordQuotation()}
+        />
       </div>
     );
   }
