@@ -98,6 +98,7 @@ export interface ReportComparisonRepairItem {
   handymanName?: string | null
   maintenanceRequestId?: string | null
   bondDeductible?: boolean
+  landlordWaivable?: boolean
   /** Client-only stable key for compare-step draft rows (not sent to API). */
   localKey?: string
 }
@@ -153,6 +154,7 @@ export interface ReportComparisonStageState {
   landlordPropertyUpdateEmail?: EndLeasingOverviewEmail | null
   tenantRepairQuoteEmail?: EndLeasingOverviewEmail | null
   tenantBondDeductionAckEmail?: EndLeasingOverviewEmail | null
+  agentBondDeductionProposalEmail?: EndLeasingOverviewEmail | null
   landlordRepairQuoteEmail?: EndLeasingOverviewEmail | null
   agentRepairQuoteEmail?: EndLeasingOverviewEmail | null
   agentQuoteConfirmed?: boolean

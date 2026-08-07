@@ -111,6 +111,7 @@ function mapRepairItems(
     handymanName: item.handymanName ?? undefined,
     maintenanceRequestId: item.maintenanceRequestId ?? null,
     bondDeductible: item.bondDeductible === true ? true : undefined,
+    landlordWaivable: item.landlordWaivable === true ? true : undefined,
   }));
 }
 
@@ -408,6 +409,9 @@ export function mapTerminationCase(
       ),
       tenantRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.tenantRepairQuoteEmail),
       tenantBondDeductionAckEmail: mapOverviewEmail(s.reportComparison?.tenantBondDeductionAckEmail),
+      agentBondDeductionProposalEmail: mapOverviewEmail(
+        s.reportComparison?.agentBondDeductionProposalEmail,
+      ),
       landlordRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.landlordRepairQuoteEmail),
       agentRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.agentRepairQuoteEmail),
       agentQuoteConfirmed: s.reportComparison?.agentQuoteConfirmed ?? false,

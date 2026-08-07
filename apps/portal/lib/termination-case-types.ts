@@ -125,7 +125,8 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       handymanId?: string | null
       handymanName?: string | null
       maintenanceRequestId?: string | null
-      bondDeductible?: boolean | null
+      bondDeductible?: boolean
+  landlordWaivable?: boolean | null
     }[]
     landlordResponsibility: {
       area: string
@@ -134,7 +135,8 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       handymanId?: string | null
       handymanName?: string | null
       maintenanceRequestId?: string | null
-      bondDeductible?: boolean | null
+      bondDeductible?: boolean
+  landlordWaivable?: boolean | null
     }[]
     tenantResponsibilityStaffComment?: string | null
     tenantResponsibilityStaffCommentAt?: string | null
@@ -201,6 +203,14 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       sentAt: string | null
     } | null
     tenantBondDeductionAckEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    agentBondDeductionProposalEmail?: {
       commConversationId: string | null
       subject: string | null
       body: string | null
@@ -364,6 +374,7 @@ export interface ReportComparisonRepairItemInput {
   handymanId?: string
   handymanName?: string
   bondDeductible?: boolean
+  landlordWaivable?: boolean
 }
 
 export type RepairQuoteEmailAudience = 'tenant' | 'landlord' | 'agent'

@@ -238,7 +238,7 @@ function TenantQuoteResponsePanel({
   );
 }
 
-function TenantBondDeductionAckSentPanel({
+function TenantQuotationSentBody({
   items,
   settlementSummary,
   sentAt,
@@ -256,20 +256,18 @@ function TenantBondDeductionAckSentPanel({
   const response = tenantQuoteResponse ?? 'pending';
 
   return (
-    <section className="space-y-3 rounded-xl border bg-card p-4">
-      <div>
-        <p className="text-sm font-semibold">Bond deduction acknowledgement sent to tenant</p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Sent to the tenant
-          {sentAt ? ` on ${formatDateTime(sentAt)}` : ''}. Bond deduct shows whether each item
-          may be taken from the rental bond.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-muted-foreground text-xs">
+        Sent to the tenant
+        {sentAt ? ` on ${formatDateTime(sentAt)}` : ''}. Bond deduct shows whether each item may
+        be taken from the rental bond.
+      </p>
       <div className="overflow-x-auto rounded-xl border text-xs">
         <table className="w-full table-fixed text-left">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
               <th className="w-28 px-3 py-2 font-semibold">Bond deduct</th>
+              <th className="w-32 px-3 py-2 font-semibold">Landlord waivable</th>
               <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
               <th className="px-3 py-2 font-semibold">Description</th>
               <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
@@ -278,9 +276,8 @@ function TenantBondDeductionAckSentPanel({
           <tbody>
             {items.map((row, index) => (
               <tr key={`bond-ack-sent-${index}`} className="border-t align-top">
-                <td className="px-3 py-2">
-                  {row.bondDeductible === true ? 'Yes' : 'No'}
-                </td>
+                <td className="px-3 py-2">{row.bondDeductible === true ? 'Yes' : 'No'}</td>
+                <td className="px-3 py-2">{row.landlordWaivable === true ? 'Yes' : 'No'}</td>
                 <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
                 <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
                 <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
@@ -291,7 +288,7 @@ function TenantBondDeductionAckSentPanel({
           </tbody>
         </table>
       </div>
-      {settlementSummary ? <SettlementSummaryPanel summary={settlementSummary} /> : null}
+      {settlementSummary ? <SettlementSummaryPanel summary={settlementSummary} compact /> : null}
       {response === 'pending' ? (
         <p className="text-muted-foreground text-xs">Awaiting tenant response in the Tenant app.</p>
       ) : (
@@ -313,20 +310,96 @@ function TenantBondDeductionAckSentPanel({
           ) : null}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
-function SettlementSummaryPanel({ summary }: { summary: ReportComparisonSettlementSummary }) {
+function TenantQuotationSentDialog({
+  open,
+  onOpenChange,
+  items,
+  settlementSummary,
+  sentAt,
+  tenantQuoteResponse,
+  tenantQuoteResponseAt,
+  declineReason,
+  replyExcerpt,
+  commConversationId,
+  busy,
+  onCheckReply,
+  onAgree,
+  onDisagree,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: ReportComparisonRepairItem[];
+  settlementSummary: ReportComparisonSettlementSummary | null | undefined;
+  sentAt?: string | null;
+  tenantQuoteResponse?: TenantQuoteResponse | null;
+  tenantQuoteResponseAt?: string | null;
+  declineReason?: string | null;
+  replyExcerpt?: string | null;
+  commConversationId?: string | null;
+  busy: boolean;
+  onCheckReply: () => void;
+  onAgree: () => void;
+  onDisagree: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
+        <DialogHeader>
+          <DialogTitle>Quotation sent to tenant</DialogTitle>
+          <DialogDescription>
+            Bond deduction acknowledgement and maintenance quotation delivered to the tenant.
+          </DialogDescription>
+        </DialogHeader>
+        <TenantQuotationSentBody
+          items={items}
+          settlementSummary={settlementSummary}
+          sentAt={sentAt}
+          tenantQuoteResponse={tenantQuoteResponse}
+          tenantQuoteResponseAt={tenantQuoteResponseAt}
+          declineReason={declineReason}
+        />
+        <TenantQuoteResponsePanel
+          response={tenantQuoteResponse}
+          responseAt={tenantQuoteResponseAt}
+          declineReason={declineReason}
+          replyExcerpt={replyExcerpt}
+          commConversationId={commConversationId}
+          busy={busy}
+          onCheckReply={onCheckReply}
+          onAgree={onAgree}
+          onDisagree={onDisagree}
+        />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SettlementSummaryPanel({
+  summary,
+  compact = false,
+}: {
+  summary: ReportComparisonSettlementSummary;
+  compact?: boolean;
+}) {
   const totalDeductions =
     summary.unpaidRent + summary.unpaidBills + summary.maintenanceCost;
 
-  return (
-    <section className="space-y-3 rounded-xl border bg-card p-4">
-      <p className="text-sm font-semibold">Bond settlement summary</p>
-      <p className="text-muted-foreground text-xs">
-        Total bond less unpaid rent, unpaid bills, and tenant maintenance costs.
-      </p>
+  const inner = (
+    <>
+      {!compact ? (
+        <p className="text-muted-foreground text-xs">
+          Total bond less unpaid rent, unpaid bills, and tenant maintenance costs.
+        </p>
+      ) : null}
       <div className="overflow-hidden rounded-xl border text-xs">
         <div className="divide-y">
           <div className="flex items-center justify-between px-3 py-2">
@@ -365,6 +438,22 @@ function SettlementSummaryPanel({ summary }: { summary: ReportComparisonSettleme
           </div>
         </div>
       </div>
+    </>
+  );
+
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Bond settlement summary</p>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <section className="space-y-3 rounded-xl border bg-card p-4">
+      <p className="text-sm font-semibold">Bond settlement summary</p>
+      {inner}
     </section>
   );
 }
@@ -376,7 +465,11 @@ function parseQuoteAmount(quote: string | undefined | null): number {
   return Number.isFinite(value) ? value : 0;
 }
 
-function TenantSendQuotationDialog({
+function isEffectiveTenantBondDeduction(item: ReportComparisonRepairItem): boolean {
+  return item.bondDeductible === true && item.landlordWaivable !== true;
+}
+
+function AgentTenantBondSendDialog({
   open,
   onOpenChange,
   items,
@@ -400,14 +493,14 @@ function TenantSendQuotationDialog({
       setDraftItems(
         items.map((item) => ({
           ...item,
-          bondDeductible: item.bondDeductible === true,
+          landlordWaivable: item.landlordWaivable === true,
         })),
       );
     }
   }, [open, items]);
 
   const maintenanceCost = draftItems
-    .filter((item) => item.bondDeductible)
+    .filter(isEffectiveTenantBondDeduction)
     .reduce((sum, item) => sum + parseQuoteAmount(item.quote), 0);
   const unpaidRent = settlementSummary?.unpaidRent ?? 0;
   const unpaidBills = settlementSummary?.unpaidBills ?? 0;
@@ -421,8 +514,8 @@ function TenantSendQuotationDialog({
         <DialogHeader>
           <DialogTitle>Send quotation to tenant</DialogTitle>
           <DialogDescription>
-            Review the bond calculation and tick which items may be deducted from the rental bond
-            before sending to the tenant app and email.
+            CROSSUB marked which items may be bond deductible. Tick any lines the landlord may waive
+            before sending the final quotation to the tenant app and email.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -431,6 +524,7 @@ function TenantSendQuotationDialog({
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
                   <th className="w-28 px-3 py-2 font-semibold">Bond deduct</th>
+                  <th className="w-32 px-3 py-2 font-semibold">Landlord waivable</th>
                   <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
                   <th className="px-3 py-2 font-semibold">Description</th>
                   <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
@@ -439,24 +533,29 @@ function TenantSendQuotationDialog({
               <tbody>
                 {draftItems.map((row, index) => (
                   <tr key={`bond-ack-${index}`} className="border-t align-top">
+                    <td className="px-3 py-2">{row.bondDeductible === true ? 'Yes' : 'No'}</td>
                     <td className="px-3 py-2">
-                      <label className="inline-flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border"
-                          checked={row.bondDeductible === true}
-                          onChange={(event) => {
-                            setDraftItems((prev) =>
-                              prev.map((item, i) =>
-                                i === index
-                                  ? { ...item, bondDeductible: event.target.checked }
-                                  : item,
-                              ),
-                            );
-                          }}
-                        />
-                        <span className="sr-only">Deduct from bond</span>
-                      </label>
+                      {row.bondDeductible === true ? (
+                        <label className="inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="size-4 rounded border"
+                            checked={row.landlordWaivable === true}
+                            onChange={(event) => {
+                              setDraftItems((prev) =>
+                                prev.map((item, i) =>
+                                  i === index
+                                    ? { ...item, landlordWaivable: event.target.checked }
+                                    : item,
+                                ),
+                              );
+                            }}
+                          />
+                          <span className="sr-only">Waivable by landlord</span>
+                        </label>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area}</td>
                     <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
@@ -477,6 +576,7 @@ function TenantSendQuotationDialog({
               netRefund,
               debtAmount,
             }}
+            compact
           />
         </div>
         <DialogFooter>
@@ -572,47 +672,58 @@ function LandlordSendQuotationDialog({
   );
 }
 
-function LandlordQuotationSentPanel({
+function LandlordQuotationSentDialog({
+  open,
+  onOpenChange,
   items,
   sentAt,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   items: ReportComparisonRepairItem[];
   sentAt?: string | null;
 }) {
   return (
-    <section className="space-y-3 rounded-xl border bg-card p-4">
-      <div>
-        <p className="text-sm font-semibold">Landlord quotation sent</p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Sent to the property owner{sentAt ? ` on ${formatDateTime(sentAt)}` : ''} via email and
-          the Landlord app.
-        </p>
-      </div>
-      <div className="overflow-x-auto rounded-xl border text-xs">
-        <table className="w-full table-fixed text-left">
-          <thead className="bg-muted/40 text-muted-foreground">
-            <tr>
-              <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
-              <th className="px-3 py-2 font-semibold">Description</th>
-              <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
-              <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Contractor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((row, index) => (
-              <tr key={`landlord-quote-sent-${index}`} className="border-t align-top">
-                <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
-                <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
-                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
-                  <MaintenanceQuoteCell row={row} />
-                </td>
-                <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>{row.handymanName || '—'}</td>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
+        <DialogHeader>
+          <DialogTitle>Quotation sent to landlord</DialogTitle>
+          <DialogDescription>
+            Sent to the property owner
+            {sentAt ? ` on ${formatDateTime(sentAt)}` : ''} via email and the Landlord app.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="overflow-x-auto rounded-xl border text-xs">
+          <table className="w-full table-fixed text-left">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr>
+                <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
+                <th className="px-3 py-2 font-semibold">Description</th>
+                <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+                <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Contractor</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+            </thead>
+            <tbody>
+              {items.map((row, index) => (
+                <tr key={`landlord-quote-sent-${index}`} className="border-t align-top">
+                  <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
+                  <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
+                  <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                    <MaintenanceQuoteCell row={row} />
+                  </td>
+                  <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>{row.handymanName || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1624,6 +1735,7 @@ function normalizeBondAckRepairItems(
   return items.filter(hasRepairContent).map((item) => ({
     ...normalizeRepairItems([item], contractors)[0]!,
     bondDeductible: item.bondDeductible === true,
+    landlordWaivable: item.landlordWaivable === true,
   }));
 }
 
@@ -2084,6 +2196,8 @@ export function EndLeasingReportComparisonPanel({
   const [busy, setBusy] = useState(false);
   const [sendQuotationDialogOpen, setSendQuotationDialogOpen] = useState(false);
   const [sendLandlordQuotationDialogOpen, setSendLandlordQuotationDialogOpen] = useState(false);
+  const [tenantQuotationSentDialogOpen, setTenantQuotationSentDialogOpen] = useState(false);
+  const [landlordQuotationSentDialogOpen, setLandlordQuotationSentDialogOpen] = useState(false);
 
   const refreshReports = useCallback(async () => {
     if (!apiConnected) return;
@@ -2288,6 +2402,7 @@ export function EndLeasingReportComparisonPanel({
       );
       applyUpdatedCase(updated);
       setSendQuotationDialogOpen(false);
+      setTenantQuotationSentDialogOpen(true);
       toast.success('Quotation sent to tenant');
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -2328,6 +2443,7 @@ export function EndLeasingReportComparisonPanel({
       const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'landlord');
       applyUpdatedCase(updated);
       setSendLandlordQuotationDialogOpen(false);
+      setLandlordQuotationSentDialogOpen(true);
       toast.success('Landlord quotation sent');
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -2394,6 +2510,7 @@ export function EndLeasingReportComparisonPanel({
 
   const rc = caseData.reportComparison;
   const tenantBondAckSent = Boolean(rc.tenantBondDeductionAckEmail?.sentAt);
+  const agentBondProposalSent = Boolean(rc.agentBondDeductionProposalEmail?.sentAt);
   const tenantQuoteEmailSent =
     Boolean(rc.tenantRepairQuoteEmail?.sentAt) || tenantBondAckSent;
   const tenantAgreed = rc.tenantQuoteResponse === 'accepted';
@@ -2434,13 +2551,20 @@ export function EndLeasingReportComparisonPanel({
         ),
     );
   const landlordQuotationSent = Boolean(rc.landlordRepairQuoteEmail?.sentAt);
+  const tenantQuotationSent = tenantBondAckSent || Boolean(rc.tenantRepairQuoteEmail?.sentAt);
   const canSendQuotationToTenant =
-    tenantMaintenanceReady &&
+    agentBondProposalSent &&
     endLeasingQuotesReadyForTenant &&
     (!tenantBondAckSent || rc.tenantQuoteResponse === 'declined');
   const canSendLandlordQuotation =
     landlordMaintenanceReady && endLeasingLandlordQuotesReady && !landlordQuotationSent;
-  const sendQuotationButtonLabel = tenantBondAckSent
+  const tenantQuotationButtonEnabled =
+    tenantResponsibilityReviewStatus === 'accepted' &&
+    (canSendQuotationToTenant ||
+      (tenantQuotationSent && rc.tenantQuoteResponse !== 'declined'));
+  const landlordQuotationButtonEnabled =
+    landlordMaintenanceReady && (canSendLandlordQuotation || landlordQuotationSent);
+  const sendQuotationButtonLabel = tenantQuotationSent
     ? rc.tenantQuoteResponse === 'pending'
       ? 'Quotation sent — awaiting tenant'
       : rc.tenantQuoteResponse === 'accepted'
@@ -2448,8 +2572,8 @@ export function EndLeasingReportComparisonPanel({
         : rc.tenantQuoteResponse === 'declined'
           ? 'Re-send quotation to tenant'
           : 'Quotation sent to tenant'
-    : !tenantMaintenanceReady
-      ? 'Awaiting tenant responsibility review'
+    : !agentBondProposalSent
+      ? 'Awaiting bond deduction from CROSSUB'
       : !endLeasingQuotesReadyForTenant
         ? 'Complete maintenance quotes first'
         : 'Send quotation to tenant';
@@ -2460,6 +2584,22 @@ export function EndLeasingReportComparisonPanel({
       : !endLeasingLandlordQuotesReady
         ? 'Complete maintenance quotes first'
         : 'Send quotation to landlord';
+
+  const handleTenantQuotationButtonClick = () => {
+    if (tenantQuotationSent && rc.tenantQuoteResponse !== 'declined') {
+      setTenantQuotationSentDialogOpen(true);
+      return;
+    }
+    void openSendQuotationDialog();
+  };
+
+  const handleLandlordQuotationButtonClick = () => {
+    if (landlordQuotationSent) {
+      setLandlordQuotationSentDialogOpen(true);
+      return;
+    }
+    void openSendLandlordQuotationDialog();
+  };
 
   const inspectorReadOnlyItems = useMemo(() => {
     const saved = caseData.reportComparison.tenantResponsibility;
@@ -2642,9 +2782,11 @@ export function EndLeasingReportComparisonPanel({
           lockedHint={
             !tenantMaintenanceReady
               ? 'Awaiting tenant responsibility review'
+              : !agentBondProposalSent
+                ? 'Awaiting bond deduction proposal from CROSSUB — then mark landlord-waivable items and send to tenant'
               : !endLeasingQuotesReadyForTenant
                 ? 'Complete End of Lease maintenance quotes, then send the quotation to the tenant'
-                : 'Send the quotation to the tenant app and email when ready'
+                : 'Mark landlord-waivable items, then send the quotation to the tenant app and email'
           }
           showQuoteColumns
           hideQuoteAmountColumn={tenantResponsibilityReviewStatus === 'pending'}
@@ -2675,8 +2817,8 @@ export function EndLeasingReportComparisonPanel({
                     ? 'h-9 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
                     : 'h-9 gap-1.5 text-xs'
                 }
-                disabled={busy || !canSendQuotationToTenant}
-                onClick={() => void openSendQuotationDialog()}
+                disabled={busy || !tenantQuotationButtonEnabled}
+                onClick={() => handleTenantQuotationButtonClick()}
               >
                 <Send className="size-3.5" />
                 {sendQuotationButtonLabel}
@@ -2719,8 +2861,8 @@ export function EndLeasingReportComparisonPanel({
                     ? 'h-9 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
                     : 'h-9 gap-1.5 text-xs'
                 }
-                disabled={busy || !canSendLandlordQuotation}
-                onClick={() => void openSendLandlordQuotationDialog()}
+                disabled={busy || !landlordQuotationButtonEnabled}
+                onClick={() => handleLandlordQuotationButtonClick()}
               >
                 <Send className="size-3.5" />
                 {sendLandlordQuotationButtonLabel}
@@ -2728,42 +2870,7 @@ export function EndLeasingReportComparisonPanel({
             ) : null
           }
         />
-        {landlordQuotationSent ? (
-          <LandlordQuotationSentPanel
-            items={landlordItems}
-            sentAt={rc.landlordRepairQuoteEmail?.sentAt}
-          />
-        ) : null}
-        {tenantBondAckSent || rc.tenantRepairQuoteEmail?.sentAt ? (
-          <>
-            <TenantBondDeductionAckSentPanel
-              items={tenantItems}
-              settlementSummary={rc.settlementSummary}
-              sentAt={rc.tenantBondDeductionAckEmail?.sentAt ?? rc.tenantRepairQuoteEmail?.sentAt}
-              tenantQuoteResponse={rc.tenantQuoteResponse}
-              tenantQuoteResponseAt={rc.tenantQuoteResponseAt}
-              declineReason={rc.tenantQuoteDeclineReason}
-            />
-            <TenantQuoteResponsePanel
-              response={rc.tenantQuoteResponse}
-              responseAt={rc.tenantQuoteResponseAt}
-              declineReason={rc.tenantQuoteDeclineReason}
-              replyExcerpt={rc.tenantQuoteReplyExcerpt}
-              commConversationId={
-                rc.tenantBondDeductionAckEmail?.commConversationId ??
-                rc.tenantRepairQuoteEmail?.commConversationId
-              }
-              busy={busy}
-              onCheckReply={() => void checkTenantReply()}
-              onAgree={() => void recordTenantAgree()}
-              onDisagree={() => void recordTenantDisagree()}
-            />
-          </>
-        ) : null}
-        {tenantAgreed && rc.settlementSummary ? (
-          <SettlementSummaryPanel summary={rc.settlementSummary} />
-        ) : null}
-        <TenantSendQuotationDialog
+        <AgentTenantBondSendDialog
           open={sendQuotationDialogOpen}
           onOpenChange={setSendQuotationDialogOpen}
           items={tenantItems}
@@ -2778,6 +2885,31 @@ export function EndLeasingReportComparisonPanel({
           items={landlordItems}
           busy={busy}
           onSend={() => void sendLandlordQuotation()}
+        />
+        <TenantQuotationSentDialog
+          open={tenantQuotationSentDialogOpen}
+          onOpenChange={setTenantQuotationSentDialogOpen}
+          items={tenantItems}
+          settlementSummary={rc.settlementSummary}
+          sentAt={rc.tenantBondDeductionAckEmail?.sentAt ?? rc.tenantRepairQuoteEmail?.sentAt}
+          tenantQuoteResponse={rc.tenantQuoteResponse}
+          tenantQuoteResponseAt={rc.tenantQuoteResponseAt}
+          declineReason={rc.tenantQuoteDeclineReason}
+          replyExcerpt={rc.tenantQuoteReplyExcerpt}
+          commConversationId={
+            rc.tenantBondDeductionAckEmail?.commConversationId ??
+            rc.tenantRepairQuoteEmail?.commConversationId
+          }
+          busy={busy}
+          onCheckReply={() => void checkTenantReply()}
+          onAgree={() => void recordTenantAgree()}
+          onDisagree={() => void recordTenantDisagree()}
+        />
+        <LandlordQuotationSentDialog
+          open={landlordQuotationSentDialogOpen}
+          onOpenChange={setLandlordQuotationSentDialogOpen}
+          items={landlordItems}
+          sentAt={rc.landlordRepairQuoteEmail?.sentAt}
         />
       </div>
     );

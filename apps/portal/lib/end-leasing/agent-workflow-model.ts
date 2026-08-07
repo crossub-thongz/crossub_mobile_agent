@@ -585,6 +585,20 @@ function emailRecordsForStepOnly(
     }
     case END_LEASING_AGENT_STEP.GET_QUOTE: {
       const records: JobCaseEmailRecord[] = [];
+      const agentBondProposal = storedEmailToRecord(
+        `${caseData.id}-agent-bond-deduction-proposal`,
+        rc.agentBondDeductionProposalEmail,
+        'agent_bond_deduction_proposal',
+        'Bond deduction proposal for agent',
+        caseData.createdAt,
+      );
+      const tenantBondAck = storedEmailToRecord(
+        `${caseData.id}-tenant-bond-deduction-ack`,
+        rc.tenantBondDeductionAckEmail,
+        'tenant_bond_deduction_ack',
+        'Bond deduction sent to tenant',
+        caseData.createdAt,
+      );
       const agentQuote = storedEmailToRecord(
         `${caseData.id}-agent-repair-quote`,
         rc.agentRepairQuoteEmail,
@@ -601,6 +615,8 @@ function emailRecordsForStepOnly(
         caseData.createdAt,
         caseData.agentName,
       );
+      if (agentBondProposal) records.push(agentBondProposal);
+      if (tenantBondAck) records.push(tenantBondAck);
       if (agentQuote) records.push(agentQuote);
       if (landlordQuote) records.push(landlordQuote);
       return records;
