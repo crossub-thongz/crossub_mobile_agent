@@ -1297,6 +1297,10 @@ function maintenanceQuoteNote(row: ReportComparisonRepairItem): string | null {
   return `Quoted from ${row.handymanName.trim()} (maintenance job)`;
 }
 
+function rowUsesMaintenanceBackedQuote(row: ReportComparisonRepairItem): boolean {
+  return Boolean(row.maintenanceRequestId?.trim());
+}
+
 function MaintenanceQuoteCell({ row }: { row: ReportComparisonRepairItem }) {
   const note = maintenanceQuoteNote(row);
   return (
@@ -1613,29 +1617,39 @@ function RepairItemsTable({
                         <>
                           {showQuoteAmountColumn ? (
                             <td className={`${REPAIR_COL_QUOTE} px-3 py-2`}>
-                              <Input
-                                className="h-8 text-xs"
-                                value={row.quote ?? ''}
-                                placeholder="$0.00"
-                                disabled={busy}
-                                onChange={(e) => updateRow(index, { quote: e.target.value })}
-                              />
-                              {maintenanceQuoteNote(row) ? (
-                                <p className="text-muted-foreground mt-1 text-[10px] leading-snug">
-                                  {maintenanceQuoteNote(row)}
-                                </p>
-                              ) : null}
+                              {rowUsesMaintenanceBackedQuote(row) ? (
+                                <MaintenanceQuoteCell row={row} />
+                              ) : (
+                                <>
+                                  <Input
+                                    className="h-8 text-xs"
+                                    value={row.quote ?? ''}
+                                    placeholder="$0.00"
+                                    disabled={busy}
+                                    onChange={(e) => updateRow(index, { quote: e.target.value })}
+                                  />
+                                  {maintenanceQuoteNote(row) ? (
+                                    <p className="text-muted-foreground mt-1 text-[10px] leading-snug">
+                                      {maintenanceQuoteNote(row)}
+                                    </p>
+                                  ) : null}
+                                </>
+                              )}
                             </td>
                           ) : null}
                           {showCompanyColumn ? (
                             <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
-                              <HandymanField
-                                row={row}
-                                contractors={contractors}
-                                agencyId={agencyId}
-                                onContractorsChange={onContractorsChange}
-                                onChange={(patch) => updateRow(index, patch)}
-                              />
+                              {rowUsesMaintenanceBackedQuote(row) ? (
+                                <span className="text-muted-foreground">{row.handymanName || '—'}</span>
+                              ) : (
+                                <HandymanField
+                                  row={row}
+                                  contractors={contractors}
+                                  agencyId={agencyId}
+                                  onContractorsChange={onContractorsChange}
+                                  onChange={(patch) => updateRow(index, patch)}
+                                />
+                              )}
                             </td>
                           ) : null}
                         </>
