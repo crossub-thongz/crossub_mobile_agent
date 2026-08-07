@@ -383,6 +383,16 @@ export function mapTerminationCase(
         s.reportComparison?.landlordResponsibilityAgentAcknowledged ?? null,
       landlordResponsibilityAgentAcknowledgedAt:
         s.reportComparison?.landlordResponsibilityAgentAcknowledgedAt ?? undefined,
+      tenantResponsibilityReviewStatus:
+        (s.reportComparison?.tenantResponsibilityReviewStatus as
+          | 'none'
+          | 'pending'
+          | 'accepted'
+          | 'declined'
+          | undefined) ?? 'none',
+      tenantResponsibilityReviewAt: s.reportComparison?.tenantResponsibilityReviewAt ?? undefined,
+      tenantResponsibilityDeclineReason:
+        s.reportComparison?.tenantResponsibilityDeclineReason ?? undefined,
       draftSummaryEmail: mapOverviewEmail(s.reportComparison?.draftSummaryEmail),
       tenantComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.tenantComparisonSummaryEmail),
       agentComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.agentComparisonSummaryEmail),

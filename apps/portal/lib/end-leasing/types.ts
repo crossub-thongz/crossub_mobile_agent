@@ -130,6 +130,9 @@ export interface ReportComparisonStageState {
   tenantResponsibilityAgentAcknowledgedAt?: string | null
   landlordResponsibilityAgentAcknowledged?: boolean | null
   landlordResponsibilityAgentAcknowledgedAt?: string | null
+  tenantResponsibilityReviewStatus?: 'none' | 'pending' | 'accepted' | 'declined'
+  tenantResponsibilityReviewAt?: string | null
+  tenantResponsibilityDeclineReason?: string | null
   draftSummaryEmail?: EndLeasingOverviewEmail | null
   tenantComparisonSummaryEmail?: EndLeasingOverviewEmail | null
   agentComparisonSummaryEmail?: EndLeasingOverviewEmail | null

@@ -1782,6 +1782,16 @@ export function EndLeasingReportComparisonPanel({
   }
 
   if (showQuote) {
+    const tenantResponsibilityReviewStatus =
+      rc.tenantResponsibilityAgentAcknowledged === true &&
+      (rc.tenantResponsibility?.length ?? 0) > 0
+        ? rc.tenantResponsibilityReviewStatus === 'accepted' ||
+          rc.tenantResponsibilityReviewStatus === 'declined' ||
+          rc.tenantResponsibilityReviewStatus === 'pending'
+          ? rc.tenantResponsibilityReviewStatus
+          : 'pending'
+        : 'none';
+
     return (
       <div className="space-y-4">
         <CompareReportPdfRow
@@ -1789,6 +1799,24 @@ export function EndLeasingReportComparisonPanel({
           ingoingDetail={ingoingDetail}
           loading={loadingReports}
         />
+        {tenantResponsibilityReviewStatus !== 'none' ? (
+          <section className="space-y-2 rounded-xl border bg-card p-4">
+            <p className="text-sm font-semibold">Tenant responsibility review</p>
+            <p className="text-muted-foreground text-xs">
+              {tenantResponsibilityReviewStatus === 'pending'
+                ? 'Awaiting tenant review in the Make-good step.'
+                : tenantResponsibilityReviewStatus === 'accepted'
+                  ? 'Tenant acknowledged — pending quotation from CROSSUB.'
+                  : 'Tenant disagreed with the responsibility list.'}
+            </p>
+            {rc.tenantResponsibilityDeclineReason ? (
+              <p className="text-xs whitespace-pre-wrap">
+                <span className="font-medium">Tenant reason:</span>{' '}
+                {rc.tenantResponsibilityDeclineReason}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
         <QuoteResponsibilitySection
           title="Tenant Responsibility"
           items={tenantItems}
@@ -1797,6 +1825,7 @@ export function EndLeasingReportComparisonPanel({
           onContractorsChange={setContractors}
           onChange={setTenantItems}
           readOnly
+          showQuoteColumns
           busy={busy}
           staffComment={tenantStaffComment}
           agentComment={tenantAgentComment}
@@ -1811,6 +1840,7 @@ export function EndLeasingReportComparisonPanel({
           onContractorsChange={setContractors}
           onChange={setLandlordItems}
           readOnly
+          showQuoteColumns
           busy={busy}
           staffComment={landlordStaffComment}
           agentComment={landlordAgentComment}
