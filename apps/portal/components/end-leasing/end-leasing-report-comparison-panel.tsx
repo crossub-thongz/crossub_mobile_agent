@@ -60,6 +60,18 @@ const REPAIR_COL_QUOTE = 'w-28';
 const REPAIR_COL_COMPANY = 'w-44';
 const REPAIR_COL_ACTION = 'w-10';
 
+type MaintenanceColumnMode = 'hidden' | 'pending_ack';
+
+function MaintenancePendingAckCell() {
+  return (
+    <td className="px-2 py-2">
+      <span className="text-muted-foreground text-[10px] leading-snug">
+        Pending Tenant Acknowledgement
+      </span>
+    </td>
+  );
+}
+
 function TenantQuoteResponsePanel({
   response,
   responseAt,
@@ -943,6 +955,8 @@ function QuoteResponsibilitySection({
   onSendAgentComment,
   canEditStaffComment = false,
   canEditAgentComment = false,
+  hideQuoteColumns = false,
+  maintenanceColumnMode = 'hidden',
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -959,7 +973,14 @@ function QuoteResponsibilitySection({
   onSendAgentComment?: (message: string) => void | Promise<void>;
   canEditStaffComment?: boolean;
   canEditAgentComment?: boolean;
+  /** @deprecated Prefer `hideQuoteColumns`. */
+  showQuoteColumns?: boolean;
+  hideQuoteColumns?: boolean;
+  maintenanceColumnMode?: MaintenanceColumnMode;
 }) {
+  const showQuoteCols = hideQuoteColumns === true ? false : showQuoteColumns !== false;
+  const showMaintenanceColumn = maintenanceColumnMode === 'pending_ack';
+
   return (
     <section className="rounded-xl border bg-card">
       <div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5">
@@ -983,6 +1004,8 @@ function QuoteResponsibilitySection({
           onChange={onChange}
           readOnly={readOnly}
           busy={busy}
+          hideQuoteColumns={!showQuoteCols}
+          maintenanceColumnMode={maintenanceColumnMode}
         />
         {readOnly ? (
           <p className="text-muted-foreground mt-2 text-[10px]">
@@ -1197,6 +1220,8 @@ function RepairItemsTable({
   hideTitle = false,
   showAddRow = true,
   busy = false,
+  hideQuoteColumns = false,
+  maintenanceColumnMode = 'hidden',
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -1211,7 +1236,10 @@ function RepairItemsTable({
   hideTitle?: boolean;
   showAddRow?: boolean;
   busy?: boolean;
+  maintenanceColumnMode?: MaintenanceColumnMode;
 }) {
+  const showMaintenanceColumn = maintenanceColumnMode === 'pending_ack';
+
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   };
@@ -1250,6 +1278,9 @@ function RepairItemsTable({
                   <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Company</th>
                 </>
               ) : null}
+              {showMaintenanceColumn ? (
+                <th className="px-3 py-2 font-semibold">Maintenance</th>
+              ) : null}
               {!readOnly ? <th className={REPAIR_COL_ACTION} /> : null}
             </tr>
           </thead>
@@ -1257,7 +1288,11 @@ function RepairItemsTable({
             {items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={(hideQuoteColumns ? 3 : 5) + (readOnly ? 0 : 1)}
+                  colSpan={
+                    (hideQuoteColumns ? 3 : 5) +
+                    (showMaintenanceColumn ? 1 : 0) +
+                    (readOnly ? 0 : 1)
+                  }
                   className="text-muted-foreground px-3 py-4 text-center"
                 >
                   No items yet.
@@ -1283,6 +1318,7 @@ function RepairItemsTable({
                           </td>
                         </>
                       ) : null}
+                      {showMaintenanceColumn ? <MaintenancePendingAckCell /> : null}
                     </>
                   ) : (
                     <>
@@ -1331,6 +1367,7 @@ function RepairItemsTable({
                           </td>
                         </>
                       ) : null}
+                      {showMaintenanceColumn ? <MaintenancePendingAckCell /> : null}
                       <td className={`${REPAIR_COL_ACTION} px-2 py-2`}>
                         <Button
                           type="button"
@@ -1917,6 +1954,12 @@ export function EndLeasingReportComparisonPanel({
           agentComment={tenantAgentComment}
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
           canEditAgentComment
+          maintenanceColumnMode={
+            tenantResponsibilityReviewStatus !== 'none' &&
+            tenantResponsibilityReviewStatus !== 'accepted'
+              ? 'pending_ack'
+              : 'hidden'
+          }
         />
         <QuoteResponsibilitySection
           title="Landlord Responsibility"
