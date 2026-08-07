@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle2,
@@ -8,6 +8,7 @@ import {
   Loader2,
   Lock,
   Mail,
+  MessageSquare,
   Plus,
   RefreshCw,
   Send,
@@ -431,6 +432,7 @@ function CommentField({
   onSend,
   actionBusy,
   placeholder,
+  tone = 'default',
 }: {
   label: string;
   savedComment: string;
@@ -439,6 +441,7 @@ function CommentField({
   onSend?: (message: string) => void | Promise<void>;
   actionBusy?: boolean;
   placeholder?: string;
+  tone?: 'staff' | 'agent' | 'default';
 }) {
   const [draft, setDraft] = useState('');
 
@@ -449,16 +452,27 @@ function CommentField({
     setDraft('');
   };
 
+  const toneClasses =
+    tone === 'staff'
+      ? 'border-sky-200/80 bg-sky-50/50'
+      : tone === 'agent'
+        ? 'border-emerald-200/80 bg-emerald-50/40'
+        : 'border-border/60 bg-muted/20';
+
   return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold">{label}</p>
-      <p className="text-muted-foreground min-h-[2.5rem] rounded-lg border bg-muted/20 px-3 py-2 text-xs whitespace-pre-wrap">
+    <div className={`rounded-lg border px-3 py-2.5 ${toneClasses}`}>
+      <p className="text-[11px] font-semibold tracking-tight text-foreground/90">{label}</p>
+      <p
+        className={`mt-1.5 min-h-[2.5rem] text-xs leading-relaxed whitespace-pre-wrap ${
+          savedComment.trim() ? 'text-foreground/80' : 'text-muted-foreground italic'
+        }`}
+      >
         {savedComment.trim() || emptyLabel}
       </p>
       {canEdit ? (
-        <div className="flex gap-2">
+        <div className="mt-2.5 flex gap-2 border-t border-border/40 pt-2.5">
           <Input
-            className="h-9 flex-1 text-xs"
+            className="h-9 flex-1 border-border/60 bg-background text-xs shadow-sm"
             value={draft}
             placeholder={placeholder}
             disabled={actionBusy}
@@ -474,7 +488,7 @@ function CommentField({
             type="button"
             size="sm"
             variant="secondary"
-            className="h-9 shrink-0 gap-1 text-xs"
+            className="h-9 shrink-0 gap-1 border-border/60 text-xs shadow-sm"
             disabled={actionBusy || !draft.trim()}
             onClick={() => void handleSend()}
           >
@@ -605,7 +619,11 @@ function ResponsibilityCommentsBlock({
   agentCommentLabel?: string;
 }) {
   return (
-    <div className="mt-4 space-y-3">
+    <div className="mt-4 space-y-3 rounded-xl border border-border/60 bg-muted/20 p-3.5">
+      <div className="flex items-center gap-2 border-b border-border/50 pb-2">
+        <MessageSquare className="text-muted-foreground size-3.5" />
+        <p className="text-xs font-semibold text-foreground/80">Comments</p>
+      </div>
       <CommentField
         label="CROSSUB staff notes"
         savedComment={staffComment}
@@ -614,6 +632,7 @@ function ResponsibilityCommentsBlock({
         onSend={onSendStaffComment}
         actionBusy={actionBusy}
         placeholder="Add a staff note…"
+        tone="staff"
       />
       <CommentField
         label={agentCommentLabel}
@@ -623,6 +642,7 @@ function ResponsibilityCommentsBlock({
         onSend={onSendAgentComment}
         actionBusy={actionBusy}
         placeholder="Add a comment…"
+        tone="agent"
       />
     </div>
   );
@@ -883,6 +903,11 @@ function QuoteResponsibilitySection({
           readOnly={readOnly}
           busy={busy}
         />
+        {readOnly ? (
+          <p className="text-muted-foreground mt-2 text-[10px]">
+            {lockedHint ?? 'View only — quotes maintained by CROSSUB staff'}
+          </p>
+        ) : null}
         <ResponsibilityCommentsBlock
           staffComment={staffComment}
           agentComment={agentComment}
@@ -1356,7 +1381,6 @@ export function EndLeasingReportComparisonPanel({
     caseData.reportComparison.landlordResponsibilityAgentComment ?? '',
   );
   const [busy, setBusy] = useState(false);
-  const quoteAutosaveReadyRef = useRef(false);
 
   const refreshReports = useCallback(async () => {
     if (!apiConnected) return;
@@ -1391,7 +1415,6 @@ export function EndLeasingReportComparisonPanel({
   }, [apiConnected, agencyId]);
 
   useEffect(() => {
-    quoteAutosaveReadyRef.current = false;
     setTenantItems(withRepairRowKeys(caseData.reportComparison.tenantResponsibility));
     setLandlordItems(withRepairRowKeys(caseData.reportComparison.landlordResponsibility));
     setTenantStaffComment(caseData.reportComparison.tenantResponsibilityStaffComment ?? '');
@@ -1508,19 +1531,6 @@ export function EndLeasingReportComparisonPanel({
     }
     await persist(patch, { silent });
   };
-
-  useEffect(() => {
-    if (mode !== 'quote') return;
-    if (!quoteAutosaveReadyRef.current) {
-      quoteAutosaveReadyRef.current = true;
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      void saveRepairItems(true).catch(() => undefined);
-    }, 1000);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce quote rows
-  }, [tenantItems, landlordItems, mode]);
 
   const confirmAgentComparison = async () => {
     setBusy(true);
@@ -1644,11 +1654,6 @@ export function EndLeasingReportComparisonPanel({
 
   const rc = caseData.reportComparison;
   const tenantQuoteEmailSent = Boolean(rc.tenantRepairQuoteEmail?.sentAt);
-  const tenantTableLocked =
-    tenantQuoteEmailSent &&
-    (rc.tenantQuoteResponse === 'pending' ||
-      rc.tenantQuoteResponse === 'accepted' ||
-      !rc.tenantQuoteResponse);
   const tenantAgreed = rc.tenantQuoteResponse === 'accepted';
   const showCompare = mode === 'compare';
   const showQuote = mode === 'quote';
@@ -1791,19 +1796,12 @@ export function EndLeasingReportComparisonPanel({
           agencyId={agencyId}
           onContractorsChange={setContractors}
           onChange={setTenantItems}
-          readOnly={tenantTableLocked}
-          lockedHint={
-            tenantTableLocked
-              ? rc.tenantQuoteResponse === 'accepted'
-                ? 'Locked — tenant agreed'
-                : 'Locked — awaiting tenant reply'
-              : undefined
-          }
+          readOnly
           busy={busy}
           staffComment={tenantStaffComment}
           agentComment={tenantAgentComment}
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
-          canEditAgentComment={!tenantTableLocked}
+          canEditAgentComment
         />
         <QuoteResponsibilitySection
           title="Landlord Responsibility"
@@ -1812,6 +1810,7 @@ export function EndLeasingReportComparisonPanel({
           agencyId={agencyId}
           onContractorsChange={setContractors}
           onChange={setLandlordItems}
+          readOnly
           busy={busy}
           staffComment={landlordStaffComment}
           agentComment={landlordAgentComment}
