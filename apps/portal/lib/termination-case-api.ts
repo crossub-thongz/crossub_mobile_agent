@@ -359,9 +359,30 @@ export function mapTerminationCase(
       tenantAcknowledgedAt: s.reportComparison?.tenantAcknowledgedAt ?? undefined,
       tenantResponsibility: mapRepairItems(s.reportComparison?.tenantResponsibility),
       landlordResponsibility: mapRepairItems(s.reportComparison?.landlordResponsibility),
+      tenantResponsibilityStaffComment: s.reportComparison?.tenantResponsibilityStaffComment ?? null,
+      tenantResponsibilityStaffCommentAt:
+        s.reportComparison?.tenantResponsibilityStaffCommentAt ?? undefined,
+      landlordResponsibilityStaffComment:
+        s.reportComparison?.landlordResponsibilityStaffComment ?? null,
+      landlordResponsibilityStaffCommentAt:
+        s.reportComparison?.landlordResponsibilityStaffCommentAt ?? undefined,
+      tenantResponsibilityAgentComment: s.reportComparison?.tenantResponsibilityAgentComment ?? null,
+      tenantResponsibilityAgentCommentAt:
+        s.reportComparison?.tenantResponsibilityAgentCommentAt ?? undefined,
+      landlordResponsibilityAgentComment:
+        s.reportComparison?.landlordResponsibilityAgentComment ?? null,
+      landlordResponsibilityAgentCommentAt:
+        s.reportComparison?.landlordResponsibilityAgentCommentAt ?? undefined,
       draftSummaryEmail: mapOverviewEmail(s.reportComparison?.draftSummaryEmail),
       tenantComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.tenantComparisonSummaryEmail),
       agentComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.agentComparisonSummaryEmail),
+      landlordComparisonSummaryEmail: mapOverviewEmail(
+        s.reportComparison?.landlordComparisonSummaryEmail,
+      ),
+      staffCommentsToAgentEmail: mapOverviewEmail(s.reportComparison?.staffCommentsToAgentEmail),
+      landlordPropertyUpdateEmail: mapOverviewEmail(
+        s.reportComparison?.landlordPropertyUpdateEmail,
+      ),
       tenantRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.tenantRepairQuoteEmail),
       landlordRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.landlordRepairQuoteEmail),
       agentRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.agentRepairQuoteEmail),

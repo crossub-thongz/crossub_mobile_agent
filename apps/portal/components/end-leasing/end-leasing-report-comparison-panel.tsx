@@ -33,9 +33,9 @@ import type {
 import {
   extractTenantResponsibilityFromOutgoing,
   mergeInspectionResponsibilityItems,
-  responsibilityItemsEqual,
 } from '@/lib/end-leasing/outgoing-inspection-sync';
 import { resolveCompareIngoingDetail } from '@/lib/end-leasing/resolve-compare-ingoing';
+import { isInspectionReportReadyForView } from '@/lib/inspections/inspection-report-ready';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { ReportComparisonRepairItemInput } from '@/lib/termination-case-types';
 import { terminationApi } from '@/lib/termination-case-api';
@@ -301,7 +301,7 @@ function CompareReportPdfRow({
             <Loader2 className="size-3 animate-spin" />
             Loading…
           </span>
-        ) : ingoingDetail ? (
+        ) : ingoingDetail && isInspectionReportReadyForView(ingoingDetail) ? (
           <InspectionReportDownloadActions
             inspectionId={ingoingDetail.id}
             reportUrl={ingoingDetail.reportUrl}
@@ -313,7 +313,9 @@ function CompareReportPdfRow({
             size="sm"
           />
         ) : (
-          <span className="text-muted-foreground text-xs">Not linked yet</span>
+          <span className="text-muted-foreground text-xs">
+            {ingoingDetail ? 'Report not available yet' : 'Not linked yet'}
+          </span>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2.5">
@@ -323,7 +325,7 @@ function CompareReportPdfRow({
             <Loader2 className="size-3 animate-spin" />
             Loading…
           </span>
-        ) : outgoingDetail ? (
+        ) : outgoingDetail && isInspectionReportReadyForView(outgoingDetail) ? (
           <InspectionReportDownloadActions
             inspectionId={outgoingDetail.id}
             reportUrl={outgoingDetail.reportUrl}
@@ -335,7 +337,9 @@ function CompareReportPdfRow({
             size="sm"
           />
         ) : (
-          <span className="text-muted-foreground text-xs">Not scheduled yet</span>
+          <span className="text-muted-foreground text-xs">
+            {outgoingDetail ? 'Report not available yet' : 'Not scheduled yet'}
+          </span>
         )}
       </div>
     </div>
@@ -359,8 +363,8 @@ function CompareReportsSection({
   actionBusy: boolean;
   onConfirm: () => void;
 }) {
-  const hasOutgoingReport = Boolean(outgoingDetail?.reportUrl || outgoingDetail?.id);
-  const hasIngoingReport = Boolean(ingoingDetail?.reportUrl || ingoingDetail?.id);
+  const hasOutgoingReport = isInspectionReportReadyForView(outgoingDetail);
+  const hasIngoingReport = isInspectionReportReadyForView(ingoingDetail);
 
   return (
     <section className="space-y-3 rounded-xl border bg-card p-4">
@@ -412,6 +416,119 @@ function CompareReportsSection({
   );
 }
 
+function appendCommentLine(existing: string, message: string): string {
+  const trimmed = message.trim();
+  if (!trimmed) return existing;
+  return existing.trim() ? `${existing.trim()}\n${trimmed}` : trimmed;
+}
+
+function CommentField({
+  label,
+  savedComment,
+  emptyLabel,
+  canEdit,
+  onSend,
+  actionBusy,
+  placeholder,
+}: {
+  label: string;
+  savedComment: string;
+  emptyLabel: string;
+  canEdit: boolean;
+  onSend?: (message: string) => void | Promise<void>;
+  actionBusy?: boolean;
+  placeholder?: string;
+}) {
+  const [draft, setDraft] = useState('');
+
+  const handleSend = async () => {
+    const trimmed = draft.trim();
+    if (!trimmed || actionBusy || !onSend) return;
+    await onSend(trimmed);
+    setDraft('');
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-semibold">{label}</p>
+      <p className="text-muted-foreground min-h-[2.5rem] rounded-lg border bg-muted/20 px-3 py-2 text-xs whitespace-pre-wrap">
+        {savedComment.trim() || emptyLabel}
+      </p>
+      {canEdit ? (
+        <div className="flex gap-2">
+          <Input
+            className="h-9 flex-1 text-xs"
+            value={draft}
+            placeholder={placeholder}
+            disabled={actionBusy}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void handleSend();
+              }
+            }}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-9 shrink-0 gap-1 text-xs"
+            disabled={actionBusy || !draft.trim()}
+            onClick={() => void handleSend()}
+          >
+            <Send className="size-3.5" />
+            Send
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ResponsibilityCommentsBlock({
+  staffComment = '',
+  agentComment = '',
+  onSendStaffComment,
+  onSendAgentComment,
+  canEditStaffComment = false,
+  canEditAgentComment = false,
+  actionBusy = false,
+  agentCommentLabel = 'Agent comments',
+}: {
+  staffComment?: string;
+  agentComment?: string;
+  onSendStaffComment?: (message: string) => void | Promise<void>;
+  onSendAgentComment?: (message: string) => void | Promise<void>;
+  canEditStaffComment?: boolean;
+  canEditAgentComment?: boolean;
+  actionBusy?: boolean;
+  agentCommentLabel?: string;
+}) {
+  return (
+    <div className="mt-4 space-y-3">
+      <CommentField
+        label="CROSSUB staff notes"
+        savedComment={staffComment}
+        emptyLabel="No staff notes yet."
+        canEdit={canEditStaffComment}
+        onSend={onSendStaffComment}
+        actionBusy={actionBusy}
+        placeholder="Add a staff note…"
+      />
+      <CommentField
+        label={agentCommentLabel}
+        savedComment={agentComment}
+        emptyLabel="No agent comments yet."
+        canEdit={canEditAgentComment}
+        onSend={onSendAgentComment}
+        actionBusy={actionBusy}
+        placeholder="Add a comment…"
+      />
+    </div>
+  );
+}
+
 function CompareResponsibilitySection({
   title,
   description,
@@ -419,9 +536,19 @@ function CompareResponsibilitySection({
   onChange,
   onEmail,
   emailHint,
+  emailButtonLabel = 'Email',
+  emailSentLabel = 'Email sent',
   emailSent = false,
   actionBusy = false,
   readOnly = false,
+  emptyReadOnlyMessage = 'No items recorded yet.',
+  staffComment = '',
+  agentComment = '',
+  onSendStaffComment,
+  onSendAgentComment,
+  canEditStaffComment = false,
+  canEditAgentComment = false,
+  showEmailButton = true,
 }: {
   title: string;
   description?: string;
@@ -429,11 +556,19 @@ function CompareResponsibilitySection({
   onChange: (items: ReportComparisonRepairItem[]) => void;
   onEmail: () => void;
   emailHint: string;
-  /** True once the comparison summary email for this section has been sent. */
+  emailButtonLabel?: string;
+  emailSentLabel?: string;
   emailSent?: boolean;
-  /** Disables email/actions only — not row inputs (avoids flicker during autosave). */
   actionBusy?: boolean;
   readOnly?: boolean;
+  emptyReadOnlyMessage?: string;
+  staffComment?: string;
+  agentComment?: string;
+  onSendStaffComment?: (message: string) => void | Promise<void>;
+  onSendAgentComment?: (message: string) => void | Promise<void>;
+  canEditStaffComment?: boolean;
+  canEditAgentComment?: boolean;
+  showEmailButton?: boolean;
 }) {
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -470,9 +605,7 @@ function CompareResponsibilitySection({
               {items.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-muted-foreground px-3 py-4 text-center">
-                    {readOnly
-                      ? 'No tenant-responsible items on the outgoing inspection report yet.'
-                      : 'No items yet.'}
+                    {readOnly ? emptyReadOnlyMessage : 'No items yet.'}
                   </td>
                 </tr>
               ) : readOnly ? (
@@ -523,8 +656,8 @@ function CompareResponsibilitySection({
             </tbody>
           </table>
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          {!readOnly ? (
+        {!readOnly ? (
+          <div className="mt-3">
             <Button
               type="button"
               size="sm"
@@ -536,28 +669,40 @@ function CompareResponsibilitySection({
               <Plus className="size-3.5" />
               Add
             </Button>
-          ) : (
-            <span className="text-muted-foreground text-[10px]">
-              Synced from inspector outgoing report
-            </span>
-          )}
-          <Button
-            type="button"
-            size="sm"
-            variant={emailSent ? 'default' : 'secondary'}
-            className={
-              emailSent
-                ? 'h-8 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
-                : 'h-8 gap-1.5 text-xs'
-            }
-            disabled={actionBusy || emailSent}
-            onClick={onEmail}
-            title={emailSent ? 'Email already sent' : emailHint}
-          >
-            <Mail className="size-3.5" />
-            {emailSent ? 'Email sent' : 'Email'}
-          </Button>
-        </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground mt-3 text-[10px]">View only — maintained by CROSSUB staff</p>
+        )}
+        <ResponsibilityCommentsBlock
+          staffComment={staffComment}
+          agentComment={agentComment}
+          onSendStaffComment={onSendStaffComment}
+          onSendAgentComment={onSendAgentComment}
+          canEditStaffComment={canEditStaffComment}
+          canEditAgentComment={canEditAgentComment}
+          actionBusy={actionBusy}
+          agentCommentLabel={canEditAgentComment ? 'Your comments' : 'Agent comments'}
+        />
+        {showEmailButton ? (
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant={emailSent ? 'default' : 'secondary'}
+              className={
+                emailSent
+                  ? 'h-8 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
+                  : 'h-8 gap-1.5 text-xs'
+              }
+              disabled={actionBusy || emailSent}
+              onClick={onEmail}
+              title={emailSent ? 'Email already sent' : emailHint}
+            >
+              <Mail className="size-3.5" />
+              {emailSent ? emailSentLabel : emailButtonLabel}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -573,6 +718,12 @@ function QuoteResponsibilitySection({
   readOnly = false,
   lockedHint,
   busy = false,
+  staffComment = '',
+  agentComment = '',
+  onSendStaffComment,
+  onSendAgentComment,
+  canEditStaffComment = false,
+  canEditAgentComment = false,
 }: {
   title: string;
   items: ReportComparisonRepairItem[];
@@ -583,6 +734,12 @@ function QuoteResponsibilitySection({
   readOnly?: boolean;
   lockedHint?: string;
   busy?: boolean;
+  staffComment?: string;
+  agentComment?: string;
+  onSendStaffComment?: (message: string) => void | Promise<void>;
+  onSendAgentComment?: (message: string) => void | Promise<void>;
+  canEditStaffComment?: boolean;
+  canEditAgentComment?: boolean;
 }) {
   return (
     <section className="rounded-xl border bg-card">
@@ -607,6 +764,16 @@ function QuoteResponsibilitySection({
           onChange={onChange}
           readOnly={readOnly}
           busy={busy}
+        />
+        <ResponsibilityCommentsBlock
+          staffComment={staffComment}
+          agentComment={agentComment}
+          onSendStaffComment={onSendStaffComment}
+          onSendAgentComment={onSendAgentComment}
+          canEditStaffComment={canEditStaffComment}
+          canEditAgentComment={canEditAgentComment}
+          actionBusy={busy}
+          agentCommentLabel={canEditAgentComment ? 'Your comments' : 'Agent comments'}
         />
       </div>
     </section>
@@ -1058,8 +1225,19 @@ export function EndLeasingReportComparisonPanel({
   const [landlordItems, setLandlordItems] = useState<ReportComparisonRepairItem[]>(
     caseData.reportComparison.landlordResponsibility,
   );
+  const [tenantStaffComment, setTenantStaffComment] = useState(
+    caseData.reportComparison.tenantResponsibilityStaffComment ?? '',
+  );
+  const [landlordStaffComment, setLandlordStaffComment] = useState(
+    caseData.reportComparison.landlordResponsibilityStaffComment ?? '',
+  );
+  const [tenantAgentComment, setTenantAgentComment] = useState(
+    caseData.reportComparison.tenantResponsibilityAgentComment ?? '',
+  );
+  const [landlordAgentComment, setLandlordAgentComment] = useState(
+    caseData.reportComparison.landlordResponsibilityAgentComment ?? '',
+  );
   const [busy, setBusy] = useState(false);
-  const compareAutosaveReadyRef = useRef(false);
   const quoteAutosaveReadyRef = useRef(false);
 
   const refreshReports = useCallback(async () => {
@@ -1095,31 +1273,55 @@ export function EndLeasingReportComparisonPanel({
   }, [apiConnected, agencyId]);
 
   useEffect(() => {
-    compareAutosaveReadyRef.current = false;
     quoteAutosaveReadyRef.current = false;
     setTenantItems(withRepairRowKeys(caseData.reportComparison.tenantResponsibility));
     setLandlordItems(withRepairRowKeys(caseData.reportComparison.landlordResponsibility));
+    setTenantStaffComment(caseData.reportComparison.tenantResponsibilityStaffComment ?? '');
+    setLandlordStaffComment(caseData.reportComparison.landlordResponsibilityStaffComment ?? '');
+    setTenantAgentComment(caseData.reportComparison.tenantResponsibilityAgentComment ?? '');
+    setLandlordAgentComment(caseData.reportComparison.landlordResponsibilityAgentComment ?? '');
     // Only reset draft rows when opening a different case — not on every parent re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- caseData.reportComparison is read at case switch
   }, [caseData.id]);
 
-  useEffect(() => {
-    if (mode !== 'compare' || !outgoingDetail) return;
-    const extracted = extractTenantResponsibilityFromOutgoing(outgoingDetail);
-    setTenantItems((prev) => {
-      const merged = withRepairRowKeys(mergeInspectionResponsibilityItems(prev, extracted));
-      if (responsibilityItemsEqual(prev, merged)) return prev;
-      queueMicrotask(() => {
-        void terminationApi
-          .updateReportComparison(caseData.id, {
-            tenantResponsibility: normalizeRepairItems(merged, contractors),
-          })
-          .then((updated) => applyCase(updated))
-          .catch(() => undefined);
+  const saveAgentComments = async (
+    comments: { tenant: string; landlord: string },
+    silent = false,
+  ) => {
+    if (!silent) setBusy(true);
+    try {
+      const updated = await terminationApi.updateReportComparison(caseData.id, {
+        tenantResponsibilityAgentComment: comments.tenant,
+        landlordResponsibilityAgentComment: comments.landlord,
       });
-      return merged;
-    });
-  }, [applyCase, caseData.id, contractors, mode, outgoingDetail]);
+      applyCase(updated);
+      if (!silent) toast.success('Comments saved');
+      return updated;
+    } catch (err) {
+      if (!silent) toast.error(apiErrorMessage(err));
+      throw err;
+    } finally {
+      if (!silent) setBusy(false);
+    }
+  };
+
+  const sendAgentComment = async (section: 'tenant' | 'landlord', message: string) => {
+    const current = section === 'tenant' ? tenantAgentComment : landlordAgentComment;
+    const next = appendCommentLine(current, message);
+    const nextTenant = section === 'tenant' ? next : tenantAgentComment;
+    const nextLandlord = section === 'landlord' ? next : landlordAgentComment;
+    if (section === 'tenant') setTenantAgentComment(next);
+    else setLandlordAgentComment(next);
+    setBusy(true);
+    try {
+      await saveAgentComments({ tenant: nextTenant, landlord: nextLandlord }, true);
+    } catch {
+      if (section === 'tenant') setTenantAgentComment(current);
+      else setLandlordAgentComment(current);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const persist = async (
     patch: Parameters<typeof terminationApi.updateReportComparison>[1],
@@ -1148,7 +1350,7 @@ export function EndLeasingReportComparisonPanel({
     }
   };
 
-  const saveRepairItems = async (silent = false) => {
+  const saveRepairItems = async (silent = false, includeComments = false) => {
     const rcNow = caseData.reportComparison;
     const tenantLocked =
       Boolean(rcNow.tenantRepairQuoteEmail?.sentAt) &&
@@ -1161,21 +1363,24 @@ export function EndLeasingReportComparisonPanel({
     if (!tenantLocked) {
       patch.tenantResponsibility = normalizeRepairItems(tenantItems, contractors);
     }
+    if (includeComments) {
+      patch.tenantResponsibilityAgentComment = tenantAgentComment;
+      patch.landlordResponsibilityAgentComment = landlordAgentComment;
+    }
     await persist(patch, { silent });
   };
 
   useEffect(() => {
-    if (mode !== 'compare' && mode !== 'quote') return;
-    const readyRef = mode === 'compare' ? compareAutosaveReadyRef : quoteAutosaveReadyRef;
-    if (!readyRef.current) {
-      readyRef.current = true;
+    if (mode !== 'quote') return;
+    if (!quoteAutosaveReadyRef.current) {
+      quoteAutosaveReadyRef.current = true;
       return;
     }
     const timer = window.setTimeout(() => {
       void saveRepairItems(true).catch(() => undefined);
     }, 1000);
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce draft rows in compare/quote modes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce quote rows
   }, [tenantItems, landlordItems, mode]);
 
   const confirmAgentComparison = async () => {
@@ -1196,7 +1401,7 @@ export function EndLeasingReportComparisonPanel({
   const sendQuoteEmail = async () => {
     setBusy(true);
     try {
-      await saveRepairItems(true);
+      await saveRepairItems(true, true);
       const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'agent');
       applyCase(updated);
       setTenantItems((prev) =>
@@ -1213,10 +1418,15 @@ export function EndLeasingReportComparisonPanel({
     }
   };
 
-  const sendComparisonSummary = async (audience: 'tenant' | 'agent') => {
+  const sendComparisonSummary = async (
+    audience: 'tenant' | 'landlord_property_update',
+  ) => {
     setBusy(true);
     try {
-      await saveRepairItems(true);
+      await saveAgentComments(
+        { tenant: tenantAgentComment, landlord: landlordAgentComment },
+        true,
+      );
       const updated = await terminationApi.sendComparisonSummaryEmail(caseData.id, audience);
       applyCase(updated);
       setTenantItems((prev) =>
@@ -1228,7 +1438,7 @@ export function EndLeasingReportComparisonPanel({
       toast.success(
         audience === 'tenant'
           ? 'Tenant responsibility summary sent'
-          : 'Comparison summary sent to tenant and landlord',
+          : 'Property update sent to landlord',
       );
     } catch (err) {
       toast.error(apiErrorMessage(err));
@@ -1352,23 +1562,65 @@ export function EndLeasingReportComparisonPanel({
         />
         <CompareResponsibilitySection
           title="Tenant responsibility"
-          description="Prefilled from the inspector outgoing report. Add or adjust items before emailing the tenant."
+          description="Recorded by CROSSUB staff. Add comments below, then email the summary to the tenant when ready."
           items={tenantItems}
           onChange={setTenantItems}
+          readOnly
           actionBusy={busy}
-          emailHint="Send to tenant"
+          emptyReadOnlyMessage="No items recorded yet — CROSSUB staff will add these from the admin portal."
+          staffComment={tenantStaffComment}
+          agentComment={tenantAgentComment}
+          onSendAgentComment={(message) => sendAgentComment('tenant', message)}
+          canEditAgentComment
+          emailHint="Send tenant responsibility summary to the tenant"
+          emailButtonLabel="Email to Tenant"
+          emailSentLabel="Email to Tenant sent"
           emailSent={Boolean(rc.tenantComparisonSummaryEmail?.sentAt)}
           onEmail={() => void sendComparisonSummary('tenant')}
         />
         <CompareResponsibilitySection
           title="Landlord responsibility"
+          description="Recorded by CROSSUB staff. Add comments below — use the property update email to notify the landlord with reports attached."
           items={landlordItems}
           onChange={setLandlordItems}
+          readOnly
           actionBusy={busy}
-          emailHint="Send to tenant + landlord"
-          emailSent={Boolean(rc.agentComparisonSummaryEmail?.sentAt)}
-          onEmail={() => void sendComparisonSummary('agent')}
+          emptyReadOnlyMessage="No items recorded yet — CROSSUB staff will add these from the admin portal."
+          staffComment={landlordStaffComment}
+          agentComment={landlordAgentComment}
+          onSendAgentComment={(message) => sendAgentComment('landlord', message)}
+          canEditAgentComment
+          showEmailButton={false}
+          emailHint=""
+          onEmail={() => undefined}
         />
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={
+              rc.landlordPropertyUpdateEmail?.sentAt ? 'default' : 'secondary'
+            }
+            className={
+              rc.landlordPropertyUpdateEmail?.sentAt
+                ? 'h-9 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
+                : 'h-9 gap-1.5 text-xs'
+            }
+            disabled={busy || Boolean(rc.landlordPropertyUpdateEmail?.sentAt)}
+            onClick={() => void sendComparisonSummary('landlord_property_update')}
+          >
+            <Mail className="size-3.5" />
+            {rc.landlordPropertyUpdateEmail?.sentAt
+              ? 'Property update sent to landlord'
+              : 'Email property update to Landlord'}
+          </Button>
+          {!rc.landlordPropertyUpdateEmail?.sentAt ? (
+            <p className="text-muted-foreground max-w-md text-right text-[10px]">
+              Attaches ingoing and outgoing reports, responsibility summary, and all staff and agent
+              comments.
+            </p>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -1397,6 +1649,10 @@ export function EndLeasingReportComparisonPanel({
               : undefined
           }
           busy={busy}
+          staffComment={tenantStaffComment}
+          agentComment={tenantAgentComment}
+          onSendAgentComment={(message) => sendAgentComment('tenant', message)}
+          canEditAgentComment={!tenantTableLocked}
         />
         <QuoteResponsibilitySection
           title="Landlord Responsibility"
@@ -1406,6 +1662,10 @@ export function EndLeasingReportComparisonPanel({
           onContractorsChange={setContractors}
           onChange={setLandlordItems}
           busy={busy}
+          staffComment={landlordStaffComment}
+          agentComment={landlordAgentComment}
+          onSendAgentComment={(message) => sendAgentComment('landlord', message)}
+          canEditAgentComment
         />
         <div className="flex justify-end">
           <Button

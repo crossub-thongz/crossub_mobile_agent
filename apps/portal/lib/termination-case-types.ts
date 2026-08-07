@@ -130,6 +130,14 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       handymanId?: string | null
       handymanName?: string | null
     }[]
+    tenantResponsibilityStaffComment?: string | null
+    tenantResponsibilityStaffCommentAt?: string | null
+    landlordResponsibilityStaffComment?: string | null
+    landlordResponsibilityStaffCommentAt?: string | null
+    tenantResponsibilityAgentComment?: string | null
+    tenantResponsibilityAgentCommentAt?: string | null
+    landlordResponsibilityAgentComment?: string | null
+    landlordResponsibilityAgentCommentAt?: string | null
     draftSummaryEmail: {
       commConversationId: string | null
       subject: string | null
@@ -147,6 +155,30 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       sentAt: string | null
     } | null
     agentComparisonSummaryEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    landlordComparisonSummaryEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    staffCommentsToAgentEmail?: {
+      commConversationId: string | null
+      subject: string | null
+      body: string | null
+      from: string | null
+      to: string | null
+      sentAt: string | null
+    } | null
+    landlordPropertyUpdateEmail?: {
       commConversationId: string | null
       subject: string | null
       body: string | null
@@ -314,7 +346,12 @@ export interface ReportComparisonRepairItemInput {
 
 export type RepairQuoteEmailAudience = 'tenant' | 'landlord' | 'agent'
 
-export type ComparisonSummaryEmailAudience = 'tenant' | 'agent'
+export type ComparisonSummaryEmailAudience =
+  | 'tenant'
+  | 'agent'
+  | 'landlord'
+  | 'agent_staff_comments'
+  | 'landlord_property_update'
 
 export interface UpdateMakeGoodInput {
   issueCount?: number

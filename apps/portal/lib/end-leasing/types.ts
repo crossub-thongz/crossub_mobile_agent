@@ -116,9 +116,20 @@ export interface ReportComparisonStageState {
   tenantAcknowledgedAt?: string | null
   tenantResponsibility: ReportComparisonRepairItem[]
   landlordResponsibility: ReportComparisonRepairItem[]
+  tenantResponsibilityStaffComment?: string | null
+  tenantResponsibilityStaffCommentAt?: string | null
+  landlordResponsibilityStaffComment?: string | null
+  landlordResponsibilityStaffCommentAt?: string | null
+  tenantResponsibilityAgentComment?: string | null
+  tenantResponsibilityAgentCommentAt?: string | null
+  landlordResponsibilityAgentComment?: string | null
+  landlordResponsibilityAgentCommentAt?: string | null
   draftSummaryEmail?: EndLeasingOverviewEmail | null
   tenantComparisonSummaryEmail?: EndLeasingOverviewEmail | null
   agentComparisonSummaryEmail?: EndLeasingOverviewEmail | null
+  landlordComparisonSummaryEmail?: EndLeasingOverviewEmail | null
+  staffCommentsToAgentEmail?: EndLeasingOverviewEmail | null
+  landlordPropertyUpdateEmail?: EndLeasingOverviewEmail | null
   tenantRepairQuoteEmail?: EndLeasingOverviewEmail | null
   landlordRepairQuoteEmail?: EndLeasingOverviewEmail | null
   agentRepairQuoteEmail?: EndLeasingOverviewEmail | null

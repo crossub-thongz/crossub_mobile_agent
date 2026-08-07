@@ -174,9 +174,9 @@ export function EndLeasingOutgoingInspectionPanel({
                   Schedule outgoing inspection
                 </p>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Creates the inspection job, targets{' '}
-                  {OUTGOING_INSPECTION_DAYS_AFTER_VACATE} days after key return, and opens it
-                  so you can track inspector assignment and the report.
+                  Creates and schedules the outgoing inspection ({OUTGOING_INSPECTION_DAYS_AFTER_VACATE}{' '}
+                  business days after key return), emails the tenant and agent, and opens the job
+                  case.
                 </p>
               </div>
               <Button
@@ -206,7 +206,8 @@ export function EndLeasingOutgoingInspectionPanel({
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-muted-foreground text-xs leading-relaxed">
-                    Outgoing order created — schedule the inspection date and assign an inspector.
+                    Outgoing order created — confirm the date or reschedule. Tenant and agent are
+                    emailed when the inspection is scheduled.
                   </p>
                   <Button
                     type="button"

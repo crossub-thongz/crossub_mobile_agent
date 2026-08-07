@@ -230,14 +230,14 @@ function reportComparisonSubProgress(
   const responsibilitiesDefined =
     rc.tenantResponsibility.length > 0 || rc.landlordResponsibility.length > 0;
   const tenantSummarySent = Boolean(rc.tenantComparisonSummaryEmail?.sentAt);
-  const agentSummarySent = Boolean(rc.agentComparisonSummaryEmail?.sentAt);
+  const landlordUpdateSent = Boolean(rc.landlordPropertyUpdateEmail?.sentAt);
 
   return [
     { id: 'complete', label: 'Outgoing inspection completion date recorded', done: inspection.status === DONE },
     { id: 'compare', label: 'Ingoing/outgoing reports compared (agent confirmed)', done: compared },
     { id: 'responsibility', label: 'Landlord & tenant responsibility defined', done: responsibilitiesDefined },
     { id: 'tenant_email', label: 'Tenant responsibility summary sent to tenant', done: tenantSummarySent },
-    { id: 'agent_email', label: 'Full summary sent to agent', done: agentSummarySent },
+    { id: 'landlord_email', label: 'Property update sent to landlord', done: landlordUpdateSent },
   ];
 }
 
@@ -546,16 +546,25 @@ function emailRecordsForStepOnly(
         caseData.createdAt,
         caseData.agentName,
       );
-      const agentSummary = storedEmailToRecord(
-        `${caseData.id}-agent-comparison`,
-        rc.agentComparisonSummaryEmail,
-        'agent_comparison',
-        'Inspection comparison summary',
+      const landlordUpdate = storedEmailToRecord(
+        `${caseData.id}-landlord-property-update`,
+        rc.landlordPropertyUpdateEmail,
+        'landlord_property_update',
+        'Property update to landlord',
+        caseData.createdAt,
+        caseData.agentName,
+      );
+      const staffNotes = storedEmailToRecord(
+        `${caseData.id}-staff-comments-agent`,
+        rc.staffCommentsToAgentEmail,
+        'staff_comments_agent',
+        'Staff responsibility notes',
         caseData.createdAt,
         caseData.agentName,
       );
       if (tenantSummary) records.push(tenantSummary);
-      if (agentSummary) records.push(agentSummary);
+      if (landlordUpdate) records.push(landlordUpdate);
+      if (staffNotes) records.push(staffNotes);
       return records;
     }
     case END_LEASING_AGENT_STEP.GET_QUOTE: {
