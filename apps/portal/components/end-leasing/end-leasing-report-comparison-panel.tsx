@@ -1220,7 +1220,6 @@ function RepairItemsTable({
   hideTitle = false,
   showAddRow = true,
   busy = false,
-  hideQuoteColumns = false,
   maintenanceColumnMode = 'hidden',
 }: {
   title: string;
