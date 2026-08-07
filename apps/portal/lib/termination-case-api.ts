@@ -552,7 +552,12 @@ export const terminationApi = {
 
   setKeyReturn: (
     id: string,
-    input: { date?: string; keysReceived?: boolean; returnAddress?: string },
+    input: {
+      date?: string;
+      keysReceived?: boolean;
+      returnAddress?: string;
+      rejectTenantKeyReturnProof?: boolean;
+    },
   ): Promise<TerminationCaseDetail> =>
     unwrap(
       api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/vacate/confirm-keys`, input),

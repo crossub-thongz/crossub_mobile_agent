@@ -192,6 +192,7 @@ export function EndLeasingKeysReturnSection({
     () => (keyReturnDate || expectedVacate).slice(0, 10),
   );
   const [savingKeyReturnDate, setSavingKeyReturnDate] = useState(false);
+  const [keyReturnDecisionBusy, setKeyReturnDecisionBusy] = useState(false);
   const lastSavedKeyReturnDateRef = useRef((keyReturnDate || expectedVacate).slice(0, 10));
 
   useEffect(() => {
@@ -219,6 +220,42 @@ export function EndLeasingKeysReturnSection({
       setSavingKeyReturnDate(false);
     }
   }, [applyCase, caseData.id, keyReturnDateDraft]);
+
+  const resolvedKeyReturnDate = () =>
+    dateOnly(keyReturnDateDraft) || dateOnly(expectedVacate) || undefined;
+
+  const confirmKeysReceived = useCallback(async () => {
+    setKeyReturnDecisionBusy(true);
+    try {
+      const updated = await terminationApi.setKeyReturn(caseData.id, {
+        date: resolvedKeyReturnDate(),
+        keysReceived: true,
+      });
+      applyCase(updated);
+      toast.success('Keys received — outgoing inspection unlocked');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not confirm key return');
+    } finally {
+      setKeyReturnDecisionBusy(false);
+    }
+  }, [applyCase, caseData.id, keyReturnDateDraft, expectedVacate]);
+
+  const rejectKeysReceived = useCallback(async () => {
+    setKeyReturnDecisionBusy(true);
+    try {
+      const updated = await terminationApi.setKeyReturn(caseData.id, {
+        date: resolvedKeyReturnDate(),
+        keysReceived: false,
+        rejectTenantKeyReturnProof: true,
+      });
+      applyCase(updated);
+      toast.success('Recorded — keys not received. Tenant can submit new proof.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not record key return decision');
+    } finally {
+      setKeyReturnDecisionBusy(false);
+    }
+  }, [applyCase, caseData.id, keyReturnDateDraft, expectedVacate]);
 
   return (
     <>
@@ -324,14 +361,37 @@ export function EndLeasingKeysReturnSection({
               </dd>
             </div>
           ) : null}
-          <div>
+          <div className="space-y-2">
             <p className="text-muted-foreground text-xs">
               {caseData.vacate.keysReturned
                 ? 'Keys have been returned and recorded.'
                 : tenantKeyReturnSubmittedAt
-                  ? 'Tenant submitted key return proof — confirm receipt to unlock outgoing inspection.'
+                  ? 'Tenant submitted key return proof — confirm whether keys were received.'
                   : 'Awaiting tenant key return.'}
             </p>
+            {!keysReturned ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={keyReturnDecisionBusy || !resolvedKeyReturnDate()}
+                  onClick={() => void confirmKeysReceived()}
+                >
+                  {keyReturnDecisionBusy ? 'Saving…' : 'Confirm keys received'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={keyReturnDecisionBusy || !tenantKeyReturnSubmittedAt}
+                  onClick={() => void rejectKeysReceived()}
+                >
+                  Keys not received
+                </Button>
+              </div>
+            ) : null}
           </div>
         </dl>
       </SectionCard>
