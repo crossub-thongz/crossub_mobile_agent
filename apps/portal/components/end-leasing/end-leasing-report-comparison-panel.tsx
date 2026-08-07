@@ -2193,8 +2193,6 @@ export function EndLeasingReportComparisonPanel({
           : 'pending'
         : 'none';
     const landlordMaintenanceReady = rc.landlordResponsibilityAgentAcknowledged === true;
-    const landlordReviewStage =
-      landlordMaintenanceReady && rc.tenantQuoteResponse !== 'accepted';
 
     return (
       <div className="space-y-4">
@@ -2240,7 +2238,10 @@ export function EndLeasingReportComparisonPanel({
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
           canEditAgentComment
           maintenanceColumnMode={
-            tenantResponsibilityReviewStatus === 'pending' ? 'actions' : 'hidden'
+            tenantResponsibilityReviewStatus === 'pending' ||
+            tenantResponsibilityReviewStatus === 'accepted'
+              ? 'actions'
+              : 'hidden'
           }
         />
         <QuoteResponsibilitySection
@@ -2252,14 +2253,14 @@ export function EndLeasingReportComparisonPanel({
           onChange={setLandlordItems}
           readOnly
           showQuoteColumns
-          hideQuoteAmountColumn={landlordReviewStage}
-          tenantReviewPending={landlordReviewStage}
+          hideQuoteAmountColumn={false}
+          tenantReviewPending={false}
           busy={busy}
           staffComment={landlordStaffComment}
           agentComment={landlordAgentComment}
           onSendAgentComment={(message) => sendAgentComment('landlord', message)}
           canEditAgentComment
-          maintenanceColumnMode={landlordReviewStage ? 'actions' : 'hidden'}
+          maintenanceColumnMode={landlordMaintenanceReady ? 'actions' : 'hidden'}
         />
         <section className="rounded-xl border bg-card p-4 text-right">
           <p className="text-sm font-semibold">Maintenance quotation</p>
