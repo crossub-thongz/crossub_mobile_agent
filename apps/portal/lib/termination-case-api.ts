@@ -416,6 +416,15 @@ export function mapTerminationCase(
       settlementSummary: s.reportComparison?.settlementSummary ?? null,
       tenantBondSummaryEmail: mapOverviewEmail(s.reportComparison?.tenantBondSummaryEmail),
       landlordBondSummaryEmail: mapOverviewEmail(s.reportComparison?.landlordBondSummaryEmail),
+      manualInspectionReports: (s.reportComparison?.manualInspectionReports ?? []).map((row) => ({
+        id: row.id,
+        kind: row.kind,
+        fileName: row.fileName,
+        uploadedAt: row.uploadedAt,
+        uploadedById: row.uploadedById,
+        uploadedByName: row.uploadedByName,
+        uploadedByRole: row.uploadedByRole,
+      })),
     },
     makeGood: {
       status: makeGood.status,
@@ -667,6 +676,32 @@ export const terminationApi = {
       api.post<{ case: ServerTerminationCase }>(
         `/end-leasing/cases/${id}/report-comparison/sync-tenant-quote-response`,
         {},
+      ),
+    ),
+
+  uploadManualInspectionReport: (
+    caseId: string,
+    input: import('@/lib/termination-case-types').UploadManualInspectionReportInput,
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.post<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${caseId}/report-comparison/manual-reports`,
+        input,
+      ),
+    ),
+
+  downloadManualInspectionReport: (caseId: string, reportId: string): Promise<Blob> =>
+    api.getBlob(
+      `/end-leasing/cases/${caseId}/report-comparison/manual-reports/${reportId}/download`,
+    ),
+
+  deleteManualInspectionReport: (
+    caseId: string,
+    reportId: string,
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.delete<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${caseId}/report-comparison/manual-reports/${reportId}`,
       ),
     ),
 

@@ -111,6 +111,16 @@ export interface ReportComparisonSettlementSummary {
   debtAmount: number
 }
 
+export interface EndLeasingManualInspectionReport {
+  id: string
+  kind: 'ingoing' | 'outgoing'
+  fileName: string
+  uploadedAt: string
+  uploadedById: string
+  uploadedByName: string
+  uploadedByRole: 'agent' | 'admin'
+}
+
 export interface ReportComparisonStageState {
   agentAcknowledged: boolean
   agentAcknowledgedAt?: string | null
@@ -152,6 +162,7 @@ export interface ReportComparisonStageState {
   settlementSummary?: ReportComparisonSettlementSummary | null
   tenantBondSummaryEmail?: EndLeasingOverviewEmail | null
   landlordBondSummaryEmail?: EndLeasingOverviewEmail | null
+  manualInspectionReports?: EndLeasingManualInspectionReport[]
 }
 
 export interface MakeGoodStageState {

@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle2,
+  Download,
   ExternalLink,
+  Eye,
   Loader2,
   Lock,
   Mail,
@@ -13,6 +15,7 @@ import {
   RefreshCw,
   Send,
   Trash2,
+  Upload,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,6 +30,7 @@ import { communicationsThread } from '@/constants/routes';
 import { inspectionsApi } from '@/lib/inspections-api';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type {
+  EndLeasingManualInspectionReport,
   ReportComparisonRepairItem,
   ReportComparisonSettlementSummary,
   TenantQuoteResponse,
@@ -47,6 +51,7 @@ import {
 } from '@/lib/crossub-api/agent-client';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
+import { fileToBase64, MAX_UPLOAD_BYTES } from '@/lib/file-upload';
 
 const TENANT_QUOTE_RESPONSE_LABEL: Record<TenantQuoteResponse, string> = {
   pending: 'Awaiting response',
@@ -378,65 +383,278 @@ function MaintenanceQuotationPanel({ items }: { items: ReportComparisonRepairIte
   );
 }
 
+function openManualReportBlob(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+async function downloadManualReportBlob(blob: Blob, fileName: string): Promise<void> {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function CompareReportColumn({
+  kind,
+  title,
+  inspectionDetail,
+  manualReports,
+  loading,
+  emptyLabel,
+  caseId,
+  allowUpload,
+  actionBusy,
+  onUploaded,
+}: {
+  kind: 'ingoing' | 'outgoing';
+  title: string;
+  inspectionDetail: InspectionDetail | null;
+  manualReports: EndLeasingManualInspectionReport[];
+  loading: boolean;
+  emptyLabel: string;
+  caseId: string;
+  allowUpload: boolean;
+  actionBusy: boolean;
+  onUploaded: (updated: TerminationCaseDetail) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
+  const hasSystemReport = isInspectionReportReadyForView(inspectionDetail);
+
+  const handleUpload = async (file: File) => {
+    const isPdf =
+      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      toast.error('Please upload a PDF file.');
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error('PDF is too large.');
+      return;
+    }
+    try {
+      const contentBase64 = await fileToBase64(file);
+      const updated = await terminationApi.uploadManualInspectionReport(caseId, {
+        kind,
+        fileName: file.name,
+        mimeType: file.type || 'application/pdf',
+        sizeBytes: file.size,
+        contentBase64,
+      });
+      onUploaded(updated);
+      toast.success(`${title} uploaded`);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    }
+  };
+
+  const viewManualReport = async (report: EndLeasingManualInspectionReport) => {
+    try {
+      const blob = await terminationApi.downloadManualInspectionReport(caseId, report.id);
+      openManualReportBlob(blob);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    }
+  };
+
+  const downloadManualReport = async (report: EndLeasingManualInspectionReport) => {
+    try {
+      const blob = await terminationApi.downloadManualInspectionReport(caseId, report.id);
+      await downloadManualReportBlob(blob, report.fileName);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    }
+  };
+
+  const deleteManualReport = async (report: EndLeasingManualInspectionReport) => {
+    if (
+      !window.confirm(
+        `Remove "${report.fileName}"? This only deletes the manual upload — inspector reports are unchanged.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingReportId(report.id);
+    try {
+      const updated = await terminationApi.deleteManualInspectionReport(caseId, report.id);
+      onUploaded(updated);
+      toast.success('Manual report removed');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setDeletingReportId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-lg border bg-muted/20 px-3 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-semibold">{title}</span>
+        {allowUpload ? (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) return;
+                void handleUpload(file);
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1 text-[11px]"
+              disabled={actionBusy || deletingReportId !== null}
+              onClick={() => inputRef.current?.click()}
+            >
+              <Upload className="size-3" />
+              Upload PDF
+            </Button>
+          </>
+        ) : null}
+      </div>
+      {loading ? (
+        <span className="text-muted-foreground flex items-center gap-1 text-xs">
+          <Loader2 className="size-3 animate-spin" />
+          Loading…
+        </span>
+      ) : (
+        <div className="space-y-2">
+          {hasSystemReport && inspectionDetail ? (
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-[10px]">Inspector report (system)</p>
+              <InspectionReportDownloadActions
+                inspectionId={inspectionDetail.id}
+                reportUrl={inspectionDetail.reportUrl}
+                propertyLabel={
+                  inspectionDetail.propertyFullAddress ??
+                  inspectionDetail.propertyAddress ??
+                  'Property'
+                }
+                inspectionType={kind}
+                variant="inline"
+                size="sm"
+              />
+            </div>
+          ) : null}
+          {manualReports.map((report) => (
+            <div
+              key={report.id}
+              className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border bg-background/70 px-2 py-1.5 text-xs"
+            >
+              <span className="font-medium">{report.fileName}</span>
+              <span className="text-muted-foreground">
+                Uploaded by {report.uploadedByName} (
+                {report.uploadedByRole === 'agent' ? 'Agent' : 'Admin'})
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1 px-2 text-[11px]"
+                  onClick={() => void viewManualReport(report)}
+                >
+                  <Eye className="size-3" />
+                  View
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1 px-2 text-[11px]"
+                  disabled={deletingReportId === report.id}
+                  onClick={() => void downloadManualReport(report)}
+                >
+                  <Download className="size-3" />
+                  Download
+                </Button>
+                {allowUpload ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 gap-1 px-2 text-[11px] text-destructive hover:text-destructive"
+                    disabled={deletingReportId === report.id || actionBusy}
+                    onClick={() => void deleteManualReport(report)}
+                  >
+                    {deletingReportId === report.id ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3" />
+                    )}
+                    Delete
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ))}
+          {!hasSystemReport && manualReports.length === 0 ? (
+            <span className="text-muted-foreground text-xs">{emptyLabel}</span>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CompareReportPdfRow({
   outgoingDetail,
   ingoingDetail,
+  manualReports,
   loading,
+  caseId,
+  allowUpload = false,
+  actionBusy = false,
+  onUploaded,
 }: {
   outgoingDetail: InspectionDetail | null;
   ingoingDetail: InspectionDetail | null;
+  manualReports: EndLeasingManualInspectionReport[];
   loading: boolean;
+  caseId: string;
+  allowUpload?: boolean;
+  actionBusy?: boolean;
+  onUploaded?: (updated: TerminationCaseDetail) => void;
 }) {
+  const ingoingManual = manualReports.filter((row) => row.kind === 'ingoing');
+  const outgoingManual = manualReports.filter((row) => row.kind === 'outgoing');
+
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2.5">
-        <span className="text-sm font-semibold">Ingoing Report:</span>
-        {loading ? (
-          <span className="text-muted-foreground flex items-center gap-1 text-xs">
-            <Loader2 className="size-3 animate-spin" />
-            Loading…
-          </span>
-        ) : ingoingDetail && isInspectionReportReadyForView(ingoingDetail) ? (
-          <InspectionReportDownloadActions
-            inspectionId={ingoingDetail.id}
-            reportUrl={ingoingDetail.reportUrl}
-            propertyLabel={
-              ingoingDetail.propertyFullAddress ?? ingoingDetail.propertyAddress ?? 'Property'
-            }
-            inspectionType="ingoing"
-            variant="inline"
-            size="sm"
-          />
-        ) : (
-          <span className="text-muted-foreground text-xs">
-            {ingoingDetail ? 'Report not available yet' : 'Not linked yet'}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2.5">
-        <span className="text-sm font-semibold">Outgoing Report:</span>
-        {loading ? (
-          <span className="text-muted-foreground flex items-center gap-1 text-xs">
-            <Loader2 className="size-3 animate-spin" />
-            Loading…
-          </span>
-        ) : outgoingDetail && isInspectionReportReadyForView(outgoingDetail) ? (
-          <InspectionReportDownloadActions
-            inspectionId={outgoingDetail.id}
-            reportUrl={outgoingDetail.reportUrl}
-            propertyLabel={
-              outgoingDetail.propertyFullAddress ?? outgoingDetail.propertyAddress ?? 'Property'
-            }
-            inspectionType="outgoing"
-            variant="inline"
-            size="sm"
-          />
-        ) : (
-          <span className="text-muted-foreground text-xs">
-            {outgoingDetail ? 'Report not available yet' : 'Not scheduled yet'}
-          </span>
-        )}
-      </div>
+      <CompareReportColumn
+        kind="ingoing"
+        title="Ingoing Report"
+        inspectionDetail={ingoingDetail}
+        manualReports={ingoingManual}
+        loading={loading}
+        emptyLabel={ingoingDetail ? 'Report not available yet' : 'Not linked yet'}
+        caseId={caseId}
+        allowUpload={allowUpload}
+        actionBusy={actionBusy}
+        onUploaded={onUploaded ?? (() => undefined)}
+      />
+      <CompareReportColumn
+        kind="outgoing"
+        title="Outgoing Report"
+        inspectionDetail={outgoingDetail}
+        manualReports={outgoingManual}
+        loading={loading}
+        emptyLabel={outgoingDetail ? 'Report not available yet' : 'Not scheduled yet'}
+        caseId={caseId}
+        allowUpload={allowUpload}
+        actionBusy={actionBusy}
+        onUploaded={onUploaded ?? (() => undefined)}
+      />
     </div>
   );
 }
@@ -444,22 +662,32 @@ function CompareReportPdfRow({
 function CompareReportsSection({
   outgoingDetail,
   ingoingDetail,
+  manualReports,
   loading,
   agentAcknowledged,
   agentAcknowledgedAt,
   actionBusy,
+  caseId,
   onConfirm,
+  onCaseUpdated,
 }: {
   outgoingDetail: InspectionDetail | null;
   ingoingDetail: InspectionDetail | null;
+  manualReports: EndLeasingManualInspectionReport[];
   loading: boolean;
   agentAcknowledged: boolean;
   agentAcknowledgedAt?: string | null;
   actionBusy: boolean;
+  caseId: string;
   onConfirm: () => void;
+  onCaseUpdated: (updated: TerminationCaseDetail) => void;
 }) {
-  const hasOutgoingReport = isInspectionReportReadyForView(outgoingDetail);
-  const hasIngoingReport = isInspectionReportReadyForView(ingoingDetail);
+  const ingoingManual = manualReports.filter((row) => row.kind === 'ingoing');
+  const outgoingManual = manualReports.filter((row) => row.kind === 'outgoing');
+  const hasOutgoingReport =
+    isInspectionReportReadyForView(outgoingDetail) || outgoingManual.length > 0;
+  const hasIngoingReport =
+    isInspectionReportReadyForView(ingoingDetail) || ingoingManual.length > 0;
 
   return (
     <section className="space-y-3 rounded-xl border bg-card p-4">
@@ -467,8 +695,8 @@ function CompareReportsSection({
         <div>
           <h3 className="text-sm font-semibold">Ingoing / outgoing comparison</h3>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
-            Open the reports when available, compare condition changes, then confirm as the
-            managing agent.
+            Open inspector reports when available, upload PDFs manually if needed, compare condition
+            changes, then confirm as the managing agent.
           </p>
         </div>
         {agentAcknowledged ? (
@@ -496,15 +724,20 @@ function CompareReportsSection({
       <CompareReportPdfRow
         outgoingDetail={outgoingDetail}
         ingoingDetail={ingoingDetail}
+        manualReports={manualReports}
         loading={loading}
+        caseId={caseId}
+        allowUpload
+        actionBusy={actionBusy}
+        onUploaded={onCaseUpdated}
       />
       {!agentAcknowledged && !loading && (!hasOutgoingReport || !hasIngoingReport) ? (
         <p className="text-muted-foreground text-[11px]">
           {!hasOutgoingReport && !hasIngoingReport
-            ? 'Reports are not linked yet — you can still confirm once you have reviewed the comparison.'
+            ? 'Reports are not linked yet — upload PDFs manually or confirm once you have reviewed the comparison.'
             : !hasIngoingReport
-              ? 'Ingoing report is not linked yet — confirm when you are satisfied with the comparison.'
-              : 'Outgoing report is not available yet — confirm when you are satisfied with the comparison.'}
+              ? 'Ingoing report is not linked yet — upload manually or confirm when you are satisfied with the comparison.'
+              : 'Outgoing report is not available yet — upload manually or confirm when you are satisfied with the comparison.'}
         </p>
       ) : null}
     </section>
@@ -1820,11 +2053,14 @@ export function EndLeasingReportComparisonPanel({
         <CompareReportsSection
           outgoingDetail={outgoingDetail}
           ingoingDetail={ingoingDetail}
+          manualReports={rc.manualInspectionReports ?? []}
           loading={loadingReports}
           agentAcknowledged={rc.agentAcknowledged}
           agentAcknowledgedAt={rc.agentAcknowledgedAt}
           actionBusy={busy}
+          caseId={caseData.id}
           onConfirm={() => void confirmAgentComparison()}
+          onCaseUpdated={applyUpdatedCase}
         />
         <CompareResponsibilitySection
           title="Tenant responsibility"
@@ -1919,7 +2155,9 @@ export function EndLeasingReportComparisonPanel({
         <CompareReportPdfRow
           outgoingDetail={outgoingDetail}
           ingoingDetail={ingoingDetail}
+          manualReports={rc.manualInspectionReports ?? []}
           loading={loadingReports}
+          caseId={caseData.id}
         />
         {tenantResponsibilityReviewStatus !== 'none' ? (
           <section className="space-y-2 rounded-xl border bg-card p-4">

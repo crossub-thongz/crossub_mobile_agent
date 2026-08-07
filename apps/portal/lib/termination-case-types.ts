@@ -243,6 +243,7 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
       to: string | null
       sentAt: string | null
     } | null
+    manualInspectionReports?: EndLeasingManualInspectionReport[]
   }
   makeGood: {
     status: LeasingItemStatus
@@ -381,4 +382,25 @@ export interface CreateTerminationCaseInput {
   proposedTerminationDate?: string
   breachClause?: string
   breachConduct?: string
+}
+
+export interface EndLeasingManualInspectionReport {
+  id: string
+  kind: 'ingoing' | 'outgoing'
+  fileName: string
+  uploadedAt: string
+  uploadedById: string
+  uploadedByName: string
+  uploadedByRole: 'agent' | 'admin'
+}
+
+export interface UploadTerminationDocumentInput {
+  fileName: string
+  mimeType: string
+  sizeBytes: number
+  contentBase64: string
+}
+
+export interface UploadManualInspectionReportInput extends UploadTerminationDocumentInput {
+  kind: 'ingoing' | 'outgoing'
 }
