@@ -2240,10 +2240,7 @@ export function EndLeasingReportComparisonPanel({
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
           canEditAgentComment
           maintenanceColumnMode={
-            tenantResponsibilityReviewStatus === 'none' ||
-            tenantResponsibilityReviewStatus === 'declined'
-              ? 'hidden'
-              : 'actions'
+            tenantResponsibilityReviewStatus === 'pending' ? 'actions' : 'hidden'
           }
         />
         <QuoteResponsibilitySection
@@ -2262,7 +2259,7 @@ export function EndLeasingReportComparisonPanel({
           agentComment={landlordAgentComment}
           onSendAgentComment={(message) => sendAgentComment('landlord', message)}
           canEditAgentComment
-          maintenanceColumnMode={landlordMaintenanceReady ? 'actions' : 'hidden'}
+          maintenanceColumnMode={landlordReviewStage ? 'actions' : 'hidden'}
         />
         <section className="rounded-xl border bg-card p-4 text-right">
           <p className="text-sm font-semibold">Maintenance quotation</p>
