@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Send,
   Trash2,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -486,6 +487,104 @@ function CommentField({
   );
 }
 
+function ResponsibilityAgentAcknowledgment({
+  acknowledged,
+  acknowledgedAt,
+  canAcknowledge = false,
+  onAcknowledge,
+  actionBusy = false,
+}: {
+  acknowledged?: boolean | null;
+  acknowledgedAt?: string | null;
+  canAcknowledge?: boolean;
+  onAcknowledge?: (accepted: boolean) => void | Promise<void>;
+  actionBusy?: boolean;
+}) {
+  const answered = typeof acknowledged === 'boolean';
+
+  const containerClass = !answered
+    ? 'border-amber-400 bg-amber-50/80 ring-2 ring-amber-200/60'
+    : acknowledged
+      ? 'border-emerald-500 bg-emerald-50/80 ring-2 ring-emerald-200/60'
+      : 'border-rose-500 bg-rose-50/80 ring-2 ring-rose-200/60';
+
+  return (
+    <div className={`mt-3 rounded-xl border-2 px-4 py-3 ${containerClass}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold tracking-tight">Agent acknowledgment</p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
+            Confirm whether you agree with this responsibility list (Yes or No).
+          </p>
+          {answered && acknowledgedAt ? (
+            <p className="mt-1.5 text-[10px] font-medium">
+              {acknowledged ? 'Agreed' : 'Disagreed'} · {formatDateTime(acknowledgedAt)}
+            </p>
+          ) : null}
+        </div>
+        {canAcknowledge ? (
+          <div className="flex shrink-0 gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={acknowledged === true ? 'default' : 'outline'}
+              className={
+                acknowledged === true
+                  ? 'h-9 gap-1.5 border-transparent bg-emerald-600 px-4 text-xs text-white hover:bg-emerald-600'
+                  : 'h-9 gap-1.5 px-4 text-xs'
+              }
+              disabled={actionBusy}
+              onClick={() => void onAcknowledge?.(true)}
+            >
+              <CheckCircle2 className="size-3.5" />
+              Yes
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={acknowledged === false ? 'default' : 'outline'}
+              className={
+                acknowledged === false
+                  ? 'h-9 gap-1.5 border-transparent bg-rose-600 px-4 text-xs text-white hover:bg-rose-600'
+                  : 'h-9 gap-1.5 px-4 text-xs'
+              }
+              disabled={actionBusy}
+              onClick={() => void onAcknowledge?.(false)}
+            >
+              <XCircle className="size-3.5" />
+              No
+            </Button>
+          </div>
+        ) : answered ? (
+          <span
+            className={
+              acknowledged
+                ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm'
+                : 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-600 bg-rose-600 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm'
+            }
+          >
+            {acknowledged ? (
+              <>
+                <CheckCircle2 className="size-3.5" />
+                Yes — Agreed
+              </>
+            ) : (
+              <>
+                <XCircle className="size-3.5" />
+                No — Disagreed
+              </>
+            )}
+          </span>
+        ) : (
+          <span className="inline-flex shrink-0 items-center rounded-full border-2 border-amber-500 bg-amber-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-900 shadow-sm">
+            Pending agent response
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ResponsibilityCommentsBlock({
   staffComment = '',
   agentComment = '',
@@ -549,6 +648,11 @@ function CompareResponsibilitySection({
   canEditStaffComment = false,
   canEditAgentComment = false,
   showEmailButton = true,
+  responsibilityAcknowledged = null,
+  responsibilityAcknowledgedAt = null,
+  canAcknowledgeResponsibility = false,
+  onAcknowledgeResponsibility,
+  showResponsibilityAcknowledgment = true,
 }: {
   title: string;
   description?: string;
@@ -569,6 +673,11 @@ function CompareResponsibilitySection({
   canEditStaffComment?: boolean;
   canEditAgentComment?: boolean;
   showEmailButton?: boolean;
+  responsibilityAcknowledged?: boolean | null;
+  responsibilityAcknowledgedAt?: string | null;
+  canAcknowledgeResponsibility?: boolean;
+  onAcknowledgeResponsibility?: (accepted: boolean) => void | Promise<void>;
+  showResponsibilityAcknowledgment?: boolean;
 }) {
   const updateRow = (index: number, patch: Partial<ReportComparisonRepairItem>) => {
     onChange(items.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -673,6 +782,15 @@ function CompareResponsibilitySection({
         ) : (
           <p className="text-muted-foreground mt-3 text-[10px]">View only — maintained by CROSSUB staff</p>
         )}
+        {showResponsibilityAcknowledgment ? (
+          <ResponsibilityAgentAcknowledgment
+            acknowledged={responsibilityAcknowledged}
+            acknowledgedAt={responsibilityAcknowledgedAt}
+            canAcknowledge={canAcknowledgeResponsibility}
+            onAcknowledge={onAcknowledgeResponsibility}
+            actionBusy={actionBusy}
+          />
+        ) : null}
         <ResponsibilityCommentsBlock
           staffComment={staffComment}
           agentComment={agentComment}
@@ -1323,6 +1441,27 @@ export function EndLeasingReportComparisonPanel({
     }
   };
 
+  const acknowledgeResponsibility = async (section: 'tenant' | 'landlord', accepted: boolean) => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.updateReportComparison(caseData.id, {
+        ...(section === 'tenant'
+          ? { tenantResponsibilityAgentAcknowledged: accepted }
+          : { landlordResponsibilityAgentAcknowledged: accepted }),
+      });
+      applyCase(updated);
+      toast.success(
+        accepted
+          ? `${section === 'tenant' ? 'Tenant' : 'Landlord'} responsibility agreed`
+          : `${section === 'tenant' ? 'Tenant' : 'Landlord'} responsibility marked as disagreed`,
+      );
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const persist = async (
     patch: Parameters<typeof terminationApi.updateReportComparison>[1],
     options?: { silent?: boolean },
@@ -1562,7 +1701,7 @@ export function EndLeasingReportComparisonPanel({
         />
         <CompareResponsibilitySection
           title="Tenant responsibility"
-          description="Recorded by CROSSUB staff. Add comments below, then email the summary to the tenant when ready."
+          description="Recorded by CROSSUB staff. Acknowledge each responsibility list (Yes/No), add comments, then email when ready."
           items={tenantItems}
           onChange={setTenantItems}
           readOnly
@@ -1572,6 +1711,12 @@ export function EndLeasingReportComparisonPanel({
           agentComment={tenantAgentComment}
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
           canEditAgentComment
+          responsibilityAcknowledged={rc.tenantResponsibilityAgentAcknowledged ?? null}
+          responsibilityAcknowledgedAt={rc.tenantResponsibilityAgentAcknowledgedAt}
+          canAcknowledgeResponsibility
+          onAcknowledgeResponsibility={(accepted) =>
+            acknowledgeResponsibility('tenant', accepted)
+          }
           emailHint="Send tenant responsibility summary to the tenant"
           emailButtonLabel="Email to Tenant"
           emailSentLabel="Email to Tenant sent"
@@ -1580,7 +1725,7 @@ export function EndLeasingReportComparisonPanel({
         />
         <CompareResponsibilitySection
           title="Landlord responsibility"
-          description="Recorded by CROSSUB staff. Add comments below — use the property update email to notify the landlord with reports attached."
+          description="Recorded by CROSSUB staff. Acknowledge this list (Yes/No), add comments, then email the landlord property update when ready."
           items={landlordItems}
           onChange={setLandlordItems}
           readOnly
@@ -1590,6 +1735,12 @@ export function EndLeasingReportComparisonPanel({
           agentComment={landlordAgentComment}
           onSendAgentComment={(message) => sendAgentComment('landlord', message)}
           canEditAgentComment
+          responsibilityAcknowledged={rc.landlordResponsibilityAgentAcknowledged ?? null}
+          responsibilityAcknowledgedAt={rc.landlordResponsibilityAgentAcknowledgedAt}
+          canAcknowledgeResponsibility
+          onAcknowledgeResponsibility={(accepted) =>
+            acknowledgeResponsibility('landlord', accepted)
+          }
           showEmailButton={false}
           emailHint=""
           onEmail={() => undefined}

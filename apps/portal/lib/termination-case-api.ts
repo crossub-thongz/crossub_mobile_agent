@@ -373,6 +373,14 @@ export function mapTerminationCase(
         s.reportComparison?.landlordResponsibilityAgentComment ?? null,
       landlordResponsibilityAgentCommentAt:
         s.reportComparison?.landlordResponsibilityAgentCommentAt ?? undefined,
+      tenantResponsibilityAgentAcknowledged:
+        s.reportComparison?.tenantResponsibilityAgentAcknowledged ?? null,
+      tenantResponsibilityAgentAcknowledgedAt:
+        s.reportComparison?.tenantResponsibilityAgentAcknowledgedAt ?? undefined,
+      landlordResponsibilityAgentAcknowledged:
+        s.reportComparison?.landlordResponsibilityAgentAcknowledged ?? null,
+      landlordResponsibilityAgentAcknowledgedAt:
+        s.reportComparison?.landlordResponsibilityAgentAcknowledgedAt ?? undefined,
       draftSummaryEmail: mapOverviewEmail(s.reportComparison?.draftSummaryEmail),
       tenantComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.tenantComparisonSummaryEmail),
       agentComparisonSummaryEmail: mapOverviewEmail(s.reportComparison?.agentComparisonSummaryEmail),

@@ -334,6 +334,12 @@ export interface UpdateReportComparisonInput {
   tenantAcknowledged?: boolean
   tenantResponsibility?: ReportComparisonRepairItemInput[]
   landlordResponsibility?: ReportComparisonRepairItemInput[]
+  tenantResponsibilityStaffComment?: string
+  landlordResponsibilityStaffComment?: string
+  tenantResponsibilityAgentComment?: string
+  landlordResponsibilityAgentComment?: string
+  tenantResponsibilityAgentAcknowledged?: boolean
+  landlordResponsibilityAgentAcknowledged?: boolean
 }
 
 export interface ReportComparisonRepairItemInput {

@@ -124,6 +124,10 @@ export interface ReportComparisonStageState {
   tenantResponsibilityAgentCommentAt?: string | null
   landlordResponsibilityAgentComment?: string | null
   landlordResponsibilityAgentCommentAt?: string | null
+  tenantResponsibilityAgentAcknowledged?: boolean | null
+  tenantResponsibilityAgentAcknowledgedAt?: string | null
+  landlordResponsibilityAgentAcknowledged?: boolean | null
+  landlordResponsibilityAgentAcknowledgedAt?: string | null
   draftSummaryEmail?: EndLeasingOverviewEmail | null
   tenantComparisonSummaryEmail?: EndLeasingOverviewEmail | null
   agentComparisonSummaryEmail?: EndLeasingOverviewEmail | null

@@ -218,6 +218,10 @@ function outgoingInspectionSubProgress(
   ];
 }
 
+function responsibilityAgentAcknowledged(value: boolean | null | undefined): boolean {
+  return typeof value === 'boolean';
+}
+
 function reportComparisonSubProgress(
   caseData: TerminationCaseDetail,
 ): EndLeasingSubProgressItem[] {
@@ -229,15 +233,19 @@ function reportComparisonSubProgress(
     rc.agentAcknowledged || inspection.reportAvailable;
   const responsibilitiesDefined =
     rc.tenantResponsibility.length > 0 || rc.landlordResponsibility.length > 0;
-  const tenantSummarySent = Boolean(rc.tenantComparisonSummaryEmail?.sentAt);
-  const landlordUpdateSent = Boolean(rc.landlordPropertyUpdateEmail?.sentAt);
+  const tenantAcknowledged = responsibilityAgentAcknowledged(
+    rc.tenantResponsibilityAgentAcknowledged,
+  );
+  const landlordAcknowledged = responsibilityAgentAcknowledged(
+    rc.landlordResponsibilityAgentAcknowledged,
+  );
 
   return [
     { id: 'complete', label: 'Outgoing inspection completion date recorded', done: inspection.status === DONE },
     { id: 'compare', label: 'Ingoing/outgoing reports compared (agent confirmed)', done: compared },
     { id: 'responsibility', label: 'Landlord & tenant responsibility defined', done: responsibilitiesDefined },
-    { id: 'tenant_email', label: 'Tenant responsibility summary sent to tenant', done: tenantSummarySent },
-    { id: 'landlord_email', label: 'Property update sent to landlord', done: landlordUpdateSent },
+    { id: 'tenant_ack', label: 'Tenant responsibility acknowledged by agent (Yes/No)', done: tenantAcknowledged },
+    { id: 'landlord_ack', label: 'Landlord responsibility acknowledged by agent (Yes/No)', done: landlordAcknowledged },
   ];
 }
 
