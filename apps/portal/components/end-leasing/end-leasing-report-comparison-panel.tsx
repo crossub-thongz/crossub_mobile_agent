@@ -1188,6 +1188,7 @@ function QuoteResponsibilitySection({
   onSendAgentComment,
   canEditStaffComment = false,
   canEditAgentComment = false,
+  showQuoteColumns = true,
   hideQuoteColumns = false,
   maintenanceColumnMode = 'hidden',
 }: {
