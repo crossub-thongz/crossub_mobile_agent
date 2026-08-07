@@ -460,7 +460,12 @@ export function endLeasingVacateDate(caseData: TerminationCaseDetail): string | 
 }
 
 export function endLeasingKeyReturnDate(caseData: TerminationCaseDetail): string | null {
-  return caseData.vacate.possessionRegainedDate ?? caseData.vacate.actualVacateDate ?? null;
+  return (
+    caseData.vacate.possessionRegainedDate ??
+    caseData.vacate.actualVacateDate ??
+    endLeasingVacateDate(caseData) ??
+    null
+  );
 }
 
 export function endLeasingKeyReturnTo(caseData: TerminationCaseDetail): string {

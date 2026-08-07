@@ -88,6 +88,8 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     exitCleaningConfirmedBy: string | null
     moveOutServices: string
     vacateDateChangeReason: string | null
+    keyReturnPhotoUrls: string[]
+    tenantKeyReturnSubmittedAt: string | null
   }
   overviewEmail: {
     commConversationId: string | null

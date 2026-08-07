@@ -60,6 +60,8 @@ export interface VacatingPreparationStageState {
   exitCleaningConfirmedBy?: 'tenant' | 'agent'
   moveOutServices: MoveOutServicesChoice
   vacateDateChangeReason?: string
+  keyReturnPhotoUrls?: string[]
+  tenantKeyReturnSubmittedAt?: string
 }
 
 export interface EndLeasingOverviewEmail {

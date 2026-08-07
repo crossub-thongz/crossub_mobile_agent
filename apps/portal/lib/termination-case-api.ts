@@ -326,6 +326,8 @@ export function mapTerminationCase(
         (s.vacatingPreparation?.moveOutServices as VacatingPreparationStageState['moveOutServices']) ??
         'pending',
       vacateDateChangeReason: s.vacatingPreparation?.vacateDateChangeReason ?? undefined,
+      keyReturnPhotoUrls: s.vacatingPreparation?.keyReturnPhotoUrls ?? [],
+      tenantKeyReturnSubmittedAt: undef(s.vacatingPreparation?.tenantKeyReturnSubmittedAt),
     },
     overviewEmail: s.overviewEmail?.commConversationId || s.overviewEmail?.body
       ? {

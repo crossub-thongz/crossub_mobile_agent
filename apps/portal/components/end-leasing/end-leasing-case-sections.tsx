@@ -5,8 +5,10 @@ import { KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { AddressLineAutocomplete } from '@/components/end-leasing/address-line-autocomplete';
 import { TerminationKeyReturnDateDialog } from '@/components/end-leasing/termination-key-return-date-dialog';
+import { dateOnly } from '@/components/agent/property-vacate-date-field';
 // import { TerminationVacateDateDialog } from '@/components/end-leasing/termination-vacate-date-dialog';
 import {
   breachStatusLabel,
@@ -154,6 +156,8 @@ export function EndLeasingKeysReturnSection({
   const [address, setAddress] = useState(savedAddress);
   const [savingAddress, setSavingAddress] = useState(false);
   const lastSavedRef = useRef(savedAddress);
+  const tenantKeyReturnPhotos = caseData.vacatingPreparation.keyReturnPhotoUrls ?? [];
+  const tenantKeyReturnSubmittedAt = caseData.vacatingPreparation.tenantKeyReturnSubmittedAt;
 
   useEffect(() => {
     setAddress(savedAddress);
@@ -184,6 +188,37 @@ export function EndLeasingKeysReturnSection({
   const keyReturnDate = endLeasingKeyReturnDate(caseData);
   const keysReturned = caseData.vacate.keysReturned === true;
   const needsKeyReturnAction = !keysReturned;
+  const [keyReturnDateDraft, setKeyReturnDateDraft] = useState(
+    () => (keyReturnDate || expectedVacate).slice(0, 10),
+  );
+  const [savingKeyReturnDate, setSavingKeyReturnDate] = useState(false);
+  const lastSavedKeyReturnDateRef = useRef((keyReturnDate || expectedVacate).slice(0, 10));
+
+  useEffect(() => {
+    const next = (keyReturnDate || expectedVacate).slice(0, 10);
+    setKeyReturnDateDraft(next);
+    lastSavedKeyReturnDateRef.current = next;
+  }, [keyReturnDate, expectedVacate]);
+
+  const saveKeyReturnDate = useCallback(async () => {
+    const next = dateOnly(keyReturnDateDraft);
+    if (!next || next === lastSavedKeyReturnDateRef.current) return;
+
+    setSavingKeyReturnDate(true);
+    try {
+      const updated = await terminationApi.setKeyReturn(caseData.id, {
+        date: next,
+        keysReceived: false,
+      });
+      lastSavedKeyReturnDateRef.current = next;
+      applyCase(updated);
+      toast.success('Key return date saved');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save key return date');
+    } finally {
+      setSavingKeyReturnDate(false);
+    }
+  }, [applyCase, caseData.id, keyReturnDateDraft]);
 
   return (
     <>
@@ -221,9 +256,39 @@ export function EndLeasingKeysReturnSection({
               received. The outgoing inspection step unlocks after keys are returned.
             </div>
           ) : null}
-          <SummaryField label="Keys return date">
-            {keyReturnDate ? formatDate(keyReturnDate) : 'Not set'}
-          </SummaryField>
+          {keysReturned ? (
+            <SummaryField label="Keys return date">
+              {keyReturnDateDraft ? formatDate(keyReturnDateDraft) : 'Not set'}
+            </SummaryField>
+          ) : (
+            <div className="space-y-1.5">
+              <dt className="text-muted-foreground text-xs font-medium">Keys return date</dt>
+              <dd className="flex flex-wrap items-center gap-2">
+                <Input
+                  id={`keys-return-date-${caseData.id}`}
+                  type="date"
+                  value={keyReturnDateDraft}
+                  onChange={(e) => setKeyReturnDateDraft(e.target.value)}
+                  onBlur={() => void saveKeyReturnDate()}
+                  disabled={savingKeyReturnDate}
+                  className="h-9 w-auto text-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 text-xs"
+                  disabled={savingKeyReturnDate || !keyReturnDateDraft}
+                  onClick={() => void saveKeyReturnDate()}
+                >
+                  {savingKeyReturnDate ? 'Saving…' : 'Save date'}
+                </Button>
+              </dd>
+              <p className="text-muted-foreground text-[11px]">
+                Defaults to the vacate date — change if keys are returned on a different day.
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <dt className="text-muted-foreground text-xs font-medium">Keys return address</dt>
             <dd>
@@ -237,11 +302,35 @@ export function EndLeasingKeysReturnSection({
               />
             </dd>
           </div>
+          {tenantKeyReturnPhotos.length > 0 ? (
+            <div className="space-y-2">
+              <dt className="text-muted-foreground text-xs font-medium">Tenant key return proof</dt>
+              <dd>
+                {tenantKeyReturnSubmittedAt ? (
+                  <p className="text-muted-foreground mb-2 text-[11px]">
+                    Submitted {formatDate(tenantKeyReturnSubmittedAt)}
+                  </p>
+                ) : null}
+                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {tenantKeyReturnPhotos.map((url) => (
+                    <li key={url} className="aspect-square overflow-hidden rounded-lg border">
+                      <a href={url} target="_blank" rel="noreferrer" className="block size-full">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="Tenant key return proof" className="size-full object-cover" />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          ) : null}
           <div>
             <p className="text-muted-foreground text-xs">
               {caseData.vacate.keysReturned
                 ? 'Keys have been returned and recorded.'
-                : 'Awaiting tenant key return.'}
+                : tenantKeyReturnSubmittedAt
+                  ? 'Tenant submitted key return proof — confirm receipt to unlock outgoing inspection.'
+                  : 'Awaiting tenant key return.'}
             </p>
           </div>
         </dl>
