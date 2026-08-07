@@ -1652,26 +1652,6 @@ export function EndLeasingReportComparisonPanel({
     }
   };
 
-  const sendQuoteEmail = async () => {
-    setBusy(true);
-    try {
-      await saveRepairItems(true, true);
-      const updated = await terminationApi.sendRepairQuoteEmail(caseData.id, 'agent');
-      applyCase(updated);
-      setTenantItems((prev) =>
-        mergeRepairItemsAfterSave(prev, updated.reportComparison.tenantResponsibility),
-      );
-      setLandlordItems((prev) =>
-        mergeRepairItemsAfterSave(prev, updated.reportComparison.landlordResponsibility),
-      );
-      toast.success('Repair quotes sent to agent');
-    } catch (err) {
-      toast.error(apiErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const sendComparisonSummary = async (
     audience: 'tenant' | 'landlord_property_update',
   ) => {
@@ -1953,20 +1933,21 @@ export function EndLeasingReportComparisonPanel({
           onSendAgentComment={(message) => sendAgentComment('landlord', message)}
           canEditAgentComment
         />
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="h-9 gap-1.5 text-xs"
-            disabled={busy}
-            onClick={() => void sendQuoteEmail()}
-          >
-            <Send className="size-3.5" />
-            Send quotes
-          </Button>
-        </div>
-        {tenantBondAckSent ? (
+        <section className="rounded-xl border bg-card p-4 text-right">
+          <p className="text-sm font-semibold">Maintenance quotation</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {rc.tenantRepairQuoteEmail?.sentAt
+              ? rc.tenantQuoteResponse === 'accepted'
+                ? 'Tenant accepted the End of Lease maintenance quotation.'
+                : rc.tenantQuoteResponse === 'declined'
+                  ? 'Tenant disagreed with the quotation — CROSSUB staff will revise and re-send.'
+                  : 'Quotation sent to tenant — awaiting reply.'
+              : tenantResponsibilityReviewStatus === 'accepted'
+                ? 'CROSSUB staff obtain contractor quotes via End of Lease Maintenance, then send the quotation to the tenant.'
+                : 'Awaiting tenant acknowledgement of the responsibility list.'}
+          </p>
+        </section>
+        {tenantBondAckSent || rc.tenantRepairQuoteEmail?.sentAt ? (
           <TenantBondDeductionAckSentPanel
             items={tenantItems}
             settlementSummary={rc.settlementSummary}
