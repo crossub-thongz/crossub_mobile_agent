@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import {
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { terminationApi } from '@/lib/termination-case-api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 function SummaryField({
   label,
@@ -46,15 +47,40 @@ function SectionCard({
   title,
   children,
   actions,
+  highlight = false,
 }: {
   title: string;
   children: React.ReactNode;
   actions?: React.ReactNode;
+  highlight?: boolean;
 }) {
   return (
-    <section className="rounded-xl border bg-card">
-      <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
-        <h3 className="text-sm font-semibold">{title}</h3>
+    <section
+      className={cn(
+        'rounded-xl border bg-card',
+        highlight &&
+          'border-amber-500/50 bg-amber-500/[0.06] shadow-[0_0_0_1px_rgba(245,158,11,0.35)] ring-2 ring-amber-500/30',
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center justify-between gap-2 border-b px-4 py-2.5',
+          highlight && 'border-amber-500/30 bg-amber-500/[0.08]',
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          {highlight ? (
+            <KeyRound className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+          ) : null}
+          <h3 className={cn('text-sm font-semibold', highlight && 'text-amber-950 dark:text-amber-50')}>
+            {title}
+          </h3>
+          {highlight ? (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+              Action required
+            </span>
+          ) : null}
+        </div>
         {actions}
       </div>
       <div className="p-4">{children}</div>
@@ -156,23 +182,25 @@ export function EndLeasingKeysReturnSection({
 
   const expectedVacate = endLeasingVacateDate(caseData) ?? '';
   const keyReturnDate = endLeasingKeyReturnDate(caseData);
-  const keyReturnDateSet = Boolean(keyReturnDate);
+  const keysReturned = caseData.vacate.keysReturned === true;
+  const needsKeyReturnAction = !keysReturned;
 
   return (
     <>
       <SectionCard
         title="Keys return"
+        highlight={needsKeyReturnAction}
         actions={
           <div className="flex flex-wrap gap-1.5">
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              className="h-7 text-[11px]"
-              disabled={keyReturnDateSet}
+              variant={needsKeyReturnAction ? 'default' : 'outline'}
+              className={cn('h-7 text-[11px]', needsKeyReturnAction && 'bg-amber-600 hover:bg-amber-600/90')}
+              disabled={keysReturned}
               onClick={() => setKeyReturnDialogOpen(true)}
             >
-              Set key return date
+              {keysReturned ? 'Key return recorded' : 'Record key return'}
             </Button>
             {/* <Button
               type="button"
@@ -187,6 +215,12 @@ export function EndLeasingKeysReturnSection({
         }
       >
         <dl className="grid gap-4">
+          {needsKeyReturnAction ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-950 dark:text-amber-50">
+              Set the key return address, then record the key return date and confirm keys have been
+              received. The outgoing inspection step unlocks after keys are returned.
+            </div>
+          ) : null}
           <SummaryField label="Keys return date">
             {keyReturnDate ? formatDate(keyReturnDate) : 'Not set'}
           </SummaryField>

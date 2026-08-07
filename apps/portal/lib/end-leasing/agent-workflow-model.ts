@@ -175,12 +175,16 @@ function vacateConfirmedSubProgress(
   );
   const tenantNoticeReceived = true;
   const vacatingReplySent = Boolean(caseData.overviewEmail?.sentAt);
+  const keyReturnAddressSet = Boolean(caseData.vacate.keysReturnAddress?.trim());
+  const keysReturned = caseData.vacate.keysReturned === true;
 
   return [
     { id: 'lease', label: 'Lease expiry & bond reviewed', done: Boolean(caseData.bondHeld) },
     { id: 'vacate_date', label: 'Vacate date confirmed', done: vacateDateConfirmed },
     { id: 'tenant_notice', label: 'Vacate notice from tenant recorded', done: tenantNoticeReceived },
     { id: 'vacating_reply', label: 'Vacating information reply sent to tenant', done: vacatingReplySent },
+    { id: 'key_return_address', label: 'Key return address set', done: keyReturnAddressSet },
+    { id: 'keys_returned', label: 'Keys returned & recorded', done: keysReturned },
   ];
 }
 
@@ -309,7 +313,9 @@ function workflowNameForStep(
     case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
       if (next?.id === 'vacate_date') return 'Confirm vacate date';
       if (next?.id === 'vacating_reply') return 'Send vacating information to tenant';
-      return 'Vacate date confirmed';
+      if (next?.id === 'key_return_address') return 'Set key return address';
+      if (next?.id === 'keys_returned') return 'Record key return';
+      return 'Vacate complete';
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
       if (caseData.inspection?.status === DONE) return 'Outgoing inspection complete';
       if (next?.id === 'attendance') return 'Confirm tenant attendance';
@@ -337,10 +343,7 @@ function stepComplete(
 ): boolean {
   switch (step) {
     case END_LEASING_AGENT_STEP.VACATE_CONFIRMED:
-      return (
-        subProgress.every((i) => i.done) ||
-        caseData.inspection?.inspectionDate != null
-      );
+      return caseData.vacate.keysReturned === true;
     case END_LEASING_AGENT_STEP.OUTGOING_INSPECTION:
       return caseData.inspection?.status === DONE;
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:

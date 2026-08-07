@@ -51,6 +51,7 @@ export function EndLeasingOutgoingInspectionPanel({
   const inspection = caseData.inspection;
   const inspectionDone = inspection.status === DONE;
   const tenantAttendance = inspection.tenantAttendance ?? 'pending';
+  const keysReturned = caseData.vacate.keysReturned === true;
   const navContext = caseData.propertyId ? fromLeasingWorkflow(caseData.propertyId) : undefined;
   const dialogInspection = useMemo(
     () => inspections.find((item) => item.id === inspectionDialogId) ?? null,
@@ -62,6 +63,10 @@ export function EndLeasingOutgoingInspectionPanel({
   };
 
   const createOutgoingInspection = async () => {
+    if (!keysReturned) {
+      toast.error('Record key return on the Vacate step before scheduling the outgoing inspection');
+      return;
+    }
     const propertyId = caseData.propertyId;
     if (!propertyId) {
       toast.error('Property is not linked to this vacating case');
@@ -122,6 +127,11 @@ export function EndLeasingOutgoingInspectionPanel({
   return (
     <>
       <section>
+        {!keysReturned ? (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-950 dark:text-amber-50">
+            Outgoing inspection is locked until key return is recorded on the Vacate step.
+          </div>
+        ) : null}
         <dl className="grid gap-4 sm:grid-cols-2">
           <Field label="Inspection date">
             {inspection.inspectionDate
@@ -183,7 +193,7 @@ export function EndLeasingOutgoingInspectionPanel({
                 type="button"
                 size="sm"
                 className={cn('h-9 w-full shrink-0 gap-1.5 sm:w-auto', LEASING_UI.ingoingBtn)}
-                disabled={createBusy}
+                disabled={createBusy || !keysReturned}
                 onClick={() => void createOutgoingInspection()}
               >
                 {createBusy ? (
@@ -213,7 +223,7 @@ export function EndLeasingOutgoingInspectionPanel({
                     type="button"
                     size="sm"
                     className={cn('h-9 w-full shrink-0 gap-1.5 sm:w-auto', LEASING_UI.ingoingBtn)}
-                    disabled={createBusy}
+                    disabled={createBusy || !keysReturned}
                     onClick={() => void createOutgoingInspection()}
                   >
                     {createBusy ? 'Scheduling…' : 'Schedule outgoing inspection'}
