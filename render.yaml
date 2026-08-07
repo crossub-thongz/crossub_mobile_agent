@@ -10,6 +10,8 @@ services:
     runtime: node
     region: singapore
     plan: starter
+    # --prod=false is required: NODE_ENV=production (below) makes pnpm skip
+    # devDependencies, and `next build` needs @tailwindcss/postcss + typescript.
     buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm build:portal
     startCommand: corepack pnpm --filter @crossub/portal start
     healthCheckPath: /login

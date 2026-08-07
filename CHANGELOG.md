@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-08-07
+
+### Fixed
+- **Render build no longer dies on `Cannot find module '@tailwindcss/postcss'`.** `NODE_ENV=production` is set on the service, and pnpm skips `devDependencies` when it sees that, so the PostCSS/Tailwind toolchain was never installed before `next build` ran. The blueprint's install step now passes `--prod=false`.
+
 ## 2026-08-04
 
 ### Changed
