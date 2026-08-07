@@ -17,4 +17,5 @@ export const SOURCE_LABELS: Record<MaintenanceWorkspaceCase['source'], string> =
   agent_submission: 'Agent Submission',
   email: 'Email',
   staff_portal: 'Staff Created',
+  system: 'System Created',
 };

@@ -388,6 +388,7 @@ function jobCreatedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
   const source = ctx.workspaceCase.source;
   const tenantReport = source === 'tenant_app';
   const agentReport = source === 'agent_submission' || source === 'email';
+  const systemReport = source === 'system';
   const hasCreatedAt = Boolean(ctx.workspaceCase.createdAt);
   const hasEmailRecords =
     emailNotifications(ctx.workspaceCase).length > 0 ||
@@ -408,6 +409,11 @@ function jobCreatedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
       id: 'agent_report',
       label: 'Agent Created',
       done: agentReport,
+    },
+    {
+      id: 'system_report',
+      label: 'System Created',
+      done: systemReport,
     },
     {
       id: 'datetime',

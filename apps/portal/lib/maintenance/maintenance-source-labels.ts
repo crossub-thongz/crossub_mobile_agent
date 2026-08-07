@@ -11,6 +11,8 @@ export function maintenanceSourceLabel(
       return 'Agent Created';
     case 'staff_portal':
       return 'Staff Created';
+    case 'system':
+      return 'System Created';
     default:
       return 'Unknown';
   }

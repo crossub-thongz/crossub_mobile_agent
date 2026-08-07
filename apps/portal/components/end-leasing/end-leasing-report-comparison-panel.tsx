@@ -246,7 +246,9 @@ function TenantBondDeductionAckSentPanel({
                 </td>
                 <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
                 <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
-                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>{row.quote || '—'}</td>
+                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                  <MaintenanceQuoteCell row={row} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -351,7 +353,9 @@ function MaintenanceQuotationPanel({ items }: { items: ReportComparisonRepairIte
                 <td className={`${REPAIR_COL_INDEX} px-3 py-2 tabular-nums`}>{index + 1}</td>
                 <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area}</td>
                 <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
-                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>{row.quote || '—'}</td>
+                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                  <MaintenanceQuoteCell row={row} />
+                </td>
                 <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>{row.handymanName || '—'}</td>
               </tr>
             ))}
@@ -1011,6 +1015,25 @@ function emptyRepairItem(): ReportComparisonRepairItem {
   };
 }
 
+function maintenanceQuoteNote(row: ReportComparisonRepairItem): string | null {
+  if (!row.maintenanceRequestId?.trim() || !row.quote?.trim() || !row.handymanName?.trim()) {
+    return null;
+  }
+  return `Quoted from ${row.handymanName.trim()} (maintenance job)`;
+}
+
+function MaintenanceQuoteCell({ row }: { row: ReportComparisonRepairItem }) {
+  const note = maintenanceQuoteNote(row);
+  return (
+    <div>
+      <span className="tabular-nums">{row.quote || '—'}</span>
+      {note ? (
+        <p className="text-muted-foreground mt-1 text-[10px] leading-snug">{note}</p>
+      ) : null}
+    </div>
+  );
+}
+
 type RepairRow = ReportComparisonRepairItem & { localKey?: string };
 
 function repairRowKey(row: RepairRow, fallback: string): string {
@@ -1252,8 +1275,8 @@ function RepairItemsTable({
                       </td>
                       {!hideQuoteColumns ? (
                         <>
-                          <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
-                            {row.quote || '—'}
+                          <td className={`${REPAIR_COL_QUOTE} px-3 py-2`}>
+                            <MaintenanceQuoteCell row={row} />
                           </td>
                           <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
                             {row.handymanName || '—'}
@@ -1291,6 +1314,11 @@ function RepairItemsTable({
                               disabled={busy}
                               onChange={(e) => updateRow(index, { quote: e.target.value })}
                             />
+                            {maintenanceQuoteNote(row) ? (
+                              <p className="text-muted-foreground mt-1 text-[10px] leading-snug">
+                                {maintenanceQuoteNote(row)}
+                              </p>
+                            ) : null}
                           </td>
                           <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>
                             <HandymanField
