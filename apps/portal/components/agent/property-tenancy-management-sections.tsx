@@ -18,7 +18,7 @@ import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import { isActiveEndLeasingCase } from '@/lib/property-leasing-history';
+import { isActiveEndLeasingCase, resolveTenantVacatingOnLabel } from '@/lib/property-leasing-history';
 import {
   parseTenancyArchiveSnapshots,
   resolveTenancyArchiveReason,
@@ -297,6 +297,10 @@ export function PropertyTenancyManagementSections({
   const tenancyDates = useMemo(() => {
     const caseVacateFromList =
       vacatingCases.find((c) => isActiveEndLeasingCase(c) && c.vacateDate)?.vacateDate ?? null;
+    const caseVacateFromCompleted =
+      vacatingCases.find(
+        (c) => c.apiStatus?.toUpperCase() === 'COMPLETED' && c.vacateDate,
+      )?.vacateDate ?? null;
     const caseVacateFromDetail = openEndLeasingCase
       ? endLeasingVacateDate(openEndLeasingCase)
       : null;
@@ -317,6 +321,7 @@ export function PropertyTenancyManagementSections({
       vacateDate: firstDate(
         caseVacateFromDetail,
         caseVacateFromList,
+        caseVacateFromCompleted,
         overview?.vacateDate,
         sync.record?.vacateDate,
         property.vacateDate,
@@ -327,6 +332,18 @@ export function PropertyTenancyManagementSections({
       routineCycleMonths: overview?.routineInspectionFrequencyMonths ?? null,
     };
   }, [overview, sync.record, property, leaseStart, vacatingCases, openEndLeasingCase]);
+
+  const tenantVacatingMeta = useMemo(() => {
+    if (tenantHistoryIndex != null) return null;
+    return resolveTenantVacatingOnLabel({
+      vacatingCases,
+      vacateDate: tenancyDates.vacateDate,
+      tenantName: tenant.name,
+      isVacant,
+      viewingArchivedTenant: tenantHistoryIndex != null,
+      formatDate,
+    });
+  }, [vacatingCases, tenancyDates.vacateDate, tenant.name, isVacant, tenantHistoryIndex]);
 
   const financialRent = sync.financial?.currentRentWeekly;
   const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
@@ -472,6 +489,7 @@ export function PropertyTenancyManagementSections({
           name={tenant.name}
           email={tenant.email}
           phone={tenant.phone}
+          meta={tenantVacatingMeta ?? undefined}
           updatedHint={tenant.hint}
         />
         {tenancyArchives.length > 0 ? (
