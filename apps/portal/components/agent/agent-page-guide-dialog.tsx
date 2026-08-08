@@ -2,8 +2,10 @@
 
 import { CheckCircle2, Lightbulb } from 'lucide-react';
 
+import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import type { AgentPageGuideContent } from '@/constants/agent-page-guides';
 import { Button } from '@/components/ui/button';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import {
   Dialog,
   DialogContent,
@@ -36,15 +38,18 @@ export function AgentPageGuideDialog({
         className="flex max-h-[min(85vh,720px)] max-w-md flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
       >
         <div className="border-border/60 border-b bg-primary/5 px-5 py-4">
-          <DialogHeader className="gap-1 text-left">
-            <p className="text-primary text-[10px] font-semibold uppercase tracking-[0.2em]">
-              {guide.eyebrow}
-            </p>
-            <DialogTitle className="text-xl">{guide.pageName}</DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed">
-              {guide.overview}
-            </DialogDescription>
-          </DialogHeader>
+          <div className="flex items-start gap-3">
+            <CrosAssistantLogoBadge size="lg" className="mt-0.5 shrink-0" />
+            <DialogHeader className="min-w-0 flex-1 gap-1 text-left">
+              <p className="text-primary text-[10px] font-semibold uppercase tracking-[0.2em]">
+                {CROS_ASSISTANT_NAME} · {guide.eyebrow}
+              </p>
+              <DialogTitle className="text-xl">{guide.pageName}</DialogTitle>
+              <DialogDescription className="text-sm leading-relaxed">
+                {guide.overview}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">

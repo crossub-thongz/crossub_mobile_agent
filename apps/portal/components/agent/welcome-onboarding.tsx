@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Building2, LayoutDashboard, ListTodo, MessageSquare, X } from 'lucide-react';
 
+import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { ROUTES, propertyNew } from '@/constants/routes';
 import {
   dismissPortalWelcome,
@@ -84,12 +86,17 @@ export function WelcomeOnboarding() {
         >
           <X className="size-4" />
         </button>
-        <p className="text-primary text-xs font-semibold uppercase">Welcome</p>
-        <h2 className="mt-1 text-lg font-semibold">Your agent portal</h2>
-        <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          Approve quotes, track jobs by status, message landlords and tenants, and
-          manage your portfolio — all from your phone.
-        </p>
+        <div className="flex flex-col items-center text-center">
+          <CrosAssistantLogoBadge size="2xl" className="mb-3" />
+          <p className="text-primary text-xs font-semibold uppercase tracking-wide">
+            {CROS_ASSISTANT_NAME} · Quick tour
+          </p>
+          <h2 className="mt-1 text-lg font-semibold">Welcome to your agent portal</h2>
+          <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+            I&apos;ll help you get started. Approve quotes, track jobs by status, message landlords
+            and tenants, and manage your portfolio — all from your phone.
+          </p>
+        </div>
         <ul className="mt-4 space-y-2 text-sm">
           <li className="flex items-center gap-2">
             <LayoutDashboard className="text-primary size-4 shrink-0" />

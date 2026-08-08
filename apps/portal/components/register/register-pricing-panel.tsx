@@ -26,9 +26,21 @@ import { cn, formatCurrency } from '@/lib/utils';
 
 type RegistrationPricingCatalog = Omit<AgentBillingPricingCatalog, 'portalServiceLevel'>;
 
-function minNumericRecordValue(rows: Record<string, number | string>): number {
+function minNumericRecordValue(rows: Record<string, number | string>): number | null {
   const values = Object.values(rows).filter((v): v is number => typeof v === 'number');
-  return values.length > 0 ? Math.min(...values) : 0;
+  return values.length > 0 ? Math.min(...values) : null;
+}
+
+function minFieldInspectionExGst(catalog: RegistrationPricingCatalog): number {
+  const compact = minNumericRecordValue(catalog.inspections.fieldInspectionsCompactExGst);
+  const house = minNumericRecordValue(catalog.inspections.fieldInspectionsHouseExGst);
+  if (compact != null && house != null) return Math.min(compact, house);
+  return compact ?? house ?? 75;
+}
+
+function openInspectionStartingLabel(catalog: RegistrationPricingCatalog): string {
+  const rate = catalog.inspections.openInspection.firstThree.trim();
+  return rate.toLowerCase().startsWith('from ') ? rate : `from ${rate}`;
 }
 
 function FullServicePricingDetails({ catalog }: { catalog: RegistrationPricingCatalog }) {
@@ -172,9 +184,7 @@ export function RegisterPricingPanel({
     setExpandedLevel((current) => (current === level ? null : level));
   };
 
-  const fieldInspectionFromExGst = catalog
-    ? minNumericRecordValue(catalog.inspections.fieldInspectionsCompactExGst)
-    : 75;
+  const fieldInspectionFromExGst = catalog ? minFieldInspectionExGst(catalog) : null;
 
   return (
     <div className="space-y-6">
@@ -248,13 +258,13 @@ export function RegisterPricingPanel({
                           <li>
                             <span className="text-muted-foreground">Ingoing/outgoing inspection </span>
                             <span className="font-medium text-foreground">
-                              from {formatCurrency(fieldInspectionFromExGst)} ex GST
+                              from {formatCurrency(fieldInspectionFromExGst!)} ex GST
                             </span>
                           </li>
                           <li>
                             <span className="text-muted-foreground">Open inspection </span>
                             <span className="font-medium text-foreground">
-                              from 50% of the letting fee
+                              {openInspectionStartingLabel(catalog)}
                             </span>
                           </li>
                         </ul>
@@ -262,7 +272,7 @@ export function RegisterPricingPanel({
                         <div className="space-y-2 text-sm">
                           <p>
                             <span className="font-semibold text-foreground">
-                              {catalog.level2.serviceFeePercent}% management fee
+                              {catalog.level2.serviceFeePercent}% platform fee
                             </span>
                             <span className="text-muted-foreground">
                               {' '}
