@@ -25,6 +25,7 @@ import {
 import { NSW_BOND_RELEASE_URL, jobCompletedAuditTimelineEntries } from '@/lib/end-leasing/vacate-display';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
+import { LIVE_POLL_MS } from '@/lib/live-sync';
 import { terminationApi } from '@/lib/termination-case-api';
 import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
@@ -93,6 +94,7 @@ export function EndLeasingBondReleasedPanel({
   showAgentActions?: boolean;
 }) {
   const applyCase = useEndLeasingStore((s) => s.applyCase);
+  const refreshCase = useEndLeasingStore((s) => s.refreshCase);
   const setSettlementOpen = useEndLeasingStore((s) => s.setSettlementDialogOpen);
   const { properties } = useAgentData();
   const [busy, setBusy] = useState(false);
@@ -147,17 +149,14 @@ export function EndLeasingBondReleasedPanel({
       (checklistComplete && !jobCompleted);
     if (!shouldPoll) return;
     const timer = window.setInterval(() => {
-      void terminationApi
-        .get(caseData.id)
-        .then((updated) => applyCase(updated))
-        .catch(() => undefined);
-    }, 30_000);
+      void refreshCase(caseData.id);
+    }, LIVE_POLL_MS);
     return () => window.clearInterval(timer);
   }, [
-    applyCase,
     caseData.id,
     checklistComplete,
     jobCompleted,
+    refreshCase,
     tenantConfirmationStatus,
   ]);
 

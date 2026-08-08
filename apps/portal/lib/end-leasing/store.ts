@@ -19,6 +19,8 @@ interface EndLeasingStoreState {
   settlementDialogOpen: boolean;
 
   loadCase: (id: string) => Promise<TerminationCaseDetail | null>;
+  /** Silent background refresh — no loading state (for live polling). */
+  refreshCase: (id: string) => Promise<void>;
   applyCase: (detail: TerminationCaseDetail) => void;
   getCase: (id: string) => TerminationCaseDetail | undefined;
   setActiveStage: (id: string, stage: TerminationStage) => void;
@@ -79,6 +81,19 @@ export const useEndLeasingStore = create<EndLeasingStoreState>((set, get) => {
           error: { ...s.error, [id]: message },
         }));
         return null;
+      }
+    },
+
+    async refreshCase(id) {
+      try {
+        const detail = await terminationApi.get(id);
+        apply(detail);
+        set((s) => ({
+          status: { ...s.status, [id]: 'ready' },
+          error: { ...s.error, [id]: null },
+        }));
+      } catch {
+        /* keep last good snapshot on transient poll errors */
       }
     },
 

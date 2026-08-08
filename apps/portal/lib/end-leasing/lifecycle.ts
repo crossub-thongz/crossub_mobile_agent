@@ -1,4 +1,5 @@
 import {
+  TERMINATION_CASE_STATUS,
   TERMINATION_STAGE,
   terminationStageOrderForCase,
   type TerminationStage,
@@ -117,4 +118,15 @@ export function isSettledTerminationCase(detail: TerminationCaseDetail): boolean
 
 export function isActiveTerminationCase(detail: TerminationCaseDetail): boolean {
   return isLiveTerminationCase(detail) && !isSettledTerminationCase(detail)
+}
+
+/** Keep polling while an open end-leasing case may change without agent action. */
+export function shouldLivePollEndLeasingCase(
+  detail: TerminationCaseDetail | undefined,
+): boolean {
+  if (!detail) return true;
+  return (
+    detail.status !== TERMINATION_CASE_STATUS.COMPLETED &&
+    detail.status !== TERMINATION_CASE_STATUS.CANCELLED
+  );
 }

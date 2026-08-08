@@ -682,7 +682,7 @@ function AgentTenantBondSendDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[90vh] w-[min(96vw,1280px)] max-w-[min(96vw,1280px)] overflow-y-auto"
+        className="max-h-[90vh] w-[min(96vw,1280px)] overflow-y-auto sm:max-w-[min(96vw,1280px)]"
         elevated
       >
         <DialogHeader>

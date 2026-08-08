@@ -219,6 +219,12 @@ export function PropertyTenancyManagementSections({
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [bondDialogOpen, setBondDialogOpen] = useState(false);
   const [docPreview, setDocPreview] = useState<DocumentPreviewItem | null>(null);
+  const [tenantHistoryIndex, setTenantHistoryIndex] = useState<number | null>(null);
+
+  const tenancyArchives = useMemo(
+    () => parseTenancyArchiveSnapshots(property.registryDraft),
+    [property.registryDraft],
+  );
 
   const openVacatingCaseId = useMemo(
     () => vacatingCases.find(isActiveEndLeasingCase)?.id ?? null,
@@ -258,6 +264,15 @@ export function PropertyTenancyManagementSections({
   );
 
   const tenant = useMemo(() => {
+    if (tenantHistoryIndex != null && tenancyArchives[tenantHistoryIndex]) {
+      const archived = tenancyArchives[tenantHistoryIndex];
+      return {
+        name: archived.tenantName ?? 'Previous tenant',
+        email: archived.tenantEmail ?? '',
+        phone: archived.tenantPhone ?? '',
+        hint: archived.vacateDate ? `Vacated ${formatDate(archived.vacateDate)}` : null,
+      };
+    }
     if (sync.tenantContact?.name) {
       return {
         name: sync.tenantContact.name,
@@ -272,7 +287,7 @@ export function PropertyTenancyManagementSections({
       phone: sync.record?.tenantPhone ?? property.tenantContact.phone,
       hint: null as string | null,
     };
-  }, [sync.tenantContact, sync.record, property, isVacant]);
+  }, [sync.tenantContact, sync.record, property, isVacant, tenantHistoryIndex, tenancyArchives]);
 
   const landlordUpdatedHint =
     sync.record?.updatedAt && apiConnected
@@ -459,6 +474,33 @@ export function PropertyTenancyManagementSections({
           phone={tenant.phone}
           updatedHint={tenant.hint}
         />
+        {tenancyArchives.length > 0 ? (
+          <div className="mt-2">
+            <label className="text-muted-foreground mb-1 block text-[10px] font-semibold uppercase tracking-wide">
+              Tenant history
+            </label>
+            <select
+              className="border-input bg-background h-8 w-full max-w-md rounded-lg border px-2 text-xs"
+              value={tenantHistoryIndex == null ? 'current' : String(tenantHistoryIndex)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setTenantHistoryIndex(value === 'current' ? null : Number(value));
+              }}
+            >
+              <option value="current">
+                {sync.tenantContact?.name || property.tenantName
+                  ? `Current — ${sync.tenantContact?.name ?? property.tenantName}`
+                  : 'Current — Vacant'}
+              </option>
+              {tenancyArchives.map((archived, index) => (
+                <option key={`${archived.archivedAt}-${index}`} value={String(index)}>
+                  Previous — {archived.tenantName ?? 'Tenant'}
+                  {archived.vacateDate ? ` · vacated ${formatDate(archived.vacateDate)}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <StatCell label="Rent paid to" value={rentPaidTo ? formatDate(rentPaidTo) : '—'} />
           <StatCell label="Payment cycle" value={paymentCycle} />

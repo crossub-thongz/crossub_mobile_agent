@@ -8,6 +8,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
+import { shouldLivePollEndLeasingCase } from '@/lib/end-leasing/lifecycle';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { useLivePoll } from '@/lib/use-live-poll';
 import { resolvePropertyDisplayAddress } from '@/lib/property-address';
@@ -24,19 +25,22 @@ export function TerminationDetailView({
   hideHeader?: boolean;
 }) {
   const loadCase = useEndLeasingStore((s) => s.loadCase);
-  const caseData = useEndLeasingStore((s) => s.getCase(caseId));
+  const refreshCase = useEndLeasingStore((s) => s.refreshCase);
+  const caseData = useEndLeasingStore((s) => s.cases[caseId]);
   const status = useEndLeasingStore((s) => s.status[caseId] ?? 'idle');
   const error = useEndLeasingStore((s) => s.error[caseId]);
 
-  const refresh = useCallback(async () => {
-    await loadCase(caseId);
-  }, [caseId, loadCase]);
+  const pollCase = useCallback(async () => {
+    await refreshCase(caseId);
+  }, [caseId, refreshCase]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void loadCase(caseId);
+  }, [caseId, loadCase]);
 
-  useLivePoll(refresh, apiConnected && Boolean(caseId));
+  useLivePoll(pollCase, apiConnected && shouldLivePollEndLeasingCase(caseData), {
+    immediate: false,
+  });
 
   if (status === 'loading' && !caseData) {
     return <p className="text-muted-foreground text-sm">Loading end-leasing case…</p>;
