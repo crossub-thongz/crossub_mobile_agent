@@ -199,6 +199,22 @@ export function buildPropertyLeasingHistoryCases(input: {
   return sortPropertyLeasingWorkflowCases(cases);
 }
 
+export function endLeasingWorkflowCaseFromVacating(
+  vacating: VacatingCase,
+): PropertyLeasingWorkflowCase {
+  const progress = vacatingWorkflowProgress(vacating);
+  return {
+    id: vacating.id,
+    category: 'end_leasing',
+    label: workflowCaseReferenceLabel(vacating.id, 'end_leasing'),
+    status: vacating.apiStatus?.replaceAll('_', ' ').toLowerCase() ?? 'completed',
+    currentStep: progress.currentStepLabel,
+    detail: `Vacate ${vacating.vacateDate} · ${vacating.reason}`,
+    sortAt: vacating.vacateDate,
+    createdAt: vacating.createdAt,
+  };
+}
+
 export const LEASING_CATEGORY_LABEL: Record<PropertyLeasingWorkflowCategory, string> = {
   leasing: 'New leasing',
   rent_review: 'Rent review',

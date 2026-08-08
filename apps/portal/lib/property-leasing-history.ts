@@ -68,22 +68,36 @@ function isVacateDateOnOrAfterToday(vacateDay: string): boolean {
 }
 
 /** Tenant tile hint when end-leasing is complete but vacate date has not passed. */
-export function resolveTenantVacatingOnLabel(args: {
+export type TenantVacatingOnHint = {
+  label: string;
+  caseId: string;
+};
+
+function findLatestCompletedVacatingCase(
+  vacatingCases: VacatingCase[],
+): VacatingCase | undefined {
+  return vacatingCases
+    .filter((c) => c.apiStatus?.toUpperCase() === 'COMPLETED')
+    .sort(
+      (a, b) =>
+        (Date.parse(b.vacateDate ?? '') || 0) - (Date.parse(a.vacateDate ?? '') || 0),
+    )[0];
+}
+
+export function resolveTenantVacatingOnHint(args: {
   vacatingCases: VacatingCase[];
   vacateDate?: string | null;
   tenantName?: string | null;
   isVacant?: boolean;
   viewingArchivedTenant?: boolean;
   formatDate: (value: string) => string;
-}): string | null {
+}): TenantVacatingOnHint | null {
   if (args.viewingArchivedTenant || args.isVacant) return null;
 
   const name = args.tenantName?.trim();
   if (!name || name.toLowerCase() === 'vacant') return null;
 
-  const completedCase = args.vacatingCases.find(
-    (c) => c.apiStatus?.toUpperCase() === 'COMPLETED',
-  );
+  const completedCase = findLatestCompletedVacatingCase(args.vacatingCases);
   if (!completedCase) return null;
 
   const vacateDay =
@@ -92,5 +106,20 @@ export function resolveTenantVacatingOnLabel(args: {
     '';
   if (!vacateDay || !isVacateDateOnOrAfterToday(vacateDay)) return null;
 
-  return `(Vacating on ${args.formatDate(vacateDay)})`;
+  return {
+    label: `(Vacating on ${args.formatDate(vacateDay)})`,
+    caseId: completedCase.id,
+  };
+}
+
+/** @deprecated Use resolveTenantVacatingOnHint */
+export function resolveTenantVacatingOnLabel(args: {
+  vacatingCases: VacatingCase[];
+  vacateDate?: string | null;
+  tenantName?: string | null;
+  isVacant?: boolean;
+  viewingArchivedTenant?: boolean;
+  formatDate: (value: string) => string;
+}): string | null {
+  return resolveTenantVacatingOnHint(args)?.label ?? null;
 }

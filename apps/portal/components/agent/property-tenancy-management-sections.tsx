@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Archive } from 'lucide-react';
 
+import { PropertyLeasingCaseWorkflowDialog } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { ContactTile } from '@/components/agent/property-contact-tile';
 import { PropertyBondEditDialog } from '@/components/agent/property-bond-edit-dialog';
 import {
@@ -18,7 +19,11 @@ import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import { isActiveEndLeasingCase, resolveTenantVacatingOnLabel } from '@/lib/property-leasing-history';
+import { isActiveEndLeasingCase, resolveTenantVacatingOnHint } from '@/lib/property-leasing-history';
+import {
+  endLeasingWorkflowCaseFromVacating,
+  type PropertyLeasingWorkflowCase,
+} from '@/lib/property-leasing-workflow-cases';
 import {
   parseTenancyArchiveSnapshots,
   resolveTenancyArchiveReason,
@@ -220,6 +225,8 @@ export function PropertyTenancyManagementSections({
   const [bondDialogOpen, setBondDialogOpen] = useState(false);
   const [docPreview, setDocPreview] = useState<DocumentPreviewItem | null>(null);
   const [tenantHistoryIndex, setTenantHistoryIndex] = useState<number | null>(null);
+  const [endLeasingDialogCase, setEndLeasingDialogCase] =
+    useState<PropertyLeasingWorkflowCase | null>(null);
 
   const tenancyArchives = useMemo(
     () => parseTenancyArchiveSnapshots(property.registryDraft),
@@ -333,9 +340,9 @@ export function PropertyTenancyManagementSections({
     };
   }, [overview, sync.record, property, leaseStart, vacatingCases, openEndLeasingCase]);
 
-  const tenantVacatingMeta = useMemo(() => {
+  const tenantVacatingHint = useMemo(() => {
     if (tenantHistoryIndex != null) return null;
-    return resolveTenantVacatingOnLabel({
+    return resolveTenantVacatingOnHint({
       vacatingCases,
       vacateDate: tenancyDates.vacateDate,
       tenantName: tenant.name,
@@ -344,6 +351,14 @@ export function PropertyTenancyManagementSections({
       formatDate,
     });
   }, [vacatingCases, tenancyDates.vacateDate, tenant.name, isVacant, tenantHistoryIndex]);
+
+  const openCompletedEndLeasingCase = () => {
+    if (!tenantVacatingHint) return;
+    const vacatingCase = vacatingCases.find((row) => row.id === tenantVacatingHint.caseId);
+    if (!vacatingCase) return;
+    if (apiConnected) void loadEndLeasingCase(vacatingCase.id);
+    setEndLeasingDialogCase(endLeasingWorkflowCaseFromVacating(vacatingCase));
+  };
 
   const financialRent = sync.financial?.currentRentWeekly;
   const registryRent = sync.record?.rentWeekly ?? property.rentWeekly;
@@ -489,7 +504,8 @@ export function PropertyTenancyManagementSections({
           name={tenant.name}
           email={tenant.email}
           phone={tenant.phone}
-          meta={tenantVacatingMeta ?? undefined}
+          meta={tenantVacatingHint?.label}
+          metaOnClick={tenantVacatingHint ? openCompletedEndLeasingCase : undefined}
           updatedHint={tenant.hint}
         />
         {tenancyArchives.length > 0 ? (
@@ -635,6 +651,22 @@ export function PropertyTenancyManagementSections({
         propertyAddress={fullAddress}
         open={docPreview != null}
         onClose={() => setDocPreview(null)}
+      />
+
+      <PropertyLeasingCaseWorkflowDialog
+        open={endLeasingDialogCase != null}
+        onClose={() => setEndLeasingDialogCase(null)}
+        item={endLeasingDialogCase}
+        property={property}
+        propertyId={propertyId}
+        rentReviews={[]}
+        rentReviewDecisions={{}}
+        vacatingCases={vacatingCases}
+        rentWeekly={displayRent ?? undefined}
+        onCaseClosed={() => {
+          void onRefresh?.();
+          setEndLeasingDialogCase(null);
+        }}
       />
     </>
   );
