@@ -49,6 +49,18 @@ import {
   mergeInspectionResponsibilityItems,
 } from '@/lib/end-leasing/outgoing-inspection-sync';
 import { resolveCompareIngoingDetail } from '@/lib/end-leasing/resolve-compare-ingoing';
+import { deriveTenantResponsibilityReviewStatus } from '@/lib/end-leasing/tenant-responsibility-review.util';
+import {
+  canAgentSendTenantQuotation,
+  deriveAgentLandlordQuoteResponse,
+  quoteStepHasLandlordItems,
+  quoteStepLandlordQuoteSentToAgent,
+  type AgentLandlordQuoteResponse,
+} from '@/lib/end-leasing/quote-step-gates.util';
+import {
+  endLeasingSendCtaClassName,
+  endLeasingSendCtaVariant,
+} from '@/lib/end-leasing/end-leasing-send-cta.util';
 import { isInspectionReportReadyForView } from '@/lib/inspections/inspection-report-ready';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import type { ReportComparisonRepairItemInput } from '@/lib/termination-case-types';
@@ -263,14 +275,15 @@ function TenantQuotationSentBody({
         be taken from the rental bond.
       </p>
       <div className="overflow-x-auto rounded-xl border text-xs">
-        <table className="w-full table-fixed text-left">
+        <table className="w-full min-w-[860px] text-left">
           <thead className="bg-muted/40 text-muted-foreground">
             <tr>
-              <th className="w-28 px-3 py-2 font-semibold">Bond deduct</th>
-              <th className="w-32 px-3 py-2 font-semibold">Landlord waivable</th>
+              <th className="w-24 px-3 py-2 font-semibold">Bond deduct</th>
+              <th className="w-28 px-3 py-2 font-semibold">Landlord waivable</th>
               <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
-              <th className="px-3 py-2 font-semibold">Description</th>
+              <th className="min-w-[120px] px-3 py-2 font-semibold">Description</th>
               <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+              <th className="min-w-[160px] px-3 py-2 font-semibold">Comments</th>
             </tr>
           </thead>
           <tbody>
@@ -282,6 +295,22 @@ function TenantQuotationSentBody({
                 <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
                 <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
                   <MaintenanceQuoteCell row={row} />
+                </td>
+                <td className="px-3 py-2 whitespace-pre-wrap">
+                  {row.bondDeductionStaffComment?.trim() ? (
+                    <p>
+                      <span className="font-medium">CROSSUB:</span> {row.bondDeductionStaffComment}
+                    </p>
+                  ) : null}
+                  {row.bondDeductionAgentComment?.trim() ? (
+                    <p className={row.bondDeductionStaffComment?.trim() ? 'mt-1' : undefined}>
+                      <span className="font-medium">Agent:</span> {row.bondDeductionAgentComment}
+                    </p>
+                  ) : null}
+                  {!row.bondDeductionStaffComment?.trim() &&
+                  !row.bondDeductionAgentComment?.trim()
+                    ? '—'
+                    : null}
                 </td>
               </tr>
             ))}
@@ -469,6 +498,145 @@ function isEffectiveTenantBondDeduction(item: ReportComparisonRepairItem): boole
   return item.bondDeductible === true && item.landlordWaivable !== true;
 }
 
+function AgentLandlordQuoteReviewPanel({
+  items,
+  sentAt,
+  response,
+  respondedAt,
+  declineReason,
+  busy,
+  onApprove,
+  onDecline,
+}: {
+  items: ReportComparisonRepairItem[];
+  sentAt?: string | null;
+  response: AgentLandlordQuoteResponse;
+  respondedAt?: string | null;
+  declineReason?: string | null;
+  busy: boolean;
+  onApprove: () => void;
+  onDecline: (reason: string) => void;
+}) {
+  const [declineOpen, setDeclineOpen] = useState(false);
+  const [declineDraft, setDeclineDraft] = useState('');
+
+  return (
+    <section className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+      <div>
+        <p className="text-sm font-semibold">Landlord quotation from CROSSUB</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Review the landlord-responsibility maintenance quotes
+          {sentAt ? ` sent ${formatDateTime(sentAt)}` : ''}. Approve to unlock sending the tenant
+          quotation, or decline with a reason so CROSSUB can update and re-send.
+        </p>
+        {response === 'approved' ? (
+          <p className="mt-2 text-xs font-medium text-emerald-700">
+            Approved
+            {respondedAt ? ` · ${formatDateTime(respondedAt)}` : ''}
+          </p>
+        ) : null}
+        {response === 'declined' ? (
+          <div className="mt-2 space-y-1">
+            <p className="text-xs font-medium text-destructive">
+              Declined{respondedAt ? ` · ${formatDateTime(respondedAt)}` : ''}
+            </p>
+            {declineReason ? (
+              <p className="text-muted-foreground text-xs whitespace-pre-wrap">{declineReason}</p>
+            ) : null}
+            <p className="text-muted-foreground text-xs">
+              Awaiting an updated quotation from CROSSUB before you can approve again.
+            </p>
+          </div>
+        ) : null}
+      </div>
+      <div className="overflow-x-auto rounded-xl border bg-card text-xs">
+        <table className="w-full table-fixed text-left">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
+              <th className="px-3 py-2 font-semibold">Description</th>
+              <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+              <th className={`${REPAIR_COL_COMPANY} px-3 py-2 font-semibold`}>Contractor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((row, index) => (
+              <tr key={`agent-landlord-quote-${index}`} className="border-t align-top">
+                <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area || '—'}</td>
+                <td className="px-3 py-2 whitespace-pre-wrap">{row.description || '—'}</td>
+                <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
+                  <MaintenanceQuoteCell row={row} />
+                </td>
+                <td className={`${REPAIR_COL_COMPANY} px-3 py-2`}>{row.handymanName || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {response === 'pending' ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9 gap-1.5 text-xs"
+            disabled={busy}
+            onClick={() => {
+              setDeclineDraft('');
+              setDeclineOpen(true);
+            }}
+          >
+            <XCircle className="size-3.5" />
+            Decline
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="h-9 gap-1.5 bg-primary text-xs font-semibold text-primary-foreground shadow-md ring-2 ring-primary/25 hover:bg-primary/90"
+            disabled={busy}
+            onClick={onApprove}
+          >
+            <CheckCircle2 className="size-3.5" />
+            Approve quotation
+          </Button>
+        </div>
+      ) : null}
+      <Dialog open={declineOpen} onOpenChange={setDeclineOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Decline landlord quotation</DialogTitle>
+            <DialogDescription>
+              Tell CROSSUB why this quotation cannot proceed. They will update and re-send.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={declineDraft}
+            onChange={(event) => setDeclineDraft(event.target.value)}
+            placeholder="Reason for declining…"
+            rows={4}
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDeclineOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={busy || !declineDraft.trim()}
+              onClick={() => {
+                onDecline(declineDraft.trim());
+                setDeclineOpen(false);
+              }}
+            >
+              Decline quotation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
 function AgentTenantBondSendDialog({
   open,
   onOpenChange,
@@ -493,7 +661,10 @@ function AgentTenantBondSendDialog({
       setDraftItems(
         items.map((item) => ({
           ...item,
+          bondDeductible: item.bondDeductible === true,
           landlordWaivable: item.landlordWaivable === true,
+          bondDeductionStaffComment: item.bondDeductionStaffComment ?? '',
+          bondDeductionAgentComment: item.bondDeductionAgentComment ?? '',
         })),
       );
     }
@@ -510,57 +681,93 @@ function AgentTenantBondSendDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl" elevated>
         <DialogHeader>
           <DialogTitle>Send quotation to tenant</DialogTitle>
           <DialogDescription>
-            CROSSUB marked which items may be bond deductible. Tick any lines the landlord may waive
-            before sending the final quotation to the tenant app and email.
+            Review CROSSUB&apos;s bond deduction proposal. You may adjust bond deduction, mark any
+            line as landlord waivable (even when not bond deductible), and add agent comments before
+            sending the final quotation to the tenant app and email.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="overflow-x-auto rounded-xl border text-xs">
-            <table className="w-full table-fixed text-left">
+            <table className="w-full min-w-[920px] text-left">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
-                  <th className="w-28 px-3 py-2 font-semibold">Bond deduct</th>
-                  <th className="w-32 px-3 py-2 font-semibold">Landlord waivable</th>
+                  <th className="w-24 px-3 py-2 font-semibold">Bond deduct</th>
+                  <th className="w-28 px-3 py-2 font-semibold">Landlord waivable</th>
                   <th className={`${REPAIR_COL_AREA} px-3 py-2 font-semibold`}>Area</th>
-                  <th className="px-3 py-2 font-semibold">Description</th>
+                  <th className="min-w-[120px] px-3 py-2 font-semibold">Description</th>
                   <th className={`${REPAIR_COL_QUOTE} px-3 py-2 font-semibold`}>Quote</th>
+                  <th className="min-w-[140px] px-3 py-2 font-semibold">CROSSUB comment</th>
+                  <th className="min-w-[140px] px-3 py-2 font-semibold">Agent comment</th>
                 </tr>
               </thead>
               <tbody>
                 {draftItems.map((row, index) => (
                   <tr key={`bond-ack-${index}`} className="border-t align-top">
-                    <td className="px-3 py-2">{row.bondDeductible === true ? 'Yes' : 'No'}</td>
                     <td className="px-3 py-2">
-                      {row.bondDeductible === true ? (
-                        <label className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            className="size-4 rounded border"
-                            checked={row.landlordWaivable === true}
-                            onChange={(event) => {
-                              setDraftItems((prev) =>
-                                prev.map((item, i) =>
-                                  i === index
-                                    ? { ...item, landlordWaivable: event.target.checked }
-                                    : item,
-                                ),
-                              );
-                            }}
-                          />
-                          <span className="sr-only">Waivable by landlord</span>
-                        </label>
-                      ) : (
-                        '—'
-                      )}
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border"
+                          checked={row.bondDeductible === true}
+                          onChange={(event) => {
+                            setDraftItems((prev) =>
+                              prev.map((item, i) =>
+                                i === index
+                                  ? { ...item, bondDeductible: event.target.checked }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                        <span className="sr-only">Deduct from bond</span>
+                      </label>
+                    </td>
+                    <td className="px-3 py-2">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border"
+                          checked={row.landlordWaivable === true}
+                          onChange={(event) => {
+                            setDraftItems((prev) =>
+                              prev.map((item, i) =>
+                                i === index
+                                  ? { ...item, landlordWaivable: event.target.checked }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                        <span className="sr-only">Waivable by landlord</span>
+                      </label>
                     </td>
                     <td className={`${REPAIR_COL_AREA} px-3 py-2`}>{row.area}</td>
                     <td className="px-3 py-2 whitespace-pre-wrap">{row.description}</td>
                     <td className={`${REPAIR_COL_QUOTE} px-3 py-2 tabular-nums`}>
                       {row.quote || '—'}
+                    </td>
+                    <td className="text-muted-foreground px-3 py-2 whitespace-pre-wrap">
+                      {row.bondDeductionStaffComment?.trim() || '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Textarea
+                        value={row.bondDeductionAgentComment ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setDraftItems((prev) =>
+                            prev.map((item, i) =>
+                              i === index ? { ...item, bondDeductionAgentComment: value } : item,
+                            ),
+                          );
+                        }}
+                        placeholder="Note for the tenant…"
+                        rows={2}
+                        className="min-h-[52px] resize-y text-xs"
+                      />
                     </td>
                   </tr>
                 ))}
@@ -585,6 +792,7 @@ function AgentTenantBondSendDialog({
           </Button>
           <Button
             type="button"
+            className="bg-primary font-semibold text-primary-foreground shadow-md ring-2 ring-primary/25 hover:bg-primary/90"
             disabled={busy || draftItems.length === 0}
             onClick={() => void onSend(draftItems)}
           >
@@ -1736,6 +1944,8 @@ function normalizeBondAckRepairItems(
     ...normalizeRepairItems([item], contractors)[0]!,
     bondDeductible: item.bondDeductible === true,
     landlordWaivable: item.landlordWaivable === true,
+    bondDeductionStaffComment: item.bondDeductionStaffComment?.trim() || undefined,
+    bondDeductionAgentComment: item.bondDeductionAgentComment?.trim() || undefined,
   }));
 }
 
@@ -2411,6 +2621,29 @@ export function EndLeasingReportComparisonPanel({
     }
   };
 
+  const respondAgentLandlordQuote = async (
+    response: 'approved' | 'declined',
+    reason?: string,
+  ) => {
+    setBusy(true);
+    try {
+      const updated = await terminationApi.respondAgentLandlordQuote(caseData.id, {
+        response,
+        reason,
+      });
+      applyUpdatedCase(updated);
+      toast.success(
+        response === 'approved'
+          ? 'Landlord quotation approved — you can send to tenant'
+          : 'Landlord quotation declined — CROSSUB will re-send',
+      );
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const openSendQuotationDialog = async () => {
     setBusy(true);
     try {
@@ -2519,15 +2752,7 @@ export function EndLeasingReportComparisonPanel({
   const showTenantResponse = mode === 'tenant-response';
   const showInspectorReadonly = mode === 'inspector-readonly';
 
-  const tenantResponsibilityReviewStatus =
-    rc.tenantResponsibilityAgentAcknowledged === true &&
-    (rc.tenantResponsibility?.length ?? 0) > 0
-      ? rc.tenantResponsibilityReviewStatus === 'accepted' ||
-        rc.tenantResponsibilityReviewStatus === 'declined' ||
-        rc.tenantResponsibilityReviewStatus === 'pending'
-        ? rc.tenantResponsibilityReviewStatus
-        : 'pending'
-      : 'none';
+  const tenantResponsibilityReviewStatus = deriveTenantResponsibilityReviewStatus(rc);
   const tenantMaintenanceReady = tenantResponsibilityReviewStatus === 'accepted';
   const landlordMaintenanceReady = rc.landlordResponsibilityAgentAcknowledged === true;
   const endLeasingQuotesReadyForTenant =
@@ -2552,8 +2777,11 @@ export function EndLeasingReportComparisonPanel({
     );
   const landlordQuotationSent = Boolean(rc.landlordRepairQuoteEmail?.sentAt);
   const tenantQuotationSent = tenantBondAckSent || Boolean(rc.tenantRepairQuoteEmail?.sentAt);
+  const agentLandlordQuoteResponse = deriveAgentLandlordQuoteResponse(rc);
+  const landlordQuoteFromAdmin =
+    quoteStepHasLandlordItems(rc) && quoteStepLandlordQuoteSentToAgent(rc);
   const canSendQuotationToTenant =
-    agentBondProposalSent &&
+    canAgentSendTenantQuotation(rc) &&
     endLeasingQuotesReadyForTenant &&
     (!tenantBondAckSent || rc.tenantQuoteResponse === 'declined');
   const canSendLandlordQuotation =
@@ -2574,9 +2802,15 @@ export function EndLeasingReportComparisonPanel({
           : 'Quotation sent to tenant'
     : !agentBondProposalSent
       ? 'Awaiting bond deduction from CROSSUB'
-      : !endLeasingQuotesReadyForTenant
-        ? 'Complete maintenance quotes first'
-        : 'Send quotation to tenant';
+      : quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
+        ? 'Awaiting landlord quotation from CROSSUB'
+        : agentLandlordQuoteResponse === 'pending'
+          ? 'Approve landlord quotation first'
+          : agentLandlordQuoteResponse === 'declined'
+            ? 'Awaiting updated landlord quotation'
+            : !endLeasingQuotesReadyForTenant
+              ? 'Complete maintenance quotes first'
+              : 'Send quotation to tenant';
   const sendLandlordQuotationButtonLabel = landlordQuotationSent
     ? 'Quotation sent to landlord'
     : !landlordMaintenanceReady
@@ -2668,7 +2902,7 @@ export function EndLeasingReportComparisonPanel({
         />
         <CompareResponsibilitySection
           title="Tenant responsibility"
-          description="Recorded by CROSSUB staff. Acknowledge each responsibility list (Yes/No), add comments, then email when ready."
+          description="Recorded by CROSSUB staff. Email the tenant when ready — they acknowledge the comparison in the tenant app."
           items={tenantItems}
           onChange={setTenantItems}
           readOnly
@@ -2678,18 +2912,31 @@ export function EndLeasingReportComparisonPanel({
           agentComment={tenantAgentComment}
           onSendAgentComment={(message) => sendAgentComment('tenant', message)}
           canEditAgentComment
-          responsibilityAcknowledged={rc.tenantResponsibilityAgentAcknowledged ?? null}
-          responsibilityAcknowledgedAt={rc.tenantResponsibilityAgentAcknowledgedAt}
-          canAcknowledgeResponsibility
-          onAcknowledgeResponsibility={(accepted) =>
-            acknowledgeResponsibility('tenant', accepted)
-          }
+          showResponsibilityAcknowledgment={false}
           emailHint="Send tenant responsibility summary to the tenant"
           emailButtonLabel="Email to Tenant"
           emailSentLabel="Email to Tenant sent"
           emailSent={Boolean(rc.tenantComparisonSummaryEmail?.sentAt)}
           onEmail={() => void sendComparisonSummary('tenant')}
         />
+        {tenantResponsibilityReviewStatus !== 'none' ? (
+          <section className="space-y-2 rounded-xl border bg-card p-4">
+            <p className="text-sm font-semibold">Tenant responsibility review</p>
+            <p className="text-muted-foreground text-xs">
+              {tenantResponsibilityReviewStatus === 'pending'
+                ? 'Awaiting tenant acknowledgement in the tenant app.'
+                : tenantResponsibilityReviewStatus === 'accepted'
+                  ? 'Tenant acknowledged — CROSSUB can proceed to quotes.'
+                  : 'Tenant disagreed — CROSSUB staff will send an updated list.'}
+            </p>
+            {rc.tenantResponsibilityDeclineReason ? (
+              <p className="text-xs whitespace-pre-wrap">
+                <span className="font-medium">Tenant reason:</span>{' '}
+                {rc.tenantResponsibilityDeclineReason}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
         <CompareResponsibilitySection
           title="Landlord responsibility"
           description="Recorded by CROSSUB staff. Acknowledge this list (Yes/No), add comments, then email the landlord property update when ready."
@@ -2758,7 +3005,7 @@ export function EndLeasingReportComparisonPanel({
             <p className="text-sm font-semibold">Tenant responsibility review</p>
             <p className="text-muted-foreground text-xs">
               {tenantResponsibilityReviewStatus === 'pending'
-                ? 'Awaiting tenant review in the Make-good step.'
+                ? 'Awaiting tenant acknowledgement in the tenant app.'
                 : tenantResponsibilityReviewStatus === 'accepted'
                   ? 'Tenant acknowledged — send the maintenance quotation when quotes are ready.'
                   : 'Tenant disagreed with the responsibility list.'}
@@ -2770,6 +3017,18 @@ export function EndLeasingReportComparisonPanel({
               </p>
             ) : null}
           </section>
+        ) : null}
+        {landlordQuoteFromAdmin ? (
+          <AgentLandlordQuoteReviewPanel
+            items={landlordItems}
+            sentAt={rc.agentRepairQuoteEmail?.sentAt}
+            response={agentLandlordQuoteResponse}
+            respondedAt={rc.agentLandlordQuoteRespondedAt}
+            declineReason={rc.agentLandlordQuoteDeclineReason}
+            busy={busy}
+            onApprove={() => void respondAgentLandlordQuote('approved')}
+            onDecline={(reason) => void respondAgentLandlordQuote('declined', reason)}
+          />
         ) : null}
         <QuoteResponsibilitySection
           title="Tenant Responsibility"
@@ -2783,10 +3042,16 @@ export function EndLeasingReportComparisonPanel({
             !tenantMaintenanceReady
               ? 'Awaiting tenant responsibility review'
               : !agentBondProposalSent
-                ? 'Awaiting bond deduction proposal from CROSSUB — then mark landlord-waivable items and send to tenant'
-              : !endLeasingQuotesReadyForTenant
-                ? 'Complete End of Lease maintenance quotes, then send the quotation to the tenant'
-                : 'Mark landlord-waivable items, then send the quotation to the tenant app and email'
+                ? 'Awaiting bond deduction proposal from CROSSUB'
+                : quoteStepHasLandlordItems(rc) && !quoteStepLandlordQuoteSentToAgent(rc)
+                  ? 'Awaiting landlord maintenance quotation from CROSSUB'
+                  : agentLandlordQuoteResponse === 'pending'
+                    ? 'Approve the landlord quotation from CROSSUB, then mark landlord-waivable items and send to tenant'
+                    : agentLandlordQuoteResponse === 'declined'
+                      ? 'Landlord quotation declined — await an updated quotation from CROSSUB'
+                      : !endLeasingQuotesReadyForTenant
+                        ? 'Complete End of Lease maintenance quotes, then send the quotation to the tenant'
+                        : 'Mark landlord-waivable items, then send the quotation to the tenant app and email'
           }
           showQuoteColumns
           hideQuoteAmountColumn={tenantResponsibilityReviewStatus === 'pending'}
@@ -2807,16 +3072,14 @@ export function EndLeasingReportComparisonPanel({
               <Button
                 type="button"
                 size="sm"
-                variant={
-                  tenantBondAckSent && rc.tenantQuoteResponse === 'accepted'
-                    ? 'default'
-                    : 'secondary'
-                }
-                className={
-                  tenantBondAckSent && rc.tenantQuoteResponse === 'accepted'
-                    ? 'h-9 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
-                    : 'h-9 gap-1.5 text-xs'
-                }
+                variant={endLeasingSendCtaVariant(
+                  tenantQuotationSent && rc.tenantQuoteResponse !== 'declined',
+                  tenantQuotationButtonEnabled && canSendQuotationToTenant,
+                )}
+                className={endLeasingSendCtaClassName(
+                  tenantQuotationSent && rc.tenantQuoteResponse !== 'declined',
+                  tenantQuotationButtonEnabled && canSendQuotationToTenant,
+                )}
                 disabled={busy || !tenantQuotationButtonEnabled}
                 onClick={() => handleTenantQuotationButtonClick()}
               >
@@ -2855,12 +3118,11 @@ export function EndLeasingReportComparisonPanel({
               <Button
                 type="button"
                 size="sm"
-                variant={landlordQuotationSent ? 'default' : 'secondary'}
-                className={
-                  landlordQuotationSent
-                    ? 'h-9 gap-1.5 border-transparent bg-emerald-600 text-xs text-white hover:bg-emerald-600 disabled:opacity-100'
-                    : 'h-9 gap-1.5 text-xs'
-                }
+                variant={endLeasingSendCtaVariant(landlordQuotationSent, canSendLandlordQuotation)}
+                className={endLeasingSendCtaClassName(
+                  landlordQuotationSent,
+                  canSendLandlordQuotation,
+                )}
                 disabled={busy || !landlordQuotationButtonEnabled}
                 onClick={() => handleLandlordQuotationButtonClick()}
               >

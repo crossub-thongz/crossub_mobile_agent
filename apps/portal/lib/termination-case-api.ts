@@ -112,6 +112,8 @@ function mapRepairItems(
     maintenanceRequestId: item.maintenanceRequestId ?? null,
     bondDeductible: item.bondDeductible === true ? true : undefined,
     landlordWaivable: item.landlordWaivable === true ? true : undefined,
+    bondDeductionStaffComment: item.bondDeductionStaffComment?.trim() || undefined,
+    bondDeductionAgentComment: item.bondDeductionAgentComment?.trim() || undefined,
   }));
 }
 
@@ -414,6 +416,17 @@ export function mapTerminationCase(
       ),
       landlordRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.landlordRepairQuoteEmail),
       agentRepairQuoteEmail: mapOverviewEmail(s.reportComparison?.agentRepairQuoteEmail),
+      agentLandlordQuoteResponse:
+        (s.reportComparison?.agentLandlordQuoteResponse as
+          | 'none'
+          | 'pending'
+          | 'approved'
+          | 'declined'
+          | undefined) ?? undefined,
+      agentLandlordQuoteRespondedAt:
+        s.reportComparison?.agentLandlordQuoteRespondedAt ?? undefined,
+      agentLandlordQuoteDeclineReason:
+        s.reportComparison?.agentLandlordQuoteDeclineReason ?? undefined,
       agentQuoteConfirmed: s.reportComparison?.agentQuoteConfirmed ?? false,
       agentQuoteConfirmedAt: s.reportComparison?.agentQuoteConfirmedAt ?? undefined,
       tenantQuoteResponse: s.reportComparison?.tenantQuoteResponse ?? null,
@@ -676,6 +689,17 @@ export const terminationApi = {
       api.patch<{ case: ServerTerminationCase }>(
         `/end-leasing/cases/${id}/report-comparison/confirm-agent-quote`,
         {},
+      ),
+    ),
+
+  respondAgentLandlordQuote: (
+    id: string,
+    input: { response: 'approved' | 'declined'; reason?: string },
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(
+      api.patch<{ case: ServerTerminationCase }>(
+        `/end-leasing/cases/${id}/report-comparison/agent-landlord-quote-response`,
+        input,
       ),
     ),
 

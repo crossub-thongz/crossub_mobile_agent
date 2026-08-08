@@ -7,6 +7,13 @@ import {
 import { formatAgentSender } from '@/lib/job-case-email-sender';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { EndLeasingOverviewEmail, TerminationCaseDetail } from '@/lib/end-leasing/types';
+import {
+  quoteStepAgentApprovedLandlordQuote,
+  quoteStepBondSentToAgent,
+  quoteStepHasLandlordItems,
+  quoteStepLandlordQuoteSentToAgent,
+  quoteStepTenantQuotationSent,
+} from '@/lib/end-leasing/quote-step-gates.util';
 
 /** Six-stage end-leasing flow (manager spec). */
 export const END_LEASING_AGENT_STEP = {
@@ -237,9 +244,11 @@ function reportComparisonSubProgress(
     rc.agentAcknowledged || inspection.reportAvailable;
   const responsibilitiesDefined =
     rc.tenantResponsibility.length > 0 || rc.landlordResponsibility.length > 0;
-  const tenantAcknowledged = responsibilityAgentAcknowledged(
-    rc.tenantResponsibilityAgentAcknowledged,
-  );
+  const tenantItemsExist = rc.tenantResponsibility.length > 0;
+  const tenantEmailSent =
+    !tenantItemsExist || Boolean(rc.tenantComparisonSummaryEmail?.sentAt);
+  const tenantReviewAccepted =
+    !tenantItemsExist || rc.tenantResponsibilityReviewStatus === 'accepted';
   const landlordAcknowledged = responsibilityAgentAcknowledged(
     rc.landlordResponsibilityAgentAcknowledged,
   );
@@ -248,27 +257,38 @@ function reportComparisonSubProgress(
     { id: 'complete', label: 'Outgoing inspection completion date recorded', done: inspection.status === DONE },
     { id: 'compare', label: 'Ingoing/outgoing reports compared (agent confirmed)', done: compared },
     { id: 'responsibility', label: 'Landlord & tenant responsibility defined', done: responsibilitiesDefined },
-    { id: 'tenant_ack', label: 'Tenant responsibility acknowledged by agent (Yes/No)', done: tenantAcknowledged },
+    { id: 'tenant_email', label: 'Comparison emailed to tenant', done: tenantEmailSent },
+    { id: 'tenant_ack', label: 'Tenant acknowledged comparison in tenant app', done: tenantReviewAccepted },
     { id: 'landlord_ack', label: 'Landlord responsibility acknowledged by agent (Yes/No)', done: landlordAcknowledged },
   ];
 }
 
 function getQuoteSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
   const rc = caseData.reportComparison;
-  const quotesEntered =
-    rc.tenantResponsibility.some((i) => i.quote?.trim()) ||
-    rc.landlordResponsibility.some((i) => i.quote?.trim()) ||
-    caseData.makeGood.estimatedDeductions > 0;
-  const handymanAssigned =
-    rc.tenantResponsibility.some((i) => i.handymanId || i.handymanName?.trim()) ||
-    rc.landlordResponsibility.some((i) => i.handymanId || i.handymanName?.trim());
-  const sentToAgent = Boolean(rc.agentRepairQuoteEmail?.sentAt ?? rc.landlordRepairQuoteEmail?.sentAt);
-
-  return [
-    { id: 'quotes', label: 'Repair quotes entered', done: quotesEntered },
-    { id: 'handyman', label: 'Handyman assigned', done: handymanAssigned },
-    { id: 'agent', label: 'Landlord & tenant quotes sent to agent', done: sentToAgent },
+  const hasLandlord = quoteStepHasLandlordItems(rc);
+  const items: EndLeasingSubProgressItem[] = [
+    { id: 'bond_agent', label: 'Bond deduction sent to agent', done: quoteStepBondSentToAgent(rc) },
   ];
+  if (hasLandlord) {
+    items.push(
+      {
+        id: 'landlord_quote_agent',
+        label: 'Landlord quotation sent to agent',
+        done: quoteStepLandlordQuoteSentToAgent(rc),
+      },
+      {
+        id: 'agent_approve',
+        label: 'Agent approved landlord quotation',
+        done: quoteStepAgentApprovedLandlordQuote(rc),
+      },
+    );
+  }
+  items.push({
+    id: 'tenant_quote',
+    label: 'Quotation sent to tenant',
+    done: quoteStepTenantQuotationSent(rc),
+  });
+  return items;
 }
 
 function resultConfirmedSubProgress(caseData: TerminationCaseDetail): EndLeasingSubProgressItem[] {
@@ -323,7 +343,11 @@ function workflowNameForStep(
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
       return 'Compare ingoing/outgoing & define responsibility';
     case END_LEASING_AGENT_STEP.GET_QUOTE:
-      return 'Obtain repair quotes & send to agent';
+      if (next?.id === 'bond_agent') return 'Await bond deduction from CROSSUB';
+      if (next?.id === 'landlord_quote_agent') return 'Await landlord quotation from CROSSUB';
+      if (next?.id === 'agent_approve') return 'Approve landlord quotation';
+      if (next?.id === 'tenant_quote') return 'Send quotation to tenant';
+      return 'Quote step complete';
     case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
       if (!caseData.reportComparison.agentQuoteConfirmed) return 'Agent confirms figures';
       return 'Record tenant response';
@@ -349,10 +373,7 @@ function stepComplete(
     case END_LEASING_AGENT_STEP.REPORT_COMPARISON:
       return subProgress.every((i) => i.done) || caseData.makeGood.status === DONE;
     case END_LEASING_AGENT_STEP.GET_QUOTE:
-      return (
-        subProgress.every((i) => i.done) ||
-        Boolean(caseData.reportComparison.agentRepairQuoteEmail?.sentAt ?? caseData.reportComparison.landlordRepairQuoteEmail?.sentAt)
-      );
+      return subProgress.every((i) => i.done);
     case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
       return (
         caseData.reportComparison.tenantQuoteResponse === 'accepted' ||

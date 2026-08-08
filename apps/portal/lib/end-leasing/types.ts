@@ -103,6 +103,8 @@ export interface ReportComparisonRepairItem {
   maintenanceRequestId?: string | null
   bondDeductible?: boolean
   landlordWaivable?: boolean
+  bondDeductionStaffComment?: string
+  bondDeductionAgentComment?: string
   /** Client-only stable key for compare-step draft rows (not sent to API). */
   localKey?: string
 }
@@ -161,6 +163,9 @@ export interface ReportComparisonStageState {
   agentBondDeductionProposalEmail?: EndLeasingOverviewEmail | null
   landlordRepairQuoteEmail?: EndLeasingOverviewEmail | null
   agentRepairQuoteEmail?: EndLeasingOverviewEmail | null
+  agentLandlordQuoteResponse?: 'none' | 'pending' | 'approved' | 'declined' | null
+  agentLandlordQuoteRespondedAt?: string | null
+  agentLandlordQuoteDeclineReason?: string | null
   agentQuoteConfirmed?: boolean
   agentQuoteConfirmedAt?: string | null
   tenantQuoteResponse?: TenantQuoteResponse | null
