@@ -499,15 +499,25 @@ function storedEmailToRecord(
     subject: email.subject ?? fallbackSubject,
     body: email.body ?? '',
     from: rawFrom
-      ? rawFrom.startsWith('[Agent]')
+      ? rawFrom.startsWith('[Agent]') ||
+        rawFrom.startsWith('[CROSSUB]') ||
+        rawFrom.startsWith('[Tenant]') ||
+        rawFrom.startsWith('[Landlord]')
         ? rawFrom
         : looksLikeCrossub(rawFrom)
           ? rawFrom
           : `[Agent] ${rawFrom}`
       : agent.from,
+    fromEmail: email.fromEmail ?? agent.fromEmail,
     to: email.to ?? '—',
+    toEmail: email.toEmail,
     at: email.sentAt ?? fallbackAt,
     kind,
+    attachments: email.attachments?.map((attachment) => ({
+      name: attachment.name,
+      mimeType: attachment.mimeType,
+      url: attachment.url,
+    })),
   };
 }
 

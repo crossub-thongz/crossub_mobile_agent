@@ -149,6 +149,18 @@ export function EndLeasingAgentWorkflowPanel({
             <JobCaseStageEmailHistory
               emails={stageEmails}
               title="Emails & Messages History"
+              agentName={caseData.agentName ?? caseData.agencyName}
+              recipientContacts={
+                caseData.tenant.email?.trim()
+                  ? [
+                      {
+                        role: 'Tenant',
+                        name: caseData.tenant.name,
+                        email: caseData.tenant.email.trim(),
+                      },
+                    ]
+                  : []
+              }
             />
           ) : null}
         </div>

@@ -69,7 +69,11 @@ export interface EndLeasingOverviewEmail {
   subject?: string
   body?: string
   from?: string
+  fromEmail?: string
   to?: string
+  toEmail?: string
+  cc?: string
+  attachments?: Array<{ name: string; mimeType?: string; url?: string }>
   sentAt?: string
 }
 
