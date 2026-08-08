@@ -4,9 +4,11 @@ import {
   Building2,
   CalendarCheck,
   Check,
+  ChevronDown,
   DoorOpen,
   Home,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -17,13 +19,119 @@ import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing
 import {
   isInspectionOnlyLevel,
   PORTAL_SERVICE_LEVEL_ORDER,
-  REGISTER_SERVICE_LEVEL_DESCRIPTION,
   REGISTER_SERVICE_LEVEL_LABEL,
   type AgentPortalServiceLevel,
 } from '@/lib/portal-service-level';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 type RegistrationPricingCatalog = Omit<AgentBillingPricingCatalog, 'portalServiceLevel'>;
+
+function minNumericRecordValue(rows: Record<string, number | string>): number {
+  const values = Object.values(rows).filter((v): v is number => typeof v === 'number');
+  return values.length > 0 ? Math.min(...values) : 0;
+}
+
+function FullServicePricingDetails({ catalog }: { catalog: RegistrationPricingCatalog }) {
+  const included = catalog.level2.includedPerPropertyPerYear;
+  const example = catalog.level2.serviceFeeExample;
+
+  return (
+    <div className="space-y-4 border-t border-border/60 pt-4 text-sm">
+      {included ? (
+        <div>
+          <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+            Included per property each year
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-1 text-xs">
+              <CalendarCheck className="size-3.5 text-violet-600 dark:text-violet-400" />
+              <strong>{included.ROUTINE_INSPECTION}</strong> routine
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-1 text-xs">
+              <DoorOpen className="size-3.5 text-violet-600 dark:text-violet-400" />
+              <strong>{included.INGOING_INSPECTION}</strong> ingoing
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-1 text-xs">
+              <Home className="size-3.5 text-violet-600 dark:text-violet-400" />
+              <strong>{included.OUTGOING_INSPECTION}</strong> outgoing
+            </span>
+          </div>
+          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
+            Open inspections and tribunal are always charged separately.
+          </p>
+        </div>
+      ) : null}
+
+      {example ? (
+        <div className="rounded-lg border border-violet-500/25 bg-violet-500/8 p-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
+            <p className="font-semibold">Full Service fee example</p>
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Standard {example.managementRatePercent}% management rate ·{' '}
+            {catalog.level2.serviceFeePercent}% of your management income invoiced monthly
+          </p>
+          <div className="text-muted-foreground mt-2 space-y-1 font-mono text-xs leading-relaxed">
+            <p>
+              Weekly rent {formatCurrency(example.weeklyRentAud)} × {example.managementRatePercent}%
+              management = {formatCurrency(example.agentIncomeAud)} agent income
+            </p>
+            <p>
+              CROSSUB fee {formatCurrency(example.agentIncomeAud)} ×{' '}
+              {catalog.level2.serviceFeePercent}% = {formatCurrency(example.crossubFeeAud)} / week ×
+              4 weeks ={' '}
+              <strong className="text-foreground">
+                {formatCurrency(example.crossubFeeAud * 4)}
+              </strong>{' '}
+              per month
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <ul className="text-muted-foreground space-y-1.5 text-xs leading-relaxed">
+        <li className="flex gap-2">
+          <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+          Leasing, maintenance, accounting, messaging, and all property workflows
+        </li>
+        <li className="flex gap-2">
+          <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+          Orders confirmed within 24 hours; auto-refund if unaccepted (inspections &amp; tribunal)
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+function InspectionOnlyPricingDetails({ catalog }: { catalog: RegistrationPricingCatalog }) {
+  return (
+    <div className="border-t border-border/60 pt-4">
+      <ul className="text-muted-foreground mb-4 space-y-1.5 text-xs leading-relaxed">
+        <li>Prepaid — pay after the inspector accepts the job</li>
+        <li>Orders confirmed within 24 hours of payment; auto-refund if unaccepted</li>
+        <li>
+          Open inspections:{' '}
+          <strong className="text-foreground">
+            {catalog.inspections.openInspection.firstThree}
+          </strong>{' '}
+          (1st–3rd);{' '}
+          <strong className="text-foreground">
+            {catalog.inspections.openInspection.fourthOnwards}
+          </strong>{' '}
+          from the 4th onwards
+        </li>
+        <li>Inspection module only — upgrade to Full Service anytime</li>
+      </ul>
+      <PricingRateCatalog
+        catalog={catalog}
+        showPlanSummaries={false}
+        showServiceFeeCard={false}
+        className="!space-y-0"
+      />
+    </div>
+  );
+}
 
 export function RegisterPricingPanel({
   selectedLevel,
@@ -35,6 +143,7 @@ export function RegisterPricingPanel({
   const [catalog, setCatalog] = useState<RegistrationPricingCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedLevel, setExpandedLevel] = useState<AgentPortalServiceLevel | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,14 +164,28 @@ export function RegisterPricingPanel({
     };
   }, []);
 
+  const toggleDetails = (
+    event: React.MouseEvent,
+    level: AgentPortalServiceLevel,
+  ) => {
+    event.stopPropagation();
+    setExpandedLevel((current) => (current === level ? null : level));
+  };
+
+  const fieldInspectionFromExGst = catalog
+    ? minNumericRecordValue(catalog.inspections.fieldInspectionsCompactExGst)
+    : 75;
+
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm font-medium">Choose your service plan</p>
         <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-          Review every service rate below, then select{' '}
+          Select{' '}
           <strong className="text-foreground">Inspection Only Service</strong> or{' '}
-          <strong className="text-foreground">Full Service</strong>.
+          <strong className="text-foreground">Full Service</strong>. Starting prices are shown
+          below — expand <strong className="text-foreground">Details</strong> for the full
+          breakdown.
         </p>
       </div>
 
@@ -79,70 +202,106 @@ export function RegisterPricingPanel({
         </p>
       ) : null}
 
-      {catalog ? <PricingRateCatalog catalog={catalog} /> : null}
-
       <div className="space-y-2">
-        <p className="text-sm font-medium">Select your plan</p>
+        <p className="text-sm font-medium">Service selection</p>
         <div className="grid gap-3">
           {PORTAL_SERVICE_LEVEL_ORDER.map((level) => {
             const selected = selectedLevel === level;
             const isLevel1 = isInspectionOnlyLevel(level);
+            const expanded = expandedLevel === level;
+
             return (
-              <button
+              <div
                 key={level}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectLevel(level)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelectLevel(level);
+                  }
+                }}
                 className={cn(
-                  'rounded-xl border p-4 text-left transition-colors',
+                  'cursor-pointer rounded-xl border p-4 text-left transition-colors',
                   selected
                     ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
                     : 'border-border/70 bg-card hover:border-primary/40',
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1 space-y-2">
+                  <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <PortalServiceLevelBadge level={level} variant="level" size="sm" />
                       <span className="font-semibold">{REGISTER_SERVICE_LEVEL_LABEL[level]}</span>
                     </div>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      {REGISTER_SERVICE_LEVEL_DESCRIPTION[level]}
-                    </p>
+
                     {catalog ? (
-                      <p className="text-xs leading-relaxed text-foreground/80">
-                        {isLevel1 ? (
-                          <>
-                            <Building2 className="mr-1 inline size-3.5" />
-                            {catalog.level1.description}
-                          </>
-                        ) : (
-                          <>
-                            <CalendarCheck className="mr-1 inline size-3.5" />
-                            {catalog.level2.description}
-                          </>
-                        )}
-                      </p>
+                      isLevel1 ? (
+                        <ul className="space-y-1 text-sm">
+                          <li>
+                            <span className="text-muted-foreground">Routine inspection </span>
+                            <span className="font-medium text-foreground">
+                              from {formatCurrency(catalog.inspections.routineIncGstAud)}
+                            </span>
+                          </li>
+                          <li>
+                            <span className="text-muted-foreground">Ingoing/outgoing inspection </span>
+                            <span className="font-medium text-foreground">
+                              from {formatCurrency(fieldInspectionFromExGst)} ex GST
+                            </span>
+                          </li>
+                          <li>
+                            <span className="text-muted-foreground">Open inspection </span>
+                            <span className="font-medium text-foreground">
+                              from 50% of the letting fee
+                            </span>
+                          </li>
+                        </ul>
+                      ) : (
+                        <div className="space-y-2 text-sm">
+                          <p>
+                            <span className="font-semibold text-foreground">
+                              {catalog.level2.serviceFeePercent}% management fee
+                            </span>
+                            <span className="text-muted-foreground">
+                              {' '}
+                              of your management income · invoiced monthly
+                            </span>
+                          </p>
+                          <p className="text-muted-foreground text-xs leading-relaxed">
+                            Leasing, maintenance, accounting, messaging, and all property workflows.
+                            Included routine, ingoing, and outgoing inspections per property each
+                            year.
+                          </p>
+                        </div>
+                      )
                     ) : null}
-                    {isLevel1 ? (
-                      <ul className="text-muted-foreground space-y-1 text-xs">
-                        <li className="flex gap-2">
-                          <DoorOpen className="mt-0.5 size-3.5 shrink-0" />
-                          Orders confirmed within 24 hours of payment; auto-refund if unaccepted
-                        </li>
-                        <li className="flex gap-2">
-                          <Home className="mt-0.5 size-3.5 shrink-0" />
-                          Inspection module only — upgrade to Full Service anytime
-                        </li>
-                      </ul>
-                    ) : (
-                      <ul className="text-muted-foreground space-y-1 text-xs">
-                        <li className="flex gap-2">
-                          <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
-                          Leasing, maintenance, accounting, messaging, and all property workflows
-                        </li>
-                      </ul>
-                    )}
+
+                    <button
+                      type="button"
+                      onClick={(event) => toggleDetails(event, level)}
+                      className="text-primary inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide hover:underline"
+                      aria-expanded={expanded}
+                    >
+                      Details
+                      <ChevronDown
+                        className={cn(
+                          'size-3.5 transition-transform',
+                          expanded && 'rotate-180',
+                        )}
+                      />
+                    </button>
+
+                    {expanded && catalog ? (
+                      isLevel1 ? (
+                        <InspectionOnlyPricingDetails catalog={catalog} />
+                      ) : (
+                        <FullServicePricingDetails catalog={catalog} />
+                      )
+                    ) : null}
                   </div>
+
                   <div
                     className={cn(
                       'mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border',
@@ -154,7 +313,7 @@ export function RegisterPricingPanel({
                     {selected ? <Check className="size-3" /> : null}
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

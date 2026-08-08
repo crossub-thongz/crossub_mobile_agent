@@ -131,11 +131,13 @@ export function PricingRateCatalog({
   catalog,
   className,
   showPlanSummaries = true,
+  showServiceFeeCard = true,
   orderActions,
 }: {
   catalog: PricingCatalog;
   className?: string;
   showPlanSummaries?: boolean;
+  showServiceFeeCard?: boolean;
   orderActions?: PricingOrderActions;
 }) {
   const openInspection = catalog.inspections.openInspection;
@@ -342,16 +344,18 @@ export function PricingRateCatalog({
           <PricingAddButton onClick={orderActions?.addTribunal} label="Add tribunal" />
         </div>
 
-        <div className="pricing-rate-card pricing-rate-card--standalone" data-rate="service-fee">
-          <div className="pricing-rate-card__icon">
-            <Building2 className="size-4" />
+        {showServiceFeeCard ? (
+          <div className="pricing-rate-card pricing-rate-card--standalone" data-rate="service-fee">
+            <div className="pricing-rate-card__icon">
+              <Building2 className="size-4" />
+            </div>
+            <p className="font-medium">Full Service platform fee</p>
+            <p className="pricing-rate-card__price mt-1">{catalog.level2.serviceFeePercent}%</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              of agent management income (ex GST) · invoiced monthly
+            </p>
           </div>
-          <p className="font-medium">Full Service platform fee</p>
-          <p className="pricing-rate-card__price mt-1">{catalog.level2.serviceFeePercent}%</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            of agent management income (ex GST) · invoiced monthly
-          </p>
-        </div>
+        ) : null}
 
         <div className="pricing-footnote">
           <Info className="mt-0.5 size-4 shrink-0 text-primary" />

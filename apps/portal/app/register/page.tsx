@@ -23,6 +23,10 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AddressLineAutocomplete } from '@/components/end-leasing/address-line-autocomplete';
 import { RegisterPricingPanel } from '@/components/register/register-pricing-panel';
+import {
+  RegisterConfirmPanel,
+  registerConfirmReady,
+} from '@/components/register/register-confirm-panel';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,10 +41,11 @@ import { registerLocalAccount } from '@/lib/local-auth';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import {
   DEFAULT_PORTAL_SERVICE_LEVEL,
-  REGISTER_SERVICE_LEVEL_LABEL,
+  isInspectionOnlyLevel,
   type AgentPortalServiceLevel,
 } from '@/lib/portal-service-level';
 import { ApiError } from '@/lib/api';
+import { fileToBase64 } from '@/lib/file-upload';
 import { cn } from '@/lib/utils';
 
 const STEPS = ['Your details', 'Service & pricing', 'Confirm'] as const;
@@ -105,6 +110,8 @@ export default function RegisterPage() {
   const [portalServiceLevel, setPortalServiceLevel] =
     useState<AgentPortalServiceLevel | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptSystemAccessAgreement, setAcceptSystemAccessAgreement] = useState(false);
+  const [signedServiceAgreementFile, setSignedServiceAgreementFile] = useState<File | null>(null);
 
   const agentForm = useForm<AgentValues>({
     resolver: zodResolver(agentSchema),
@@ -139,6 +146,9 @@ export default function RegisterPage() {
       toast.error('Please select Inspection Only Service or Full Service.');
       return;
     }
+    setAcceptTerms(false);
+    setAcceptSystemAccessAgreement(false);
+    setSignedServiceAgreementFile(null);
     setStep('Confirm');
   };
 
@@ -148,9 +158,52 @@ export default function RegisterPage() {
       setStep('Service & pricing');
       return;
     }
-    if (!acceptTerms) {
-      toast.error('Please accept the terms and conditions to continue.');
+    if (
+      !registerConfirmReady({
+        portalServiceLevel,
+        acceptTerms,
+        acceptSystemAccessAgreement,
+        signedServiceAgreementFile,
+      })
+    ) {
+      if (!acceptTerms) {
+        toast.error('Please accept the terms and conditions to continue.');
+        return;
+      }
+      if (!isInspectionOnlyLevel(portalServiceLevel)) {
+        if (!acceptSystemAccessAgreement) {
+          toast.error('Please accept the System Access Agreement to continue.');
+          return;
+        }
+        if (!signedServiceAgreementFile) {
+          toast.error('Please upload your signed CROSSUB Service Agreement.');
+          return;
+        }
+      }
       return;
+    }
+
+    let signedServiceAgreement:
+      | {
+          fileName: string;
+          mimeType: string;
+          sizeBytes: number;
+          contentBase64: string;
+        }
+      | undefined;
+
+    if (!isInspectionOnlyLevel(portalServiceLevel) && signedServiceAgreementFile) {
+      try {
+        signedServiceAgreement = {
+          fileName: signedServiceAgreementFile.name,
+          mimeType: signedServiceAgreementFile.type || 'application/pdf',
+          sizeBytes: signedServiceAgreementFile.size,
+          contentBase64: await fileToBase64(signedServiceAgreementFile),
+        };
+      } catch {
+        toast.error('Could not read the signed service agreement file.');
+        return;
+      }
     }
 
     let apiUnreachable = false;
@@ -169,13 +222,17 @@ export default function RegisterPage() {
         officeAddress: values.officeAddress,
         portalServiceLevel,
         acceptTerms: true,
+        acceptSystemAccessAgreement: isInspectionOnlyLevel(portalServiceLevel)
+          ? undefined
+          : true,
+        signedServiceAgreement,
       });
       await refresh();
       toast.success('Account created — check your email to verify your address.');
       router.replace(
         postAuthDestination(
           user,
-          ROUTES.DASHBOARD,
+          isInspectionOnlyLevel(portalServiceLevel) ? ROUTES.DASHBOARD : ROUTES.AGREEMENTS,
           ROUTES.SYSTEM_ACCESS_AGREEMENT,
           ROUTES.CHANGE_PASSWORD,
         ),
@@ -227,6 +284,12 @@ export default function RegisterPage() {
 
   const isSubmitting = agentForm.formState.isSubmitting;
   const selectedLevel = portalServiceLevel ?? DEFAULT_PORTAL_SERVICE_LEVEL;
+  const confirmReady = registerConfirmReady({
+    portalServiceLevel: selectedLevel,
+    acceptTerms,
+    acceptSystemAccessAgreement,
+    signedServiceAgreementFile,
+  });
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
@@ -241,7 +304,7 @@ export default function RegisterPage() {
       <div
         className={cn(
           'w-full rounded-xl border bg-card p-6 shadow-lg sm:p-8',
-          step === 'Service & pricing' ? 'max-w-3xl' : 'max-w-lg',
+          step === 'Service & pricing' || step === 'Confirm' ? 'max-w-3xl' : 'max-w-lg',
         )}
       >
         <StepIndicator current={step} />
@@ -256,8 +319,8 @@ export default function RegisterPage() {
           >
             <p className="text-muted-foreground text-sm leading-relaxed">
               Create your agent account. Your email is your username — we&apos;ll send a
-              verification link after signup. On first login, a user guide walks you through
-              the platform.
+              verification link after signup. Once you&apos;re in, we&apos;ll guide you to add
+              your first property.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -431,38 +494,22 @@ export default function RegisterPage() {
             onSubmit={agentForm.handleSubmit(onAgentRegister)}
             className="space-y-4"
           >
-            <div className="rounded-lg border bg-secondary/20 p-4 text-sm">
-              <p className="font-medium">{agentForm.watch('firstName')} {agentForm.watch('lastName')}</p>
-              <p className="text-muted-foreground">{agentForm.watch('email')}</p>
-              <p className="text-muted-foreground mt-2">{agentForm.watch('agencyName')}</p>
-              {agentForm.watch('agencyCompany') ? (
-                <p className="text-muted-foreground text-xs">{agentForm.watch('agencyCompany')}</p>
-              ) : null}
-              <p className="mt-3 text-sm font-medium">
-                {REGISTER_SERVICE_LEVEL_LABEL[selectedLevel]}
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 text-sm leading-relaxed">
-              <p className="font-medium text-foreground">Terms &amp; system access agreement</p>
-              <p className="text-muted-foreground mt-2">
-                By registering you agree to the CROSSUB terms of service, privacy policy, and the
-                system access agreement governing use of the agent portal.
-              </p>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="acceptTerms"
-                className="mt-1 size-4 rounded border-border"
-                checked={acceptTerms}
-                onChange={(e) => setAcceptTerms(e.target.checked)}
-              />
-              <Label htmlFor="acceptTerms" className="text-sm leading-snug">
-                I accept the CROSSUB terms &amp; conditions and system access agreement
-              </Label>
-            </div>
+            <RegisterConfirmPanel
+              summary={{
+                firstName: agentForm.watch('firstName'),
+                lastName: agentForm.watch('lastName'),
+                email: agentForm.watch('email'),
+                agencyName: agentForm.watch('agencyName'),
+                agencyCompany: agentForm.watch('agencyCompany'),
+              }}
+              portalServiceLevel={selectedLevel}
+              acceptTerms={acceptTerms}
+              onAcceptTermsChange={setAcceptTerms}
+              acceptSystemAccessAgreement={acceptSystemAccessAgreement}
+              onAcceptSystemAccessAgreementChange={setAcceptSystemAccessAgreement}
+              signedServiceAgreementFile={signedServiceAgreementFile}
+              onSignedServiceAgreementFileChange={setSignedServiceAgreementFile}
+            />
 
             <div className="flex gap-2">
               <Button
@@ -472,7 +519,7 @@ export default function RegisterPage() {
               >
                 <ArrowLeft className="size-4" /> Back
               </Button>
-              <Button type="submit" disabled={!acceptTerms || isSubmitting} className="flex-1">
+              <Button type="submit" disabled={!confirmReady || isSubmitting} className="flex-1">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" /> Creating account...

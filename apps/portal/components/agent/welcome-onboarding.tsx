@@ -117,11 +117,13 @@ export function WelcomeOnboarding() {
           </li>
         </ul>
         <div className="mt-5 flex flex-col gap-2">
-          {hasFullManagementAccess && (
-            <Button asChild disabled={dismissing} onClick={() => void dismiss()}>
-              <Link href={propertyNew()}>Add your first property</Link>
-            </Button>
-          )}
+          <Button asChild disabled={dismissing} onClick={() => void dismiss()}>
+            <Link href={propertyNew()}>
+              {hasFullManagementAccess
+                ? 'Add your first property'
+                : 'Add a property for inspection'}
+            </Link>
+          </Button>
           <Button variant="outline" asChild disabled={dismissing} onClick={() => void dismiss()}>
             <Link href={ROUTES.TASKS}>View need-action queue</Link>
           </Button>
