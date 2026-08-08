@@ -14,6 +14,7 @@ import {
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import {
   TENANT_SETTLEMENT_CONFIRMATION,
+  TERMINATION_AGENT_DECISION,
   TERMINATION_CASE_STATUS,
 } from '@/constants/end-leasing';
 import { communicationsThread } from '@/constants/routes';
@@ -128,17 +129,23 @@ export function EndLeasingBondReleasedPanel({
   const debtAmount = Math.max(0, totalDeductions - bondHeld);
 
   const settlementFinalized = caseData.settlement.status === DONE;
-  const agentApproved = caseData.agentApproval.decision === 'approved';
-  const agentAmountsConfirmed = settlementFinalized && agentApproved;
+  const agentReviewed =
+    caseData.agentApproval.decision === TERMINATION_AGENT_DECISION.APPROVED ||
+    caseData.agentApproval.decision === TERMINATION_AGENT_DECISION.ADJUSTMENT;
+  const agentAmountsConfirmed = settlementFinalized && agentReviewed;
   const tenantConfirmationStatus = caseData.tenantConfirmation.status;
   const tenantAccepted =
     tenantConfirmationStatus === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED;
   const tenantDeclined =
     tenantConfirmationStatus === TENANT_SETTLEMENT_CONFIRMATION.DECLINED;
   const jobCompleted = caseData.status === TERMINATION_CASE_STATUS.COMPLETED;
+  const checklistComplete = agentAmountsConfirmed && tenantAccepted;
 
   useEffect(() => {
-    if (tenantConfirmationStatus !== TENANT_SETTLEMENT_CONFIRMATION.PENDING) return;
+    const shouldPoll =
+      tenantConfirmationStatus === TENANT_SETTLEMENT_CONFIRMATION.PENDING ||
+      (checklistComplete && !jobCompleted);
+    if (!shouldPoll) return;
     const timer = window.setInterval(() => {
       void terminationApi
         .get(caseData.id)
@@ -146,7 +153,13 @@ export function EndLeasingBondReleasedPanel({
         .catch(() => undefined);
     }, 30_000);
     return () => window.clearInterval(timer);
-  }, [applyCase, caseData.id, tenantConfirmationStatus]);
+  }, [
+    applyCase,
+    caseData.id,
+    checklistComplete,
+    jobCompleted,
+    tenantConfirmationStatus,
+  ]);
 
   const tenantSettlementDescription = tenantAccepted
     ? `Tenant accepted in the tenant app${
@@ -267,8 +280,8 @@ export function EndLeasingBondReleasedPanel({
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Agent confirmation</p>
         <p className="text-muted-foreground text-xs">
-          Confirm deduction amounts, release the bond on the NSW Rental Bonds portal, then mark the
-          job completed once the tenant accepts in the tenant app.
+          Confirm deduction amounts, release the bond on the NSW Rental Bonds portal, then the job
+          completes automatically once the tenant accepts in the tenant app.
         </p>
 
         <BondConfirmationChecklist>
@@ -329,7 +342,7 @@ export function EndLeasingBondReleasedPanel({
           />
         </BondConfirmationChecklist>
 
-        {showAgentActions && agentApproved ? (
+        {showAgentActions && agentReviewed ? (
           <Button
             type="button"
             size="sm"
@@ -351,10 +364,16 @@ export function EndLeasingBondReleasedPanel({
         {!jobCompleted ? (
           <>
             <p className="text-muted-foreground mt-1 text-xs">
-              Confirm once the bond has been released on the NSW Rental Bonds portal and the case
-              is fully closed. If not confirmed, the system sends an automated reminder to the
-              managing agent every 2 days.
+              {checklistComplete
+                ? 'The confirmation checklist is complete — the end leasing job will close automatically.'
+                : 'Once agent confirmation and tenant acceptance are both complete, the end leasing job closes automatically.'}
             </p>
+            {checklistComplete ? (
+              <p className="text-primary mt-3 flex items-center gap-2 text-sm font-medium">
+                <Loader2 className="size-4 animate-spin" />
+                Completing job…
+              </p>
+            ) : null}
             {auditEntries.length > 0 ? (
               <div className="mt-3 rounded-lg border bg-card">
                 <button
@@ -382,25 +401,6 @@ export function EndLeasingBondReleasedPanel({
                   </ul>
                 ) : null}
               </div>
-            ) : null}
-            <Button
-              type="button"
-              className="mt-3 w-full font-semibold uppercase tracking-wide"
-              disabled={busy || !tenantAccepted}
-              onClick={() =>
-                void run(
-                  () => terminationApi.processBondRefund(caseData.id),
-                  'End leasing job completed',
-                )
-              }
-            >
-              {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-              Job completed
-            </Button>
-            {!tenantAccepted ? (
-              <p className="text-muted-foreground mt-2 text-center text-[10px]">
-                The tenant must accept the settlement in the tenant app before closing the case.
-              </p>
             ) : null}
           </>
         ) : (
