@@ -3,13 +3,6 @@ import type { AuthUser } from '@/lib/auth-types';
 import type { AgentPortalServiceLevel } from '@/lib/portal-service-level';
 import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
 
-export interface RegisterAgentSignedServiceAgreementInput {
-  fileName: string;
-  mimeType: string;
-  sizeBytes: number;
-  contentBase64: string;
-}
-
 export interface RegisterAgentInput {
   email: string;
   password: string;
@@ -23,8 +16,6 @@ export interface RegisterAgentInput {
   officeAddress?: string;
   portalServiceLevel: AgentPortalServiceLevel;
   acceptTerms: boolean;
-  acceptSystemAccessAgreement?: boolean;
-  signedServiceAgreement?: RegisterAgentSignedServiceAgreementInput;
 }
 
 /** Default NSW service agreement template for Full Service registration. */
@@ -55,8 +46,6 @@ export async function registerAgentAccount(
     officeAddress: input.officeAddress?.trim() || undefined,
     portalServiceLevel: input.portalServiceLevel,
     acceptTerms: input.acceptTerms,
-    acceptSystemAccessAgreement: input.acceptSystemAccessAgreement,
-    signedServiceAgreement: input.signedServiceAgreement,
   });
   return result.user;
 }

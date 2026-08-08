@@ -41,11 +41,9 @@ import { registerLocalAccount } from '@/lib/local-auth';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import {
   DEFAULT_PORTAL_SERVICE_LEVEL,
-  isInspectionOnlyLevel,
   type AgentPortalServiceLevel,
 } from '@/lib/portal-service-level';
 import { ApiError } from '@/lib/api';
-import { fileToBase64 } from '@/lib/file-upload';
 import { cn } from '@/lib/utils';
 
 const STEPS = ['Your details', 'Service & pricing', 'Confirm'] as const;
@@ -110,8 +108,6 @@ export default function RegisterPage() {
   const [portalServiceLevel, setPortalServiceLevel] =
     useState<AgentPortalServiceLevel | null>(null);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [acceptSystemAccessAgreement, setAcceptSystemAccessAgreement] = useState(false);
-  const [signedServiceAgreementFile, setSignedServiceAgreementFile] = useState<File | null>(null);
 
   const agentForm = useForm<AgentValues>({
     resolver: zodResolver(agentSchema),
@@ -147,8 +143,6 @@ export default function RegisterPage() {
       return;
     }
     setAcceptTerms(false);
-    setAcceptSystemAccessAgreement(false);
-    setSignedServiceAgreementFile(null);
     setStep('Confirm');
   };
 
@@ -158,52 +152,9 @@ export default function RegisterPage() {
       setStep('Service & pricing');
       return;
     }
-    if (
-      !registerConfirmReady({
-        portalServiceLevel,
-        acceptTerms,
-        acceptSystemAccessAgreement,
-        signedServiceAgreementFile,
-      })
-    ) {
-      if (!acceptTerms) {
-        toast.error('Please accept the terms and conditions to continue.');
-        return;
-      }
-      if (!isInspectionOnlyLevel(portalServiceLevel)) {
-        if (!acceptSystemAccessAgreement) {
-          toast.error('Please accept the System Access Agreement to continue.');
-          return;
-        }
-        if (!signedServiceAgreementFile) {
-          toast.error('Please upload your signed CROSSUB Service Agreement.');
-          return;
-        }
-      }
+    if (!registerConfirmReady({ acceptTerms })) {
+      toast.error('Please accept the terms and conditions to continue.');
       return;
-    }
-
-    let signedServiceAgreement:
-      | {
-          fileName: string;
-          mimeType: string;
-          sizeBytes: number;
-          contentBase64: string;
-        }
-      | undefined;
-
-    if (!isInspectionOnlyLevel(portalServiceLevel) && signedServiceAgreementFile) {
-      try {
-        signedServiceAgreement = {
-          fileName: signedServiceAgreementFile.name,
-          mimeType: signedServiceAgreementFile.type || 'application/pdf',
-          sizeBytes: signedServiceAgreementFile.size,
-          contentBase64: await fileToBase64(signedServiceAgreementFile),
-        };
-      } catch {
-        toast.error('Could not read the signed service agreement file.');
-        return;
-      }
     }
 
     let apiUnreachable = false;
@@ -222,17 +173,13 @@ export default function RegisterPage() {
         officeAddress: values.officeAddress,
         portalServiceLevel,
         acceptTerms: true,
-        acceptSystemAccessAgreement: isInspectionOnlyLevel(portalServiceLevel)
-          ? undefined
-          : true,
-        signedServiceAgreement,
       });
       await refresh();
       toast.success('Account created — check your email to verify your address.');
       router.replace(
         postAuthDestination(
           user,
-          isInspectionOnlyLevel(portalServiceLevel) ? ROUTES.DASHBOARD : ROUTES.AGREEMENTS,
+          ROUTES.DASHBOARD,
           ROUTES.SYSTEM_ACCESS_AGREEMENT,
           ROUTES.CHANGE_PASSWORD,
         ),
@@ -284,12 +231,7 @@ export default function RegisterPage() {
 
   const isSubmitting = agentForm.formState.isSubmitting;
   const selectedLevel = portalServiceLevel ?? DEFAULT_PORTAL_SERVICE_LEVEL;
-  const confirmReady = registerConfirmReady({
-    portalServiceLevel: selectedLevel,
-    acceptTerms,
-    acceptSystemAccessAgreement,
-    signedServiceAgreementFile,
-  });
+  const confirmReady = registerConfirmReady({ acceptTerms });
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
@@ -505,10 +447,6 @@ export default function RegisterPage() {
               portalServiceLevel={selectedLevel}
               acceptTerms={acceptTerms}
               onAcceptTermsChange={setAcceptTerms}
-              acceptSystemAccessAgreement={acceptSystemAccessAgreement}
-              onAcceptSystemAccessAgreementChange={setAcceptSystemAccessAgreement}
-              signedServiceAgreementFile={signedServiceAgreementFile}
-              onSignedServiceAgreementFileChange={setSignedServiceAgreementFile}
             />
 
             <div className="flex gap-2">

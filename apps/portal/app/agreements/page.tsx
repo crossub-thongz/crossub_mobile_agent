@@ -1,10 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, FileSignature, Loader2, Upload } from 'lucide-react';
+import { Eye, FileSignature, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import {
+  DocumentPreviewDialog,
+  type DocumentPreviewItem,
+} from '@/components/agent/document-preview-dialog';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { StatusBadge } from '@/components/agent/status-badge';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -18,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH } from '@/lib/agent-registration';
 import { fileToBase64WithProgress } from '@/lib/file-upload';
 import {
   fetchSalesAgreementAccessStatus,
@@ -58,6 +63,18 @@ function statusVariant(status: AgentSalesAgreement['status']): 'default' | 'succ
   return 'default';
 }
 
+function agreementPreviewDoc(
+  agreement: AgentSalesAgreement,
+  templateHref: string,
+): DocumentPreviewItem {
+  return {
+    title: agreement.title,
+    fileName: 'CROSSUB Service Agreement NSW.pdf',
+    downloadFileName: 'CROSSUB Service Agreement NSW.pdf',
+    href: agreement.documentUrl ?? templateHref,
+  };
+}
+
 export default function AgreementsPage() {
   const [filter, setFilter] = useState('all');
   const [agreements, setAgreements] = useState<AgentSalesAgreement[]>([]);
@@ -68,7 +85,25 @@ export default function AgreementsPage() {
   const [notes, setNotes] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<DocumentPreviewItem | null>(null);
+  const [previewSubtitle, setPreviewSubtitle] = useState<string | undefined>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const templateHref = `/api${REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH}`;
+
+  const openAgreementPreview = (agreement: AgentSalesAgreement) => {
+    setPreviewDoc(agreementPreviewDoc(agreement, templateHref));
+    setPreviewSubtitle(agreement.agencyName);
+  };
+
+  const openTemplatePreview = () => {
+    setPreviewDoc({
+      title: 'CROSSUB Service Agreement (NSW)',
+      fileName: 'CROSSUB Service Agreement NSW.pdf',
+      downloadFileName: 'CROSSUB Service Agreement NSW.pdf',
+      href: templateHref,
+    });
+    setPreviewSubtitle('Default template');
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,23 +190,27 @@ export default function AgreementsPage() {
               </p>
             ) : access.pendingCount > 0 ? (
               <p>
-                Your Agent Portal access is limited to service agreements until your salesperson
-                confirms the signed copy. Review each document below, sign offline if needed, then
-                return the signed copy to your salesperson.
+                Preview the CROSSUB Service Agreement template, sign offline, then return the signed
+                PDF below. Full Service access unlocks once your signed copy is approved.
               </p>
             ) : (
               <p>
-                Complete registration, then review your CROSSUB Service Agreement here. Sign
-                offline and return the signed copy to unlock the rest of the Agent Portal.
+                Preview your CROSSUB Service Agreement, sign offline, and return the signed copy to
+                unlock Full Service access.
               </p>
             )}
           </div>
         ) : null}
-        <p className="text-sm text-muted-foreground">
-          Your CROSSUB Service Agreement (included with your registration invite). Review the
-          document, sign offline if needed, then upload and return the signed copy to your
-          salesperson.
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-muted-foreground min-w-[12rem] flex-1">
+            Your CROSSUB Service Agreement (NSW). Preview the document, sign offline if needed, then
+            upload and return the signed copy.
+          </p>
+          <Button variant="outline" size="sm" onClick={openTemplatePreview}>
+            <Eye className="mr-1.5 size-3.5" />
+            Preview template
+          </Button>
+        </div>
 
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
 
@@ -236,23 +275,29 @@ export default function AgreementsPage() {
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {agreement.documentUrl ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={agreement.documentUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-1.5 size-3.5" />
-                          View agreement
-                        </a>
-                      </Button>
-                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openAgreementPreview(agreement)}
+                    >
+                      <Eye className="mr-1.5 size-3.5" />
+                      Preview
+                    </Button>
                     {agreement.returnedDocumentUrl ? (
-                      <Button variant="outline" size="sm" asChild>
-                        <a
-                          href={agreement.returnedDocumentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Signed copy
-                        </a>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setPreviewDoc({
+                            title: `${agreement.title} — signed copy`,
+                            fileName: agreement.returnedDocumentName ?? 'signed-agreement.pdf',
+                            href: agreement.returnedDocumentUrl!,
+                          });
+                          setPreviewSubtitle(agreement.agencyName);
+                        }}
+                      >
+                        <Eye className="mr-1.5 size-3.5" />
+                        Preview signed copy
                       </Button>
                     ) : null}
                     {agreement.status === 'sent' ? (
@@ -329,6 +374,16 @@ export default function AgreementsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DocumentPreviewDialog
+        doc={previewDoc}
+        subtitle={previewSubtitle}
+        open={previewDoc != null}
+        onClose={() => {
+          setPreviewDoc(null);
+          setPreviewSubtitle(undefined);
+        }}
+      />
     </AgentShell>
   );
 }
