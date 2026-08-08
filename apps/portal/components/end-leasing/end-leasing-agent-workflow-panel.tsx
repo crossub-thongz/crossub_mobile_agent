@@ -39,7 +39,7 @@ function StepContent({
     case END_LEASING_AGENT_STEP.RESULT_CONFIRMED:
       return <EndLeasingResultConfirmedPanel caseData={caseData} />;
     case END_LEASING_AGENT_STEP.BOND_RELEASED:
-      return <EndLeasingBondReleasedPanel caseData={caseData} />;
+      return <EndLeasingBondReleasedPanel caseData={caseData} showAgentActions />;
     default:
       return null;
   }

@@ -681,7 +681,10 @@ function AgentTenantBondSendDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl" elevated>
+      <DialogContent
+        className="max-h-[90vh] w-[min(96vw,1280px)] max-w-[min(96vw,1280px)] overflow-y-auto"
+        elevated
+      >
         <DialogHeader>
           <DialogTitle>Send quotation to tenant</DialogTitle>
           <DialogDescription>

@@ -1,14 +1,21 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, ChevronDown, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import {
+  BondConfirmationChecklist,
+  BondConfirmationChecklistItem,
+} from '@/components/end-leasing/bond-confirmation-checklist';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
-import { TENANT_SETTLEMENT_CONFIRMATION, TERMINATION_CASE_STATUS } from '@/constants/end-leasing';
+import {
+  TENANT_SETTLEMENT_CONFIRMATION,
+  TERMINATION_CASE_STATUS,
+} from '@/constants/end-leasing';
 import { communicationsThread } from '@/constants/routes';
 import {
   endLeasingKeyReturnDate,
@@ -79,8 +86,10 @@ function jobCompleteAudit(caseData: TerminationCaseDetail) {
 
 export function EndLeasingBondReleasedPanel({
   caseData,
+  showAgentActions = true,
 }: {
   caseData: TerminationCaseDetail;
+  showAgentActions?: boolean;
 }) {
   const applyCase = useEndLeasingStore((s) => s.applyCase);
   const setSettlementOpen = useEndLeasingStore((s) => s.setSettlementDialogOpen);
@@ -120,9 +129,40 @@ export function EndLeasingBondReleasedPanel({
 
   const settlementFinalized = caseData.settlement.status === DONE;
   const agentApproved = caseData.agentApproval.decision === 'approved';
+  const agentAmountsConfirmed = settlementFinalized && agentApproved;
+  const tenantConfirmationStatus = caseData.tenantConfirmation.status;
   const tenantAccepted =
-    caseData.tenantConfirmation.status === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED;
+    tenantConfirmationStatus === TENANT_SETTLEMENT_CONFIRMATION.ACCEPTED;
+  const tenantDeclined =
+    tenantConfirmationStatus === TENANT_SETTLEMENT_CONFIRMATION.DECLINED;
   const jobCompleted = caseData.status === TERMINATION_CASE_STATUS.COMPLETED;
+
+  useEffect(() => {
+    if (tenantConfirmationStatus !== TENANT_SETTLEMENT_CONFIRMATION.PENDING) return;
+    const timer = window.setInterval(() => {
+      void terminationApi
+        .get(caseData.id)
+        .then((updated) => applyCase(updated))
+        .catch(() => undefined);
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [applyCase, caseData.id, tenantConfirmationStatus]);
+
+  const tenantSettlementDescription = tenantAccepted
+    ? `Tenant accepted in the tenant app${
+        caseData.tenantConfirmation.confirmedAt
+          ? ` · ${formatDateTime(caseData.tenantConfirmation.confirmedAt)}`
+          : ''
+      }`
+    : tenantDeclined
+      ? `Tenant declined in the tenant app${
+          caseData.tenantConfirmation.confirmedAt
+            ? ` · ${formatDateTime(caseData.tenantConfirmation.confirmedAt)}`
+            : ''
+        }${caseData.tenantConfirmation.declineReason ? `\n${caseData.tenantConfirmation.declineReason}` : ''}`
+      : caseData.tenantConfirmation.dueAt
+        ? `Awaiting tenant response in the tenant app · due ${formatDateTime(caseData.tenantConfirmation.dueAt)}`
+        : 'Awaiting tenant response in the tenant app';
 
   const auditEntries = jobCompleteAudit(caseData);
   const jobCompletedAt = auditEntries.find((e) => /^Job completed confirmed/i.test(e.label));
@@ -228,71 +268,68 @@ export function EndLeasingBondReleasedPanel({
         <p className="text-sm font-semibold">Agent confirmation</p>
         <p className="text-muted-foreground text-xs">
           Confirm deduction amounts, release the bond on the NSW Rental Bonds portal, then mark the
-          job completed.
+          job completed once the tenant accepts in the tenant app.
         </p>
-        <div className="flex flex-wrap gap-2">
-          {!settlementFinalized ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={busy}
-              onClick={() =>
-                void run(
-                  () => terminationApi.finalizeSettlement(caseData.id),
-                  'Deduction amounts confirmed',
-                )
-              }
-            >
-              Confirm amounts
-            </Button>
-          ) : (
-            <span className="text-primary flex items-center gap-1 text-xs">
-              <Check className="size-3.5" /> Amounts confirmed
-            </span>
-          )}
-          {settlementFinalized && !agentApproved ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              disabled={busy}
-              onClick={() =>
-                void run(() => terminationApi.agentApprove(caseData.id), 'Settlement approved')
-              }
-            >
-              Approve settlement
-            </Button>
-          ) : agentApproved ? (
-            <span className="text-primary flex items-center gap-1 text-xs">
-              <Check className="size-3.5" /> Agent approved
-            </span>
-          ) : null}
-          {agentApproved && !tenantAccepted ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              disabled={busy}
-              onClick={() =>
-                void run(
-                  () => terminationApi.tenantAcceptSettlement(caseData.id),
-                  'Tenant acceptance recorded',
-                )
-              }
-            >
-              Record tenant acceptance
-            </Button>
-          ) : tenantAccepted ? (
-            <span className="text-primary flex items-center gap-1 text-xs">
-              <Check className="size-3.5" /> Tenant accepted settlement
-            </span>
-          ) : null}
-        </div>
 
-        {agentApproved ? (
+        <BondConfirmationChecklist>
+          <BondConfirmationChecklistItem
+            state={agentAmountsConfirmed ? 'done' : 'pending'}
+            title="Amount confirmed and approved by agent"
+            description={
+              agentAmountsConfirmed
+                ? 'Deduction amounts are finalized and approved by the managing agent.'
+                : settlementFinalized
+                  ? 'Amounts confirmed — approve settlement to continue.'
+                  : 'Confirm deduction amounts, then approve the settlement.'
+            }
+            action={
+              showAgentActions && !agentAmountsConfirmed ? (
+                <div className="flex flex-wrap gap-2">
+                  {!settlementFinalized ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 bg-primary text-xs font-semibold shadow-md ring-2 ring-primary/25 hover:bg-primary/90"
+                      disabled={busy}
+                      onClick={() =>
+                        void run(
+                          () => terminationApi.finalizeSettlement(caseData.id),
+                          'Deduction amounts confirmed',
+                        )
+                      }
+                    >
+                      Confirm amounts
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 bg-primary text-xs font-semibold shadow-md ring-2 ring-primary/25 hover:bg-primary/90"
+                      disabled={busy}
+                      onClick={() =>
+                        void run(
+                          () => terminationApi.agentApprove(caseData.id),
+                          'Settlement approved',
+                        )
+                      }
+                    >
+                      Approve settlement
+                    </Button>
+                  )}
+                </div>
+              ) : undefined
+            }
+          />
+          <BondConfirmationChecklistItem
+            state={
+              tenantAccepted ? 'done' : tenantDeclined ? 'declined' : 'pending'
+            }
+            title="Tenant accepted settlement"
+            description={tenantSettlementDescription}
+          />
+        </BondConfirmationChecklist>
+
+        {showAgentActions && agentApproved ? (
           <Button
             type="button"
             size="sm"
@@ -308,6 +345,7 @@ export function EndLeasingBondReleasedPanel({
         ) : null}
       </section>
 
+      {showAgentActions ? (
       <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
         <p className="text-sm font-semibold uppercase tracking-wide">Job completed</p>
         {!jobCompleted ? (
@@ -361,7 +399,7 @@ export function EndLeasingBondReleasedPanel({
             </Button>
             {!tenantAccepted ? (
               <p className="text-muted-foreground mt-2 text-center text-[10px]">
-                Record tenant acceptance before closing the case.
+                The tenant must accept the settlement in the tenant app before closing the case.
               </p>
             ) : null}
           </>
@@ -378,6 +416,7 @@ export function EndLeasingBondReleasedPanel({
           </p>
         )}
       </section>
+      ) : null}
 
       <SettlementDeductionDialog caseData={caseData} />
     </div>
