@@ -2,7 +2,7 @@
 
 import { CreditCard, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -44,11 +44,11 @@ export function InspectionPlatformPaymentPrompt({
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
-  const promptedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!active) {
       setCharge(null);
+      setSummary(null);
       return;
     }
     setLoading(true);
@@ -76,53 +76,57 @@ export function InspectionPlatformPaymentPrompt({
     return () => window.clearInterval(timer);
   }, [active, load]);
 
-  const payNow = useCallback(
-    async (opts?: { auto?: boolean }) => {
-      if (!charge || charge.status !== 'awaiting_payment') return;
-      setPaying(true);
-      try {
-        const result = await payAgentBillingCharge(charge.id, { devConfirm: false });
-        const label = SERVICE_LABEL[charge.serviceType] ?? 'Inspection';
-        const outcome = resolvePaymentFlow(
-          result,
-          {
-            title: `${label} — payment required`,
-            description: charge.description,
-            amountAud: charge.amount,
-            defaultPaymentMethod: summary?.defaultPaymentMethod,
-          },
-          setPaymentDialog,
-        );
-        if (outcome === 'complete') {
-          toast.success('Payment complete — thank you');
-          await load();
-        } else if (outcome === 'failed' && opts?.auto) {
-          promptedRef.current = false;
-        }
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Payment failed');
-      } finally {
-        setPaying(false);
+  const payNow = useCallback(async () => {
+    if (!charge || charge.status !== 'awaiting_payment') {
+      await load();
+      return;
+    }
+    setPaying(true);
+    try {
+      const result = await payAgentBillingCharge(charge.id, { devConfirm: false });
+      const label = SERVICE_LABEL[charge.serviceType] ?? 'Inspection';
+      const outcome = resolvePaymentFlow(
+        result,
+        {
+          title: `${label} — payment required`,
+          description: charge.description,
+          amountAud: charge.amount,
+          defaultPaymentMethod: summary?.defaultPaymentMethod,
+        },
+        setPaymentDialog,
+      );
+      if (outcome === 'complete') {
+        toast.success('Payment complete — thank you');
+        await load();
       }
-    },
-    [charge, load],
-  );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setPaying(false);
+    }
+  }, [charge, load, summary?.defaultPaymentMethod]);
 
-  const needsPrepaidPayment =
-    Boolean(summary?.prepaidEnabled) &&
-    summary?.inspectionsCollectionMode === 'prepaid' &&
-    charge?.status === 'awaiting_payment' &&
-    charge.collectionMode === 'prepaid';
+  if (!active) return null;
 
-  useEffect(() => {
-    if (!needsPrepaidPayment || promptedRef.current || paying || paymentDialog) return;
-    promptedRef.current = true;
-    void payNow({ auto: true });
-  }, [needsPrepaidPayment, payNow, paying, paymentDialog]);
+  if (loading && !summary) {
+    return (
+      <section
+        className={cn(
+          'rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm',
+          className,
+        )}
+      >
+        <div className="text-muted-foreground flex items-center gap-2">
+          <Loader2 className="size-4 animate-spin" />
+          Loading payment details…
+        </div>
+      </section>
+    );
+  }
 
-  if (!active || loading) return null;
-
-  if (!summary?.prepaidEnabled) return null;
+  if (!summary?.prepaidEnabled && summary?.inspectionsCollectionMode !== 'postpaid') {
+    return null;
+  }
 
   if (summary.inspectionsCollectionMode === 'postpaid') {
     if (charge?.status === 'accrued') {
@@ -144,24 +148,26 @@ export function InspectionPlatformPaymentPrompt({
     return null;
   }
 
-  if (!needsPrepaidPayment) {
-    if (charge?.status === 'paid') {
-      return (
-        <section
-          className={cn(
-            'rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm',
-            className,
-          )}
-        >
-          <p className="font-medium text-emerald-800 dark:text-emerald-200">Inspection paid</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {formatCurrency(charge.amount)} received for this job.
-          </p>
-        </section>
-      );
-    }
-    return null;
+  if (charge?.status === 'paid') {
+    return (
+      <section
+        className={cn(
+          'rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm',
+          className,
+        )}
+      >
+        <p className="font-medium text-emerald-800 dark:text-emerald-200">Inspection paid</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          {formatCurrency(charge.amount)} received for this job.
+        </p>
+      </section>
+    );
   }
+
+  const awaitingPrepaid =
+    !charge || charge.status === 'awaiting_payment' || charge.collectionMode === 'prepaid';
+
+  if (!awaitingPrepaid) return null;
 
   return (
     <>
@@ -175,9 +181,9 @@ export function InspectionPlatformPaymentPrompt({
           Payment required
         </p>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-          The inspector has accepted this job. Pay the platform fee ({formatCurrency(charge!.amount)}
-          ) while this case is in progress. If you skip payment here, any outstanding balance will
-          appear on the{' '}
+          The inspector has accepted this job. Pay the platform fee
+          {charge ? ` (${formatCurrency(charge.amount)})` : ''} while this case is in progress.
+          If you skip payment here, any outstanding balance will appear on the{' '}
           <Link href="/bill" className="text-primary font-medium hover:underline">
             Bill
           </Link>{' '}
@@ -188,20 +194,33 @@ export function InspectionPlatformPaymentPrompt({
             type="button"
             size="sm"
             onClick={() => void payNow()}
-            disabled={paying || paymentDialog != null}
+            disabled={paying || paymentDialog != null || (loading && !charge)}
           >
-            {paying ? (
+            {paying || (loading && !charge) ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <CreditCard className="size-3.5" />
             )}
-            Pay now
+            {charge ? `Pay ${formatCurrency(charge.amount)}` : 'Load payment'}
           </Button>
+          {charge ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading || paying}
+            >
+              Refresh
+            </Button>
+          ) : null}
         </div>
       </section>
 
       <StripePaymentDialog
+        stacked
         state={paymentDialog}
+        open={paymentDialog != null}
         onOpenChange={(open) => {
           if (!open) setPaymentDialog(null);
         }}

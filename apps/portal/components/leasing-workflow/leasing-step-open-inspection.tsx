@@ -5,6 +5,7 @@ import { CalendarClock, DoorOpen, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
+import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
 import { OpenLeasingGenerateReportButton } from '@/components/leasing-workflow/open-leasing-generate-report-button';
 import { OpenLeasingInspectionReportPanel } from '@/components/leasing-workflow/open-leasing-inspection-report-panel';
 import { OpenInspectionApplicantLinksPanel } from '@/components/open-inspection/open-inspection-applicant-links-panel';
@@ -25,6 +26,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
+import {
+  isOpenPlatformPaymentActive,
+  resolveOpenPlatformPaymentInspectionId,
+} from '@/lib/billing/inspection-platform-payment';
 import { cancelAgentLeasingCycle } from '@/lib/crossub-api/agent-workflow-client';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import { LEASING_AGENT_SELF_OPEN_LABEL, LEASING_UI } from '@/lib/leasing/constants';
@@ -109,6 +115,29 @@ export function LeasingStepOpenInspection({
       linkedInspection?.id ||
       (crossubManagedOpen && oi.status === 'in_progress'),
   );
+
+  const { poolInspectionRecord } = useOpenInspectionEmailSources({
+    enabled: crossubManagedOpen && hasOpenInspection,
+    apiConnected,
+    leasingDetail: detail,
+    focusInspectionId: oi.inspectionId ?? linkedInspection?.id,
+    poll: true,
+  });
+
+  const openPoolInspectionId = resolveOpenPlatformPaymentInspectionId({
+    leasingDetail: detail,
+    openSession,
+    focusInspectionId: oi.inspectionId ?? linkedInspection?.id,
+  });
+
+  const openPlatformPaymentActive = isOpenPlatformPaymentActive({
+    isCrossubOpen: crossubManagedOpen,
+    isSelfOpen: oi.agentConducted,
+    isDone: reportReady || oi.status === 'done',
+    poolInspectionId: openPoolInspectionId,
+    poolInspectionRecord,
+    inspection: linkedInspection ?? null,
+  });
   const isScheduled = Boolean(oi.scheduledTime ?? linkedInspection?.scheduledAt);
   const isRequested = !isScheduled && Boolean(oi.preferredScheduledTime || oi.preferredNotes);
   const crossubOrderPlaced =
@@ -388,6 +417,10 @@ export function LeasingStepOpenInspection({
           </Button>
         </div>
       )}
+
+      {openPlatformPaymentActive && openPoolInspectionId ? (
+        <InspectionPlatformPaymentPrompt inspectionId={openPoolInspectionId} active />
+      ) : null}
 
       {needsScheduleRequest && cycleId ? (
         <OpenInspectionScheduleRequestPanel

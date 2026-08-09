@@ -397,10 +397,6 @@ export function OutgoingFieldInspectionDetail({
         onUpdated={refresh}
       />
 
-      {!loading && gateStatus === 'scheduled' ? (
-        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
-      ) : null}
-
       <section className="rounded-2xl border bg-card p-3">
         <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
           Outgoing progress
@@ -430,6 +426,10 @@ export function OutgoingFieldInspectionDetail({
           {AGENT_OUTGOING_GATE_HINT[viewingStep]}
         </p>
       </section>
+
+      {!loading && gateStatus === 'scheduled' ? (
+        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
+      ) : null}
 
       {loading && apiConnected ? (
         <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">

@@ -24,6 +24,12 @@ import {
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
+import {
+  isOpenPlatformPaymentActive,
+  isRoutinePlatformPaymentActive,
+  resolveOpenPlatformPaymentInspectionId,
+  resolveRoutinePlatformPaymentInspectionId,
+} from '@/lib/billing/inspection-platform-payment';
 import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { RoutineCaseStatusSection } from '@/components/inspections/routine-case-status-section';
@@ -78,6 +84,7 @@ import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import {
   INSPECTION_TYPE_LABEL,
   inspectionNextAction,
+  isInspectionDone,
 } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import {
@@ -418,11 +425,34 @@ export function InspectionDetailView({
       insp.status === 'Cancelled' ||
       routineInspectionRecord?.status === 'CANCELLED');
   const routineInPersonInProgress =
-    insp.type === 'ROUTINE' &&
-    routineFlow === 'in_person' &&
-    !routineCompletedAt &&
-    !isCancelledRoutine &&
-    inspectorHasAcceptedJob(routineInspectionRecord, insp);
+    isRoutinePlatformPaymentActive({
+      inspection: insp,
+      routineFlow,
+      routineCompletedAt,
+      isCancelledRoutine,
+      routineInspectionRecord,
+    });
+  const routinePlatformPaymentInspectionId = resolveRoutinePlatformPaymentInspectionId({
+    inspection: insp,
+    routineSchedule,
+    routineInspectionRecord,
+  });
+  const openPoolInspectionId = resolveOpenPlatformPaymentInspectionId({
+    leasingDetail,
+    openSession,
+    focusInspectionId: insp.id,
+    isViewingSessionSource: isOpenViewingSource,
+  });
+  const openPlatformPaymentActive =
+    insp.type === 'OPEN' &&
+    isOpenPlatformPaymentActive({
+      isCrossubOpen,
+      isSelfOpen,
+      isDone: isInspectionDone(insp) || reportGenerated,
+      poolInspectionId: openPoolInspectionId,
+      poolInspectionRecord,
+      inspection: insp,
+    });
   const routineReportInspectionId =
     routineInspectionRecord?.id ??
     routineSchedule?.currentInspectionId ??
@@ -789,7 +819,14 @@ export function InspectionDetailView({
       ) : null}
 
       {routineInPersonInProgress ? (
-        <InspectionPlatformPaymentPrompt inspectionId={insp.id} active />
+        <InspectionPlatformPaymentPrompt
+          inspectionId={routinePlatformPaymentInspectionId}
+          active
+        />
+      ) : null}
+
+      {openPlatformPaymentActive && openPoolInspectionId ? (
+        <InspectionPlatformPaymentPrompt inspectionId={openPoolInspectionId} active />
       ) : null}
 
       {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (
