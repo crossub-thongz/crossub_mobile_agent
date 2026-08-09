@@ -330,25 +330,20 @@ export function InspectionPlatformPaymentPrompt({
             Payment required
           </p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            The inspector has accepted this job. Pay the platform fee
-            {charge ? ` (${formatCurrency(charge.amount)})` : ''} while this case is in progress.
             {chargeUnavailable ? (
               <>
-                {' '}
-                We could not load the payment amount yet — try Refresh, or check the{' '}
+                The inspector has accepted this job. Your saved card should be charged
+                automatically — we could not load the fee yet. Try Refresh, or check the{' '}
                 <Link href="/bill" className="text-primary font-medium hover:underline">
                   Bill
                 </Link>{' '}
-                page shortly.
+                page.
               </>
             ) : (
               <>
-                {' '}
-                If you skip payment here, any outstanding balance will appear on the{' '}
-                <Link href="/bill" className="text-primary font-medium hover:underline">
-                  Bill
-                </Link>{' '}
-                page once the job is complete.
+                The inspector has accepted this job. We charge your saved card automatically
+                {charge ? ` (${formatCurrency(charge.amount)})` : ''}. If confirmation is needed,
+                payment will open here.
               </>
             )}
           </p>
