@@ -55,6 +55,7 @@ import {
 } from '@/lib/ingoing-inspection-display';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
+import { isFieldInspectionPlatformPaymentActive } from '@/lib/billing/inspection-platform-payment';
 import type { InspectionDetail, InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
@@ -319,8 +320,18 @@ export function IngoingInspectionAgentDetail({
     onCancelled?.();
   };
 
+  const platformPaymentActive = isFieldInspectionPlatformPaymentActive({
+    gateStatus,
+    record,
+    inspection,
+  });
+
   return (
     <div className="space-y-4">
+      {platformPaymentActive ? (
+        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
+      ) : null}
+
       <section className="rounded-2xl border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
@@ -408,10 +419,6 @@ export function IngoingInspectionAgentDetail({
           {AGENT_INGOING_GATE_HINT[viewingStep]}
         </p>
       </section>
-
-      {!loading && gateStatus === 'scheduled' ? (
-        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
-      ) : null}
 
       {loading && apiConnected ? (
         <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">

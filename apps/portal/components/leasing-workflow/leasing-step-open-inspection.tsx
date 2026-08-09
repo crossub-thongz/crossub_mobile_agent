@@ -116,7 +116,7 @@ export function LeasingStepOpenInspection({
       (crossubManagedOpen && oi.status === 'in_progress'),
   );
 
-  const { poolInspectionRecord } = useOpenInspectionEmailSources({
+  const { poolInspectionRecord, poolInspectionId } = useOpenInspectionEmailSources({
     enabled: crossubManagedOpen && hasOpenInspection,
     apiConnected,
     leasingDetail: detail,
@@ -125,6 +125,7 @@ export function LeasingStepOpenInspection({
   });
 
   const openPoolInspectionId = resolveOpenPlatformPaymentInspectionId({
+    poolInspectionId,
     leasingDetail: detail,
     openSession,
     focusInspectionId: oi.inspectionId ?? linkedInspection?.id,
@@ -137,6 +138,7 @@ export function LeasingStepOpenInspection({
     poolInspectionId: openPoolInspectionId,
     poolInspectionRecord,
     inspection: linkedInspection ?? null,
+    leasingDetail: detail,
   });
   const isScheduled = Boolean(oi.scheduledTime ?? linkedInspection?.scheduledAt);
   const isRequested = !isScheduled && Boolean(oi.preferredScheduledTime || oi.preferredNotes);
@@ -292,6 +294,10 @@ export function LeasingStepOpenInspection({
 
   return (
     <div className="space-y-3">
+      {openPlatformPaymentActive && openPoolInspectionId ? (
+        <InspectionPlatformPaymentPrompt inspectionId={openPoolInspectionId} active />
+      ) : null}
+
       {oi.agentConducted ? (
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3">
           <p className="text-sm font-semibold">{LEASING_AGENT_SELF_OPEN_LABEL}</p>
@@ -417,10 +423,6 @@ export function LeasingStepOpenInspection({
           </Button>
         </div>
       )}
-
-      {openPlatformPaymentActive && openPoolInspectionId ? (
-        <InspectionPlatformPaymentPrompt inspectionId={openPoolInspectionId} active />
-      ) : null}
 
       {needsScheduleRequest && cycleId ? (
         <OpenInspectionScheduleRequestPanel

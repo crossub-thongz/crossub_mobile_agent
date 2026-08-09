@@ -108,7 +108,7 @@ import {
 import { mapInspectionRecordToView, mapOpenSessionToInspection, caseAuditToTimeline } from '@/lib/inspection-mappers';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { RoutineFlow } from '@/lib/routine/routine-case-status';
-import { inspectorHasAcceptedJob } from '@/lib/ingoing-inspection-display';
+import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -172,7 +172,8 @@ export function InspectionDetailView({
   const leasingDetail = useLeasingWorkflowStore((s) =>
     base?.propertyId ? s.getDetail(base.propertyId) : undefined,
   );
-  const { openSession, poolInspectionRecord, mergeSessionUpdate } = useOpenInspectionEmailSources({
+  const { openSession, poolInspectionRecord, poolInspectionId, mergeSessionUpdate } =
+    useOpenInspectionEmailSources({
     enabled: base?.type === 'OPEN',
     apiConnected,
     leasingDetail,
@@ -195,8 +196,53 @@ export function InspectionDetailView({
   const [routineSchedule, setRoutineSchedule] = useState<ServerRoutineScheduleView | null>(null);
   const [routineInspectionRecord, setRoutineInspectionRecord] =
     useState<InspectionRecord | null>(null);
+  const [fallbackOpenPoolInspectionId, setFallbackOpenPoolInspectionId] = useState<string | null>(
+    null,
+  );
   const routineCaseId = base?.id ?? inspectionId;
   const isRoutineCase = base?.type === 'ROUTINE';
+
+  useEffect(() => {
+    if (
+      !apiConnected ||
+      base?.type !== 'OPEN' ||
+      base?.openConductedBy === 'agent' ||
+      !base.propertyId
+    ) {
+      setFallbackOpenPoolInspectionId(null);
+      return;
+    }
+    const oi = leasingDetail?.openInspection;
+    const resolvedId = resolveOpenPlatformPaymentInspectionId({
+      poolInspectionId,
+      leasingDetail,
+      openSession,
+      focusInspectionId: base.id,
+      isViewingSessionSource: base?.source === 'open_viewing',
+    });
+    if (resolvedId || !oi || oi.agentConducted || !oi.scheduledTime) {
+      if (resolvedId) setFallbackOpenPoolInspectionId(null);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchLatestOpenPoolInspection(base.propertyId).then((row) => {
+      if (!cancelled && row?.id) setFallbackOpenPoolInspectionId(row.id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    apiConnected,
+    base?.id,
+    base?.openConductedBy,
+    base?.propertyId,
+    base?.source,
+    base?.type,
+    leasingDetail?.openInspection,
+    openSession,
+    poolInspectionId,
+  ]);
 
   useEffect(() => {
     if (!apiConnected || !isRoutineCase) {
@@ -384,9 +430,15 @@ export function InspectionDetailView({
     apiConnected;
   const isCrossubOpen =
     insp.type === 'OPEN' &&
+    !isSelfOpen &&
     (insp.openConductedBy === 'crossub' ||
       isCrossubManagedLeasingOpen ||
-      Boolean(leasingDetail?.openInspection.preferredScheduledTime || leasingDetail?.openInspection.preferredNotes));
+      (isOpenViewingSource && insp.openConductedBy !== 'agent') ||
+      Boolean(
+        leasingDetail?.openInspection.scheduledTime ||
+          leasingDetail?.openInspection.preferredScheduledTime ||
+          leasingDetail?.openInspection.preferredNotes,
+      ));
   const inspectorLabel = isSelfOpen
     ? OPEN_CONDUCTED_BY_LABEL.agent
     : insp.inspector ?? 'Unassigned';
@@ -438,11 +490,13 @@ export function InspectionDetailView({
     routineInspectionRecord,
   });
   const openPoolInspectionId = resolveOpenPlatformPaymentInspectionId({
+    poolInspectionId: poolInspectionId ?? fallbackOpenPoolInspectionId,
     leasingDetail,
     openSession,
     focusInspectionId: insp.id,
     isViewingSessionSource: isOpenViewingSource,
   });
+
   const openPlatformPaymentActive =
     insp.type === 'OPEN' &&
     isOpenPlatformPaymentActive({
@@ -452,6 +506,7 @@ export function InspectionDetailView({
       poolInspectionId: openPoolInspectionId,
       poolInspectionRecord,
       inspection: insp,
+      leasingDetail,
     });
   const routineReportInspectionId =
     routineInspectionRecord?.id ??
@@ -520,8 +575,19 @@ export function InspectionDetailView({
   const TypeIcon =
     insp.type === 'OPEN' ? DoorOpen : insp.type === 'ROUTINE' ? ClipboardList : Home;
 
+  const platformPaymentInspectionId =
+    insp.type === 'OPEN' && openPlatformPaymentActive && openPoolInspectionId
+      ? openPoolInspectionId
+      : insp.type === 'ROUTINE' && routineInPersonInProgress
+        ? routinePlatformPaymentInspectionId
+        : null;
+
   return (
     <div className="space-y-5">
+      {platformPaymentInspectionId ? (
+        <InspectionPlatformPaymentPrompt inspectionId={platformPaymentInspectionId} active />
+      ) : null}
+
       {embedded && canDelete ? (
         <div className="flex justify-end">
           <Button
@@ -816,17 +882,6 @@ export function InspectionDetailView({
             <InfoRow label="Next due" value={formatDateTime(insp.nextDueDate)} icon={Calendar} />
           )}
         </InfoSection>
-      ) : null}
-
-      {routineInPersonInProgress ? (
-        <InspectionPlatformPaymentPrompt
-          inspectionId={routinePlatformPaymentInspectionId}
-          active
-        />
-      ) : null}
-
-      {openPlatformPaymentActive && openPoolInspectionId ? (
-        <InspectionPlatformPaymentPrompt inspectionId={openPoolInspectionId} active />
       ) : null}
 
       {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (

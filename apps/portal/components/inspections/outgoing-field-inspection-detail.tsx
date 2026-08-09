@@ -55,6 +55,7 @@ import {
 } from '@/lib/outgoing-inspection-display';
 import { terminationApi } from '@/lib/termination-case-api';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
+import { isFieldInspectionPlatformPaymentActive } from '@/lib/billing/inspection-platform-payment';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -350,8 +351,18 @@ export function OutgoingFieldInspectionDetail({
     }
   };
 
+  const platformPaymentActive = isFieldInspectionPlatformPaymentActive({
+    gateStatus,
+    record,
+    inspection,
+  });
+
   return (
     <div className="space-y-4">
+      {platformPaymentActive ? (
+        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
+      ) : null}
+
       <section className="rounded-2xl border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
@@ -426,10 +437,6 @@ export function OutgoingFieldInspectionDetail({
           {AGENT_OUTGOING_GATE_HINT[viewingStep]}
         </p>
       </section>
-
-      {!loading && gateStatus === 'scheduled' ? (
-        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
-      ) : null}
 
       {loading && apiConnected ? (
         <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
