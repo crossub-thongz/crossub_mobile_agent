@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
+import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
 import type { StripePaymentDialogState } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -109,11 +110,13 @@ export function PlatformChargeDetailDialog({
           description: row.description,
           amountAud: row.amount,
           defaultPaymentMethod: state?.defaultPaymentMethod,
+          chargeId: row.id,
         },
         setPaymentDialog,
       );
 
       if (outcome === 'complete') {
+        await finalizeBillingChargePayment(row.id);
         toast.success('Payment complete');
         await onPaid();
         onOpenChange(false);

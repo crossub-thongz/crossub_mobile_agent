@@ -23,6 +23,7 @@ import {
   type StripeSetupDialogState,
 } from '@/components/billing/stripe-setup-dialog';
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
+import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import {
@@ -183,11 +184,10 @@ export default function BillPage() {
 
   const outstandingCountDisplay = outstandingCount;
 
-  const handlePaymentSuccess = async () => {
+  const handlePaymentSuccess = async (chargeId?: string | null) => {
+    await finalizeBillingChargePayment(chargeId);
     toast.success('Payment complete');
     await load();
-    // Webhook may mark the charge paid a moment after Stripe confirms.
-    window.setTimeout(() => void load(), 2000);
   };
 
   const handlePaymentMethodSuccess = async () => {
@@ -514,9 +514,10 @@ export default function BillPage() {
           void startAddPaymentMethod(paymentDialog?.defaultPaymentMethod ? 'update' : 'add')
         }
         onSuccess={async () => {
+          const chargeId = paymentDialog?.chargeId;
           setChargeDialog(null);
           setInvoiceDialog(null);
-          await handlePaymentSuccess();
+          await handlePaymentSuccess(chargeId);
         }}
       />
 

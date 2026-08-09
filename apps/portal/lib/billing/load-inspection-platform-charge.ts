@@ -30,6 +30,32 @@ async function fetchChargeByIds(candidateIds: string[]): Promise<AgentBillingCha
   return null;
 }
 
+/** Match charges that were quoted without a linked inspection id (legacy staging). */
+async function findChargeFromHistory(args: {
+  propertyId?: string;
+  inspectionType?: BillableInspectionType;
+}): Promise<AgentBillingCharge | null> {
+  if (!args.propertyId || !args.inspectionType) return null;
+
+  const serviceType = SERVICE_TYPE[args.inspectionType];
+  try {
+    const history = await listAgentChargeHistory();
+    const matches = history.filter(
+      (row) => row.propertyId === args.propertyId && row.serviceType === serviceType,
+    );
+    if (matches.length === 0) return null;
+
+    const paid = matches.find((row) => row.status === 'paid');
+    if (paid) return paid;
+
+    return matches.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function createMissingCharge(args: {
   poolInspectionId: string;
   propertyId?: string;
@@ -47,23 +73,13 @@ async function createMissingCharge(args: {
 
   if (args.propertyId && args.inspectionType) {
     try {
-      const linked = await quoteAgentBillingCharge({
+      return await quoteAgentBillingCharge({
         serviceType: SERVICE_TYPE[args.inspectionType],
         propertyId: args.propertyId,
         inspectionId: poolId,
       });
-      if (linked) return linked;
     } catch {
       /* quote with inspectionId may not exist on older API builds */
-    }
-
-    try {
-      return await quoteAgentBillingCharge({
-        serviceType: SERVICE_TYPE[args.inspectionType],
-        propertyId: args.propertyId,
-      });
-    } catch {
-      /* property quote is the legacy fallback on staging */
     }
   }
 
@@ -79,7 +95,8 @@ export async function prepareInspectionPlatformCharge(args: {
   poolInspectionId?: string;
 }): Promise<{ charge: AgentBillingCharge | null; billingInspectionId: string }> {
   const loaded = await loadInspectionPlatformCharge(args);
-  if (loaded.charge) return loaded;
+  if (loaded.charge?.status === 'paid') return loaded;
+  if (loaded.charge?.status === 'awaiting_payment') return loaded;
 
   const poolId =
     loaded.billingInspectionId.trim() ||
@@ -95,7 +112,7 @@ export async function prepareInspectionPlatformCharge(args: {
   return { charge: created, billingInspectionId: poolId };
 }
 
-/** Load (and if needed create) the platform charge for an accepted inspection job. */
+/** Load the platform charge for an accepted inspection job (read-only — no charge creation). */
 export async function loadInspectionPlatformCharge(args: {
   inspectionId: string;
   propertyId?: string;
@@ -126,15 +143,12 @@ export async function loadInspectionPlatformCharge(args: {
     args.viewingSessionId ?? '',
   ];
 
-  let charge = await fetchChargeByIds(candidateIds);
-
-  if (!charge && billingInspectionId) {
-    charge = await createMissingCharge({
-      poolInspectionId: billingInspectionId,
+  let charge =
+    (await fetchChargeByIds(candidateIds)) ??
+    (await findChargeFromHistory({
       propertyId: args.propertyId,
       inspectionType: args.inspectionType,
-    });
-  }
+    }));
 
   if (!charge) {
     const retried = await resolveBillingInspectionId({
@@ -147,8 +161,7 @@ export async function loadInspectionPlatformCharge(args: {
       billingInspectionId = retried;
       charge =
         (await fetchChargeByIds([retried, ...candidateIds])) ??
-        (await createMissingCharge({
-          poolInspectionId: retried,
+        (await findChargeFromHistory({
           propertyId: args.propertyId,
           inspectionType: args.inspectionType,
         }));

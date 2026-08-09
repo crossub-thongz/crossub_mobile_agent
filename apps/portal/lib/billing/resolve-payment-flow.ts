@@ -16,6 +16,7 @@ export type PaymentFlowDialogInput = Omit<
   'clientSecret' | 'customerSessionClientSecret' | 'preferSavedCard'
 > & {
   defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
+  chargeId?: string;
 };
 
 export function resolvePaymentFlow(

@@ -30,6 +30,8 @@ export type StripePaymentDialogState = {
   defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
   customerSessionClientSecret?: string | null;
   preferSavedCard?: boolean;
+  /** Platform charge to mark paid after Stripe confirms. */
+  chargeId?: string;
 };
 
 type PaymentFormProps = {

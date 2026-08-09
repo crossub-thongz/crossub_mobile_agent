@@ -208,6 +208,15 @@ export async function payAgentBillingCharge(
   });
 }
 
+export async function confirmAgentBillingChargePayment(
+  chargeId: string,
+): Promise<AgentBillingCharge> {
+  return agentFetch(`/agent/billing/charges/${encodeURIComponent(chargeId)}/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export async function listAgentOpenInvoices(): Promise<AgentBillingMonthlyInvoice[]> {
   return agentFetch('/agent/billing/invoices');
 }

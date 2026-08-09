@@ -2,7 +2,7 @@
 
 import { CreditCard, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -10,6 +10,7 @@ import {
   type StripePaymentDialogState,
 } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
+import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
 import {
   loadInspectionPlatformCharge,
   prepareInspectionPlatformCharge,
@@ -56,6 +57,8 @@ export function InspectionPlatformPaymentPrompt({
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const payInFlightRef = useRef(false);
+  const activeChargeIdRef = useRef<string | null>(null);
 
   const chargeArgs = useCallback(
     () => ({
@@ -115,6 +118,8 @@ export function InspectionPlatformPaymentPrompt({
   }, [load]);
 
   const payNow = useCallback(async () => {
+    if (payInFlightRef.current || paymentDialog) return;
+    payInFlightRef.current = true;
     setPaying(true);
     try {
       let linked = charge;
@@ -133,6 +138,8 @@ export function InspectionPlatformPaymentPrompt({
         );
         return;
       }
+
+      activeChargeIdRef.current = linked.id;
 
       if (linked.status === 'paid') {
         toast.success('This inspection is already paid.');
@@ -153,23 +160,37 @@ export function InspectionPlatformPaymentPrompt({
           description: linked.description,
           amountAud: linked.amount,
           defaultPaymentMethod: summary?.defaultPaymentMethod,
+          chargeId: linked.id,
         },
         setPaymentDialog,
       );
       if (outcome === 'complete') {
+        await finalizeBillingChargePayment(linked.id);
         toast.success('Payment complete — thank you');
         await load();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Payment failed');
+      payInFlightRef.current = false;
     } finally {
       setPaying(false);
     }
-  }, [billingInspectionId, charge, chargeArgs, load, summary?.defaultPaymentMethod]);
+  }, [billingInspectionId, charge, chargeArgs, load, paymentDialog, summary?.defaultPaymentMethod]);
+
+  const handleStripeSuccess = useCallback(async () => {
+    const chargeId = paymentDialog?.chargeId ?? activeChargeIdRef.current;
+    await finalizeBillingChargePayment(chargeId);
+    toast.success('Payment complete — thank you');
+    payInFlightRef.current = false;
+    setPaymentDialog(null);
+    await load();
+  }, [load, paymentDialog?.chargeId]);
 
   useEffect(() => {
     setPaymentDialog(null);
     setPaying(false);
+    payInFlightRef.current = false;
+    activeChargeIdRef.current = null;
   }, [inspectionId, billingInspectionId]);
 
   if (!active) return null;
@@ -302,13 +323,15 @@ export function InspectionPlatformPaymentPrompt({
       ) : null}
 
       <StripePaymentDialog
-        stacked
         state={paymentDialog}
         open={paymentDialogOpen}
         onOpenChange={(open) => {
-          if (!open) setPaymentDialog(null);
+          if (!open) {
+            setPaymentDialog(null);
+            payInFlightRef.current = false;
+          }
         }}
-        onSuccess={() => void load()}
+        onSuccess={() => void handleStripeSuccess()}
       />
     </>
   );
