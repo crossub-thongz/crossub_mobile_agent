@@ -56,6 +56,7 @@ export function InspectionPlatformPaymentPrompt({
   const [charge, setCharge] = useState<AgentBillingCharge | null>(null);
   const [billingInspectionId, setBillingInspectionId] = useState(inspectionId);
   const [loading, setLoading] = useState(false);
+  const [chargeLookupDone, setChargeLookupDone] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
 
@@ -79,12 +80,14 @@ export function InspectionPlatformPaymentPrompt({
     if (!active) {
       setCharge(null);
       setSummary(null);
+      setChargeLookupDone(false);
       return null;
     }
     if (!inspectionId.trim() && !viewingSessionId?.trim() && !propertyId?.trim()) {
       return null;
     }
     setLoading(true);
+    setChargeLookupDone(false);
     try {
       const billing = await fetchAgentBillingSummary();
       setSummary(billing);
@@ -131,9 +134,11 @@ export function InspectionPlatformPaymentPrompt({
         setBillingInspectionId(resolvedId);
       }
       setCharge(linked);
+      setChargeLookupDone(true);
       return linked;
     } catch (err) {
       setCharge(null);
+      setChargeLookupDone(true);
       toast.error(err instanceof Error ? err.message : 'Could not load payment details');
       return null;
     } finally {
@@ -143,6 +148,7 @@ export function InspectionPlatformPaymentPrompt({
 
   useEffect(() => {
     setBillingInspectionId(inspectionId);
+    setChargeLookupDone(false);
   }, [inspectionId]);
 
   useEffect(() => {
@@ -307,6 +313,8 @@ export function InspectionPlatformPaymentPrompt({
 
   if (!awaitingPrepaid) return null;
 
+  const chargeUnavailable = chargeLookupDone && !loading && !charge;
+
   const paymentDialogOpen = paymentDialog != null;
 
   return (
@@ -324,37 +332,53 @@ export function InspectionPlatformPaymentPrompt({
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
             The inspector has accepted this job. Pay the platform fee
             {charge ? ` (${formatCurrency(charge.amount)})` : ''} while this case is in progress.
-            If you skip payment here, any outstanding balance will appear on the{' '}
-            <Link href="/bill" className="text-primary font-medium hover:underline">
-              Bill
-            </Link>{' '}
-            page once the job is complete.
+            {chargeUnavailable ? (
+              <>
+                {' '}
+                We could not load the payment amount yet — try Refresh, or check the{' '}
+                <Link href="/bill" className="text-primary font-medium hover:underline">
+                  Bill
+                </Link>{' '}
+                page shortly.
+              </>
+            ) : (
+              <>
+                {' '}
+                If you skip payment here, any outstanding balance will appear on the{' '}
+                <Link href="/bill" className="text-primary font-medium hover:underline">
+                  Bill
+                </Link>{' '}
+                page once the job is complete.
+              </>
+            )}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               type="button"
               size="sm"
-              onClick={() => void payNow()}
-              disabled={paying || (loading && !charge)}
+              onClick={() => void (charge ? payNow() : load())}
+              disabled={paying || loading}
             >
-              {paying || (loading && !charge) ? (
+              {paying || loading ? (
                 <Loader2 className="size-3.5 animate-spin" />
               ) : (
                 <CreditCard className="size-3.5" />
               )}
-              {charge ? `Pay ${formatCurrency(charge.amount)}` : 'Open payment'}
+              {charge
+                ? `Pay ${formatCurrency(charge.amount)}`
+                : chargeUnavailable
+                  ? 'Retry payment setup'
+                  : 'Open payment'}
             </Button>
-            {charge ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void load()}
-                disabled={loading || paying}
-              >
-                Refresh
-              </Button>
-            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading || paying}
+            >
+              Refresh
+            </Button>
           </div>
         </section>
       ) : null}
