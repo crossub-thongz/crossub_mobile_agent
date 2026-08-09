@@ -54,9 +54,9 @@ export function RegisterConfirmPanel({
             <> before using the Agent Portal.</>
           ) : (
             <>
-              . You will then review and return your signed{' '}
-              <strong className="text-foreground">CROSSUB Service Agreement (NSW)</strong> before
-              Full Service access is unlocked.
+              . You will then preview, sign, and upload your{' '}
+              <strong className="text-foreground">CROSSUB Service Agreement (NSW)</strong> on first
+              login — CROSSUB staff will review it in the admin portal.
             </>
           )}
         </p>

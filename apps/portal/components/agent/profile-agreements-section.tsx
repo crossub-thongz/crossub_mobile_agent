@@ -18,12 +18,15 @@ import {
 } from '@/lib/crossub-api/agent-client';
 import { formatDateTime } from '@/lib/utils';
 
-function statusLabel(status: AgentSalesAgreement['status']): string {
+function statusLabel(
+  status: AgentSalesAgreement['status'],
+  selfRegistration: boolean,
+): string {
   switch (status) {
     case 'sent':
       return 'Awaiting signature';
     case 'returned':
-      return 'Awaiting sales approval';
+      return selfRegistration ? 'Uploaded' : 'Awaiting sales approval';
     case 'signed':
       return 'Signed';
     case 'declined':
@@ -124,7 +127,7 @@ export function ProfileAgreementsSection() {
                   <FileSignature className="text-muted-foreground size-4 shrink-0" />
                   <p className="text-sm font-medium">{agreement.title}</p>
                   <StatusBadge
-                    label={statusLabel(agreement.status)}
+                    label={statusLabel(agreement.status, agreement.selfRegistration)}
                     variant={statusVariant(agreement.status)}
                   />
                 </div>

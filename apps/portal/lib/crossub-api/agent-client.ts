@@ -1039,12 +1039,14 @@ export type AgentSalesAgreement = {
   assignedSalesperson: string;
   salesRejectedAt: string | null;
   salesRejectionReason: string | null;
+  selfRegistration: boolean;
 };
 
 export type AgentSalesAgreementAccessStatus = {
   blocked: boolean;
   pendingCount: number;
   awaitingSalesApproval: boolean;
+  selfRegistration: boolean;
 };
 
 export async function fetchSalesAgreementAccessStatus(): Promise<AgentSalesAgreementAccessStatus> {

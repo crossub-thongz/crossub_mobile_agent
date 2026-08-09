@@ -33,24 +33,35 @@ import {
 } from '@/lib/crossub-api/agent-client';
 import { formatDateTime } from '@/lib/utils';
 
-const FILTERS = [
+const SALES_FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'pending', label: 'Awaiting signature' },
   { id: 'returned', label: 'Returned' },
   { id: 'signed', label: 'Signed' },
   { id: 'declined', label: 'Rejected' },
-];
+] as const;
 
-function statusLabel(status: AgentSalesAgreement['status']): string {
+const SELF_REG_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Awaiting signature' },
+  { id: 'returned', label: 'Uploaded' },
+  { id: 'signed', label: 'Signed' },
+  { id: 'declined', label: 'Rejected' },
+] as const;
+
+function statusLabel(
+  status: AgentSalesAgreement['status'],
+  selfRegistration: boolean,
+): string {
   switch (status) {
     case 'sent':
       return 'Awaiting signature';
     case 'returned':
-      return 'Returned to sales';
+      return selfRegistration ? 'Uploaded' : 'Returned to sales';
     case 'signed':
       return 'Signed';
     case 'declined':
-      return 'Rejected by sales';
+      return selfRegistration ? 'Rejected' : 'Rejected by sales';
     default:
       return status.replace(/_/g, ' ');
   }
@@ -89,6 +100,8 @@ export default function AgreementsPage() {
   const [previewSubtitle, setPreviewSubtitle] = useState<string | undefined>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const templateHref = `/api${REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH}`;
+  const selfRegistration = access?.selfRegistration ?? agreements.some((row) => row.selfRegistration);
+  const filters = selfRegistration ? SELF_REG_FILTERS : SALES_FILTERS;
 
   const openAgreementPreview = (agreement: AgentSalesAgreement) => {
     setPreviewDoc(agreementPreviewDoc(agreement, templateHref));
@@ -153,6 +166,10 @@ export default function AgreementsPage() {
 
   const handleReturn = async () => {
     if (!returnTarget) return;
+    if (selfRegistration && !file) {
+      toast.error('Choose your signed service agreement PDF to upload.');
+      return;
+    }
     setSubmitting(true);
     try {
       let payload: Parameters<typeof returnSalesAgreement>[1] = {};
@@ -169,10 +186,16 @@ export default function AgreementsPage() {
       }
       const updated = await returnSalesAgreement(returnTarget.id, payload);
       setAgreements((rows) => rows.map((row) => (row.id === updated.id ? updated : row)));
-      toast.success('Agreement returned to your salesperson');
+      const accessStatus = await fetchSalesAgreementAccessStatus();
+      setAccess(accessStatus);
+      toast.success(
+        selfRegistration
+          ? 'Signed service agreement uploaded'
+          : 'Agreement returned to your salesperson',
+      );
       closeReturn();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not return agreement');
+      toast.error(err instanceof Error ? err.message : 'Could not upload agreement');
     } finally {
       setSubmitting(false);
     }
@@ -183,7 +206,20 @@ export default function AgreementsPage() {
       <div className="space-y-4">
         {access?.blocked ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
-            {access.awaitingSalesApproval ? (
+            {selfRegistration ? (
+              access.pendingCount > 0 ? (
+                <p>
+                  Preview the CROSSUB Service Agreement template, sign offline, then upload the signed
+                  PDF below. You can use the Agent App once your signed copy is uploaded — CROSSUB
+                  staff will review it in the admin portal.
+                </p>
+              ) : (
+                <p>
+                  Preview your CROSSUB Service Agreement, sign offline, and upload the signed copy
+                  to continue.
+                </p>
+              )
+            ) : access.awaitingSalesApproval ? (
               <p>
                 Your signed agreement has been returned to your salesperson. The Agent App will
                 unlock once they review and approve it.
@@ -203,8 +239,9 @@ export default function AgreementsPage() {
         ) : null}
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-muted-foreground min-w-[12rem] flex-1">
-            Your CROSSUB Service Agreement (NSW). Preview the document, sign offline if needed, then
-            upload and return the signed copy.
+            {selfRegistration
+              ? 'Your CROSSUB Service Agreement (NSW). Preview the template, sign offline, then upload the signed copy to your profile.'
+              : 'Your CROSSUB Service Agreement (NSW). Preview the document, sign offline if needed, then upload and return the signed copy.'}
           </p>
           <Button variant="outline" size="sm" onClick={openTemplatePreview}>
             <Eye className="mr-1.5 size-3.5" />
@@ -212,7 +249,7 @@ export default function AgreementsPage() {
           </Button>
         </div>
 
-        <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
+        <FilterChips options={filters} value={filter} onChange={setFilter} />
 
         {loading ? (
           <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -242,22 +279,37 @@ export default function AgreementsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <FileSignature className="size-4 shrink-0 text-muted-foreground" />
                       <h2 className="font-semibold leading-tight">{agreement.title}</h2>
-                      <StatusBadge label={statusLabel(agreement.status)} variant={statusVariant(agreement.status)} />
+                      <StatusBadge
+                        label={statusLabel(agreement.status, agreement.selfRegistration)}
+                        variant={statusVariant(agreement.status)}
+                      />
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{agreement.agencyName}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Sales contact: {agreement.assignedSalesperson}
-                      {agreement.sentAt ? ` · Sent ${formatDateTime(agreement.sentAt)}` : null}
-                    </p>
-                    {agreement.agentReturnedAt ? (
-                      <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
-                        Returned {formatDateTime(agreement.agentReturnedAt)}
+                    {!agreement.selfRegistration ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Sales contact: {agreement.assignedSalesperson}
+                        {agreement.sentAt ? ` · Sent ${formatDateTime(agreement.sentAt)}` : null}
+                      </p>
+                    ) : agreement.sentAt ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Sent {formatDateTime(agreement.sentAt)}
                       </p>
                     ) : null}
-                    {agreement.status === 'returned' ? (
+                    {agreement.agentReturnedAt ? (
+                      <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                        {agreement.selfRegistration ? 'Uploaded' : 'Returned'}{' '}
+                        {formatDateTime(agreement.agentReturnedAt)}
+                      </p>
+                    ) : null}
+                    {agreement.status === 'returned' && !agreement.selfRegistration ? (
                       <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
                         Waiting for {agreement.assignedSalesperson || 'your salesperson'} to approve
                         this agreement.
+                      </p>
+                    ) : null}
+                    {agreement.status === 'returned' && agreement.selfRegistration ? (
+                      <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
+                        Your signed copy is on file. CROSSUB staff may review it in the admin portal.
                       </p>
                     ) : null}
                     {agreement.status === 'declined' ? (
@@ -302,7 +354,7 @@ export default function AgreementsPage() {
                     ) : null}
                     {agreement.status === 'sent' ? (
                       <Button size="sm" onClick={() => openReturn(agreement)}>
-                        Return to sales
+                        {agreement.selfRegistration ? 'Upload signed copy' : 'Return to sales'}
                       </Button>
                     ) : null}
                   </div>
@@ -316,17 +368,30 @@ export default function AgreementsPage() {
       <Dialog open={returnTarget != null} onOpenChange={(open) => !open && closeReturn()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Return signed agreement</DialogTitle>
+            <DialogTitle>
+              {selfRegistration ? 'Upload signed agreement' : 'Return signed agreement'}
+            </DialogTitle>
           </DialogHeader>
           {returnTarget ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Send <strong>{returnTarget.title}</strong> back to{' '}
-                {returnTarget.assignedSalesperson || 'your salesperson'}. You can attach the signed
-                PDF and add a short note.
+                {selfRegistration ? (
+                  <>
+                    Upload your signed copy of <strong>{returnTarget.title}</strong>. It will be
+                    saved to your profile for CROSSUB staff to review in the admin portal.
+                  </>
+                ) : (
+                  <>
+                    Send <strong>{returnTarget.title}</strong> back to{' '}
+                    {returnTarget.assignedSalesperson || 'your salesperson'}. You can attach the
+                    signed PDF and add a short note.
+                  </>
+                )}
               </p>
               <div className="space-y-2">
-                <Label htmlFor="signed-file">Signed copy (optional)</Label>
+                <Label htmlFor="signed-file">
+                  Signed copy{selfRegistration ? '' : ' (optional)'}
+                </Label>
                 <input
                   ref={fileInputRef}
                   id="signed-file"
@@ -345,16 +410,18 @@ export default function AgreementsPage() {
                   {file ? file.name : 'Choose signed document'}
                 </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="return-notes">Note to salesperson (optional)</Label>
-                <Textarea
-                  id="return-notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  placeholder="e.g. Signed by the agency principal today."
-                />
-              </div>
+              {!selfRegistration ? (
+                <div className="space-y-2">
+                  <Label htmlFor="return-notes">Note to salesperson (optional)</Label>
+                  <Textarea
+                    id="return-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    placeholder="e.g. Signed by the agency principal today."
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
           <DialogFooter>
@@ -365,8 +432,10 @@ export default function AgreementsPage() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Sending…
+                  {selfRegistration ? 'Uploading…' : 'Sending…'}
                 </>
+              ) : selfRegistration ? (
+                'Upload signed copy'
               ) : (
                 'Send to salesperson'
               )}
