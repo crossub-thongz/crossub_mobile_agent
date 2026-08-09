@@ -13,6 +13,7 @@ import type { InspectionRecord } from '@/lib/inspections-types';
 import { workflowEventToTimelineEntry } from '@/lib/open-inspection/linked-case-history';
 import type { Inspection } from '@/lib/types';
 import type { TimelineEntry } from '@/lib/types';
+import { resolveOpenConductedByFromSession } from '@/lib/open-inspection/open-conducted-by';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
 export function caseAuditToTimeline(
@@ -142,7 +143,7 @@ export function mapOpenSessionToInspection(
           ? SessionStatusEnum.CLOSED
           : session.sessionStatus,
     reportStatus: session.openReportGenerated ? 'sent' : 'pending',
-    openConductedBy: session.agent?.role === 'leasing_agent' ? 'agent' : 'crossub',
+    openConductedBy: resolveOpenConductedByFromSession(session),
     openListingContext,
     tenantMovedOut: session.tenantMovedOut,
     visitorCount: session.visitors?.length ?? 0,

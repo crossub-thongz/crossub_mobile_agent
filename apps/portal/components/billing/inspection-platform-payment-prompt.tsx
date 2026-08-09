@@ -18,6 +18,7 @@ import {
   type AgentBillingCharge,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
+import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import { cn, formatCurrency } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
@@ -29,6 +30,8 @@ const SERVICE_LABEL: Record<string, string> = {
 
 type InspectionPlatformPaymentPromptProps = {
   inspectionId: string;
+  /** Resolves the pool inspection row when the initial id is a viewing session id. */
+  propertyId?: string;
   /** When true, show in-case payment (inspector accepted, job not yet complete). */
   active: boolean;
   /** Open the Stripe payment dialog as soon as the charge is ready (default true). */
@@ -38,12 +41,14 @@ type InspectionPlatformPaymentPromptProps = {
 
 export function InspectionPlatformPaymentPrompt({
   inspectionId,
+  propertyId,
   active,
   autoOpenPayment = true,
   className,
 }: InspectionPlatformPaymentPromptProps) {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charge, setCharge] = useState<AgentBillingCharge | null>(null);
+  const [billingInspectionId, setBillingInspectionId] = useState(inspectionId);
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
@@ -72,11 +77,24 @@ export function InspectionPlatformPaymentPrompt({
     }
     setLoading(true);
     try {
-      const [billing, linked] = await Promise.all([
-        fetchAgentBillingSummary(),
-        fetchAgentInspectionPlatformCharge(inspectionId),
-      ]);
+      const billing = await fetchAgentBillingSummary();
       setSummary(billing);
+
+      let resolvedId = billingInspectionId.trim() || inspectionId.trim();
+      let linked = await fetchAgentInspectionPlatformCharge(resolvedId);
+
+      if (!linked && propertyId) {
+        const pooled = await fetchLatestOpenPoolInspection(propertyId);
+        const poolId = pooled?.id?.trim();
+        if (poolId && poolId !== resolvedId) {
+          resolvedId = poolId;
+          linked = await fetchAgentInspectionPlatformCharge(poolId);
+        }
+      }
+
+      if (resolvedId !== billingInspectionId) {
+        setBillingInspectionId(resolvedId);
+      }
       setCharge(linked);
       return linked;
     } catch {
@@ -85,7 +103,11 @@ export function InspectionPlatformPaymentPrompt({
     } finally {
       setLoading(false);
     }
-  }, [active, inspectionId]);
+  }, [active, billingInspectionId, inspectionId, propertyId]);
+
+  useEffect(() => {
+    setBillingInspectionId(inspectionId);
+  }, [inspectionId]);
 
   useEffect(() => {
     void load();
@@ -132,7 +154,7 @@ export function InspectionPlatformPaymentPrompt({
   useEffect(() => {
     setPaymentDialog(null);
     setPaying(false);
-  }, [inspectionId]);
+  }, [inspectionId, billingInspectionId]);
 
   /** Open payment when the case is opened and the inspection is still unpaid. */
   useEffect(() => {

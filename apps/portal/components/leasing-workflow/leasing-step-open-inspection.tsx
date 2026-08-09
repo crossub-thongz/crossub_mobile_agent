@@ -312,7 +312,11 @@ export function LeasingStepOpenInspection({
       ) : null}
 
       {openPlatformPaymentActive && openBillingInspectionId ? (
-        <InspectionPlatformPaymentPrompt inspectionId={openBillingInspectionId} active />
+        <InspectionPlatformPaymentPrompt
+          inspectionId={openBillingInspectionId}
+          propertyId={detail.propertyId}
+          active
+        />
       ) : null}
 
       {oi.agentConducted ? (

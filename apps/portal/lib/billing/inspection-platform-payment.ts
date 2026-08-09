@@ -6,6 +6,7 @@ import {
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { isAssignedInspectorName } from '@/lib/leasing/open-inspection-display';
+import { isCrossubManagedOpenInspection } from '@/lib/open-inspection/open-conducted-by';
 import { resolveOpenPoolInspectionId } from '@/lib/open-inspection/linked-case-history';
 import type { RoutineFlow } from '@/lib/routine/routine-case-status';
 import type { ServerRoutineScheduleView } from '@/lib/routine-inspection-api';
@@ -106,7 +107,35 @@ function openInspectorBillingEligible(args: {
     return true;
   }
 
+  if (
+    isAssignedInspectorName(args.poolInspectionRecord?.inspectorName) &&
+    Boolean(args.poolInspectionRecord?.assignedInspectorId ?? args.poolInspectionRecord?.inspectorAssignedAt)
+  ) {
+    return true;
+  }
+
   return false;
+}
+
+/** Single entry point for open in-case billing UI. */
+export function isOpenPlatformPaymentActiveForCase(args: {
+  inspection: Inspection;
+  isDone: boolean;
+  poolInspectionRecord: InspectionRecord | null;
+  leasingDetail?: LeasingPropertyDetail | null;
+  openSession?: OpenInspectionSession | null;
+}): boolean {
+  if (args.inspection.type !== 'OPEN' || args.isDone) return false;
+  if (
+    !isCrossubManagedOpenInspection({
+      session: args.openSession,
+      leasingDetail: args.leasingDetail,
+      inspection: args.inspection,
+    })
+  ) {
+    return false;
+  }
+  return openInspectorBillingEligible(args);
 }
 
 /** CROSSUB open inspections bill when the pool inspector accepts (not tenant self / agent-run). */
@@ -119,6 +148,7 @@ export function isOpenPlatformPaymentActive(args: {
   leasingDetail?: LeasingPropertyDetail | null;
   openSession?: OpenInspectionSession | null;
 }): boolean {
-  if (!args.isCrossubOpen || args.isSelfOpen || args.isDone) return false;
+  if (args.isSelfOpen || args.isDone) return false;
+  if (!args.isCrossubOpen) return false;
   return openInspectorBillingEligible(args);
 }

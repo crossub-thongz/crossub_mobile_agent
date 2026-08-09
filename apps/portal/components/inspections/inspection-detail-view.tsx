@@ -25,7 +25,7 @@ import {
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
 import {
-  isOpenPlatformPaymentActive,
+  isOpenPlatformPaymentActiveForCase,
   isRoutinePlatformPaymentActive,
   resolveOpenPlatformPaymentInspectionId,
   resolveRoutinePlatformPaymentInspectionId,
@@ -92,6 +92,7 @@ import {
   cancelOpenInspectionJob,
 } from '@/lib/open-inspection-delete';
 import { canCompleteOpenSessionReview } from '@/lib/open-inspection-session-rail';
+import { resolveOpenConductedBy } from '@/lib/open-inspection/open-conducted-by';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import {
   OPEN_CONDUCTED_BY_LABEL,
@@ -368,7 +369,12 @@ export function InspectionDetailView({
   const nextAction = inspectionNextAction(insp);
   const isOpenLeasingCase =
     insp.type === 'OPEN' && Boolean(leasingDetail) && !isStandaloneOpenViewing;
-  const isSelfOpen = insp.type === 'OPEN' && insp.openConductedBy === 'agent';
+  const openConductedBy = resolveOpenConductedBy({
+    session: openSession,
+    leasingDetail,
+    inspection: insp,
+  });
+  const isSelfOpen = insp.type === 'OPEN' && openConductedBy === 'agent';
   const isCrossubManagedLeasingOpen =
     isOpenLeasingCase && Boolean(leasingDetail) && !leasingDetail.openInspection.agentConducted;
   const needsScheduleRequest =
@@ -382,16 +388,7 @@ export function InspectionDetailView({
     !openInspectionStartReached(leasingDetail.openInspection) &&
     Boolean(linkedLeasingCycleId) &&
     apiConnected;
-  const isCrossubOpen =
-    insp.type === 'OPEN' &&
-    !isSelfOpen &&
-    (insp.openConductedBy !== 'agent' ||
-      isCrossubManagedLeasingOpen ||
-      Boolean(
-        leasingDetail?.openInspection.scheduledTime ||
-          leasingDetail?.openInspection.preferredScheduledTime ||
-          leasingDetail?.openInspection.preferredNotes,
-      ));
+  const isCrossubOpen = insp.type === 'OPEN' && openConductedBy === 'crossub';
   const inspectorLabel = isSelfOpen
     ? OPEN_CONDUCTED_BY_LABEL.agent
     : insp.inspector ?? 'Unassigned';
@@ -458,12 +455,10 @@ export function InspectionDetailView({
 
   const openPlatformPaymentActive =
     insp.type === 'OPEN' &&
-    isOpenPlatformPaymentActive({
-      isCrossubOpen,
-      isSelfOpen,
+    isOpenPlatformPaymentActiveForCase({
+      inspection: insp,
       isDone: isInspectionDone(insp) || reportGenerated,
       poolInspectionRecord,
-      inspection: insp,
       leasingDetail,
       openSession,
     });
@@ -534,26 +529,30 @@ export function InspectionDetailView({
   const TypeIcon =
     insp.type === 'OPEN' ? DoorOpen : insp.type === 'ROUTINE' ? ClipboardList : Home;
 
-  const platformPaymentInspectionId =
-    insp.type === 'OPEN' && openPlatformPaymentActive && openBillingInspectionId
-      ? openBillingInspectionId
-      : insp.type === 'ROUTINE' && routineInPersonInProgress
-        ? routinePlatformPaymentInspectionId
-        : null;
-
   return (
     <div className="space-y-5">
-      {insp.type === 'OPEN' && openPlatformPaymentActive && !openBillingInspectionId ? (
-        <section className="rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm">
-          <div className="text-muted-foreground flex items-center gap-2">
-            <Loader2 className="size-4 animate-spin" />
-            Loading payment details…
-          </div>
-        </section>
+      {insp.type === 'OPEN' && openPlatformPaymentActive ? (
+        openBillingInspectionId ? (
+          <InspectionPlatformPaymentPrompt
+            inspectionId={openBillingInspectionId}
+            propertyId={insp.propertyId}
+            active
+          />
+        ) : (
+          <section className="rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm">
+            <div className="text-muted-foreground flex items-center gap-2">
+              <Loader2 className="size-4 animate-spin" />
+              Loading payment details…
+            </div>
+          </section>
+        )
       ) : null}
 
-      {platformPaymentInspectionId ? (
-        <InspectionPlatformPaymentPrompt inspectionId={platformPaymentInspectionId} active />
+      {insp.type === 'ROUTINE' && routineInPersonInProgress && routinePlatformPaymentInspectionId ? (
+        <InspectionPlatformPaymentPrompt
+          inspectionId={routinePlatformPaymentInspectionId}
+          active
+        />
       ) : null}
 
       {embedded && canDelete ? (
