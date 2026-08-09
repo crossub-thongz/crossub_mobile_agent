@@ -247,7 +247,10 @@ export function PricingRateCatalog({
             <p className="pricing-rate-card__price mt-1">
               {formatCurrency(catalog.inspections.routineIncGstAud)}
             </p>
-            <p className="text-muted-foreground mt-0.5 text-xs">inc GST · flat rate</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">inc GST · in-person only</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              Tenant self routine inspections are not charged.
+            </p>
             <PricingAddButton onClick={orderActions?.addRoutine} label="Add routine" />
           </div>
 
