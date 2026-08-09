@@ -182,7 +182,6 @@ function SavedCardPaymentForm({
         confirmParams: {
           payment_method: defaultPaymentMethod.id,
           return_url: `${window.location.origin}/bill?payment=return`,
-          ...STRIPE_BILLING_CONFIRM_PARAMS,
         },
         redirect: 'if_required',
       });
