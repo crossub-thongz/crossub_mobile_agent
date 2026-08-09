@@ -14,6 +14,7 @@ import {
   StripeSetupDialog,
   type StripeSetupDialogState,
 } from '@/components/billing/stripe-setup-dialog';
+import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,31 +77,6 @@ function formatCardExpiry(expMonth: number, expYear: number): string {
 
 function isPayableInvoice(row: AgentBillingMonthlyInvoice): boolean {
   return row.status === 'sent' || row.status === 'overdue';
-}
-
-type PayIntentResult = {
-  paymentComplete: boolean;
-  clientSecret?: string | null;
-};
-
-function resolvePaymentFlow(
-  result: PayIntentResult,
-  dialog: Omit<StripePaymentDialogState, 'clientSecret'>,
-  setPaymentDialog: (state: StripePaymentDialogState | null) => void,
-): 'complete' | 'dialog' | 'failed' {
-  if (result.paymentComplete) return 'complete';
-
-  if (result.clientSecret) {
-    setPaymentDialog({ ...dialog, clientSecret: result.clientSecret });
-    return 'dialog';
-  }
-
-  if (!getStripePublishableKey()) {
-    toast.error('Card payments are not configured on this environment.');
-  } else {
-    toast.error('Could not start payment. Try again or contact CROSSUB support.');
-  }
-  return 'failed';
 }
 
 export default function BillPage() {

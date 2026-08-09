@@ -192,32 +192,79 @@ export async function confirmAgentPaymentMethodSetup(
   });
 }
 
+export type PlatformChargePrepareResult = {
+  /** Null when billing is off or the service is included in allowance. */
+  chargeId: string | null;
+  /** Open Stripe when prepaid payment is required before continuing. */
+  paymentRequired?: {
+    chargeId: string;
+    clientSecret: string;
+    amountAud: number;
+    title: string;
+    description: string;
+  };
+};
+
+const SERVICE_LABEL: Record<AgentBillingQuoteInput['serviceType'], string> = {
+  tribunal: 'Tribunal session',
+  open_inspection: 'Open inspection',
+  routine_inspection: 'Routine inspection',
+  ingoing_inspection: 'Ingoing inspection',
+  outgoing_inspection: 'Outgoing inspection',
+};
+
 /**
- * Quote and pay a platform charge upfront — used for tribunal (inspections bill on inspector accept).
- * Returns null when billing is disabled or the service is included in Full Service allowance.
+ * Quote a platform charge and start payment when prepaid is required.
+ * Inspections usually bill on inspector accept — tribunal uses this at create time.
  */
-export async function ensurePlatformCharge(input: AgentBillingQuoteInput): Promise<string | null> {
+export async function preparePlatformCharge(
+  input: AgentBillingQuoteInput,
+): Promise<PlatformChargePrepareResult> {
   const summary = await fetchAgentBillingSummary();
-  if (!summary.prepaidEnabled) return null;
+  if (!summary.prepaidEnabled) return { chargeId: null };
 
   const charge = await quoteAgentBillingCharge(input);
-  if (!charge) return null;
+  if (!charge) return { chargeId: null };
 
   if (
     summary.inspectionsCollectionMode === 'postpaid' ||
     charge.collectionMode === 'postpaid'
   ) {
-    if (charge.status === 'accrued' || charge.status === 'paid') return charge.id;
-    return charge.id;
+    return { chargeId: charge.id };
   }
 
-  if (charge.status === 'paid') return charge.id;
+  if (charge.status === 'paid') return { chargeId: charge.id };
 
-  const paid = await payAgentBillingCharge(charge.id);
-  if (!paid.paymentComplete) {
+  const paid = await payAgentBillingCharge(charge.id, { devConfirm: false });
+  if (paid.paymentComplete) return { chargeId: paid.charge.id };
+
+  if (paid.clientSecret) {
+    return {
+      chargeId: charge.id,
+      paymentRequired: {
+        chargeId: charge.id,
+        clientSecret: paid.clientSecret,
+        amountAud: charge.amount,
+        title: SERVICE_LABEL[input.serviceType] ?? 'Platform service',
+        description: charge.description,
+      },
+    };
+  }
+
+  throw new Error('Payment is required before starting this service');
+}
+
+/**
+ * Quote and pay a platform charge upfront — used for tribunal (inspections bill on inspector accept).
+ * Returns null when billing is disabled or the service is included in Full Service allowance.
+ * @throws when Stripe payment is required but cannot be completed inline (use preparePlatformCharge).
+ */
+export async function ensurePlatformCharge(input: AgentBillingQuoteInput): Promise<string | null> {
+  const prepared = await preparePlatformCharge(input);
+  if (prepared.paymentRequired) {
     throw new Error('Payment is required before starting this service');
   }
-  return paid.charge.id;
+  return prepared.chargeId;
 }
 
 /** @deprecated use ensurePlatformCharge */

@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  StripePaymentDialog,
+  type StripePaymentDialogState,
+} from '@/components/billing/stripe-payment-dialog';
 import { SelectChip } from '@/components/agent/form-step';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +28,8 @@ import {
   type AgentTribunalRentChasingPrefill,
   type CreateAgentTribunalRentChasingInput,
 } from '@/lib/crossub-api/agent-workflow-client';
-import { ensurePrepaidCharge } from '@/lib/crossub-api/agent-billing-client';
+import { preparePlatformCharge } from '@/lib/crossub-api/agent-billing-client';
+import { getStripePublishableKey } from '@/lib/stripe-client';
 import {
   RENT_PERIOD_OPTIONS,
   type RentPeriodChoice,
@@ -227,6 +232,11 @@ export function CreateTribunalRentChasingDialog({
   const [bondNotes, setBondNotes] = useState('');
   const [selectedKinds, setSelectedKinds] = useState<ArrearsKind[]>([]);
   const [prefill, setPrefill] = useState<AgentTribunalRentChasingPrefill | null>(null);
+  const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const [pendingTribunalCreate, setPendingTribunalCreate] = useState<{
+    body: CreateAgentTribunalRentChasingInput;
+    platformChargeId: string;
+  } | null>(null);
 
   const { accounting } = useAgentData();
   const propertyIdsWithArrears = useMemo(
@@ -468,17 +478,31 @@ export function CreateTribunalRentChasingDialog({
         return;
       }
 
-      const platformChargeId = await ensurePrepaidCharge({
+      const prepared = await preparePlatformCharge({
         serviceType: 'tribunal',
         propertyId,
       });
-      const result = await createAgentTribunalRentChasing(propertyId, {
-        ...body,
-        ...(platformChargeId ? { platformChargeId } : {}),
-      });
-      toast.success('Tribunal case created');
-      onOpenChange(false);
-      onCreated?.(result.id);
+
+      if (prepared.paymentRequired) {
+        if (!getStripePublishableKey()) {
+          toast.error('Card payments are not configured on this environment.');
+          return;
+        }
+
+        setPendingTribunalCreate({
+          body,
+          platformChargeId: prepared.paymentRequired.chargeId,
+        });
+        setPaymentDialog({
+          clientSecret: prepared.paymentRequired.clientSecret,
+          title: prepared.paymentRequired.title,
+          description: prepared.paymentRequired.description,
+          amountAud: prepared.paymentRequired.amountAud,
+        });
+        return;
+      }
+
+      await finalizeTribunalCase(body, prepared.chargeId ?? undefined);
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -492,11 +516,48 @@ export function CreateTribunalRentChasingDialog({
     }
   };
 
+  const finalizeTribunalCase = async (
+    body: CreateAgentTribunalRentChasingInput,
+    platformChargeId?: string,
+  ) => {
+    if (!propertyId) return;
+
+    const result = await createAgentTribunalRentChasing(propertyId, {
+      ...body,
+      ...(platformChargeId ? { platformChargeId } : {}),
+    });
+    toast.success('Tribunal case created');
+    setPendingTribunalCreate(null);
+    onOpenChange(false);
+    onCreated?.(result.id);
+  };
+
+  const handleTribunalPaymentSuccess = async () => {
+    if (!pendingTribunalCreate) {
+      setPaymentDialog(null);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await finalizeTribunalCase(
+        pendingTribunalCreate.body,
+        pendingTribunalCreate.platformChargeId,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create tribunal case');
+    } finally {
+      setSaving(false);
+      setPaymentDialog(null);
+    }
+  };
+
   const canSubmit =
     Boolean(propertyId) &&
     selectedKinds.length > 0 &&
     !saving &&
     !loading &&
+    !paymentDialog &&
     (isAddingArrears || prefill?.hasAccountingArrears);
 
   const showArrearsForm =
@@ -505,7 +566,17 @@ export function CreateTribunalRentChasingDialog({
     (isAddingArrears || Boolean(prefill?.hasAccountingArrears));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setPendingTribunalCreate(null);
+            setPaymentDialog(null);
+          }
+          onOpenChange(nextOpen);
+        }}
+      >
       <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="shrink-0 border-b px-4 py-3 text-left">
           <DialogTitle>{dialogTitle}</DialogTitle>
@@ -859,5 +930,17 @@ export function CreateTribunalRentChasingDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      <StripePaymentDialog
+        state={paymentDialog}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setPaymentDialog(null);
+            if (!saving) setPendingTribunalCreate(null);
+          }
+        }}
+        onSuccess={handleTribunalPaymentSuccess}
+      />
+    </>
   );
 }
