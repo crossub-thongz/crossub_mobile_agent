@@ -10,7 +10,7 @@ import {
   type StripePaymentDialogState,
 } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
-import { resolveOpenBillingInspectionId } from '@/lib/billing/resolve-open-billing-inspection-id';
+import { resolveBillingInspectionId, type BillableInspectionType } from '@/lib/billing/resolve-billing-inspection-id';
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import {
   fetchAgentBillingSummary,
@@ -19,7 +19,6 @@ import {
   type AgentBillingCharge,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
-import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import { cn, formatCurrency } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
@@ -35,6 +34,7 @@ type InspectionPlatformPaymentPromptProps = {
   propertyId?: string;
   /** Open-viewing session id when the job case uses session id as its primary key. */
   viewingSessionId?: string;
+  inspectionType?: BillableInspectionType;
   /** When true, show in-case payment (inspector accepted, job not yet complete). */
   active: boolean;
   /** Open the Stripe payment dialog as soon as the charge is ready (default true). */
@@ -46,6 +46,7 @@ export function InspectionPlatformPaymentPrompt({
   inspectionId,
   propertyId,
   viewingSessionId,
+  inspectionType,
   active,
   autoOpenPayment = true,
   className,
@@ -87,19 +88,26 @@ export function InspectionPlatformPaymentPrompt({
       const billing = await fetchAgentBillingSummary();
       setSummary(billing);
 
-      let resolvedId = await resolveOpenBillingInspectionId({
+      let resolvedId = await resolveBillingInspectionId({
         inspectionId: billingInspectionId.trim() || inspectionId.trim(),
         propertyId,
         viewingSessionId,
+        inspectionType,
       });
-      let linked = await fetchAgentInspectionPlatformCharge(resolvedId);
+      let linked = resolvedId
+        ? await fetchAgentInspectionPlatformCharge(resolvedId)
+        : null;
 
-      if (!linked && propertyId) {
-        const pooled = await fetchLatestOpenPoolInspection(propertyId);
-        const poolId = pooled?.id?.trim();
-        if (poolId && poolId !== resolvedId) {
-          resolvedId = poolId;
-          linked = await fetchAgentInspectionPlatformCharge(poolId);
+      if (!linked && resolvedId) {
+        const retried = await resolveBillingInspectionId({
+          inspectionId: '',
+          propertyId,
+          viewingSessionId,
+          inspectionType,
+        });
+        if (retried && retried !== resolvedId) {
+          resolvedId = retried;
+          linked = await fetchAgentInspectionPlatformCharge(retried);
         }
       }
 
@@ -115,7 +123,7 @@ export function InspectionPlatformPaymentPrompt({
     } finally {
       setLoading(false);
     }
-  }, [active, billingInspectionId, inspectionId, propertyId, viewingSessionId]);
+  }, [active, billingInspectionId, inspectionId, inspectionType, propertyId, viewingSessionId]);
 
   useEffect(() => {
     setBillingInspectionId(inspectionId);

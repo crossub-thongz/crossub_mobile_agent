@@ -1,3 +1,5 @@
+import { inspectionsApi } from '@/lib/inspections-api';
+import { INSPECTION_RECORD_TYPE } from '@/constants/inspection-records';
 import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
@@ -27,6 +29,23 @@ export async function resolveOpenBillingInspectionId(args: {
 
   if (sessionId && initial === sessionId) {
     if (args.propertyId) {
+      try {
+        const { inspections } = await inspectionsApi.list({ pageSize: 100 });
+        const linked = inspections
+          .filter(
+            (row) =>
+              row.type === INSPECTION_RECORD_TYPE.OPEN &&
+              row.propertyId === args.propertyId &&
+              row.status !== 'CANCELLED',
+          )
+          .sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )[0];
+        if (linked?.id?.trim()) return linked.id.trim();
+      } catch {
+        /* fall through */
+      }
+
       const pooled = await fetchLatestOpenPoolInspection(args.propertyId);
       const poolId = pooled?.id?.trim();
       if (poolId) return poolId;

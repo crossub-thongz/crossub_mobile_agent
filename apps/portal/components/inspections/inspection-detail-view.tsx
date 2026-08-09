@@ -536,13 +536,16 @@ export function InspectionDetailView({
           inspectionId={openBillingInspectionId ?? insp.id}
           propertyId={insp.propertyId}
           viewingSessionId={isOpenViewingSource ? insp.id : openSession?.id}
+          inspectionType="OPEN"
           active
         />
       ) : null}
 
-      {insp.type === 'ROUTINE' && routineInPersonInProgress && routinePlatformPaymentInspectionId ? (
+      {insp.type === 'ROUTINE' && routineInPersonInProgress ? (
         <InspectionPlatformPaymentPrompt
-          inspectionId={routinePlatformPaymentInspectionId}
+          inspectionId={routinePlatformPaymentInspectionId ?? insp.id}
+          propertyId={insp.propertyId}
+          inspectionType="ROUTINE"
           active
         />
       ) : null}

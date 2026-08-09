@@ -329,7 +329,12 @@ export function IngoingInspectionAgentDetail({
   return (
     <div className="space-y-4">
       {platformPaymentActive ? (
-        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
+        <InspectionPlatformPaymentPrompt
+          inspectionId={snapshot.record?.id ?? inspection.id}
+          propertyId={inspection.propertyId}
+          inspectionType="INGOING"
+          active
+        />
       ) : null}
 
       <section className="rounded-2xl border bg-card p-4">

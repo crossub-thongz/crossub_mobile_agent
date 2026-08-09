@@ -316,6 +316,7 @@ export function LeasingStepOpenInspection({
           inspectionId={openBillingInspectionId ?? oi.viewingSessionId ?? oi.inspectionId ?? ''}
           propertyId={detail.propertyId}
           viewingSessionId={oi.viewingSessionId ?? undefined}
+          inspectionType="OPEN"
           active
         />
       ) : null}

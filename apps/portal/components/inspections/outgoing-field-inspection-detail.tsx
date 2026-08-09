@@ -360,7 +360,12 @@ export function OutgoingFieldInspectionDetail({
   return (
     <div className="space-y-4">
       {platformPaymentActive ? (
-        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
+        <InspectionPlatformPaymentPrompt
+          inspectionId={record?.id ?? inspection.id}
+          propertyId={inspection.propertyId}
+          inspectionType="OUTGOING"
+          active
+        />
       ) : null}
 
       <section className="rounded-2xl border bg-card p-4">
