@@ -130,6 +130,13 @@ export function InspectionPlatformPaymentPrompt({
         }
         linked = prepared.charge;
         setCharge(linked);
+        if (!linked) {
+          toast.error(
+            prepared.error ??
+              'Could not prepare payment for this inspection. Try again or pay from the Bill page.',
+          );
+          return;
+        }
       }
 
       if (!linked) {

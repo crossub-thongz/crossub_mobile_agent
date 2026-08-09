@@ -17,46 +17,99 @@ const SERVICE_TYPE: Record<
   ROUTINE: 'routine_inspection',
 };
 
-async function fetchChargeByIds(candidateIds: string[]): Promise<AgentBillingCharge | null> {
-  const tried = new Set<string>();
-  for (const raw of candidateIds) {
-    const id = raw.trim();
-    if (!id || tried.has(id)) continue;
-    tried.add(id);
-    const linked = await fetchAgentInspectionPlatformCharge(id);
+function uniqueCandidateIds(...values: Array<string | undefined | null>): string[] {
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const raw of values) {
+    const id = raw?.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+async function fetchLinkedChargeByIds(candidateIds: string[]): Promise<AgentBillingCharge | null> {
+  for (const id of candidateIds) {
+    let linked = await fetchAgentInspectionPlatformCharge(id);
+    if (!linked) {
+      try {
+        linked = await ensureAgentInspectionPlatformCharge(id);
+      } catch {
+        /* try next candidate — ensure may not exist on older API builds */
+      }
+    }
     if (linked) return linked;
   }
   return null;
 }
 
-async function createMissingCharge(args: {
-  poolInspectionId: string;
-  propertyId?: string;
-  inspectionType?: BillableInspectionType;
-}): Promise<AgentBillingCharge | null> {
-  const poolId = args.poolInspectionId.trim();
-  if (!poolId) return null;
-
-  try {
-    const linked = await ensureAgentInspectionPlatformCharge(poolId);
-    if (linked) return linked;
-  } catch {
-    /* ensure-charge may not exist on older API builds */
-  }
-
-  if (args.propertyId && args.inspectionType) {
+async function ensureLinkedChargeByIds(
+  candidateIds: string[],
+): Promise<{ charge: AgentBillingCharge | null; error?: string }> {
+  let lastError: string | undefined;
+  for (const id of candidateIds) {
     try {
-      return await quoteAgentBillingCharge({
-        serviceType: SERVICE_TYPE[args.inspectionType],
-        propertyId: args.propertyId,
-        inspectionId: poolId,
-      });
-    } catch {
-      /* quote with inspectionId may not exist on older API builds */
+      const linked = await ensureAgentInspectionPlatformCharge(id);
+      if (linked) return { charge: linked };
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : 'Could not prepare payment';
     }
   }
+  return { charge: null, error: lastError };
+}
 
-  return null;
+async function quoteLinkedCharge(args: {
+  candidateIds: string[];
+  propertyId?: string;
+  inspectionType?: BillableInspectionType;
+}): Promise<{ charge: AgentBillingCharge | null; error?: string }> {
+  if (!args.propertyId || !args.inspectionType) {
+    return { charge: null };
+  }
+
+  let lastError: string | undefined;
+  for (const id of args.candidateIds) {
+    try {
+      const quoted = await quoteAgentBillingCharge({
+        serviceType: SERVICE_TYPE[args.inspectionType],
+        propertyId: args.propertyId,
+        inspectionId: id,
+      });
+      if (quoted) return { charge: quoted };
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : 'Could not prepare payment';
+    }
+  }
+  return { charge: null, error: lastError };
+}
+
+async function createMissingCharge(args: {
+  candidateIds: string[];
+  propertyId?: string;
+  inspectionType?: BillableInspectionType;
+}): Promise<{ charge: AgentBillingCharge | null; error?: string }> {
+  const ensured = await ensureLinkedChargeByIds(args.candidateIds);
+  if (ensured.charge) return ensured;
+
+  const quoted = await quoteLinkedCharge(args);
+  if (quoted.charge) return quoted;
+
+  return { charge: null, error: quoted.error ?? ensured.error };
+}
+
+function buildCandidateIds(args: {
+  billingInspectionId: string;
+  inspectionId: string;
+  poolInspectionId?: string;
+  viewingSessionId?: string;
+}): string[] {
+  return uniqueCandidateIds(
+    args.billingInspectionId,
+    args.poolInspectionId,
+    args.inspectionId,
+    args.viewingSessionId,
+  );
 }
 
 /** Create a charge if needed, then return it (for manual Pay click). */
@@ -66,23 +119,33 @@ export async function prepareInspectionPlatformCharge(args: {
   viewingSessionId?: string;
   inspectionType?: BillableInspectionType;
   poolInspectionId?: string;
-}): Promise<{ charge: AgentBillingCharge | null; billingInspectionId: string }> {
+}): Promise<{
+  charge: AgentBillingCharge | null;
+  billingInspectionId: string;
+  error?: string;
+}> {
   const loaded = await loadInspectionPlatformCharge(args);
   if (loaded.charge?.status === 'paid') return loaded;
   if (loaded.charge?.status === 'awaiting_payment') return loaded;
 
-  const poolId =
-    loaded.billingInspectionId.trim() ||
-    args.poolInspectionId?.trim() ||
-    args.inspectionId.trim();
+  const candidateIds = buildCandidateIds({
+    billingInspectionId: loaded.billingInspectionId,
+    inspectionId: args.inspectionId,
+    poolInspectionId: args.poolInspectionId,
+    viewingSessionId: args.viewingSessionId,
+  });
 
   const created = await createMissingCharge({
-    poolInspectionId: poolId,
+    candidateIds,
     propertyId: args.propertyId,
     inspectionType: args.inspectionType,
   });
 
-  return { charge: created, billingInspectionId: poolId };
+  return {
+    charge: created.charge,
+    billingInspectionId: loaded.billingInspectionId,
+    error: created.error,
+  };
 }
 
 /**
@@ -107,13 +170,14 @@ export async function loadInspectionPlatformCharge(args: {
       inspectionType: args.inspectionType,
     }));
 
-  const candidateIds = [
+  let candidateIds = buildCandidateIds({
     billingInspectionId,
-    args.inspectionId,
-    args.viewingSessionId ?? '',
-  ];
+    inspectionId: args.inspectionId,
+    poolInspectionId: args.poolInspectionId,
+    viewingSessionId: args.viewingSessionId,
+  });
 
-  let charge = await fetchChargeByIds(candidateIds);
+  let charge = await fetchLinkedChargeByIds(candidateIds);
 
   if (!charge) {
     const retried = await resolveBillingInspectionId({
@@ -124,7 +188,13 @@ export async function loadInspectionPlatformCharge(args: {
     });
     if (retried && retried !== billingInspectionId) {
       billingInspectionId = retried;
-      charge = await fetchChargeByIds([retried, ...candidateIds]);
+      candidateIds = buildCandidateIds({
+        billingInspectionId,
+        inspectionId: args.inspectionId,
+        poolInspectionId: args.poolInspectionId,
+        viewingSessionId: args.viewingSessionId,
+      });
+      charge = await fetchLinkedChargeByIds(candidateIds);
     }
   }
 
