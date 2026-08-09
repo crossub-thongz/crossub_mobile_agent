@@ -1,7 +1,32 @@
-import { inspectionsApi } from '@/lib/inspections-api';
 import { INSPECTION_RECORD_TYPE } from '@/constants/inspection-records';
-import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
+import { inspectionsApi } from '@/lib/inspections-api';
 import { openViewingsApi } from '@/lib/open-viewings-api';
+
+async function poolIdFromViewingSession(
+  sessionId: string,
+  propertyId?: string,
+): Promise<string | null> {
+  try {
+    const session = await openViewingsApi.get(sessionId);
+    const linked = session.inspectionId?.trim();
+    if (linked) return linked;
+  } catch {
+    /* fall through to list lookup */
+  }
+
+  if (propertyId) {
+    try {
+      const sessions = await openViewingsApi.list({ propertyId, pageSize: 100 });
+      const match = sessions.find((row) => row.id === sessionId);
+      const linked = match?.inspectionId?.trim();
+      if (linked) return linked;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return null;
+}
 
 /** Pool inspection row id for billing — never the open-viewing session id. */
 export async function resolveOpenBillingInspectionId(args: {
@@ -12,45 +37,25 @@ export async function resolveOpenBillingInspectionId(args: {
   const initial = args.inspectionId.trim();
   if (!initial) return initial;
 
-  const fromViewingSession = async (sessionId: string): Promise<string | null> => {
-    try {
-      const session = await openViewingsApi.get(sessionId);
-      return session.inspectionId?.trim() ?? null;
-    } catch {
-      return null;
-    }
-  };
+  const sessionId = args.viewingSessionId?.trim() ?? initial;
 
-  const sessionId = args.viewingSessionId?.trim();
-  if (sessionId) {
-    const linked = await fromViewingSession(sessionId);
-    if (linked) return linked;
+  const linkedFromSession = await poolIdFromViewingSession(sessionId, args.propertyId);
+  if (linkedFromSession) return linkedFromSession;
+
+  if (initial !== sessionId) {
+    const linkedInitial = await poolIdFromViewingSession(initial, args.propertyId);
+    if (linkedInitial) return linkedInitial;
   }
 
-  if (sessionId && initial === sessionId) {
-    if (args.propertyId) {
-      try {
-        const { inspections } = await inspectionsApi.list({ pageSize: 100 });
-        const linked = inspections
-          .filter(
-            (row) =>
-              row.type === INSPECTION_RECORD_TYPE.OPEN &&
-              row.propertyId === args.propertyId &&
-              row.status !== 'CANCELLED',
-          )
-          .sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          )[0];
-        if (linked?.id?.trim()) return linked.id.trim();
-      } catch {
-        /* fall through */
+  if (initial !== sessionId) {
+    try {
+      const record = await inspectionsApi.get(initial);
+      if (record?.type === INSPECTION_RECORD_TYPE.OPEN && record.id?.trim()) {
+        return record.id.trim();
       }
-
-      const pooled = await fetchLatestOpenPoolInspection(args.propertyId);
-      const poolId = pooled?.id?.trim();
-      if (poolId) return poolId;
+    } catch {
+      /* not a pool row id */
     }
-    return initial;
   }
 
   return initial;

@@ -13,9 +13,8 @@ import { Button } from '@/components/ui/button';
 import { resolveBillingInspectionId, type BillableInspectionType } from '@/lib/billing/resolve-billing-inspection-id';
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import {
-  ensureAgentInspectionPlatformCharge,
   fetchAgentBillingSummary,
-  fetchAgentInspectionPlatformCharge,
+  fetchAgentInspectionPlatformChargeResolved,
   payAgentBillingCharge,
   type AgentBillingCharge,
   type AgentBillingSummary,
@@ -98,17 +97,15 @@ export function InspectionPlatformPaymentPrompt({
         viewingSessionId,
         inspectionType,
       });
-      let linked = resolvedId
-        ? await fetchAgentInspectionPlatformCharge(resolvedId)
-        : null;
 
-      if (!linked && resolvedId) {
-        try {
-          linked = await ensureAgentInspectionPlatformCharge(resolvedId);
-        } catch {
-          /* Older API builds may not expose ensure-charge yet. */
-        }
-      }
+      const chargeCandidates = [
+        resolvedId,
+        billingInspectionId,
+        inspectionId,
+        viewingSessionId ?? '',
+      ];
+
+      let linked = await fetchAgentInspectionPlatformChargeResolved(chargeCandidates);
 
       if (!linked && resolvedId) {
         const retried = await resolveBillingInspectionId({
@@ -119,14 +116,10 @@ export function InspectionPlatformPaymentPrompt({
         });
         if (retried && retried !== resolvedId) {
           resolvedId = retried;
-          linked = await fetchAgentInspectionPlatformCharge(retried);
-          if (!linked) {
-            try {
-              linked = await ensureAgentInspectionPlatformCharge(retried);
-            } catch {
-              /* Older API builds may not expose ensure-charge yet. */
-            }
-          }
+          linked = await fetchAgentInspectionPlatformChargeResolved([
+            retried,
+            ...chargeCandidates,
+          ]);
         }
       }
 

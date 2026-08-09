@@ -159,6 +159,29 @@ export async function fetchAgentInspectionPlatformCharge(
   return agentFetch(`/agent/billing/inspections/${encodeURIComponent(inspectionId)}/charge`);
 }
 
+/** Try several inspection / session ids until a linked charge is found. */
+export async function fetchAgentInspectionPlatformChargeResolved(
+  candidateIds: string[],
+): Promise<AgentBillingCharge | null> {
+  const tried = new Set<string>();
+  for (const raw of candidateIds) {
+    const id = raw.trim();
+    if (!id || tried.has(id)) continue;
+    tried.add(id);
+
+    let linked = await fetchAgentInspectionPlatformCharge(id);
+    if (!linked) {
+      try {
+        linked = await ensureAgentInspectionPlatformCharge(id);
+      } catch {
+        /* Older API builds may not expose ensure-charge yet. */
+      }
+    }
+    if (linked) return linked;
+  }
+  return null;
+}
+
 /** Backfill a missing inspector-accept charge, then return it. */
 export async function ensureAgentInspectionPlatformCharge(
   inspectionId: string,
