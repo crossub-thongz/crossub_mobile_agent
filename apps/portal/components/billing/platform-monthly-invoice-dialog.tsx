@@ -150,6 +150,11 @@ export function PlatformMonthlyInvoiceDialog({
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{serviceLabel(row.serviceType)}</p>
                         <p className="text-muted-foreground mt-0.5 text-xs">{row.description}</p>
+                        {row.createdByName ? (
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            Created by {row.createdByName}
+                          </p>
+                        ) : null}
                       </div>
                       <p className="shrink-0 text-sm font-semibold tabular-nums">
                         {formatCurrency(row.amount)}

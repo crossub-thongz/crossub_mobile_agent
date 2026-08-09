@@ -255,7 +255,9 @@ export function CreateTribunalRentChasingDialog({
         .filter((property) =>
           initialPropertyId
             ? property.id === initialPropertyId
-            : isAddingArrears || propertyIdsWithArrears.has(property.id),
+            : isAddingArrears
+              ? propertyIdsWithArrears.has(property.id)
+              : true,
         )
         .sort((a, b) =>
           a.address.localeCompare(b.address, undefined, { sensitivity: 'base' }),
@@ -264,11 +266,8 @@ export function CreateTribunalRentChasingDialog({
   );
 
   const selectableKinds = useMemo(
-    () =>
-      isAddingArrears
-        ? ARREARS_KIND_OPTIONS.map((option) => option.id)
-        : ([...new Set(prefill?.arrears.map((row) => row.kind) ?? [])] as ArrearsKind[]),
-    [isAddingArrears, prefill],
+    () => ARREARS_KIND_OPTIONS.map((option) => option.id),
+    [],
   );
 
   useEffect(() => {
@@ -557,13 +556,9 @@ export function CreateTribunalRentChasingDialog({
     selectedKinds.length > 0 &&
     !saving &&
     !loading &&
-    !paymentDialog &&
-    (isAddingArrears || prefill?.hasAccountingArrears);
+    !paymentDialog;
 
-  const showArrearsForm =
-    Boolean(propertyId) &&
-    !loading &&
-    (isAddingArrears || Boolean(prefill?.hasAccountingArrears));
+  const showArrearsForm = Boolean(propertyId) && !loading;
 
   return (
     <>
@@ -592,9 +587,7 @@ export function CreateTribunalRentChasingDialog({
                   'Selected property'}
               </p>
             ) : propertyOptions.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                No properties with open accounting arrears.
-              </p>
+              <p className="text-muted-foreground text-sm">No properties found.</p>
             ) : (
               <select
                 className={selectClass}
@@ -666,7 +659,7 @@ export function CreateTribunalRentChasingDialog({
                 <p className="text-muted-foreground text-xs">
                   {isAddingArrears
                     ? 'Select one or more arrears types, then complete the sections below.'
-                    : 'Choose one or more arrears types from Accounting. Form sections appear after you select them.'}
+                    : 'Select one or more arrears types for this tribunal case, then complete the sections below.'}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {ARREARS_KIND_OPTIONS.filter((option) =>

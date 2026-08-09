@@ -442,9 +442,14 @@ export default function BillPage() {
                       </div>
                       <p className="text-muted-foreground mt-1 text-sm">{row.description}</p>
                       <p className="text-muted-foreground mt-1 text-xs">
-                        {row.paidAt
-                          ? `Paid ${formatWhen(row.paidAt)}`
-                          : `Created ${formatWhen(row.createdAt)}`}
+                        {[
+                          row.createdByName ? `Created by ${row.createdByName}` : null,
+                          row.paidAt
+                            ? `Paid ${formatWhen(row.paidAt)}`
+                            : `Created ${formatWhen(row.createdAt)}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">

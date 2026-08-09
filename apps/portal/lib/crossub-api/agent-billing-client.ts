@@ -11,6 +11,7 @@ export type AgentBillingCharge = {
   propertyId?: string | null;
   paidAt?: string | null;
   createdAt: string;
+  createdByName?: string | null;
 };
 
 export type AgentBillingSummary = {
@@ -95,6 +96,7 @@ export type AgentBillingMonthlyInvoiceLineItem = {
   serviceType: string;
   description: string;
   amount: number;
+  createdByName?: string | null;
 };
 
 export type AgentBillingMonthlyInvoiceDetail = AgentBillingMonthlyInvoice & {
