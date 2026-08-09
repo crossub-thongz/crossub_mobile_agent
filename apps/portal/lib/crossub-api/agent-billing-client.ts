@@ -159,6 +159,16 @@ export async function fetchAgentInspectionPlatformCharge(
   return agentFetch(`/agent/billing/inspections/${encodeURIComponent(inspectionId)}/charge`);
 }
 
+/** Backfill a missing inspector-accept charge, then return it. */
+export async function ensureAgentInspectionPlatformCharge(
+  inspectionId: string,
+): Promise<AgentBillingCharge | null> {
+  return agentFetch(`/agent/billing/inspections/${encodeURIComponent(inspectionId)}/ensure-charge`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export async function fetchAgentBillingCharge(chargeId: string): Promise<AgentBillingCharge> {
   return agentFetch(`/agent/billing/charges/${encodeURIComponent(chargeId)}`);
 }
