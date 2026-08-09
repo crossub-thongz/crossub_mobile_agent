@@ -11,6 +11,10 @@ import {
   type StripePaymentDialogState,
 } from '@/components/billing/stripe-payment-dialog';
 import {
+  PlatformMonthlyInvoiceDialog,
+  type PlatformMonthlyInvoiceDialogState,
+} from '@/components/billing/platform-monthly-invoice-dialog';
+import {
   StripeSetupDialog,
   type StripeSetupDialogState,
 } from '@/components/billing/stripe-setup-dialog';
@@ -49,6 +53,7 @@ const SERVICE_LABEL: Record<string, string> = {
 const STATUS_TONE: Record<string, string> = {
   paid: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   awaiting_payment: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  accrued: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
   invoiced: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
   sent: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   overdue: 'border-destructive/30 bg-destructive/10 text-destructive',
@@ -87,6 +92,7 @@ export default function BillPage() {
   const [payingKey, setPayingKey] = useState<string | null>(null);
   const [payingAll, setPayingAll] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const [invoiceDialog, setInvoiceDialog] = useState<PlatformMonthlyInvoiceDialogState>(null);
   const [setupDialog, setSetupDialog] = useState<StripeSetupDialogState | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
 
@@ -491,20 +497,30 @@ export default function BillPage() {
                     <p className="text-sm font-semibold tabular-nums">
                       {formatCurrency(row.amountDue)}
                     </p>
-                    {payable ? (
+                    <div className="flex flex-wrap justify-end gap-2">
                       <Button
                         size="sm"
-                        onClick={() => void payInvoice(row.id, row)}
-                        disabled={payingKey === entry.id || paymentDialog != null}
+                        variant="outline"
+                        onClick={() => setInvoiceDialog({ invoice: row })}
+                        disabled={paymentDialog != null}
                       >
-                        {payingKey === entry.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <CreditCard className="size-3.5" />
-                        )}
-                        Pay invoice
+                        View invoice
                       </Button>
-                    ) : null}
+                      {payable ? (
+                        <Button
+                          size="sm"
+                          onClick={() => void payInvoice(row.id, row)}
+                          disabled={payingKey === entry.id || paymentDialog != null}
+                        >
+                          {payingKey === entry.id ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <CreditCard className="size-3.5" />
+                          )}
+                          Pay invoice
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </li>
               );
@@ -519,6 +535,13 @@ export default function BillPage() {
           if (!open) setPaymentDialog(null);
         }}
         onSuccess={handlePaymentSuccess}
+      />
+
+      <PlatformMonthlyInvoiceDialog
+        state={invoiceDialog}
+        onOpenChange={(open) => {
+          if (!open) setInvoiceDialog(null);
+        }}
       />
 
       <StripeSetupDialog

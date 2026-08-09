@@ -90,6 +90,19 @@ export type AgentBillingMonthlyInvoice = {
   paidAt?: string | null;
 };
 
+export type AgentBillingMonthlyInvoiceLineItem = {
+  id: string;
+  serviceType: string;
+  description: string;
+  amount: number;
+};
+
+export type AgentBillingMonthlyInvoiceDetail = AgentBillingMonthlyInvoice & {
+  periodToken?: string;
+  serviceFeePercent?: number;
+  lineItems: AgentBillingMonthlyInvoiceLineItem[];
+};
+
 export type AgentBillingIncludedAllowanceUsage = {
   included: number;
   used: number;
@@ -150,6 +163,12 @@ export async function listAgentChargeHistory(): Promise<AgentBillingCharge[]> {
 
 export async function listAgentInvoiceHistory(): Promise<AgentBillingMonthlyInvoice[]> {
   return agentFetch('/agent/billing/invoices/history');
+}
+
+export async function fetchAgentMonthlyInvoice(
+  invoiceId: string,
+): Promise<AgentBillingMonthlyInvoiceDetail> {
+  return agentFetch(`/agent/billing/invoices/${encodeURIComponent(invoiceId)}`);
 }
 
 export async function payAgentMonthlyInvoice(
