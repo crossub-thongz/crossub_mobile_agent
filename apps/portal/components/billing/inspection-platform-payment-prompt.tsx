@@ -2,7 +2,7 @@
 
 import { CreditCard, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -31,12 +31,15 @@ type InspectionPlatformPaymentPromptProps = {
   inspectionId: string;
   /** When true, show in-case payment (inspector accepted, job not yet complete). */
   active: boolean;
+  /** Open the Stripe payment dialog as soon as the charge is ready (default true). */
+  autoOpenPayment?: boolean;
   className?: string;
 };
 
 export function InspectionPlatformPaymentPrompt({
   inspectionId,
   active,
+  autoOpenPayment = true,
   className,
 }: InspectionPlatformPaymentPromptProps) {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
@@ -44,6 +47,7 @@ export function InspectionPlatformPaymentPrompt({
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const autoPaymentAttemptedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!active) {
@@ -105,6 +109,36 @@ export function InspectionPlatformPaymentPrompt({
       setPaying(false);
     }
   }, [charge, load, summary?.defaultPaymentMethod]);
+
+  useEffect(() => {
+    autoPaymentAttemptedRef.current = false;
+  }, [inspectionId]);
+
+  useEffect(() => {
+    if (!active || !autoOpenPayment) return;
+    if (autoPaymentAttemptedRef.current || paying || paymentDialog != null || loading) return;
+
+    const collectionMode = summary?.inspectionsCollectionMode;
+    const prepaidAgency =
+      collectionMode === 'prepaid' || summary?.prepaidEnabled === true || !summary;
+    const postpaidAgency = collectionMode === 'postpaid';
+
+    if (postpaidAgency || (summary && !prepaidAgency)) return;
+    if (charge?.status === 'paid') return;
+    if (!charge || charge.status !== 'awaiting_payment') return;
+
+    autoPaymentAttemptedRef.current = true;
+    void payNow();
+  }, [
+    active,
+    autoOpenPayment,
+    charge,
+    loading,
+    payNow,
+    paymentDialog,
+    paying,
+    summary,
+  ]);
 
   if (!active) return null;
 
@@ -174,58 +208,76 @@ export function InspectionPlatformPaymentPrompt({
 
   if (!awaitingPrepaid) return null;
 
+  const paymentDialogOpen = paymentDialog != null;
+
   return (
     <>
-      <section
-        className={cn(
-          'rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4',
-          className,
-        )}
-      >
-        <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
-          Payment required
-        </p>
-        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-          The inspector has accepted this job. Pay the platform fee
-          {charge ? ` (${formatCurrency(charge.amount)})` : ''} while this case is in progress.
-          If you skip payment here, any outstanding balance will appear on the{' '}
-          <Link href="/bill" className="text-primary font-medium hover:underline">
-            Bill
-          </Link>{' '}
-          page once the job is complete.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void payNow()}
-            disabled={paying || paymentDialog != null || (loading && !charge)}
-          >
-            {paying || (loading && !charge) ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <CreditCard className="size-3.5" />
-            )}
-            {charge ? `Pay ${formatCurrency(charge.amount)}` : 'Load payment'}
-          </Button>
-          {charge ? (
+      {!paymentDialogOpen ? (
+        <section
+          className={cn(
+            'rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4',
+            className,
+          )}
+        >
+          <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+            Payment required
+          </p>
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+            The inspector has accepted this job. Pay the platform fee
+            {charge ? ` (${formatCurrency(charge.amount)})` : ''} while this case is in progress.
+            If you skip payment here, any outstanding balance will appear on the{' '}
+            <Link href="/bill" className="text-primary font-medium hover:underline">
+              Bill
+            </Link>{' '}
+            page once the job is complete.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              onClick={() => void load()}
-              disabled={loading || paying}
+              onClick={() => void payNow()}
+              disabled={paying || (loading && !charge)}
             >
-              Refresh
+              {paying || (loading && !charge) ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <CreditCard className="size-3.5" />
+              )}
+              {charge ? `Pay ${formatCurrency(charge.amount)}` : 'Open payment'}
             </Button>
-          ) : null}
-        </div>
-      </section>
+            {charge ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void load()}
+                disabled={loading || paying}
+              >
+                Refresh
+              </Button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {paying && !paymentDialogOpen ? (
+        <section
+          className={cn(
+            'rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm',
+            className,
+          )}
+        >
+          <div className="text-muted-foreground flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin" />
+            Opening payment…
+          </div>
+        </section>
+      ) : null}
 
       <StripePaymentDialog
         stacked
         state={paymentDialog}
-        open={paymentDialog != null}
+        open={paymentDialogOpen}
         onOpenChange={(open) => {
           if (!open) setPaymentDialog(null);
         }}
