@@ -10,7 +10,10 @@ import {
   type StripePaymentDialogState,
 } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
-import { loadInspectionPlatformCharge } from '@/lib/billing/load-inspection-platform-charge';
+import {
+  loadInspectionPlatformCharge,
+  prepareInspectionPlatformCharge,
+} from '@/lib/billing/load-inspection-platform-charge';
 import type { BillableInspectionType } from '@/lib/billing/resolve-billing-inspection-id';
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import {
@@ -30,17 +33,11 @@ const SERVICE_LABEL: Record<string, string> = {
 
 type InspectionPlatformPaymentPromptProps = {
   inspectionId: string;
-  /** Known pool inspection row id (preferred for billing lookups). */
   poolInspectionId?: string;
-  /** Resolves the pool inspection row when the initial id is a viewing session id. */
   propertyId?: string;
-  /** Open-viewing session id when the job case uses session id as its primary key. */
   viewingSessionId?: string;
   inspectionType?: BillableInspectionType;
-  /** When true, show in-case payment (inspector accepted, job not yet complete). */
   active: boolean;
-  /** Open the Stripe payment dialog as soon as the charge is ready (default true). */
-  autoOpenPayment?: boolean;
   className?: string;
 };
 
@@ -51,111 +48,102 @@ export function InspectionPlatformPaymentPrompt({
   viewingSessionId,
   inspectionType,
   active,
-  autoOpenPayment = true,
   className,
 }: InspectionPlatformPaymentPromptProps) {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charge, setCharge] = useState<AgentBillingCharge | null>(null);
   const [billingInspectionId, setBillingInspectionId] = useState(inspectionId);
   const [loading, setLoading] = useState(false);
-  const [chargeLookupDone, setChargeLookupDone] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
 
-  const isPrepaidAgency = useCallback((billing: AgentBillingSummary | null, isLoading: boolean) => {
-    const collectionMode = billing?.inspectionsCollectionMode;
-    return (
-      collectionMode === 'prepaid' || billing?.prepaidEnabled === true || (!billing && !isLoading)
-    );
-  }, []);
-
-  const isAwaitingPrepaidPayment = useCallback(
-    (linked: AgentBillingCharge | null, billing: AgentBillingSummary | null, isLoading: boolean) => {
-      if (!isPrepaidAgency(billing, isLoading)) return false;
-      if (linked?.status === 'paid') return false;
-      return !linked || linked.status === 'awaiting_payment' || linked.collectionMode === 'prepaid';
-    },
-    [isPrepaidAgency],
+  const chargeArgs = useCallback(
+    () => ({
+      inspectionId: billingInspectionId.trim() || inspectionId.trim(),
+      poolInspectionId: poolInspectionId ?? billingInspectionId,
+      propertyId,
+      viewingSessionId,
+      inspectionType,
+    }),
+    [
+      billingInspectionId,
+      inspectionId,
+      inspectionType,
+      poolInspectionId,
+      propertyId,
+      viewingSessionId,
+    ],
   );
 
   const load = useCallback(async (): Promise<AgentBillingCharge | null> => {
     if (!active) {
       setCharge(null);
       setSummary(null);
-      setChargeLookupDone(false);
       return null;
     }
     if (!inspectionId.trim() && !viewingSessionId?.trim() && !propertyId?.trim()) {
       return null;
     }
     setLoading(true);
-    setChargeLookupDone(false);
     try {
       const billing = await fetchAgentBillingSummary();
       setSummary(billing);
 
       const { charge: linked, billingInspectionId: resolvedId } =
-        await loadInspectionPlatformCharge({
-          inspectionId: billingInspectionId.trim() || inspectionId.trim(),
-          poolInspectionId: poolInspectionId ?? billingInspectionId,
-          propertyId,
-          viewingSessionId,
-          inspectionType,
-        });
+        await loadInspectionPlatformCharge(chargeArgs());
 
-      if (resolvedId !== billingInspectionId) {
+      if (resolvedId && resolvedId !== billingInspectionId) {
         setBillingInspectionId(resolvedId);
       }
       setCharge(linked);
-      setChargeLookupDone(true);
       return linked;
     } catch (err) {
       setCharge(null);
-      setChargeLookupDone(true);
       toast.error(err instanceof Error ? err.message : 'Could not load payment details');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [active, billingInspectionId, inspectionId, inspectionType, poolInspectionId, propertyId, viewingSessionId]);
+  }, [active, billingInspectionId, chargeArgs, inspectionId, propertyId, viewingSessionId]);
 
   useEffect(() => {
     setBillingInspectionId(inspectionId);
-    setChargeLookupDone(false);
   }, [inspectionId]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    if (!active) return;
-    const timer = window.setInterval(() => void load(), 30_000);
-    return () => window.clearInterval(timer);
-  }, [active, load]);
-
   const payNow = useCallback(async () => {
-    let linked = charge;
-    if (!linked || linked.status !== 'awaiting_payment') {
-      linked = await load();
-    }
-    if (!linked) {
-      toast.error(
-        'Could not prepare payment for this inspection. Try Refresh, or check the Bill page shortly.',
-      );
-      return;
-    }
-    if (linked.status !== 'awaiting_payment') {
-      toast.message(
-        linked.status === 'paid'
-          ? 'This inspection is already paid.'
-          : 'This inspection is billed to your monthly invoice.',
-      );
-      return;
-    }
-
     setPaying(true);
     try {
+      let linked = charge;
+      if (!linked || linked.status !== 'awaiting_payment') {
+        const prepared = await prepareInspectionPlatformCharge(chargeArgs());
+        if (prepared.billingInspectionId !== billingInspectionId) {
+          setBillingInspectionId(prepared.billingInspectionId);
+        }
+        linked = prepared.charge;
+        setCharge(linked);
+      }
+
+      if (!linked) {
+        toast.error(
+          'Could not prepare payment for this inspection. Try again or pay from the Bill page.',
+        );
+        return;
+      }
+
+      if (linked.status === 'paid') {
+        toast.success('This inspection is already paid.');
+        return;
+      }
+
+      if (linked.status !== 'awaiting_payment') {
+        toast.message('This inspection is billed to your monthly invoice.');
+        return;
+      }
+
       const result = await payAgentBillingCharge(linked.id, { devConfirm: false });
       const label = SERVICE_LABEL[linked.serviceType] ?? 'Inspection';
       const outcome = resolvePaymentFlow(
@@ -177,47 +165,12 @@ export function InspectionPlatformPaymentPrompt({
     } finally {
       setPaying(false);
     }
-  }, [charge, load, summary?.defaultPaymentMethod]);
+  }, [billingInspectionId, charge, chargeArgs, load, summary?.defaultPaymentMethod]);
 
   useEffect(() => {
     setPaymentDialog(null);
     setPaying(false);
   }, [inspectionId, billingInspectionId]);
-
-  /** Open payment when the case is opened and the inspection is still unpaid. */
-  useEffect(() => {
-    if (!active || !autoOpenPayment || loading || paying || paymentDialog != null) return;
-    if (!charge || charge.status !== 'awaiting_payment') return;
-    if (!isAwaitingPrepaidPayment(charge, summary, loading)) return;
-    void payNow();
-  }, [
-    active,
-    autoOpenPayment,
-    charge?.id,
-    charge?.status,
-    inspectionId,
-    isAwaitingPrepaidPayment,
-    loading,
-    payNow,
-    paymentDialog,
-    paying,
-    summary,
-  ]);
-
-  const handlePaymentDialogOpenChange = useCallback(
-    (open: boolean) => {
-      if (open) return;
-      setPaymentDialog(null);
-      if (!autoOpenPayment || paying) return;
-      void (async () => {
-        const linked = await load();
-        if (linked?.status === 'awaiting_payment') {
-          window.setTimeout(() => void payNow(), 200);
-        }
-      })();
-    },
-    [autoOpenPayment, load, payNow, paying],
-  );
 
   if (!active) return null;
 
@@ -238,7 +191,10 @@ export function InspectionPlatformPaymentPrompt({
   }
 
   const collectionMode = summary?.inspectionsCollectionMode;
-  const prepaidAgency = isPrepaidAgency(summary, loading);
+  const prepaidAgency =
+    collectionMode === 'prepaid' ||
+    summary?.prepaidEnabled === true ||
+    (!summary && !loading);
   const postpaidAgency = collectionMode === 'postpaid';
 
   if (summary && !prepaidAgency && !postpaidAgency) {
@@ -286,8 +242,6 @@ export function InspectionPlatformPaymentPrompt({
 
   if (!awaitingPrepaid) return null;
 
-  const chargeUnavailable = chargeLookupDone && !loading && !charge;
-
   const paymentDialogOpen = paymentDialog != null;
 
   return (
@@ -303,40 +257,22 @@ export function InspectionPlatformPaymentPrompt({
             Payment required
           </p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            {chargeUnavailable ? (
-              <>
-                The inspector has accepted this job. Your saved card should be charged
-                automatically — we could not load the fee yet. Try Refresh, or check the{' '}
-                <Link href="/bill" className="text-primary font-medium hover:underline">
-                  Bill
-                </Link>{' '}
-                page.
-              </>
-            ) : (
-              <>
-                The inspector has accepted this job. We charge your saved card automatically
-                {charge ? ` (${formatCurrency(charge.amount)})` : ''}. If confirmation is needed,
-                payment will open here.
-              </>
-            )}
+            The inspector has accepted this job. Pay the platform fee
+            {charge ? ` (${formatCurrency(charge.amount)})` : ''} to continue. Unpaid fees also
+            appear on the{' '}
+            <Link href="/bill" className="text-primary font-medium hover:underline">
+              Bill
+            </Link>{' '}
+            page.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => void (charge ? payNow() : load())}
-              disabled={paying || loading}
-            >
-              {paying || loading ? (
+            <Button type="button" size="sm" onClick={() => void payNow()} disabled={paying || loading}>
+              {paying ? (
                 <Loader2 className="size-3.5 animate-spin" />
               ) : (
                 <CreditCard className="size-3.5" />
               )}
-              {charge
-                ? `Pay ${formatCurrency(charge.amount)}`
-                : chargeUnavailable
-                  ? 'Retry payment setup'
-                  : 'Open payment'}
+              {charge ? `Pay ${formatCurrency(charge.amount)}` : 'Pay now'}
             </Button>
             <Button
               type="button"
@@ -360,7 +296,7 @@ export function InspectionPlatformPaymentPrompt({
         >
           <div className="text-muted-foreground flex items-center gap-2">
             <Loader2 className="size-4 animate-spin" />
-            Opening payment…
+            Preparing payment…
           </div>
         </section>
       ) : null}
@@ -369,7 +305,9 @@ export function InspectionPlatformPaymentPrompt({
         stacked
         state={paymentDialog}
         open={paymentDialogOpen}
-        onOpenChange={handlePaymentDialogOpenChange}
+        onOpenChange={(open) => {
+          if (!open) setPaymentDialog(null);
+        }}
         onSuccess={() => void load()}
       />
     </>

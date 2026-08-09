@@ -56,9 +56,43 @@ async function createMissingCharge(args: {
     } catch {
       /* quote with inspectionId may not exist on older API builds */
     }
+
+    try {
+      return await quoteAgentBillingCharge({
+        serviceType: SERVICE_TYPE[args.inspectionType],
+        propertyId: args.propertyId,
+      });
+    } catch {
+      /* property quote is the legacy fallback on staging */
+    }
   }
 
   return null;
+}
+
+/** Create a charge if needed, then return it (for manual Pay click). */
+export async function prepareInspectionPlatformCharge(args: {
+  inspectionId: string;
+  propertyId?: string;
+  viewingSessionId?: string;
+  inspectionType?: BillableInspectionType;
+  poolInspectionId?: string;
+}): Promise<{ charge: AgentBillingCharge | null; billingInspectionId: string }> {
+  const loaded = await loadInspectionPlatformCharge(args);
+  if (loaded.charge) return loaded;
+
+  const poolId =
+    loaded.billingInspectionId.trim() ||
+    args.poolInspectionId?.trim() ||
+    args.inspectionId.trim();
+
+  const created = await createMissingCharge({
+    poolInspectionId: poolId,
+    propertyId: args.propertyId,
+    inspectionType: args.inspectionType,
+  });
+
+  return { charge: created, billingInspectionId: poolId };
 }
 
 /** Load (and if needed create) the platform charge for an accepted inspection job. */
