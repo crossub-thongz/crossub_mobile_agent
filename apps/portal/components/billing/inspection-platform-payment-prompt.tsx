@@ -2,7 +2,7 @@
 
 import { CreditCard, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -47,13 +47,28 @@ export function InspectionPlatformPaymentPrompt({
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
-  const autoPaymentAttemptedRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const isPrepaidAgency = useCallback((billing: AgentBillingSummary | null, isLoading: boolean) => {
+    const collectionMode = billing?.inspectionsCollectionMode;
+    return (
+      collectionMode === 'prepaid' || billing?.prepaidEnabled === true || (!billing && !isLoading)
+    );
+  }, []);
+
+  const isAwaitingPrepaidPayment = useCallback(
+    (linked: AgentBillingCharge | null, billing: AgentBillingSummary | null, isLoading: boolean) => {
+      if (!isPrepaidAgency(billing, isLoading)) return false;
+      if (linked?.status === 'paid') return false;
+      return !linked || linked.status === 'awaiting_payment' || linked.collectionMode === 'prepaid';
+    },
+    [isPrepaidAgency],
+  );
+
+  const load = useCallback(async (): Promise<AgentBillingCharge | null> => {
     if (!active) {
       setCharge(null);
       setSummary(null);
-      return;
+      return null;
     }
     setLoading(true);
     try {
@@ -63,8 +78,10 @@ export function InspectionPlatformPaymentPrompt({
       ]);
       setSummary(billing);
       setCharge(linked);
+      return linked;
     } catch {
       setCharge(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -81,20 +98,22 @@ export function InspectionPlatformPaymentPrompt({
   }, [active, load]);
 
   const payNow = useCallback(async () => {
-    if (!charge || charge.status !== 'awaiting_payment') {
-      await load();
-      return;
+    let linked = charge;
+    if (!linked || linked.status !== 'awaiting_payment') {
+      linked = await load();
     }
+    if (!linked || linked.status !== 'awaiting_payment') return;
+
     setPaying(true);
     try {
-      const result = await payAgentBillingCharge(charge.id, { devConfirm: false });
-      const label = SERVICE_LABEL[charge.serviceType] ?? 'Inspection';
+      const result = await payAgentBillingCharge(linked.id, { devConfirm: false });
+      const label = SERVICE_LABEL[linked.serviceType] ?? 'Inspection';
       const outcome = resolvePaymentFlow(
         result,
         {
           title: `${label} — payment required`,
-          description: charge.description,
-          amountAud: charge.amount,
+          description: linked.description,
+          amountAud: linked.amount,
           defaultPaymentMethod: summary?.defaultPaymentMethod,
         },
         setPaymentDialog,
@@ -111,34 +130,44 @@ export function InspectionPlatformPaymentPrompt({
   }, [charge, load, summary?.defaultPaymentMethod]);
 
   useEffect(() => {
-    autoPaymentAttemptedRef.current = false;
+    setPaymentDialog(null);
+    setPaying(false);
   }, [inspectionId]);
 
+  /** Open payment when the case is opened and the inspection is still unpaid. */
   useEffect(() => {
-    if (!active || !autoOpenPayment) return;
-    if (autoPaymentAttemptedRef.current || paying || paymentDialog != null || loading) return;
-
-    const collectionMode = summary?.inspectionsCollectionMode;
-    const prepaidAgency =
-      collectionMode === 'prepaid' || summary?.prepaidEnabled === true || !summary;
-    const postpaidAgency = collectionMode === 'postpaid';
-
-    if (postpaidAgency || (summary && !prepaidAgency)) return;
-    if (charge?.status === 'paid') return;
+    if (!active || !autoOpenPayment || loading || paying || paymentDialog != null) return;
     if (!charge || charge.status !== 'awaiting_payment') return;
-
-    autoPaymentAttemptedRef.current = true;
+    if (!isAwaitingPrepaidPayment(charge, summary, loading)) return;
     void payNow();
   }, [
     active,
     autoOpenPayment,
-    charge,
+    charge?.id,
+    charge?.status,
+    inspectionId,
+    isAwaitingPrepaidPayment,
     loading,
     payNow,
     paymentDialog,
     paying,
     summary,
   ]);
+
+  const handlePaymentDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) return;
+      setPaymentDialog(null);
+      if (!autoOpenPayment || paying) return;
+      void (async () => {
+        const linked = await load();
+        if (linked?.status === 'awaiting_payment') {
+          window.setTimeout(() => void payNow(), 200);
+        }
+      })();
+    },
+    [autoOpenPayment, load, payNow, paying],
+  );
 
   if (!active) return null;
 
@@ -159,8 +188,7 @@ export function InspectionPlatformPaymentPrompt({
   }
 
   const collectionMode = summary?.inspectionsCollectionMode;
-  const prepaidAgency =
-    collectionMode === 'prepaid' || summary?.prepaidEnabled === true || (!summary && !loading);
+  const prepaidAgency = isPrepaidAgency(summary, loading);
   const postpaidAgency = collectionMode === 'postpaid';
 
   if (summary && !prepaidAgency && !postpaidAgency) {
@@ -278,9 +306,7 @@ export function InspectionPlatformPaymentPrompt({
         stacked
         state={paymentDialog}
         open={paymentDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) setPaymentDialog(null);
-        }}
+        onOpenChange={handlePaymentDialogOpenChange}
         onSuccess={() => void load()}
       />
     </>
