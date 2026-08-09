@@ -6,7 +6,10 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PageIntro } from '@/components/agent/page-intro';
-import { BillPricingSection } from '@/components/billing/bill-pricing-section';
+import {
+  PlatformChargeDetailDialog,
+  type PlatformChargeDetailDialogState,
+} from '@/components/billing/platform-charge-detail-dialog';
 import {
   StripePaymentDialog,
   type StripePaymentDialogState,
@@ -26,15 +29,11 @@ import {
   confirmAgentPaymentMethodSetup,
   createAgentPaymentMethodSetup,
   fetchAgentBillingSummary,
-  fetchAgentBillingPricing,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
-  payAgentBillingCharge,
-  payAgentMonthlyInvoice,
   payAllAgentBilling,
   type AgentBillingCharge,
   type AgentBillingMonthlyInvoice,
-  type AgentBillingPricingCatalog,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { getStripePublishableKey } from '@/lib/stripe-client';
@@ -89,13 +88,13 @@ function isPayableInvoice(row: AgentBillingMonthlyInvoice): boolean {
 
 export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
-  const [pricing, setPricing] = useState<AgentBillingPricingCatalog | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [payingKey, setPayingKey] = useState<string | null>(null);
   const [payingAll, setPayingAll] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const [chargeDialog, setChargeDialog] = useState<PlatformChargeDetailDialogState>(null);
   const [invoiceDialog, setInvoiceDialog] = useState<PlatformMonthlyInvoiceDialogState>(null);
   const [setupDialog, setSetupDialog] = useState<StripeSetupDialogState | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
@@ -118,14 +117,12 @@ export default function BillPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [billing, chargeRows, invoiceRows, pricingCatalog] = await Promise.all([
+      const [billing, chargeRows, invoiceRows] = await Promise.all([
         fetchAgentBillingSummary(),
         listAgentChargeHistory(),
         listAgentInvoiceHistory(),
-        fetchAgentBillingPricing().catch(() => null),
       ]);
       setSummary(billing);
-      setPricing(pricingCatalog);
       setCharges(chargeRows);
       setInvoices(invoiceRows);
     } catch (err) {
@@ -243,58 +240,6 @@ export default function BillPage() {
     }
   };
 
-  const payCharge = async (chargeId: string, row: AgentBillingCharge) => {
-    setPayingKey(`charge-${chargeId}`);
-    try {
-      const result = await payAgentBillingCharge(chargeId, { devConfirm: false });
-      const outcome = resolvePaymentFlow(
-        result,
-        {
-          title: serviceLabel(row.serviceType),
-          description: row.description,
-          amountAud: row.amount,
-          defaultPaymentMethod: summary?.defaultPaymentMethod,
-        },
-        setPaymentDialog,
-      );
-
-      if (outcome === 'complete') {
-        toast.success('Payment complete');
-        await load();
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Payment failed');
-    } finally {
-      setPayingKey(null);
-    }
-  };
-
-  const payInvoice = async (invoiceId: string, row: AgentBillingMonthlyInvoice) => {
-    setPayingKey(`invoice-${invoiceId}`);
-    try {
-      const result = await payAgentMonthlyInvoice(invoiceId, { devConfirm: false });
-      const outcome = resolvePaymentFlow(
-        result,
-        {
-          title: 'Monthly platform invoice',
-          description: row.invoiceNumber,
-          amountAud: row.amountDue,
-          defaultPaymentMethod: summary?.defaultPaymentMethod,
-        },
-        setPaymentDialog,
-      );
-
-      if (outcome === 'complete') {
-        toast.success('Invoice paid');
-        await load();
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Payment failed');
-    } finally {
-      setPayingKey(null);
-    }
-  };
-
   return (
     <AgentShell title="Bill">
       <div className="space-y-5">
@@ -317,8 +262,6 @@ export default function BillPage() {
             </div>
           </div>
         ) : null}
-
-        {pricing ? <BillPricingSection catalog={pricing} /> : null}
 
         {stripeConfigured ? (
           <div className="rounded-xl border bg-card p-4">
@@ -467,20 +410,24 @@ export default function BillPage() {
                       <p className="text-sm font-semibold tabular-nums">
                         {formatCurrency(row.amount)}
                       </p>
-                      {payable ? (
+                      <div className="flex flex-wrap justify-end gap-2">
                         <Button
                           size="sm"
-                          onClick={() => void payCharge(row.id, row)}
-                          disabled={payingKey === entry.id || paymentDialog != null}
+                          variant={payable ? 'default' : 'outline'}
+                          onClick={() =>
+                            setChargeDialog({
+                              charge: row,
+                              defaultPaymentMethod: summary?.defaultPaymentMethod,
+                            })
+                          }
+                          disabled={paymentDialog != null || chargeDialog != null}
                         >
-                          {payingKey === entry.id ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : (
+                          {payable ? (
                             <CreditCard className="size-3.5" />
-                          )}
-                          Pay
+                          ) : null}
+                          View bill
                         </Button>
-                      ) : null}
+                      </div>
                     </div>
                   </li>
                 );
@@ -516,26 +463,18 @@ export default function BillPage() {
                     <div className="flex flex-wrap justify-end gap-2">
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => setInvoiceDialog({ invoice: row })}
-                        disabled={paymentDialog != null}
+                        variant={payable ? 'default' : 'outline'}
+                        onClick={() =>
+                          setInvoiceDialog({
+                            invoice: row,
+                            defaultPaymentMethod: summary?.defaultPaymentMethod,
+                          })
+                        }
+                        disabled={paymentDialog != null || invoiceDialog != null}
                       >
+                        {payable ? <CreditCard className="size-3.5" /> : null}
                         View invoice
                       </Button>
-                      {payable ? (
-                        <Button
-                          size="sm"
-                          onClick={() => void payInvoice(row.id, row)}
-                          disabled={payingKey === entry.id || paymentDialog != null}
-                        >
-                          {payingKey === entry.id ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : (
-                            <CreditCard className="size-3.5" />
-                          )}
-                          Pay invoice
-                        </Button>
-                      ) : null}
                     </div>
                   </div>
                 </li>
@@ -544,6 +483,16 @@ export default function BillPage() {
           </ul>
         )}
       </div>
+
+      <PlatformChargeDetailDialog
+        state={chargeDialog}
+        onOpenChange={(open) => {
+          if (!open) setChargeDialog(null);
+        }}
+        onPaid={handlePaymentSuccess}
+        paymentDialog={paymentDialog}
+        setPaymentDialog={setPaymentDialog}
+      />
 
       <StripePaymentDialog
         state={paymentDialog}
@@ -558,6 +507,9 @@ export default function BillPage() {
         onOpenChange={(open) => {
           if (!open) setInvoiceDialog(null);
         }}
+        onPaid={handlePaymentSuccess}
+        paymentDialog={paymentDialog}
+        setPaymentDialog={setPaymentDialog}
       />
 
       <StripeSetupDialog

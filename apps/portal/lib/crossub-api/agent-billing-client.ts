@@ -12,6 +12,8 @@ export type AgentBillingCharge = {
   paidAt?: string | null;
   createdAt: string;
   createdByName?: string | null;
+  calculationDetail?: string | null;
+  calculationSummary?: string | null;
 };
 
 export type AgentBillingSummary = {
@@ -155,6 +157,10 @@ export async function fetchAgentInspectionPlatformCharge(
   inspectionId: string,
 ): Promise<AgentBillingCharge | null> {
   return agentFetch(`/agent/billing/inspections/${encodeURIComponent(inspectionId)}/charge`);
+}
+
+export async function fetchAgentBillingCharge(chargeId: string): Promise<AgentBillingCharge> {
+  return agentFetch(`/agent/billing/charges/${encodeURIComponent(chargeId)}`);
 }
 
 export async function payAgentBillingCharge(

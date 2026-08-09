@@ -1,10 +1,11 @@
 'use client';
 
-import { Info, Loader2 } from 'lucide-react';
+import { CreditCard, Info, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { BillPricingSection } from '@/components/billing/bill-pricing-section';
+import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
+import type { StripePaymentDialogState } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,11 +15,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  fetchAgentBillingPricing,
   fetchAgentMonthlyInvoice,
+  payAgentMonthlyInvoice,
+  type AgentBillingDefaultPaymentMethod,
   type AgentBillingMonthlyInvoice,
   type AgentBillingMonthlyInvoiceDetail,
-  type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -42,41 +43,41 @@ function serviceLabel(raw: string): string {
 
 export type PlatformMonthlyInvoiceDialogState = {
   invoice: AgentBillingMonthlyInvoice;
+  defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
 } | null;
 
 type PlatformMonthlyInvoiceDialogProps = {
   state: PlatformMonthlyInvoiceDialogState;
   onOpenChange: (open: boolean) => void;
+  onPaid: () => void | Promise<void>;
+  paymentDialog: StripePaymentDialogState | null;
+  setPaymentDialog: (state: StripePaymentDialogState | null) => void;
 };
 
 export function PlatformMonthlyInvoiceDialog({
   state,
   onOpenChange,
+  onPaid,
+  paymentDialog,
+  setPaymentDialog,
 }: PlatformMonthlyInvoiceDialogProps) {
   const [detail, setDetail] = useState<AgentBillingMonthlyInvoiceDetail | null>(null);
-  const [pricing, setPricing] = useState<AgentBillingPricingCatalog | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const invoiceId = state?.invoice.id;
 
   useEffect(() => {
     if (!invoiceId) {
       setDetail(null);
-      setPricing(null);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
-    void Promise.all([
-      fetchAgentMonthlyInvoice(invoiceId),
-      fetchAgentBillingPricing().catch(() => null),
-    ])
-      .then(([row, catalog]) => {
-        if (!cancelled) {
-          setDetail(row);
-          setPricing(catalog);
-        }
+    void fetchAgentMonthlyInvoice(invoiceId)
+      .then((row) => {
+        if (!cancelled) setDetail(row);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -101,6 +102,35 @@ export function PlatformMonthlyInvoiceDialog({
   const invoice = state?.invoice;
   const showFeeBreakdown =
     (detail?.serviceChargesSubtotal ?? 0) > 0 || (detail?.serviceFeeAmount ?? 0) > 0;
+  const payable = detail?.status === 'sent' || detail?.status === 'overdue';
+
+  const pay = async () => {
+    if (!invoice || !payable) return;
+    setPaying(true);
+    try {
+      const result = await payAgentMonthlyInvoice(invoice.id, { devConfirm: false });
+      const outcome = resolvePaymentFlow(
+        result,
+        {
+          title: 'Monthly platform invoice',
+          description: invoice.invoiceNumber,
+          amountAud: invoice.amountDue,
+          defaultPaymentMethod: state?.defaultPaymentMethod,
+        },
+        setPaymentDialog,
+      );
+
+      if (outcome === 'complete') {
+        toast.success('Invoice paid');
+        await onPaid();
+        onOpenChange(false);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setPaying(false);
+    }
+  };
 
   return (
     <Dialog open={state != null} onOpenChange={onOpenChange}>
@@ -243,15 +273,27 @@ export function PlatformMonthlyInvoiceDialog({
                 </span>
               </div>
             ) : null}
-
-            {pricing ? <BillPricingSection catalog={pricing} /> : null}
           </div>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
+          {payable && detail ? (
+            <Button
+              type="button"
+              onClick={() => void pay()}
+              disabled={paying || paymentDialog != null}
+            >
+              {paying ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CreditCard className="size-4" />
+              )}
+              Pay {formatCurrency(detail.amountDue)}
+            </Button>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
