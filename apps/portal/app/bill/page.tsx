@@ -38,7 +38,7 @@ import {
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { getStripePublishableKey } from '@/lib/stripe-client';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 type PaymentRow =
   | { kind: 'charge'; id: string; sortAt: string; row: AgentBillingCharge }
@@ -64,7 +64,7 @@ const STATUS_TONE: Record<string, string> = {
 
 function formatWhen(iso: string | null | undefined): string {
   if (!iso) return '—';
-  return new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium' }).format(new Date(iso));
+  return formatDate(iso);
 }
 
 function serviceLabel(raw: string): string {
@@ -169,13 +169,13 @@ export default function BillPage() {
       ...charges.map((row) => ({
         kind: 'charge' as const,
         id: `charge-${row.id}`,
-        sortAt: row.paidAt ?? row.createdAt,
+        sortAt: row.createdAt,
         row,
       })),
       ...invoices.map((row) => ({
         kind: 'invoice' as const,
         id: `invoice-${row.id}`,
-        sortAt: row.paidAt ?? row.dueDate ?? row.periodEnd,
+        sortAt: row.periodEnd,
         row,
       })),
     ];
@@ -409,7 +409,7 @@ export default function BillPage() {
                         {[
                           row.createdByName ? `Created by ${row.createdByName}` : null,
                           row.paidAt
-                            ? `Paid ${formatWhen(row.paidAt)}`
+                            ? `Paid ${formatDateTime(row.paidAt)}`
                             : `Created ${formatWhen(row.createdAt)}`,
                         ]
                           .filter(Boolean)
@@ -463,7 +463,7 @@ export default function BillPage() {
                     <p className="text-muted-foreground mt-1 text-xs">
                       {formatWhen(row.periodStart)} – {formatWhen(row.periodEnd)}
                       {row.dueDate ? ` · due ${formatWhen(row.dueDate)}` : null}
-                      {row.paidAt ? ` · paid ${formatWhen(row.paidAt)}` : null}
+                      {row.paidAt ? ` · paid ${formatDateTime(row.paidAt)}` : null}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">

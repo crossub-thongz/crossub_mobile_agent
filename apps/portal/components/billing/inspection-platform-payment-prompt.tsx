@@ -23,7 +23,7 @@ import {
   type AgentBillingCharge,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
@@ -252,7 +252,8 @@ export function InspectionPlatformPaymentPrompt({
       >
         <p className="font-medium text-emerald-800 dark:text-emerald-200">Inspection paid</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          {formatCurrency(charge.amount)} received for this job.
+          {formatCurrency(charge.amount)} received for this job
+          {charge.paidAt ? ` · ${formatDateTime(charge.paidAt)}` : ''}.
         </p>
       </section>
     );

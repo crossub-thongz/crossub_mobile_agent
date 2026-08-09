@@ -3,7 +3,6 @@ import { resolveBillingInspectionId } from '@/lib/billing/resolve-billing-inspec
 import {
   ensureAgentInspectionPlatformCharge,
   fetchAgentInspectionPlatformCharge,
-  listAgentChargeHistory,
   quoteAgentBillingCharge,
   type AgentBillingCharge,
 } from '@/lib/crossub-api/agent-billing-client';
@@ -28,32 +27,6 @@ async function fetchChargeByIds(candidateIds: string[]): Promise<AgentBillingCha
     if (linked) return linked;
   }
   return null;
-}
-
-/** Match charges that were quoted without a linked inspection id (legacy staging). */
-async function findChargeFromHistory(args: {
-  propertyId?: string;
-  inspectionType?: BillableInspectionType;
-}): Promise<AgentBillingCharge | null> {
-  if (!args.propertyId || !args.inspectionType) return null;
-
-  const serviceType = SERVICE_TYPE[args.inspectionType];
-  try {
-    const history = await listAgentChargeHistory();
-    const matches = history.filter(
-      (row) => row.propertyId === args.propertyId && row.serviceType === serviceType,
-    );
-    if (matches.length === 0) return null;
-
-    const paid = matches.find((row) => row.status === 'paid');
-    if (paid) return paid;
-
-    return matches.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )[0] ?? null;
-  } catch {
-    return null;
-  }
 }
 
 async function createMissingCharge(args: {
@@ -112,7 +85,11 @@ export async function prepareInspectionPlatformCharge(args: {
   return { charge: created, billingInspectionId: poolId };
 }
 
-/** Load the platform charge for an accepted inspection job (read-only — no charge creation). */
+/**
+ * Load the platform charge linked to this inspection job.
+ * Only returns a charge when the API links it via sourceRef — never guesses from
+ * other bills on the same property (that caused false "Inspection paid" banners).
+ */
 export async function loadInspectionPlatformCharge(args: {
   inspectionId: string;
   propertyId?: string;
@@ -121,13 +98,6 @@ export async function loadInspectionPlatformCharge(args: {
   /** When known, skip session→pool resolution. */
   poolInspectionId?: string;
 }): Promise<{ charge: AgentBillingCharge | null; billingInspectionId: string }> {
-  // Triggers inspector-accept charge sweep on API builds that support it.
-  try {
-    await listAgentChargeHistory();
-  } catch {
-    /* non-fatal */
-  }
-
   let billingInspectionId =
     args.poolInspectionId?.trim() ||
     (await resolveBillingInspectionId({
@@ -143,12 +113,7 @@ export async function loadInspectionPlatformCharge(args: {
     args.viewingSessionId ?? '',
   ];
 
-  let charge =
-    (await fetchChargeByIds(candidateIds)) ??
-    (await findChargeFromHistory({
-      propertyId: args.propertyId,
-      inspectionType: args.inspectionType,
-    }));
+  let charge = await fetchChargeByIds(candidateIds);
 
   if (!charge) {
     const retried = await resolveBillingInspectionId({
@@ -159,12 +124,7 @@ export async function loadInspectionPlatformCharge(args: {
     });
     if (retried && retried !== billingInspectionId) {
       billingInspectionId = retried;
-      charge =
-        (await fetchChargeByIds([retried, ...candidateIds])) ??
-        (await findChargeFromHistory({
-          propertyId: args.propertyId,
-          inspectionType: args.inspectionType,
-        }));
+      charge = await fetchChargeByIds([retried, ...candidateIds]);
     }
   }
 
