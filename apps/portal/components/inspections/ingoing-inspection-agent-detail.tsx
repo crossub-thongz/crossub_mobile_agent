@@ -379,8 +379,8 @@ export function IngoingInspectionAgentDetail({
         onUpdated={refreshSnapshot}
       />
 
-      {!loading && accepted ? (
-        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active={accepted} />
+      {!loading && gateStatus === 'scheduled' ? (
+        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
       ) : null}
 
       <section className="rounded-2xl border bg-card p-3">

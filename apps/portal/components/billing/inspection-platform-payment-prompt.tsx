@@ -29,7 +29,7 @@ const SERVICE_LABEL: Record<string, string> = {
 
 type InspectionPlatformPaymentPromptProps = {
   inspectionId: string;
-  /** When false, skip polling (e.g. job still pending acceptance). */
+  /** When true, show in-case payment (inspector accepted, job not yet complete). */
   active: boolean;
   className?: string;
 };
@@ -89,6 +89,7 @@ export function InspectionPlatformPaymentPrompt({
             title: `${label} — payment required`,
             description: charge.description,
             amountAud: charge.amount,
+            defaultPaymentMethod: summary?.defaultPaymentMethod,
           },
           setPaymentDialog,
         );
@@ -175,11 +176,12 @@ export function InspectionPlatformPaymentPrompt({
         </p>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
           The inspector has accepted this job. Pay the platform fee ({formatCurrency(charge!.amount)}
-          ) to continue — or pay later from the{' '}
+          ) while this case is in progress. If you skip payment here, any outstanding balance will
+          appear on the{' '}
           <Link href="/bill" className="text-primary font-medium hover:underline">
             Bill
           </Link>{' '}
-          page.
+          page once the job is complete.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button

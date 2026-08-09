@@ -2,7 +2,7 @@
 
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { CreditCard, Loader2, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import type { AgentBillingDefaultPaymentMethod } from '@/lib/crossub-api/agent-billing-client';
 import {
   getStripeBillingAppearance,
   STRIPE_BILLING_CONFIRM_PARAMS,
@@ -26,6 +27,9 @@ export type StripePaymentDialogState = {
   title: string;
   description?: string;
   amountAud: number;
+  defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
+  customerSessionClientSecret?: string | null;
+  preferSavedCard?: boolean;
 };
 
 type PaymentFormProps = {
@@ -33,6 +37,14 @@ type PaymentFormProps = {
   onSuccess: () => void | Promise<void>;
   onCancel: () => void;
 };
+
+function formatCardBrand(brand: string): string {
+  return brand.charAt(0).toUpperCase() + brand.slice(1);
+}
+
+function formatCardExpiry(expMonth: number, expYear: number): string {
+  return `${String(expMonth).padStart(2, '0')}/${String(expYear).slice(-2)}`;
+}
 
 function PaymentForm({ amountAud, onSuccess, onCancel }: PaymentFormProps) {
   const stripe = useStripe();
@@ -135,6 +147,135 @@ function PaymentForm({ amountAud, onSuccess, onCancel }: PaymentFormProps) {
   );
 }
 
+type SavedCardPaymentFormProps = {
+  amountAud: number;
+  clientSecret: string;
+  defaultPaymentMethod: AgentBillingDefaultPaymentMethod;
+  onSuccess: () => void | Promise<void>;
+  onCancel: () => void;
+  onUseDifferentCard: () => void;
+};
+
+function SavedCardPaymentForm({
+  amountAud,
+  clientSecret,
+  defaultPaymentMethod,
+  onSuccess,
+  onCancel,
+  onUseDifferentCard,
+}: SavedCardPaymentFormProps) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const payWithSavedCard = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const stripe = await getStripe();
+      if (!stripe) {
+        setError('Card payments are not configured on this environment.');
+        return;
+      }
+
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        clientSecret,
+        confirmParams: {
+          payment_method: defaultPaymentMethod.id,
+          return_url: `${window.location.origin}/bill?payment=return`,
+          ...STRIPE_BILLING_CONFIRM_PARAMS,
+        },
+        redirect: 'if_required',
+      });
+
+      if (confirmError) {
+        setError(confirmError.message ?? 'Payment failed');
+        return;
+      }
+
+      if (
+        paymentIntent?.status === 'succeeded' ||
+        paymentIntent?.status === 'processing'
+      ) {
+        await onSuccess();
+        onCancel();
+        return;
+      }
+
+      setError(
+        paymentIntent?.status
+          ? `Payment did not complete (${paymentIntent.status}). Try again.`
+          : 'Payment did not complete. Try again.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            Amount due
+          </p>
+          <p className="mt-0.5 text-2xl font-semibold tabular-nums">{formatCurrency(amountAud)}</p>
+        </div>
+
+        <div className="rounded-xl border bg-muted/25 p-4">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            Saved payment method
+          </p>
+          <p className="mt-2 text-sm font-semibold">
+            {formatCardBrand(defaultPaymentMethod.brand)} ending in {defaultPaymentMethod.last4}
+          </p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Expires {formatCardExpiry(defaultPaymentMethod.expMonth, defaultPaymentMethod.expYear)}
+          </p>
+        </div>
+
+        <div className="text-muted-foreground mt-4 flex items-start gap-2 text-xs leading-relaxed">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+          <span>Your saved card will be charged securely through Stripe.</span>
+        </div>
+
+        {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
+      </div>
+
+      <DialogFooter className="flex-col gap-2 border-t px-6 py-4 sm:flex-row sm:gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          className="order-3 w-full sm:order-1 sm:mr-auto sm:w-auto"
+          onClick={onUseDifferentCard}
+          disabled={submitting}
+        >
+          Use a different card
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="order-2 w-full sm:w-auto"
+          onClick={onCancel}
+          disabled={submitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          className="order-1 w-full sm:order-3 sm:w-auto"
+          onClick={() => void payWithSavedCard()}
+          disabled={submitting}
+        >
+          {submitting ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
+          Pay {formatCurrency(amountAud)}
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
 type StripePaymentDialogProps = {
   state: StripePaymentDialogState | null;
   onOpenChange: (open: boolean) => void;
@@ -144,6 +285,16 @@ type StripePaymentDialogProps = {
 export function StripePaymentDialog({ state, onOpenChange, onSuccess }: StripePaymentDialogProps) {
   const publishableKey = getStripePublishableKey();
   const open = state != null;
+  const [useAlternateCard, setUseAlternateCard] = useState(false);
+
+  useEffect(() => {
+    if (!open) setUseAlternateCard(false);
+  }, [open, state?.clientSecret]);
+
+  const showSavedCard =
+    Boolean(state?.defaultPaymentMethod?.id) &&
+    state?.preferSavedCard !== false &&
+    !useAlternateCard;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -159,7 +310,7 @@ export function StripePaymentDialog({ state, onOpenChange, onSuccess }: StripePa
             <DialogDescription className="text-sm leading-relaxed">{state.description}</DialogDescription>
           ) : (
             <DialogDescription className="text-sm leading-relaxed">
-              Enter your card details to complete this platform bill payment.
+              Complete this platform bill payment with your saved card or enter new card details.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -168,13 +319,25 @@ export function StripePaymentDialog({ state, onOpenChange, onSuccess }: StripePa
           <p className="text-destructive px-6 py-5 text-sm">
             Card payments are not configured on this environment. Contact CROSSUB support.
           </p>
+        ) : state?.clientSecret && showSavedCard && state.defaultPaymentMethod ? (
+          <SavedCardPaymentForm
+            amountAud={state.amountAud}
+            clientSecret={state.clientSecret}
+            defaultPaymentMethod={state.defaultPaymentMethod}
+            onSuccess={onSuccess}
+            onCancel={() => onOpenChange(false)}
+            onUseDifferentCard={() => setUseAlternateCard(true)}
+          />
         ) : state?.clientSecret ? (
           <Elements
-            key={state.clientSecret}
+            key={`${state.clientSecret}:${state.customerSessionClientSecret ?? 'none'}:${useAlternateCard ? 'alt' : 'default'}`}
             stripe={getStripe()}
             options={{
               clientSecret: state.clientSecret,
               appearance: getStripeBillingAppearance(),
+              ...(state.customerSessionClientSecret
+                ? { customerSessionClientSecret: state.customerSessionClientSecret }
+                : {}),
             }}
           >
             <PaymentForm

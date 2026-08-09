@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
 import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { RoutineCaseStatusSection } from '@/components/inspections/routine-case-status-section';
@@ -100,6 +101,7 @@ import {
 import { mapInspectionRecordToView, mapOpenSessionToInspection, caseAuditToTimeline } from '@/lib/inspection-mappers';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { RoutineFlow } from '@/lib/routine/routine-case-status';
+import { inspectorHasAcceptedJob } from '@/lib/ingoing-inspection-display';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -415,6 +417,12 @@ export function InspectionDetailView({
     (insp.apiStatus === 'CANCELLED' ||
       insp.status === 'Cancelled' ||
       routineInspectionRecord?.status === 'CANCELLED');
+  const routineInPersonInProgress =
+    insp.type === 'ROUTINE' &&
+    routineFlow === 'in_person' &&
+    !routineCompletedAt &&
+    !isCancelledRoutine &&
+    inspectorHasAcceptedJob(routineInspectionRecord, insp);
   const routineReportInspectionId =
     routineInspectionRecord?.id ??
     routineSchedule?.currentInspectionId ??
@@ -778,6 +786,10 @@ export function InspectionDetailView({
             <InfoRow label="Next due" value={formatDateTime(insp.nextDueDate)} icon={Calendar} />
           )}
         </InfoSection>
+      ) : null}
+
+      {routineInPersonInProgress ? (
+        <InspectionPlatformPaymentPrompt inspectionId={insp.id} active />
       ) : null}
 
       {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (

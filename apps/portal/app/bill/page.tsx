@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PageIntro } from '@/components/agent/page-intro';
+import { BillPricingSection } from '@/components/billing/bill-pricing-section';
 import {
   StripePaymentDialog,
   type StripePaymentDialogState,
@@ -25,6 +26,7 @@ import {
   confirmAgentPaymentMethodSetup,
   createAgentPaymentMethodSetup,
   fetchAgentBillingSummary,
+  fetchAgentBillingPricing,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
   payAgentBillingCharge,
@@ -32,6 +34,7 @@ import {
   payAllAgentBilling,
   type AgentBillingCharge,
   type AgentBillingMonthlyInvoice,
+  type AgentBillingPricingCatalog,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { getStripePublishableKey } from '@/lib/stripe-client';
@@ -86,6 +89,7 @@ function isPayableInvoice(row: AgentBillingMonthlyInvoice): boolean {
 
 export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
+  const [pricing, setPricing] = useState<AgentBillingPricingCatalog | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,12 +118,14 @@ export default function BillPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [billing, chargeRows, invoiceRows] = await Promise.all([
+      const [billing, chargeRows, invoiceRows, pricingCatalog] = await Promise.all([
         fetchAgentBillingSummary(),
         listAgentChargeHistory(),
         listAgentInvoiceHistory(),
+        fetchAgentBillingPricing().catch(() => null),
       ]);
       setSummary(billing);
+      setPricing(pricingCatalog);
       setCharges(chargeRows);
       setInvoices(invoiceRows);
     } catch (err) {
@@ -219,6 +225,7 @@ export default function BillPage() {
           title: 'Pay all outstanding bills',
           description: `${outstandingCount} bill(s) · ${formatCurrency(result.totalAmountAud)}`,
           amountAud: result.totalAmountAud,
+          defaultPaymentMethod: summary?.defaultPaymentMethod,
         },
         setPaymentDialog,
       );
@@ -246,6 +253,7 @@ export default function BillPage() {
           title: serviceLabel(row.serviceType),
           description: row.description,
           amountAud: row.amount,
+          defaultPaymentMethod: summary?.defaultPaymentMethod,
         },
         setPaymentDialog,
       );
@@ -271,6 +279,7 @@ export default function BillPage() {
           title: 'Monthly platform invoice',
           description: row.invoiceNumber,
           amountAud: row.amountDue,
+          defaultPaymentMethod: summary?.defaultPaymentMethod,
         },
         setPaymentDialog,
       );
@@ -308,6 +317,8 @@ export default function BillPage() {
             </div>
           </div>
         ) : null}
+
+        {pricing ? <BillPricingSection catalog={pricing} /> : null}
 
         {stripeConfigured ? (
           <div className="rounded-xl border bg-card p-4">

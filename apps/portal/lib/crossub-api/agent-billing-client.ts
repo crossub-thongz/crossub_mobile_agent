@@ -29,6 +29,7 @@ export type AgentBillingSummary = {
 };
 
 export type AgentBillingDefaultPaymentMethod = {
+  id: string;
   brand: string;
   last4: string;
   expMonth: number;

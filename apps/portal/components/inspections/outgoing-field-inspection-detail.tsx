@@ -54,6 +54,7 @@ import {
   type AgentOutgoingGateStatus,
 } from '@/lib/outgoing-inspection-display';
 import { terminationApi } from '@/lib/termination-case-api';
+import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -395,6 +396,10 @@ export function OutgoingFieldInspectionDetail({
         agentAcknowledged={agentAcknowledged}
         onUpdated={refresh}
       />
+
+      {!loading && gateStatus === 'scheduled' ? (
+        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active />
+      ) : null}
 
       <section className="rounded-2xl border bg-card p-3">
         <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
