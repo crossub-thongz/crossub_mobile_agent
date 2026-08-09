@@ -36,6 +36,7 @@ type PaymentFormProps = {
   amountAud: number;
   onSuccess: () => void | Promise<void>;
   onCancel: () => void;
+  onUseSavedCard?: () => void;
 };
 
 function formatCardBrand(brand: string): string {
@@ -46,7 +47,7 @@ function formatCardExpiry(expMonth: number, expYear: number): string {
   return `${String(expMonth).padStart(2, '0')}/${String(expYear).slice(-2)}`;
 }
 
-function PaymentForm({ amountAud, onSuccess, onCancel }: PaymentFormProps) {
+function PaymentForm({ amountAud, onSuccess, onCancel, onUseSavedCard }: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -117,6 +118,17 @@ function PaymentForm({ amountAud, onSuccess, onCancel }: PaymentFormProps) {
             '[&_.StripeElement]:min-h-[280px]',
           )}
         >
+          {onUseSavedCard ? (
+            <div className="mb-3 flex justify-end border-b pb-3">
+              <button
+                type="button"
+                className="text-primary text-xs font-medium hover:underline"
+                onClick={onUseSavedCard}
+              >
+                Back to saved card
+              </button>
+            </div>
+          ) : null}
           <PaymentElement options={STRIPE_BILLING_PAYMENT_ELEMENT_OPTIONS} />
         </div>
 
@@ -154,6 +166,7 @@ type SavedCardPaymentFormProps = {
   onSuccess: () => void | Promise<void>;
   onCancel: () => void;
   onUseDifferentCard: () => void;
+  onChangePaymentMethod?: () => void | Promise<void>;
 };
 
 function SavedCardPaymentForm({
@@ -163,6 +176,7 @@ function SavedCardPaymentForm({
   onSuccess,
   onCancel,
   onUseDifferentCard,
+  onChangePaymentMethod,
 }: SavedCardPaymentFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -223,15 +237,40 @@ function SavedCardPaymentForm({
         </div>
 
         <div className="rounded-xl border bg-muted/25 p-4">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Saved payment method
-          </p>
-          <p className="mt-2 text-sm font-semibold">
-            {formatCardBrand(defaultPaymentMethod.brand)} ending in {defaultPaymentMethod.last4}
-          </p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Expires {formatCardExpiry(defaultPaymentMethod.expMonth, defaultPaymentMethod.expYear)}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                Saved payment method
+              </p>
+              <p className="mt-2 text-sm font-semibold">
+                {formatCardBrand(defaultPaymentMethod.brand)} ending in {defaultPaymentMethod.last4}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Expires {formatCardExpiry(defaultPaymentMethod.expMonth, defaultPaymentMethod.expYear)}
+              </p>
+            </div>
+            <CreditCard className="size-5 shrink-0 text-muted-foreground" />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t pt-3">
+            {onChangePaymentMethod ? (
+              <button
+                type="button"
+                className="text-primary text-xs font-medium hover:underline disabled:opacity-50"
+                onClick={() => void onChangePaymentMethod()}
+                disabled={submitting}
+              >
+                Change saved card
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="text-primary text-xs font-medium hover:underline disabled:opacity-50"
+              onClick={onUseDifferentCard}
+              disabled={submitting}
+            >
+              Use another card for this payment
+            </button>
+          </div>
         </div>
 
         <div className="text-muted-foreground mt-4 flex items-start gap-2 text-xs leading-relaxed">
@@ -242,20 +281,11 @@ function SavedCardPaymentForm({
         {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
       </div>
 
-      <DialogFooter className="flex-col gap-2 border-t px-6 py-4 sm:flex-row sm:gap-3">
-        <Button
-          type="button"
-          variant="ghost"
-          className="order-3 w-full sm:order-1 sm:mr-auto sm:w-auto"
-          onClick={onUseDifferentCard}
-          disabled={submitting}
-        >
-          Use a different card
-        </Button>
+      <DialogFooter className="gap-2 border-t px-6 py-4 sm:gap-3">
         <Button
           type="button"
           variant="outline"
-          className="order-2 w-full sm:w-auto"
+          className="w-full sm:w-auto"
           onClick={onCancel}
           disabled={submitting}
         >
@@ -263,7 +293,7 @@ function SavedCardPaymentForm({
         </Button>
         <Button
           type="button"
-          className="order-1 w-full sm:order-3 sm:w-auto"
+          className="w-full sm:w-auto"
           onClick={() => void payWithSavedCard()}
           disabled={submitting}
         >
@@ -277,18 +307,27 @@ function SavedCardPaymentForm({
 
 type StripePaymentDialogProps = {
   state: StripePaymentDialogState | null;
+  /** When false, keeps state but hides the dialog (e.g. while updating saved card). */
+  open?: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void | Promise<void>;
+  onChangePaymentMethod?: () => void | Promise<void>;
 };
 
-export function StripePaymentDialog({ state, onOpenChange, onSuccess }: StripePaymentDialogProps) {
+export function StripePaymentDialog({
+  state,
+  open: openOverride,
+  onOpenChange,
+  onSuccess,
+  onChangePaymentMethod,
+}: StripePaymentDialogProps) {
   const publishableKey = getStripePublishableKey();
-  const open = state != null;
+  const open = openOverride ?? state != null;
   const [useAlternateCard, setUseAlternateCard] = useState(false);
 
   useEffect(() => {
     if (!open) setUseAlternateCard(false);
-  }, [open, state?.clientSecret]);
+  }, [open, state?.clientSecret, state?.defaultPaymentMethod?.id]);
 
   const showSavedCard =
     Boolean(state?.defaultPaymentMethod?.id) &&
@@ -327,6 +366,7 @@ export function StripePaymentDialog({ state, onOpenChange, onSuccess }: StripePa
             onSuccess={onSuccess}
             onCancel={() => onOpenChange(false)}
             onUseDifferentCard={() => setUseAlternateCard(true)}
+            onChangePaymentMethod={onChangePaymentMethod}
           />
         ) : state?.clientSecret ? (
           <Elements
@@ -344,6 +384,9 @@ export function StripePaymentDialog({ state, onOpenChange, onSuccess }: StripePa
               amountAud={state.amountAud}
               onSuccess={onSuccess}
               onCancel={() => onOpenChange(false)}
+              onUseSavedCard={
+                state.defaultPaymentMethod?.id ? () => setUseAlternateCard(false) : undefined
+              }
             />
           </Elements>
         ) : null}

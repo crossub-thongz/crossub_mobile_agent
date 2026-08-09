@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 
 export type StripeSetupDialogState = {
   clientSecret: string;
+  mode?: 'add' | 'update';
 };
 
 type SetupFormProps = {
@@ -122,7 +123,7 @@ function SetupForm({ onSuccess, onCancel }: SetupFormProps) {
         </Button>
         <Button type="submit" className="w-full sm:w-auto" disabled={!stripe || !elements || submitting}>
           {submitting ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
-          Save payment method
+          Save {state?.mode === 'update' ? 'new card' : 'payment method'}
         </Button>
       </DialogFooter>
     </form>
@@ -149,10 +150,13 @@ export function StripeSetupDialog({ state, onOpenChange, onSuccess }: StripeSetu
         )}
       >
         <DialogHeader className="space-y-2 border-b px-6 py-5 text-left">
-          <DialogTitle className="text-xl">Add payment method</DialogTitle>
+          <DialogTitle className="text-xl">
+            {state?.mode === 'update' ? 'Update payment method' : 'Add payment method'}
+          </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            Save a default card for CROSSUB platform bills — inspections, tribunal, and monthly
-            invoices.
+            {state?.mode === 'update'
+              ? 'Replace your default card for CROSSUB platform bills — inspections, tribunal, and monthly invoices.'
+              : 'Save a default card for CROSSUB platform bills — inspections, tribunal, and monthly invoices.'}
           </DialogDescription>
         </DialogHeader>
 

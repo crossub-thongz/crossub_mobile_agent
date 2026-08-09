@@ -192,10 +192,20 @@ export default function BillPage() {
 
   const handlePaymentMethodSuccess = async () => {
     toast.success('Default payment method saved');
-    await load();
+    const billing = await fetchAgentBillingSummary();
+    setSummary(billing);
+    setPaymentDialog((prev) =>
+      prev
+        ? {
+            ...prev,
+            defaultPaymentMethod: billing.defaultPaymentMethod ?? null,
+            preferSavedCard: true,
+          }
+        : null,
+    );
   };
 
-  const startAddPaymentMethod = async () => {
+  const startAddPaymentMethod = async (mode: 'add' | 'update' = 'add') => {
     if (!stripeConfigured) {
       toast.error('Card payments are not configured on this environment.');
       return;
@@ -204,7 +214,7 @@ export default function BillPage() {
     setSavingPaymentMethod(true);
     try {
       const { clientSecret } = await createAgentPaymentMethodSetup();
-      setSetupDialog({ clientSecret });
+      setSetupDialog({ clientSecret, mode });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not start payment method setup');
     } finally {
@@ -294,7 +304,7 @@ export default function BillPage() {
                 type="button"
                 variant={summary?.defaultPaymentMethod ? 'outline' : 'default'}
                 size="sm"
-                onClick={() => void startAddPaymentMethod()}
+                onClick={() => void startAddPaymentMethod(summary?.defaultPaymentMethod ? 'update' : 'add')}
                 disabled={
                   savingPaymentMethod ||
                   paymentDialog != null ||
@@ -496,9 +506,13 @@ export default function BillPage() {
 
       <StripePaymentDialog
         state={paymentDialog}
+        open={paymentDialog != null && setupDialog == null}
         onOpenChange={(open) => {
           if (!open) setPaymentDialog(null);
         }}
+        onChangePaymentMethod={() =>
+          void startAddPaymentMethod(paymentDialog?.defaultPaymentMethod ? 'update' : 'add')
+        }
         onSuccess={async () => {
           setChargeDialog(null);
           setInvoiceDialog(null);
@@ -521,7 +535,10 @@ export default function BillPage() {
         onOpenChange={(open) => {
           if (!open) setSetupDialog(null);
         }}
-        onSuccess={handlePaymentMethodSuccess}
+        onSuccess={async () => {
+          await handlePaymentMethodSuccess();
+          await load();
+        }}
       />
     </AgentShell>
   );
