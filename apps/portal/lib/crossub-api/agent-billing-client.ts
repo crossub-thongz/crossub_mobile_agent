@@ -98,11 +98,16 @@ export type AgentBillingMonthlyInvoiceLineItem = {
   description: string;
   amount: number;
   createdByName?: string | null;
+  calculationDetail?: string | null;
 };
 
 export type AgentBillingMonthlyInvoiceDetail = AgentBillingMonthlyInvoice & {
   periodToken?: string;
   serviceFeePercent?: number;
+  serviceFeeAmount?: number;
+  serviceChargesSubtotal?: number;
+  gstPercent?: number;
+  calculationSummary?: string;
   lineItems: AgentBillingMonthlyInvoiceLineItem[];
 };
 

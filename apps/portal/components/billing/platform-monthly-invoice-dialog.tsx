@@ -1,9 +1,10 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Info, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { BillPricingSection } from '@/components/billing/bill-pricing-section';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,9 +14,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  fetchAgentBillingPricing,
   fetchAgentMonthlyInvoice,
   type AgentBillingMonthlyInvoice,
   type AgentBillingMonthlyInvoiceDetail,
+  type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -51,6 +54,7 @@ export function PlatformMonthlyInvoiceDialog({
   onOpenChange,
 }: PlatformMonthlyInvoiceDialogProps) {
   const [detail, setDetail] = useState<AgentBillingMonthlyInvoiceDetail | null>(null);
+  const [pricing, setPricing] = useState<AgentBillingPricingCatalog | null>(null);
   const [loading, setLoading] = useState(false);
 
   const invoiceId = state?.invoice.id;
@@ -58,14 +62,21 @@ export function PlatformMonthlyInvoiceDialog({
   useEffect(() => {
     if (!invoiceId) {
       setDetail(null);
+      setPricing(null);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
-    void fetchAgentMonthlyInvoice(invoiceId)
-      .then((row) => {
-        if (!cancelled) setDetail(row);
+    void Promise.all([
+      fetchAgentMonthlyInvoice(invoiceId),
+      fetchAgentBillingPricing().catch(() => null),
+    ])
+      .then(([row, catalog]) => {
+        if (!cancelled) {
+          setDetail(row);
+          setPricing(catalog);
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -88,10 +99,12 @@ export function PlatformMonthlyInvoiceDialog({
   );
 
   const invoice = state?.invoice;
+  const showFeeBreakdown =
+    (detail?.serviceChargesSubtotal ?? 0) > 0 || (detail?.serviceFeeAmount ?? 0) > 0;
 
   return (
     <Dialog open={state != null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" elevated>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
         <DialogHeader>
           <DialogTitle>Monthly platform invoice</DialogTitle>
           <DialogDescription>
@@ -129,13 +142,56 @@ export function PlatformMonthlyInvoiceDialog({
                   <span className="font-medium">{formatWhen(detail.paidAt)}</span>
                 </div>
               ) : null}
-              {detail.serviceFeePercent != null ? (
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Full Service fee rate</span>
-                  <span className="font-medium">{detail.serviceFeePercent}% of management income</span>
-                </div>
-              ) : null}
             </div>
+
+            {detail.calculationSummary ? (
+              <div className="flex gap-3 rounded-lg border border-sky-500/25 bg-sky-500/5 p-3 text-sm">
+                <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-300" />
+                <div>
+                  <p className="font-medium">How this invoice is calculated</p>
+                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                    {detail.calculationSummary}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {showFeeBreakdown ? (
+              <div className="rounded-lg border bg-card p-3 text-sm">
+                <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+                  Invoice breakdown
+                </p>
+                <div className="space-y-1.5">
+                  {(detail.serviceChargesSubtotal ?? 0) > 0 ? (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">Inspection & tribunal charges</span>
+                      <span className="font-medium tabular-nums">
+                        {formatCurrency(detail.serviceChargesSubtotal ?? 0)}
+                      </span>
+                    </div>
+                  ) : null}
+                  {(detail.serviceFeeAmount ?? 0) > 0 ? (
+                    <div className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        Full Service fee
+                        {detail.serviceFeePercent != null
+                          ? ` (${detail.serviceFeePercent}% of management income)`
+                          : null}
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {formatCurrency(detail.serviceFeeAmount ?? 0)}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between gap-3 border-t pt-2 font-semibold">
+                    <span>{detail.status === 'paid' ? 'Total paid' : 'Total due'}</span>
+                    <span className="tabular-nums">
+                      {formatCurrency(detail.status === 'paid' ? lineTotal : detail.amountDue)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -150,6 +206,11 @@ export function PlatformMonthlyInvoiceDialog({
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{serviceLabel(row.serviceType)}</p>
                         <p className="text-muted-foreground mt-0.5 text-xs">{row.description}</p>
+                        {row.calculationDetail ? (
+                          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                            {row.calculationDetail}
+                          </p>
+                        ) : null}
                         {row.createdByName ? (
                           <p className="text-muted-foreground mt-0.5 text-xs">
                             Created by {row.createdByName}
@@ -165,21 +226,25 @@ export function PlatformMonthlyInvoiceDialog({
               )}
             </div>
 
-            <div
-              className={cn(
-                'flex items-center justify-between rounded-lg border px-3 py-2',
-                detail.status === 'paid'
-                  ? 'border-emerald-500/30 bg-emerald-500/10'
-                  : 'border-border bg-card',
-              )}
-            >
-              <span className="text-sm font-medium">
-                {detail.status === 'paid' ? 'Amount paid' : 'Amount due'}
-              </span>
-              <span className="text-base font-semibold tabular-nums">
-                {formatCurrency(detail.status === 'paid' ? lineTotal : detail.amountDue)}
-              </span>
-            </div>
+            {!showFeeBreakdown ? (
+              <div
+                className={cn(
+                  'flex items-center justify-between rounded-lg border px-3 py-2',
+                  detail.status === 'paid'
+                    ? 'border-emerald-500/30 bg-emerald-500/10'
+                    : 'border-border bg-card',
+                )}
+              >
+                <span className="text-sm font-medium">
+                  {detail.status === 'paid' ? 'Amount paid' : 'Amount due'}
+                </span>
+                <span className="text-base font-semibold tabular-nums">
+                  {formatCurrency(detail.status === 'paid' ? lineTotal : detail.amountDue)}
+                </span>
+              </div>
+            ) : null}
+
+            {pricing ? <BillPricingSection catalog={pricing} /> : null}
           </div>
         )}
 
