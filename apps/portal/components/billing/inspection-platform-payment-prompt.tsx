@@ -10,11 +10,11 @@ import {
   type StripePaymentDialogState,
 } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
-import { resolveBillingInspectionId, type BillableInspectionType } from '@/lib/billing/resolve-billing-inspection-id';
+import { loadInspectionPlatformCharge } from '@/lib/billing/load-inspection-platform-charge';
+import type { BillableInspectionType } from '@/lib/billing/resolve-billing-inspection-id';
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import {
   fetchAgentBillingSummary,
-  fetchAgentInspectionPlatformChargeResolved,
   payAgentBillingCharge,
   type AgentBillingCharge,
   type AgentBillingSummary,
@@ -30,6 +30,8 @@ const SERVICE_LABEL: Record<string, string> = {
 
 type InspectionPlatformPaymentPromptProps = {
   inspectionId: string;
+  /** Known pool inspection row id (preferred for billing lookups). */
+  poolInspectionId?: string;
   /** Resolves the pool inspection row when the initial id is a viewing session id. */
   propertyId?: string;
   /** Open-viewing session id when the job case uses session id as its primary key. */
@@ -44,6 +46,7 @@ type InspectionPlatformPaymentPromptProps = {
 
 export function InspectionPlatformPaymentPrompt({
   inspectionId,
+  poolInspectionId,
   propertyId,
   viewingSessionId,
   inspectionType,
@@ -91,37 +94,14 @@ export function InspectionPlatformPaymentPrompt({
       const billing = await fetchAgentBillingSummary();
       setSummary(billing);
 
-      let resolvedId = await resolveBillingInspectionId({
-        inspectionId: billingInspectionId.trim() || inspectionId.trim(),
-        propertyId,
-        viewingSessionId,
-        inspectionType,
-      });
-
-      const chargeCandidates = [
-        resolvedId,
-        billingInspectionId,
-        inspectionId,
-        viewingSessionId ?? '',
-      ];
-
-      let linked = await fetchAgentInspectionPlatformChargeResolved(chargeCandidates);
-
-      if (!linked && resolvedId) {
-        const retried = await resolveBillingInspectionId({
-          inspectionId: '',
+      const { charge: linked, billingInspectionId: resolvedId } =
+        await loadInspectionPlatformCharge({
+          inspectionId: billingInspectionId.trim() || inspectionId.trim(),
+          poolInspectionId: poolInspectionId ?? billingInspectionId,
           propertyId,
           viewingSessionId,
           inspectionType,
         });
-        if (retried && retried !== resolvedId) {
-          resolvedId = retried;
-          linked = await fetchAgentInspectionPlatformChargeResolved([
-            retried,
-            ...chargeCandidates,
-          ]);
-        }
-      }
 
       if (resolvedId !== billingInspectionId) {
         setBillingInspectionId(resolvedId);
@@ -137,7 +117,7 @@ export function InspectionPlatformPaymentPrompt({
     } finally {
       setLoading(false);
     }
-  }, [active, billingInspectionId, inspectionId, inspectionType, propertyId, viewingSessionId]);
+  }, [active, billingInspectionId, inspectionId, inspectionType, poolInspectionId, propertyId, viewingSessionId]);
 
   useEffect(() => {
     setBillingInspectionId(inspectionId);

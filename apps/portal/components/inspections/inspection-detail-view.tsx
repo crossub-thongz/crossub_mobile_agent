@@ -534,6 +534,7 @@ export function InspectionDetailView({
       {insp.type === 'OPEN' && openPlatformPaymentActive ? (
         <InspectionPlatformPaymentPrompt
           inspectionId={openBillingInspectionId ?? insp.id}
+          poolInspectionId={openBillingInspectionId ?? undefined}
           propertyId={insp.propertyId}
           viewingSessionId={isOpenViewingSource ? insp.id : openSession?.id}
           inspectionType="OPEN"

@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { resolveOpenBillingInspectionId } from '@/lib/billing/resolve-open-billing-inspection-id';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { inspectionsApi } from '@/lib/inspections-api';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import { resolveOpenPoolInspectionId } from '@/lib/open-inspection/linked-case-history';
-import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import { mergeOpenInspectionSessionPoll } from '@/lib/open-inspection-session-sync';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { useLivePoll } from '@/lib/use-live-poll';
@@ -21,11 +21,27 @@ async function resolvePoolInspectionIdForOpenCase(args: {
   const direct = resolveOpenPoolInspectionId(args);
   if (direct) return direct;
 
+  const sessionId =
+    args.openSession?.id?.trim() ??
+    (args.isViewingSessionSource ? args.focusInspectionId?.trim() : null);
   const propertyId = args.openSession?.propertyId ?? args.leasingDetail?.propertyId;
-  if (!propertyId) return null;
+  if (!sessionId) return null;
 
-  const pooled = await fetchLatestOpenPoolInspection(propertyId);
-  return pooled?.id ?? null;
+  const pooled = await resolveOpenBillingInspectionId({
+    inspectionId: sessionId,
+    propertyId,
+    viewingSessionId: sessionId,
+  });
+  if (!pooled || pooled === sessionId) return null;
+
+  try {
+    const record = await inspectionsApi.get(pooled);
+    if (record?.id?.trim()) return record.id.trim();
+  } catch {
+    return pooled;
+  }
+
+  return null;
 }
 
 /** Load viewing session + pool inspection rows for open-case email history. */

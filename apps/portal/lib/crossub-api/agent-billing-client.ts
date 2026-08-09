@@ -133,6 +133,8 @@ export type AgentBillingQuoteInput = {
   propertyId: string;
   leasingCycleId?: string;
   pricingContext?: Record<string, unknown>;
+  /** Pool inspection row — links quote to a specific job when supported by the API. */
+  inspectionId?: string;
 };
 
 export async function fetchAgentBillingSummary(): Promise<AgentBillingSummary> {
