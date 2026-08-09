@@ -55,3 +55,14 @@ export const STRIPE_BILLING_PAYMENT_ELEMENT_OPTIONS: StripePaymentElementOptions
     },
   },
 };
+
+/** Required when `fields.billingDetails.address.country` is `never` (AU platform billing). */
+export const STRIPE_BILLING_CONFIRM_PARAMS = {
+  payment_method_data: {
+    billing_details: {
+      address: {
+        country: 'AU',
+      },
+    },
+  },
+} as const;

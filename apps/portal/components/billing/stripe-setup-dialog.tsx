@@ -16,6 +16,7 @@ import {
 import { confirmAgentPaymentMethodSetup } from '@/lib/crossub-api/agent-billing-client';
 import {
   getStripeBillingAppearance,
+  STRIPE_BILLING_CONFIRM_PARAMS,
   STRIPE_BILLING_PAYMENT_ELEMENT_OPTIONS,
 } from '@/lib/stripe-elements-config';
 import { getStripe, getStripePublishableKey } from '@/lib/stripe-client';
@@ -54,6 +55,7 @@ function SetupForm({ onSuccess, onCancel }: SetupFormProps) {
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/bill?setup=return`,
+          ...STRIPE_BILLING_CONFIRM_PARAMS,
         },
         redirect: 'if_required',
       });

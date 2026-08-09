@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   getStripeBillingAppearance,
+  STRIPE_BILLING_CONFIRM_PARAMS,
   STRIPE_BILLING_PAYMENT_ELEMENT_OPTIONS,
 } from '@/lib/stripe-elements-config';
 import { getStripe, getStripePublishableKey } from '@/lib/stripe-client';
@@ -57,6 +58,7 @@ function PaymentForm({ amountAud, onSuccess, onCancel }: PaymentFormProps) {
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/bill?payment=return`,
+          ...STRIPE_BILLING_CONFIRM_PARAMS,
         },
         redirect: 'if_required',
       });

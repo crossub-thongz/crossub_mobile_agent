@@ -406,6 +406,7 @@ export function PropertyFeesTab({
             forceShow
             compact
             managementRatePercent={managementRatePercent}
+            managementRateGst={property.managementRateGst}
             weeklyRentAud={property.rentWeekly}
           />
         </div>
@@ -547,11 +548,13 @@ export function PropertyFeesTab({
 
       <CrossubPlatformFeeSummaryRow
         managementRatePercent={managementRatePercent}
+        managementRateGst={property.managementRateGst}
         weeklyRentAud={property.rentWeekly}
       />
       <CrossubServiceFeeNotice
         forceShow
         managementRatePercent={managementRatePercent}
+        managementRateGst={property.managementRateGst}
         weeklyRentAud={property.rentWeekly}
       />
 

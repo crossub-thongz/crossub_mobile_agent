@@ -134,7 +134,7 @@ export const EMPTY_MANAGEMENT_DETAILS: ManagementDetailsValues = {
   managementRatePercent: '',
   managementRateGst: '',
   fees: [
-    { id: 'fee-management', feeType: 'management_fee', valueMode: 'rate', amount: '4', gst: '' },
+    { id: 'fee-management', feeType: 'management_fee', valueMode: 'rate', amount: '4', gst: 'include' },
     { id: 'fee-letting', feeType: 'letting_fee', valueMode: 'amount', amount: '', gst: '' },
     { id: 'fee-admin', feeType: 'administration_fee', valueMode: 'rate', amount: '', gst: '' },
   ],
@@ -224,6 +224,10 @@ export function PropertyManagementFeesSection({
 }) {
   const managementFeeRow = values.fees.find((row) => row.feeType === 'management_fee');
   const managementRateRaw = managementFeeRow?.amount || values.managementRatePercent;
+  const managementRateGst =
+    managementFeeRow?.gst === 'include' || managementFeeRow?.gst === 'exclude'
+      ? managementFeeRow.gst
+      : values.managementRateGst;
   const updateFee = (id: string, patch: Partial<ManagementFeeRow>) => {
     onChange({
       fees: values.fees.map((row) => (row.id === id ? { ...row, ...patch } : row)),
@@ -267,6 +271,7 @@ export function PropertyManagementFeesSection({
                   ? Number(managementRateRaw.replace(/,/g, ''))
                   : null
               }
+              managementRateGst={managementRateGst}
               weeklyRentAud={weeklyRentAud}
             />
           </div>
@@ -416,6 +421,7 @@ export function PropertyManagementFeesSection({
                   ? Number(managementRateRaw.replace(/,/g, ''))
                   : null
               }
+              managementRateGst={managementRateGst}
               weeklyRentAud={weeklyRentAud}
             />
           </div>
@@ -426,6 +432,7 @@ export function PropertyManagementFeesSection({
         managementRatePercent={
           managementRateRaw.trim() ? Number(managementRateRaw.replace(/,/g, '')) : null
         }
+        managementRateGst={managementRateGst}
         weeklyRentAud={weeklyRentAud}
       />
     </div>
