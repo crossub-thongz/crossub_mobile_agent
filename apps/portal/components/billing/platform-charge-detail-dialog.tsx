@@ -127,7 +127,13 @@ export function PlatformChargeDetailDialog({
 
   return (
     <>
-      <Dialog open={state != null} onOpenChange={onOpenChange}>
+      <Dialog
+        open={state != null && paymentDialog == null}
+        onOpenChange={(open) => {
+          if (!open && paymentDialog != null) return;
+          onOpenChange(open);
+        }}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" elevated>
           <DialogHeader>
             <DialogTitle>{row ? serviceLabel(row.serviceType) : 'Platform bill'}</DialogTitle>

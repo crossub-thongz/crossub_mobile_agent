@@ -133,7 +133,13 @@ export function PlatformMonthlyInvoiceDialog({
   };
 
   return (
-    <Dialog open={state != null} onOpenChange={onOpenChange}>
+    <Dialog
+      open={state != null && paymentDialog == null}
+      onOpenChange={(open) => {
+        if (!open && paymentDialog != null) return;
+        onOpenChange(open);
+      }}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
         <DialogHeader>
           <DialogTitle>Monthly platform invoice</DialogTitle>

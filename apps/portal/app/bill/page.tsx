@@ -499,7 +499,11 @@ export default function BillPage() {
         onOpenChange={(open) => {
           if (!open) setPaymentDialog(null);
         }}
-        onSuccess={handlePaymentSuccess}
+        onSuccess={async () => {
+          setChargeDialog(null);
+          setInvoiceDialog(null);
+          await handlePaymentSuccess();
+        }}
       />
 
       <PlatformMonthlyInvoiceDialog
