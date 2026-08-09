@@ -54,6 +54,7 @@ import {
   type AgentIngoingGateStatus,
 } from '@/lib/ingoing-inspection-display';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
+import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
 import type { InspectionDetail, InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
@@ -377,6 +378,10 @@ export function IngoingInspectionAgentDetail({
         leasingTenantApproved={leasingTenantApproved}
         onUpdated={refreshSnapshot}
       />
+
+      {!loading && accepted ? (
+        <InspectionPlatformPaymentPrompt inspectionId={inspection.id} active={accepted} />
+      ) : null}
 
       <section className="rounded-2xl border bg-card p-3">
         <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">

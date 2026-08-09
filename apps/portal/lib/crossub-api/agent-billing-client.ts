@@ -145,6 +145,12 @@ export async function quoteAgentBillingCharge(
   return result.charge;
 }
 
+export async function fetchAgentInspectionPlatformCharge(
+  inspectionId: string,
+): Promise<AgentBillingCharge | null> {
+  return agentFetch(`/agent/billing/inspections/${encodeURIComponent(inspectionId)}/charge`);
+}
+
 export async function payAgentBillingCharge(
   chargeId: string,
   opts?: { devConfirm?: boolean },
