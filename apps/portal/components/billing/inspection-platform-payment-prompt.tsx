@@ -108,7 +108,7 @@ export function InspectionPlatformPaymentPrompt({
 
   if (!active) return null;
 
-  if (loading && !summary) {
+  if (loading && !summary && !charge) {
     return (
       <section
         className={cn(
@@ -124,11 +124,16 @@ export function InspectionPlatformPaymentPrompt({
     );
   }
 
-  if (!summary?.prepaidEnabled && summary?.inspectionsCollectionMode !== 'postpaid') {
+  const collectionMode = summary?.inspectionsCollectionMode;
+  const prepaidAgency =
+    collectionMode === 'prepaid' || summary?.prepaidEnabled === true || (!summary && !loading);
+  const postpaidAgency = collectionMode === 'postpaid';
+
+  if (summary && !prepaidAgency && !postpaidAgency) {
     return null;
   }
 
-  if (summary.inspectionsCollectionMode === 'postpaid') {
+  if (postpaidAgency) {
     if (charge?.status === 'accrued') {
       return (
         <section

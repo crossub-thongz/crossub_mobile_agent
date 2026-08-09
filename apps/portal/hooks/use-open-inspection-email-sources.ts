@@ -6,12 +6,27 @@ import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { inspectionsApi } from '@/lib/inspections-api';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
-import {
-  resolveOpenPoolInspectionId,
-} from '@/lib/open-inspection/linked-case-history';
+import { resolveOpenPoolInspectionId } from '@/lib/open-inspection/linked-case-history';
+import { fetchLatestOpenPoolInspection } from '@/lib/open-inspection-resolve';
 import { mergeOpenInspectionSessionPoll } from '@/lib/open-inspection-session-sync';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { useLivePoll } from '@/lib/use-live-poll';
+
+async function resolvePoolInspectionIdForOpenCase(args: {
+  leasingDetail?: LeasingPropertyDetail | null;
+  openSession?: OpenInspectionSession | null;
+  focusInspectionId?: string | null;
+  isViewingSessionSource?: boolean;
+}): Promise<string | null> {
+  const direct = resolveOpenPoolInspectionId(args);
+  if (direct) return direct;
+
+  const propertyId = args.openSession?.propertyId ?? args.leasingDetail?.propertyId;
+  if (!propertyId) return null;
+
+  const pooled = await fetchLatestOpenPoolInspection(propertyId);
+  return pooled?.id ?? null;
+}
 
 /** Load viewing session + pool inspection rows for open-case email history. */
 export function useOpenInspectionEmailSources(args: {
@@ -24,6 +39,7 @@ export function useOpenInspectionEmailSources(args: {
 }) {
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [poolInspectionRecord, setPoolInspectionRecord] = useState<InspectionRecord | null>(null);
+  const [resolvedPoolInspectionId, setResolvedPoolInspectionId] = useState<string | null>(null);
 
   const openSessionId = useMemo(() => {
     if (!args.enabled) return null;
@@ -40,63 +56,80 @@ export function useOpenInspectionEmailSources(args: {
     args.leasingDetail?.openInspection?.viewingSessionId,
   ]);
 
-  const poolInspectionId = useMemo(
-    () =>
-      args.enabled
-        ? resolveOpenPoolInspectionId({
-            leasingDetail: args.leasingDetail,
-            openSession,
-            focusInspectionId: args.focusInspectionId,
-            isViewingSessionSource: args.isViewingSessionSource,
-          })
-        : null,
-    [
-      args.enabled,
-      args.focusInspectionId,
-      args.isViewingSessionSource,
-      args.leasingDetail,
-      openSession,
-    ],
-  );
+  const poolInspectionId = useMemo(() => {
+    if (!args.enabled) return null;
+    return (
+      resolvedPoolInspectionId ??
+      resolveOpenPoolInspectionId({
+        leasingDetail: args.leasingDetail,
+        openSession,
+        focusInspectionId: args.focusInspectionId,
+        isViewingSessionSource: args.isViewingSessionSource,
+      })
+    );
+  }, [
+    args.enabled,
+    args.focusInspectionId,
+    args.isViewingSessionSource,
+    args.leasingDetail,
+    openSession,
+    resolvedPoolInspectionId,
+  ]);
 
-  const syncOpenSession = useCallback(async () => {
-    if (!args.apiConnected || !openSessionId) {
+  const syncAll = useCallback(async () => {
+    if (!args.enabled) {
       setOpenSession(null);
+      setPoolInspectionRecord(null);
+      setResolvedPoolInspectionId(null);
       return;
     }
-    try {
-      const session = await openViewingsApi.get(openSessionId);
-      setOpenSession((previous) => mergeOpenInspectionSessionPoll(previous, session));
-    } catch {
-      /* keep last good session on transient poll errors */
-    }
-  }, [args.apiConnected, openSessionId]);
 
-  const syncPoolInspectionRecord = useCallback(async () => {
-    if (!args.apiConnected || !poolInspectionId) {
+    let session: OpenInspectionSession | null = null;
+    if (args.apiConnected && openSessionId) {
+      try {
+        session = await openViewingsApi.get(openSessionId);
+        setOpenSession((previous) => mergeOpenInspectionSessionPoll(previous, session!));
+      } catch {
+        /* keep last good session on transient poll errors */
+      }
+    } else {
+      setOpenSession(null);
+    }
+
+    const poolId = args.apiConnected
+      ? await resolvePoolInspectionIdForOpenCase({
+          leasingDetail: args.leasingDetail,
+          openSession: session ?? openSession,
+          focusInspectionId: args.focusInspectionId,
+          isViewingSessionSource: args.isViewingSessionSource,
+        })
+      : null;
+    setResolvedPoolInspectionId(poolId);
+
+    if (!args.apiConnected || !poolId) {
       setPoolInspectionRecord(null);
       return;
     }
+
     try {
-      const record = await inspectionsApi.get(poolInspectionId);
+      const record = await inspectionsApi.get(poolId);
       setPoolInspectionRecord(record);
     } catch {
       /* keep last good record on transient poll errors */
     }
-  }, [args.apiConnected, poolInspectionId]);
-
-  const syncAll = useCallback(async () => {
-    await Promise.all([syncOpenSession(), syncPoolInspectionRecord()]);
-  }, [syncOpenSession, syncPoolInspectionRecord]);
+  }, [
+    args.apiConnected,
+    args.enabled,
+    args.focusInspectionId,
+    args.isViewingSessionSource,
+    args.leasingDetail,
+    openSession,
+    openSessionId,
+  ]);
 
   useEffect(() => {
-    if (!args.enabled) {
-      setOpenSession(null);
-      setPoolInspectionRecord(null);
-      return;
-    }
     void syncAll();
-  }, [args.enabled, syncAll]);
+  }, [syncAll]);
 
   useLivePoll(syncAll, Boolean(args.poll && args.enabled && args.apiConnected));
 

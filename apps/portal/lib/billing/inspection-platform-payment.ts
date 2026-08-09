@@ -13,14 +13,24 @@ import type { Inspection } from '@/lib/types';
 
 type FieldInspectionGateStatus = AgentIngoingGateStatus;
 
-/** Ingoing / outgoing: inspector accepted, job still in progress. */
+/** Mirrors backend inspectorAcceptanceTriggersBilling — assign or accept. */
+export function inspectorBillingEligible(
+  record: InspectionRecord | null,
+  inspection?: Inspection | null,
+): boolean {
+  if (inspectorHasAcceptedJob(record, inspection ?? null)) return true;
+  if (record?.assignedInspectorId && record?.inspectorAssignedAt) return true;
+  return false;
+}
+
+/** Ingoing / outgoing: inspector accepted (or assigned for billing), job still in progress. */
 export function isFieldInspectionPlatformPaymentActive(args: {
   gateStatus: FieldInspectionGateStatus;
   record: InspectionRecord | null;
   inspection?: Inspection | null;
 }): boolean {
   if (args.gateStatus === 'completed') return false;
-  if (inspectorHasAcceptedJob(args.record, args.inspection ?? null)) return true;
+  if (inspectorBillingEligible(args.record, args.inspection ?? null)) return true;
   return args.gateStatus === 'scheduled';
 }
 
@@ -48,7 +58,7 @@ export function isRoutinePlatformPaymentActive(args: {
     args.routineFlow === 'in_person' &&
     !args.routineCompletedAt &&
     !args.isCancelledRoutine &&
-    inspectorHasAcceptedJob(args.routineInspectionRecord, args.inspection)
+    inspectorBillingEligible(args.routineInspectionRecord, args.inspection)
   );
 }
 
@@ -64,12 +74,13 @@ export function resolveOpenPlatformPaymentInspectionId(args: {
   return resolveOpenPoolInspectionId(args);
 }
 
-function openInspectorAcceptedForBilling(args: {
+function openInspectorBillingEligible(args: {
   poolInspectionRecord: InspectionRecord | null;
   inspection?: Inspection | null;
   leasingDetail?: LeasingPropertyDetail | null;
+  openSession?: OpenInspectionSession | null;
 }): boolean {
-  if (inspectorHasAcceptedJob(args.poolInspectionRecord, args.inspection ?? null)) {
+  if (inspectorBillingEligible(args.poolInspectionRecord, args.inspection ?? null)) {
     return true;
   }
 
@@ -78,11 +89,21 @@ function openInspectorAcceptedForBilling(args: {
     oi &&
     !oi.agentConducted &&
     oi.scheduledTime &&
-    isAssignedInspectorName(oi.inspectorName) &&
-    Boolean(oi.inspectionId?.trim())
+    isAssignedInspectorName(oi.inspectorName)
   ) {
-    // Leasing cycle already mirrors the pool row; show payment while the pool record poll catches up.
-    return args.poolInspectionRecord == null;
+    return true;
+  }
+
+  if (
+    args.openSession &&
+    isAssignedInspectorName(
+      args.leasingDetail?.openInspection?.inspectorName ??
+        args.poolInspectionRecord?.inspectorName ??
+        args.inspection?.inspector,
+    ) &&
+    Boolean(args.openSession.startTime)
+  ) {
+    return true;
   }
 
   return false;
@@ -93,12 +114,11 @@ export function isOpenPlatformPaymentActive(args: {
   isCrossubOpen: boolean;
   isSelfOpen: boolean;
   isDone: boolean;
-  poolInspectionId: string | null;
   poolInspectionRecord: InspectionRecord | null;
   inspection?: Inspection | null;
   leasingDetail?: LeasingPropertyDetail | null;
+  openSession?: OpenInspectionSession | null;
 }): boolean {
   if (!args.isCrossubOpen || args.isSelfOpen || args.isDone) return false;
-  if (!args.poolInspectionId) return false;
-  return openInspectorAcceptedForBilling(args);
+  return openInspectorBillingEligible(args);
 }

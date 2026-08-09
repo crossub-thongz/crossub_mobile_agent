@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, DoorOpen, ExternalLink } from 'lucide-react';
+import { CalendarClock, DoorOpen, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CreateInspectionWizard, type InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
@@ -135,11 +135,19 @@ export function LeasingStepOpenInspection({
     isCrossubOpen: crossubManagedOpen,
     isSelfOpen: oi.agentConducted,
     isDone: reportReady || oi.status === 'done',
-    poolInspectionId: openPoolInspectionId,
     poolInspectionRecord,
     inspection: linkedInspection ?? null,
     leasingDetail: detail,
+    openSession,
   });
+
+  const openBillingInspectionId =
+    openPoolInspectionId ??
+    poolInspectionRecord?.id ??
+    oi.inspectionId ??
+    openSession?.inspectionId ??
+    linkedInspection?.id ??
+    null;
   const isScheduled = Boolean(oi.scheduledTime ?? linkedInspection?.scheduledAt);
   const isRequested = !isScheduled && Boolean(oi.preferredScheduledTime || oi.preferredNotes);
   const crossubOrderPlaced =
@@ -294,8 +302,17 @@ export function LeasingStepOpenInspection({
 
   return (
     <div className="space-y-3">
-      {openPlatformPaymentActive && openPoolInspectionId ? (
-        <InspectionPlatformPaymentPrompt inspectionId={openPoolInspectionId} active />
+      {openPlatformPaymentActive && !openBillingInspectionId ? (
+        <section className="rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm">
+          <div className="text-muted-foreground flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin" />
+            Loading payment details…
+          </div>
+        </section>
+      ) : null}
+
+      {openPlatformPaymentActive && openBillingInspectionId ? (
+        <InspectionPlatformPaymentPrompt inspectionId={openBillingInspectionId} active />
       ) : null}
 
       {oi.agentConducted ? (
