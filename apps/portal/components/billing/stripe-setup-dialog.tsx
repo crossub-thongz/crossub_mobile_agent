@@ -142,6 +142,7 @@ export function StripeSetupDialog({ state, onOpenChange, onSuccess }: StripeSetu
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        stacked
         className={cn(
           'flex max-h-[min(92vh,820px)] flex-col gap-0 overflow-hidden p-0',
           'w-[calc(100%-1.5rem)] sm:max-w-xl',

@@ -45,18 +45,21 @@ function DialogContent({
   children,
   showCloseButton = true,
   elevated = false,
+  stacked = false,
   overlayClassName,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
   /** Stack above CaseDetailDialog (`z-[100]`) and other high z-index shells. */
   elevated?: boolean;
+  /** Stack above `elevated` dialogs (e.g. payment flow opened from a bill popup). */
+  stacked?: boolean;
   overlayClassName?: string;
 }) {
-  const z = elevated ? 'z-[110]' : 'z-50';
+  const z = stacked ? 'z-[120]' : elevated ? 'z-[110]' : 'z-50';
   return (
     <DialogPortal>
-      <DialogOverlay className={cn(elevated ? z : undefined, overlayClassName)} />
+      <DialogOverlay className={cn(stacked || elevated ? z : undefined, overlayClassName)} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
