@@ -46,30 +46,45 @@ function PaymentForm({ amountAud, onSuccess, onCancel }: PaymentFormProps) {
     setSubmitting(true);
     setError(null);
 
-    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/bill?payment=return`,
-      },
-      redirect: 'if_required',
-    });
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setError(submitError.message ?? 'Could not validate card details');
+        return;
+      }
 
-    if (confirmError) {
-      setError(confirmError.message ?? 'Payment failed');
+      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/bill?payment=return`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (confirmError) {
+        setError(confirmError.message ?? 'Payment failed');
+        return;
+      }
+
+      if (
+        paymentIntent?.status === 'succeeded' ||
+        paymentIntent?.status === 'processing'
+      ) {
+        await onSuccess();
+        onCancel();
+        return;
+      }
+
+      setError(
+        paymentIntent?.status
+          ? `Payment did not complete (${paymentIntent.status}). Try again.`
+          : 'Payment did not complete. Try again.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    if (
-      paymentIntent?.status === 'succeeded' ||
-      paymentIntent?.status === 'processing'
-    ) {
-      await onSuccess();
-      onCancel();
-      return;
-    }
-
-    setSubmitting(false);
   };
 
   return (

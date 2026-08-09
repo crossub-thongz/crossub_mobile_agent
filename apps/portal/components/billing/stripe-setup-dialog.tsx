@@ -43,34 +43,46 @@ function SetupForm({ onSuccess, onCancel }: SetupFormProps) {
     setSubmitting(true);
     setError(null);
 
-    const { error: confirmError, setupIntent } = await stripe.confirmSetup({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/bill?setup=return`,
-      },
-      redirect: 'if_required',
-    });
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setError(submitError.message ?? 'Could not validate card details');
+        return;
+      }
 
-    if (confirmError) {
-      setError(confirmError.message ?? 'Could not save payment method');
-      setSubmitting(false);
-      return;
-    }
+      const { error: confirmError, setupIntent } = await stripe.confirmSetup({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/bill?setup=return`,
+        },
+        redirect: 'if_required',
+      });
 
-    if (setupIntent?.status === 'succeeded') {
-      try {
+      if (confirmError) {
+        setError(confirmError.message ?? 'Could not save payment method');
+        return;
+      }
+
+      if (
+        setupIntent?.status === 'succeeded' ||
+        setupIntent?.status === 'processing'
+      ) {
         await confirmAgentPaymentMethodSetup(setupIntent.id);
         await onSuccess();
         onCancel();
         return;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not save payment method');
-        setSubmitting(false);
-        return;
       }
-    }
 
-    setSubmitting(false);
+      setError(
+        setupIntent?.status
+          ? `Card setup did not complete (${setupIntent.status}). Try again.`
+          : 'Card setup did not complete. Try again.',
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save payment method');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
