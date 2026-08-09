@@ -532,20 +532,12 @@ export function InspectionDetailView({
   return (
     <div className="space-y-5">
       {insp.type === 'OPEN' && openPlatformPaymentActive ? (
-        openBillingInspectionId ? (
-          <InspectionPlatformPaymentPrompt
-            inspectionId={openBillingInspectionId}
-            propertyId={insp.propertyId}
-            active
-          />
-        ) : (
-          <section className="rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm">
-            <div className="text-muted-foreground flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin" />
-              Loading payment details…
-            </div>
-          </section>
-        )
+        <InspectionPlatformPaymentPrompt
+          inspectionId={openBillingInspectionId ?? insp.id}
+          propertyId={insp.propertyId}
+          viewingSessionId={isOpenViewingSource ? insp.id : openSession?.id}
+          active
+        />
       ) : null}
 
       {insp.type === 'ROUTINE' && routineInPersonInProgress && routinePlatformPaymentInspectionId ? (

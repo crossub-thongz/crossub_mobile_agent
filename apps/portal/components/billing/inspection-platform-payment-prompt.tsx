@@ -10,6 +10,7 @@ import {
   type StripePaymentDialogState,
 } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
+import { resolveOpenBillingInspectionId } from '@/lib/billing/resolve-open-billing-inspection-id';
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import {
   fetchAgentBillingSummary,
@@ -32,6 +33,8 @@ type InspectionPlatformPaymentPromptProps = {
   inspectionId: string;
   /** Resolves the pool inspection row when the initial id is a viewing session id. */
   propertyId?: string;
+  /** Open-viewing session id when the job case uses session id as its primary key. */
+  viewingSessionId?: string;
   /** When true, show in-case payment (inspector accepted, job not yet complete). */
   active: boolean;
   /** Open the Stripe payment dialog as soon as the charge is ready (default true). */
@@ -42,6 +45,7 @@ type InspectionPlatformPaymentPromptProps = {
 export function InspectionPlatformPaymentPrompt({
   inspectionId,
   propertyId,
+  viewingSessionId,
   active,
   autoOpenPayment = true,
   className,
@@ -75,12 +79,19 @@ export function InspectionPlatformPaymentPrompt({
       setSummary(null);
       return null;
     }
+    if (!inspectionId.trim() && !viewingSessionId?.trim() && !propertyId?.trim()) {
+      return null;
+    }
     setLoading(true);
     try {
       const billing = await fetchAgentBillingSummary();
       setSummary(billing);
 
-      let resolvedId = billingInspectionId.trim() || inspectionId.trim();
+      let resolvedId = await resolveOpenBillingInspectionId({
+        inspectionId: billingInspectionId.trim() || inspectionId.trim(),
+        propertyId,
+        viewingSessionId,
+      });
       let linked = await fetchAgentInspectionPlatformCharge(resolvedId);
 
       if (!linked && propertyId) {
@@ -97,13 +108,14 @@ export function InspectionPlatformPaymentPrompt({
       }
       setCharge(linked);
       return linked;
-    } catch {
+    } catch (err) {
       setCharge(null);
+      toast.error(err instanceof Error ? err.message : 'Could not load payment details');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [active, billingInspectionId, inspectionId, propertyId]);
+  }, [active, billingInspectionId, inspectionId, propertyId, viewingSessionId]);
 
   useEffect(() => {
     setBillingInspectionId(inspectionId);
@@ -124,7 +136,20 @@ export function InspectionPlatformPaymentPrompt({
     if (!linked || linked.status !== 'awaiting_payment') {
       linked = await load();
     }
-    if (!linked || linked.status !== 'awaiting_payment') return;
+    if (!linked) {
+      toast.error(
+        'Could not prepare payment for this inspection. Try Refresh, or check the Bill page shortly.',
+      );
+      return;
+    }
+    if (linked.status !== 'awaiting_payment') {
+      toast.message(
+        linked.status === 'paid'
+          ? 'This inspection is already paid.'
+          : 'This inspection is billed to your monthly invoice.',
+      );
+      return;
+    }
 
     setPaying(true);
     try {
