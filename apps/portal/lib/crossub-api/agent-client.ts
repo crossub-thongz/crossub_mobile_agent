@@ -290,9 +290,12 @@ export async function createProperty(
 export async function updateProperty(
   propertyId: string,
   body: UpdateAgentPropertyInput,
-): Promise<AgentProperty> {
+): Promise<AgentProperty & { tenantPortalInvite?: TenantPortalInviteResult }> {
   try {
-    return await apiV1.patch<AgentProperty>(`/agent/properties/${propertyId}`, body);
+    return await apiV1.patch<AgentProperty & { tenantPortalInvite?: TenantPortalInviteResult }>(
+      `/agent/properties/${propertyId}`,
+      body,
+    );
   } catch (err) {
     if (err instanceof ApiError) {
       const message = formatApiErrorMessage(err);
@@ -301,6 +304,20 @@ export async function updateProperty(
     throw err;
   }
 }
+
+export type TenantPortalInviteResult =
+  | {
+      status: 'sent';
+      email: string;
+      name?: string | null;
+      createdUser?: boolean;
+    }
+  | {
+      status: 'skipped';
+      reason?: string;
+      email?: string | null;
+      detail?: string;
+    };
 
 /** End agency management on a property (`POST /agent/properties/{propertyId}/end-management`). */
 export async function endPropertyManagement(

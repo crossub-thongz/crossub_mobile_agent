@@ -1,5 +1,8 @@
 import { api } from '@/lib/api';
-import { updateProperty } from '@/lib/crossub-api/agent-client';
+import {
+  updateProperty,
+  type TenantPortalInviteResult,
+} from '@/lib/crossub-api/agent-client';
 
 /** Full property row from `GET /properties/{id}` — includes building contacts + parking. */
 export interface PropertyRecord {
@@ -185,10 +188,14 @@ export const propertyRegistryApi = {
   update: async (
     propertyId: string,
     patch: PropertyRegistryPatch,
-  ): Promise<PropertyRecord> => {
-    await updateProperty(propertyId, patch);
-    return api
+  ): Promise<{ property: PropertyRecord; tenantPortalInvite?: TenantPortalInviteResult }> => {
+    const updated = await updateProperty(propertyId, patch);
+    const property = await api
       .get<{ property: PropertyRecord }>(`/properties/${propertyId}`)
       .then((r) => r.property);
+    return {
+      property,
+      tenantPortalInvite: updated.tenantPortalInvite,
+    };
   },
 };
