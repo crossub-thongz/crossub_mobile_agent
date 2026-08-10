@@ -155,6 +155,7 @@ export const PROPERTY_DETAIL_TABS = [
   'Gii',
   'Documents',
   'Fees',
+  'Bills',
   'Rent Review',
   'Leasing',
   'Maintenance',
@@ -170,6 +171,7 @@ const INSPECTION_ONLY_PROPERTY_TABS: PropertyDetailTab[] = [
   'Gii',
   'Documents',
   'Fees',
+  'Bills',
   'Inspection',
   'Tribunal',
 ];

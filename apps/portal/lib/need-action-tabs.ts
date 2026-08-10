@@ -5,6 +5,7 @@ const PROPERTY_DETAIL_TAB_SET = new Set<string>([
   'Gii',
   'Documents',
   'Fees',
+  'Bills',
   'Rent Review',
   'Leasing',
   'Maintenance',

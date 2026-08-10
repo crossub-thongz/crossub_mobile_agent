@@ -24,6 +24,7 @@ import { PropertyAccountingTab } from '@/components/agent/property-accounting-ta
 import { PropertyTribunalTab } from '@/components/agent/property-tribunal-tab';
 import { PropertyDocumentsTab } from '@/components/agent/property-documents-tab';
 import { PropertyFeesTab } from '@/components/agent/property-fees-tab';
+import { PropertyBillsTab } from '@/components/agent/property-bills-tab';
 import { PropertyHistoryTab } from '@/components/agent/property-history-tab';
 import { PropertyRentReviewTab } from '@/components/agent/property-rent-review-tab';
 import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
@@ -465,6 +466,8 @@ export default function PropertyDetailPage() {
         )}
 
         {tab === 'Fees' && <PropertyFeesTab property={property} propertyId={id} />}
+
+        {tab === 'Bills' && <PropertyBillsTab propertyId={id} />}
 
         {tab === 'Rent Review' && (
           <PropertyRentReviewTab

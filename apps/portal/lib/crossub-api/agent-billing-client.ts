@@ -221,8 +221,13 @@ export async function listAgentOpenInvoices(): Promise<AgentBillingMonthlyInvoic
   return agentFetch('/agent/billing/invoices');
 }
 
-export async function listAgentChargeHistory(): Promise<AgentBillingCharge[]> {
-  return agentFetch('/agent/billing/charges');
+export async function listAgentChargeHistory(
+  propertyId?: string,
+): Promise<AgentBillingCharge[]> {
+  const query = propertyId?.trim()
+    ? `?propertyId=${encodeURIComponent(propertyId.trim())}`
+    : '';
+  return agentFetch(`/agent/billing/charges${query}`);
 }
 
 export async function listAgentInvoiceHistory(): Promise<AgentBillingMonthlyInvoice[]> {
