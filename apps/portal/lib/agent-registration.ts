@@ -22,6 +22,13 @@ export interface RegisterAgentInput {
 export const REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH =
   '/auth/register-agent-service-agreement-template';
 
+/** Agency system access agreement for the registration confirm step (public, no auth). */
+export const REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH =
+  '/auth/register-agent-system-access-agreement';
+
+export const REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH =
+  '/auth/register-agent-system-access-agreement/document';
+
 /** Default platform pricing for the registration flow (public, no auth). */
 export async function fetchRegisterAgentPricing(): Promise<
   Omit<AgentBillingPricingCatalog, 'portalServiceLevel'>
