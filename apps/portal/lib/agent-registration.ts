@@ -29,6 +29,15 @@ export const REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH =
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH =
   '/auth/register-agent-system-access-agreement/document';
 
+/** Shown on the confirm step when metadata cannot be loaded from the API. */
+export const REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK = {
+  title:
+    'CROSSUB Agency Portal User Access, Confidentiality and Privacy Agreement',
+  fileName:
+    'CROSSUB_Agency_Portal_User_Access_Confidentiality_and_Privacy_Agreement_Final.docx',
+  version: 'final-2026-07',
+} as const;
+
 /** Default platform pricing for the registration flow (public, no auth). */
 export async function fetchRegisterAgentPricing(): Promise<
   Omit<AgentBillingPricingCatalog, 'portalServiceLevel'>

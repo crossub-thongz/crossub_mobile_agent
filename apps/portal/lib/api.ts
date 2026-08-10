@@ -37,6 +37,8 @@ const AUTH_NO_REFRESH_PATHS = [
   '/auth/verify-email',
   '/auth/register-agent',
   '/auth/register-agent-invite',
+  '/auth/register-agent-pricing',
+  '/auth/register-agent-system-access-agreement',
   '/auth/register-inspector',
 ];
 

@@ -18,6 +18,10 @@ export function documentPreviewKindFromFileName(fileName: string): DocumentPrevi
 }
 
 export function documentPreviewKind(url: string, fileName?: string): DocumentPreviewKind {
+  if (fileName) {
+    const fromName = documentPreviewKindFromFileName(fileName);
+    if (fromName !== 'none') return fromName;
+  }
   if (url.startsWith('blob:') && fileName) {
     return documentPreviewKindFromFileName(fileName);
   }
