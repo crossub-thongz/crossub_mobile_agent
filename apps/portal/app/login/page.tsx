@@ -22,19 +22,34 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PASSWORD_MAX, PASSWORD_MIN } from '@/constants/auth';
+import { PASSWORD_MAX } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
 import { ApiError, api } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
 import { loginLocalAccount } from '@/lib/local-auth';
 import { postAuthDestination } from '@/lib/system-access-agreement';
 
+/**
+ * ⚠️ `password` deliberately carries NO `.min(PASSWORD_MIN)`. Signing in VERIFIES a password;
+ * it does not SET one. The length policy belongs on the screens that set a password —
+ * `/register`, `/reset-password/[token]`, `/change-password` — and all three still enforce it.
+ * A minimum here cannot admit an account the API would reject; it can only lock out an account
+ * whose password predates the policy, and it does so in the BROWSER, so the request never even
+ * reaches the API and nothing is logged server-side.
+ *
+ * That is not hypothetical. The agent logins migrated on 6 Aug 2026 carry the agents' own
+ * legacy passwords and 23 of the 43 are 6–9 characters. `LoginDto` was fixed on 10 Aug
+ * (crossub_web `c4c3e077`) after the same rule locked them out API-side — but this copy kept
+ * them out for another day, and it looked different from the agent's side: the form greys out
+ * with "Min 10 characters" under a password that is perfectly correct. Two agencies read that
+ * as "my password is wrong", changed it, and still could not get in.
+ *
+ * `.max(PASSWORD_MAX)` stays: it bounds what is handed to Argon2 and is a cost guard, not a
+ * policy statement. Do not "restore" the minimum here for symmetry with the other three forms.
+ */
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
-  password: z
-    .string()
-    .min(PASSWORD_MIN, `Min ${PASSWORD_MIN} characters`)
-    .max(PASSWORD_MAX),
+  password: z.string().min(1, 'Enter your password').max(PASSWORD_MAX),
 });
 
 type FormValues = z.infer<typeof schema>;
