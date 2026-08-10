@@ -248,8 +248,7 @@ export function buildLeaseAgreementProgress(detail: RentReviewWorkflowDetail): L
     auditAt(detail, 'tenant_notices_dispatched') ??
     auditAt(detail, 'tenant_accepted_response') ??
     auditAt(detail, 'agent_accepted_tenant_counter');
-  const sentAt =
-    auditAt(detail, K.SENT) ?? auditAt(detail, 'tenant_notices_dispatched');
+  const sentAt = auditAt(detail, K.SENT);
   const signedAt = auditAt(detail, K.SIGNED);
 
   return [

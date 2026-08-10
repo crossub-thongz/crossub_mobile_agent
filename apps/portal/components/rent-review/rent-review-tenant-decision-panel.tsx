@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { FileDown } from 'lucide-react';
-import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
+import { RentReviewLeaseAgreementContractPanel } from '@/components/rent-review/rent-review-lease-agreement-contract-panel';
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewSignedLeaseAgreementCard } from '@/components/rent-review/rent-review-signed-lease-agreement-card';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
@@ -14,9 +12,7 @@ import {
   isTenantAccepted,
   isTenantDeclined,
 } from '@/lib/rent-review/tenant-decision-display';
-import { loadRentReviewLeaseAgreementPdf } from '@/lib/rent-review/rent-review-lease-agreement-pdf';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
-import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { formatDate } from '@/lib/utils';
 
 export function RentReviewTenantDecisionPanel({
@@ -29,31 +25,11 @@ export function RentReviewTenantDecisionPanel({
   readOnly?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
-  const [viewingAgreement, setViewingAgreement] = useState(false);
   const accepted = isTenantAccepted(detail);
   const declined = isTenantDeclined(detail);
   const acceptance = buildTenantAcceptanceSummary(detail);
   const fixedRenewal = isPreferredRenewalFixed(detail);
   const awaiting = !accepted && !declined;
-
-  const previewPresignedAgreement = async () => {
-    setViewingAgreement(true);
-    try {
-      const { blob, filename } = await loadRentReviewLeaseAgreementPdf(detail.id, {
-        draft: true,
-        weekly: detail.proposedWeeklyRent ?? undefined,
-        propertyId: detail.propertyId,
-      });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      void filename;
-    } catch (err) {
-      toast.error(apiErrorMessage(err));
-    } finally {
-      setViewingAgreement(false);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -88,25 +64,8 @@ export function RentReviewTenantDecisionPanel({
         ) : null}
       </section>
 
-      {awaiting && fixedRenewal ? (
-        <section className="rounded-xl border bg-card p-4">
-          <p className="text-sm font-semibold">Lease extension agreement</p>
-          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            Preview the agreement prepared for the tenant — landlord and managing agent signatures
-            are already applied.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3 h-8 gap-1.5 px-2.5 text-xs"
-            disabled={viewingAgreement}
-            onClick={() => void previewPresignedAgreement()}
-          >
-            <FileDown className="size-3.5" />
-            {viewingAgreement ? 'Opening…' : 'Preview agreement'}
-          </Button>
-        </section>
+      {accepted && fixedRenewal && !readOnly ? (
+        <RentReviewLeaseAgreementContractPanel detail={detail} onUpdated={onUpdated} />
       ) : null}
 
       {accepted && fixedRenewal ? <RentReviewSignedLeaseAgreementCard detail={detail} /> : null}
@@ -122,7 +81,11 @@ export function RentReviewTenantDecisionPanel({
 
       {accepted && detail.workflowState === 'completed' ? (
         <p className="text-muted-foreground text-center text-xs">
-          Rent review completed and system synced automatically after tenant acceptance.
+          Rent review completed after the tenant signed the lease extension agreement.
+        </p>
+      ) : accepted && fixedRenewal && !readOnly ? (
+        <p className="text-muted-foreground text-center text-xs">
+          Complete the lease extension agreement above and send it to the tenant for signature.
         </p>
       ) : null}
     </div>

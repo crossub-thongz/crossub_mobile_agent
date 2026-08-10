@@ -100,7 +100,7 @@ export function RentReviewSignedLeaseAgreementCard({
             Signed lease extension agreement
           </p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            The tenant signed the NSW residential tenancy agreement in the tenant portal before
+            The tenant signed the NSW residential tenancy agreement in the tenant portal after
             accepting the rent increase. Landlord and agent signatures were applied when the
             agreement was prepared.
             {signedAt ? ` Signed ${formatDateTime(signedAt)}.` : ''}
