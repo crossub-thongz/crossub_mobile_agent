@@ -15,10 +15,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  StripePaymentDialog,
+  type StripePaymentDialogState,
+} from '@/components/billing/stripe-payment-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
 import { createAgentIngoingInspection, createAgentLeasingCycle, createAgentOutgoingInspection, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
+import { preparePlatformCharge } from '@/lib/crossub-api/agent-billing-client';
+import { getStripePublishableKey } from '@/lib/stripe-client';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import {
@@ -210,6 +216,11 @@ export function CreateInspectionWizard({
   const [propertyId, setPropertyId] = useState(validPreselected);
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const [pendingPaidCreate, setPendingPaidCreate] = useState<{
+    platformChargeId: string;
+    run: (platformChargeId: string) => Promise<void>;
+  } | null>(null);
   const prefillSessionRef = useRef<string | null>(null);
   const agentDataRef = useRef({
     properties,
@@ -509,6 +520,38 @@ export function CreateInspectionWizard({
       return;
     }
 
+    const ensurePrepaidThen = async (
+      serviceType:
+        | 'open_inspection'
+        | 'ingoing_inspection'
+        | 'outgoing_inspection'
+        | 'routine_inspection',
+      run: (platformChargeId?: string) => Promise<void>,
+    ): Promise<'done' | 'payment_pending'> => {
+      const prepared = await preparePlatformCharge({
+        serviceType,
+        propertyId: property.id,
+      });
+      if (prepared.paymentRequired) {
+        if (!getStripePublishableKey()) {
+          throw new Error('Card payments are not configured on this environment.');
+        }
+        setPendingPaidCreate({
+          platformChargeId: prepared.paymentRequired.chargeId,
+          run: async (chargeId) => run(chargeId),
+        });
+        setPaymentDialog({
+          clientSecret: prepared.paymentRequired.clientSecret,
+          title: prepared.paymentRequired.title,
+          description: prepared.paymentRequired.description,
+          amountAud: prepared.paymentRequired.amountAud,
+        });
+        return 'payment_pending';
+      }
+      await run(prepared.chargeId ?? undefined);
+      return 'done';
+    };
+
     setSubmitting(true);
     try {
       if (inspectionType === 'OPEN') {
@@ -566,24 +609,28 @@ export function CreateInspectionWizard({
           if (new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)) {
             throw new Error('Viewing end time must be after the start time');
           }
-          const result = await requestAgentOpenInspection(property.id, cycleId, {
-            preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
-            preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
-            preferredNotes: openPreferredNotes.trim() || undefined,
+          const outcome = await ensurePrepaidThen('open_inspection', async (platformChargeId) => {
+            const result = await requestAgentOpenInspection(property.id, cycleId, {
+              preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
+              preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
+              preferredNotes: openPreferredNotes.trim() || undefined,
+              platformChargeId,
+            });
+            toast.success('Open inspection scheduled');
+            const inspection = await resolveCreatedOpenInspection(
+              property.id,
+              result.openInspectionId,
+              cycleId,
+            );
+            if (inspection) {
+              registerInspection(inspection);
+              onCreated?.({ inspectionId: inspection.id, inspection });
+            } else {
+              onCreated?.({});
+            }
+            await refresh();
           });
-          toast.success('Open inspection scheduled');
-          const inspection = await resolveCreatedOpenInspection(
-            property.id,
-            result.openInspectionId,
-            cycleId,
-          );
-          if (inspection) {
-            registerInspection(inspection);
-            onCreated?.({ inspectionId: inspection.id, inspection });
-          } else {
-            onCreated?.({});
-          }
-          await refresh();
+          if (outcome === 'payment_pending') return;
           return;
         }
 
@@ -645,33 +692,32 @@ export function CreateInspectionWizard({
             });
             cycleId = created.id;
           }
-          const result = await requestAgentOpenInspection(property.id, cycleId, {
-            preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
-            preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
-            preferredNotes: openPreferredNotes.trim() || undefined,
+          const outcome = await ensurePrepaidThen('open_inspection', async (platformChargeId) => {
+            const result = await requestAgentOpenInspection(property.id, cycleId!, {
+              preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
+              preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
+              preferredNotes: openPreferredNotes.trim() || undefined,
+              platformChargeId,
+            });
+            toast.success(
+              leasingCycle?.id
+                ? 'Open inspection scheduled'
+                : 'New leasing created and open inspection scheduled',
+            );
+            const inspection = await resolveCreatedOpenInspection(
+              property.id,
+              result.openInspectionId,
+              cycleId!,
+            );
+            if (inspection) {
+              registerInspection(inspection);
+              onCreated?.({ inspectionId: inspection.id, inspection });
+            } else {
+              onCreated?.({});
+            }
+            await refresh();
           });
-          toast.success(
-            leasingCycle?.id
-              ? 'Open inspection scheduled'
-              : 'New leasing created and open inspection scheduled',
-          );
-          const inspection = await resolveCreatedOpenInspection(
-            property.id,
-            result.openInspectionId,
-            cycleId,
-          );
-          if (inspection) {
-            registerInspection(inspection);
-            onCreated?.({ inspectionId: inspection.id, inspection });
-          } else {
-            onCreated?.({});
-          }
-          await refresh();
-          if (navigateOnSuccess && !inspection) {
-            router.push(propertyLeasingWorkflow(property.id));
-          } else if (navigateOnSuccess && inspection) {
-            router.push(inspectionDetail(inspection.id));
-          }
+          if (outcome === 'payment_pending') return;
           return;
         }
 
@@ -714,37 +760,41 @@ export function CreateInspectionWizard({
         const scheduledTime = ingoingScheduledLocal
           ? new Date(ingoingScheduledLocal).toISOString()
           : ingoing.scheduledTime || undefined;
-        const created = await createAgentIngoingInspection(property.id, {
-          moveInDate: ingoing.moveInDate,
-          scheduledTime,
-          tenantName: ingoing.tenantName.trim(),
-          tenantEmail: ingoing.tenantEmail.trim() || undefined,
-          tenantPhone: ingoing.tenantPhone.trim() || undefined,
-          priority: ingoing.priority,
-          accessInstructions: ingoing.accessInstructions.trim() || undefined,
-          notes: ingoing.notes?.trim() || undefined,
+        const outcome = await ensurePrepaidThen('ingoing_inspection', async (platformChargeId) => {
+          const created = await createAgentIngoingInspection(property.id, {
+            moveInDate: ingoing.moveInDate,
+            scheduledTime,
+            tenantName: ingoing.tenantName.trim(),
+            tenantEmail: ingoing.tenantEmail.trim() || undefined,
+            tenantPhone: ingoing.tenantPhone.trim() || undefined,
+            priority: ingoing.priority,
+            accessInstructions: ingoing.accessInstructions.trim() || undefined,
+            notes: ingoing.notes?.trim() || undefined,
+            platformChargeId,
+          });
+          let view: Inspection;
+          try {
+            const record = await inspectionsApi.get(created.id);
+            view = mapInspectionRecordToView(record);
+          } catch {
+            view = {
+              id: created.id,
+              trackingNumber: workflowCaseReferenceLabel(created.id, 'ingoing'),
+              type: 'INGOING',
+              propertyId: property.id,
+              propertyAddress: property.address,
+              scheduledAt: scheduledTime,
+              status: 'Scheduled',
+              reportStatus: 'pending',
+              createdAt: new Date().toISOString(),
+              timeline: [],
+              source: 'inspection',
+            };
+          }
+          toast.success('Ingoing inspection created');
+          finalizeInspectionCreate(view);
         });
-        let view: Inspection;
-        try {
-          const record = await inspectionsApi.get(created.id);
-          view = mapInspectionRecordToView(record);
-        } catch {
-          view = {
-            id: created.id,
-            trackingNumber: workflowCaseReferenceLabel(created.id, 'ingoing'),
-            type: 'INGOING',
-            propertyId: property.id,
-            propertyAddress: property.address,
-            scheduledAt: scheduledTime,
-            status: 'Scheduled',
-            reportStatus: 'pending',
-            createdAt: new Date().toISOString(),
-            timeline: [],
-            source: 'inspection',
-          };
-        }
-        toast.success('Ingoing inspection created');
-        finalizeInspectionCreate(view);
+        if (outcome === 'payment_pending') return;
         return;
       }
 
@@ -825,18 +875,33 @@ export function CreateInspectionWizard({
           return;
         }
 
-        const schedule = await routineInspectionApi.create({
-          propertyId: property.id,
-          flow: routine.flow,
-          frequency: routine.frequency,
-          scheduledDate: routine.scheduledDate || undefined,
-          tenantName: routine.tenantName.trim() || undefined,
-          tenantEmail: routine.tenantEmail.trim() || undefined,
-          inspectorName:
-            routine.flow === 'in_person' ? routine.inspectorName.trim() || undefined : undefined,
-        });
-        toast.success('Routine inspection schedule created');
-        await finalizeRoutineSchedule(schedule);
+        const schedule = await (async () => {
+          const createRoutine = async (platformChargeId?: string) => {
+            const created = await routineInspectionApi.create({
+              propertyId: property.id,
+              flow: routine.flow,
+              frequency: routine.frequency,
+              scheduledDate: routine.scheduledDate || undefined,
+              tenantName: routine.tenantName.trim() || undefined,
+              tenantEmail: routine.tenantEmail.trim() || undefined,
+              inspectorName:
+                routine.flow === 'in_person'
+                  ? routine.inspectorName.trim() || undefined
+                  : undefined,
+              platformChargeId,
+            });
+            toast.success('Routine inspection schedule created');
+            await finalizeRoutineSchedule(created);
+          };
+          if (routine.flow === 'in_person') {
+            const outcome = await ensurePrepaidThen('routine_inspection', createRoutine);
+            if (outcome === 'payment_pending') return null;
+            return 'done';
+          }
+          await createRoutine();
+          return 'done';
+        })();
+        if (!schedule) return;
         return;
       }
 
@@ -852,14 +917,51 @@ export function CreateInspectionWizard({
           });
           inspectionId = updatedCase.inspection?.inspectionId ?? undefined;
         } else {
-          const created = await createAgentOutgoingInspection(property.id, {
-            scheduledTime: scheduledIso,
-            inspectorName: outgoingInspector.trim() || undefined,
-            tenantName: property.tenantName?.trim() || undefined,
-            tenantEmail: property.tenantContact?.email?.trim() || undefined,
-            tenantPhone: property.tenantContact?.phone?.trim() || undefined,
-          });
-          inspectionId = created.id;
+          const outcome = await ensurePrepaidThen(
+            'outgoing_inspection',
+            async (platformChargeId) => {
+              const created = await createAgentOutgoingInspection(property.id, {
+                scheduledTime: scheduledIso,
+                inspectorName: outgoingInspector.trim() || undefined,
+                tenantName: property.tenantName?.trim() || undefined,
+                tenantEmail: property.tenantContact?.email?.trim() || undefined,
+                tenantPhone: property.tenantContact?.phone?.trim() || undefined,
+                platformChargeId,
+              });
+              inspectionId = created.id;
+
+              let view: Inspection | null = null;
+              if (inspectionId) {
+                try {
+                  const record = await inspectionsApi.get(inspectionId);
+                  view = mapInspectionRecordToView(record);
+                } catch {
+                  view = {
+                    id: inspectionId,
+                    trackingNumber: inspectionReferenceLabel(inspectionId, 'OUTGOING'),
+                    type: 'OUTGOING',
+                    propertyId: property.id,
+                    propertyAddress: property.address,
+                    scheduledAt: scheduledIso,
+                    status: 'Scheduled',
+                    reportStatus: 'pending',
+                    createdAt: new Date().toISOString(),
+                    timeline: [],
+                    source: 'inspection',
+                  };
+                }
+              }
+              toast.success('Outgoing inspection created');
+              if (view) {
+                finalizeInspectionCreate(view);
+              } else {
+                void refresh();
+                if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=OUTGOING`);
+              }
+            },
+          );
+          if (outcome === 'payment_pending') return;
+          return;
         }
 
         let view: Inspection | null = null;
@@ -883,11 +985,7 @@ export function CreateInspectionWizard({
             };
           }
         }
-        toast.success(
-          vacatingCaseId
-            ? 'Outgoing inspection scheduled'
-            : 'Outgoing inspection created',
-        );
+        toast.success('Outgoing inspection scheduled');
         if (view) {
           finalizeInspectionCreate(view);
         } else {
@@ -905,8 +1003,35 @@ export function CreateInspectionWizard({
 
   const showForm = Boolean(property && inspectionType);
 
+  const handlePrepaidPaymentSuccess = async () => {
+    if (!pendingPaidCreate) {
+      setPaymentDialog(null);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await pendingPaidCreate.run(pendingPaidCreate.platformChargeId);
+      setPendingPaidCreate(null);
+      setPaymentDialog(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create inspection');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
+      <StripePaymentDialog
+        state={paymentDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPaymentDialog(null);
+            setPendingPaidCreate(null);
+          }
+        }}
+        onSuccess={() => void handlePrepaidPaymentSuccess()}
+      />
       {!apiConnected ? (
         <div className="flex gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />

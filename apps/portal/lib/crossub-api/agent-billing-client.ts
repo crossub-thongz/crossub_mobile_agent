@@ -298,7 +298,7 @@ const SERVICE_LABEL: Record<AgentBillingQuoteInput['serviceType'], string> = {
 
 /**
  * Quote a platform charge and start payment when prepaid is required.
- * Inspections prepare the charge when the agent pays after inspector accept.
+ * Level 1 inspections pay as the last step of create (tribunal-style).
  */
 export async function preparePlatformCharge(
   input: AgentBillingQuoteInput,

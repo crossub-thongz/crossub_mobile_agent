@@ -58,6 +58,7 @@ const STATUS_TONE: Record<string, string> = {
   awaiting_payment: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   accrued: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
   invoiced: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
+  refunded: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
   sent: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   overdue: 'border-destructive/30 bg-destructive/10 text-destructive',
 };
