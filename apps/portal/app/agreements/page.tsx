@@ -188,10 +188,15 @@ export default function AgreementsPage() {
       setAgreements((rows) => rows.map((row) => (row.id === updated.id ? updated : row)));
       const accessStatus = await fetchSalesAgreementAccessStatus();
       setAccess(accessStatus);
+      const wasReupload = returnTarget.status === 'returned';
       toast.success(
         selfRegistration
-          ? 'Signed service agreement uploaded'
-          : 'Agreement returned to your salesperson',
+          ? wasReupload
+            ? 'Signed service agreement updated'
+            : 'Signed service agreement uploaded'
+          : wasReupload
+            ? 'Signed agreement re-uploaded to your salesperson'
+            : 'Agreement returned to your salesperson',
       );
       closeReturn();
     } catch (err) {
@@ -352,9 +357,15 @@ export default function AgreementsPage() {
                         Preview signed copy
                       </Button>
                     ) : null}
-                    {agreement.status === 'sent' ? (
+                    {agreement.status === 'sent' || agreement.status === 'returned' ? (
                       <Button size="sm" onClick={() => openReturn(agreement)}>
-                        {agreement.selfRegistration ? 'Upload signed copy' : 'Return to sales'}
+                        {agreement.status === 'returned'
+                          ? agreement.selfRegistration
+                            ? 'Re-upload signed copy'
+                            : 'Re-upload to sales'
+                          : agreement.selfRegistration
+                            ? 'Upload signed copy'
+                            : 'Return to sales'}
                       </Button>
                     ) : null}
                   </div>
@@ -369,7 +380,13 @@ export default function AgreementsPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {selfRegistration ? 'Upload signed agreement' : 'Return signed agreement'}
+              {returnTarget?.status === 'returned'
+                ? selfRegistration
+                  ? 'Re-upload signed agreement'
+                  : 'Re-upload signed agreement to sales'
+                : selfRegistration
+                  ? 'Upload signed agreement'
+                  : 'Return signed agreement'}
             </DialogTitle>
           </DialogHeader>
           {returnTarget ? (
@@ -377,14 +394,18 @@ export default function AgreementsPage() {
               <p className="text-sm text-muted-foreground">
                 {selfRegistration ? (
                   <>
-                    Upload your signed copy of <strong>{returnTarget.title}</strong>. It will be
-                    saved to your profile for CROSSUB staff to review in the admin portal.
+                    Upload your signed copy of <strong>{returnTarget.title}</strong>.
+                    {returnTarget.status === 'returned'
+                      ? ' This replaces your previous upload.'
+                      : ' It will be saved to your profile for CROSSUB staff to review in the admin portal.'}
                   </>
                 ) : (
                   <>
                     Send <strong>{returnTarget.title}</strong> back to{' '}
-                    {returnTarget.assignedSalesperson || 'your salesperson'}. You can attach the
-                    signed PDF and add a short note.
+                    {returnTarget.assignedSalesperson || 'your salesperson'}.
+                    {returnTarget.status === 'returned'
+                      ? ' This replaces your previous signed copy.'
+                      : ' You can attach the signed PDF and add a short note.'}
                   </>
                 )}
               </p>
@@ -434,6 +455,8 @@ export default function AgreementsPage() {
                   <Loader2 className="mr-2 size-4 animate-spin" />
                   {selfRegistration ? 'Uploading…' : 'Sending…'}
                 </>
+              ) : returnTarget?.status === 'returned' ? (
+                selfRegistration ? 'Re-upload signed copy' : 'Re-upload to sales'
               ) : selfRegistration ? (
                 'Upload signed copy'
               ) : (

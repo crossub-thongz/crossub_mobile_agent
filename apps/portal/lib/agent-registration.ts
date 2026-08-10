@@ -12,7 +12,7 @@ export interface RegisterAgentInput {
   agencyCompany?: string;
   phone?: string;
   abn?: string;
-  licenceNumber?: string;
+  licenceNumber: string;
   officeAddress?: string;
   portalServiceLevel: AgentPortalServiceLevel;
   acceptTerms: boolean;
@@ -42,7 +42,7 @@ export async function registerAgentAccount(
     agencyCompany: input.agencyCompany?.trim() || undefined,
     phone: input.phone?.trim() || undefined,
     abn: input.abn?.trim() || undefined,
-    licenceNumber: input.licenceNumber?.trim() || undefined,
+    licenceNumber: input.licenceNumber.trim(),
     officeAddress: input.officeAddress?.trim() || undefined,
     portalServiceLevel: input.portalServiceLevel,
     acceptTerms: input.acceptTerms,

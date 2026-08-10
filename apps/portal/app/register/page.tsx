@@ -61,7 +61,7 @@ const agentSchema = z.object({
   agencyCompany: z.string().optional(),
   phone: z.string().optional(),
   abn: z.string().optional(),
-  licenceNumber: z.string().optional(),
+  licenceNumber: z.string().trim().min(1, 'Licence number is required'),
   officeAddress: z.string().optional(),
 });
 
@@ -130,6 +130,7 @@ export default function RegisterPage() {
       'firstName',
       'lastName',
       'agencyName',
+      'licenceNumber',
       'email',
       'password',
     ]);
@@ -320,9 +321,14 @@ export default function RegisterPage() {
                     <Label htmlFor="licenceNumber">Licence no.</Label>
                     <Input
                       id="licenceNumber"
-                      placeholder="Optional"
+                      placeholder="e.g. 123456789"
                       {...agentForm.register('licenceNumber')}
                     />
+                    {agentForm.formState.errors.licenceNumber ? (
+                      <p className="text-xs text-destructive">
+                        {agentForm.formState.errors.licenceNumber.message}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="space-y-2">
