@@ -1,4 +1,4 @@
-export type DocumentPreviewKind = 'pdf' | 'image' | 'none';
+export type DocumentPreviewKind = 'pdf' | 'image' | 'docx' | 'none';
 
 export function isViewableDocumentUrl(url?: string | null): url is string {
   if (!url || url === '#') return false;
@@ -13,6 +13,7 @@ export function isViewableDocumentUrl(url?: string | null): url is string {
 export function documentPreviewKindFromFileName(fileName: string): DocumentPreviewKind {
   const path = fileName.toLowerCase();
   if (path.endsWith('.pdf')) return 'pdf';
+  if (/\.(docx?|word)$/i.test(path)) return 'docx';
   if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(path)) return 'image';
   return 'none';
 }
@@ -27,6 +28,7 @@ export function documentPreviewKind(url: string, fileName?: string): DocumentPre
   }
   const path = url.split('?')[0]?.toLowerCase() ?? '';
   if (path.endsWith('.pdf') || url.startsWith('blob:')) return 'pdf';
+  if (/\.(docx?|word)$/i.test(path)) return 'docx';
   if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(path)) return 'image';
   // Assume remote/API URLs without extension are PDFs (common for document storage).
   if (url.startsWith('http://') || url.startsWith('https://')) return 'pdf';

@@ -1,6 +1,7 @@
 'use client';
 
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { fetchApiBlobFromUrl } from '@/lib/api';
 import {
   documentPreviewKind,
   isViewableDocumentUrl,
@@ -29,6 +31,87 @@ export type DocumentPreviewItem = {
 function pdfPreviewSrc(url: string): string {
   const base = url.split('#')[0] ?? url;
   return `${base}#navpanes=0&scrollbar=1&view=FitH`;
+}
+
+async function fetchDocumentBlob(href: string): Promise<Blob> {
+  if (href.startsWith('/api/')) {
+    return fetchApiBlobFromUrl(href);
+  }
+  const response = await fetch(href, { credentials: 'include', cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`Unable to load document (${response.status})`);
+  }
+  return response.blob();
+}
+
+function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    container.innerHTML = '';
+
+    void (async () => {
+      try {
+        const blob = await fetchDocumentBlob(href);
+        if (cancelled) return;
+
+        const { renderAsync } = await import('docx-preview');
+        await renderAsync(blob, container, undefined, {
+          className: 'docx-preview',
+          inWrapper: true,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          ignoreFonts: false,
+          breakPages: true,
+        });
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [href]);
+
+  if (loading) {
+    return (
+      <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="text-muted-foreground mb-2 size-8 animate-spin" />
+        <p className="text-muted-foreground text-sm">Loading document…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
+        <FileText className="text-muted-foreground mb-2 size-10" />
+        <p className="text-muted-foreground text-sm">Unable to load the document preview</p>
+        <p className="text-muted-foreground mt-1 text-xs">Use Download below.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-auto bg-background p-4">
+      <div
+        ref={containerRef}
+        className="docx-preview-host mx-auto max-w-4xl bg-white text-foreground shadow-sm"
+        aria-label={title}
+      />
+    </div>
+  );
 }
 
 export function DocumentPreviewDialog({
@@ -84,6 +167,8 @@ export function DocumentPreviewDialog({
               src={pdfPreviewSrc(url)}
               className="h-full min-h-0 w-full border-0 bg-background"
             />
+          ) : previewKind === 'docx' ? (
+            open ? <DocxPreviewPanel href={url} title={doc?.title ?? 'Document'} /> : null
           ) : (
             <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
               <FileText className="text-muted-foreground mb-2 size-10" />
