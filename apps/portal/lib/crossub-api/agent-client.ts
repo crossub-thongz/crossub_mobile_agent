@@ -169,18 +169,48 @@ export async function assignPropertyAgent(
   });
 }
 
+/**
+ * Every `/agent/*` list takes `PaginationQueryDto`, which defaults to **20 rows a page**.
+ * Sending no `pageSize` therefore returns page 1 only — silently, with no error — and the
+ * caller reads a truncated array as if it were the whole set. That is what capped the
+ * agent app's property book at 20 for an agency holding 38: the list, the dashboard donut
+ * (`properties.length`), and every store lookup all saw the same first page.
+ *
+ * `fetchAllPages` walks pages until the API says there are no more. 100 is the DTO's
+ * `@Max(100)` ceiling, so a bigger literal is a 400, not a bigger page.
+ */
+const AGENT_LIST_PAGE_SIZE = 100;
+const MAX_AGENT_LIST_PAGES = 50;
+
+async function fetchAllPages<T>(
+  path: string,
+  params: Record<string, string> = {},
+): Promise<T[]> {
+  const all: T[] = [];
+  for (let page = 1; page <= MAX_AGENT_LIST_PAGES; page += 1) {
+    const query = new URLSearchParams({
+      ...params,
+      page: String(page),
+      pageSize: String(AGENT_LIST_PAGE_SIZE),
+    });
+    const data = await agentFetch<{ items: T[]; hasMore?: boolean }>(
+      `${path}?${query.toString()}`,
+    );
+    all.push(...data.items);
+    // Fall back to a short page when `hasMore` is absent rather than looping to the cap.
+    if (!data.hasMore || data.items.length < AGENT_LIST_PAGE_SIZE) break;
+  }
+  return all;
+}
+
 /** Properties across the assigned agencies (`GET /api/v1/agent/properties`). */
 export async function fetchProperties(): Promise<AgentProperty[]> {
-  const data = await agentFetch<{ items: AgentProperty[] }>('/agent/properties');
-  return data.items;
+  return fetchAllPages<AgentProperty>('/agent/properties');
 }
 
 /** Archived properties whose management has ended (`GET /api/v1/agent/properties?archived=true`). */
 export async function fetchArchivedProperties(): Promise<AgentProperty[]> {
-  const data = await agentFetch<{ items: AgentProperty[] }>(
-    '/agent/properties?archived=true&pageSize=100',
-  );
-  return data.items;
+  return fetchAllPages<AgentProperty>('/agent/properties', { archived: 'true' });
 }
 
 /** Register a property under the agent's profile agency (`POST /api/v1/agent/properties`). */
@@ -326,8 +356,7 @@ export async function updateAgencyBilling(
 
 /** Tax invoices for assigned agencies (`GET /api/v1/agent/invoices`). */
 export async function fetchInvoices(): Promise<AgentInvoiceListItem[]> {
-  const data = await agentFetch<{ items: AgentInvoiceListItem[] }>('/agent/invoices');
-  return data.items;
+  return fetchAllPages<AgentInvoiceListItem>('/agent/invoices');
 }
 
 export async function fetchInvoice(invoiceId: string): Promise<AgentInvoiceDetail> {
