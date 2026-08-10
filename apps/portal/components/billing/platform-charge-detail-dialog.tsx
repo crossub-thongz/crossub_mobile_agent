@@ -208,35 +208,18 @@ export function PlatformChargeDetailDialog({
 
               <div
                 className={cn(
-                  'flex flex-col gap-2 rounded-lg border px-3 py-2 sm:flex-row sm:items-start sm:justify-between',
+                  'rounded-lg border px-3 py-2',
                   row.status === 'paid'
                     ? 'border-emerald-500/30 bg-emerald-500/10'
                     : 'border-border bg-card',
                 )}
               >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {row.status === 'paid' ? 'Amount paid' : 'Amount due'}
-                  </p>
-                  <p className="mt-0.5 text-base font-semibold tabular-nums">
-                    {formatCurrency(row.amount)}
-                  </p>
-                </div>
-                {row.calculationDetail || row.calculationSummary ? (
-                  <div className="min-w-0 sm:max-w-[60%] sm:text-right">
-                    <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
-                      How it&apos;s calculated
-                    </p>
-                    {row.calculationDetail ? (
-                      <p className="mt-1 text-sm leading-snug">{row.calculationDetail}</p>
-                    ) : null}
-                    {row.calculationSummary ? (
-                      <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                        {row.calculationSummary}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
+                <p className="text-sm font-medium">
+                  {row.status === 'paid' ? 'Amount paid' : 'Amount due'}
+                </p>
+                <p className="mt-0.5 text-base font-semibold tabular-nums">
+                  {formatCurrency(row.amount)}
+                </p>
               </div>
             </div>
           )}
