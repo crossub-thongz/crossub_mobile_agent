@@ -312,6 +312,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const storeAddProperty = useAgentStore((s) => s.addProperty);
   const storeAddOpenInspection = useAgentStore((s) => s.addOpenInspection);
   const registerInspection = useAgentStore((s) => s.registerInspection);
+  const pruneStaleAddedInspections = useAgentStore((s) => s.pruneStaleAddedInspections);
   const storeEnsureMessageThread = useAgentStore((s) => s.ensureMessageThread);
   const uploadedDocuments = useAgentStore((s) => s.uploadedDocuments ?? []);
   const addUploadedDocument = useAgentStore((s) => s.addUploadedDocument);
@@ -708,10 +709,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       if (isHiddenOpenPoolTwin(row)) continue;
       byId.set(row.id, row);
     }
-    // Optimistic OPEN rows from create are dropped once live inspections are
-    // loaded so admin-deleted cases don't stick in the agent list.
+    // Optimistic create rows stick in localStorage until pruned. Once the agency
+    // book is loaded, drop non-OPEN orphans so admin hard-deletes don't ghost
+    // (OPEN still waits on live inspections — it may only exist as a viewing session).
     for (const row of added) {
       if (byId.has(row.id)) continue;
+      if (portfolio != null && row.type !== 'OPEN') continue;
       if (apiInspections != null && row.type === 'OPEN') continue;
       if (isHiddenOpenPoolTwin(row)) continue;
       byId.set(row.id, row);
@@ -722,6 +725,15 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       return bt - at;
     });
   }, [apiConnected, apiInspections, portfolio, propertyIds, addedInspections, properties]);
+
+  useEffect(() => {
+    if (!portfolio) return;
+    const knownIds = new Set<string>([
+      ...(portfolio.inspections ?? []).map((row) => row.id),
+      ...(apiInspections ?? []).map((row) => row.id),
+    ]);
+    pruneStaleAddedInspections(knownIds);
+  }, [portfolio, apiInspections, pruneStaleAddedInspections]);
 
   const rentReviews = useMemo(
     () =>

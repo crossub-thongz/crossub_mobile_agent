@@ -137,6 +137,8 @@ interface AgentStore {
   addedInspections: Inspection[];
   addOpenInspection: (input: NewOpenInspectionInput) => Inspection;
   registerInspection: (inspection: Inspection) => void;
+  /** Drop optimistic non-OPEN rows that are no longer in the agency book (admin delete). */
+  pruneStaleAddedInspections: (knownIds: ReadonlySet<string>) => void;
   provisionedTenants: ProvisionedTenantRecord[];
   addProvisionedTenant: (record: ProvisionedTenantRecord) => void;
 }
@@ -402,6 +404,17 @@ export const useAgentStore = create<AgentStore>()(
             ...s.addedInspections.filter((row) => row.id !== inspection.id),
           ],
         })),
+      pruneStaleAddedInspections: (knownIds) =>
+        set((s) => {
+          const next = s.addedInspections.filter((row) => {
+            if (knownIds.has(row.id)) return true;
+            // OPEN may exist only as a viewing session until mapped — keep those.
+            if (row.type === 'OPEN') return true;
+            return false;
+          });
+          if (next.length === s.addedInspections.length) return s;
+          return { addedInspections: next };
+        }),
       provisionedTenants: [],
       addProvisionedTenant: (record) =>
         set((s) => {
