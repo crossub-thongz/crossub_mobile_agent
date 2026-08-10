@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -88,8 +89,7 @@ export function RentReviewAgentConfirmedPanel({
   const [fixedTermWeeks, setFixedTermWeeks] = useState<FixedTermWeeks>(52);
   const [fixedTermEndDate, setFixedTermEndDate] = useState('');
   const [manualRentIncreaseOn, setManualRentIncreaseOn] = useState('');
-
-  const hasLeaseEnd = Boolean(toDateOnly(detail.leaseEndDate));
+  const [previewingNotice, setPreviewingNotice] = useState(false);
 
   const hasCounter = canResolveNegotiation(detail);
   const editable = canEditAgentDecision(detail) && !readOnly;
@@ -126,9 +126,7 @@ export function RentReviewAgentConfirmedPanel({
   );
 
   const effectiveDate = editable
-    ? hasLeaseEnd
-      ? autoRentIncreaseOnResolved
-      : manualRentIncreaseOn
+    ? manualRentIncreaseOn || autoRentIncreaseOnResolved
     : (toDateOnly(detail.effectiveDate) ?? autoRentIncreaseOnResolved);
   const newLeaseStart = editable
     ? currentLeaseIsFixed
@@ -168,6 +166,10 @@ export function RentReviewAgentConfirmedPanel({
       toast.error('Select a preferred lease term for the fixed agreement');
       return;
     }
+    if (!effectiveDate) {
+      toast.error('Set the NSW notice payable-from date');
+      return;
+    }
     void run(
       () =>
         rentReviewApi.setProposedRent(
@@ -187,6 +189,24 @@ export function RentReviewAgentConfirmedPanel({
         ),
       'Agent decision saved — formal notice sent to tenant',
     );
+  };
+
+  const previewNotice = async () => {
+    setPreviewingNotice(true);
+    try {
+      const weekly = Number(preferredRent);
+      const blob = await rentReviewApi.downloadNoticeOfRentIncrease(detail.id, {
+        weekly: Number.isFinite(weekly) ? weekly : detail.proposedWeeklyRent ?? undefined,
+        effectiveDate: effectiveDate || undefined,
+      });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setPreviewingNotice(false);
+    }
   };
 
   if (hasCounter) {
@@ -356,11 +376,11 @@ export function RentReviewAgentConfirmedPanel({
             </div>
           </div>
 
-          <div className="text-muted-foreground mt-4 grid gap-2 rounded-lg border border-dashed bg-muted/20 p-3 text-[11px] sm:grid-cols-2">
-            {editable && !hasLeaseEnd ? (
-              <div className="space-y-1.5 sm:col-span-2">
+          <div className="text-muted-foreground mt-4 space-y-3 rounded-lg border border-dashed bg-muted/20 p-3 text-[11px]">
+            {editable ? (
+              <div className="space-y-2">
                 <Label htmlFor={`rent-increase-on-${detail.id}`} className="text-foreground text-xs">
-                  Rent increase on
+                  NSW notice — Payable from
                 </Label>
                 <Input
                   id={`rent-increase-on-${detail.id}`}
@@ -370,15 +390,25 @@ export function RentReviewAgentConfirmedPanel({
                   onChange={(e) => setManualRentIncreaseOn(e.target.value)}
                 />
                 <p className="text-[10px] leading-relaxed">
-                  Periodic tenancy — set the NSW notice payable-from date manually (at least 60 days
-                  after delivery).
+                  Suggested: {formatDateOnly(autoRentIncreaseOnResolved) ?? '—'} — the later of the
+                  lease end date or 60 days after notice delivery. Edit before saving if needed.
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2.5 text-xs"
+                  disabled={busy || previewingNotice}
+                  onClick={() => void previewNotice()}
+                >
+                  <FileText className="size-3.5" />
+                  {previewingNotice ? 'Opening preview…' : 'Preview notice of rent increase'}
+                </Button>
               </div>
             ) : (
               <p>
                 <span className="font-medium text-foreground">Rent increase on:</span>{' '}
                 {formatDateOnly(effectiveDate) ?? '—'}
-                {hasLeaseEnd ? <span className="ml-1">(auto)</span> : null}
               </p>
             )}
             {currentLeaseIsFixed && newLeaseStart ? (

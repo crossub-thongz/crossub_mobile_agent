@@ -66,8 +66,8 @@ export function RentReviewNoticePayableFromField({
         onBlur={() => void save(payableFrom)}
       />
       <p className="text-muted-foreground text-[11px] leading-relaxed">
-        Must be at least 60 days after the notice is delivered. Auto-filled from the lease end when
-        on time; edit for periodic tenancies or late sends.
+        Suggested from lease end or 60 days after notice delivery. Edit before sending if the
+        auto-filled date is not correct.
       </p>
     </div>
   );

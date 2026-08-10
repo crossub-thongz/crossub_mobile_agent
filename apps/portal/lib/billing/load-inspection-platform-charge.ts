@@ -29,16 +29,10 @@ function uniqueCandidateIds(...values: Array<string | undefined | null>): string
   return ids;
 }
 
+/** Lookup only — never create a charge while browsing the case. */
 async function fetchLinkedChargeByIds(candidateIds: string[]): Promise<AgentBillingCharge | null> {
   for (const id of candidateIds) {
-    let linked = await fetchAgentInspectionPlatformCharge(id);
-    if (!linked) {
-      try {
-        linked = await ensureAgentInspectionPlatformCharge(id);
-      } catch {
-        /* try next candidate — ensure may not exist on older API builds */
-      }
-    }
+    const linked = await fetchAgentInspectionPlatformCharge(id);
     if (linked) return linked;
   }
   return null;
@@ -81,6 +75,20 @@ async function quoteLinkedCharge(args: {
       lastError = err instanceof Error ? err.message : 'Could not prepare payment';
     }
   }
+
+  // Last resort: quote by property + type without a resolvable inspection id.
+  if (args.candidateIds.length === 0) {
+    try {
+      const quoted = await quoteAgentBillingCharge({
+        serviceType: SERVICE_TYPE[args.inspectionType],
+        propertyId: args.propertyId,
+      });
+      if (quoted) return { charge: quoted };
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : 'Could not prepare payment';
+    }
+  }
+
   return { charge: null, error: lastError };
 }
 
@@ -112,7 +120,7 @@ function buildCandidateIds(args: {
   );
 }
 
-/** Create a charge if needed, then return it (for manual Pay click). */
+/** Create a charge if needed, then return it (for manual Pay click only). */
 export async function prepareInspectionPlatformCharge(args: {
   inspectionId: string;
   propertyId?: string;
@@ -149,9 +157,8 @@ export async function prepareInspectionPlatformCharge(args: {
 }
 
 /**
- * Load the platform charge linked to this inspection job.
- * Only returns a charge when the API links it via sourceRef — never guesses from
- * other bills on the same property (that caused false "Inspection paid" banners).
+ * Load the platform charge linked to this inspection job (read-only).
+ * Charges are created when the agent clicks Pay — not while opening the case.
  */
 export async function loadInspectionPlatformCharge(args: {
   inspectionId: string;

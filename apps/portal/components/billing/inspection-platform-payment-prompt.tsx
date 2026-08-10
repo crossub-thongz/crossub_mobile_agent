@@ -23,7 +23,7 @@ import {
   type AgentBillingCharge,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
-import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
@@ -174,6 +174,7 @@ export function InspectionPlatformPaymentPrompt({
       if (outcome === 'complete') {
         await finalizeBillingChargePayment(linked.id);
         toast.success('Payment complete — thank you');
+        payInFlightRef.current = false;
         await load();
       }
     } catch (err) {
@@ -249,21 +250,9 @@ export function InspectionPlatformPaymentPrompt({
     return null;
   }
 
+  // Prompt stays until payment succeeds — then it is fully dismissed.
   if (charge?.status === 'paid') {
-    return (
-      <section
-        className={cn(
-          'rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm',
-          className,
-        )}
-      >
-        <p className="font-medium text-emerald-800 dark:text-emerald-200">Inspection paid</p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          {formatCurrency(charge.amount)} received for this job
-          {charge.paidAt ? ` · ${formatDateTime(charge.paidAt)}` : ''}.
-        </p>
-      </section>
-    );
+    return null;
   }
 
   const awaitingPrepaid =
@@ -287,8 +276,8 @@ export function InspectionPlatformPaymentPrompt({
           </p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
             The inspector has accepted this job. Pay the platform fee
-            {charge ? ` (${formatCurrency(charge.amount)})` : ''} to continue. Unpaid fees also
-            appear on the{' '}
+            {charge ? ` (${formatCurrency(charge.amount)})` : ''} to continue. This prompt stays
+            until payment succeeds. Unpaid fees also appear on the{' '}
             <Link href="/bill" className="text-primary font-medium hover:underline">
               Bill
             </Link>{' '}

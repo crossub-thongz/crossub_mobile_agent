@@ -24,13 +24,19 @@ export function inspectorBillingEligible(
   return false;
 }
 
-/** Ingoing / outgoing: inspector accepted (or assigned for billing), job still in progress. */
+/**
+ * Ingoing / outgoing: show payment after CROSSUB inspector accept until paid.
+ * Completion does not dismiss the prompt — only a successful payment does.
+ */
 export function isFieldInspectionPlatformPaymentActive(args: {
   gateStatus: FieldInspectionGateStatus;
   record: InspectionRecord | null;
   inspection?: Inspection | null;
 }): boolean {
-  if (args.gateStatus === 'completed') return false;
+  const status = (args.record?.status ?? args.inspection?.apiStatus ?? args.inspection?.status ?? '')
+    .toString()
+    .toLowerCase();
+  if (status.includes('cancel')) return false;
   if (inspectorBillingEligible(args.record, args.inspection ?? null)) return true;
   return args.gateStatus === 'scheduled';
 }
@@ -47,6 +53,7 @@ export function resolveRoutinePlatformPaymentInspectionId(args: {
   );
 }
 
+/** In-person CROSSUB routine only — stays until paid (completion does not clear it). */
 export function isRoutinePlatformPaymentActive(args: {
   inspection: Inspection;
   routineFlow: RoutineFlow | null;
@@ -57,7 +64,6 @@ export function isRoutinePlatformPaymentActive(args: {
   return (
     args.inspection.type === 'ROUTINE' &&
     args.routineFlow === 'in_person' &&
-    !args.routineCompletedAt &&
     !args.isCancelledRoutine &&
     inspectorBillingEligible(args.routineInspectionRecord, args.inspection)
   );
@@ -117,7 +123,7 @@ function openInspectorBillingEligible(args: {
   return false;
 }
 
-/** Single entry point for open in-case billing UI. */
+/** CROSSUB open in-case billing — stays until paid (report done does not clear it). */
 export function isOpenPlatformPaymentActiveForCase(args: {
   inspection: Inspection;
   isDone: boolean;
@@ -125,7 +131,13 @@ export function isOpenPlatformPaymentActiveForCase(args: {
   leasingDetail?: LeasingPropertyDetail | null;
   openSession?: OpenInspectionSession | null;
 }): boolean {
-  if (args.inspection.type !== 'OPEN' || args.isDone) return false;
+  if (args.inspection.type !== 'OPEN') return false;
+  if (
+    args.inspection.status?.toLowerCase().includes('cancel') ||
+    args.inspection.apiStatus === 'CANCELLED'
+  ) {
+    return false;
+  }
   if (
     !isCrossubManagedOpenInspection({
       session: args.openSession,
@@ -138,7 +150,7 @@ export function isOpenPlatformPaymentActiveForCase(args: {
   return openInspectorBillingEligible(args);
 }
 
-/** CROSSUB open inspections bill when the pool inspector accepts (not tenant self / agent-run). */
+/** CROSSUB open inspections — agent-run / self open are not billed. */
 export function isOpenPlatformPaymentActive(args: {
   isCrossubOpen: boolean;
   isSelfOpen: boolean;
@@ -148,7 +160,7 @@ export function isOpenPlatformPaymentActive(args: {
   leasingDetail?: LeasingPropertyDetail | null;
   openSession?: OpenInspectionSession | null;
 }): boolean {
-  if (args.isSelfOpen || args.isDone) return false;
+  if (args.isSelfOpen) return false;
   if (!args.isCrossubOpen) return false;
   return openInspectorBillingEligible(args);
 }

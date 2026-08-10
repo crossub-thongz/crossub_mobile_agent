@@ -314,6 +314,7 @@ export function LeasingStepOpenInspection({
       {openPlatformPaymentActive ? (
         <InspectionPlatformPaymentPrompt
           inspectionId={openBillingInspectionId ?? oi.viewingSessionId ?? oi.inspectionId ?? ''}
+          poolInspectionId={openBillingInspectionId ?? openPoolInspectionId ?? undefined}
           propertyId={detail.propertyId}
           viewingSessionId={oi.viewingSessionId ?? undefined}
           inspectionType="OPEN"
