@@ -285,6 +285,8 @@ export type PlatformChargePrepareResult = {
     amountAud: number;
     title: string;
     description: string;
+    calculationDetail?: string | null;
+    calculationSummary?: string | null;
   };
 };
 
@@ -330,6 +332,8 @@ export async function preparePlatformCharge(
         amountAud: charge.amount,
         title: SERVICE_LABEL[input.serviceType] ?? 'Platform service',
         description: charge.description,
+        calculationDetail: charge.calculationDetail,
+        calculationSummary: charge.calculationSummary,
       },
     };
   }

@@ -49,6 +49,7 @@ import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { routineInspectionApi, type RoutineScheduleByProperty } from '@/lib/routine-inspection-api';
 import { routineScheduleNeedsNewInstance, isActiveRoutineInspectionStatus } from '@/lib/routine/routine-instance-state';
+import { normalizeRoutinePoolInspectorName } from '@/lib/routine/routine-pool-inspector';
 import { terminationApi } from '@/lib/termination-case-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
@@ -798,7 +799,7 @@ export function CreateInspectionWizard({
               scheduledDate: routine.scheduledDate,
               inspectorName:
                 routine.flow === 'in_person'
-                  ? routine.inspectorName.trim() || undefined
+                  ? normalizeRoutinePoolInspectorName(routine.inspectorName)
                   : undefined,
               reason:
                 'Superseded — agent scheduled a new routine inspection case from the portal.',
@@ -809,7 +810,7 @@ export function CreateInspectionWizard({
               scheduledDate: routine.scheduledDate,
               inspectorName:
                 routine.flow === 'in_person'
-                  ? routine.inspectorName.trim() || undefined
+                  ? normalizeRoutinePoolInspectorName(routine.inspectorName)
                   : undefined,
             });
             toast.success('Next routine inspection scheduled');
@@ -831,7 +832,7 @@ export function CreateInspectionWizard({
               tenantEmail: routine.tenantEmail.trim() || undefined,
               inspectorName:
                 routine.flow === 'in_person'
-                  ? routine.inspectorName.trim() || undefined
+                  ? normalizeRoutinePoolInspectorName(routine.inspectorName)
                   : undefined,
             });
             toast.success('Routine inspection schedule created');
@@ -1544,12 +1545,15 @@ function RoutineInspectionForm({
         />
       </Field>
       {routine.flow === 'in_person' ? (
-        <Field label="Inspector name">
+        <Field label="Inspector (optional)">
           <Input
             value={routine.inspectorName}
             onChange={(e) => onChange({ ...routine, inspectorName: e.target.value })}
-            placeholder="Pending assignment"
+            placeholder="Leave blank for task pool"
           />
+          <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+            Leave blank so CROSSUB inspectors can claim the job from the task pool.
+          </p>
         </Field>
       ) : null}
     </div>

@@ -166,6 +166,8 @@ export function InspectionPlatformPaymentPrompt({
           title: `${label} — payment required`,
           description: linked.description,
           amountAud: linked.amount,
+          calculationDetail: linked.calculationDetail,
+          calculationSummary: linked.calculationSummary,
           defaultPaymentMethod: summary?.defaultPaymentMethod,
           chargeId: linked.id,
         },

@@ -497,6 +497,8 @@ export function CreateTribunalRentChasingDialog({
           title: prepared.paymentRequired.title,
           description: prepared.paymentRequired.description,
           amountAud: prepared.paymentRequired.amountAud,
+          calculationDetail: prepared.paymentRequired.calculationDetail,
+          calculationSummary: prepared.paymentRequired.calculationSummary,
         });
         return;
       }

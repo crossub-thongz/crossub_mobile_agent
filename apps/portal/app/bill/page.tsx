@@ -406,6 +406,11 @@ export default function BillPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground mt-1 text-sm">{row.description}</p>
+                      {row.calculationDetail ? (
+                        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                          {row.calculationDetail}
+                        </p>
+                      ) : null}
                       <p className="text-muted-foreground mt-1 text-xs">
                         {[
                           row.createdByName ? `Created by ${row.createdByName}` : null,

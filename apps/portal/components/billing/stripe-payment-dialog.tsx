@@ -27,6 +27,10 @@ export type StripePaymentDialogState = {
   title: string;
   description?: string;
   amountAud: number;
+  /** How the amount was calculated (ex GST + GST, rate card basis, etc.). */
+  calculationDetail?: string | null;
+  /** Plain-language pricing summary for this service. */
+  calculationSummary?: string | null;
   defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
   customerSessionClientSecret?: string | null;
   preferSavedCard?: boolean;
@@ -34,8 +38,57 @@ export type StripePaymentDialogState = {
   chargeId?: string;
 };
 
+function AmountDuePanel({
+  amountAud,
+  calculationDetail,
+  calculationSummary,
+}: {
+  amountAud: number;
+  calculationDetail?: string | null;
+  calculationSummary?: string | null;
+}) {
+  const hasCalc = Boolean(calculationDetail?.trim() || calculationSummary?.trim());
+
+  return (
+    <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+      <div
+        className={cn(
+          'flex flex-col gap-3',
+          hasCalc && 'sm:flex-row sm:items-start sm:justify-between sm:gap-4',
+        )}
+      >
+        <div className="min-w-0 shrink-0">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            Amount due
+          </p>
+          <p className="mt-0.5 text-2xl font-semibold tabular-nums">
+            {formatCurrency(amountAud)}
+          </p>
+        </div>
+        {hasCalc ? (
+          <div className="min-w-0 sm:max-w-[60%] sm:text-right">
+            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+              How it&apos;s calculated
+            </p>
+            {calculationDetail?.trim() ? (
+              <p className="mt-1 text-sm font-medium leading-snug">{calculationDetail}</p>
+            ) : null}
+            {calculationSummary?.trim() ? (
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                {calculationSummary}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 type PaymentFormProps = {
   amountAud: number;
+  calculationDetail?: string | null;
+  calculationSummary?: string | null;
   onSuccess: () => void | Promise<void>;
   onCancel: () => void;
   onUseSavedCard?: () => void;
@@ -49,7 +102,14 @@ function formatCardExpiry(expMonth: number, expYear: number): string {
   return `${String(expMonth).padStart(2, '0')}/${String(expYear).slice(-2)}`;
 }
 
-function PaymentForm({ amountAud, onSuccess, onCancel, onUseSavedCard }: PaymentFormProps) {
+function PaymentForm({
+  amountAud,
+  calculationDetail,
+  calculationSummary,
+  onSuccess,
+  onCancel,
+  onUseSavedCard,
+}: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -107,12 +167,11 @@ function PaymentForm({ amountAud, onSuccess, onCancel, onUseSavedCard }: Payment
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Amount due
-          </p>
-          <p className="mt-0.5 text-2xl font-semibold tabular-nums">{formatCurrency(amountAud)}</p>
-        </div>
+        <AmountDuePanel
+          amountAud={amountAud}
+          calculationDetail={calculationDetail}
+          calculationSummary={calculationSummary}
+        />
 
         <div
           className={cn(
@@ -163,6 +222,8 @@ function PaymentForm({ amountAud, onSuccess, onCancel, onUseSavedCard }: Payment
 
 type SavedCardPaymentFormProps = {
   amountAud: number;
+  calculationDetail?: string | null;
+  calculationSummary?: string | null;
   clientSecret: string;
   defaultPaymentMethod: AgentBillingDefaultPaymentMethod;
   onSuccess: () => void | Promise<void>;
@@ -173,6 +234,8 @@ type SavedCardPaymentFormProps = {
 
 function SavedCardPaymentForm({
   amountAud,
+  calculationDetail,
+  calculationSummary,
   clientSecret,
   defaultPaymentMethod,
   onSuccess,
@@ -231,12 +294,11 @@ function SavedCardPaymentForm({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Amount due
-          </p>
-          <p className="mt-0.5 text-2xl font-semibold tabular-nums">{formatCurrency(amountAud)}</p>
-        </div>
+        <AmountDuePanel
+          amountAud={amountAud}
+          calculationDetail={calculationDetail}
+          calculationSummary={calculationSummary}
+        />
 
         <div className="rounded-xl border bg-muted/25 p-4">
           <div className="flex items-start justify-between gap-3">
@@ -363,6 +425,8 @@ export function StripePaymentDialog({
         ) : state?.clientSecret && showSavedCard && state.defaultPaymentMethod ? (
           <SavedCardPaymentForm
             amountAud={state.amountAud}
+            calculationDetail={state.calculationDetail}
+            calculationSummary={state.calculationSummary}
             clientSecret={state.clientSecret}
             defaultPaymentMethod={state.defaultPaymentMethod}
             onSuccess={onSuccess}
@@ -384,6 +448,8 @@ export function StripePaymentDialog({
           >
             <PaymentForm
               amountAud={state.amountAud}
+              calculationDetail={state.calculationDetail}
+              calculationSummary={state.calculationSummary}
               onSuccess={onSuccess}
               onCancel={() => onOpenChange(false)}
               onUseSavedCard={

@@ -115,6 +115,19 @@ export function PlatformMonthlyInvoiceDialog({
           title: 'Monthly platform invoice',
           description: invoice.invoiceNumber,
           amountAud: invoice.amountDue,
+          calculationDetail: detail
+            ? [
+                (detail.serviceChargesSubtotal ?? 0) > 0
+                  ? `Inspection & tribunal lines $${(detail.serviceChargesSubtotal ?? 0).toFixed(2)}`
+                  : null,
+                (detail.serviceFeeAmount ?? 0) > 0
+                  ? `Full Service fee $${(detail.serviceFeeAmount ?? 0).toFixed(2)}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' + ') || detail.calculationSummary
+            : null,
+          calculationSummary: detail?.calculationSummary,
           defaultPaymentMethod: state?.defaultPaymentMethod,
         },
         setPaymentDialog,

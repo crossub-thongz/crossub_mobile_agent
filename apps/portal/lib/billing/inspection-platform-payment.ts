@@ -5,7 +5,6 @@ import {
 } from '@/lib/ingoing-inspection-display';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
-import { isAssignedInspectorName } from '@/lib/leasing/open-inspection-display';
 import { isCrossubManagedOpenInspection } from '@/lib/open-inspection/open-conducted-by';
 import { resolveOpenPoolInspectionId } from '@/lib/open-inspection/linked-case-history';
 import type { RoutineFlow } from '@/lib/routine/routine-case-status';
@@ -81,49 +80,10 @@ export function resolveOpenPlatformPaymentInspectionId(args: {
   return resolveOpenPoolInspectionId(args);
 }
 
-function openInspectorBillingEligible(args: {
-  poolInspectionRecord: InspectionRecord | null;
-  inspection?: Inspection | null;
-  leasingDetail?: LeasingPropertyDetail | null;
-  openSession?: OpenInspectionSession | null;
-}): boolean {
-  if (inspectorBillingEligible(args.poolInspectionRecord, args.inspection ?? null)) {
-    return true;
-  }
-
-  const oi = args.leasingDetail?.openInspection;
-  if (
-    oi &&
-    !oi.agentConducted &&
-    oi.scheduledTime &&
-    isAssignedInspectorName(oi.inspectorName)
-  ) {
-    return true;
-  }
-
-  if (
-    args.openSession &&
-    isAssignedInspectorName(
-      args.leasingDetail?.openInspection?.inspectorName ??
-        args.poolInspectionRecord?.inspectorName ??
-        args.inspection?.inspector,
-    ) &&
-    Boolean(args.openSession.startTime)
-  ) {
-    return true;
-  }
-
-  if (
-    isAssignedInspectorName(args.poolInspectionRecord?.inspectorName) &&
-    Boolean(args.poolInspectionRecord?.assignedInspectorId ?? args.poolInspectionRecord?.inspectorAssignedAt)
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-/** CROSSUB open in-case billing — stays until paid (report done does not clear it). */
+/**
+ * CROSSUB open in-case billing — same gate as ingoing: only after the inspector
+ * claims/accepts. Creating or scheduling alone must not ask for payment.
+ */
 export function isOpenPlatformPaymentActiveForCase(args: {
   inspection: Inspection;
   isDone: boolean;
@@ -147,7 +107,7 @@ export function isOpenPlatformPaymentActiveForCase(args: {
   ) {
     return false;
   }
-  return openInspectorBillingEligible(args);
+  return inspectorBillingEligible(args.poolInspectionRecord, args.inspection);
 }
 
 /** CROSSUB open inspections — agent-run / self open are not billed. */
@@ -162,5 +122,5 @@ export function isOpenPlatformPaymentActive(args: {
 }): boolean {
   if (args.isSelfOpen) return false;
   if (!args.isCrossubOpen) return false;
-  return openInspectorBillingEligible(args);
+  return inspectorBillingEligible(args.poolInspectionRecord, args.inspection ?? null);
 }
