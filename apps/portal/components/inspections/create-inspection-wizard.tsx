@@ -18,11 +18,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
-import { createAgentIngoingInspection, createAgentLeasingCycle, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
+import { createAgentIngoingInspection, createAgentLeasingCycle, createAgentOutgoingInspection, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import {
   defaultOpenInspectionSchedule,
+  suggestedOutgoingInspectionIsoFromDate,
   toDatetimeLocalValue,
 } from '@/lib/inspections/outgoing-schedule';
 import { openViewingsApi } from '@/lib/open-viewings-api';
@@ -447,7 +448,9 @@ export function CreateInspectionWizard({
             } else {
               setVacatingCaseId('');
               setOutgoingInspector('Pending assignment');
-              setOutgoingScheduledLocal('');
+              setOutgoingScheduledLocal(
+                toDatetimeLocalValue(suggestedOutgoingInspectionIsoFromDate(null)),
+              );
             }
           }
         }
@@ -838,13 +841,27 @@ export function CreateInspectionWizard({
       }
 
       if (inspectionType === 'OUTGOING') {
-        if (!vacatingCaseId) throw new Error('Select a vacating case');
         if (!outgoingScheduledLocal) throw new Error('Scheduled date is required');
-        const updatedCase = await terminationApi.scheduleInspection(vacatingCaseId, {
-          inspector: outgoingInspector.trim() || 'Pending assignment',
-          date: new Date(outgoingScheduledLocal).toISOString(),
-        });
-        const inspectionId = updatedCase.inspection?.inspectionId ?? undefined;
+        const scheduledIso = new Date(outgoingScheduledLocal).toISOString();
+
+        let inspectionId: string | undefined;
+        if (vacatingCaseId) {
+          const updatedCase = await terminationApi.scheduleInspection(vacatingCaseId, {
+            inspector: outgoingInspector.trim() || 'Pending assignment',
+            date: scheduledIso,
+          });
+          inspectionId = updatedCase.inspection?.inspectionId ?? undefined;
+        } else {
+          const created = await createAgentOutgoingInspection(property.id, {
+            scheduledTime: scheduledIso,
+            inspectorName: outgoingInspector.trim() || undefined,
+            tenantName: property.tenantName?.trim() || undefined,
+            tenantEmail: property.tenantContact?.email?.trim() || undefined,
+            tenantPhone: property.tenantContact?.phone?.trim() || undefined,
+          });
+          inspectionId = created.id;
+        }
+
         let view: Inspection | null = null;
         if (inspectionId) {
           try {
@@ -857,7 +874,7 @@ export function CreateInspectionWizard({
               type: 'OUTGOING',
               propertyId: property.id,
               propertyAddress: property.address,
-              scheduledAt: new Date(outgoingScheduledLocal).toISOString(),
+              scheduledAt: scheduledIso,
               status: 'Scheduled',
               reportStatus: 'pending',
               createdAt: new Date().toISOString(),
@@ -866,7 +883,11 @@ export function CreateInspectionWizard({
             };
           }
         }
-        toast.success('Outgoing inspection scheduled');
+        toast.success(
+          vacatingCaseId
+            ? 'Outgoing inspection scheduled'
+            : 'Outgoing inspection created',
+        );
         if (view) {
           finalizeInspectionCreate(view);
         } else {
@@ -1513,7 +1534,6 @@ function OutgoingInspectionForm({
   onInspectorChange,
   scheduledLocal,
   onScheduledLocalChange,
-  propertyId,
 }: {
   vacatingCases: import('@/lib/types').VacatingCase[];
   vacatingCaseId: string;
@@ -1526,14 +1546,21 @@ function OutgoingInspectionForm({
 }) {
   if (vacatingCases.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-4 text-center text-xs">
-        <p className="font-medium">No vacating case for this property</p>
-        <p className="text-muted-foreground mt-1">
-          Start an end-leasing case on the property first, then schedule the outgoing inspection.
+      <div className="space-y-3">
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          No end-leasing case on this property — that is expected for Inspection Only (Level 1).
+          Schedule a standalone outgoing inspection for the inspector pool.
         </p>
-        <Button asChild size="sm" className="mt-3" variant="outline">
-          <Link href={propertyDetail(propertyId)}>Open property</Link>
-        </Button>
+        <Field label="Inspector">
+          <Input value={inspector} onChange={(e) => onInspectorChange(e.target.value)} />
+        </Field>
+        <Field label="Scheduled inspection *">
+          <Input
+            type="datetime-local"
+            value={scheduledLocal}
+            onChange={(e) => onScheduledLocalChange(e.target.value)}
+          />
+        </Field>
       </div>
     );
   }

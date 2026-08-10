@@ -77,6 +77,18 @@ export type CreateAgentIngoingInspectionInput = {
   platformChargeId?: string;
 };
 
+export type CreateAgentOutgoingInspectionInput = {
+  scheduledTime: string;
+  vacateDate?: string;
+  tenantName?: string;
+  tenantEmail?: string;
+  tenantPhone?: string;
+  inspectorName?: string;
+  accessInstructions?: string;
+  notes?: string;
+  platformChargeId?: string;
+};
+
 export async function createAgentLeasingCycle(
   propertyId: string,
   body: CreateAgentLeasingCycleInput,
@@ -250,6 +262,16 @@ export async function createAgentIngoingInspection(
   body: CreateAgentIngoingInspectionInput,
 ): Promise<AgentWorkflowCreateResult> {
   return agentFetch(`${base(propertyId)}/inspection/ingoing`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function createAgentOutgoingInspection(
+  propertyId: string,
+  body: CreateAgentOutgoingInspectionInput,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(`${base(propertyId)}/inspection/outgoing`, {
     method: 'POST',
     body: JSON.stringify(body),
   });
