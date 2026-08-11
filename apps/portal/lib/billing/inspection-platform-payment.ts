@@ -2,6 +2,7 @@ import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import {
   type AgentIngoingGateStatus,
   inspectorHasAcceptedJob,
+  inspectorIsAssigned,
 } from '@/lib/ingoing-inspection-display';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
@@ -13,18 +14,24 @@ import type { Inspection } from '@/lib/types';
 
 type FieldInspectionGateStatus = AgentIngoingGateStatus;
 
-/** Mirrors backend inspectorAcceptanceTriggersBilling — assign or accept. */
+/**
+ * Mirrors backend billing trigger — pool accept **or** staff/admin assign.
+ * Level 1 pay-now must appear as soon as an inspector is on the job.
+ */
 export function inspectorBillingEligible(
   record: InspectionRecord | null,
   inspection?: Inspection | null,
 ): boolean {
   if (inspectorHasAcceptedJob(record, inspection ?? null)) return true;
   if (record?.assignedInspectorId && record?.inspectorAssignedAt) return true;
+  if (inspectorIsAssigned(record?.inspectorName ?? inspection?.inspector)) {
+    return true;
+  }
   return false;
 }
 
 /**
- * Ingoing / outgoing: show payment after CROSSUB inspector accept until paid.
+ * Ingoing / outgoing: show payment after an inspector is assigned/accepted until paid.
  * Completion does not dismiss the prompt — only a successful payment does.
  */
 export function isFieldInspectionPlatformPaymentActive(args: {

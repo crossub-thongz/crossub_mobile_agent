@@ -1,6 +1,9 @@
 import { INSPECTION_RECORD_STATUS } from '@/constants/inspection-records';
 import { INSPECTION_STATUS } from '@/constants/api-enums';
-import { inspectorHasAcceptedJob } from '@/lib/ingoing-inspection-display';
+import {
+  inspectorHasAcceptedJob,
+  inspectorIsAssigned,
+} from '@/lib/ingoing-inspection-display';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
 
@@ -23,9 +26,9 @@ export const AGENT_OUTGOING_GATE_LABEL: Record<AgentOutgoingGateStatus, string> 
 
 export const AGENT_OUTGOING_GATE_HINT: Record<AgentOutgoingGateStatus, string> = {
   pending:
-    'Vacating tenant details and inspector details. Waiting for an inspector to accept the outgoing job.',
+    'Vacating tenant details and inspector details. Waiting for an inspector to be assigned or accept.',
   scheduled:
-    'Inspector has accepted. Track key collection proof, report submission, key return, and agent acknowledgement.',
+    'Inspector is on the job. Pay the Level 1 platform fee if prompted, then track key collection, report, key return, and agent acknowledgement.',
   completed: 'All four post-accept steps are done — this outgoing job case is complete.',
 };
 
@@ -34,8 +37,8 @@ export function agentOutgoingGateIndex(status: AgentOutgoingGateStatus): number 
 }
 
 /**
- * Pending until the inspector accepts.
- * Scheduled after accept (field work + 4 completion steps).
+ * Pending until an inspector is on the job (pool accept or staff assign).
+ * Scheduled after that (field work + 4 completion steps).
  * Completed when all four post-accept steps are done.
  */
 export function deriveAgentOutgoingGateStatus(args: {
@@ -60,5 +63,11 @@ export function deriveAgentOutgoingGateStatus(args: {
   }
 
   if (inspectorHasAcceptedJob(record, inspection)) return 'scheduled';
+  if (
+    record?.assignedInspectorId ||
+    inspectorIsAssigned(record?.inspectorName ?? inspection.inspector)
+  ) {
+    return 'scheduled';
+  }
   return 'pending';
 }

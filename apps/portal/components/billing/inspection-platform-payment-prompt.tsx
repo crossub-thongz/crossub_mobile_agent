@@ -277,9 +277,9 @@ export function InspectionPlatformPaymentPrompt({
             Payment required
           </p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            The inspector has accepted this job. Pay the platform fee
-            {charge ? ` (${formatCurrency(charge.amount)})` : ''} so they can start. This prompt stays
-            until payment succeeds. Unpaid fees also appear on the{' '}
+            An inspector is on this job. Pay the platform fee
+            {charge ? ` (${formatCurrency(charge.amount)})` : ''} before they can start.
+            This prompt stays until payment succeeds. Unpaid fees also appear on the{' '}
             <Link href="/bill" className="text-primary font-medium hover:underline">
               Bill
             </Link>{' '}

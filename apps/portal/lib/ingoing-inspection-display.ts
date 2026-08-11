@@ -23,9 +23,9 @@ export const AGENT_INGOING_GATE_LABEL: Record<AgentIngoingGateStatus, string> = 
 
 export const AGENT_INGOING_GATE_HINT: Record<AgentIngoingGateStatus, string> = {
   pending:
-    'New tenant details and inspector details. Inspection date targets 7 days before move-in until an inspector accepts.',
+    'New tenant details and inspector details. Inspection date targets 7 days before move-in until an inspector is assigned or accepts.',
   scheduled:
-    'Inspector has accepted. Track key collection proof, report submission, key return, and tenant acknowledgement.',
+    'Inspector is on the job. Pay the Level 1 platform fee if prompted, then track key collection, report, key return, and tenant acknowledgement.',
   completed: 'All four post-accept steps are done — this ingoing job case is complete.',
 };
 
@@ -77,8 +77,8 @@ export function inspectorHasAcceptedJob(
 }
 
 /**
- * Pending until the inspector accepts.
- * Scheduled after accept (field work + 4 completion steps).
+ * Pending until an inspector is on the job (pool accept or staff assign).
+ * Scheduled after that (field work + 4 completion steps).
  * Completed when all four post-accept steps are done.
  */
 export function deriveAgentIngoingGateStatus(args: {
@@ -103,6 +103,13 @@ export function deriveAgentIngoingGateStatus(args: {
   }
 
   if (inspectorHasAcceptedJob(record, inspection)) return 'scheduled';
+  // Staff assign skips accept — once a named inspector is on the job, move past Pending.
+  if (
+    record?.assignedInspectorId ||
+    inspectorIsAssigned(record?.inspectorName ?? inspection.inspector)
+  ) {
+    return 'scheduled';
+  }
   return 'pending';
 }
 
