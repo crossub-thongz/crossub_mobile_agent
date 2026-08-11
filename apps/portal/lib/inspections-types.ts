@@ -17,6 +17,11 @@ export interface InspectionRecord {
   propertyLatitude: number | null
   propertyLongitude: number | null
   inspectorName: string | null
+  /**
+   * Prior inspector when staff reassigned this DRAFT job before work started.
+   * Display with `formatInspectorReassignmentLabel`.
+   */
+  previousInspectorName?: string | null
   assignedInspectorId: string | null
   workflowPhase: string | null
   /** True when tenant (or ops simulation) signed the ingoing report. */

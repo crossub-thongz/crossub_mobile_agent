@@ -10,6 +10,7 @@ import {
   type SessionStatus,
 } from '@/constants/open-inspection-ops';
 import type { InspectionRecord } from '@/lib/inspections-types';
+import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { workflowEventToTimelineEntry } from '@/lib/open-inspection/linked-case-history';
 import type { Inspection } from '@/lib/types';
 import type { TimelineEntry } from '@/lib/types';
@@ -83,7 +84,11 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     type,
     propertyId: record.propertyId ?? '',
     propertyAddress: record.propertyAddress ?? '—',
-    inspector: record.inspectorName ?? undefined,
+    inspector:
+      formatInspectorReassignmentLabel(
+        record.inspectorName,
+        record.previousInspectorName,
+      ) ?? undefined,
     scheduledAt: record.scheduledDate ?? record.inspectionDate ?? undefined,
     moveInDate: record.moveInDate ?? undefined,
     status: openInspectionStatusLabel(

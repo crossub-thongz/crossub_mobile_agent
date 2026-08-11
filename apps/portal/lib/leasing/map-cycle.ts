@@ -1,4 +1,5 @@
 import type { ServerContractDraft, ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
+import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import {
   LEASING_AGENT_DECISION,
   LEASING_ITEM_STATUS,
@@ -21,6 +22,24 @@ const asArray = <T>(value: T[] | null | undefined): T[] =>
   Array.isArray(value) ? value : [];
 
 const POOL_INSPECTOR_LABEL = 'Pending — task pool';
+
+function resolveOpenInspectorLabel(view: ServerLeasingCycleView): string {
+  const inspectorRaw = view.openInspection.inspectorName?.trim();
+  if (
+    !inspectorRaw ||
+    ['pending assignment', 'task pool', 'pending — task pool'].includes(
+      inspectorRaw.toLowerCase(),
+    )
+  ) {
+    return POOL_INSPECTOR_LABEL;
+  }
+  return (
+    formatInspectorReassignmentLabel(
+      inspectorRaw,
+      view.openInspection.previousInspectorName,
+    ) ?? inspectorRaw
+  );
+}
 
 function asItemStatus(status: string): LeasingItemStatus {
   if (Object.values(LEASING_ITEM_STATUS).includes(status as LeasingItemStatus)) {
@@ -138,14 +157,7 @@ export function patchDetailFromCycleView(
   existing: LeasingPropertyDetail,
   view: ServerLeasingCycleView,
 ): LeasingPropertyDetail {
-  const inspectorRaw = view.openInspection.inspectorName?.trim();
-  const inspectorName =
-    inspectorRaw &&
-    !['pending assignment', 'task pool', 'pending — task pool'].includes(
-      inspectorRaw.toLowerCase(),
-    )
-      ? inspectorRaw
-      : POOL_INSPECTOR_LABEL;
+  const inspectorName = resolveOpenInspectorLabel(view);
 
   return {
     ...existing,

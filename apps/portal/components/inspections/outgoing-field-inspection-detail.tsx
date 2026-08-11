@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import {
   WorkflowProgressRail,
@@ -295,7 +296,14 @@ export function OutgoingFieldInspectionDetail({
   const tenantPhone = snapshot.tenantPhone?.trim() || '—';
   const inspectionDate =
     record?.scheduledDate ?? inspection.scheduledAt ?? record?.inspectionDate ?? null;
-  const inspectorLabel = record?.inspectorName ?? inspection.inspector ?? 'Unassigned';
+  const inspectorLabel =
+    formatInspectorReassignmentLabel(
+      record?.inspectorName ?? inspection.inspector,
+      record?.previousInspectorName,
+    ) ??
+    record?.inspectorName ??
+    inspection.inspector ??
+    'Unassigned';
   const inspectorStatus = formatInspectorFieldStatus({
     workflowPhase: record?.workflowPhase,
     keyCollected,

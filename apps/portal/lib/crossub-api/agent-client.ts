@@ -12,6 +12,8 @@ export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   createdAt?: string | null;
   /** From ingoing workflow meta — target schedule when scheduledDate is null. */
   moveInDate?: string | null;
+  /** Prior inspector when staff reassigned a DRAFT job before work started. */
+  previousInspectorName?: string | null;
 };
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
   closureReason?: string | null;

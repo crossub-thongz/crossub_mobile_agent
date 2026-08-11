@@ -182,6 +182,7 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
     required: boolean
     inspectionId?: string | null
     inspectorName: string | null
+    previousInspectorName?: string | null
     inspectorPhone?: string | null
     inspectorEmail?: string | null
     scheduledTime: string | null

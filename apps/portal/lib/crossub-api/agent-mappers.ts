@@ -70,6 +70,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 
 type AgentPortfolioId = 'agent-1' | 'agent-2';
 
@@ -323,7 +324,9 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       type,
       propertyId: i.propertyId ?? '',
       propertyAddress: i.propertyAddress,
-      inspector: i.inspectorName ?? undefined,
+      inspector:
+        formatInspectorReassignmentLabel(i.inspectorName, i.previousInspectorName) ??
+        undefined,
       scheduledAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
       moveInDate: i.moveInDate ?? undefined,
       status:

@@ -27,6 +27,7 @@ import { InspectionReportDownloadActions } from '@/components/inspections/inspec
 import { FieldInspectionReportReviewSection } from '@/components/inspections/field-inspection-report-review-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
+import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { LEASING_INGOING_SCHEDULE_WINDOW_DAYS } from '@/lib/leasing/leasing-ingoing-handoff';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
@@ -303,7 +304,13 @@ export function IngoingInspectionAgentDetail({
     moveInDate: snapshot.moveInDate,
   });
   const inspectorLabel =
-    record?.inspectorName ?? inspection.inspector ?? 'Unassigned';
+    formatInspectorReassignmentLabel(
+      record?.inspectorName ?? inspection.inspector,
+      record?.previousInspectorName,
+    ) ??
+    record?.inspectorName ??
+    inspection.inspector ??
+    'Unassigned';
   const inspectorStatus = formatInspectorFieldStatus({
     workflowPhase: record?.workflowPhase,
     keyCollected,

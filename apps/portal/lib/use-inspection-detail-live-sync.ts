@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { fetchInspectionDetail } from '@/lib/inspections/fetch';
 import { mapOpenSessionToInspection } from '@/lib/inspection-mappers';
+import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import type { Inspection } from '@/lib/types';
@@ -27,7 +28,13 @@ function mergeInspectionDetail(base: Inspection, detail: InspectionDetail | Open
   }
   return {
     ...base,
-    inspector: detail.inspectorName ?? base.inspector,
+    inspector:
+      formatInspectorReassignmentLabel(
+        detail.inspectorName,
+        detail.previousInspectorName,
+      ) ??
+      detail.inspectorName ??
+      base.inspector,
     scheduledAt: detail.scheduledDate ?? detail.inspectionDate ?? base.scheduledAt,
     reportUrl: detail.reportUrl ?? base.reportUrl,
     areaOutcomes: detail.areas.map((area) => ({
