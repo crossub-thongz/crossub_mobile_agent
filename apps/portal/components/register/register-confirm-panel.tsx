@@ -363,7 +363,7 @@ export function RegisterConfirmPanel({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold uppercase tracking-wide text-primary underline underline-offset-2 group-hover:opacity-90">
-                  CROSSUB System Access Agreement
+                  CROSSUB Portal Privacy Agreement
                 </p>
                 <ExternalLink className="size-3.5 shrink-0 text-primary opacity-70 group-hover:opacity-100" />
                 <span className="text-muted-foreground text-[11px] font-medium normal-case tracking-normal">
@@ -378,7 +378,7 @@ export function RegisterConfirmPanel({
       <DocumentPreviewDialog
         doc={previewKind ? activePreview : null}
         subtitle={
-          previewKind === 'privacy' ? 'System access agreement' : undefined
+          previewKind === 'privacy' ? 'Agency portal privacy & access' : undefined
         }
         open={previewKind != null}
         onClose={() => setPreviewKind(null)}

@@ -123,13 +123,14 @@ export default function SystemAccessAgreementPage() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Required before access
             </p>
-            <h1 className="text-xl font-semibold text-foreground">CROSSUB System Access Agreement</h1>
+            <h1 className="text-xl font-semibold text-foreground">Agency Portal Access Agreement</h1>
           </div>
         </div>
 
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Before using the CROSSUB Agent portal, you must read and accept the CROSSUB System
-          Access Agreement. Your signed acceptance will be stored in the agency records.
+          Before using the CROSSUB Agent portal, you must read and accept the agency portal
+          user access, confidentiality and privacy agreement. Your signed acceptance will be
+          stored in the agency records.
         </p>
 
         {agreement ? (
