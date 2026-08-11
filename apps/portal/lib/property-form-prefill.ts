@@ -569,11 +569,18 @@ export function buildMaintenancePrefill(
     tenantSelections: options?.tenantSelections,
     recordTenant: options?.recordTenant,
   });
+  // Prefer the property registry tenant (same as Property Overview) over the lease
+  // Person — a wrong lease link must not prefill the maintenance form as Tenant contact.
+  const registryName = isUsableTenantLabel(property.tenantName)
+    ? property.tenantName.trim()
+    : '';
+  const registryEmail = property.tenantContact?.email?.trim() || '';
+  const registryPhone = property.tenantContact?.phone?.trim() || '';
   return {
     address: formatPropertyAddress(property),
-    tenantName: tenant.name,
-    tenantEmail: tenant.email,
-    tenantPhone: tenant.phone,
+    tenantName: registryName || tenant.name,
+    tenantEmail: registryEmail || tenant.email,
+    tenantPhone: registryPhone || tenant.phone,
   };
 }
 

@@ -24,6 +24,7 @@ import {
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
+import { InspectionViewPaymentButton } from '@/components/billing/inspection-view-payment-button';
 import {
   isOpenPlatformPaymentActiveForCase,
   isRoutinePlatformPaymentActive,
@@ -585,14 +586,38 @@ export function InspectionDetailView({
               titleClassName="text-base font-semibold leading-snug"
               subtitle={<p className="text-muted-foreground text-xs">Case ref {insp.trackingNumber}</p>}
             />
-            {insp.propertyId && (
-              <Link
-                href={propertyDetail(insp.propertyId)}
-                className="text-primary inline-flex text-xs font-medium hover:underline"
-              >
-                View property
-              </Link>
-            )}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {insp.propertyId ? (
+                <Link
+                  href={propertyDetail(insp.propertyId)}
+                  className="text-primary inline-flex text-xs font-medium hover:underline"
+                >
+                  View property
+                </Link>
+              ) : null}
+              {insp.type === 'OPEN' || insp.type === 'ROUTINE' ? (
+                <InspectionViewPaymentButton
+                  inspectionId={
+                    insp.type === 'OPEN'
+                      ? (openBillingInspectionId ?? insp.id)
+                      : (routinePlatformPaymentInspectionId ?? insp.id)
+                  }
+                  poolInspectionId={
+                    insp.type === 'OPEN' ? (openBillingInspectionId ?? undefined) : undefined
+                  }
+                  propertyId={insp.propertyId}
+                  viewingSessionId={
+                    insp.type === 'OPEN'
+                      ? isOpenViewingSource
+                        ? insp.id
+                        : openSession?.id
+                      : undefined
+                  }
+                  inspectionType={insp.type === 'OPEN' ? 'OPEN' : 'ROUTINE'}
+                  active
+                />
+              ) : null}
+            </div>
           </div>
           {canDelete && (
             <Button

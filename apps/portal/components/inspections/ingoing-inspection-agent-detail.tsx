@@ -56,6 +56,7 @@ import {
 } from '@/lib/ingoing-inspection-display';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
+import { InspectionViewPaymentButton } from '@/components/billing/inspection-view-payment-button';
 import { isFieldInspectionPlatformPaymentActive } from '@/lib/billing/inspection-platform-payment';
 import type { InspectionDetail, InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
 import { useLivePoll } from '@/lib/use-live-poll';
@@ -366,14 +367,22 @@ export function IngoingInspectionAgentDetail({
               </div>
               <h1 className="text-base font-semibold leading-snug">{inspection.propertyAddress}</h1>
               <p className="text-muted-foreground text-xs">Case ref {inspection.trackingNumber}</p>
-              {inspection.propertyId ? (
-                <Link
-                  href={propertyDetail(inspection.propertyId)}
-                  className="text-primary inline-flex text-xs font-medium hover:underline"
-                >
-                  View property
-                </Link>
-              ) : null}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {inspection.propertyId ? (
+                  <Link
+                    href={propertyDetail(inspection.propertyId)}
+                    className="text-primary inline-flex text-xs font-medium hover:underline"
+                  >
+                    View property
+                  </Link>
+                ) : null}
+                <InspectionViewPaymentButton
+                  inspectionId={snapshot.record?.id ?? inspection.id}
+                  propertyId={inspection.propertyId}
+                  inspectionType="INGOING"
+                  active={gateStatus !== 'pending' || platformPaymentActive}
+                />
+              </div>
             </div>
           </div>
           {canCancel ? (
