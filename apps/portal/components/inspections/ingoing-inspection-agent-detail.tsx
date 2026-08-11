@@ -27,6 +27,7 @@ import { InspectionReportDownloadActions } from '@/components/inspections/inspec
 import { FieldInspectionReportReviewSection } from '@/components/inspections/field-inspection-report-review-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
+import { InspectorNameWithHistory } from '@/components/inspections/inspector-name-with-history';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { LEASING_INGOING_SCHEDULE_WINDOW_DAYS } from '@/lib/leasing/leasing-ingoing-handoff';
@@ -304,12 +305,20 @@ export function IngoingInspectionAgentDetail({
     scheduledDate: record?.scheduledDate ?? inspection.scheduledAt,
     moveInDate: snapshot.moveInDate,
   });
+  const currentInspectorName =
+    record?.inspectorName?.trim() ||
+    // List mapper may already embed "A → B (Reassigned)" — prefer raw record.
+    (inspection.inspector && !/→/.test(inspection.inspector)
+      ? inspection.inspector
+      : null) ||
+    null;
+  const previousInspectorName = record?.previousInspectorName ?? null;
   const inspectorLabel =
     formatInspectorReassignmentLabel(
-      record?.inspectorName ?? inspection.inspector,
-      record?.previousInspectorName,
+      currentInspectorName ?? inspection.inspector,
+      previousInspectorName,
     ) ??
-    record?.inspectorName ??
+    currentInspectorName ??
     inspection.inspector ??
     'Unassigned';
   const inspectorStatus = formatInspectorFieldStatus({
@@ -506,7 +515,13 @@ export function IngoingInspectionAgentDetail({
             <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
               Inspector name
             </dt>
-            <dd className="mt-1 text-sm font-medium">{inspectorLabel}</dd>
+            <dd className="mt-1">
+              <InspectorNameWithHistory
+                currentName={currentInspectorName ?? inspectorLabel}
+                previousName={previousInspectorName}
+                auditEntries={auditEntries}
+              />
+            </dd>
           </div>
           {gateStatus !== 'pending' ? (
             <div className="sm:col-span-2">

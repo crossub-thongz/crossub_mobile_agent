@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { InspectorNameWithHistory } from '@/components/inspections/inspector-name-with-history';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import {
@@ -297,12 +298,19 @@ export function OutgoingFieldInspectionDetail({
   const tenantPhone = snapshot.tenantPhone?.trim() || '—';
   const inspectionDate =
     record?.scheduledDate ?? inspection.scheduledAt ?? record?.inspectionDate ?? null;
+  const currentInspectorName =
+    record?.inspectorName?.trim() ||
+    (inspection.inspector && !/→/.test(inspection.inspector)
+      ? inspection.inspector
+      : null) ||
+    null;
+  const previousInspectorName = record?.previousInspectorName ?? null;
   const inspectorLabel =
     formatInspectorReassignmentLabel(
-      record?.inspectorName ?? inspection.inspector,
-      record?.previousInspectorName,
+      currentInspectorName ?? inspection.inspector,
+      previousInspectorName,
     ) ??
-    record?.inspectorName ??
+    currentInspectorName ??
     inspection.inspector ??
     'Unassigned';
   const inspectorStatus = formatInspectorFieldStatus({
@@ -549,7 +557,13 @@ export function OutgoingFieldInspectionDetail({
             <dt className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
               Inspector name
             </dt>
-            <dd className="mt-1 text-sm font-medium">{inspectorLabel}</dd>
+            <dd className="mt-1">
+              <InspectorNameWithHistory
+                currentName={currentInspectorName ?? inspectorLabel}
+                previousName={previousInspectorName}
+                auditEntries={auditEntries}
+              />
+            </dd>
           </div>
           {gateStatus !== 'pending' ? (
             <div className="sm:col-span-2">
