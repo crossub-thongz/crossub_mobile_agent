@@ -44,21 +44,95 @@ async function fetchDocumentBlob(href: string): Promise<Blob> {
   return response.blob();
 }
 
+function PreviewLoadingState() {
+  return (
+    <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
+      <Loader2 className="text-muted-foreground mb-2 size-8 animate-spin" />
+      <p className="text-muted-foreground text-sm">Loading document…</p>
+    </div>
+  );
+}
+
+function PreviewErrorState() {
+  return (
+    <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
+      <FileText className="text-muted-foreground mb-2 size-10" />
+      <p className="text-muted-foreground text-sm">Unable to load the document preview</p>
+      <p className="text-muted-foreground mt-1 text-xs">Use Download below.</p>
+    </div>
+  );
+}
+
+/** Fetch PDF as a blob so the browser previews inline instead of downloading. */
+function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setLoading(true);
+    setError(false);
+    setBlobUrl(null);
+
+    void (async () => {
+      try {
+        const blob = await fetchDocumentBlob(href);
+        if (cancelled) return;
+        const pdfBlob =
+          blob.type === 'application/pdf'
+            ? blob
+            : new Blob([await blob.arrayBuffer()], { type: 'application/pdf' });
+        objectUrl = URL.createObjectURL(pdfBlob);
+        setBlobUrl(objectUrl);
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [href]);
+
+  if (loading) return <PreviewLoadingState />;
+  if (error || !blobUrl) return <PreviewErrorState />;
+
+  return (
+    <iframe
+      title={title}
+      src={pdfPreviewSrc(blobUrl)}
+      className="h-full min-h-0 w-full border-0 bg-background"
+    />
+  );
+}
+
 function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
     let cancelled = false;
     setLoading(true);
     setError(false);
-    container.innerHTML = '';
 
+    // Keep the host node mounted (see render below) so the ref is available here.
     void (async () => {
+      const container = containerRef.current;
+      if (!container) {
+        if (!cancelled) {
+          setError(true);
+          setLoading(false);
+        }
+        return;
+      }
+      container.innerHTML = '';
+
       try {
         const blob = await fetchDocumentBlob(href);
         if (cancelled) return;
@@ -84,32 +158,25 @@ function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
     };
   }, [href]);
 
-  if (loading) {
-    return (
-      <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
-        <Loader2 className="text-muted-foreground mb-2 size-8 animate-spin" />
-        <p className="text-muted-foreground text-sm">Loading document…</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
-        <FileText className="text-muted-foreground mb-2 size-10" />
-        <p className="text-muted-foreground text-sm">Unable to load the document preview</p>
-        <p className="text-muted-foreground mt-1 text-xs">Use Download below.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-full overflow-auto bg-background p-4">
-      <div
-        ref={containerRef}
-        className="docx-preview-host mx-auto max-w-4xl bg-white text-foreground shadow-sm"
-        aria-label={title}
-      />
+    <div className="relative h-full min-h-[320px]">
+      {loading ? (
+        <div className="absolute inset-0 z-10 bg-background">
+          <PreviewLoadingState />
+        </div>
+      ) : null}
+      {error && !loading ? (
+        <div className="absolute inset-0 z-10 bg-background">
+          <PreviewErrorState />
+        </div>
+      ) : null}
+      <div className="h-full overflow-auto bg-background p-4">
+        <div
+          ref={containerRef}
+          className="docx-preview-host mx-auto max-w-4xl bg-white text-foreground shadow-sm"
+          aria-label={title}
+        />
+      </div>
     </div>
   );
 }
@@ -128,6 +195,28 @@ export function DocumentPreviewDialog({
   const url = doc && isViewableDocumentUrl(doc.href) ? doc.href : undefined;
   const previewKind = url ? documentPreviewKind(url, doc?.fileName) : 'none';
   const downloadName = doc?.downloadFileName ?? doc?.fileName ?? doc?.title ?? 'document';
+  const [downloadBusy, setDownloadBusy] = useState(false);
+
+  const handleDownload = async () => {
+    if (!url) return;
+    setDownloadBusy(true);
+    try {
+      const blob = await fetchDocumentBlob(url);
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = downloadName;
+      anchor.rel = 'noopener';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } finally {
+      setDownloadBusy(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
@@ -162,11 +251,7 @@ export function DocumentPreviewDialog({
               />
             </div>
           ) : previewKind === 'pdf' ? (
-            <iframe
-              title={doc?.title ?? 'Document'}
-              src={pdfPreviewSrc(url)}
-              className="h-full min-h-0 w-full border-0 bg-background"
-            />
+            open ? <PdfPreviewPanel href={url} title={doc?.title ?? 'Document'} /> : null
           ) : previewKind === 'docx' ? (
             open ? <DocxPreviewPanel href={url} title={doc?.title ?? 'Document'} /> : null
           ) : (
@@ -182,11 +267,18 @@ export function DocumentPreviewDialog({
 
         <DialogFooter className="shrink-0 gap-2 sm:justify-between">
           {url ? (
-            <Button asChild className="gap-1.5">
-              <a href={url} download={downloadName} target="_blank" rel="noopener noreferrer">
+            <Button
+              type="button"
+              className="gap-1.5"
+              disabled={downloadBusy}
+              onClick={() => void handleDownload()}
+            >
+              {downloadBusy ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
                 <Download className="size-3.5" />
-                Download
-              </a>
+              )}
+              Download
             </Button>
           ) : (
             <span />

@@ -1,21 +1,16 @@
 'use client';
 
-import {
-  Building2,
-  CalendarCheck,
-  Check,
-  ChevronDown,
-  DoorOpen,
-  Home,
-  Loader2,
-  Sparkles,
-} from 'lucide-react';
+import { Check, ChevronDown, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { PricingRateCatalog } from '@/components/pricing/pricing-rate-catalog';
 import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
+import {
+  FullServiceFeeExample,
+  FullServicePricingDetails,
+  type RegistrationPricingCatalog,
+} from '@/components/register/register-full-service-details';
 import { fetchRegisterAgentPricing } from '@/lib/agent-registration';
-import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
 import {
   isInspectionOnlyLevel,
   PORTAL_SERVICE_LEVEL_ORDER,
@@ -23,8 +18,6 @@ import {
   type AgentPortalServiceLevel,
 } from '@/lib/portal-service-level';
 import { cn, formatCurrency } from '@/lib/utils';
-
-type RegistrationPricingCatalog = Omit<AgentBillingPricingCatalog, 'portalServiceLevel'>;
 
 function minNumericRecordValue(rows: Record<string, number | string>): number | null {
   const values = Object.values(rows).filter((v): v is number => typeof v === 'number');
@@ -41,79 +34,6 @@ function minFieldInspectionExGst(catalog: RegistrationPricingCatalog): number {
 function openInspectionStartingLabel(catalog: RegistrationPricingCatalog): string {
   const rate = catalog.inspections.openInspection.firstThree.trim();
   return rate.toLowerCase().startsWith('from ') ? rate : `from ${rate}`;
-}
-
-function FullServicePricingDetails({ catalog }: { catalog: RegistrationPricingCatalog }) {
-  const included = catalog.level2.includedPerPropertyPerYear;
-  const example = catalog.level2.serviceFeeExample;
-
-  return (
-    <div className="space-y-4 border-t border-border/60 pt-4 text-sm">
-      {included ? (
-        <div>
-          <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
-            Included per property each year
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-1 text-xs">
-              <CalendarCheck className="size-3.5 text-violet-600 dark:text-violet-400" />
-              <strong>{included.ROUTINE_INSPECTION}</strong> routine
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-1 text-xs">
-              <DoorOpen className="size-3.5 text-violet-600 dark:text-violet-400" />
-              <strong>{included.INGOING_INSPECTION}</strong> ingoing
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-1 text-xs">
-              <Home className="size-3.5 text-violet-600 dark:text-violet-400" />
-              <strong>{included.OUTGOING_INSPECTION}</strong> outgoing
-            </span>
-          </div>
-          <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-            Open inspections and tribunal are always charged separately.
-          </p>
-        </div>
-      ) : null}
-
-      {example ? (
-        <div className="rounded-lg border border-violet-500/25 bg-violet-500/8 p-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
-            <p className="font-semibold">Full Service fee example</p>
-          </div>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Standard {example.managementRatePercent}% management rate ·{' '}
-            {catalog.level2.serviceFeePercent}% of your management income invoiced monthly
-          </p>
-          <div className="text-muted-foreground mt-2 space-y-1 font-mono text-xs leading-relaxed">
-            <p>
-              Weekly rent {formatCurrency(example.weeklyRentAud)} × {example.managementRatePercent}%
-              management = {formatCurrency(example.agentIncomeAud)} agent income
-            </p>
-            <p>
-              CROSSUB fee {formatCurrency(example.agentIncomeAud)} ×{' '}
-              {catalog.level2.serviceFeePercent}% = {formatCurrency(example.crossubFeeAud)} / week ×
-              4 weeks ={' '}
-              <strong className="text-foreground">
-                {formatCurrency(example.crossubFeeAud * 4)}
-              </strong>{' '}
-              per month
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      <ul className="text-muted-foreground space-y-1.5 text-xs leading-relaxed">
-        <li className="flex gap-2">
-          <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
-          Leasing, maintenance, accounting, messaging, and all property workflows
-        </li>
-        <li className="flex gap-2">
-          <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
-          Orders confirmed within 24 hours; auto-refund if unaccepted (inspections &amp; tribunal)
-        </li>
-      </ul>
-    </div>
-  );
 }
 
 function InspectionOnlyPricingDetails({ catalog }: { catalog: RegistrationPricingCatalog }) {
@@ -269,7 +189,7 @@ export function RegisterPricingPanel({
                           </li>
                         </ul>
                       ) : (
-                        <div className="space-y-2 text-sm">
+                        <div className="space-y-3 text-sm">
                           <p>
                             <span className="font-semibold text-foreground">
                               {catalog.level2.serviceFeePercent}% platform fee
@@ -284,6 +204,9 @@ export function RegisterPricingPanel({
                             Included routine, ingoing, and outgoing inspections per property each
                             year.
                           </p>
+                          {catalog.level2.serviceFeeExample ? (
+                            <FullServiceFeeExample catalog={catalog} />
+                          ) : null}
                         </div>
                       )
                     ) : null}
@@ -307,7 +230,7 @@ export function RegisterPricingPanel({
                       isLevel1 ? (
                         <InspectionOnlyPricingDetails catalog={catalog} />
                       ) : (
-                        <FullServicePricingDetails catalog={catalog} />
+                        <FullServicePricingDetails catalog={catalog} omitFeeExample />
                       )
                     ) : null}
                   </div>

@@ -22,6 +22,11 @@ export interface RegisterAgentInput {
 export const REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH =
   '/auth/register-agent-service-agreement-template';
 
+export const REGISTER_SERVICE_AGREEMENT_FALLBACK = {
+  title: 'CROSSUB Service Agreement (NSW)',
+  fileName: 'CROSSUB Service Agreement NSW.pdf',
+} as const;
+
 /** Agency system access agreement for the registration confirm step (public, no auth). */
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH =
   '/auth/register-agent-system-access-agreement';
@@ -31,10 +36,8 @@ export const REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH =
 
 /** Shown on the confirm step when metadata cannot be loaded from the API. */
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK = {
-  title:
-    'CROSSUB Agency Portal User Access, Confidentiality and Privacy Agreement',
-  fileName:
-    'CROSSUB_Agency_Portal_User_Access_Confidentiality_and_Privacy_Agreement_Final.docx',
+  title: 'CROSSUB System Access Agreement',
+  fileName: 'CROSSUB_System_Access_Website_Registration_Terms_Clickwrap_Final.docx',
   version: 'final-2026-07',
 } as const;
 

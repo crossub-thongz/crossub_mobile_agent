@@ -197,7 +197,7 @@ export function PricingRateCatalog({
                   </span>
                 </div>
                 <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-                  Open inspections and tribunal are always charged separately.
+                  Inspections and tribunal are always charged separately.
                 </p>
               </div>
             ) : null}

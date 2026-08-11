@@ -107,7 +107,8 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [portalServiceLevel, setPortalServiceLevel] =
     useState<AgentPortalServiceLevel | null>(null);
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptServiceAgreement, setAcceptServiceAgreement] = useState(false);
+  const [acceptPrivacyAgreement, setAcceptPrivacyAgreement] = useState(false);
 
   const agentForm = useForm<AgentValues>({
     resolver: zodResolver(agentSchema),
@@ -143,7 +144,8 @@ export default function RegisterPage() {
       toast.error('Please select Inspection Only Service or Full Service.');
       return;
     }
-    setAcceptTerms(false);
+    setAcceptServiceAgreement(false);
+    setAcceptPrivacyAgreement(false);
     setStep('Confirm');
   };
 
@@ -153,8 +155,14 @@ export default function RegisterPage() {
       setStep('Service & pricing');
       return;
     }
-    if (!registerConfirmReady({ acceptTerms })) {
-      toast.error('Please accept the terms and conditions to continue.');
+    if (
+      !registerConfirmReady({
+        portalServiceLevel,
+        acceptServiceAgreement,
+        acceptPrivacyAgreement,
+      })
+    ) {
+      toast.error('Please accept the required agreements to continue.');
       return;
     }
 
@@ -232,7 +240,11 @@ export default function RegisterPage() {
 
   const isSubmitting = agentForm.formState.isSubmitting;
   const selectedLevel = portalServiceLevel ?? DEFAULT_PORTAL_SERVICE_LEVEL;
-  const confirmReady = registerConfirmReady({ acceptTerms });
+  const confirmReady = registerConfirmReady({
+    portalServiceLevel: selectedLevel,
+    acceptServiceAgreement,
+    acceptPrivacyAgreement,
+  });
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
@@ -449,10 +461,16 @@ export default function RegisterPage() {
                 email: agentForm.watch('email'),
                 agencyName: agentForm.watch('agencyName'),
                 agencyCompany: agentForm.watch('agencyCompany'),
+                phone: agentForm.watch('phone'),
+                abn: agentForm.watch('abn'),
+                licenceNumber: agentForm.watch('licenceNumber'),
+                officeAddress: agentForm.watch('officeAddress'),
               }}
               portalServiceLevel={selectedLevel}
-              acceptTerms={acceptTerms}
-              onAcceptTermsChange={setAcceptTerms}
+              acceptServiceAgreement={acceptServiceAgreement}
+              acceptPrivacyAgreement={acceptPrivacyAgreement}
+              onAcceptServiceAgreementChange={setAcceptServiceAgreement}
+              onAcceptPrivacyAgreementChange={setAcceptPrivacyAgreement}
             />
 
             <div className="flex gap-2">

@@ -1025,7 +1025,8 @@ export function NewPropertyRegistryForm({
                 <option value={3}>Three times per year (every 4 months)</option>
               </select>
               <p className="text-muted-foreground mt-1 text-[11px]">
-                Creates the property&apos;s routine inspection schedule when registration completes.
+                Preferred cadence for this property. A routine inspection is only arranged
+                when an inspection order is placed — registration alone does not book one.
               </p>
             </FormField>
           ) : null}
