@@ -245,7 +245,9 @@ export default function AgreementsPage() {
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-muted-foreground min-w-[12rem] flex-1">
             {selfRegistration
-              ? 'Your CROSSUB Service Agreement (NSW). Preview the template, sign offline, then upload the signed copy to your profile.'
+              ? access?.blocked
+                ? 'Your CROSSUB Service Agreement (NSW). Preview the template, sign offline, then upload the signed copy to your profile.'
+                : 'Your CROSSUB Service Agreement (NSW) was accepted during registration. You can still preview the template or upload a signed PDF copy for your records.'
               : 'Your CROSSUB Service Agreement (NSW). Preview the document, sign offline if needed, then upload and return the signed copy.'}
           </p>
           <Button variant="outline" size="sm" onClick={openTemplatePreview}>

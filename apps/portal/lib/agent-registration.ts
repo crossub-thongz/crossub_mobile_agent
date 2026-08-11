@@ -36,11 +36,10 @@ export const REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH =
 
 /** Shown on the confirm step when metadata cannot be loaded from the API. */
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK = {
-  title:
-    'CROSSUB Agency Portal User Access, Confidentiality and Privacy Agreement',
+  title: 'CROSSUB Agency Portal Website Registration Terms (Clickwrap)',
   fileName:
-    'CROSSUB_Agency_Portal_User_Access_Confidentiality_and_Privacy_Agreement_Final.docx',
-  version: 'final-2026-07',
+    'CROSSUB_Agency_Portal_Website_Registration_Terms_Clickwrap_Final.docx',
+  version: 'final-2026-08',
 } as const;
 
 /** Default platform pricing for the registration flow (public, no auth). */
