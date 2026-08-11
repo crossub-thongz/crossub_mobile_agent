@@ -305,6 +305,65 @@ export async function updateProperty(
   }
 }
 
+export type AgentPropertyContact = {
+  id: string;
+  role: 'TENANT' | 'LANDLORD' | string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  isPrimary: boolean;
+  sortOrder: number;
+};
+
+export type CreateAgentPropertyContactInput = {
+  role: 'TENANT' | 'LANDLORD';
+  name?: string;
+  email?: string;
+  phone?: string;
+  isPrimary?: boolean;
+};
+
+/** List property contacts (`GET /api/v1/agent/properties/{propertyId}/contacts`). */
+export async function listPropertyContacts(
+  propertyId: string,
+): Promise<AgentPropertyContact[]> {
+  try {
+    const data = await apiV1.get<{ contacts: AgentPropertyContact[] }>(
+      `/agent/properties/${propertyId}/contacts`,
+    );
+    return data.contacts;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new Error(formatApiErrorMessage(err));
+    }
+    throw err;
+  }
+}
+
+/**
+ * Add a property contact (`POST /api/v1/agent/properties/{propertyId}/contacts`).
+ * TENANT + email auto-invites Tenant app credentials.
+ */
+export async function addPropertyContact(
+  propertyId: string,
+  body: CreateAgentPropertyContactInput,
+): Promise<{
+  contacts: AgentPropertyContact[];
+  tenantPortalInvite?: TenantPortalInviteResult;
+}> {
+  try {
+    return await apiV1.post<{
+      contacts: AgentPropertyContact[];
+      tenantPortalInvite?: TenantPortalInviteResult;
+    }>(`/agent/properties/${propertyId}/contacts`, body);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new Error(formatApiErrorMessage(err));
+    }
+    throw err;
+  }
+}
+
 export type TenantPortalInviteResult =
   | {
       status: 'sent';

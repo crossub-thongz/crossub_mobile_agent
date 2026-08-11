@@ -377,8 +377,8 @@ export default function AgreementsPage() {
       </div>
 
       <Dialog open={returnTarget != null} onOpenChange={(open) => !open && closeReturn()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md overflow-x-hidden">
+          <DialogHeader className="pr-8">
             <DialogTitle>
               {returnTarget?.status === 'returned'
                 ? selfRegistration
@@ -390,8 +390,8 @@ export default function AgreementsPage() {
             </DialogTitle>
           </DialogHeader>
           {returnTarget ? (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="min-w-0 space-y-4">
+              <p className="text-sm break-words text-muted-foreground">
                 {selfRegistration ? (
                   <>
                     Upload your signed copy of <strong>{returnTarget.title}</strong>.
@@ -409,7 +409,7 @@ export default function AgreementsPage() {
                   </>
                 )}
               </p>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="signed-file">
                   Signed copy{selfRegistration ? '' : ' (optional)'}
                 </Label>
@@ -424,32 +424,40 @@ export default function AgreementsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full justify-start"
+                  className="w-full min-w-0 justify-start"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload className="mr-2 size-4" />
-                  {file ? file.name : 'Choose signed document'}
+                  <Upload className="mr-2 size-4 shrink-0" />
+                  <span className="truncate">
+                    {file ? file.name : 'Choose signed document'}
+                  </span>
                 </Button>
               </div>
               {!selfRegistration ? (
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2">
                   <Label htmlFor="return-notes">Note to salesperson (optional)</Label>
                   <Textarea
                     id="return-notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={3}
+                    className="min-w-0 resize-none"
                     placeholder="e.g. Signed by the agency principal today."
                   />
                 </div>
               ) : null}
             </div>
           ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={closeReturn} disabled={submitting}>
+          <DialogFooter className="gap-2 sm:flex-row sm:flex-wrap">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={closeReturn}
+              disabled={submitting}
+            >
               Cancel
             </Button>
-            <Button onClick={() => void handleReturn()} disabled={submitting}>
+            <Button className="w-full sm:w-auto" onClick={() => void handleReturn()} disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
