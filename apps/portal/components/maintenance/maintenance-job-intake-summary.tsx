@@ -8,6 +8,17 @@ import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflo
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import { formatDateTime } from '@/lib/utils';
 
+/** Split a joined registry tenant name ("A & B") for display. */
+function splitTenantNames(name: string | null | undefined): string[] {
+  const value = name?.trim();
+  if (!value) return [];
+  const parts = value
+    .split(/\s*(?:&| and )\s*/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : [value];
+}
+
 function attachmentPreviewUrl(att: ApiMaintenanceAttachment): string {
   return att.previewUrl ?? `/api/maintenance/attachments/${att.id}/preview`;
 }
@@ -110,6 +121,10 @@ export function MaintenanceJobIntakeSummary({
 }) {
   const tenant = ctx.workspaceCase.tenant;
   const description = ctx.workspaceCase.description.trim();
+  const tenantNames = splitTenantNames(tenant?.name);
+  const phone = tenant?.phone?.trim() || '';
+  const email = tenant?.email?.trim() || '';
+  const contactDetail = [phone, email].filter(Boolean).join(' · ');
 
   const intakeAttachments = useMemo(() => {
     const seen = new Set<string>();
@@ -136,17 +151,30 @@ export function MaintenanceJobIntakeSummary({
           <dt className="text-muted-foreground">Date &amp; time created</dt>
           <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
         </div>
-        <div>
-          <dt className="text-muted-foreground">Tenant contact</dt>
-          <dd className="font-medium">{tenant?.name?.trim() || '—'}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Phone</dt>
-          <dd className="font-medium">{tenant?.phone?.trim() || '—'}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Email</dt>
-          <dd className="font-medium break-words">{tenant?.email?.trim() || '—'}</dd>
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">
+            {tenantNames.length > 1 ? `Tenants (${tenantNames.length})` : 'Tenant contact'}
+          </dt>
+          <dd className="mt-1.5 space-y-2">
+            {tenantNames.length === 0 ? (
+              <p className="font-medium">—</p>
+            ) : (
+              tenantNames.map((name, index) => (
+                <div
+                  key={`${name}-${index}`}
+                  className={index > 0 ? 'border-border/60 border-t pt-2' : undefined}
+                >
+                  <p className="font-medium">{name}</p>
+                  {index === 0 && contactDetail ? (
+                    <p className="text-muted-foreground mt-0.5 break-words">{contactDetail}</p>
+                  ) : null}
+                  {index > 0 ? (
+                    <p className="text-muted-foreground mt-0.5">Co-tenant</p>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Issue type</dt>
