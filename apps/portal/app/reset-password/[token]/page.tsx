@@ -111,9 +111,10 @@ export default function ResetPasswordPage() {
               <Input
                 id="newPassword"
                 type={showNew ? 'text' : 'password'}
-                autoComplete="new-password"
                 className="pl-10 pr-10"
+                placeholder="Enter your New Password"
                 {...register('newPassword')}
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -139,9 +140,10 @@ export default function ResetPasswordPage() {
               <Input
                 id="confirmPassword"
                 type={showConfirm ? 'text' : 'password'}
-                autoComplete="new-password"
                 className="pl-10 pr-10"
+                placeholder="Confirm your New Password"
                 {...register('confirmPassword')}
+                autoComplete="new-password"
               />
               <button
                 type="button"

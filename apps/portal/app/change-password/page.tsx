@@ -173,7 +173,19 @@ export default function ChangePasswordPage() {
               : 'Enter your current password, then choose a new one.'}
         </p>
 
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} autoComplete="on">
+          {/* Give password managers a username slot so they do not dump the email into New password. */}
+          <input
+            type="email"
+            name="username"
+            autoComplete="username"
+            value={user.email}
+            readOnly
+            tabIndex={-1}
+            aria-hidden
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
+          />
+
           {!skipCurrentPassword ? (
             <div className="space-y-1.5">
               <Label htmlFor="currentPassword">Existing password</Label>
@@ -182,6 +194,7 @@ export default function ChangePasswordPage() {
                   id="currentPassword"
                   type={showCurrent ? 'text' : 'password'}
                   autoComplete="current-password"
+                  placeholder="Enter your current password"
                   className="pr-10"
                   {...register('currentPassword')}
                 />
@@ -206,9 +219,10 @@ export default function ChangePasswordPage() {
               <Input
                 id="newPassword"
                 type={showNew ? 'text' : 'password'}
-                autoComplete="new-password"
                 className="pr-10"
+                placeholder="Enter your New Password"
                 {...register('newPassword')}
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -233,9 +247,10 @@ export default function ChangePasswordPage() {
               <Input
                 id="confirmPassword"
                 type={showConfirm ? 'text' : 'password'}
-                autoComplete="new-password"
                 className="pr-10"
+                placeholder="Confirm your New Password"
                 {...register('confirmPassword')}
+                autoComplete="new-password"
               />
               <button
                 type="button"
