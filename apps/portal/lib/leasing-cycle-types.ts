@@ -185,8 +185,23 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
     previousInspectorName?: string | null
     inspectorPhone?: string | null
     inspectorEmail?: string | null
+    /**
+     * ⚠️ Non-null even when nothing is scheduled — a property waiting in the weekly open
+     * pool carries a PLACEHOLDER here, because the viewing record's start cannot be null.
+     * Read it with `timeProvisional`, never alone.
+     */
     scheduledTime: string | null
     scheduledTimeEnd?: string | null
+    /** TRUE while `scheduledTime` is a placeholder rather than a confirmed open time. */
+    timeProvisional?: boolean
+    /** When the inspector confirmed the open time. Absent while provisional. */
+    timeConfirmedAt?: string | null
+    /** `YYYY-MM-DD` of the batch Wednesday this request belongs to. */
+    batchWeekKey?: string | null
+    /** What the agent asked for — weighed by the inspector's route, never binding. */
+    agentPreferredStart?: string | null
+    /** Position in the assigned inspector's Saturday route (1-based). */
+    routeSequence?: number | null
     preferredScheduledTime?: string | null
     preferredScheduledTimeEnd?: string | null
     preferredNotes?: string | null

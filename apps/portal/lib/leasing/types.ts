@@ -34,8 +34,24 @@ export interface LeasingOpenInspection {
   inspectorName?: string;
   inspectorPhone?: string;
   inspectorEmail?: string;
+  /**
+   * ⚠️ Present even when no time has been decided. A property waiting in the weekly open
+   * pool carries a PLACEHOLDER here — the underlying viewing record cannot hold an empty
+   * time — and it reads exactly like a real Saturday slot. Never render it without
+   * checking `timeProvisional`; use `isOpenTimePending` from `open-inspection-display`.
+   */
   scheduledTime?: string;
   scheduledTimeEnd?: string;
+  /** TRUE while `scheduledTime` is a placeholder rather than a confirmed open time. */
+  timeProvisional?: boolean;
+  /** When the inspector confirmed the time. Absent while provisional. */
+  timeConfirmedAt?: string;
+  /** `YYYY-MM-DD` of the batch Wednesday this request belongs to. */
+  batchWeekKey?: string;
+  /** What this agent asked for — weighed by the route, never binding. */
+  agentPreferredStart?: string;
+  /** Position in the assigned inspector's Saturday route (1-based). */
+  routeSequence?: number;
   preferredScheduledTime?: string;
   preferredScheduledTimeEnd?: string;
   preferredNotes?: string;

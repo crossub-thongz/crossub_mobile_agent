@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-13
+
+### Changed
+- **Requesting an open inspection no longer means choosing when it happens.** Follows Miara Li's 13 Aug spec, matching the weekly batch now live in the API. The panel was "Schedule Open Inspection" with a **required** Saturday date, a required duration, and a success toast reading *"Open inspection scheduled — CROSSUB will assign an inspector"* — so an agent came away believing they had booked a slot, and were then told to advertise it. They had not booked anything: nothing had assigned an inspector, and the time they picked was chosen with no knowledge of the other opens someone would have to drive that morning, so two properties forty minutes apart could be advertised for the same quarter hour. It is now **"Request Open Inspection"** → **"Add to open list"**, the date and duration are **optional**, and the copy says plainly that requests close 12:00pm Wednesday, that inspectors choose their properties that afternoon, and that the final time comes from the route they can actually drive. A preferred time still sends — the route planner weighs it, and the confirmation email tells the agent if it could not be matched — but it is labelled a preference, not a booking.
+- **The duration field appears only once a preferred time is entered.** It means nothing without one, and a required field that governs nothing is a field people fill with a guess.
+
+### Fixed
+- **The case screen no longer presents a placeholder as a confirmed viewing time.** This is the one that would have cost a real letting. A property waiting in the weekly pool still carries a stored `scheduledTime` — the underlying viewing record cannot hold an empty one — so the "Confirmed viewing" section, keyed off that value being truthy, rendered a 9:00am Saturday slot for every open nobody had picked up yet, under a heading asserting it was confirmed. An agent reading that would advertise it. The section now renders only for a time an inspector has actually confirmed; until then a plain **Open time — Awaiting inspector** block takes its place, echoing back what the agent asked for where they gave a time, and saying they will be emailed once it is set. `isOpenTimePending` is the single guard, and `LeasingOpenInspection.scheduledTime` now carries a comment saying never to read it alone.
+- **"Start open inspection now" no longer appears on properties still sitting in the pool.** It was gated on `scheduledTime` being present, which the placeholder satisfies — so the button offered to start a viewing with no assigned inspector and no agreed time, on any property awaiting pickup.
+- `resolveEffectiveOpenInspectionStart` skips a provisional time rather than preferring it, falling through to the agent's own requested time — more truthful, and more useful to them while they wait.
+
 ## 2026-08-10
 
 ### Fixed
