@@ -74,9 +74,14 @@ import {
   formatInspectionDurationHours,
   formatInspectionTimeRange,
   isAssignedInspectorName,
+  isOpenTimePending,
   needsOpenInspectionScheduleRequest,
   openInspectionStartReached,
 } from '@/lib/leasing/open-inspection-display';
+import {
+  OPEN_TIME_PENDING_DESCRIPTION,
+  OPEN_TIME_PENDING_LABEL,
+} from '@/constants/open-batch';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useLeasingCycleLiveSync } from '@/lib/use-leasing-cycle-live-sync';
 import { useOpenInspectionEmailSources } from '@/hooks/use-open-inspection-email-sources';
@@ -386,6 +391,10 @@ export function InspectionDetailView({
     isCrossubManagedLeasingOpen &&
     leasingDetail != null &&
     Boolean(leasingDetail.openInspection.scheduledTime) &&
+    // A placeholder satisfies the check above, so without this the "start now" button
+    // appeared on every property still sitting in the pool — starting a viewing nobody
+    // has been assigned to, at a time nobody set.
+    !isOpenTimePending(leasingDetail.openInspection) &&
     !openInspectionStartReached(leasingDetail.openInspection) &&
     Boolean(linkedLeasingCycleId) &&
     apiConnected;
@@ -724,7 +733,17 @@ export function InspectionDetailView({
         </InfoSection>
       ) : null}
 
-      {insp.type === 'OPEN' && leasingDetail?.openInspection.scheduledTime && !isOpenResultsStep ? (
+      {/*
+        A property waiting in the weekly pool still HAS a `scheduledTime` — a placeholder,
+        because the viewing record's start cannot be null — so keying this section off the
+        bare value titled a placeholder "Confirmed viewing" and handed the agent a slot to
+        advertise that no inspector had agreed to. It now renders only for a time an
+        inspector has actually confirmed; the pending case is the block below.
+      */}
+      {insp.type === 'OPEN' &&
+      leasingDetail?.openInspection.scheduledTime &&
+      !isOpenTimePending(leasingDetail.openInspection) &&
+      !isOpenResultsStep ? (
         <InfoSection title="Confirmed viewing">
           <OpenInspectionEarlyStartNotice
             startedEarly={leasingDetail.openInspection.startedEarly}
@@ -774,6 +793,35 @@ export function InspectionDetailView({
               />
             </div>
           ) : null}
+        </InfoSection>
+      ) : null}
+
+      {/*
+        The pending counterpart. Shown INSTEAD of a time, never alongside one — the point
+        is that the agent has nothing to advertise yet and should not go looking for a
+        number on this screen. Their own requested time is echoed back where they gave
+        one, so the panel still tells them what they asked for.
+      */}
+      {insp.type === 'OPEN' &&
+      isOpenLeasingCase &&
+      leasingDetail != null &&
+      !leasingDetail.openInspection.agentConducted &&
+      isOpenTimePending(leasingDetail.openInspection) &&
+      !isOpenResultsStep ? (
+        <InfoSection title="Open time">
+          <InfoRow label="Status" value={OPEN_TIME_PENDING_LABEL} icon={Calendar} />
+          {leasingDetail.openInspection.preferredScheduledTime ? (
+            <InfoRow
+              label="You asked for"
+              value={formatInspectionTimeRange(
+                leasingDetail.openInspection.preferredScheduledTime,
+                leasingDetail.openInspection.preferredScheduledTimeEnd,
+              )}
+            />
+          ) : null}
+          <p className="text-muted-foreground pt-2 text-[11px] leading-relaxed">
+            {OPEN_TIME_PENDING_DESCRIPTION}
+          </p>
         </InfoSection>
       ) : null}
 

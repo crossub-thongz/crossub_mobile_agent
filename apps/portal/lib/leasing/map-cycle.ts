@@ -196,6 +196,14 @@ export function patchDetailFromCycleView(
       inspectorEmail: u(view.openInspection.inspectorEmail ?? undefined),
       scheduledTime: u(view.openInspection.scheduledTime),
       scheduledTimeEnd: u(view.openInspection.scheduledTimeEnd ?? undefined),
+      // Weekly-batch state. `timeProvisional` has to travel with `scheduledTime` — the
+      // time above is a placeholder until an inspector confirms one, and a screen that
+      // takes one without the other advertises a slot nobody agreed to.
+      timeProvisional: view.openInspection.timeProvisional ?? false,
+      timeConfirmedAt: u(view.openInspection.timeConfirmedAt ?? undefined),
+      batchWeekKey: u(view.openInspection.batchWeekKey ?? undefined),
+      agentPreferredStart: u(view.openInspection.agentPreferredStart ?? undefined),
+      routeSequence: n(view.openInspection.routeSequence ?? undefined),
       preferredScheduledTime: u(view.openInspection.preferredScheduledTime ?? undefined),
       preferredScheduledTimeEnd: u(view.openInspection.preferredScheduledTimeEnd ?? undefined),
       preferredNotes: u(view.openInspection.preferredNotes ?? undefined),

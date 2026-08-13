@@ -10,6 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import {
+  OPEN_PREFERRED_TIME_HINT,
+  OPEN_REQUEST_DESCRIPTION,
+  OPEN_REQUEST_SUBMITTED,
+  OPEN_REQUEST_TITLE,
+} from '@/constants/open-batch';
 import { requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
 import { finalizeAgentOpenInspectionSchedule } from '@/lib/open-inspection/finalize-agent-open-schedule';
 import {
@@ -76,54 +82,62 @@ export function OpenInspectionScheduleRequestPanel({
       toast.error('Connect to the API to schedule');
       return;
     }
-    if (!preferredStartLocal) {
-      toast.error('Pick a Saturday and start time');
-      return;
-    }
     const keyError = validateKeyLocation();
     if (keyError) {
       toast.error(keyError);
       return;
     }
 
-    const hours = parseDurationHours();
-    if (hours == null) {
-      toast.error('Enter a valid duration in hours');
-      return;
-    }
+    // The time is now OPTIONAL, and that is the substance of the change rather than a
+    // relaxation of validation. The agent is asking for a property to be opened; the
+    // Saturday time comes from the route the inspector who takes it can actually drive.
+    // Requiring a time here is what let two properties forty minutes apart be advertised
+    // for the same quarter hour with nobody on either.
+    let preferredStartTime: string | undefined;
+    let preferredEndTime: string | undefined;
 
-    const startError = validateCrossubOpenDateTimeLocal(
-      preferredStartLocal,
-      'Viewing date & time',
-    );
-    if (startError) {
-      toast.error(startError);
-      return;
-    }
-
-    const preferredEndLocal = addHoursToDatetimeLocal(preferredStartLocal, hours);
-    const endError = validateCrossubOpenDateTimeLocal(
-      preferredEndLocal,
-      'Viewing end time',
-    );
-    if (endError) {
-      toast.error('Duration is too long — the viewing must finish on the same Saturday');
-      return;
+    if (preferredStartLocal) {
+      const hours = parseDurationHours();
+      if (hours == null) {
+        toast.error('Enter a valid duration in hours');
+        return;
+      }
+      const startError = validateCrossubOpenDateTimeLocal(
+        preferredStartLocal,
+        'Preferred date & time',
+      );
+      if (startError) {
+        toast.error(startError);
+        return;
+      }
+      const preferredEndLocal = addHoursToDatetimeLocal(preferredStartLocal, hours);
+      const endError = validateCrossubOpenDateTimeLocal(
+        preferredEndLocal,
+        'Preferred end time',
+      );
+      if (endError) {
+        toast.error('Duration is too long — the viewing must finish on the same Saturday');
+        return;
+      }
+      preferredStartTime = new Date(preferredStartLocal).toISOString();
+      preferredEndTime = new Date(preferredEndLocal).toISOString();
     }
 
     setSubmitting(true);
     try {
       await finalizeSchedule(
         {
-          preferredStartTime: new Date(preferredStartLocal).toISOString(),
-          preferredEndTime: new Date(preferredEndLocal).toISOString(),
+          preferredStartTime,
+          preferredEndTime,
           preferredNotes: preferredNotes.trim() || undefined,
           keyCollectLocation: keyCollectLocation.trim(),
         },
-        'Open inspection scheduled — CROSSUB will assign an inspector',
+        OPEN_REQUEST_SUBMITTED,
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not schedule open inspection');
+      toast.error(
+        err instanceof Error ? err.message : 'Could not add this property to the open list',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -169,36 +183,40 @@ export function OpenInspectionScheduleRequestPanel({
   return (
     <section className={cn('space-y-4 rounded-2xl border bg-card p-4', className)}>
       <div>
-        <h2 className="text-sm font-semibold">Schedule Open Inspection</h2>
+        <h2 className="text-sm font-semibold">{OPEN_REQUEST_TITLE}</h2>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-          CROSSUB open inspections are normally held on <strong>Saturdays</strong>. Use{' '}
-          <strong>Start open inspection now</strong> to begin immediately for testing — the end
-          time follows the duration you set below.
+          {OPEN_REQUEST_DESCRIPTION}
         </p>
       </div>
 
       <SaturdayDatetimeField
         id="open-schedule-start"
-        label="Viewing date & time *"
+        label="Preferred date & time (optional)"
         value={preferredStartLocal}
         onChange={setPreferredStartLocal}
         disabled={busy}
         defaultTime="10:00"
       />
+      <p className="text-muted-foreground -mt-2 text-[11px] leading-relaxed">
+        {OPEN_PREFERRED_TIME_HINT}
+      </p>
 
-      <div className="space-y-2">
-        <Label htmlFor="open-schedule-duration">Duration (hours) *</Label>
-        <Input
-          id="open-schedule-duration"
-          type="number"
-          min={0.5}
-          step={0.5}
-          value={durationHours}
-          onChange={(e) => setDurationHours(e.target.value)}
-          disabled={busy}
-          className="w-28"
-        />
-      </div>
+      {/* Duration only means something once a preferred start exists. */}
+      {preferredStartLocal ? (
+        <div className="space-y-2">
+          <Label htmlFor="open-schedule-duration">Preferred duration (hours)</Label>
+          <Input
+            id="open-schedule-duration"
+            type="number"
+            min={0.5}
+            step={0.5}
+            value={durationHours}
+            onChange={(e) => setDurationHours(e.target.value)}
+            disabled={busy}
+            className="w-28"
+          />
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="open-schedule-key-location">Key collect location *</Label>
@@ -237,10 +255,10 @@ export function OpenInspectionScheduleRequestPanel({
           {submitting ? (
             <>
               <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-              Scheduling…
+              Adding…
             </>
           ) : (
-            'Schedule open inspection'
+            'Add to open list'
           )}
         </Button>
         <Button

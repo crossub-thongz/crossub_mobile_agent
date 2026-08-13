@@ -41,10 +41,33 @@ export function resolveOpenInspectionForProperty(
   );
 }
 
-/** Staff-confirmed schedule wins over agent preference for progress and display. */
+/**
+ * Is this open still waiting for an inspector to set the time?
+ *
+ * The guard behind every screen that shows an open time. A property in the weekly pool
+ * carries a stored `scheduledTime` that is a PLACEHOLDER, not a decision — it reads
+ * exactly like a real Saturday slot, and an agent who sees one will put it in a listing.
+ *
+ * Written as a positive check on the flag rather than `!timeConfirmedAt`, because every
+ * open that predates the weekly batch carries neither field; treating those as pending
+ * would relabel historical viewings as unscheduled.
+ */
+export function isOpenTimePending(oi: LeasingOpenInspection): boolean {
+  if (oi.timeProvisional === true) return true;
+  return !oi.scheduledTime;
+}
+
+/**
+ * Staff-confirmed schedule wins over agent preference for progress and display.
+ *
+ * A provisional `scheduledTime` is skipped rather than preferred — it is a placeholder,
+ * and falling through to the agent's own requested time is both more truthful and more
+ * useful to them while they wait.
+ */
 export function resolveEffectiveOpenInspectionStart(
   oi: LeasingOpenInspection,
 ): string | undefined {
+  if (isOpenTimePending(oi)) return oi.preferredScheduledTime;
   return oi.scheduledTime ?? oi.preferredScheduledTime;
 }
 
