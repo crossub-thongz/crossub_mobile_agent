@@ -181,12 +181,17 @@ export function formatPropertyFullAddress(property: {
   state?: string;
   postcode?: string;
 }): string {
-  const parts = [
-    property.address?.trim(),
-    property.suburb?.trim(),
-    property.state?.trim(),
-    property.postcode?.trim(),
-  ].filter(Boolean);
+  // Many legacy rows already embed suburb/state/postcode in `address` — don't duplicate.
+  const street = property.address?.trim() ?? '';
+  if (!street) return '';
+  const parts: string[] = [street];
+  const joined = () => parts.join(', ').toLowerCase();
+  const suburb = property.suburb?.trim() ?? '';
+  const statePost = [property.state?.trim(), property.postcode?.trim()]
+    .filter(Boolean)
+    .join(' ');
+  if (suburb && !joined().includes(suburb.toLowerCase())) parts.push(suburb);
+  if (statePost && !joined().includes(statePost.toLowerCase())) parts.push(statePost);
   return parts.join(', ');
 }
 

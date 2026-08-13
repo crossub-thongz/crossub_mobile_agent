@@ -40,7 +40,9 @@ import {
   resolveLeaseDates,
   resolveRentPaidTo,
 } from '@/lib/property-overview';
+import type { PropertyPortalDocument } from '@/lib/property-registry-api';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
+import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
 import type {
   AgentDocument,
   LeasingCycle,
@@ -194,6 +196,46 @@ function firstDate(...values: Array<string | null | undefined>): string {
   return '';
 }
 
+function resolveManagementAgreementDoc(
+  portalDocuments: PropertyPortalDocument[],
+  fallbackDocs: Array<{
+    id: string;
+    title: string;
+    uploadedAt: string;
+    href?: string | null;
+    category?: string;
+  }>,
+): { title: string; uploadedAt: string; href?: string | null } | undefined {
+  // Same source as the Documents tab — address-filtered portfolio docs can miss
+  // portal uploads when addresses are duplicated/normalized differently.
+  const fromPortal = portalDocuments
+    .filter((doc) => !doc.previousTenantName?.trim())
+    .filter(
+      (doc) =>
+        doc.category === 'management_agreement' ||
+        Boolean(findPropertyDocument([doc], MANAGEMENT_AGREEMENT_DOC_SLOT.label)),
+    )
+    .sort(
+      (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+    )[0];
+  if (fromPortal) {
+    return {
+      title: fromPortal.title,
+      uploadedAt: fromPortal.uploadedAt,
+      href: agentDocumentPreviewHref(fromPortal.id, fromPortal.url),
+    };
+  }
+
+  const byCategory = fallbackDocs
+    .filter((doc) => doc.category === 'management_agreement')
+    .sort(
+      (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+    )[0];
+  if (byCategory) return byCategory;
+
+  return findPropertyDocument(fallbackDocs, MANAGEMENT_AGREEMENT_DOC_SLOT.label);
+}
+
 export function PropertyTenancyManagementSections({
   property,
   propertyId,
@@ -214,6 +256,7 @@ export function PropertyTenancyManagementSections({
   onRefresh?: () => void;
 }) {
   const { apiConnected } = useAgentData();
+  const { detail } = usePropertyPortalDetail(propertyId, apiConnected);
   const activeCycle = leasingCycles?.[0];
   const sync = usePropertyOverviewSync(
     property,
@@ -435,14 +478,15 @@ export function PropertyTenancyManagementSections({
         id: doc.id,
         title: doc.title,
         uploadedAt: doc.uploadedAt,
+        category: doc.category,
         href: agentDocumentPreviewHref(doc.id, doc.downloadUrl ?? doc.href),
       })),
     [propertyDocs],
   );
 
-  const managementAgreementDoc = findPropertyDocument(
-    displayDocs,
-    MANAGEMENT_AGREEMENT_DOC_SLOT.label,
+  const managementAgreementDoc = useMemo(
+    () => resolveManagementAgreementDoc(detail?.documents ?? [], displayDocs),
+    [detail?.documents, displayDocs],
   );
 
   const tenancyInitial = useMemo(

@@ -11,7 +11,7 @@
     "dev:portal": "pnpm --filter @crossub/portal dev",
     "build": "pnpm -r run build",
     "build:portal": "pnpm --filter @crossub/portal build",
-    "start": "pnpm -r --parallel run start",
+    "start": "pnpm --filter @crossub/portal start",
     "start:portal": "pnpm --filter @crossub/portal start",
     "lint": "pnpm -r run lint"
   },

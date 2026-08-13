@@ -12,8 +12,11 @@ services:
     plan: starter
     # --prod=false is required: NODE_ENV=production (below) makes pnpm skip
     # devDependencies, and `next build` needs @tailwindcss/postcss + typescript.
-    buildCommand: corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm build:portal
-    startCommand: corepack pnpm --filter @crossub/portal start
+    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm build:portal
+    # Do not prefix with `corepack` here — Render may re-download pnpm on every boot
+    # (flaky registry TLS → UND_ERR_SOCKET → exit 1 / "No open ports detected").
+    # Build already enables Corepack; start only needs the local Next binary.
+    startCommand: pnpm --filter @crossub/portal start
     healthCheckPath: /login
     envVars:
       - key: NODE_ENV
