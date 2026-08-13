@@ -48,6 +48,7 @@ type DisplayDoc = {
   title: string;
   uploadedAt: string;
   href?: string | null;
+  previousTenantName?: string;
 };
 
 type ExtraDraftRow = {
@@ -516,10 +517,14 @@ export function PropertyDocumentsTab({
         title,
         uploadedAt: doc.uploadedAt,
         href: doc.url,
+        previousTenantName: doc.previousTenantName,
       };
     };
 
-    const portalMapped = portalDocuments.map(mapPortalDoc);
+    // Prior-tenancy files stay on the API payload but must not fill the live checklist.
+    const portalMapped = portalDocuments
+      .map(mapPortalDoc)
+      .filter((doc) => !doc.previousTenantName?.trim());
 
     // Portal detail is the source of truth when loaded — fallback `/agent/documents`
     // re-introduces aggregated `inspection:*` rows the portal API already deduped.

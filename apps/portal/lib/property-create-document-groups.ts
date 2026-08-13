@@ -297,7 +297,11 @@ function titlesMatch(slotLabel: string, docTitle: string): boolean {
   if (slot === 'landlord insurance' && /landlord\s*insurance/.test(base)) return true;
   if (slot === 'paper bond' && /paper\s*bond|bond\s*lodgement/.test(base)) return true;
   if (slot === 'key handover form' && /key\s*handover/.test(base)) return true;
-  if (slot === 'ingoing inspection report' && /ingoing\s*inspection|^ig-/.test(base)) {
+  if (
+    slot === 'ingoing inspection report' &&
+    /ingoing\s*inspection|^ig-/.test(base) &&
+    !/^op-|\bopen\b/.test(base)
+  ) {
     return true;
   }
   if (slot === 'outgoing inspection report' && /outgoing\s*inspection|^oi-/.test(base)) {

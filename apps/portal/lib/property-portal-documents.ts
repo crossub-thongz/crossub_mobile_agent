@@ -33,13 +33,15 @@ const INSPECTION_REPORT_TYPE_SUFFIX = {
 
 function inspectionCategoryFromDocumentTitle(
   title: string,
-): keyof typeof INSPECTION_REPORT_TYPE_SUFFIX {
+): keyof typeof INSPECTION_REPORT_TYPE_SUFFIX | null {
   const upper = title.trim().toUpperCase();
   if (upper.startsWith('OI-') || upper.includes('OUTGOING')) return 'outgoing';
   if (upper.startsWith('RI-') || upper.includes('ROUTINE')) return 'routine';
-  if (upper.startsWith('OP-') || upper.includes('OPEN')) return 'open';
+  if (upper.startsWith('OP-') || /\bOPEN\b/.test(upper)) return 'open';
   if (upper.startsWith('IG-') || upper.includes('INGOING')) return 'ingoing';
-  return 'ingoing';
+  // Do not default unknowns to ingoing — that mixes open/marketing reports into
+  // the current tenancy's ingoing checklist after a changeover.
+  return null;
 }
 
 function findInspectionCategory(
@@ -83,7 +85,8 @@ export function inspectionReportDisplayName(
 ): string {
   const category =
     findInspectionCategory(inspections, doc.inspectionId) ??
-    inspectionCategoryFromDocumentTitle(doc.title);
+    inspectionCategoryFromDocumentTitle(doc.title) ??
+    'open';
   return formatInspectionReportDisplayName(propertyJobDisplayName(property), category);
 }
 
@@ -96,8 +99,8 @@ export function inspectionReportDownloadType(
     inspectionCategoryFromDocumentTitle(doc.title);
   if (category === 'outgoing') return 'outgoing';
   if (category === 'routine') return 'routine';
-  if (category === 'open') return 'open';
-  return 'ingoing';
+  if (category === 'ingoing') return 'ingoing';
+  return 'open';
 }
 
 export function reportIdLabel(doc: { id: string; inspectionId?: string }): string {

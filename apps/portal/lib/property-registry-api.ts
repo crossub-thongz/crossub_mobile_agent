@@ -124,6 +124,8 @@ export interface PropertyPortalDocument {
   uploadedAt: string;
   url?: string;
   inspectionId?: string;
+  /** Set when the file belongs to a prior tenancy — exclude from the current checklist. */
+  previousTenantName?: string;
 }
 
 export interface PropertyPortalAccounting {
