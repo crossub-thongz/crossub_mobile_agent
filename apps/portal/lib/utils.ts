@@ -1,6 +1,26 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import {
+  dayKey,
+  formatDate,
+  formatDateMedium,
+  formatDateTime,
+  formatDateTimeMedium,
+  formatTime,
+  formatTimeShort,
+} from '@/lib/format-datetime';
+
+export {
+  dayKey,
+  formatDate,
+  formatDateMedium,
+  formatDateTime,
+  formatDateTimeMedium,
+  formatTime,
+  formatTimeShort,
+};
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -19,23 +39,6 @@ export function displayName(user: {
 }): string {
   const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
   return name || user.email;
-}
-
-/** en-AU can render meridiem as am/pm or Am/Pm — always show AM/PM. */
-function withUppercaseMeridiem(value: string): string {
-  return value.replace(/\b(am|pm)\b/gi, (match) => match.toUpperCase());
-}
-
-export function formatDateTime(iso: string): string {
-  return withUppercaseMeridiem(
-    new Date(iso).toLocaleString('en-AU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    }),
-  );
 }
 
 /** Local calendar YYYY-MM-DD (avoids UTC day-shift from `toISOString()`). */
@@ -81,26 +84,9 @@ export function daysSinceVacate(isoDate: string | null | undefined): number | nu
   return Math.floor((todayStart.getTime() - end.getTime()) / 86_400_000);
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-export function formatTime(iso: string): string {
-  return withUppercaseMeridiem(
-    new Date(iso).toLocaleTimeString('en-AU', {
-      hour: 'numeric',
-      minute: '2-digit',
-    }),
-  );
-}
-
 export function formatScheduledAt(iso?: string | null): string {
   if (!iso) return 'TBC';
-  return `${formatDate(iso)} · ${formatTime(iso)}`;
+  return formatDateTime(iso);
 }
 
 /** Key collection / open inspection window for display cards. */
@@ -118,13 +104,7 @@ export function formatOpenInspectionWindow(
     month: 'short',
     year: 'numeric',
   });
-  const timeFmt: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: '2-digit',
-  };
-  const startTime = withUppercaseMeridiem(
-    start.toLocaleTimeString('en-AU', timeFmt),
-  );
+  const startTime = formatTime(start);
 
   if (!endIso) {
     return `${datePart} · ${startTime}`;
@@ -135,10 +115,8 @@ export function formatOpenInspectionWindow(
     return `${datePart} · ${startTime}`;
   }
 
-  const sameDay = start.toDateString() === end.toDateString();
-  const endTime = withUppercaseMeridiem(
-    end.toLocaleTimeString('en-AU', timeFmt),
-  );
+  const sameDay = dayKey(start) === dayKey(end);
+  const endTime = formatTime(end);
   if (sameDay) {
     return `${datePart} · ${startTime} – ${endTime}`;
   }
