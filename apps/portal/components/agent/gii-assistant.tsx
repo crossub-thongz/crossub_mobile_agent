@@ -14,6 +14,7 @@ import {
   GiiAttachmentPreviewRow,
   GiiComposerDropOverlay,
 } from '@/components/agent/gii-composer-attachments';
+import { GiiJobCaseButtons } from '@/components/agent/gii-job-case-buttons';
 import { GiiPropertyJobsCard } from '@/components/agent/gii-property-jobs-card';
 import { MessageCompose } from '@/components/agent/message-compose';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
@@ -49,13 +50,19 @@ import { buildNeedActionGroups } from '@/lib/need-action-groups';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { useAgentStore } from '@/lib/store';
 import type { PropertyNeedAction } from '@/lib/types';
-import { needActionToJobRow } from '@/lib/portfolio-case-dialog';
+import {
+  inspectionToJobRow,
+  maintenanceToJobRow,
+  needActionToJobRow,
+  rentReviewToJobRow,
+} from '@/lib/portfolio-case-dialog';
 import { usePortfolioCaseDialog } from '@/hooks/use-portfolio-case-dialog';
 import {
   sendGiiMessage,
   type GiiAssessment,
   type GiiChatMessage,
   type GiiContext,
+  type GiiJobCaseLink,
 } from '@/lib/crossub-api/gii-client';
 import {
   createPendingAttachment,
@@ -94,6 +101,7 @@ type ChatLine = {
   assessment?: GiiAssessment | null;
   briefing?: GiiBriefing | null;
   lodgedRef?: string | null;
+  jobCases?: GiiJobCaseLink[];
   pending?: boolean;
   attachments?: GiiChatAttachmentView[];
   /** Base64 payloads resent with history so Gii can keep reading prior attachments. */
@@ -242,7 +250,42 @@ export function GiiAssistant({
   );
   const messageScoped = Boolean(effectiveLaunch.messageContext?.trim());
   const { selectedJob, openJob, closeJob, portfolioData } = usePortfolioCaseDialog();
+  const refreshPortfolio = data.refresh;
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
+
+  const resolveJobCaseLink = useCallback(
+    (link: GiiJobCaseLink): PropertyJobRow | null => {
+      if (link.kind === 'maintenance') {
+        const item =
+          portfolioData.maintenanceAll.find((row) => row.id === link.id) ??
+          (link.reference
+            ? portfolioData.maintenanceAll.find((row) => row.trackingNumber === link.reference)
+            : undefined);
+        return item ? maintenanceToJobRow(item) : null;
+      }
+      if (link.kind === 'rent_review') {
+        const item = portfolioData.rentReviews.find((row) => row.id === link.id);
+        return item ? rentReviewToJobRow(item, portfolioData.rentReviewDecisions) : null;
+      }
+      const item = portfolioData.inspections.find((row) => row.id === link.id);
+      return item ? inspectionToJobRow(item) : null;
+    },
+    [portfolioData],
+  );
+
+  const openJobCaseLink = useCallback(
+    async (link: GiiJobCaseLink) => {
+      const existing = resolveJobCaseLink(link);
+      if (existing) {
+        openJob(existing);
+        return;
+      }
+      // Newly created jobs may not be in the portfolio snapshot yet.
+      await refreshPortfolio();
+      toast.message('Refreshing jobs… tap Open again in a moment.');
+    },
+    [openJob, refreshPortfolio, resolveJobCaseLink],
+  );
   const [query, setQuery] = useState('');
   const [dockTab, setDockTab] = useState<'gii' | 'reply'>('gii');
   const [pendingAttachments, setPendingAttachments] = useState<GiiPendingAttachment[]>([]);
@@ -635,6 +678,7 @@ export function GiiAssistant({
           moveOutDate: res.assessment.moveOutDate,
         };
       }
+      const jobCases = res.jobCases ?? [];
       setLines((prev) =>
         prev.map((l) =>
           l.id === pendingId
@@ -643,11 +687,15 @@ export function GiiAssistant({
                 text: res.reply,
                 assessment: res.assessment,
                 lodgedRef: res.lodged?.caseRef ?? null,
+                jobCases,
                 pending: false,
               }
             : l,
         ),
       );
+      if (jobCases.length > 0) {
+        void refreshPortfolio();
+      }
     } catch {
       setLines((prev) =>
         prev.map((l) =>
@@ -663,7 +711,7 @@ export function GiiAssistant({
     } finally {
       setSending(false);
     }
-  }, [lines, pendingAttachments, sending]);
+  }, [lines, pendingAttachments, refreshPortfolio, sending]);
 
   // Launch prompt from property hub / phone book — runs once when Gii opens.
   useEffect(() => {
@@ -793,6 +841,14 @@ export function GiiAssistant({
               <div key={line.id} className="space-y-2">
                 <GiiChatLine role={line.role} text={line.text} pending={line.pending} />
                 {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
+                {line.jobCases?.length ? (
+                  <GiiJobCaseButtons
+                    cases={line.jobCases}
+                    portfolioData={portfolioData}
+                    onOpen={openJob}
+                    onOpenMissing={openJobCaseLink}
+                  />
+                ) : null}
               </div>
             ))}
             <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
@@ -1115,6 +1171,15 @@ export function GiiAssistant({
             />
 
             {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
+
+            {line.jobCases?.length ? (
+              <GiiJobCaseButtons
+                cases={line.jobCases}
+                portfolioData={portfolioData}
+                onOpen={openJob}
+                onOpenMissing={openJobCaseLink}
+              />
+            ) : null}
 
             {line.lodgedRef ? (
               <p className="mr-auto text-xs font-medium text-primary">

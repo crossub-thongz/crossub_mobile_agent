@@ -16,7 +16,18 @@ const API_BASE = `${process.env.NEXT_PUBLIC_API_URL ?? '/api'}/v1`;
 export type GiiChatMessage = components['schemas']['GiiChatMessageDto'] & {
   attachments?: GiiChatAttachment[];
 };
-export type GiiChatResponse = components['schemas']['GiiChatResponseDto'];
+
+/** Job-case Open buttons — present once the API contract ships `jobCases` on chat. */
+export type GiiJobCaseLink = {
+  id: string;
+  kind: 'maintenance' | 'rent_review' | 'inspection';
+  reference: string | null;
+  label: string;
+};
+
+export type GiiChatResponse = components['schemas']['GiiChatResponseDto'] & {
+  jobCases?: GiiJobCaseLink[];
+};
 export type GiiAssessment = components['schemas']['GiiAssessmentDto'];
 export type GiiTermProgress = components['schemas']['GiiTermProgressDto'];
 export type GiiBreakFee = components['schemas']['GiiBreakFeeDto'];
