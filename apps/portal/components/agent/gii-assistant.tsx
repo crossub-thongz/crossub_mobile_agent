@@ -676,7 +676,17 @@ export function GiiAssistant({
         contextRef.current = {
           propertyId: res.assessment.propertyId,
           moveOutDate: res.assessment.moveOutDate,
+          // Choice resolved — drop the ambiguous list.
         };
+      } else if (res.pendingPropertyCandidates?.length) {
+        contextRef.current = {
+          ...contextRef.current,
+          pendingPropertyCandidates: res.pendingPropertyCandidates,
+        };
+      } else if (contextRef.current?.pendingPropertyCandidates) {
+        // Unique resolve without assessment still clears the pick list.
+        const { pendingPropertyCandidates: _drop, ...rest } = contextRef.current;
+        contextRef.current = rest;
       }
       const jobCases = res.jobCases ?? [];
       setLines((prev) =>

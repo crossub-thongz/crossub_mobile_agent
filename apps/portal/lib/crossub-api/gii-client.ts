@@ -41,27 +41,46 @@ export type GiiChatAttachment = {
   base64: string;
 };
 
+/** One candidate from an ambiguous find_property — echo so "1" / "1A" can resolve. */
+export type GiiPendingPropertyCandidate = {
+  propertyId: string;
+  label: string;
+  tenantName?: string | null;
+};
+
 /** The subject carried between turns — Gii is stateless and tool results do not persist. */
 export interface GiiContext {
   propertyId?: string;
   propertyLabel?: string;
   moveOutDate?: string;
+  pendingPropertyCandidates?: GiiPendingPropertyCandidate[];
 }
+
+export type GiiChatResponseWithPending = GiiChatResponse & {
+  pendingPropertyCandidates?: GiiPendingPropertyCandidate[];
+};
 
 /**
  * Send a turn. The whole transcript is resent each time; `context` echoes the previous
- * assessment's property so Gii keeps the subject instead of re-asking for the address.
+ * assessment's property (and any pending ambiguous candidates) so Gii keeps the subject
+ * instead of re-asking for the address.
  */
 export async function sendGiiMessage(args: {
   messages: GiiChatMessage[];
   context?: GiiContext | null;
-}): Promise<GiiChatResponse> {
-  const apiContext = args.context?.propertyId
-    ? {
-        propertyId: args.context.propertyId,
-        ...(args.context.moveOutDate ? { moveOutDate: args.context.moveOutDate } : {}),
-      }
-    : undefined;
+}): Promise<GiiChatResponseWithPending> {
+  const ctx = args.context;
+  const apiContext =
+    ctx?.propertyId || (ctx?.pendingPropertyCandidates?.length ?? 0) > 0
+      ? {
+          ...(ctx?.propertyId ? { propertyId: ctx.propertyId } : {}),
+          ...(ctx?.propertyLabel ? { propertyLabel: ctx.propertyLabel } : {}),
+          ...(ctx?.moveOutDate ? { moveOutDate: ctx.moveOutDate } : {}),
+          ...(ctx?.pendingPropertyCandidates?.length
+            ? { pendingPropertyCandidates: ctx.pendingPropertyCandidates }
+            : {}),
+        }
+      : undefined;
 
   const { data, error } = await crossub.POST('/agent/gii/chat', {
     body: {
@@ -69,10 +88,11 @@ export async function sendGiiMessage(args: {
       ...(apiContext ? { context: apiContext } : {}),
     } as components['schemas']['GiiChatRequestDto'] & {
       messages: GiiChatMessage[];
+      context?: Record<string, unknown>;
     },
   });
   if (error || !data) throw new Error(`${CROS_ASSISTANT_NAME} is unavailable`);
-  return data;
+  return data as GiiChatResponseWithPending;
 }
 
 /**
