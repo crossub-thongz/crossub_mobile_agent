@@ -10,6 +10,24 @@ export function isViewableDocumentUrl(url?: string | null): url is string {
   );
 }
 
+/**
+ * Same-origin proxy for agent property/portal documents. Browser `fetch()` of public R2
+ * URLs fails CORS; the API streams bytes at this path instead.
+ */
+export function agentDocumentFileHref(documentId: string): string {
+  return `/api/v1/agent/documents/${encodeURIComponent(documentId)}/file`;
+}
+
+/** Prefer the authenticated file proxy when we have a stable document id. */
+export function agentDocumentPreviewHref(
+  documentId: string | undefined | null,
+  fallbackUrl?: string | null,
+): string | undefined {
+  if (documentId?.trim()) return agentDocumentFileHref(documentId.trim());
+  if (fallbackUrl && isViewableDocumentUrl(fallbackUrl)) return fallbackUrl;
+  return undefined;
+}
+
 export function documentPreviewKindFromFileName(fileName: string): DocumentPreviewKind {
   const path = fileName.toLowerCase();
   if (path.endsWith('.pdf')) return 'pdf';

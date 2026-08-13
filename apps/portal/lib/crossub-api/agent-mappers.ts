@@ -41,6 +41,7 @@ import {
   TRIBUNAL_CASE_STATUS,
   VACATING_STATUS,
 } from '@/constants/api-enums';
+import { agentDocumentFileHref } from '@/lib/document-preview';
 import { toPlainTextBody } from '@/lib/message-body';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { TENANT_REJECTED_LABEL } from '@/lib/maintenance/tenant-rejected';
@@ -893,13 +894,17 @@ export function mapAgentNotifications(
  * in-app link and the download. A null property (portfolio-level upload) shows as 'Portfolio'.
  */
 export function mapAgentDocuments(dtos: AgentDocumentDto[]): AgentDocument[] {
-  return dtos.map((d) => ({
-    id: d.id,
-    title: d.name,
-    propertyAddress: d.propertyAddress ?? 'Portfolio',
-    category: d.category,
-    uploadedAt: d.uploadedAt,
-    href: d.url,
-    downloadUrl: d.url,
-  }));
+  return dtos.map((d) => {
+    // Proxy through the API — direct R2 URLs fail browser fetch CORS in the preview dialog.
+    const href = agentDocumentFileHref(d.id);
+    return {
+      id: d.id,
+      title: d.name,
+      propertyAddress: d.propertyAddress ?? 'Portfolio',
+      category: d.category,
+      uploadedAt: d.uploadedAt,
+      href,
+      downloadUrl: href,
+    };
+  });
 }

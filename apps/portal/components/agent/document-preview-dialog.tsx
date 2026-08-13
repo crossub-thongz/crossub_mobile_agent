@@ -66,6 +66,7 @@ function PreviewErrorState() {
 /** Fetch PDF as a blob so the browser previews inline instead of downloading. */
 function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [directUrl, setDirectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -75,6 +76,7 @@ function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
     setLoading(true);
     setError(false);
     setBlobUrl(null);
+    setDirectUrl(null);
 
     void (async () => {
       try {
@@ -87,7 +89,15 @@ function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
         objectUrl = URL.createObjectURL(pdfBlob);
         setBlobUrl(objectUrl);
       } catch {
-        if (!cancelled) setError(true);
+        // Cross-origin R2 URLs often block `fetch` (CORS) but still load in an iframe.
+        if (
+          !cancelled &&
+          (href.startsWith('https://') || href.startsWith('http://'))
+        ) {
+          setDirectUrl(href);
+        } else if (!cancelled) {
+          setError(true);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -100,12 +110,13 @@ function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
   }, [href]);
 
   if (loading) return <PreviewLoadingState />;
-  if (error || !blobUrl) return <PreviewErrorState />;
+  const src = blobUrl ?? directUrl;
+  if (error || !src) return <PreviewErrorState />;
 
   return (
     <iframe
       title={title}
-      src={pdfPreviewSrc(blobUrl)}
+      src={pdfPreviewSrc(src)}
       className="h-full min-h-0 w-full border-0 bg-background"
     />
   );

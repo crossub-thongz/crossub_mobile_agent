@@ -14,7 +14,10 @@ import { PropertyLandlordOverviewEditDialog } from '@/components/agent/property-
 import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-edit-dialog';
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { isViewableDocumentUrl } from '@/lib/document-preview';
+import {
+  agentDocumentPreviewHref,
+  isViewableDocumentUrl,
+} from '@/lib/document-preview';
 import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { findPropertyDocument } from '@/lib/property-create-document-groups';
@@ -432,7 +435,7 @@ export function PropertyTenancyManagementSections({
         id: doc.id,
         title: doc.title,
         uploadedAt: doc.uploadedAt,
-        href: doc.downloadUrl ?? doc.href,
+        href: agentDocumentPreviewHref(doc.id, doc.downloadUrl ?? doc.href),
       })),
     [propertyDocs],
   );

@@ -38,6 +38,7 @@ import {
   inspectionReportDisplayName,
   inspectionReportDownloadType,
 } from '@/lib/property-portal-documents';
+import { agentDocumentPreviewHref } from '@/lib/document-preview';
 import { dedupePropertyDocumentsForChecklist } from '@/lib/property-document-merge';
 import { usePropertyPortalDetail } from '@/lib/use-property-portal-detail';
 import type { AgentDocument, Property } from '@/lib/types';
@@ -516,7 +517,7 @@ export function PropertyDocumentsTab({
         id: doc.id,
         title,
         uploadedAt: doc.uploadedAt,
-        href: doc.url,
+        href: agentDocumentPreviewHref(doc.id, doc.url),
         previousTenantName: doc.previousTenantName,
       };
     };
@@ -536,7 +537,7 @@ export function PropertyDocumentsTab({
       id: doc.id,
       title: doc.title,
       uploadedAt: doc.uploadedAt,
-      href: doc.downloadUrl ?? doc.href,
+      href: agentDocumentPreviewHref(doc.id, doc.downloadUrl ?? doc.href),
     }));
 
     return dedupePropertyDocumentsForChecklist([...portalMapped, ...fallbackMapped]);
