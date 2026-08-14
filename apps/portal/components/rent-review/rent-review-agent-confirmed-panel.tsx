@@ -25,7 +25,12 @@ import {
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
-import { toDateOnly, resolveNoticePayableFromDate } from '@/lib/rent-review/scheduling';
+import {
+  earliestCompliantRentIncreaseDate,
+  RENT_REVIEW_STATUTORY_NOTICE_DAYS,
+  resolveNoticePayableFromDate,
+  toDateOnly,
+} from '@/lib/rent-review/scheduling';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
@@ -124,6 +129,11 @@ export function RentReviewAgentConfirmedPanel({
       }) || deriveRentIncreaseOnDate(detail),
     [detail],
   );
+
+  // Saving here serves the notice, so the statutory count starts tomorrow. Shown as `min` on
+  // the picker as well as in words: the API refuses anything earlier, and the agent should
+  // meet the rule while choosing rather than after saving.
+  const earliestIncreaseDate = useMemo(() => earliestCompliantRentIncreaseDate(), []);
 
   const effectiveDate = editable
     ? manualRentIncreaseOn || autoRentIncreaseOnResolved
@@ -386,12 +396,18 @@ export function RentReviewAgentConfirmedPanel({
                   id={`rent-increase-on-${detail.id}`}
                   type="date"
                   value={manualRentIncreaseOn}
+                  min={earliestIncreaseDate}
                   disabled={busy}
                   onChange={(e) => setManualRentIncreaseOn(e.target.value)}
                 />
                 <p className="text-[10px] leading-relaxed">
                   Suggested: {formatDateOnly(autoRentIncreaseOnResolved) ?? '—'} — the later of the
-                  lease end date or 60 days after notice delivery. Edit before saving if needed.
+                  lease end date or the statutory minimum. Earliest permitted is{' '}
+                  <span className="font-medium tabular-nums">
+                    {formatDateOnly(earliestIncreaseDate) ?? '—'}
+                  </span>{' '}
+                  — {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice counted from the day after this
+                  notice is served.
                 </p>
                 <Button
                   type="button"

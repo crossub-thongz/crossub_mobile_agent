@@ -6,7 +6,12 @@ import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { resolveNoticePayableFromDate } from '@/lib/rent-review/scheduling';
+import { tenantNoticeServedAt } from '@/lib/rent-review/agent-workflow-model';
+import {
+  earliestCompliantRentIncreaseDate,
+  RENT_REVIEW_STATUTORY_NOTICE_DAYS,
+  resolveNoticePayableFromDate,
+} from '@/lib/rent-review/scheduling';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
@@ -26,6 +31,13 @@ export function RentReviewNoticePayableFromField({
         storedEffectiveDate: detail.effectiveDate,
       }),
     [detail.effectiveDate, detail.leaseEndDate],
+  );
+
+  // Measured from the notice already served where there is one, so correcting this field a
+  // week after dispatch does not demand a date a week later than the notice itself required.
+  const earliestIncreaseDate = useMemo(
+    () => earliestCompliantRentIncreaseDate(tenantNoticeServedAt(detail)),
+    [detail],
   );
 
   const [payableFrom, setPayableFrom] = useState(defaultPayableFrom);
@@ -61,13 +73,16 @@ export function RentReviewNoticePayableFromField({
         id={`notice-payable-${detail.id}`}
         type="date"
         value={payableFrom}
+        min={earliestIncreaseDate}
         disabled={disabled || saving}
         onChange={(e) => setPayableFrom(e.target.value)}
         onBlur={() => void save(payableFrom)}
       />
       <p className="text-muted-foreground text-[11px] leading-relaxed">
-        Suggested from lease end or 60 days after notice delivery. Edit before sending if the
-        auto-filled date is not correct.
+        Suggested from lease end, or the statutory minimum. Earliest permitted is{' '}
+        <span className="font-medium tabular-nums">{earliestIncreaseDate}</span> —{' '}
+        {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice counted from the day after the notice is
+        served.
       </p>
     </div>
   );

@@ -1,9 +1,9 @@
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
+  earliestCompliantRentIncreaseDate,
   isoDateAddDays,
   resolveCurrentTenancyLeaseEnd,
   resolveRentIncreaseAnchor,
-  RENT_REVIEW_STATUTORY_NOTICE_DAYS,
 } from '@/lib/rent-review/scheduling';
 
 /** Current tenancy is a fixed-term lease (not periodic). */
@@ -42,8 +42,7 @@ export function deriveRentIncreaseOnDate(detail: RentReviewWorkflowDetail): stri
   if (anchored) return anchored;
 
   if (!isCurrentTenancyFixed(detail)) {
-    const today = new Date().toISOString().slice(0, 10);
-    return isoDateAddDays(today, RENT_REVIEW_STATUTORY_NOTICE_DAYS);
+    return earliestCompliantRentIncreaseDate();
   }
 
   const leaseEnd = resolveCurrentLeaseEnd(detail);
@@ -52,6 +51,5 @@ export function deriveRentIncreaseOnDate(detail: RentReviewWorkflowDetail): stri
   const newStart = deriveNewLeaseStartDate(detail);
   if (newStart) return isoDateAddDays(newStart, -1);
 
-  const today = new Date().toISOString().slice(0, 10);
-  return isoDateAddDays(today, RENT_REVIEW_STATUTORY_NOTICE_DAYS);
+  return earliestCompliantRentIncreaseDate();
 }

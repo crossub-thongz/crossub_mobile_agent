@@ -195,6 +195,18 @@ export function hasTenantNoticeSent(detail: RentReviewWorkflowDetail): boolean {
   return auditHas(detail, 'tenant_notices_dispatched');
 }
 
+/**
+ * When the s41 notice was served — the day the statutory 60 are counted from.
+ *
+ * The most recent dispatch, not the first: a re-send supersedes, and the tenant's rights run
+ * from the notice in their hand. Null before any notice has gone out, where the caller should
+ * measure from today because that is when it will be served. Mirrors the API's
+ * `resolveNoticeServiceDate`.
+ */
+export function tenantNoticeServedAt(detail: RentReviewWorkflowDetail): string | null {
+  return auditAt(detail, 'tenant_notices_dispatched');
+}
+
 /** Agent may dispatch the formal increase notice (backend: `agent_review` only). */
 export function canSendTenantNotice(detail: RentReviewWorkflowDetail): boolean {
   if (hasPendingTenantCounter(detail)) return false;

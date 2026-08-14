@@ -18,6 +18,10 @@ import {
   hasTenantNoticeSent,
 } from '@/lib/rent-review/agent-workflow-model';
 import { formatRentReviewAuditDetail } from '@/lib/rent-review/audit-detail-display';
+import {
+  earliestCompliantRentIncreaseDate,
+  RENT_REVIEW_STATUTORY_NOTICE_DAYS,
+} from '@/lib/rent-review/scheduling';
 import { listTenantResponseReminders } from '@/lib/rent-review/tenant-reminders';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -44,6 +48,8 @@ export function RentReviewTenantNotifiedPanel({
     setEffectiveDate(detail.effectiveDate ?? '');
   }, [detail]);
 
+  // This button serves the notice, so the statutory count starts tomorrow.
+  const earliestIncreaseDate = earliestCompliantRentIncreaseDate();
   const auditEntries = auditEntriesForStep(detail, RENT_REVIEW_AGENT_STEP.TENANT_NOTIFIED);
   const noticeSent = hasTenantNoticeSent(detail);
   const showSendNotice = canSendTenantNotice(detail);
@@ -117,8 +123,14 @@ export function RentReviewTenantNotifiedPanel({
             id="notice-effective"
             type="date"
             value={effectiveDate}
+            min={earliestIncreaseDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
           />
+          <p className="text-muted-foreground text-[11px] leading-relaxed">
+            Earliest {earliestIncreaseDate} — {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days notice
+            counted from the day after this notice is served. Re-sending serves a new notice, so
+            the count starts again from today.
+          </p>
           <Button
             className="w-full"
             disabled={busy}

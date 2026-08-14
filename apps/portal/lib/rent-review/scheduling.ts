@@ -4,7 +4,8 @@
  * - First review: order opens 90 days before initial lease expiry; rent increase on lease end.
  * - Subsequent reviews: order opens 90 days before the 12-month anniversary of the
  *   previous rent increase; rent increase on that anniversary.
- * - Tenants require 60-day advance notice before a rent increase.
+ * - Tenants require 60-day advance notice before a rent increase, counted from the day after
+ *   the notice is served.
  * - Agent due date is 30 days before the new lease start (first fixed review) or
  *   30 days before the rent increase (subsequent).
  */
@@ -13,6 +14,15 @@ export const RENT_REVIEW_ADVANCE_ORDER_DAYS = 90;
 export const RENT_REVIEW_STATUTORY_NOTICE_DAYS = 60;
 export const RENT_REVIEW_CONDUCT_WINDOW_DAYS =
   RENT_REVIEW_ADVANCE_ORDER_DAYS - RENT_REVIEW_STATUTORY_NOTICE_DAYS;
+/**
+ * Calendar days from service to the earliest date an increase may lawfully take effect.
+ *
+ * The sixty days are counted from the day **after** the notice is served — the day of service
+ * is not one of them. Mirrors `RENT_REVIEW_EARLIEST_INCREASE_OFFSET_DAYS` in the API; if the
+ * two disagree the picker offers a date the API refuses, which reads to an agent as a broken
+ * form rather than as a rule.
+ */
+export const RENT_REVIEW_EARLIEST_INCREASE_OFFSET_DAYS = RENT_REVIEW_STATUTORY_NOTICE_DAYS + 1;
 /** Agent due date — 30 days before the new lease start or rent increase. */
 export const RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE = 30;
 
@@ -253,6 +263,16 @@ export function calendarDaysUntil(
   return Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/**
+ * Earliest date a rent increase may lawfully take effect for a notice served on `servedOn`.
+ * Use it for the `min` on any picker that sets an increase date, so the rule shows up while
+ * the agent is choosing rather than as a rejected save afterwards.
+ */
+export function earliestCompliantRentIncreaseDate(servedOn?: string | null): string {
+  const served = toDateOnly(servedOn ?? null) ?? new Date().toISOString().slice(0, 10);
+  return isoDateAddDays(served, RENT_REVIEW_EARLIEST_INCREASE_OFFSET_DAYS);
+}
+
 /** NSW notice "Payable from" — mirrors backend scheduling util. */
 export function resolveNoticePayableFromDate(input: {
   suppliedOn?: string | null;
@@ -262,7 +282,7 @@ export function resolveNoticePayableFromDate(input: {
   storedEffectiveDate?: string | null;
 }): string {
   const supplied = toDateOnly(input.suppliedOn) ?? new Date().toISOString().slice(0, 10);
-  const statutoryMin = isoDateAddDays(supplied, RENT_REVIEW_STATUTORY_NOTICE_DAYS);
+  const statutoryMin = earliestCompliantRentIncreaseDate(supplied);
 
   const override =
     toDateOnly(input.explicitPayableFrom) ?? toDateOnly(input.storedEffectiveDate);
