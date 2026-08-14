@@ -1,6 +1,6 @@
 'use client';
 
-import { CreditCard, Loader2, Lock, RefreshCw } from 'lucide-react';
+import { CreditCard, FileText, Loader2, Lock, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -10,6 +10,12 @@ import {
   PlatformChargeDetailDialog,
   type PlatformChargeDetailDialogState,
 } from '@/components/billing/platform-charge-detail-dialog';
+import {
+  Level2MonthlyBillingList,
+  buildLevel2MonthGroups,
+  daysUntilAccountLock,
+  formatAccountLockCountdown,
+} from '@/components/billing/level2-monthly-billing';
 import {
   StripePaymentDialog,
   type StripePaymentDialogState,
@@ -30,6 +36,7 @@ import {
   confirmAgentPaymentMethodSetup,
   createAgentPaymentMethodSetup,
   fetchAgentBillingSummary,
+  fetchAgentMonthlyInvoice,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
   payAllAgentBilling,
@@ -88,6 +95,10 @@ function isPayableInvoice(row: AgentBillingMonthlyInvoice): boolean {
   return row.status === 'sent' || row.status === 'overdue';
 }
 
+function chargeOpensInvoice(row: AgentBillingCharge): boolean {
+  return Boolean(row.monthlyInvoiceId) || row.status === 'invoiced';
+}
+
 export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
@@ -95,6 +106,7 @@ export default function BillPage() {
   const [loading, setLoading] = useState(true);
   const [payingKey, setPayingKey] = useState<string | null>(null);
   const [payingAll, setPayingAll] = useState(false);
+  const [openingInvoiceId, setOpeningInvoiceId] = useState<string | null>(null);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
   const [chargeDialog, setChargeDialog] = useState<PlatformChargeDetailDialogState>(null);
   const [invoiceDialog, setInvoiceDialog] = useState<PlatformMonthlyInvoiceDialogState>(null);
@@ -102,6 +114,7 @@ export default function BillPage() {
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
 
   const stripeConfigured = Boolean(getStripePublishableKey());
+  const isLevel2 = summary?.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT';
 
   const payableCharges = useMemo(() => charges.filter(isPayableCharge), [charges]);
   const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
@@ -165,7 +178,9 @@ export default function BillPage() {
     })();
   }, [load]);
 
+  /** Level 1 keeps a flat prepaid + invoice list; Level 2 uses month groups. */
   const payments = useMemo(() => {
+    if (isLevel2) return [] as PaymentRow[];
     const rows: PaymentRow[] = [
       ...charges.map((row) => ({
         kind: 'charge' as const,
@@ -180,10 +195,69 @@ export default function BillPage() {
         row,
       })),
     ];
-    return rows.sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime());
-  }, [charges, invoices]);
+    return rows.sort(
+      (a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime(),
+    );
+  }, [charges, invoices, isLevel2]);
 
+  const level2MonthGroups = useMemo(
+    () =>
+      isLevel2
+        ? buildLevel2MonthGroups(charges, invoices, {
+            overdueLockDays: summary?.overdueLockDays ?? 7,
+          })
+        : [],
+    [charges, invoices, isLevel2, summary?.overdueLockDays],
+  );
+
+  const openInvoiceLockDays = useMemo(() => {
+    if (!isLevel2 || summary?.billingBlocked || !summary?.nextInvoiceDueDate) return null;
+    return daysUntilAccountLock(
+      summary.nextInvoiceDueDate,
+      summary.overdueLockDays ?? 7,
+    );
+  }, [
+    isLevel2,
+    summary?.billingBlocked,
+    summary?.nextInvoiceDueDate,
+    summary?.overdueLockDays,
+  ]);
+
+  const hasBillingRows = isLevel2 ? level2MonthGroups.length > 0 : payments.length > 0;
   const outstandingCountDisplay = outstandingCount;
+
+  const openInvoiceById = async (invoiceId: string) => {
+    const existing = invoices.find((row) => row.id === invoiceId);
+    if (existing) {
+      setInvoiceDialog({
+        invoice: existing,
+        defaultPaymentMethod: summary?.defaultPaymentMethod,
+      });
+      return;
+    }
+
+    setOpeningInvoiceId(invoiceId);
+    try {
+      const detail = await fetchAgentMonthlyInvoice(invoiceId);
+      setInvoiceDialog({
+        invoice: {
+          id: detail.id,
+          invoiceNumber: detail.invoiceNumber,
+          periodStart: detail.periodStart,
+          periodEnd: detail.periodEnd,
+          dueDate: detail.dueDate,
+          status: detail.status,
+          amountDue: detail.amountDue,
+          paidAt: detail.paidAt,
+        },
+        defaultPaymentMethod: summary?.defaultPaymentMethod,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not load invoice');
+    } finally {
+      setOpeningInvoiceId(null);
+    }
+  };
 
   const handlePaymentSuccess = async (chargeId?: string | null) => {
     await finalizeBillingChargePayment(chargeId);
@@ -256,7 +330,11 @@ export default function BillPage() {
       <div className="space-y-5">
         <PageIntro
           title="CROSSUB SERVICES billing"
-          description="Prepaid service charges and monthly service invoices for your agency."
+          description={
+            isLevel2
+              ? 'Monthly service invoices for your agency — grouped by month with paid status.'
+              : 'Prepaid service charges and monthly service invoices for your agency.'
+          }
         />
 
         {summary?.billingBlocked ? (
@@ -341,26 +419,61 @@ export default function BillPage() {
                   : null}
               </p>
             ) : null}
-            {showPayAll ? (
-              <Button
-                className="mt-4 w-full sm:w-auto"
-                onClick={() => void payAll()}
-                disabled={payingAll || payingKey != null || paymentDialog != null}
-              >
-                {payingAll ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <CreditCard className="size-4" />
+            {isLevel2 && openInvoiceLockDays != null ? (
+              <p
+                className={cn(
+                  'mt-2 text-sm font-medium',
+                  openInvoiceLockDays <= 3
+                    ? 'text-destructive'
+                    : 'text-amber-800 dark:text-amber-200',
                 )}
-                Pay all ({outstandingCount} bills · {formatCurrency(outstandingTotal)})
-              </Button>
+              >
+                {formatAccountLockCountdown(openInvoiceLockDays)}
+              </p>
             ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {summary.openInvoiceId ? (
+                <Button
+                  type="button"
+                  variant={showPayAll ? 'outline' : 'default'}
+                  className="w-full sm:w-auto"
+                  onClick={() => void openInvoiceById(summary.openInvoiceId!)}
+                  disabled={
+                    openingInvoiceId != null ||
+                    paymentDialog != null ||
+                    invoiceDialog != null ||
+                    payingAll
+                  }
+                >
+                  {openingInvoiceId === summary.openInvoiceId ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <FileText className="size-4" />
+                  )}
+                  View invoice
+                </Button>
+              ) : null}
+              {showPayAll ? (
+                <Button
+                  className="w-full sm:w-auto"
+                  onClick={() => void payAll()}
+                  disabled={payingAll || payingKey != null || paymentDialog != null}
+                >
+                  {payingAll ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="size-4" />
+                  )}
+                  Pay all ({outstandingCount} bills · {formatCurrency(outstandingTotal)})
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">
-            All payments
+            {isLevel2 ? 'Monthly invoices' : 'All payments'}
             {outstandingCountDisplay > 0 ? (
               <span className="text-muted-foreground ml-2 text-xs font-normal">
                 {outstandingCountDisplay} awaiting payment
@@ -377,10 +490,42 @@ export default function BillPage() {
           <div className="flex justify-center py-16">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
           </div>
-        ) : payments.length === 0 ? (
+        ) : !hasBillingRows ? (
           <EmptyState
             title="No payments yet"
-            description="Prepaid inspections, tribunal sessions, and monthly service invoices will appear here."
+            description={
+              isLevel2
+                ? 'Service charges and monthly invoices will appear here grouped by month.'
+                : 'Prepaid inspections, tribunal sessions, and monthly service invoices will appear here.'
+            }
+          />
+        ) : isLevel2 ? (
+          <Level2MonthlyBillingList
+            charges={charges}
+            invoices={invoices}
+            overdueLockDays={summary?.overdueLockDays ?? 7}
+            billingBlocked={summary?.billingBlocked === true}
+            openingInvoiceId={openingInvoiceId}
+            disabled={
+              paymentDialog != null ||
+              chargeDialog != null ||
+              invoiceDialog != null ||
+              payingAll ||
+              payingKey != null
+            }
+            onViewInvoice={(invoice) =>
+              setInvoiceDialog({
+                invoice,
+                defaultPaymentMethod: summary?.defaultPaymentMethod,
+              })
+            }
+            onOpenInvoiceById={(invoiceId) => void openInvoiceById(invoiceId)}
+            onViewCharge={(row) =>
+              setChargeDialog({
+                charge: row,
+                defaultPaymentMethod: summary?.defaultPaymentMethod,
+              })
+            }
           />
         ) : (
           <ul className="divide-y rounded-xl border bg-card">
@@ -388,6 +533,9 @@ export default function BillPage() {
               if (entry.kind === 'charge') {
                 const row = entry.row;
                 const payable = isPayableCharge(row);
+                const opensInvoice = chargeOpensInvoice(row);
+                const invoiceId = row.monthlyInvoiceId ?? null;
+                const viewLabel = opensInvoice ? 'View invoice' : 'View bill';
                 return (
                   <li key={entry.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
                     <div className="min-w-0 flex-1">
@@ -430,18 +578,31 @@ export default function BillPage() {
                         <Button
                           size="sm"
                           variant={payable ? 'default' : 'outline'}
-                          onClick={() =>
+                          onClick={() => {
+                            if (opensInvoice && invoiceId) {
+                              void openInvoiceById(invoiceId);
+                              return;
+                            }
                             setChargeDialog({
                               charge: row,
                               defaultPaymentMethod: summary?.defaultPaymentMethod,
-                            })
+                            });
+                          }}
+                          disabled={
+                            paymentDialog != null ||
+                            chargeDialog != null ||
+                            invoiceDialog != null ||
+                            openingInvoiceId != null
                           }
-                          disabled={paymentDialog != null || chargeDialog != null}
                         >
-                          {payable ? (
+                          {openingInvoiceId && invoiceId && openingInvoiceId === invoiceId ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : opensInvoice ? (
+                            <FileText className="size-3.5" />
+                          ) : payable ? (
                             <CreditCard className="size-3.5" />
                           ) : null}
-                          View bill
+                          {viewLabel}
                         </Button>
                       </div>
                     </div>
@@ -486,9 +647,13 @@ export default function BillPage() {
                             defaultPaymentMethod: summary?.defaultPaymentMethod,
                           })
                         }
-                        disabled={paymentDialog != null || invoiceDialog != null}
+                        disabled={
+                          paymentDialog != null ||
+                          invoiceDialog != null ||
+                          openingInvoiceId != null
+                        }
                       >
-                        {payable ? <CreditCard className="size-3.5" /> : null}
+                        {payable ? <CreditCard className="size-3.5" /> : <FileText className="size-3.5" />}
                         View invoice
                       </Button>
                     </div>

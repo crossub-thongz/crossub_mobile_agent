@@ -14,6 +14,8 @@ export type AgentBillingCharge = {
   createdByName?: string | null;
   calculationDetail?: string | null;
   calculationSummary?: string | null;
+  /** Present when this postpaid charge was rolled into a monthly invoice (Level 2). */
+  monthlyInvoiceId?: string | null;
 };
 
 export type AgentBillingSummary = {
@@ -22,6 +24,8 @@ export type AgentBillingSummary = {
   inspectionsCollectionMode?: 'prepaid' | 'postpaid';
   serviceFeePercent?: number;
   billingBlocked: boolean;
+  /** Days after due date before the portal locks (Level 2). */
+  overdueLockDays?: number;
   outstandingInvoiceAmount: number;
   openInvoiceId?: string | null;
   openInvoiceNumber?: string | null;
