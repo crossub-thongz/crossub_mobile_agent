@@ -11,7 +11,10 @@ import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-r
 import { RentReviewNoticePayableFromField } from '@/components/rent-review/rent-review-notice-payable-from-field';
 import { RentReviewResearchResultSection } from '@/components/rent-review/rent-review-research-result-section';
 import { RentResearchPlatformsPanel } from '@/components/rent-review/rent-research-platforms-panel';
-import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
+import {
+  buildPropertyWorkflowEmailContacts,
+  landlordWorkflowEmailContacts,
+} from '@/lib/job-case-email-recipients';
 import {
   canAdjustRentRecommendation,
   canAgentViewResearchResults,
@@ -40,9 +43,7 @@ export function RentReviewResearchPanel({
   const recipientContacts = buildPropertyWorkflowEmailContacts(property, {
     tenantName: detail.tenantName,
   });
-  const landlordFromContacts = recipientContacts.find((c) =>
-    c.role.toLowerCase().startsWith('landlord'),
-  );
+  const [landlordFromContacts] = landlordWorkflowEmailContacts(recipientContacts);
   const landlordEmail =
     property?.homeOwnerContact?.email?.trim() || landlordFromContacts?.email;
   const landlordName =

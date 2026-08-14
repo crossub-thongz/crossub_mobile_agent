@@ -25,6 +25,7 @@ import {
 } from '@/lib/rent-review/research-landlord-email';
 import {
   formatWorkflowEmailContact,
+  landlordWorkflowEmailContacts,
   type WorkflowEmailContact,
 } from '@/lib/job-case-email-recipients';
 import { rentReviewApi } from '@/lib/rent-review-api';
@@ -53,6 +54,9 @@ export function RentReviewEmailToLandlordDialog({
 }) {
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const contact = resolveLandlordContact(landlordName, landlordEmail);
+  // Owner-side only. The pack states the rent the agent is about to propose, so the tenant is
+  // the one address on the property this dialog must never offer as a one-tap recipient.
+  const landlordContacts = landlordWorkflowEmailContacts(recipientContacts);
   const [toEmail, setToEmail] = useState(contact.email);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
@@ -169,11 +173,11 @@ export function RentReviewEmailToLandlordDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          {recipientContacts.length > 0 ? (
+          {landlordContacts.length > 1 ? (
             <div className="space-y-1.5">
-              <p className="text-muted-foreground text-[11px] font-medium">Property contacts</p>
+              <p className="text-muted-foreground text-[11px] font-medium">Landlord contacts</p>
               <div className="flex flex-wrap gap-1.5">
-                {recipientContacts.map((contact) => (
+                {landlordContacts.map((contact) => (
                   <button
                     key={`${contact.role}-${contact.email}`}
                     type="button"

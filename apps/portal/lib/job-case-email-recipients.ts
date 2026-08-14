@@ -1,3 +1,7 @@
+import {
+  WORKFLOW_EMAIL_ROLE,
+  workflowEmailRoleMatches,
+} from '@/constants/workflow-email-recipients';
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
 import type { Property, PropertyPartyContact } from '@/lib/types';
 
@@ -55,14 +59,26 @@ export function buildPropertyWorkflowEmailContacts(
   const contacts: WorkflowEmailContact[] = [];
   const seen = new Set<string>();
 
-  pushContact(contacts, seen, 'Agent', options?.agentEmail, options?.agentName);
+  pushContact(contacts, seen, WORKFLOW_EMAIL_ROLE.AGENT, options?.agentEmail, options?.agentName);
 
-  pushContact(contacts, seen, 'Landlord', property.homeOwnerContact?.email, property.homeOwnerName);
-  pushPartyContacts(contacts, seen, 'Landlord', property.additionalLandlords);
+  pushContact(
+    contacts,
+    seen,
+    WORKFLOW_EMAIL_ROLE.LANDLORD,
+    property.homeOwnerContact?.email,
+    property.homeOwnerName,
+  );
+  pushPartyContacts(contacts, seen, WORKFLOW_EMAIL_ROLE.LANDLORD, property.additionalLandlords);
 
   const tenantName = options?.tenantName?.trim() || property.tenantName;
-  pushContact(contacts, seen, 'Tenant', property.tenantContact?.email, tenantName);
-  pushPartyContacts(contacts, seen, 'Tenant', property.additionalTenants);
+  pushContact(
+    contacts,
+    seen,
+    WORKFLOW_EMAIL_ROLE.TENANT,
+    property.tenantContact?.email,
+    tenantName,
+  );
+  pushPartyContacts(contacts, seen, WORKFLOW_EMAIL_ROLE.TENANT, property.additionalTenants);
 
   const draft =
     property.registryDraft && typeof property.registryDraft === 'object'
@@ -75,9 +91,25 @@ export function buildPropertyWorkflowEmailContacts(
     ext.strataContactName ??
     (typeof draft?.strataContactName === 'string' ? draft.strataContactName : undefined);
 
-  pushContact(contacts, seen, 'Strata', strataEmail, strataName);
+  pushContact(contacts, seen, WORKFLOW_EMAIL_ROLE.STRATA, strataEmail, strataName);
 
   return contacts;
+}
+
+/**
+ * The owner-side subset, for dialogs that write to the landlord and nobody else.
+ *
+ * `buildPropertyWorkflowEmailContacts` collects every party on the property because reply and
+ * forward genuinely reach any of them. An owner-addressed send does not: the research pack
+ * quotes the rate the agent intends to put to the tenant, and one tap on a Tenant chip in the
+ * Email to landlord dialog silently replaced the recipient with the counterparty — which is
+ * how Daniel Zhou found it on 14 Aug (CRS-0067 item 3). Filtering here rather than at the one
+ * call site keeps the invariant with the dialog that owns it.
+ */
+export function landlordWorkflowEmailContacts(
+  contacts: WorkflowEmailContact[],
+): WorkflowEmailContact[] {
+  return contacts.filter((c) => workflowEmailRoleMatches(c.role, WORKFLOW_EMAIL_ROLE.LANDLORD));
 }
 
 export function formatWorkflowEmailContactBlock(contacts: WorkflowEmailContact[]): string {
