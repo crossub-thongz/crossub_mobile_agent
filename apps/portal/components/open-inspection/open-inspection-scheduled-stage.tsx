@@ -12,6 +12,7 @@ import {
 } from '@/lib/leasing/open-inspection-display';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { OpenInspectionEarlyStartNotice } from '@/components/open-inspection/open-inspection-early-start-notice';
+import { OpenInspectionConfirmTimeButton } from '@/components/open-inspection/open-inspection-confirm-time-button';
 
 const POOL_INSPECTOR_LABEL = 'Pending — task pool';
 
@@ -30,10 +31,13 @@ function FactTile({ label, value, icon: Icon }: { label: string; value: string; 
 export function OpenInspectionScheduledStage({
   session,
   fieldInspectorName,
+  onConfirmed,
 }: {
   session: OpenInspectionSession;
   /** CROSSUB field inspector from the linked pool job — not the managing agent on the session. */
   fieldInspectorName?: string | null;
+  /** Refresh the session after the agent confirms the time. */
+  onConfirmed?: (confirmedAt: string) => void;
 }) {
   const [resolvedInspector, setResolvedInspector] = useState<string | null | undefined>(
     fieldInspectorName,
@@ -109,6 +113,18 @@ export function OpenInspectionScheduledStage({
           label="Notes (Security Lock PIN)"
           value={notes}
           icon={FileText}
+        />
+      </div>
+
+      {/* Geng Xu, 14 Aug: the agent confirms the time once an inspector has taken the job.
+          It sits here rather than in its own card because this is where the time and the
+          inspector are already on screen — confirming is an answer to what is above it. */}
+      <div className="mt-3 border-t pt-3">
+        <OpenInspectionConfirmTimeButton
+          propertyId={session.propertyId}
+          job={session.openInspection}
+          scheduledStart={session.startTime}
+          onConfirmed={onConfirmed}
         />
       </div>
     </section>

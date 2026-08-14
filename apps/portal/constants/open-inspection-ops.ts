@@ -145,6 +145,27 @@ export interface OpenInspectionTimelineEvent {
   at: string;
 }
 
+/**
+ * The OPEN pool job behind a viewing session — the half a viewing row cannot answer.
+ *
+ * A viewing session carries no inspector of its own; the assignment lives on the linked
+ * inspection row. Reading it here is what lets this app tell whether there is anybody to
+ * confirm a time *with*, rather than offering a Confirm button over an unstaffed slot.
+ */
+export interface OpenInspectionPoolJob {
+  inspectionId: string;
+  /** Every inspector on the job, lead first. Empty while nobody is assigned. */
+  inspectors: Array<{ id: string; name: string; isPrimary: boolean }>;
+  inspectorAssignedAt: string | null;
+  scheduledDate: string | null;
+  completedDate: string | null;
+  reportUrl: string | null;
+  approvedAt: string | null;
+  /** When this agent confirmed the scheduled time. Null means not yet — CROSSUB is waiting. */
+  agentConfirmedAt: string | null;
+  reportSentToAgentAt: string | null;
+}
+
 export interface OpenInspectionSession {
   id: string;
   propertyId?: string;
@@ -178,6 +199,8 @@ export interface OpenInspectionSession {
   checkInUrl?: string;
   /** Linked OPEN pool inspection (inspector mobile job) for this viewing session. */
   inspectionId?: string;
+  /** The linked OPEN pool job in full — inspectors, schedule, report, confirmation. */
+  openInspection?: OpenInspectionPoolJob;
   /** True once the linked leasing cycle's open report has been generated. */
   openReportGenerated?: boolean;
   reviewCompletedAt?: string;

@@ -177,6 +177,33 @@ export async function cancelAgentOpenInspection(
   );
 }
 
+/**
+ * The agent confirms the time CROSSUB scheduled for their open inspection.
+ *
+ * The server refuses until an inspector is on the job **and** a time is set, and refuses a
+ * second confirmation — so the UI's job is to only offer the button when it will succeed,
+ * and to report the server's reason when it does not. `agentConfirmedAt` comes back from
+ * the server rather than being stamped here: the handset's clock and the server's disagree,
+ * and the server's is the one CROSSUB staff read off the Task Pool.
+ *
+ * Typed locally rather than from `components['schemas']`, matching `AgentWorkflowCreateResult`
+ * above: the published contract is 0.13.0 and this route lands in the next publish.
+ */
+export type AgentOpenInspectionConfirmResult = {
+  id: string;
+  agentConfirmedAt: string;
+};
+
+export async function confirmAgentOpenInspectionSchedule(
+  propertyId: string,
+  inspectionId: string,
+): Promise<AgentOpenInspectionConfirmResult> {
+  return agentFetch(
+    `${base(propertyId)}/open-inspection/${encodeURIComponent(inspectionId)}/confirm-schedule`,
+    { method: 'POST' },
+  );
+}
+
 export async function cancelAgentTerminationCase(
   propertyId: string,
   caseId: string,

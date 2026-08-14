@@ -39,6 +39,15 @@ export function OpenInspectionStagePanel({
         <OpenInspectionScheduledStage
           session={session}
           fieldInspectorName={fieldInspectorName}
+          onConfirmed={(confirmedAt) => {
+            // Reflect the confirmation on the session the rest of the page reads, without
+            // a refetch — the server has already recorded it and the stamp is its own.
+            if (!session.openInspection) return;
+            onSessionChange({
+              ...session,
+              openInspection: { ...session.openInspection, agentConfirmedAt: confirmedAt },
+            });
+          }}
         />
       ) : null}
 
