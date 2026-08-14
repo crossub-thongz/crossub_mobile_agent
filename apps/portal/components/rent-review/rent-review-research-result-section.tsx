@@ -222,7 +222,7 @@ export function RentReviewResearchResultSection({
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         {landlordEmailed ? (
           <p className="text-muted-foreground text-xs sm:mr-auto">
-            Research results emailed to the landlord automatically.
+            Research results sent to the landlord.
           </p>
         ) : null}
         <Button
@@ -238,7 +238,7 @@ export function RentReviewResearchResultSection({
       {!researchComplete || helperText ? (
         <p className="text-muted-foreground mt-2 text-[11px]">
           {helperText ??
-            'Market research is completed in the admin portal. Email the landlord once results are shown above.'}
+            'Market research is completed in the admin portal. Send the pack to the landlord once results are shown above.'}
         </p>
       ) : null}
     </section>

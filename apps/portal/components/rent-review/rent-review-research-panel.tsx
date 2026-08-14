@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Bell, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,10 +19,6 @@ import {
   hasMarketResearchComplete,
   hasResearchRequested,
 } from '@/lib/rent-review/agent-workflow-model';
-import {
-  buildLandlordResearchEmailDraft,
-  resolveLandlordContact,
-} from '@/lib/rent-review/research-landlord-email';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
@@ -39,7 +35,6 @@ export function RentReviewResearchPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [requesting, setRequesting] = useState(false);
-  const autoSendLandlordAttempted = useRef<string | null>(null);
 
   const property = properties.find((p) => p.id === detail.propertyId);
   const recipientContacts = buildPropertyWorkflowEmailContacts(property, {
@@ -66,45 +61,20 @@ export function RentReviewResearchPanel({
   // `landlordEmailed` so an adjustment can't mail the owner by itself.
   const packBehindRecommendation = hasLandlordPackFallenBehindRecommendation(detail);
 
-  useEffect(() => {
-    if (!canViewResults || landlordEmailed || autoSendLandlordAttempted.current === detail.id) {
-      return;
-    }
-    if (!detail.propertyId || !landlordEmail?.includes('@')) return;
+  /**
+   * An effect here used to write to the owner the moment this card could be seen.
+   *
+   * It never once worked: the API stopped accepting `landlord_research_email` on 15 Jul and
+   * the rejection landed in a bare `.catch`, so for a month opening a case produced a silent
+   * 400 while the card's own copy told the agent the owner had been written to. Restoring
+   * that kind would have brought it to life — and what it does is write to an owner from a
+   * draft nobody read, at an address nobody confirmed, triggered by a page render.
+   *
+   * The owner relationship belongs to the agent, which is the entire reason CROSSUB is
+   * allowed to carry this message at all. So the agent presses Send: the dialog below is the
+   * only path, and it shows the recipient, the body and the attachments first.
+   */
 
-    autoSendLandlordAttempted.current = detail.id;
-    const contact = resolveLandlordContact(landlordName, landlordEmail);
-    const draft = buildLandlordResearchEmailDraft(detail, contact.name, contact.email);
-
-    void runMutation(
-      detail.id,
-      rentReviewApi.sendEmail(
-        detail.id,
-        {
-          toEmail: contact.email,
-          toName: contact.name,
-          subject: draft.subject,
-          body: draft.body,
-          kind: 'landlord_research_email',
-          channel: 'email',
-        },
-        detail.propertyId,
-        detail.leaseEndDate,
-      ),
-    )
-      .then((updated) => onUpdated?.(updated))
-      .catch(() => {
-        autoSendLandlordAttempted.current = null;
-      });
-  }, [
-    canViewResults,
-    detail,
-    landlordEmailed,
-    landlordEmail,
-    landlordName,
-    onUpdated,
-    runMutation,
-  ]);
 
   const requestResearch = async () => {
     if (!detail.propertyId) {
@@ -230,10 +200,10 @@ export function RentReviewResearchPanel({
             emailDisabled={landlordEmailed && !packBehindRecommendation}
             helperText={
               packBehindRecommendation
-                ? 'The rate has changed since the landlord was emailed — send them the updated pack.'
+                ? 'The rate has changed since you emailed the landlord — send them the updated pack.'
                 : landlordEmailed
-                  ? 'The landlord has been emailed the research pack automatically.'
-                  : 'The research pack is emailed to the landlord automatically when research is complete.'
+                  ? 'You have sent the landlord the research pack.'
+                  : 'Review the recommended rate, then send the research pack to the landlord.'
             }
           />
         </>
