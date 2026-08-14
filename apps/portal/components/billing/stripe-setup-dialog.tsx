@@ -28,11 +28,12 @@ export type StripeSetupDialogState = {
 };
 
 type SetupFormProps = {
+  mode?: 'add' | 'update';
   onSuccess: () => void | Promise<void>;
   onCancel: () => void;
 };
 
-function SetupForm({ onSuccess, onCancel }: SetupFormProps) {
+function SetupForm({ mode = 'add', onSuccess, onCancel }: SetupFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -123,7 +124,7 @@ function SetupForm({ onSuccess, onCancel }: SetupFormProps) {
         </Button>
         <Button type="submit" className="w-full sm:w-auto" disabled={!stripe || !elements || submitting}>
           {submitting ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
-          Save {state?.mode === 'update' ? 'new card' : 'payment method'}
+          Save {mode === 'update' ? 'new card' : 'payment method'}
         </Button>
       </DialogFooter>
     </form>
@@ -173,7 +174,11 @@ export function StripeSetupDialog({ state, onOpenChange, onSuccess }: StripeSetu
               appearance: getStripeBillingAppearance(),
             }}
           >
-            <SetupForm onSuccess={onSuccess} onCancel={() => onOpenChange(false)} />
+            <SetupForm
+              mode={state.mode}
+              onSuccess={onSuccess}
+              onCancel={() => onOpenChange(false)}
+            />
           </Elements>
         ) : null}
       </DialogContent>
