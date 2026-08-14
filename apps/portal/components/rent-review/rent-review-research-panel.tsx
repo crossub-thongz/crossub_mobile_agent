@@ -5,6 +5,7 @@ import { Bell, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND } from '@/constants/rent-review-recommendation';
 import { Button } from '@/components/ui/button';
 import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
 import { RentReviewNoticePayableFromField } from '@/components/rent-review/rent-review-notice-payable-from-field';
@@ -12,7 +13,9 @@ import { RentReviewResearchResultSection } from '@/components/rent-review/rent-r
 import { RentResearchPlatformsPanel } from '@/components/rent-review/rent-research-platforms-panel';
 import { buildPropertyWorkflowEmailContacts } from '@/lib/job-case-email-recipients';
 import {
+  canAdjustRentRecommendation,
   canAgentViewResearchResults,
+  hasLandlordPackFallenBehindRecommendation,
   hasMarketResearchComplete,
   hasResearchRequested,
 } from '@/lib/rent-review/agent-workflow-model';
@@ -55,7 +58,13 @@ export function RentReviewResearchPanel({
   const researchRequested = hasResearchRequested(detail);
   const researchComplete = hasMarketResearchComplete(detail);
   const canViewResults = canAgentViewResearchResults(detail);
-  const landlordEmailed = detail.auditLog.some((e) => e.kind === 'landlord_research_email');
+  const landlordEmailed = detail.auditLog.some(
+    (e) => e.kind === RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND,
+  );
+  // The pack has gone but quotes a rate the agent has since changed. This re-opens the send
+  // button; it must never re-open the automatic send above, which stays keyed on
+  // `landlordEmailed` so an adjustment can't mail the owner by itself.
+  const packBehindRecommendation = hasLandlordPackFallenBehindRecommendation(detail);
 
   useEffect(() => {
     if (!canViewResults || landlordEmailed || autoSendLandlordAttempted.current === detail.id) {
@@ -197,10 +206,34 @@ export function RentReviewResearchPanel({
             researchComplete={researchComplete}
             landlordEmailed={landlordEmailed}
             onEmail={() => setLandlordDialogOpen(true)}
+            canAdjustRecommendation={canAdjustRentRecommendation(detail)}
+            onAdjustRecommendation={async (weekly) => {
+              const updated = await runMutation(
+                detail.id,
+                rentReviewApi.setRecommendedRent(
+                  detail.id,
+                  { weekly },
+                  detail.propertyId ?? undefined,
+                  detail.leaseEndDate,
+                ),
+              );
+              onUpdated?.(updated);
+              return updated;
+            }}
+            emailLabel={
+              packBehindRecommendation
+                ? 'Email updated pack'
+                : landlordEmailed
+                  ? 'Sent to landlord'
+                  : 'Email landlord'
+            }
+            emailDisabled={landlordEmailed && !packBehindRecommendation}
             helperText={
-              landlordEmailed
-                ? 'The landlord has been emailed the research pack automatically.'
-                : 'The research pack is emailed to the landlord automatically when research is complete.'
+              packBehindRecommendation
+                ? 'The rate has changed since the landlord was emailed — send them the updated pack.'
+                : landlordEmailed
+                  ? 'The landlord has been emailed the research pack automatically.'
+                  : 'The research pack is emailed to the landlord automatically when research is complete.'
             }
           />
         </>

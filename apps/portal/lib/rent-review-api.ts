@@ -13,6 +13,7 @@ import type {
   SendRentReviewEmailInput,
   ServerRentReviewWorkflowView,
   SetProposedRentInput,
+  SetRecommendedRentInput,
   TenantResponseInput,
 } from '@/lib/rent-review-workflow-types';
 
@@ -154,6 +155,41 @@ export const rentReviewApi = {
     }
     return map(
       unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/approve-ai`, {})),
+      leaseEndDate,
+    );
+  },
+
+  /**
+   * Adjust the recommended rent, or clear the adjustment (`weekly: null`).
+   *
+   * The response is the whole review, so the caller's `onUpdated` refreshes the rate
+   * everywhere it is quoted — including the landlord email draft, which reads the same
+   * `ai.suggestedWeekly` this writes.
+   */
+  setRecommendedRent: (
+    id: string,
+    input: SetRecommendedRentInput,
+    propertyId?: string | null,
+    leaseEndDate?: string | null,
+  ): Promise<RentReviewWorkflowDetail> => {
+    if (propertyId) {
+      return map(
+        unwrap(
+          apiV1.patch<{ review: ServerRentReviewWorkflowView }>(
+            `${agentRentReviewWorkflowPath(propertyId, id)}/recommended-rent`,
+            input,
+          ),
+        ),
+        leaseEndDate,
+      );
+    }
+    return map(
+      unwrap(
+        api.patch<{ review: ServerRentReviewWorkflowView }>(
+          `${BASE}/${id}/recommended-rent`,
+          input,
+        ),
+      ),
       leaseEndDate,
     );
   },

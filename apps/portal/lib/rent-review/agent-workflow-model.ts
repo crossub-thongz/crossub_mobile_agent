@@ -1,3 +1,8 @@
+import {
+  RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND,
+  RENT_REVIEW_RECOMMENDATION_AUDIT_KIND,
+  RENT_REVIEW_RECOMMENDATION_EDITABLE_STATES,
+} from '@/constants/rent-review-recommendation';
 import type { JobCaseEmailRecord } from '@/lib/job-case-email';
 import { formatAgentSender } from '@/lib/job-case-email-sender';
 import { commRecordsFromAuditLog, enrichRentReviewEmailRecords } from '@/lib/rent-review/communications';
@@ -122,7 +127,35 @@ export function canAgentViewResearchResults(detail: RentReviewWorkflowDetail): b
 }
 
 function hasLandlordResearchEmailed(detail: RentReviewWorkflowDetail): boolean {
-  return auditHas(detail, 'landlord_research_email');
+  return auditHas(detail, RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND);
+}
+
+/** The agent may still put their own figure on the recommendation. */
+export function canAdjustRentRecommendation(detail: RentReviewWorkflowDetail): boolean {
+  return (
+    hasResearchComplete(detail) &&
+    RENT_REVIEW_RECOMMENDATION_EDITABLE_STATES.includes(detail.workflowState)
+  );
+}
+
+/**
+ * The owner holds a pack quoting a rate that has since been adjusted.
+ *
+ * The send button is otherwise disabled for good once the pack has gone, which was correct
+ * while the rate could never change afterwards. Now that it can, that same rule would leave
+ * the agent looking at their new figure on screen and the owner holding the old one, with no
+ * control on the card to close the gap.
+ *
+ * Deliberately separate from the `landlordEmailed` flag that guards the *automatic* send.
+ * Folding the two together would make every adjustment mail the owner by itself.
+ */
+export function hasLandlordPackFallenBehindRecommendation(
+  detail: RentReviewWorkflowDetail,
+): boolean {
+  const sentAt = auditAt(detail, RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND);
+  if (!sentAt) return false;
+  const adjustedAt = auditAt(detail, RENT_REVIEW_RECOMMENDATION_AUDIT_KIND);
+  return adjustedAt != null && adjustedAt > sentAt;
 }
 
 /** Research step is done only after market research and landlord email pack are sent. */
@@ -646,9 +679,10 @@ export function resolveRentReviewStepForAuditKind(kind: string): RentReviewAgent
     case 'ai_report_ready':
     case 'statutory_notice_alert':
     case 'agent_confirmation_reminder':
-    case 'landlord_research_email':
+    case RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND:
     case 'agent_research_email':
     case 'research_requested':
+    case RENT_REVIEW_RECOMMENDATION_AUDIT_KIND:
     case 'comm_reply':
     case 'comm_forward':
       return RENT_REVIEW_AGENT_STEP.RENT_RESEARCH;
@@ -916,7 +950,7 @@ export function auditEntriesForStep(
   }
 
   const kindsByStep: Record<Exclude<RentReviewAgentStep, 'completed'>, string[]> = {
-    rent_research: ['research_requested', 'ai_report_ready', 'agent_confirmation_reminder', 'statutory_notice_alert', 'agent_research_email', 'landlord_research_email'],
+    rent_research: ['research_requested', 'ai_report_ready', 'agent_confirmation_reminder', 'statutory_notice_alert', 'agent_research_email', RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND, RENT_REVIEW_RECOMMENDATION_AUDIT_KIND],
     agent_confirmed: ['review_confirmed', 'pricing_snapshot'],
     tenant_notified: ['tenant_notices_dispatched', 'tenant_response_reminder'],
     negotiation: [

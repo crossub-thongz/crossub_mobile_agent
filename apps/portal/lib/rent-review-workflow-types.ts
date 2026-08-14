@@ -151,6 +151,21 @@ export interface CancelReviewInput {
   reason?: string;
 }
 
+/**
+ * Adjust the recommended rent, or clear the adjustment.
+ *
+ * `weekly: null` is the clear — Daniel's "leave blank, set as default recommendation" — and it
+ * restores the figure market research produced rather than a remembered copy of it. The API
+ * recomputes that from the stored research snapshot, so there is nothing to send back with it.
+ *
+ * Not `SetProposedRentInput`. That one is the agent's decision and serves the tenant their
+ * statutory notice on the way out; this one changes what the pack says while the owner is
+ * still being talked to.
+ */
+export interface SetRecommendedRentInput {
+  weekly: number | null;
+}
+
 export interface SetProposedRentInput {
   weekly: number;
   effectiveDate: string;

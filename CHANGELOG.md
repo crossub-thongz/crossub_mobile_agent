@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-14
+
+### Added
+- **The agent can now put their own figure on the recommended rent, and blanking it gives the research back.** Daniel Zhou, 14 Aug (CRS-0067, *"some issues not fixed"*): *"Agent unable to adjust the rent increase recomandation … Should be able to edit and save. Edit -> 1) Leave blank, set as default recommendation. 2) Input value and save input value"*, and *"Email template to landlord will also adjust follow the change of the rate."* The Research result card showed **Recommended rent value $1,700** — a blend of platform medians, on his review from a single source — beside one button, **Email landlord**. The agent, who is the only party in this workflow who has spoken to the owner, could send that number or not send it, and nothing else.
+
+  A pencil beside the value opens an inline input with Save and Cancel. **The input starts empty rather than pre-filled**, because blank-and-save is a real action here and not an empty form: it restores the researched figure, which the API recomputes from the stored platform data rather than from a remembered copy. Pre-filling would make "clear it" read as a way to submit nothing, and would put the agent one keystroke from wiping their own figure when they only meant to retype it. The rate flows through `ai.suggestedWeekly`, which is what the landlord email draft, the research report and the notice-of-rent-increase draft all quote — so Daniel's second sentence needed no separate change, and the response is the whole review, so every one of those refreshes at once.
+
+  **The pencil is hidden, not disabled, once the review is past agent review.** By then the tenant holds a statutory notice quoting the rate and the API answers with a 409; hiding the control is what stops that refusal from being how an agent finds out. A dead button reads as a broken feature.
+
+### Fixed
+- **The landlord could be left holding a pack quoting a rate the agent has since changed.** The research pack sends itself when results land and the send button was then disabled for good — correct while the rate could never change afterwards, and a dead end the moment it can. It now re-opens as **Email updated pack** when the recommendation was adjusted after the last send, with the helper line saying why. That staleness check is kept deliberately separate from the flag guarding the **automatic** send: folding the two together would email the owner on every adjustment, which is the shape of the RFQ reselect loop that sent one real contractor thirty emails in two hours.
+- **A rent decrease rendered as `(+-2.9%)`.** Visible in Daniel's own screenshot — the template hard-coded the plus sign, so any negative change printed both.
+
 ## 2026-08-13
 
 ### Changed
