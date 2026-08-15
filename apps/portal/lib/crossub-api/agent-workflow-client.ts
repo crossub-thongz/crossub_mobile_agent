@@ -78,11 +78,17 @@ export type CreateAgentIngoingInspectionInput = {
 };
 
 export type CreateAgentOutgoingInspectionInput = {
-  scheduledTime: string;
+  /**
+   * @deprecated CRS-0068 — the server discards it. An agent raises a request; the account
+   * manager sets the time and the agent is emailed it. Left on the type so an older screen
+   * still compiles rather than being dropped and taking a build with it.
+   */
+  scheduledTime?: string;
   vacateDate?: string;
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  /** @deprecated CRS-0068 — who drives is CROSSUB's call. Discarded server-side. */
   inspectorName?: string;
   accessInstructions?: string;
   notes?: string;
@@ -133,6 +139,25 @@ export async function requestAgentOpenInspection(
       body: JSON.stringify(body),
     },
   );
+}
+
+/**
+ * Ask CROSSUB to run routine inspections at a property (CRS-0068).
+ *
+ * Replaces the create wizard's direct calls to `/inspections/routine` — the **staff**
+ * routine console — which wrote `nextInspectionDate` and started instances on a date the
+ * agent typed, and whose `start` emails the tenant. No date crosses this boundary: the
+ * cadence follows the property's state (NSW 3/yr, VIC 2/yr) and each instance date is the
+ * account manager's.
+ */
+export async function requestAgentRoutineInspection(
+  propertyId: string,
+  body: { flow?: 'self' | 'in_person'; note?: string } = {},
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(`${base(propertyId)}/inspection/routine`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 export async function startAgentOpenInspectionNow(

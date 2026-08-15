@@ -79,6 +79,7 @@ import {
   openInspectionStartReached,
 } from '@/lib/leasing/open-inspection-display';
 import {
+  canStartOpenInspectionNow,
   OPEN_TIME_PENDING_DESCRIPTION,
   OPEN_TIME_PENDING_LABEL,
 } from '@/constants/open-batch';
@@ -388,6 +389,9 @@ export function InspectionDetailView({
     leasingDetail != null &&
     needsOpenInspectionScheduleRequest(leasingDetail.openInspection);
   const canStartCrossubOpenNow =
+    // CRS-0068 — off for agents. Starting an open "now" chooses its time, and `startNow`
+    // skips the weekly batch and the Saturday rule to do it.
+    canStartOpenInspectionNow &&
     isCrossubManagedLeasingOpen &&
     leasingDetail != null &&
     Boolean(leasingDetail.openInspection.scheduledTime) &&

@@ -630,10 +630,20 @@ export interface IngoingInspectionPrefill {
 export interface RoutineInspectionPrefill {
   tenantName: string;
   tenantEmail: string;
+  /**
+   * @deprecated CRS-0068 — a routine request carries no date. Kept so the existing prefill
+   * builders still type-check; the form no longer renders it and the request no longer
+   * sends it. The cadence comes from the property's state and each instance date from the
+   * account manager.
+   */
   scheduledDate: string;
+  /** @deprecated CRS-0068 — cadence follows the property's state (NSW 3/yr, VIC 2/yr). */
   frequency: 2 | 3;
   flow: 'self' | 'in_person';
+  /** @deprecated CRS-0068 — who attends is CROSSUB's call. */
   inspectorName: string;
+  /** What the agent wants us to know when we pick the date. Read by a person, never parsed. */
+  note: string;
 }
 
 export interface OutgoingInspectionPrefill {
@@ -737,6 +747,7 @@ export function buildRoutineInspectionPrefill(
     frequency: 2,
     flow: 'self',
     inspectorName: '',
+    note: '',
   };
 }
 

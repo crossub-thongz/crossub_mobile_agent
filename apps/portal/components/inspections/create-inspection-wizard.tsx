@@ -18,7 +18,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
-import { createAgentIngoingInspection, createAgentLeasingCycle, createAgentOutgoingInspection, requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
+import {
+  createAgentIngoingInspection,
+  createAgentLeasingCycle,
+  createAgentOutgoingInspection,
+  requestAgentOpenInspection,
+  requestAgentRoutineInspection,
+} from '@/lib/crossub-api/agent-workflow-client';
+import {
+  INSPECTION_TIME_REQUEST_HINT,
+  INSPECTION_TIME_REQUEST_NOTE_LABEL,
+  INSPECTION_TIME_REQUEST_NOTE_PLACEHOLDER,
+  INSPECTION_TIME_REQUEST_SUBMITTED,
+  OPEN_PREFERRED_TIME_HINT,
+  OPEN_REQUEST_SUBMITTED,
+  VACATING_CASE_NOTE_PREFIX,
+} from '@/constants/open-batch';
+import { buildOpenPreferredWindow } from '@/lib/open-inspection/open-preferred-window';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection } from '@/lib/inspection-mappers';
 import {
@@ -311,6 +327,15 @@ export function CreateInspectionWizard({
     frequency: 2 as 2 | 3,
     flow: 'in_person' as 'self' | 'in_person',
     inspectorName: '',
+    /**
+     * What the agent wants us to know when we pick the date (CRS-0068).
+     *
+     * This field is what `scheduledDate` became. The agent still has something to say
+     * about timing — a tenant who works nights, a lease ending Friday — and losing that
+     * along with the date picker would have made the change a removal rather than a
+     * handover. It is read by a person and never parsed.
+     */
+    note: '',
   });
   const [existingRoutineSchedule, setExistingRoutineSchedule] =
     useState<RoutineScheduleByProperty | null>(null);
@@ -401,9 +426,12 @@ export function CreateInspectionWizard({
                 setRoutine({
                   ...basePrefill,
                   frequency: (schedule.frequency === 3 ? 3 : 2) as 2 | 3,
+                  // Only the conduct mode carries over from an existing schedule now. The
+                  // next date used to be prefilled here and shown in an editable field,
+                  // which is how an agent came to be adjusting a cadence anchor CROSSUB
+                  // owns — the field looked like theirs because it was filled in for them.
                   flow: schedule.flow,
-                  scheduledDate:
-                    schedule.nextInspectionDate?.slice(0, 10) ?? basePrefill.scheduledDate,
+                  note: '',
                 });
                 return;
               }
@@ -548,31 +576,20 @@ export function CreateInspectionWizard({
               'Letting cycle is not ready — close and reopen the workflow, then try again',
             );
           }
-          if (!openPreferredStartLocal) {
-            throw new Error('Enter a viewing start date and time');
-          }
-          if (!openPreferredEndLocal) {
-            throw new Error('Enter a viewing end date and time');
-          }
-          const startError = validateCrossubOpenDateTimeLocal(
+          // The time is a preference now, not a booking, so an empty one is a complete
+          // request rather than an error. Miara's flow: the agent flags the property, the
+          // batch closes Wednesday noon, the inspector picks what they can cover and the
+          // route decides the times. Requiring a time here is what let two properties
+          // forty minutes apart be advertised for the same quarter hour.
+          const preferred = buildOpenPreferredWindow(
             openPreferredStartLocal,
-            'Viewing start date & time',
-          );
-          if (startError) throw new Error(startError);
-          const endError = validateCrossubOpenDateTimeLocal(
             openPreferredEndLocal,
-            'Viewing end date & time',
           );
-          if (endError) throw new Error(endError);
-          if (new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)) {
-            throw new Error('Viewing end time must be after the start time');
-          }
           const result = await requestAgentOpenInspection(property.id, cycleId, {
-            preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
-            preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
+            ...preferred,
             preferredNotes: openPreferredNotes.trim() || undefined,
           });
-          toast.success('Open inspection scheduled');
+          toast.success(OPEN_REQUEST_SUBMITTED);
           const inspection = await resolveCreatedOpenInspection(
             property.id,
             result.openInspectionId,
@@ -588,9 +605,8 @@ export function CreateInspectionWizard({
           return;
         }
 
-        if (openConductedBy === 'crossub' && !openPreferredStartLocal) {
-          throw new Error('Enter a preferred date and time for CROSSUB to schedule');
-        }
+        // No "a CROSSUB open needs a preferred time" guard here any more — that is the
+        // request the agent is allowed to make, and CROSSUB answers it.
         // Tenant-moved-out only applies when the property currently has a tenant.
         if (manualStandaloneCrossubOpen && !propertyIsVacant && openTenantMovedOut === null) {
           throw new Error('Select whether the tenant has moved out');
@@ -610,25 +626,15 @@ export function CreateInspectionWizard({
         // Case 2: vacant / newly registered property — creating a CROSSUB open
         // must also create (or attach to) a New Leasing job case.
         if (manualStandaloneCrossubOpen && propertyIsVacant) {
-          if (!openPreferredStartLocal) {
-            throw new Error('Enter a viewing start date and time');
-          }
-          if (!openPreferredEndLocal) {
-            throw new Error('Enter a viewing end date and time');
-          }
-          const startError = validateCrossubOpenDateTimeLocal(
+          // The time is a preference now, not a booking, so an empty one is a complete
+          // request rather than an error. Miara's flow: the agent flags the property, the
+          // batch closes Wednesday noon, the inspector picks what they can cover and the
+          // route decides the times. Requiring a time here is what let two properties
+          // forty minutes apart be advertised for the same quarter hour.
+          const preferred = buildOpenPreferredWindow(
             openPreferredStartLocal,
-            'Viewing start date & time',
-          );
-          if (startError) throw new Error(startError);
-          const endError = validateCrossubOpenDateTimeLocal(
             openPreferredEndLocal,
-            'Viewing end date & time',
           );
-          if (endError) throw new Error(endError);
-          if (new Date(openPreferredEndLocal) <= new Date(openPreferredStartLocal)) {
-            throw new Error('Viewing end time must be after the start time');
-          }
           const rent = Number(openPreferredRentPerWeek);
           const fixedTermWeeks = resolveStandaloneOpenLeaseTermWeeks(
             openLeaseTermChoice,
@@ -647,14 +653,13 @@ export function CreateInspectionWizard({
             cycleId = created.id;
           }
           const result = await requestAgentOpenInspection(property.id, cycleId!, {
-            preferredStartTime: new Date(openPreferredStartLocal).toISOString(),
-            preferredEndTime: new Date(openPreferredEndLocal).toISOString(),
+            ...preferred,
             preferredNotes: openPreferredNotes.trim() || undefined,
           });
           toast.success(
             leasingCycle?.id
-              ? 'Open inspection scheduled'
-              : 'New leasing created and open inspection scheduled',
+              ? OPEN_REQUEST_SUBMITTED
+              : `New leasing created — `,
           );
           const inspection = await resolveCreatedOpenInspection(
             property.id,
@@ -671,6 +676,22 @@ export function CreateInspectionWizard({
           return;
         }
 
+        /**
+         * The remaining path writes a viewing session directly, which means it needs a
+         * real start — so a CROSSUB open with no preferred time must not reach it. It
+         * would produce `Invalid Date` and advertise a viewing window built from `NaN`.
+         *
+         * A CROSSUB open belongs in the weekly batch, and every route into that batch is
+         * handled above. Reaching here means the letting cycle is missing, which is a
+         * state to report rather than to paper over with an invented time.
+         */
+        if (openConductedBy === 'crossub' && !openPreferredStartLocal) {
+          throw new Error(
+            'This property is not on a letting yet — open the leasing workflow and request the open inspection from there',
+          );
+        }
+        // An agent-conducted open is the agent's own diary and stays theirs to set: they
+        // are the one attending it. CRS-0068 is about the inspections CROSSUB runs.
         const scheduledAt = openConductedBy === 'crossub'
           ? new Date(openPreferredStartLocal).toISOString()
           : new Date(openScheduledLocal).toISOString();
@@ -706,13 +727,12 @@ export function CreateInspectionWizard({
 
       if (inspectionType === 'INGOING') {
         if (!ingoing.tenantName.trim()) throw new Error('Tenant name is required');
+        // The move-in date stays required and stays the agent's — it is a fact about the
+        // tenancy they arranged, not a slot in CROSSUB's diary. Only the inspection time
+        // moved to us (CRS-0068).
         if (!ingoing.moveInDate) throw new Error('Move-in date is required');
-        const scheduledTime = ingoingScheduledLocal
-          ? new Date(ingoingScheduledLocal).toISOString()
-          : ingoing.scheduledTime || undefined;
         const created = await createAgentIngoingInspection(property.id, {
           moveInDate: ingoing.moveInDate,
-          scheduledTime,
           tenantName: ingoing.tenantName.trim(),
           tenantEmail: ingoing.tenantEmail.trim() || undefined,
           tenantPhone: ingoing.tenantPhone.trim() || undefined,
@@ -731,7 +751,9 @@ export function CreateInspectionWizard({
             type: 'INGOING',
             propertyId: property.id,
             propertyAddress: property.address,
-            scheduledAt: scheduledTime,
+            // No time, and the fallback view must not invent one — an optimistic card
+            // showing "now" is the same fabrication as the server writing `createdAt`
+            // into the scheduled column.
             status: 'Scheduled',
             reportStatus: 'pending',
             createdAt: new Date().toISOString(),
@@ -739,127 +761,62 @@ export function CreateInspectionWizard({
             source: 'inspection',
           };
         }
-        toast.success('Ingoing inspection created');
+        toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
         finalizeInspectionCreate(view);
         return;
       }
 
       if (inspectionType === 'ROUTINE') {
-        const finalizeRoutineSchedule = async (schedule: Awaited<
-          ReturnType<typeof routineInspectionApi.create>
-        >) => {
-          const inspectionId = schedule.currentInspection?.id;
-          let view: Inspection | null = null;
-          if (inspectionId) {
-            try {
-              const record = await inspectionsApi.get(inspectionId);
-              view = mapInspectionRecordToView(record);
-            } catch {
-              view = null;
-            }
-          }
-          if (view) {
-            finalizeInspectionCreate(view);
-          } else {
-            void refresh();
-            if (navigateOnSuccess) {
-              if (inspectionId) {
-                router.push(inspectionDetail(inspectionId));
-              } else {
-                router.push(ROUTES.INSPECTIONS);
-              }
-            }
-          }
-        };
-
-        if (existingRoutineSchedule) {
-          if (!routine.scheduledDate.trim()) {
-            throw new Error('Next inspection date is required');
-          }
-          let schedule = await routineInspectionApi.override(existingRoutineSchedule.id, {
-            nextInspectionDate: routine.scheduledDate,
-            frequency: routine.frequency,
-            reason: 'agent_requested_cycle',
-            reasonNote: 'Updated via agent portal routine scheduler',
-          });
-          if (routine.flow !== existingRoutineSchedule.flow) {
-            schedule = await routineInspectionApi.changeFlow(existingRoutineSchedule.id, {
-              flow: routine.flow,
-              reason: 'agent_requested_cycle',
-              reasonNote: 'Updated conduct mode via agent portal routine scheduler',
-            });
-          }
-
-          const instanceStatus =
-            schedule.currentInspection?.status ??
-            existingRoutineSchedule.currentInspectionStatus;
-          const needsNewInstance = routineScheduleNeedsNewInstance(instanceStatus);
-          if (isActiveRoutineInspectionStatus(instanceStatus)) {
-            schedule = await routineInspectionApi.restart(existingRoutineSchedule.id, {
-              scheduledDate: routine.scheduledDate,
-              inspectorName:
-                routine.flow === 'in_person'
-                  ? normalizeRoutinePoolInspectorName(routine.inspectorName)
-                  : undefined,
-              reason:
-                'Superseded — agent scheduled a new routine inspection case from the portal.',
-            });
-            toast.success('Previous routine case cancelled — new case created');
-          } else if (needsNewInstance) {
-            schedule = await routineInspectionApi.start(existingRoutineSchedule.id, {
-              scheduledDate: routine.scheduledDate,
-              inspectorName:
-                routine.flow === 'in_person'
-                  ? normalizeRoutinePoolInspectorName(routine.inspectorName)
-                  : undefined,
-            });
-            toast.success('Next routine inspection scheduled');
-          } else {
-            toast.success('Routine inspection schedule updated');
-          }
-          await finalizeRoutineSchedule(schedule);
-          return;
-        }
-
-        const schedule = await (async () => {
-          const createRoutine = async () => {
-            const created = await routineInspectionApi.create({
-              propertyId: property.id,
-              flow: routine.flow,
-              frequency: routine.frequency,
-              scheduledDate: routine.scheduledDate || undefined,
-              tenantName: routine.tenantName.trim() || undefined,
-              tenantEmail: routine.tenantEmail.trim() || undefined,
-              inspectorName:
-                routine.flow === 'in_person'
-                  ? normalizeRoutinePoolInspectorName(routine.inspectorName)
-                  : undefined,
-            });
-            toast.success('Routine inspection schedule created');
-            await finalizeRoutineSchedule(created);
-          };
-          await createRoutine();
-          return 'done';
-        })();
-        if (!schedule) return;
+        /**
+         * Routine is now one call, and the code this replaced is the reason.
+         *
+         * The wizard used to drive the **staff** routine console straight from the agent
+         * app — `override` to write `nextInspectionDate`, then `start` or `restart` to
+         * spawn an instance on a date the agent typed. Those are `/inspections/routine`
+         * routes gated on `MODIFY_CUSTOMER_INFO`, which an outside agency's login holds,
+         * because one role key (`ACCOUNT_MANAGER`) serves both CROSSUB's internal account
+         * manager and the agency. So it was never blocked; it worked, and an agent was
+         * setting the cadence anchor for a schedule they do not operate — and `start`
+         * emails the tenant, so a date they picked went straight out under our name.
+         *
+         * What an agent legitimately decides is that the property should be on routine and
+         * whether the tenant self-conducts. The cadence comes from the property's state
+         * (NSW 3/yr, VIC 2/yr) and each instance date from the account manager.
+         */
+        await requestAgentRoutineInspection(property.id, {
+          flow: routine.flow,
+          note: routine.note?.trim() || undefined,
+        });
+        toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
+        void refresh();
+        if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=ROUTINE`);
         return;
       }
 
       if (inspectionType === 'OUTGOING') {
-        if (!outgoingScheduledLocal) throw new Error('Scheduled date is required');
-        const scheduledIso = new Date(outgoingScheduledLocal).toISOString();
-
+        /**
+         * No time, and no inspector — both are CROSSUB's to decide (CRS-0068).
+         *
+         * The inspector matters as much as the date here. An agent naming one decided who
+         * would drive before anyone knew when the job would run, which is the same mistake
+         * in a second field, and it is why the outgoing form's Inspector box is gone too.
+         */
         let inspectionId: string | undefined;
-        if (vacatingCaseId) {
-          const updatedCase = await terminationApi.scheduleInspection(vacatingCaseId, {
-            inspector: outgoingInspector.trim() || 'Pending assignment',
-            date: scheduledIso,
-          });
-          inspectionId = updatedCase.inspection?.inspectionId ?? undefined;
-        } else {
+        {
+          /**
+           * One path now, and the vacating case rides along as a note.
+           *
+           * The wizard used to fork here: with a vacating case it called
+           * `terminationApi.scheduleInspection` — a staff end-leasing route — with the
+           * agent's date. That fork is what made "who chose this time" have two different
+           * answers depending on which screen the agent came from. Both are requests now;
+           * the officer working the end-leasing case still schedules it, and the case
+           * reference travels with the request so they can find it.
+           */
           const created = await createAgentOutgoingInspection(property.id, {
-            scheduledTime: scheduledIso,
-            inspectorName: outgoingInspector.trim() || undefined,
+            notes: vacatingCaseId
+              ? `${VACATING_CASE_NOTE_PREFIX} ${workflowCaseReferenceLabel(vacatingCaseId, 'end_leasing')}`
+              : undefined,
             tenantName: property.tenantName?.trim() || undefined,
             tenantEmail: property.tenantContact?.email?.trim() || undefined,
             tenantPhone: property.tenantContact?.phone?.trim() || undefined,
@@ -878,7 +835,7 @@ export function CreateInspectionWizard({
                 type: 'OUTGOING',
                 propertyId: property.id,
                 propertyAddress: property.address,
-                scheduledAt: scheduledIso,
+                // No `scheduledAt` — see the ingoing fallback above.
                 status: 'Scheduled',
                 reportStatus: 'pending',
                 createdAt: new Date().toISOString(),
@@ -887,7 +844,7 @@ export function CreateInspectionWizard({
               };
             }
           }
-          toast.success('Outgoing inspection created');
+          toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
           if (view) {
             finalizeInspectionCreate(view);
           } else {
@@ -896,36 +853,6 @@ export function CreateInspectionWizard({
           }
           return;
         }
-
-        let view: Inspection | null = null;
-        if (inspectionId) {
-          try {
-            const record = await inspectionsApi.get(inspectionId);
-            view = mapInspectionRecordToView(record);
-          } catch {
-            view = {
-              id: inspectionId,
-              trackingNumber: inspectionReferenceLabel(inspectionId, 'OUTGOING'),
-              type: 'OUTGOING',
-              propertyId: property.id,
-              propertyAddress: property.address,
-              scheduledAt: scheduledIso,
-              status: 'Scheduled',
-              reportStatus: 'pending',
-              createdAt: new Date().toISOString(),
-              timeline: [],
-              source: 'inspection',
-            };
-          }
-        }
-        toast.success('Outgoing inspection scheduled');
-        if (view) {
-          finalizeInspectionCreate(view);
-        } else {
-          void refresh();
-          if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=OUTGOING`);
-        }
-        return;
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not create inspection');
@@ -1353,7 +1280,15 @@ function OpenInspectionForm({
               </Field>
             </>
           ) : null}
-          <Field label={leasingRequestMode ? 'Viewing start date & time *' : 'Preferred start date & time'}>
+          {/*
+            No asterisk on either field any more, in any mode. A CROSSUB open is requested,
+            not booked: the batch closes Wednesday noon, the inspector picks what they can
+            cover, and the route sets the times. The label says "preferred" because that is
+            now literally what it is — the planner weighs it to anchor where the drive
+            begins and to break ties, and the confirmation email says so when the route
+            could not get close.
+          */}
+          <Field label="Preferred start date & time (optional)">
             <Input
               type="datetime-local"
               value={preferredStartLocal}
@@ -1361,17 +1296,11 @@ function OpenInspectionForm({
             />
             {leasingRequestMode || conductedBy === 'crossub' ? (
               <p className="text-muted-foreground mt-1 text-[11px]">
-                CROSSUB open inspections must be on a Saturday (Sydney time).
+                {OPEN_PREFERRED_TIME_HINT}
               </p>
             ) : null}
           </Field>
-          <Field
-            label={
-              leasingRequestMode
-                ? 'Viewing end date & time *'
-                : 'Preferred end date & time (optional)'
-            }
-          >
+          <Field label="Preferred end date & time (optional)">
             <Input
               type="datetime-local"
               value={preferredEndLocal}
@@ -1461,14 +1390,15 @@ function IngoingInspectionForm({
             onChange={(e) => onChange({ ...ingoing, moveInDate: e.target.value })}
           />
         </Field>
-        <Field label="Scheduled inspection">
-          <Input
-            type="datetime-local"
-            value={scheduledLocal}
-            onChange={(e) => onScheduledLocalChange(e.target.value)}
-          />
-        </Field>
       </div>
+      {/*
+        The "Scheduled inspection" picker was here. CRS-0068 moved that decision to the
+        account manager — the move-in date above stays, because it is a fact about the
+        tenancy the agent arranged rather than a slot in our diary.
+      */}
+      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+        {INSPECTION_TIME_REQUEST_HINT}
+      </p>
       <Field label="Access instructions">
         <Textarea
           value={ingoing.accessInstructions}
@@ -1514,21 +1444,22 @@ function RoutineInspectionForm({
           inspector pool when no inspector is named.
         </p>
       </Field>
-      <Field label="Frequency (per year) *">
-        <select
-          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-          value={routine.frequency}
-          onChange={(e) => onChange({ ...routine, frequency: Number(e.target.value) as 2 | 3 })}
-        >
-          <option value={2}>Twice per year (every 6 months)</option>
-          <option value={3}>Three times per year (every 4 months)</option>
-        </select>
-      </Field>
-      <Field label={isExistingSchedule ? 'Next inspection date *' : 'First scheduled date'}>
-        <Input
-          type="date"
-          value={routine.scheduledDate}
-          onChange={(e) => onChange({ ...routine, scheduledDate: e.target.value })}
+      {/*
+        Frequency, the date picker and the inspector box all went with CRS-0068.
+        Cadence is not a preference — it is the property's state (NSW 3 a year, VIC 2), and
+        offering it as a dropdown invited an agent to pick a number the regulation had
+        already chosen. The date and the inspector are CROSSUB's for the same reason they
+        are on every other type.
+      */}
+      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+        {INSPECTION_TIME_REQUEST_HINT}
+      </p>
+      <Field label={INSPECTION_TIME_REQUEST_NOTE_LABEL}>
+        <Textarea
+          value={routine.note}
+          onChange={(e) => onChange({ ...routine, note: e.target.value })}
+          rows={3}
+          placeholder={INSPECTION_TIME_REQUEST_NOTE_PLACEHOLDER}
         />
       </Field>
       <Field label="Tenant name">
@@ -1544,18 +1475,6 @@ function RoutineInspectionForm({
           onChange={(e) => onChange({ ...routine, tenantEmail: e.target.value })}
         />
       </Field>
-      {routine.flow === 'in_person' ? (
-        <Field label="Inspector (optional)">
-          <Input
-            value={routine.inspectorName}
-            onChange={(e) => onChange({ ...routine, inspectorName: e.target.value })}
-            placeholder="Leave blank for task pool"
-          />
-          <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
-            Leave blank so CROSSUB inspectors can claim the job from the task pool.
-          </p>
-        </Field>
-      ) : null}
     </div>
   );
 }
@@ -1583,18 +1502,16 @@ function OutgoingInspectionForm({
       <div className="space-y-3">
         <p className="text-muted-foreground text-xs leading-relaxed">
           No end-leasing case on this property — that is expected for Inspection Only (Level 1).
-          Schedule a standalone outgoing inspection for the inspector pool.
+          Request a standalone outgoing inspection and CROSSUB will schedule it.
         </p>
-        <Field label="Inspector">
-          <Input value={inspector} onChange={(e) => onInspectorChange(e.target.value)} />
-        </Field>
-        <Field label="Scheduled inspection *">
-          <Input
-            type="datetime-local"
-            value={scheduledLocal}
-            onChange={(e) => onScheduledLocalChange(e.target.value)}
-          />
-        </Field>
+        {/*
+          Inspector and time pickers both removed (CRS-0068). They were two halves of the
+          same decision: naming an inspector settled who would drive before anyone knew
+          when the job would run.
+        */}
+        <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+          {INSPECTION_TIME_REQUEST_HINT}
+        </p>
       </div>
     );
   }
@@ -1605,15 +1522,7 @@ function OutgoingInspectionForm({
         <select
           className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
           value={vacatingCaseId}
-          onChange={(e) => {
-            const next = vacatingCases.find((c) => c.id === e.target.value);
-            onVacatingCaseIdChange(e.target.value);
-            if (next) {
-              const prefill = buildOutgoingInspectionPrefill(next);
-              onInspectorChange(prefill.inspector);
-              onScheduledLocalChange(toDatetimeLocalValue(prefill.scheduledAt));
-            }
-          }}
+          onChange={(e) => onVacatingCaseIdChange(e.target.value)}
         >
           {vacatingCases.map((c) => (
             <option key={c.id} value={c.id}>
@@ -1623,18 +1532,15 @@ function OutgoingInspectionForm({
           ))}
         </select>
       </Field>
-      <Field label="Inspector">
-        <Input value={inspector} onChange={(e) => onInspectorChange(e.target.value)} />
-      </Field>
-      <Field label="Scheduled inspection *">
-        <Input
-          type="datetime-local"
-          value={scheduledLocal}
-          onChange={(e) => onScheduledLocalChange(e.target.value)}
-        />
-      </Field>
-      <p className="text-muted-foreground text-[11px]">
-        Default schedule is 3 days after the vacate date at 9:00 AM (same as CROSSUB web).
+      {/*
+        The inspector and time pickers are gone, and with them the "3 days after the vacate
+        date at 9:00 AM" prefill. That default was the problem in its most persuasive form:
+        it filled the field with a plausible answer, so the agent confirmed a date rather
+        than choosing one, and CROSSUB inherited a booking nobody had actually weighed
+        against the inspector's week.
+      */}
+      <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-[11px] leading-relaxed">
+        {INSPECTION_TIME_REQUEST_HINT}
       </p>
     </div>
   );

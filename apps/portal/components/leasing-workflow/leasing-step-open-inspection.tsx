@@ -13,6 +13,7 @@ import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-
 import { OpenInspectionKeyCustodySection } from '@/components/open-inspection/open-inspection-key-custody-section';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
+import { canStartOpenInspectionNow } from '@/constants/open-batch';
 import { StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { Button } from '@/components/ui/button';
 import {
@@ -155,6 +156,9 @@ export function LeasingStepOpenInspection({
   const needsScheduleRequest =
     crossubManagedOpen && needsOpenInspectionScheduleRequest(oi);
   const canStartOpenNow =
+    // CRS-0068 — off for agents. Starting an open "now" chooses its time, and `startNow`
+    // skips the weekly batch and the Saturday rule to do it.
+    canStartOpenInspectionNow &&
     crossubManagedOpen &&
     isScheduled &&
     !openInspectionStartReached(oi, now) &&

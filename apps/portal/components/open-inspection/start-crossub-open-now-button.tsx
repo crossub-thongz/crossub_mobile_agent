@@ -11,6 +11,20 @@ import { finalizeAgentOpenInspectionSchedule } from '@/lib/open-inspection/final
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { cn } from '@/lib/utils';
 
+/**
+ * Begin a CROSSUB open inspection immediately.
+ *
+ * **Not rendered for agents (CRS-0068).** Starting an open "now" is choosing its time by
+ * the most direct route there is, and the server treats it that way: `startNow` skips the
+ * weekly batch and the Saturday validation entirely. Leaving it on an agent screen would
+ * have left the one door open that every other part of this change closes — and it is the
+ * worst of them, because it produces a live viewing window with no inspector assigned.
+ *
+ * The component stays because the endpoint stays: it is the testing and genuine-urgency
+ * path, and a CROSSUB officer sitting with an agent on the phone is the right caller. The
+ * mount points are gated on {@link canStartOpenInspectionNow} rather than deleted, so
+ * re-enabling it for staff is a prop and not a rebuild.
+ */
 export function StartCrossubOpenNowButton({
   propertyId,
   cycleId,

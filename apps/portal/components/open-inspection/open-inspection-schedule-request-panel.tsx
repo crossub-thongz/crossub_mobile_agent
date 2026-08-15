@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
+  canStartOpenInspectionNow,
   OPEN_PREFERRED_TIME_HINT,
   OPEN_REQUEST_DESCRIPTION,
   OPEN_REQUEST_SUBMITTED,
@@ -261,23 +262,31 @@ export function OpenInspectionScheduleRequestPanel({
             'Add to open list'
           )}
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-9"
-          disabled={busy}
-          onClick={() => void submitStartNow()}
-        >
-          {startingNow ? (
-            <>
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-              Starting…
-            </>
-          ) : (
-            'Start open inspection now'
-          )}
-        </Button>
+        {/*
+          "Start open inspection now" lived here. Removed for agents (CRS-0068) — it is
+          time-selection by the shortest route there is, and `startNow` skips the weekly
+          batch and the Saturday rule to do it. `submitStartNow` is kept below so a
+          staff-gated caller can be added without rebuilding the flow.
+        */}
+        {canStartOpenInspectionNow ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-9"
+            disabled={busy}
+            onClick={() => void submitStartNow()}
+          >
+            {startingNow ? (
+              <>
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                Starting…
+              </>
+            ) : (
+              'Start open inspection now'
+            )}
+          </Button>
+        ) : null}
       </div>
     </section>
   );

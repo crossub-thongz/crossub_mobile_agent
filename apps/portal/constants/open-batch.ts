@@ -53,3 +53,45 @@ export const OPEN_REQUEST_SUBMITTED =
 /** Advertising guard: nothing to advertise until a real time exists. */
 export const OPEN_ADVERTISE_BLOCKED_PENDING =
   'Wait for the confirmed time before advertising — the time shown is not final yet.';
+
+// ---------------------------------------------------------------------------
+// The same rule, for the other three types — Angel's CRS-0068.
+//
+// Routine, ingoing and outgoing were still forms with a date field in them, so the
+// principle above held for opens and nowhere else. It holds everywhere now. What differs
+// is who answers: an open is timed by the inspector against the Saturday route, while
+// these three are timed by the account manager. Either way, not by the agent.
+// ---------------------------------------------------------------------------
+
+/** Success toast after a routine / ingoing / outgoing request is lodged. */
+export const INSPECTION_TIME_REQUEST_SUBMITTED =
+  'Request sent — CROSSUB will confirm the time and email you.';
+
+/** Sits under the type picker, so the absence of a date field is explained, not just felt. */
+export const INSPECTION_TIME_REQUEST_HINT =
+  'You are requesting this inspection, not booking it. CROSSUB sets the time — around ' +
+  'the inspector who will attend and the tenant’s notice period — and emails you once ' +
+  'it is confirmed.';
+
+/** Label on the free-text availability box that replaced the date pickers. */
+export const INSPECTION_TIME_REQUEST_NOTE_LABEL = 'Anything we should know? (optional)';
+
+export const INSPECTION_TIME_REQUEST_NOTE_PLACEHOLDER =
+  'e.g. tenant works nights, please avoid mornings — or “urgent, lease ends Friday”';
+
+/** Prefix when an outgoing request is raised against an existing vacating case. */
+export const VACATING_CASE_NOTE_PREFIX = 'Vacating case:';
+
+/**
+ * May this build show the "Start open inspection now" control?
+ *
+ * `false`, and it is a named constant rather than a deleted component so the reason
+ * survives. Starting an open immediately bypasses the weekly batch and the Saturday rule
+ * on the server (`startNow`), which makes it time-selection by the shortest possible
+ * route — and it produces a live viewing window with no inspector assigned to it.
+ *
+ * The endpoint remains for CROSSUB's own testing and genuine-urgency use. If that ever
+ * needs to reach an agent screen it should arrive as a staff-gated prop, not by flipping
+ * this back to `true`.
+ */
+export const canStartOpenInspectionNow = false;
