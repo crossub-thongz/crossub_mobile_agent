@@ -1,4 +1,16 @@
+import type { components } from '@crossub-thongz/api-contract';
+
 import { fileToBase64 } from '@/lib/file-upload';
+
+/**
+ * The five media types the API will accept on a Gii turn.
+ *
+ * Taken from the contract rather than restated, so the list cannot drift from the enum the
+ * server validates against — which is exactly what happened before 0.14.0, when this file
+ * typed `mediaType` as a plain `string` and the DTO narrowed it to an enum.
+ */
+export type GiiAttachmentMediaType =
+  components['schemas']['GiiChatAttachmentDto']['mediaType'];
 
 export const GII_MAX_ATTACHMENTS = 5;
 
@@ -26,13 +38,14 @@ export type GiiPendingAttachment = {
 
 export type GiiChatAttachmentView = {
   fileName: string;
+  /** Display only — a file the API would refuse still gets a preview row. */
   mediaType: string;
   previewUrl?: string;
 };
 
 export type GiiApiAttachment = {
   fileName: string;
-  mediaType: string;
+  mediaType: GiiAttachmentMediaType;
   base64: string;
 };
 
@@ -48,10 +61,18 @@ export function isGiiAttachmentAllowed(file: File): boolean {
   return ext === 'pdf' || ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext);
 }
 
-export function normalizeGiiAttachmentMime(file: File): string {
+/**
+ * The media type to send for this file, or null when it is not one the API accepts.
+ *
+ * Null rather than a plausible-looking default: the old tail returned the browser's own
+ * mime, or `application/octet-stream`, and sending either would have been an attachment the
+ * server rejects described as one it takes. `isGiiAttachmentAllowed` already refuses those
+ * files at the picker, so null is unreachable in practice — it exists so the type says so.
+ */
+export function normalizeGiiAttachmentMime(file: File): GiiAttachmentMediaType | null {
   const mime = (file.type || '').toLowerCase();
   if (ALLOWED_MIME.has(mime)) {
-    return mime === 'image/jpg' ? 'image/jpeg' : mime;
+    return (mime === 'image/jpg' ? 'image/jpeg' : mime) as GiiAttachmentMediaType;
   }
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   if (ext === 'pdf') return 'application/pdf';
@@ -59,7 +80,7 @@ export function normalizeGiiAttachmentMime(file: File): string {
   if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
   if (ext === 'webp') return 'image/webp';
   if (ext === 'gif') return 'image/gif';
-  return mime || 'application/octet-stream';
+  return null;
 }
 
 export function createPendingAttachment(file: File): GiiPendingAttachment | null {
@@ -84,7 +105,7 @@ export function revokePendingAttachments(atts: GiiPendingAttachment[]): void {
 export function pendingToView(att: GiiPendingAttachment): GiiChatAttachmentView {
   return {
     fileName: att.file.name,
-    mediaType: normalizeGiiAttachmentMime(att.file),
+    mediaType: normalizeGiiAttachmentMime(att.file) ?? att.file.type,
     previewUrl: att.previewUrl ?? undefined,
   };
 }
@@ -94,9 +115,12 @@ export async function pendingToApiAttachments(
 ): Promise<GiiApiAttachment[]> {
   const out: GiiApiAttachment[] = [];
   for (const att of atts) {
+    const mediaType = normalizeGiiAttachmentMime(att.file);
+    // Dropped rather than sent as something else — the picker already refuses these.
+    if (!mediaType) continue;
     out.push({
       fileName: att.file.name,
-      mediaType: normalizeGiiAttachmentMime(att.file),
+      mediaType,
       base64: await fileToBase64(att.file),
     });
   }

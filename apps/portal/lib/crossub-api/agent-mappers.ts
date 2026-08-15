@@ -749,6 +749,12 @@ const MESSAGE_CATEGORY_BY_DEPARTMENT: Record<
   [COMM_DEPARTMENT.ACCOUNTING]: 'Accounting',
   [COMM_DEPARTMENT.TRIBUNAL]: 'Tribunal',
   [COMM_DEPARTMENT.GENERAL]: 'Others',
+  // The app's `MessageCategory` is a fixed six-value union the whole message UI filters on,
+  // so these two fold into the nearest existing one rather than widening it: a rent review is
+  // part of the leasing lifecycle, and a complaint has no home but the catch-all. Lossy on the
+  // way back through `messageCategoryToDepartment`, which is why that stays a separate switch.
+  [COMM_DEPARTMENT.RENT_REVIEW]: 'Leasing',
+  [COMM_DEPARTMENT.COMPLAINT]: 'Others',
 };
 
 /** The inverse: an app MessageCategory → the CommDepartment to route a new thread to. */

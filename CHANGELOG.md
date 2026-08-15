@@ -2,6 +2,19 @@
 
 ## 2026-08-15
 
+### Changed
+- **The API contract moved 0.13.0 → 0.14.0, and two pieces of drift it had been hiding are fixed with it.** This repo consumes `@crossub-thongz/api-contract` from GitHub Packages rather than vendoring a copy, so the bump is a `package.json` change and an install — but a published release does not arrive on its own, and 0.13.0 had been sitting here since 29 July.
+
+  **`CommDepartment` grew `RENT_REVIEW` and `COMPLAINT` on the API and nothing here knew.** `MESSAGE_CATEGORY_BY_DEPARTMENT` is a `Record` keyed on every department, so a thread routed to either arrived with **no category at all** — not a wrong label, an `undefined` one, which the message filters then fail to match on. Both now fold into the nearest existing `MessageCategory` (`Leasing` and `Others`) rather than widening a six-value union the whole message UI filters against; `messageCategoryToDepartment` stays a separate switch precisely because that mapping is lossy on the way back.
+
+  **`GiiChatAttachmentDto.mediaType` is an enum of five types, and this app typed it as `string`.** `normalizeGiiAttachmentMime` ended in `return mime || 'application/octet-stream'` — a browser-supplied type, or a placeholder, for a file the API would refuse. It now returns the contract's own union or **null**, and `pendingToApiAttachments` drops a null instead of sending it. Null is unreachable in practice, since `isGiiAttachmentAllowed` already refuses those files at the picker; the point is that the type now says so, and the accepted list is taken from `components['schemas']` rather than restated, so it cannot drift from the enum the server validates against a second time.
+
+  Type errors are 73 before and 73 after — the bump surfaced exactly these two and both are closed. `next build` passes.
+
+  **Known and not fixed here: 26 of the 311 schemas in this contract are empty** — `{"type":"object","properties":{}}` — because those DTOs carry `class-validator` decorators but no `@ApiProperty()`, so Swagger sees no fields. `LoginDto` is one of them. Any typed client sending those bodies gets `Type 'string' is not assignable to type 'never'`. API-side fix and a re-publish.
+
+## 2026-08-15
+
 ### Added
 - **A non-production deployment now says so, because landing on the wrong host is indistinguishable from a wrong password.** Two hosts serve this app and they differ by one `-prod` suffix: `crossub-mobile-agent.onrender.com` (staging API, staging database) and `crossub-mobile-agent-prod.onrender.com` (production). Both track `main`, both auto-deploy the same commits, and both serve a working-looking login form — on 15 Aug they went live on the same commit one minute apart. The accounts, however, exist in production only, so the staging portal answers a real agent's real credentials with `Invalid email or password`. That is the exact string an agent reports as "my password doesn't work", and it cost a round of investigation once already (Winny Wu, 10 Aug) *because a genuine credentials bug had just been fixed*, which made the wrong-host visit look like the fix had failed.
 
