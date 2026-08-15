@@ -129,7 +129,9 @@ export function AgentShell({
           ref={headerRef}
           className={cn(
             'border-border bg-background/95 z-40 border-b backdrop-blur supports-[backdrop-filter]:bg-background/80',
-            'fixed top-0 left-1/2 w-full max-w-lg -translate-x-1/2 lg:hidden',
+            // `--env-banner-height` is defined only on a non-production deployment and
+            // defaults to `0px`, so this stays `top-0` on production.
+            'fixed top-[var(--env-banner-height,0px)] left-1/2 w-full max-w-lg -translate-x-1/2 lg:hidden',
             immersive && 'hidden',
           )}
         >

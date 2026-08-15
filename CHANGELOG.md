@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-15
+
+### Added
+- **A non-production deployment now says so, because landing on the wrong host is indistinguishable from a wrong password.** Two hosts serve this app and they differ by one `-prod` suffix: `crossub-mobile-agent.onrender.com` (staging API, staging database) and `crossub-mobile-agent-prod.onrender.com` (production). Both track `main`, both auto-deploy the same commits, and both serve a working-looking login form — on 15 Aug they went live on the same commit one minute apart. The accounts, however, exist in production only, so the staging portal answers a real agent's real credentials with `Invalid email or password`. That is the exact string an agent reports as "my password doesn't work", and it cost a round of investigation once already (Winny Wu, 10 Aug) *because a genuine credentials bug had just been fixed*, which made the wrong-host visit look like the fix had failed.
+
+  **The banner is decided on the server, per request.** The root layout is already `force-dynamic`, so `API_INTERNAL_URL` is read from the live process environment rather than through `NEXT_PUBLIC_*`. That distinction is the point: a `NEXT_PUBLIC_` variable is inlined at build time, so a service configured *after* its last build would keep serving a bundle that says nothing — missing precisely where it had just been switched on. It also renders with no client JavaScript, so it is present in the first paint of the login page rather than after hydration, and the login page is the one screen that must carry it: it sits outside every gate and provider in `layout.tsx`, none of which mount for a signed-out visitor.
+
+  **Silence is the default and the URL is the signal.** An explicit `CROSSUB_ENVIRONMENT_LABEL` wins and naming it `production`/`prod`/`live` forces the banner off; otherwise the backend host is inspected for `staging`/`uat`/`localhost`. Deriving it from the API URL rather than requiring a variable means **staging shows the banner today with no dashboard change** — the signal is already in its configuration — and a new or restored service inherits the behaviour instead of waiting for someone to remember. Markers are matched against the **host only**, never the whole URL, so a query string like `?redirect=/staging` cannot light the banner on production. With no label and no marker the resolver returns null, because a banner that could appear on production would be worse than no banner at all.
+
+  **Nothing moves on production.** The height is published as `--env-banner-height` and every fixed element that pins to the viewport top — the mobile shell header, the add-to-home-screen prompt, the notification live alert — offsets by `var(--env-banner-height, 0px)`. Production never renders the component, so the variable is never defined, every offset resolves to `0px`, and the computed layout is identical to before. Verified both directions against a real build: with a staging `API_INTERNAL_URL` the strip and the variable are in the served HTML; with a production one the page contains zero occurrences of either.
+
+  One trap worth recording: `new URL('crossub-api-staging:10000')` does **not** throw — it parses as protocol `crossub-api-staging:` with path `10000` and an *empty* hostname. Render's internal addresses take exactly that form, so trusting the no-throw path would have silently dropped the most common staging configuration; an empty hostname falls through to a manual split instead.
+
 ## 2026-08-14
 
 ### Added

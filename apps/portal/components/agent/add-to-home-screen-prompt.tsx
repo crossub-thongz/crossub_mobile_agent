@@ -108,7 +108,7 @@ export function AddToHomeScreenPrompt() {
   return (
     <div
       ref={bannerRef}
-      className="fixed inset-x-0 top-[calc(var(--shell-header-height,3.5rem)+env(safe-area-inset-top))] z-[90] flex justify-center px-3 lg:hidden"
+      className="fixed inset-x-0 top-[calc(var(--shell-header-height,3.5rem)+env(safe-area-inset-top)+var(--env-banner-height,0px))] z-[90] flex justify-center px-3 lg:hidden"
       role="status"
       aria-live="polite"
     >

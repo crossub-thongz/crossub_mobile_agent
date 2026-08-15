@@ -17,6 +17,7 @@ import { ProviderErrorBoundary } from '@/components/providers/provider-error-bou
 import { ChunkReloadGuard } from '@/components/providers/chunk-reload-guard';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AddToHomeScreenPrompt } from '@/components/agent/add-to-home-screen-prompt';
+import { EnvironmentBanner } from '@/components/agent/environment-banner';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
@@ -70,6 +71,13 @@ export default function RootLayout({
         </Script>
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
+        {/*
+          Outside every gate and provider, deliberately. The login page renders none of
+          them, and the login page is where a wrong-host visit is mistaken for a wrong
+          password — so a banner mounted inside the authenticated tree would be absent at
+          the one moment it has to be read.
+        */}
+        <EnvironmentBanner />
         <ChunkReloadGuard />
         <ThemeProvider>
           <AuthProvider>

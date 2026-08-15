@@ -118,7 +118,7 @@ export function AgentNotificationLiveAlert() {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed inset-x-0 top-0 z-[100] flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]',
+        'pointer-events-none fixed inset-x-0 top-[var(--env-banner-height,0px)] z-[100] flex justify-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))]',
       )}
       role="status"
       aria-live="polite"
