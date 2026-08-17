@@ -18,6 +18,7 @@ import { PricingOrderHost } from '@/components/pricing/pricing-order-host';
 import { PricingRateCatalog } from '@/components/pricing/pricing-rate-catalog';
 import {
   fetchAgentBillingPricing,
+  openInspectionRateLabel,
   type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
 import { PORTAL_SERVICE_LEVEL_LABEL, type AgentPortalServiceLevel } from '@/lib/portal-service-level';
@@ -205,9 +206,9 @@ export default function PricingPage() {
                 <li>Open, routine, ingoing, outgoing, and tribunal per the rate cards below</li>
                 <li>
                   Open inspections:{' '}
-                  <strong className="text-foreground">50% of weekly rent + GST</strong> for the
-                  1st, 2nd, and 3rd;{' '}
-                  <strong className="text-foreground">100% of weekly rent + GST from the 4th onwards</strong>
+                  <strong className="text-foreground">
+                    {openInspectionRateLabel(catalog.inspections.openInspection)}
+                  </strong>
                 </li>
               </ul>
             </PricingSection>
@@ -293,10 +294,11 @@ export default function PricingPage() {
               ) : null}
 
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/6 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-                <strong className="text-foreground">Open inspection tiers:</strong>{' '}
-                <span className="text-foreground">50% of weekly rent + GST</span> for occurrences
-                1–3 per property;{' '}
-                <span className="text-foreground">100% of weekly rent + GST from the 4th onwards</span>.
+                <strong className="text-foreground">Open inspections:</strong>{' '}
+                {openInspectionRateLabel(catalog.inspections.openInspection)}
+                {catalog.inspections.lettingFee?.summary
+                  ? ` Letting fee: ${catalog.inspections.lettingFee.summary}`
+                  : ''}
               </div>
 
               {example ? (

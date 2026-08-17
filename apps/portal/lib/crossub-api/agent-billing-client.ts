@@ -42,6 +42,45 @@ export type AgentBillingDefaultPaymentMethod = {
   expYear: number;
 };
 
+/** Open inspections are free (CRS-0065). Legacy rent-multiplier fields may still appear. */
+export type AgentBillingOpenInspectionPricing = {
+  summary?: string;
+  incGstAud?: number;
+  firstThree?: string;
+  fourthOnwards?: string;
+  exampleRent500FirstIncGstAud?: number;
+  /** @deprecated use exampleRent500FirstIncGstAud */
+  exampleRent500IncGstAud?: number;
+  exampleRent500FourthIncGstAud?: number;
+};
+
+export type AgentBillingLettingFeePricing = {
+  weeksOfRent: number;
+  summary: string;
+  chargedWhen: string;
+  exampleRent500IncGstAud: number;
+};
+
+export function openInspectionRateLabel(
+  openInspection?: AgentBillingOpenInspectionPricing | null,
+): string {
+  const summary = openInspection?.summary?.trim();
+  if (summary) return summary;
+  const first = openInspection?.firstThree?.trim();
+  if (first) return first.toLowerCase().startsWith('from ') ? first : `from ${first}`;
+  if (openInspection?.incGstAud === 0) return 'Free';
+  return 'Free';
+}
+
+export function openInspectionIsFree(
+  openInspection?: AgentBillingOpenInspectionPricing | null,
+): boolean {
+  if (!openInspection) return true;
+  if (openInspection.incGstAud === 0) return true;
+  if (openInspection.summary && !openInspection.firstThree) return true;
+  return !openInspection.firstThree;
+}
+
 export type AgentBillingPricingCatalog = {
   portalServiceLevel: string;
   level1: {
@@ -66,14 +105,8 @@ export type AgentBillingPricingCatalog = {
   };
   inspections: {
     routineIncGstAud: number;
-    openInspection: {
-      firstThree: string;
-      fourthOnwards: string;
-      exampleRent500FirstIncGstAud?: number;
-      /** @deprecated use exampleRent500FirstIncGstAud */
-      exampleRent500IncGstAud?: number;
-      exampleRent500FourthIncGstAud?: number;
-    };
+    openInspection: AgentBillingOpenInspectionPricing;
+    lettingFee?: AgentBillingLettingFeePricing;
     fieldInspectionsCompactExGst: Record<string, number>;
     fieldInspectionsHouseExGst: Record<string, number | string>;
     tribunal: {

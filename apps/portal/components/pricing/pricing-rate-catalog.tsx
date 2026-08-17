@@ -15,7 +15,11 @@ import {
 
 import type { PricingOrderActions } from '@/components/pricing/pricing-order-host';
 import { Button } from '@/components/ui/button';
-import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
+import {
+  openInspectionIsFree,
+  openInspectionRateLabel,
+  type AgentBillingPricingCatalog,
+} from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatCurrency } from '@/lib/utils';
 
 import '@/app/pricing/pricing.css';
@@ -164,8 +168,9 @@ export function PricingRateCatalog({
               <li>Open, routine, ingoing, outgoing, and tribunal per the rate cards below</li>
               <li>
                 Open inspections:{' '}
-                <strong className="text-foreground">50% of weekly rent + GST</strong> (1st–3rd);{' '}
-                <strong className="text-foreground">100% + GST from the 4th onwards</strong>
+                <strong className="text-foreground">
+                  {openInspectionRateLabel(openInspection)}
+                </strong>
               </li>
             </ul>
           </PricingSection>
@@ -259,41 +264,79 @@ export function PricingRateCatalog({
               <DoorOpen className="size-4" />
             </div>
             <p className="font-medium">Open inspection</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              Percentage of weekly rent, counted per property (each occurrence in a leasing cycle).
-            </p>
-            <div className="pricing-tier-split">
-              <div className="pricing-tier" data-tier="standard">
-                <p className="pricing-tier__label">1st · 2nd · 3rd</p>
-                <p className="pricing-tier__value">
-                  {openInspection?.firstThree ?? '50% of weekly rent + GST'}
+            {openInspectionIsFree(openInspection) ? (
+              <>
+                <p className="pricing-rate-card__price mt-1">Free</p>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  {openInspection?.summary ??
+                    'Open inspections are not charged. A letting fee applies only once the property is let through CROSSUB.'}
                 </p>
-              </div>
-              <div className="pricing-tier" data-tier="premium">
-                <p className="pricing-tier__label">4th onwards</p>
-                <p className="pricing-tier__value">
-                  {openInspection?.fourthOnwards ?? '100% of weekly rent + GST'}
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  Percentage of weekly rent, counted per property (each occurrence in a leasing cycle).
                 </p>
-              </div>
-            </div>
-            {openExampleFirst != null || openExampleFourth != null ? (
-              <div className="pricing-example-box">
-                {openExampleFirst != null ? (
-                  <p>
-                    e.g. $500/week rent — 1st open inspection (50%) ={' '}
-                    <strong>{formatCurrency(openExampleFirst)}</strong> inc GST
-                  </p>
+                <div className="pricing-tier-split">
+                  <div className="pricing-tier" data-tier="standard">
+                    <p className="pricing-tier__label">1st · 2nd · 3rd</p>
+                    <p className="pricing-tier__value">
+                      {openInspection?.firstThree ?? '50% of weekly rent + GST'}
+                    </p>
+                  </div>
+                  <div className="pricing-tier" data-tier="premium">
+                    <p className="pricing-tier__label">4th onwards</p>
+                    <p className="pricing-tier__value">
+                      {openInspection?.fourthOnwards ?? '100% of weekly rent + GST'}
+                    </p>
+                  </div>
+                </div>
+                {openExampleFirst != null || openExampleFourth != null ? (
+                  <div className="pricing-example-box">
+                    {openExampleFirst != null ? (
+                      <p>
+                        e.g. $500/week rent — 1st open inspection (50%) ={' '}
+                        <strong>{formatCurrency(openExampleFirst)}</strong> inc GST
+                      </p>
+                    ) : null}
+                    {openExampleFourth != null ? (
+                      <p className={openExampleFirst != null ? 'mt-1' : undefined}>
+                        e.g. $500/week rent — 4th open inspection onwards (100%) ={' '}
+                        <strong>{formatCurrency(openExampleFourth)}</strong> inc GST
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
-                {openExampleFourth != null ? (
-                  <p className={openExampleFirst != null ? 'mt-1' : undefined}>
-                    e.g. $500/week rent — 4th open inspection onwards (100%) ={' '}
-                    <strong>{formatCurrency(openExampleFourth)}</strong> inc GST
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
+              </>
+            )}
             <PricingAddButton onClick={orderActions?.addOpen} label="Add open inspection" />
           </div>
+
+          {catalog.inspections.lettingFee ? (
+            <div className="pricing-rate-card pricing-rate-card--wide" data-rate="letting-fee">
+              <div className="pricing-rate-card__icon">
+                <Home className="size-4" />
+              </div>
+              <p className="font-medium">Letting fee</p>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                {catalog.inspections.lettingFee.summary}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                {catalog.inspections.lettingFee.chargedWhen}
+              </p>
+              {catalog.inspections.lettingFee.exampleRent500IncGstAud != null ? (
+                <div className="pricing-example-box mt-2">
+                  <p>
+                    e.g. $500/week rent ={' '}
+                    <strong>
+                      {formatCurrency(catalog.inspections.lettingFee.exampleRent500IncGstAud)}
+                    </strong>{' '}
+                    inc GST
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="pricing-field-inspection-order">
@@ -364,8 +407,7 @@ export function PricingRateCatalog({
           <Info className="mt-0.5 size-4 shrink-0 text-primary" />
           <span>
             Ingoing and outgoing amounts are ex GST; {tribunal.gstPercent}% GST is added at
-            invoice. Routine, open inspection examples, and tribunal rates shown include GST where
-            marked.
+            invoice. Routine and tribunal rates shown include GST where marked.
           </span>
         </div>
       </PricingSection>

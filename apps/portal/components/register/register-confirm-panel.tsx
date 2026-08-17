@@ -20,7 +20,10 @@ import {
   REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH,
 } from '@/lib/agent-registration';
-import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
+import {
+  openInspectionRateLabel,
+  type AgentBillingPricingCatalog,
+} from '@/lib/crossub-api/agent-billing-client';
 import {
   isInspectionOnlyLevel,
   REGISTER_SERVICE_LEVEL_DESCRIPTION,
@@ -201,13 +204,8 @@ export function RegisterConfirmPanel({
             <li>
               Open inspections:{' '}
               <strong className="text-foreground">
-                {catalog.inspections.openInspection.firstThree}
-              </strong>{' '}
-              (1st–3rd);{' '}
-              <strong className="text-foreground">
-                {catalog.inspections.openInspection.fourthOnwards}
-              </strong>{' '}
-              from the 4th onwards
+                {openInspectionRateLabel(catalog.inspections.openInspection)}
+              </strong>
             </li>
             <li>Prepaid — pay after the inspector accepts the job</li>
             <li>Inspection module only — upgrade to Full Service anytime</li>

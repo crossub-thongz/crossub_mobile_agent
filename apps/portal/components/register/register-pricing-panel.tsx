@@ -11,6 +11,7 @@ import {
   type RegistrationPricingCatalog,
 } from '@/components/register/register-full-service-details';
 import { fetchRegisterAgentPricing } from '@/lib/agent-registration';
+import { openInspectionRateLabel } from '@/lib/crossub-api/agent-billing-client';
 import {
   isInspectionOnlyLevel,
   PORTAL_SERVICE_LEVEL_ORDER,
@@ -31,11 +32,6 @@ function minFieldInspectionExGst(catalog: RegistrationPricingCatalog): number {
   return compact ?? house ?? 75;
 }
 
-function openInspectionStartingLabel(catalog: RegistrationPricingCatalog): string {
-  const rate = catalog.inspections.openInspection.firstThree.trim();
-  return rate.toLowerCase().startsWith('from ') ? rate : `from ${rate}`;
-}
-
 function InspectionOnlyPricingDetails({ catalog }: { catalog: RegistrationPricingCatalog }) {
   return (
     <div className="border-t border-border/60 pt-4">
@@ -45,13 +41,8 @@ function InspectionOnlyPricingDetails({ catalog }: { catalog: RegistrationPricin
         <li>
           Open inspections:{' '}
           <strong className="text-foreground">
-            {catalog.inspections.openInspection.firstThree}
-          </strong>{' '}
-          (1st–3rd);{' '}
-          <strong className="text-foreground">
-            {catalog.inspections.openInspection.fourthOnwards}
-          </strong>{' '}
-          from the 4th onwards
+            {openInspectionRateLabel(catalog.inspections.openInspection)}
+          </strong>
         </li>
         <li>Inspection module only — upgrade to Full Service anytime</li>
       </ul>
@@ -184,7 +175,7 @@ export function RegisterPricingPanel({
                           <li>
                             <span className="text-muted-foreground">Open inspection </span>
                             <span className="font-medium text-foreground">
-                              {openInspectionStartingLabel(catalog)}
+                              {openInspectionRateLabel(catalog.inspections.openInspection)}
                             </span>
                           </li>
                         </ul>
