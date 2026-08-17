@@ -115,13 +115,13 @@ export function AgentShell({
   }, [moreOpen]);
 
   return (
-    <div className="flex min-h-screen bg-background lg:h-dvh lg:overflow-hidden">
+    <div className="flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden bg-background">
       <AgentSidebar onLogout={() => void logout()} />
 
-      <div className="flex min-h-screen min-w-0 flex-1 lg:h-full lg:min-h-0 lg:overflow-hidden">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
         <div
           className={cn(
-            'mx-auto flex min-h-screen w-full min-w-0 flex-col lg:h-full lg:min-h-0 lg:flex-[3] lg:overflow-hidden',
+            'mx-auto flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden lg:flex-[3]',
             wide ? 'max-w-none' : 'max-w-lg lg:max-w-none',
           )}
         >
@@ -277,7 +277,7 @@ export function AgentShell({
 
         <main
           className={cn(
-            'flex min-h-0 flex-1 flex-col lg:overflow-y-auto',
+            'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain',
             wide ? 'lg:p-0' : 'lg:px-8 lg:pb-8',
             title && !immersive && 'lg:pt-6',
             immersive && 'lg:pt-2 lg:pb-0',
@@ -401,7 +401,7 @@ export function AgentShell({
         {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
         </div>
 
-        <aside className="bg-background hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
+        <aside className="bg-background sticky top-0 hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
           <GiiAssistant open variant="panel" />
         </aside>
       </div>

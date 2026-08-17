@@ -80,7 +80,7 @@ export function AgentSidebar({
   return (
     <aside
       className={cn(
-        'border-border bg-card/95 group/sidebar z-30 hidden h-dvh shrink-0 flex-col overflow-hidden border-r shadow-[1px_0_0_0_rgba(0,0,0,0.03)] backdrop-blur-xl transition-[width,box-shadow] duration-300 ease-out lg:flex',
+        'border-border bg-card/95 group/sidebar sticky top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r shadow-[1px_0_0_0_rgba(0,0,0,0.03)] backdrop-blur-xl transition-[width,box-shadow] duration-300 ease-out lg:flex',
         compact
           ? 'w-[72px] hover:z-40 hover:w-[240px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)]'
           : 'w-[260px]',
