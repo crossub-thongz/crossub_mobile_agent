@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Building2, ChevronRight, History, LogOut, Mail, Phone, Settings, User, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { ProfileAgreementsSection } from '@/components/agent/profile-agreements-section';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -276,7 +275,9 @@ export default function ProfilePage() {
           </section>
         ) : null}
 
+        {/* Sales service-agreement lock retired — hide until signing is required again.
         <ProfileAgreementsSection />
+        */}
 
         <Link
           href={ROUTES.SETTINGS}
