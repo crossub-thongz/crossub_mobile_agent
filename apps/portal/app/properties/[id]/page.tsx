@@ -15,6 +15,7 @@ import { PropertyInspectionTab } from '@/components/agent/property-inspection-ta
 import { PropertyLeasingJobPanel } from '@/components/agent/property-leasing-job-panel';
 import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-tab';
 import { PropertyRemindersDialog } from '@/components/agent/property-reminders-dialog';
+import { PropertyApprovalBanner } from '@/components/agent/property-approval-banner';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyMessageTab } from '@/components/agent/property-message-tab';
 import { PropertyTabBar, type PropertyViewTab } from '@/components/agent/property-tab-bar';
@@ -409,6 +410,8 @@ export default function PropertyDetailPage() {
               )} */}
             </div>
           </div>
+
+          <PropertyApprovalBanner property={property} />
 
           <PropertyProfileDetails
             property={property}

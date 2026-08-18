@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-18
+
+### Added
+- **A property you register here now waits for CROSSUB to confirm they service the address, and the app says so instead of letting you find out from a 403.** Geng, 18 Aug: a customer adding a property needs CROSSUB's management staff to confirm it, otherwise CROSSUB ends up committed to remote areas its field team cannot reach.
+
+  The gate itself is the API's — `assertAccessibleProperty` refuses every workflow on a property whose `approvalStatus` is not `APPROVED`, which is ~25 entry points covering leasing, inspections, maintenance, rent reviews and their cancels. Registry edit stays open, because correcting the address is exactly how a declined property gets reconsidered. This app's job is the part the API cannot do: tell the agent *why* the button they were about to press is going to fail.
+
+  `PropertyApprovalBanner` on the property detail states the block, and for a decline carries CROSSUB's reason verbatim rather than a generic refusal — "outside our service area" is the answer that lets an agency act. The property list carries the same status as a chip. A draft (`registryIntakeComplete === false`) already reads "Incomplete" and has not been submitted for approval at all, so it deliberately gets no second chip.
+
+  **The mapper defaults a missing `approvalStatus` to `APPROVED`, never `PENDING`.** This app ships separately from the API and can run ahead of it; an API that predates the gate simply omits the field, and reading that absence as "pending" would put a banner on every property in the portfolio and imply a block the server is not applying. Guessing the permissive direction is right here precisely because the server, not this app, is the thing enforcing it.
+
+  **Deliberately not built:** individual workflow buttons are not disabled one by one. They are spread across nine tab panels, a per-button sweep would drift out of step with the API's opt-out list the first time either side changed, and the banner is what actually prevents the agent guessing which button to try. The API returns a readable message on refusal, so a button pressed anyway explains itself. `approvalStatus` is read through the local `ExtendedAgentProperty` / `AgentPropertyListFields` shims the mapper already uses for fields ahead of the vendored contract, so this needs no `@crossub-thongz/api-contract` republish to compile.
+
 ## 2026-08-15
 
 ### Changed

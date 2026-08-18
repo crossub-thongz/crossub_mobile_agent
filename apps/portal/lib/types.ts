@@ -1,3 +1,5 @@
+import type { PropertyApprovalStatus } from '@/constants/api-enums';
+
 export type Priority = 'urgent' | 'high' | 'normal' | 'low';
 
 export type TaskModule =
@@ -118,6 +120,19 @@ export interface Property {
   endOfManagementDate?: string;
   /** False while the create-property wizard is still in progress. */
   registryIntakeComplete?: boolean;
+  /**
+   * Whether CROSSUB has confirmed it services this address. A property you register stays
+   * `PENDING` until CROSSUB answers — the registry record is yours to edit, but every
+   * workflow on it (leasing, inspections, maintenance, rent reviews) is refused until then,
+   * because CROSSUB's field team cannot reach every area. `DECLINED` carries a reason.
+   *
+   * Optional and defaulted to APPROVED by the mapper so this app running against an older
+   * API shows no banner rather than a wrong one.
+   */
+  approvalStatus?: PropertyApprovalStatus;
+  approvalRequestedAt?: string;
+  approvalDecidedAt?: string;
+  approvalDeclineReason?: string;
   /** Wizard draft + archived landlord/tenancy snapshots from the API. */
   registryDraft?: Record<string, unknown> | null;
   vacateDate?: string;

@@ -37,10 +37,12 @@ import {
   INSPECTION_TYPE,
   LEASE_STATUS,
   MAINTENANCE_STATUS,
+  PROPERTY_APPROVAL_STATUS,
   RENT_REVIEW_WORKFLOW_STATE,
   TRIBUNAL_CASE_STATUS,
   VACATING_STATUS,
 } from '@/constants/api-enums';
+import type { PropertyApprovalStatus } from '@/constants/api-enums';
 import { agentDocumentFileHref } from '@/lib/document-preview';
 import { toPlainTextBody } from '@/lib/message-body';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
@@ -107,6 +109,10 @@ type ExtendedAgentProperty = AgentProperty & {
   propertyManagerId?: string | null;
   endOfManagementDate?: string | null;
   registryIntakeComplete?: boolean | null;
+  approvalStatus?: PropertyApprovalStatus | null;
+  approvalRequestedAt?: string | null;
+  approvalDecidedAt?: string | null;
+  approvalDeclineReason?: string | null;
   registryDraft?: Record<string, unknown> | null;
   vacateDate?: string | null;
   nextRentReviewAt?: string | null;
@@ -134,6 +140,10 @@ type AgentPropertyListFields = {
   propertyManagerId?: string | null;
   endOfManagementDate?: string | null;
   registryIntakeComplete?: boolean | null;
+  approvalStatus?: PropertyApprovalStatus | null;
+  approvalRequestedAt?: string | null;
+  approvalDecidedAt?: string | null;
+  approvalDeclineReason?: string | null;
   registryDraft?: Record<string, unknown> | null;
   vacateDate?: string | null;
   nextRentReviewAt?: string | null;
@@ -206,6 +216,18 @@ export function mapAgentProperty(
     endOfManagementDate: list.endOfManagementDate ?? ext.endOfManagementDate ?? undefined,
     registryIntakeComplete:
       list.registryIntakeComplete ?? ext.registryIntakeComplete ?? true,
+    // Defaults to APPROVED, never PENDING: an API that predates the gate omits the field,
+    // and guessing PENDING there would lock every workflow in the app on a property the
+    // server would happily accept work on.
+    approvalStatus:
+      list.approvalStatus ??
+      ext.approvalStatus ??
+      PROPERTY_APPROVAL_STATUS.APPROVED,
+    approvalRequestedAt:
+      list.approvalRequestedAt ?? ext.approvalRequestedAt ?? undefined,
+    approvalDecidedAt: list.approvalDecidedAt ?? ext.approvalDecidedAt ?? undefined,
+    approvalDeclineReason:
+      list.approvalDeclineReason ?? ext.approvalDeclineReason ?? undefined,
     registryDraft: list.registryDraft ?? ext.registryDraft ?? null,
     vacateDate:
       (dto as AgentProperty & { vacateDate?: string | null }).vacateDate ??

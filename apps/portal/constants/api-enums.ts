@@ -225,6 +225,52 @@ export const PROPERTY_STATUS_ORDER: PropertyStatus[] = [
   PROPERTY_STATUS.MAINTENANCE,
 ];
 
+/**
+ * PropertyApprovalStatus — whether CROSSUB has confirmed it services a property you
+ * registered here.
+ *
+ * CROSSUB's field team cannot reach every area. A property you add stays `PENDING` until
+ * they answer: the registry record is yours to edit the whole time, but every workflow on
+ * it — leasing, inspections, maintenance, rent reviews — is refused until it is approved.
+ * `DECLINED` is the "we do not cover this area" answer and carries a reason.
+ */
+export const PROPERTY_APPROVAL_STATUS = {
+  APPROVED: 'APPROVED',
+  PENDING: 'PENDING',
+  DECLINED: 'DECLINED',
+} as const;
+
+export type PropertyApprovalStatus =
+  (typeof PROPERTY_APPROVAL_STATUS)[keyof typeof PROPERTY_APPROVAL_STATUS];
+
+export const PROPERTY_APPROVAL_STATUS_LABEL: Record<PropertyApprovalStatus, string> = {
+  [PROPERTY_APPROVAL_STATUS.APPROVED]: 'Approved',
+  [PROPERTY_APPROVAL_STATUS.PENDING]: 'Awaiting CROSSUB approval',
+  [PROPERTY_APPROVAL_STATUS.DECLINED]: 'Not serviced by CROSSUB',
+};
+
+/** True when CROSSUB has confirmed the address — i.e. workflows are unlocked. */
+export function isPropertyServiceApproved(
+  status: PropertyApprovalStatus | undefined,
+): boolean {
+  // Undefined means an API that predates the gate: treat as approved so this app never
+  // blocks a property the server would happily accept work on.
+  return status === undefined || status === PROPERTY_APPROVAL_STATUS.APPROVED;
+}
+
+/** Why a workflow button is disabled — shown on the property, in its own words. */
+export function propertyApprovalBlockMessage(
+  status: PropertyApprovalStatus,
+  declineReason?: string,
+): string {
+  if (status === PROPERTY_APPROVAL_STATUS.DECLINED) {
+    return declineReason?.trim()
+      ? `CROSSUB does not service this property: ${declineReason.trim()}`
+      : 'CROSSUB does not service this property. Contact your account manager.';
+  }
+  return 'CROSSUB is confirming it services this address. You can keep editing the details — workflows unlock once it is approved.';
+}
+
 /** Australian states & territories — required on property registry intake. */
 export const AUSTRALIAN_STATE = {
   NSW: 'NSW',
