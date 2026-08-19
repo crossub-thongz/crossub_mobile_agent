@@ -19,6 +19,7 @@ import {
   resolveLeaseDates,
   resolveUpcomingAcceptedRentChange,
 } from '@/lib/property-overview';
+import type { PropertyContactBlock } from '@/lib/property-registry-api';
 import type {
   AgentDocument,
   Inspection,
@@ -85,6 +86,22 @@ function formatKeyFobCount(count: number | null | undefined): string {
   return count === 1 ? '1 fob' : `${count} fobs`;
 }
 
+function contactFromScalars(
+  name?: string | null,
+  email?: string | null,
+  phone?: string | null,
+): PropertyContactBlock | undefined {
+  const trimmedName = name?.trim();
+  const trimmedEmail = email?.trim();
+  const trimmedPhone = phone?.trim();
+  if (!trimmedName && !trimmedEmail && !trimmedPhone) return undefined;
+  return {
+    name: trimmedName || undefined,
+    email: trimmedEmail || undefined,
+    mobile: trimmedPhone || undefined,
+  };
+}
+
 /** Collapsible property, tenancy, and management details in the profile header card. */
 export function PropertyProfileDetails({
   property,
@@ -133,8 +150,20 @@ export function PropertyProfileDetails({
     (typeof sync.record?.furnished === 'boolean' ? sync.record.furnished : property.furnished);
 
   const overview = sync.overview;
-  const buildingManager = overview?.buildingManager;
-  const strataContact = overview?.strataContact;
+  const buildingManager = hasContact(overview?.buildingManager)
+    ? overview?.buildingManager
+    : contactFromScalars(
+        sync.record?.buildingManagerName ?? property.buildingManagerName,
+        sync.record?.buildingManagerEmail ?? property.buildingManagerEmail,
+        sync.record?.buildingManagerPhone ?? property.buildingManagerPhone,
+      );
+  const strataContact = hasContact(overview?.strataContact)
+    ? overview?.strataContact
+    : contactFromScalars(
+        sync.record?.strataContactName ?? property.strataContactName,
+        sync.record?.strataContactEmail ?? property.strataContactEmail,
+        sync.record?.strataContactPhone ?? property.strataContactPhone,
+      );
 
   const strataMeta = formatStrataMeta(
     overview?.buildingName ?? sync.record?.buildingName ?? property.buildingName,
