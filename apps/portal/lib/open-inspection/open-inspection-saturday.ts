@@ -23,14 +23,11 @@ export function validateCrossubOpenDateTimeLocal(
   return null;
 }
 
-/** Validate datetime-local for agent self-conducted open (not Saturday). */
+/** Validate datetime-local for agent self-conducted open (any day). */
 export function validateSelfOpenDateTimeLocal(value: string, label: string): string | null {
   if (!value) return `${label} is required`;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return `${label} is invalid`;
-  if (isSaturdayInSydney(date)) {
-    return `${label} cannot be on a Saturday — choose Schedule open inspection (CROSSUB) instead`;
-  }
   return null;
 }
 
