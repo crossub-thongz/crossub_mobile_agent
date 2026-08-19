@@ -158,6 +158,7 @@ export type AgentBillingPricingCatalog = {
   platformBilling?: {
     complimentaryAllServices?: boolean;
     legacyFreeOpenInspections?: boolean;
+    legacyLettingFee?: boolean;
   };
   inspections: {
     routineIncGstAud: number;

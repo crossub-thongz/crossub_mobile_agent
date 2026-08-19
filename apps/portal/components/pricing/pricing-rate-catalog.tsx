@@ -305,9 +305,11 @@ export function PricingRateCatalog({
                   : 'inc GST · same rate as routine'}
             </p>
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              {complimentary || openIsFree
-                ? 'Letting fee still applies if CROSSUB finds the tenant.'
-                : 'Level 1 prepaid on inspector accept · Level 2 on the monthly invoice.'}
+              {complimentary
+                ? 'not charged for this account'
+                : openIsFree && catalog.inspections.lettingFee
+                  ? 'Letting fee still applies if CROSSUB finds the tenant.'
+                  : 'Level 1 prepaid on inspector accept · Level 2 on the monthly invoice.'}
             </p>
             <PricingAddButton onClick={orderActions?.addOpen} label="Add open inspection" />
           </div>
