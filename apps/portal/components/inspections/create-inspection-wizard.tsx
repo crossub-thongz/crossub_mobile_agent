@@ -72,6 +72,7 @@ import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
 import {
   getOpenListingContext,
   OPEN_CONDUCTED_BY_LABEL,
+  SELF_OPEN_INSPECTION_DISCLAIMER,
   type OpenConductedBy,
 } from '@/lib/open-inspection';
 import type { Inspection, Property } from '@/lib/types';
@@ -1173,6 +1174,15 @@ function OpenInspectionForm({
               </button>
             ))}
           </div>
+          {conductedBy === 'crossub' ? (
+            <p className="text-muted-foreground text-[11px]">
+              The $55 inc GST open-inspection fee applies after the inspector accepts the job.
+            </p>
+          ) : conductedBy === 'agent' ? (
+            <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+              {SELF_OPEN_INSPECTION_DISCLAIMER}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

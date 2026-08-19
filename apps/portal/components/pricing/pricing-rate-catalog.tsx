@@ -175,10 +175,11 @@ export function PricingRateCatalog({
               <li>Prepaid — pay after the inspector accepts the job</li>
               <li>Open, Routine, Ingoing, Outgoing, and Tribunal follow per the cards below</li>
               <li>
-                Open inspections:{' '}
+                Open inspections (when CROSSUB conducts):{' '}
                 <strong className="text-foreground">
                   {openInspectionRateLabel(openInspection)}
                 </strong>
+                . Self-conducted opens are not billed.
               </li>
             </ul>
           </PricingSection>

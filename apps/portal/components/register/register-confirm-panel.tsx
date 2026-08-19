@@ -202,7 +202,7 @@ export function RegisterConfirmPanel({
               (inc GST)
             </li>
             <li>
-              Open inspections:{' '}
+              Open inspections (when CROSSUB conducts):{' '}
               <strong className="text-foreground">
                 {openInspectionRateLabel(catalog.inspections.openInspection)}
               </strong>

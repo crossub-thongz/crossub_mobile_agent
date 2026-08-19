@@ -224,7 +224,7 @@ export default function PricingPage() {
                 </li>
                 <li>Open, Routine, Ingoing, Outgoing, and Tribunal follow per the cards below</li>
                 <li>
-                  Open inspections:{' '}
+                  Open inspections (when CROSSUB conducts):{' '}
                   <strong className="text-foreground">
                     {openInspectionRateLabel(catalog.inspections.openInspection)}
                   </strong>
@@ -333,7 +333,7 @@ export default function PricingPage() {
               ) : null}
 
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/6 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-                <strong className="text-foreground">Open inspections:</strong>{' '}
+                <strong className="text-foreground">Open inspections (when CROSSUB conducts):</strong>{' '}
                 {openInspectionRateLabel(catalog.inspections.openInspection)}
                 {catalog.inspections.lettingFee?.summary
                   ? ` Letting fee: ${catalog.inspections.lettingFee.summary}`

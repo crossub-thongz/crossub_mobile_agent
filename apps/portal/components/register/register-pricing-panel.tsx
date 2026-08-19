@@ -39,7 +39,7 @@ function InspectionOnlyPricingDetails({ catalog }: { catalog: RegistrationPricin
         <li>Prepaid — pay after the inspector accepts the job</li>
         <li>Orders confirmed within 24 hours of payment; auto-refund if unaccepted</li>
         <li>
-          Open inspections:{' '}
+          Open inspections (when CROSSUB conducts):{' '}
           <strong className="text-foreground">
             {openInspectionRateLabel(catalog.inspections.openInspection)}
           </strong>
