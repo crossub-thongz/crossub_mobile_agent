@@ -338,7 +338,7 @@ export function Level2MonthlyBillingList({
                       <p className="text-muted-foreground mt-1 text-xs">
                         {[
                           row.createdByName ? `Created by ${row.createdByName}` : null,
-                          `Created ${formatDate(row.createdAt)}`,
+                          `Created ${formatDateTime(row.createdAt)}`,
                         ]
                           .filter(Boolean)
                           .join(' · ')}

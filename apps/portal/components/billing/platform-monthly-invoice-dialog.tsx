@@ -21,7 +21,7 @@ import {
   type AgentBillingMonthlyInvoice,
   type AgentBillingMonthlyInvoiceDetail,
 } from '@/lib/crossub-api/agent-billing-client';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -279,9 +279,14 @@ export function PlatformMonthlyInvoiceDialog({
                             {row.calculationDetail}
                           </p>
                         ) : null}
-                        {row.createdByName ? (
+                        {row.createdByName || row.createdAt ? (
                           <p className="text-muted-foreground mt-0.5 text-xs">
-                            Created by {row.createdByName}
+                            {[
+                              row.createdByName ? `Created by ${row.createdByName}` : null,
+                              row.createdAt ? `Created ${formatDateTime(row.createdAt)}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
                           </p>
                         ) : null}
                       </div>

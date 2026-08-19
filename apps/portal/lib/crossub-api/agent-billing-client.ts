@@ -193,6 +193,7 @@ export type AgentBillingMonthlyInvoiceLineItem = {
   serviceType: string;
   description: string;
   amount: number;
+  createdAt?: string | null;
   createdByName?: string | null;
   calculationDetail?: string | null;
 };
