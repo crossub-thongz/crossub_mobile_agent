@@ -42,7 +42,7 @@ export type AgentBillingDefaultPaymentMethod = {
   expYear: number;
 };
 
-/** Open inspections are free (CRS-0065). Legacy rent-multiplier fields may still appear. */
+/** Open inspections are billed at the same flat rate as routine ($55 inc GST). */
 export type AgentBillingOpenInspectionPricing = {
   summary?: string;
   incGstAud?: number;
@@ -61,24 +61,75 @@ export type AgentBillingLettingFeePricing = {
   exampleRent500IncGstAud: number;
 };
 
+const OPEN_INSPECTION_FALLBACK_INC_GST_AUD = 55;
+
+/** Billed open-inspection amount. Missing payloads fall back to the routine flat rate — never $0. */
+export function openInspectionIncGstAud(
+  openInspection?: AgentBillingOpenInspectionPricing | null,
+  fallbackIncGstAud = OPEN_INSPECTION_FALLBACK_INC_GST_AUD,
+): number {
+  const n = Number(openInspection?.incGstAud);
+  if (Number.isFinite(n) && n > 0) return n;
+  return fallbackIncGstAud;
+}
+
 export function openInspectionRateLabel(
   openInspection?: AgentBillingOpenInspectionPricing | null,
 ): string {
+  const n = Number(openInspection?.incGstAud);
+  if (Number.isFinite(n) && n > 0) {
+    const summary = openInspection?.summary?.trim();
+    if (summary && !/^(free|complimentary)\b/i.test(summary)) return summary;
+    return `$${n.toFixed(2)} inc GST`;
+  }
   const summary = openInspection?.summary?.trim();
-  if (summary) return summary;
-  const first = openInspection?.firstThree?.trim();
-  if (first) return first.toLowerCase().startsWith('from ') ? first : `from ${first}`;
-  if (openInspection?.incGstAud === 0) return 'Free';
-  return 'Free';
+  if (summary && /^(free|complimentary)\b/i.test(summary)) return summary;
+  if (Number.isFinite(n) && n === 0) return 'Free';
+  return `$${OPEN_INSPECTION_FALLBACK_INC_GST_AUD.toFixed(2)} inc GST`;
 }
 
 export function openInspectionIsFree(
   openInspection?: AgentBillingOpenInspectionPricing | null,
+  platformBilling?: {
+    complimentaryAllServices?: boolean;
+    legacyFreeOpenInspections?: boolean;
+  } | null,
 ): boolean {
-  if (!openInspection) return true;
-  if (openInspection.incGstAud === 0) return true;
-  if (openInspection.summary && !openInspection.firstThree) return true;
-  return !openInspection.firstThree;
+  if (platformBilling?.complimentaryAllServices) return true;
+  if (platformBilling?.legacyFreeOpenInspections) return true;
+  const n = Number(openInspection?.incGstAud);
+  if (Number.isFinite(n)) return n === 0;
+  return false;
+}
+
+export type AgentBillingIncludedPackageItem = {
+  key: string;
+  label: string;
+  feeLabel: string;
+  summary: string;
+};
+
+export const LEVEL2_INCLUDED_PACKAGE_FALLBACK: AgentBillingIncludedPackageItem[] = [
+  {
+    key: 'reference_checks',
+    label: 'Reference checks',
+    feeLabel: 'Included',
+    summary: 'Included in Full Service — applicant referee checks as part of leasing.',
+  },
+  {
+    key: 'contract_agreement',
+    label: 'Contract agreement',
+    feeLabel: 'Included',
+    summary:
+      'Included in Full Service — residential tenancy agreement prepared and sent for signing.',
+  },
+];
+
+export function level2IncludedPackageItems(
+  catalog?: { level2?: { includedPackageItems?: AgentBillingIncludedPackageItem[] } } | null,
+): AgentBillingIncludedPackageItem[] {
+  const items = catalog?.level2?.includedPackageItems;
+  return items && items.length > 0 ? items : LEVEL2_INCLUDED_PACKAGE_FALLBACK;
 }
 
 export type AgentBillingPricingCatalog = {
@@ -93,6 +144,7 @@ export type AgentBillingPricingCatalog = {
     collectionMode: string;
     description: string;
     includedPerPropertyPerYear: Record<string, number>;
+    includedPackageItems?: AgentBillingIncludedPackageItem[];
     serviceFeePercent: number;
     serviceFeeExample: {
       weeklyRentAud: number;
@@ -102,6 +154,10 @@ export type AgentBillingPricingCatalog = {
     };
     /** Level 2 only — remaining included inspections per property this calendar year. */
     includedUsageByProperty?: AgentBillingIncludedUsageRow[];
+  };
+  platformBilling?: {
+    complimentaryAllServices?: boolean;
+    legacyFreeOpenInspections?: boolean;
   };
   inspections: {
     routineIncGstAud: number;

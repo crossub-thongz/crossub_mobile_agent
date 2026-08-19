@@ -244,20 +244,19 @@
   color: var(--foreground);
 }
 
-/* Rate cards */
+/* Rate cards — routine + open stay equal-width side by side on every viewport. */
 .pricing-rate-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 0.875rem;
-}
-
-@media (min-width: 640px) {
-  .pricing-rate-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .pricing-rate-card {
   position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 1rem;
   border: 1px solid var(--border);

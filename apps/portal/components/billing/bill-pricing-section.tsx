@@ -32,9 +32,11 @@ export function BillPricingSection({ catalog }: BillPricingSectionProps) {
           <div>
             <p className="text-sm font-semibold">How we charge</p>
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              {isLevel2
-                ? `Inspection and tribunal rates plus your ${catalog.level2.serviceFeePercent}% Full Service platform fee on monthly invoices.`
-                : 'Prepaid inspection and tribunal rates — pay when the inspector accepts (or at tribunal create).'}
+              {catalog.platformBilling?.complimentaryAllServices
+                ? 'Complimentary account — inspections, tribunal, letting fee, and Full Service are not charged.'
+                : isLevel2
+                  ? `Inspection and tribunal rates plus your ${catalog.level2.serviceFeePercent}% Full Service platform fee on monthly invoices.`
+                  : 'Prepaid inspection and tribunal rates — pay when the inspector accepts (or at tribunal create).'}
             </p>
           </div>
         </div>
