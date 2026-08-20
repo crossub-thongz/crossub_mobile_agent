@@ -24,6 +24,7 @@ import {
   createAgentOutgoingInspection,
   requestAgentOpenInspection,
   requestAgentRoutineInspection,
+  scheduleAgentSelfOpenInspection,
 } from '@/lib/crossub-api/agent-workflow-client';
 import {
   INSPECTION_TIME_REQUEST_HINT,
@@ -43,9 +44,6 @@ import {
   toDatetimeLocalValue,
 } from '@/lib/inspections/outgoing-schedule';
 import { openViewingsApi } from '@/lib/open-viewings-api';
-import {
-  validateCrossubOpenDateTimeLocal,
-} from '@/lib/open-inspection/open-inspection-saturday';
 import {
   buildAgentContactPrefill,
   buildIngoingInspectionPrefill,
@@ -72,6 +70,7 @@ import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
 import {
   getOpenListingContext,
   OPEN_CONDUCTED_BY_LABEL,
+  SELF_OPEN_INSPECTION_DISCLAIMER,
   type OpenConductedBy,
 } from '@/lib/open-inspection';
 import type { Inspection, Property } from '@/lib/types';
@@ -498,8 +497,9 @@ export function CreateInspectionWizard({
   const propertyIsVacant = property
     ? isPropertyVacant(property, currentLease ? [currentLease] : [])
     : false;
+  const standaloneOpen = !leasingCycleIdProp;
   const manualStandaloneCrossubOpen =
-    !leasingCycleIdProp && openConductedBy === 'crossub';
+    standaloneOpen && openConductedBy === 'crossub';
   const minOpenAvailableFrom = minLeasingCycleAvailableFrom();
   const isSelfOpen = openConductedBy === 'agent';
 
@@ -543,29 +543,58 @@ export function CreateInspectionWizard({
       if (inspectionType === 'OPEN') {
         if (!openConductedBy) throw new Error('Choose who conducts the open inspection');
 
-        if (isSelfOpen && !leasingCycleIdProp) {
-          if (leasingCycle?.id) {
-            throw new Error('An active letting already exists for this property');
+        if (isSelfOpen) {
+          if (standaloneOpen && !propertyIsVacant && openTenantMovedOut === null) {
+            throw new Error('Select whether the tenant has moved out');
           }
-          const prefill = buildLeasingCyclePrefill(property, currentLease);
-          const rent = Number(prefill.rentPerWeek);
-          if (!rent || rent <= 0) {
-            throw new Error('Set weekly rent on the property before creating a letting');
+          const rent = Number(openPreferredRentPerWeek);
+          if (standaloneOpen) {
+            if (!rent || rent <= 0) throw new Error('Preferred rent is required');
+            if (!openPreferredAvailableFrom) throw new Error('Available from date is required');
+            if (openPreferredAvailableFrom < minOpenAvailableFrom) {
+              throw new Error(
+                `Available from must be at least ${LEASING_CYCLE_AVAILABLE_FROM_MIN_DAYS} days from today`,
+              );
+            }
           }
-          const tenantMovedOut = isPropertyVacant(
-            property,
-            currentLease ? [currentLease] : [],
-          );
-          const result = await createAgentLeasingCycle(property.id, {
-            rentPerWeek: rent,
-            availableFrom: new Date(prefill.availableFrom).toISOString(),
-            fixedTermWeeks: 52,
-            tenantMovedOut,
-            skipOpenInspection: true,
-            agentConductsOpenInspection: true,
+          if (!openPreferredStartLocal) {
+            throw new Error('Start date & time is required');
+          }
+          const start = new Date(openPreferredStartLocal);
+          if (Number.isNaN(start.getTime())) {
+            throw new Error('Start date & time is invalid');
+          }
+          const end = openPreferredEndLocal
+            ? new Date(openPreferredEndLocal)
+            : new Date(start.getTime() + 60 * 60 * 1000);
+          if (Number.isNaN(end.getTime()) || end <= start) {
+            throw new Error('End time must be after the start time');
+          }
+
+          let cycleId = leasingCycleIdProp ?? leasingCycle?.id ?? null;
+          if (!cycleId) {
+            const fixedTermWeeks = resolveStandaloneOpenLeaseTermWeeks(
+              openLeaseTermChoice,
+              openCustomLeaseTermWeeks,
+            );
+            const created = await createAgentLeasingCycle(property.id, {
+              rentPerWeek: rent,
+              availableFrom: new Date(openPreferredAvailableFrom).toISOString(),
+              fixedTermWeeks,
+              tenantMovedOut: propertyIsVacant ? true : Boolean(openTenantMovedOut),
+              skipOpenInspection: true,
+              agentConductsOpenInspection: true,
+            });
+            cycleId = created.id;
+          }
+
+          await scheduleAgentSelfOpenInspection(property.id, cycleId, {
+            preferredStartTime: start.toISOString(),
+            preferredEndTime: end.toISOString(),
+            preferredNotes: openPreferredNotes.trim() || undefined,
           });
-          toast.success('New leasing created — you conduct the open inspection');
-          await finalizeAgentSelfOpenLeasing(result.id, rent);
+          toast.success('Self open inspection scheduled');
+          await finalizeAgentSelfOpenLeasing(cycleId, rent || 0);
           return;
         }
 
@@ -968,8 +997,8 @@ export function CreateInspectionWizard({
                   onAcknowledgedChange={setOpenAcknowledged}
                   tenantNotified={openTenantNotified}
                   onTenantNotifiedChange={setOpenTenantNotified}
-                  showTenantMovedOut={manualStandaloneCrossubOpen && !propertyIsVacant}
-                  showListingFields={manualStandaloneCrossubOpen}
+                  showTenantMovedOut={standaloneOpen && !propertyIsVacant}
+                  showListingFields={standaloneOpen}
                   tenantMovedOut={openTenantMovedOut}
                   onTenantMovedOutChange={setOpenTenantMovedOut}
                   preferredRentPerWeek={openPreferredRentPerWeek}
@@ -1139,7 +1168,7 @@ function OpenInspectionForm({
   tenantNotified: boolean;
   onTenantNotifiedChange: (v: boolean) => void;
   showTenantMovedOut?: boolean;
-  /** Standalone CROSSUB open — rent / term / available-from (independent of tenant-moved-out). */
+  /** Standalone open from Properties — rent / term / available-from. */
   showListingFields?: boolean;
   tenantMovedOut: boolean | null;
   onTenantMovedOutChange: (v: boolean) => void;
@@ -1173,10 +1202,19 @@ function OpenInspectionForm({
               </button>
             ))}
           </div>
+          {conductedBy === 'crossub' ? (
+            <p className="text-muted-foreground text-[11px]">
+              The $55 inc GST open-inspection fee applies after the inspector accepts the job.
+            </p>
+          ) : conductedBy === 'agent' ? (
+            <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+              {SELF_OPEN_INSPECTION_DISCLAIMER}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
-      {conductedBy === 'crossub' ? (
+      {conductedBy ? (
         <>
           {showTenantMovedOut ? (
             <div className="space-y-2">
@@ -1209,7 +1247,9 @@ function OpenInspectionForm({
               </div>
               {tenantMovedOut === false ? (
                 <p className="text-amber-700 dark:text-amber-400 text-[11px]">
-                  The current tenant&apos;s details will appear on the job case for CROSSUB to contact them.
+                  {conductedBy === 'crossub'
+                    ? "The current tenant's details will appear on the job case for CROSSUB to contact them."
+                    : 'You must notify the current tenant of the open inspection date and time yourself.'}
                 </p>
               ) : null}
             </div>
@@ -1280,32 +1320,46 @@ function OpenInspectionForm({
               </Field>
             </>
           ) : null}
-          {/*
-            No asterisk on either field any more, in any mode. A CROSSUB open is requested,
-            not booked: the batch closes Wednesday noon, the inspector picks what they can
-            cover, and the route sets the times. The label says "preferred" because that is
-            now literally what it is — the planner weighs it to anchor where the drive
-            begins and to break ties, and the confirmation email says so when the route
-            could not get close.
-          */}
-          <Field label="Preferred start date & time (optional)">
+          <Field
+            label={
+              conductedBy === 'crossub'
+                ? 'Preferred start date & time (optional)'
+                : 'Start date & time *'
+            }
+          >
             <Input
               type="datetime-local"
               value={preferredStartLocal}
               onChange={(e) => onPreferredStartLocalChange(e.target.value)}
             />
-            {leasingRequestMode || conductedBy === 'crossub' ? (
+            {conductedBy === 'crossub' ? (
               <p className="text-muted-foreground mt-1 text-[11px]">
                 {OPEN_PREFERRED_TIME_HINT}
               </p>
-            ) : null}
+            ) : (
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                You set the viewing time. Any day of the week — Saturday is only required when
+                CROSSUB conducts.
+              </p>
+            )}
           </Field>
-          <Field label="Preferred end date & time (optional)">
+          <Field
+            label={
+              conductedBy === 'crossub'
+                ? 'Preferred end date & time (optional)'
+                : 'End date & time (optional)'
+            }
+          >
             <Input
               type="datetime-local"
               value={preferredEndLocal}
               onChange={(e) => onPreferredEndLocalChange(e.target.value)}
             />
+            {conductedBy === 'agent' ? (
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                Defaults to one hour after the start if left blank.
+              </p>
+            ) : null}
           </Field>
           <Field label="Notes (optional)">
             <Textarea
@@ -1316,9 +1370,11 @@ function OpenInspectionForm({
             />
           </Field>
           <p className="text-muted-foreground text-xs">
-            {leasingRequestMode
-              ? 'Choose a Saturday — CROSSUB assigns an inspector from the task pool.'
-              : 'CROSSUB open inspections are scheduled on Saturdays only.'}
+            {conductedBy === 'crossub'
+              ? leasingRequestMode
+                ? 'Choose a Saturday — CROSSUB assigns an inspector from the task pool.'
+                : 'CROSSUB open inspections are scheduled on Saturdays only.'
+              : 'You run this open yourself. Pick a time that suits you — it does not need to be a Saturday.'}
           </p>
         </>
       ) : null}

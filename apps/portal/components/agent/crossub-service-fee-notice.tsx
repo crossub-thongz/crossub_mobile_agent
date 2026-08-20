@@ -135,8 +135,9 @@ export function CrossubServiceFeeNotice({
         </p>
       </div>
       <p className="text-muted-foreground mt-2 text-xs">
-        Included per property each year: 3 routine, 1 ingoing, and 1 outgoing inspection. Open
-        inspections and tribunal are charged separately.{' '}
+        Included per property each year: 3 routine, 1 ingoing, and 1 outgoing inspection, plus
+        reference checks and the contract agreement. Open inspections and tribunal are charged
+        separately.{' '}
         <a href="/pricing" className="text-primary underline-offset-2 hover:underline">
           View pricing
         </a>

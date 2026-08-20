@@ -22,7 +22,7 @@ import {
   type AgentBillingCharge,
   type AgentBillingDefaultPaymentMethod,
 } from '@/lib/crossub-api/agent-billing-client';
-import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -32,11 +32,6 @@ const SERVICE_LABEL: Record<string, string> = {
   tribunal: 'Tribunal',
   service_fee: 'Full Service fee',
 };
-
-function formatWhen(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  return formatDate(iso);
-}
 
 function serviceLabel(raw: string): string {
   return SERVICE_LABEL[raw] ?? raw.replace(/_/g, ' ');
@@ -162,7 +157,7 @@ export function PlatformChargeDetailDialog({
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Created</span>
-                  <span className="font-medium">{formatWhen(row.createdAt)}</span>
+                  <span className="font-medium">{formatDateTime(row.createdAt)}</span>
                 </div>
                 {row.paidAt ? (
                   <div className="flex justify-between gap-3">

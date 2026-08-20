@@ -21,7 +21,7 @@ import {
   type AgentBillingMonthlyInvoice,
   type AgentBillingMonthlyInvoiceDetail,
 } from '@/lib/crossub-api/agent-billing-client';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -30,15 +30,30 @@ const SERVICE_LABEL: Record<string, string> = {
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
   service_fee: 'Full Service fee',
+  letting_fee: 'Letting fee',
 };
 
 function formatWhen(iso: string | null | undefined): string {
   if (!iso) return '—';
-  return new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium' }).format(new Date(iso));
+  return new Intl.DateTimeFormat('en-AU', {
+    dateStyle: 'medium',
+    timeZone: 'Australia/Sydney',
+  }).format(new Date(iso));
 }
 
 function serviceLabel(raw: string): string {
   return SERVICE_LABEL[raw] ?? raw.replace(/_/g, ' ');
+}
+
+/** "2 CROSSUB Demo Street (L2A), Haymarket Routine inspection" */
+function invoiceLineTitle(serviceType: string, description: string): string {
+  const service = serviceLabel(serviceType);
+  if (serviceType === 'service_fee') return service;
+  const marker = ' — ';
+  const idx = description.indexOf(marker);
+  if (idx === -1) return service;
+  const property = description.slice(idx + marker.length).trim();
+  return property ? `${property} ${service}` : service;
 }
 
 export type PlatformMonthlyInvoiceDialogState = {
@@ -173,12 +188,12 @@ export function PlatformMonthlyInvoiceDialog({
                 <span className="text-muted-foreground">Status</span>
                 <span className="font-medium capitalize">{detail.status}</span>
               </div>
-              {detail.periodToken ? (
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted-foreground">Billing period</span>
-                  <span className="font-medium">{detail.periodToken}</span>
-                </div>
-              ) : null}
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Billing period</span>
+                <span className="font-medium">
+                  {formatWhen(detail.periodStart)} – {formatWhen(detail.periodEnd)}
+                </span>
+              </div>
               {detail.dueDate ? (
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Due</span>
@@ -253,16 +268,25 @@ export function PlatformMonthlyInvoiceDialog({
                   {detail.lineItems.map((row) => (
                     <li key={row.id} className="flex items-start justify-between gap-3 p-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium">{serviceLabel(row.serviceType)}</p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">{row.description}</p>
+                        <p className="text-sm font-medium">
+                          {invoiceLineTitle(row.serviceType, row.description)}
+                        </p>
+                        {row.serviceType === 'service_fee' && row.description ? (
+                          <p className="text-muted-foreground mt-0.5 text-xs">{row.description}</p>
+                        ) : null}
                         {row.calculationDetail ? (
                           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                             {row.calculationDetail}
                           </p>
                         ) : null}
-                        {row.createdByName ? (
+                        {row.createdByName || row.createdAt ? (
                           <p className="text-muted-foreground mt-0.5 text-xs">
-                            Created by {row.createdByName}
+                            {[
+                              row.createdByName ? `Created by ${row.createdByName}` : null,
+                              row.createdAt ? `Created ${formatDateTime(row.createdAt)}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
                           </p>
                         ) : null}
                       </div>

@@ -39,7 +39,7 @@ function InspectionOnlyPricingDetails({ catalog }: { catalog: RegistrationPricin
         <li>Prepaid — pay after the inspector accepts the job</li>
         <li>Orders confirmed within 24 hours of payment; auto-refund if unaccepted</li>
         <li>
-          Open inspections:{' '}
+          Open inspections (when CROSSUB conducts):{' '}
           <strong className="text-foreground">
             {openInspectionRateLabel(catalog.inspections.openInspection)}
           </strong>
@@ -193,7 +193,7 @@ export function RegisterPricingPanel({
                           <p className="text-muted-foreground text-xs leading-relaxed">
                             Leasing, maintenance, accounting, messaging, and all property workflows.
                             Included routine, ingoing, and outgoing inspections per property each
-                            year.
+                            year, plus reference checks and the contract agreement.
                           </p>
                           {catalog.level2.serviceFeeExample ? (
                             <FullServiceFeeExample catalog={catalog} />

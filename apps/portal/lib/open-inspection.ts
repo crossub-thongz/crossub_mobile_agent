@@ -34,7 +34,7 @@ export const OPEN_CONDUCTED_BY_LABEL: Record<OpenConductedBy, string> = {
 };
 
 export const SELF_OPEN_INSPECTION_DISCLAIMER =
-  'If you conduct the open inspection yourself, CROSSUB is not responsible for contacting the tenant or arranging inspection times on your behalf. You must notify the tenant of the date and time yourself.';
+  'If you conduct the open inspection yourself, CROSSUB is not responsible for contacting the tenant or arranging inspection times on your behalf. You must notify the tenant of the date and time yourself. No CROSSUB open-inspection fee applies.';
 
 export const SELF_OPEN_NEW_LISTING_NOTE =
   'For a new listing, you are responsible for promoting the open inspection and contacting interested parties yourself. CROSSUB will not arrange timing or outreach on your behalf.';

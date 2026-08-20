@@ -564,7 +564,7 @@ export default function BillPage() {
                           row.createdByName ? `Created by ${row.createdByName}` : null,
                           row.paidAt
                             ? `Paid ${formatDateTime(row.paidAt)}`
-                            : `Created ${formatWhen(row.createdAt)}`,
+                            : `Created ${formatDateTime(row.createdAt)}`,
                         ]
                           .filter(Boolean)
                           .join(' · ')}

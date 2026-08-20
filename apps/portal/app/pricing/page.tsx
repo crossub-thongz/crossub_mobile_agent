@@ -4,9 +4,11 @@ import {
   Building2,
   CalendarCheck,
   DoorOpen,
+  FileText,
   Home,
   Loader2,
   Sparkles,
+  UserSearch,
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -18,6 +20,7 @@ import { PricingOrderHost } from '@/components/pricing/pricing-order-host';
 import { PricingRateCatalog } from '@/components/pricing/pricing-rate-catalog';
 import {
   fetchAgentBillingPricing,
+  level2IncludedPackageItems,
   openInspectionRateLabel,
   type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
@@ -182,11 +185,27 @@ export default function PricingPage() {
                       Inspections
                     </p>
                     <p className="text-sm font-semibold text-foreground">
-                      {isLevel2 ? 'Postpaid · monthly invoice' : 'Prepaid · pay on accept'}
+                      {catalog.platformBilling?.complimentaryAllServices
+                        ? 'Complimentary · no payment'
+                        : isLevel2
+                          ? 'Postpaid · monthly invoice'
+                          : 'Prepaid · pay on accept'}
                     </p>
                   </div>
                 </div>
               </div>
+            ) : null}
+
+            {catalog.platformBilling?.complimentaryAllServices ? (
+              <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-3 text-sm leading-relaxed text-emerald-900 dark:text-emerald-100">
+                Complimentary account — inspections, tribunal, letting fee, and Full Service are
+                not charged.
+              </p>
+            ) : catalog.platformBilling?.legacyFreeOpenInspections ? (
+              <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-4 py-3 text-sm leading-relaxed text-emerald-900 dark:text-emerald-100">
+                Open inspections stay free under your existing client arrangement. Other services
+                follow the rates below.
+              </p>
             ) : null}
 
             <PricingSection
@@ -198,14 +217,14 @@ export default function PricingPage() {
               delayClass="pricing-animate-in-delay-1"
             >
               <ul className="pricing-check-list">
-                <li>Place inspection orders anytime — no payment required upfront</li>
+                <li>Place inspection orders at anytime</li>
                 <li>
                   Pay after the inspector accepts the job (Bill page), or tribunal when opening a
                   case
                 </li>
-                <li>Open, routine, ingoing, outgoing, and tribunal per the rate cards below</li>
+                <li>Open, Routine, Ingoing, Outgoing, and Tribunal follow per the cards below</li>
                 <li>
-                  Open inspections:{' '}
+                  Open inspections (when CROSSUB conducts):{' '}
                   <strong className="text-foreground">
                     {openInspectionRateLabel(catalog.inspections.openInspection)}
                   </strong>
@@ -240,8 +259,28 @@ export default function PricingPage() {
                       <strong>{included.OUTGOING_INSPECTION}</strong> outgoing
                     </span>
                   </div>
+                  {level2IncludedPackageItems(catalog).length > 0 ? (
+                    <div className="mt-3">
+                      <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+                        Also included
+                      </p>
+                      <div className="pricing-chip-row">
+                        {level2IncludedPackageItems(catalog).map((item) => (
+                          <span key={item.key} className="pricing-chip">
+                            {item.key === 'contract_agreement' ? (
+                              <FileText className="size-3.5 text-violet-600 dark:text-violet-400" />
+                            ) : (
+                              <UserSearch className="size-3.5 text-violet-600 dark:text-violet-400" />
+                            )}
+                            {item.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-                    Inspections and tribunal are always charged separately.
+                    Inspections and tribunal are always charged separately. Reference checks and the
+                    contract agreement are included in Full Service.
                   </p>
                 </div>
               ) : null}
@@ -294,7 +333,7 @@ export default function PricingPage() {
               ) : null}
 
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/6 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-                <strong className="text-foreground">Open inspections:</strong>{' '}
+                <strong className="text-foreground">Open inspections (when CROSSUB conducts):</strong>{' '}
                 {openInspectionRateLabel(catalog.inspections.openInspection)}
                 {catalog.inspections.lettingFee?.summary
                   ? ` Letting fee: ${catalog.inspections.lettingFee.summary}`

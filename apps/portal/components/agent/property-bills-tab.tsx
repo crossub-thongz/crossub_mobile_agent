@@ -19,7 +19,7 @@ import {
   type AgentBillingDefaultPaymentMethod,
 } from '@/lib/crossub-api/agent-billing-client';
 import { ROUTES } from '@/constants/routes';
-import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -156,7 +156,7 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
                   <dl className="mt-3 grid gap-2 border-t border-border/60 pt-3 text-xs sm:grid-cols-2">
                     <div>
                       <dt className="text-muted-foreground">Created</dt>
-                      <dd className="font-medium">{formatDate(row.createdAt)}</dd>
+                      <dd className="font-medium">{formatDateTime(row.createdAt)}</dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">

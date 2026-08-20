@@ -5,17 +5,21 @@ import {
   CalendarCheck,
   ClipboardList,
   DoorOpen,
+  FileText,
   Gavel,
   Home,
   Info,
   Plus,
   Sparkles,
+  UserSearch,
   Zap,
 } from 'lucide-react';
 
 import type { PricingOrderActions } from '@/components/pricing/pricing-order-host';
 import { Button } from '@/components/ui/button';
 import {
+  level2IncludedPackageItems,
+  openInspectionIncGstAud,
   openInspectionIsFree,
   openInspectionRateLabel,
   type AgentBillingPricingCatalog,
@@ -145,12 +149,16 @@ export function PricingRateCatalog({
   orderActions?: PricingOrderActions;
 }) {
   const openInspection = catalog.inspections.openInspection;
-  const openExampleFirst =
-    openInspection?.exampleRent500FirstIncGstAud ?? openInspection?.exampleRent500IncGstAud;
-  const openExampleFourth = openInspection?.exampleRent500FourthIncGstAud;
+  const openIsFree = openInspectionIsFree(openInspection, catalog.platformBilling);
+  const openAmount = openInspectionIncGstAud(
+    openInspection,
+    catalog.inspections.routineIncGstAud,
+  );
   const included = catalog.level2.includedPerPropertyPerYear;
+  const includedPackage = level2IncludedPackageItems(catalog);
   const example = catalog.level2.serviceFeeExample;
   const tribunal = catalog.inspections.tribunal;
+  const complimentary = catalog.platformBilling?.complimentaryAllServices === true;
 
   return (
     <div className={cn('pricing-page space-y-5', className)}>
@@ -165,12 +173,13 @@ export function PricingRateCatalog({
           >
             <ul className="pricing-check-list">
               <li>Prepaid — pay after the inspector accepts the job</li>
-              <li>Open, routine, ingoing, outgoing, and tribunal per the rate cards below</li>
+              <li>Open, Routine, Ingoing, Outgoing, and Tribunal follow per the cards below</li>
               <li>
-                Open inspections:{' '}
+                Open inspections (when CROSSUB conducts):{' '}
                 <strong className="text-foreground">
                   {openInspectionRateLabel(openInspection)}
                 </strong>
+                . Self-conducted opens are not billed.
               </li>
             </ul>
           </PricingSection>
@@ -201,13 +210,33 @@ export function PricingRateCatalog({
                     <strong>{included.OUTGOING_INSPECTION}</strong> outgoing
                   </span>
                 </div>
+                {includedPackage.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+                      Also included
+                    </p>
+                    <div className="pricing-chip-row">
+                      {includedPackage.map((item) => (
+                        <span key={item.key} className="pricing-chip">
+                          {item.key === 'contract_agreement' ? (
+                            <FileText className="size-3.5 text-violet-600 dark:text-violet-400" />
+                          ) : (
+                            <UserSearch className="size-3.5 text-violet-600 dark:text-violet-400" />
+                          )}
+                          {item.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-                  Inspections and tribunal are always charged separately.
+                  Inspections and tribunal are always charged separately. Reference checks and the
+                  contract agreement are included in Full Service.
                 </p>
               </div>
             ) : null}
 
-            {example ? (
+            {example && !complimentary ? (
               <div className="pricing-callout">
                 <div className="flex items-center gap-2">
                   <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
@@ -250,65 +279,39 @@ export function PricingRateCatalog({
             </div>
             <p className="font-medium">Routine inspection</p>
             <p className="pricing-rate-card__price mt-1">
-              {formatCurrency(catalog.inspections.routineIncGstAud)}
+              {complimentary ? 'Complimentary' : formatCurrency(catalog.inspections.routineIncGstAud)}
             </p>
-            <p className="text-muted-foreground mt-0.5 text-xs">inc GST · in-person only</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {complimentary ? 'not charged for this account' : 'inc GST · in-person only'}
+            </p>
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
               Tenant self routine inspections are not charged.
             </p>
             <PricingAddButton onClick={orderActions?.addRoutine} label="Add routine" />
           </div>
 
-          <div className="pricing-rate-card pricing-rate-card--wide" data-rate="open">
+          <div className="pricing-rate-card" data-rate="open">
             <div className="pricing-rate-card__icon">
               <DoorOpen className="size-4" />
             </div>
             <p className="font-medium">Open inspection</p>
-            {openInspectionIsFree(openInspection) ? (
-              <>
-                <p className="pricing-rate-card__price mt-1">Free</p>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  {openInspection?.summary ??
-                    'Open inspections are not charged. A letting fee applies only once the property is let through CROSSUB.'}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  Percentage of weekly rent, counted per property (each occurrence in a leasing cycle).
-                </p>
-                <div className="pricing-tier-split">
-                  <div className="pricing-tier" data-tier="standard">
-                    <p className="pricing-tier__label">1st · 2nd · 3rd</p>
-                    <p className="pricing-tier__value">
-                      {openInspection?.firstThree ?? '50% of weekly rent + GST'}
-                    </p>
-                  </div>
-                  <div className="pricing-tier" data-tier="premium">
-                    <p className="pricing-tier__label">4th onwards</p>
-                    <p className="pricing-tier__value">
-                      {openInspection?.fourthOnwards ?? '100% of weekly rent + GST'}
-                    </p>
-                  </div>
-                </div>
-                {openExampleFirst != null || openExampleFourth != null ? (
-                  <div className="pricing-example-box">
-                    {openExampleFirst != null ? (
-                      <p>
-                        e.g. $500/week rent — 1st open inspection (50%) ={' '}
-                        <strong>{formatCurrency(openExampleFirst)}</strong> inc GST
-                      </p>
-                    ) : null}
-                    {openExampleFourth != null ? (
-                      <p className={openExampleFirst != null ? 'mt-1' : undefined}>
-                        e.g. $500/week rent — 4th open inspection onwards (100%) ={' '}
-                        <strong>{formatCurrency(openExampleFourth)}</strong> inc GST
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </>
-            )}
+            <p className="pricing-rate-card__price mt-1">
+              {complimentary ? 'Complimentary' : openIsFree ? 'Free' : formatCurrency(openAmount)}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {complimentary
+                ? 'not charged for this account'
+                : openIsFree
+                  ? 'existing client arrangement'
+                  : 'inc GST · same rate as routine'}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              {complimentary
+                ? 'not charged for this account'
+                : openIsFree && catalog.inspections.lettingFee
+                  ? 'Letting fee still applies if CROSSUB finds the tenant.'
+                  : 'Level 1 prepaid on inspector accept · Level 2 on the monthly invoice.'}
+            </p>
             <PricingAddButton onClick={orderActions?.addOpen} label="Add open inspection" />
           </div>
 
@@ -324,7 +327,7 @@ export function PricingRateCatalog({
               <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                 {catalog.inspections.lettingFee.chargedWhen}
               </p>
-              {catalog.inspections.lettingFee.exampleRent500IncGstAud != null ? (
+              {catalog.inspections.lettingFee.exampleRent500IncGstAud != null && !complimentary ? (
                 <div className="pricing-example-box mt-2">
                   <p>
                     e.g. $500/week rent ={' '}
@@ -337,6 +340,22 @@ export function PricingRateCatalog({
               ) : null}
             </div>
           ) : null}
+
+          {includedPackage.map((item) => (
+            <div key={item.key} className="pricing-rate-card" data-rate={item.key}>
+              <div className="pricing-rate-card__icon">
+                {item.key === 'contract_agreement' ? (
+                  <FileText className="size-4" />
+                ) : (
+                  <UserSearch className="size-4" />
+                )}
+              </div>
+              <p className="font-medium">{item.label}</p>
+              <p className="pricing-rate-card__price mt-1">{item.feeLabel}</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">Full Service package</p>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">{item.summary}</p>
+            </div>
+          ))}
         </div>
 
         <div className="pricing-field-inspection-order">
@@ -376,17 +395,31 @@ export function PricingRateCatalog({
           </div>
           <p className="font-medium">Tribunal</p>
           <p className="pricing-rate-card__price mt-1">
-            {formatCurrency(tribunal.standardIncGstAud)}{' '}
-            <span className="text-muted-foreground text-sm font-normal">inc GST</span>
+            {complimentary ? (
+              'Complimentary'
+            ) : (
+              <>
+                {formatCurrency(tribunal.standardIncGstAud)}{' '}
+                <span className="text-muted-foreground text-sm font-normal">inc GST</span>
+              </>
+            )}
           </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            Ex GST: {formatCurrency(tribunal.standardExGstAud)}
-          </p>
-          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            Standard session includes {tribunal.includedHours} hours. Additional time{' '}
-            {formatCurrency(tribunal.extraHourlyIncGstAud)}/hr inc GST (
-            {formatCurrency(tribunal.extraHourlyExGstAud)}/hr ex GST).
-          </p>
+          {complimentary ? (
+            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+              Not charged for this account.
+            </p>
+          ) : (
+            <>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Ex GST: {formatCurrency(tribunal.standardExGstAud)}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                Standard session includes {tribunal.includedHours} hours. Additional time{' '}
+                {formatCurrency(tribunal.extraHourlyIncGstAud)}/hr inc GST (
+                {formatCurrency(tribunal.extraHourlyExGstAud)}/hr ex GST).
+              </p>
+            </>
+          )}
           <PricingAddButton onClick={orderActions?.addTribunal} label="Add tribunal" />
         </div>
 
@@ -396,9 +429,13 @@ export function PricingRateCatalog({
               <Building2 className="size-4" />
             </div>
             <p className="font-medium">Full Service platform fee</p>
-            <p className="pricing-rate-card__price mt-1">{catalog.level2.serviceFeePercent}%</p>
+            <p className="pricing-rate-card__price mt-1">
+              {complimentary ? 'Complimentary' : `${catalog.level2.serviceFeePercent}%`}
+            </p>
             <p className="text-muted-foreground mt-0.5 text-xs">
-              of agent management income (ex GST) · invoiced monthly
+              {complimentary
+                ? 'not charged for this account'
+                : 'of agent management income (ex GST) · invoiced monthly'}
             </p>
           </div>
         ) : null}

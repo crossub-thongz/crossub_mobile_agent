@@ -1,8 +1,11 @@
 'use client';
 
-import { CalendarCheck, Check, DoorOpen, Home, Sparkles } from 'lucide-react';
+import { CalendarCheck, Check, DoorOpen, FileText, Home, Sparkles, UserSearch } from 'lucide-react';
 
-import type { AgentBillingPricingCatalog } from '@/lib/crossub-api/agent-billing-client';
+import {
+  type AgentBillingPricingCatalog,
+  level2IncludedPackageItems,
+} from '@/lib/crossub-api/agent-billing-client';
 import { formatCurrency } from '@/lib/utils';
 
 export type RegistrationPricingCatalog = Omit<
@@ -74,8 +77,31 @@ export function FullServicePricingDetails({
               <strong>{included.OUTGOING_INSPECTION}</strong> outgoing
             </span>
           </div>
+          {level2IncludedPackageItems(catalog).length > 0 ? (
+            <div className="mt-3">
+              <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+                Also included
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {level2IncludedPackageItems(catalog).map((item) => (
+                  <span
+                    key={item.key}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-1 text-xs"
+                  >
+                    {item.key === 'contract_agreement' ? (
+                      <FileText className="size-3.5 text-violet-600 dark:text-violet-400" />
+                    ) : (
+                      <UserSearch className="size-3.5 text-violet-600 dark:text-violet-400" />
+                    )}
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-            Inspections and tribunal are always charged separately.
+            Inspections and tribunal are always charged separately. Reference checks and the
+            contract agreement are included in Full Service.
           </p>  
         </div>
       ) : null}
