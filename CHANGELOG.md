@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-20
+
+### Added
+- **A callable CROSSUB Account Manager — the "Account Manager" tab finally contains a human.** Geng's report: agencies still cannot phone their Account Manager directly from the app. The tab existed, but everything in it deflected — a message-thread button and Gii, with the AI literally styled "your Account Manager". No name, no number, because the API never sent one; the fields it did send (`propertyManager`) resolve to the agency's own portal login, not CROSSUB staff.
+
+  The API now ships `accountManagerName` / `accountManagerEmail` / `accountManagerPhone` on both the property and agency DTOs (the assigned CROSSUB officer, agency-dominant fallback), and the app consumes them in three places. The **Account Manager tab** leads with a contact card — initials, name, a prominent Call button through the existing `placePhoneCall` path, an Email button — with the message-thread and Gii buttons unchanged below it, so calling is added rather than swapped for messaging. The **Contacts tab and the property-scoped phonebook** grow a `CROSSUB Account Manager` group, ordered first, because the person an agency most needs to reach should not sort below their own tenants. Resolution: the scoped property's own officer wins, then the first agency carrying the fields, then the first property; a phone-less officer still gets a card with email plus "No direct line on file — message the team below." rather than nothing, and when no manager resolves at all the tab renders exactly as before.
+
+  Two shapes worth noting: the phonebook builder dedups by phone+name, and one officer covers many properties — so a property's own `am-property-*` row usually collapses into another's. The scoped list therefore falls back to any CROSSUB contact rather than showing the AM on only whichever property happened to build first. And the three fields are typed as a local intersection on the contract DTOs (the established `AgentInspection` idiom), so this ships ahead of the next `@crossub-thongz/api-contract` publish and compiles against the current one — an older API simply omits the fields and the card does not render. Type errors: 73 before, 73 after, none in touched files.
+
 ## 2026-08-18
 
 ### Added

@@ -5,8 +5,17 @@ import { fileToBase64WithProgress } from '@/lib/file-upload';
 
 import { crossub } from './client';
 
-export type AgentAgency = components['schemas']['AgentAgencyResponseDto'];
-export type AgentProperty = components['schemas']['AgentPropertyResponseDto'];
+/** The three `accountManager*` fields ship ahead of the next contract publish. */
+type AgentAccountManagerFields = {
+  accountManagerName?: string | null;
+  accountManagerEmail?: string | null;
+  accountManagerPhone?: string | null;
+};
+
+export type AgentAgency = components['schemas']['AgentAgencyResponseDto'] &
+  AgentAccountManagerFields;
+export type AgentProperty = components['schemas']['AgentPropertyResponseDto'] &
+  AgentAccountManagerFields;
 
 export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   createdAt?: string | null;

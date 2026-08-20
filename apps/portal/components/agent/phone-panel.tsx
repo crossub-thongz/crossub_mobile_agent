@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Phone, PhoneCall, Search, X } from 'lucide-react';
+import { Mail, Phone, PhoneCall, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
@@ -13,6 +13,7 @@ import {
   AGENT_PHONEBOOK_GROUP_LABEL,
   buildAgentPhonebook,
   phonebookContactsForProperty,
+  resolveAccountManagerContact,
   type AgentPhonebookGroup,
 } from '@/lib/agent-phonebook';
 import { placePhoneCall } from '@/lib/phone';
@@ -24,7 +25,21 @@ const TABS = [
   { id: 'account-manager' as const, label: 'Account Manager' },
 ];
 
-const CONTACT_GROUPS: AgentPhonebookGroup[] = ['tenant', 'landlord', 'agency'];
+const CONTACT_GROUPS: AgentPhonebookGroup[] = [
+  'crossub',
+  'tenant',
+  'landlord',
+  'agency',
+];
+
+function accountManagerInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'AM';
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
 
 export function PhonePanel({
   variant = 'sheet',
@@ -51,6 +66,13 @@ export function PhonePanel({
     if (!propertyId) return all;
     return phonebookContactsForProperty(propertyId, all);
   }, [properties, agencies, propertyId]);
+
+  const accountManager = useMemo(
+    () => resolveAccountManagerContact(properties, agencies, propertyId),
+    [properties, agencies, propertyId],
+  );
+  const accountManagerPhone = accountManager?.phone;
+  const accountManagerName = accountManager?.name;
 
   const propertyLabel = property ? formatPropertyFullAddress(property) : undefined;
 
@@ -172,6 +194,45 @@ export function PhonePanel({
         </div>
       ) : (
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+          {accountManager ? (
+            <div className="bg-card rounded-xl border p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                  {accountManagerInitials(accountManager.name)}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{accountManager.name}</p>
+                  <p className="text-muted-foreground truncate text-xs">
+                    CROSSUB Account Manager
+                  </p>
+                </div>
+              </div>
+              {accountManagerPhone ? (
+                <button
+                  type="button"
+                  onClick={() => handleCall(accountManagerPhone, accountManagerName)}
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  <PhoneCall className="size-4 shrink-0" />
+                  Call {accountManagerPhone}
+                </button>
+              ) : null}
+              {accountManager.email ? (
+                <a
+                  href={`mailto:${accountManager.email}`}
+                  className="border-border/60 hover:bg-muted/40 mt-2 flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition"
+                >
+                  <Mail className="size-4 shrink-0" />
+                  <span className="truncate">Email {accountManager.email}</span>
+                </a>
+              ) : null}
+              {!accountManagerPhone ? (
+                <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                  No direct line on file — message the team below.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <p className="text-muted-foreground text-xs leading-relaxed">
             Your CROSSUB Account Manager — message the team or ask Gii for help with this portfolio.
           </p>

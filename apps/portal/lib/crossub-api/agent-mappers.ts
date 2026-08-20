@@ -252,6 +252,9 @@ export function mapAgentProperty(
     openTasks: 0,
     inspectionStatus: '—',
     maintenanceStatus: '—',
+    accountManagerName: dto.accountManagerName ?? undefined,
+    accountManagerEmail: dto.accountManagerEmail ?? undefined,
+    accountManagerPhone: dto.accountManagerPhone ?? undefined,
   };
 }
 
@@ -303,6 +306,9 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     bankAccountName: asString(a.bankAccountName),
     bankBsb: asString(a.bankBsb),
     bankAccountNumber: asString(a.bankAccountNumber),
+    accountManagerName: asString(a.accountManagerName),
+    accountManagerEmail: asString(a.accountManagerEmail),
+    accountManagerPhone: asString(a.accountManagerPhone),
   }));
 }
 

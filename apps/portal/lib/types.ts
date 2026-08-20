@@ -142,6 +142,10 @@ export interface Property {
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;
+  /** The CROSSUB staff member assigned to this property — the agency's human contact. */
+  accountManagerName?: string;
+  accountManagerEmail?: string;
+  accountManagerPhone?: string;
 }
 
 export type AgencyStatus = 'ONBOARDING' | 'ACTIVE' | 'INACTIVE';
@@ -174,6 +178,10 @@ export interface Agency {
   bankAccountName?: string;
   bankBsb?: string;
   bankAccountNumber?: string;
+  /** The CROSSUB staff member assigned to this agency — fallback when a property has none. */
+  accountManagerName?: string;
+  accountManagerEmail?: string;
+  accountManagerPhone?: string;
 }
 
 export interface LeasingRecord {
