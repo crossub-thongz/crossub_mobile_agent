@@ -2,6 +2,9 @@
 
 ## 2026-08-20
 
+### Changed
+- **The Account Manager card says why there is no Call button, and names the number that is not the answer.** Daniel Zhou found the button dialling CROSSUB's published line — the tenant switchboard — because that is what one officer has saved as their phone. The API now withholds a company line (and any placeholder too short to be a real number) rather than handing it to an agency to dial, so the button is absent until a real direct line is on file. The card kept its old fallback copy, "No direct line on file", which reads like the feature is broken; it now says the Account Manager will call back from email or a message, and that the number on our website is the tenant line — which is the thing an agency reaching for the phone actually needs to know.
+
 ### Added
 - **A callable CROSSUB Account Manager — the "Account Manager" tab finally contains a human.** Geng's report: agencies still cannot phone their Account Manager directly from the app. The tab existed, but everything in it deflected — a message-thread button and Gii, with the AI literally styled "your Account Manager". No name, no number, because the API never sent one; the fields it did send (`propertyManager`) resolve to the agency's own portal login, not CROSSUB staff.
 

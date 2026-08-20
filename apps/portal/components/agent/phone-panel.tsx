@@ -228,7 +228,8 @@ export function PhonePanel({
               ) : null}
               {!accountManagerPhone ? (
                 <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                  No direct line on file — message the team below.
+                  No direct line published yet — email or message and your Account Manager
+                  will call you back. The number on our website is the tenant line.
                 </p>
               ) : null}
             </div>
