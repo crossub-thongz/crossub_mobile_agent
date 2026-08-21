@@ -104,6 +104,7 @@ import {
   mergeOpenSessionsIntoInspections,
 } from '@/lib/inspections/fetch';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
+import { isInspectionDone } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
@@ -688,15 +689,18 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         : [];
 
     // New-leasing OPEN creates both a ViewingSession (agent case) and an OPEN
-    // Inspection pool job (inspector task pool). Prefer the session row and hide
-    // the pool twin so Inspection cases don't show two opens for one create.
-    const propertiesWithOpenSessions = new Set(
-      [...portfolioRows, ...liveRows, ...added]
+    // Inspection pool job (inspector task pool). Prefer a *live* session row and
+    // hide the pool twin so one create is not listed twice. A completed/cancelled
+    // session must not hide a newly paid OPEN — that is why paid opens vanished
+    // from the Inspection tab while the bill deep-link still opened the case.
+    const propertiesWithLiveOpenSessions = new Set(
+      [...portfolioRows, ...liveRows]
         .filter(
           (row) =>
             row.type === 'OPEN' &&
             row.source === 'open_viewing' &&
             !isDeletedInspection(row) &&
+            !isInspectionDone(row) &&
             row.propertyId,
         )
         .map((row) => row.propertyId),
@@ -705,7 +709,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       row.type === 'OPEN' &&
       row.source !== 'open_viewing' &&
       Boolean(row.propertyId) &&
-      propertiesWithOpenSessions.has(row.propertyId);
+      propertiesWithLiveOpenSessions.has(row.propertyId);
 
     const byId = new Map<string, Inspection>();
     for (const row of portfolioRows) {
@@ -721,11 +725,19 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     // (OPEN still waits on live inspections — it may only exist as a viewing session).
     // Keep a recently created routine/ingoing/outgoing so pay-at-create cases don't
     // vanish before the portfolio snapshot includes them.
+    // Keep fetched OPEN *pool* rows (bill deep-link / get-by-id) so they appear on
+    // the Inspection tab even when the viewing-session list omitted them.
     for (const row of added) {
       if (byId.has(row.id)) continue;
       if (isHiddenOpenPoolTwin(row)) continue;
       if (portfolio != null && row.type !== 'OPEN' && !isRecentAddedInspection(row)) continue;
-      if (apiInspections != null && row.type === 'OPEN') continue;
+      if (
+        apiInspections != null &&
+        row.type === 'OPEN' &&
+        row.source === 'open_viewing'
+      ) {
+        continue;
+      }
       byId.set(row.id, row);
     }
     return [...byId.values()].sort((a, b) => {

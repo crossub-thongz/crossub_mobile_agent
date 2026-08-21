@@ -166,12 +166,15 @@ export function mergeInspectionRows(
     .filter((r) => r.type === INSPECTION_RECORD_TYPE.OPEN)
     .map(mapInspectionRecordToView);
 
-  const activeSessions = sessions.filter(
-    (s) => s.sessionStatus !== SessionStatusEnum.CANCELLED,
+  const occupyingSessions = sessions.filter(
+    (s) =>
+      s.sessionStatus !== SessionStatusEnum.CANCELLED &&
+      s.sessionStatus !== SessionStatusEnum.CLOSED &&
+      !s.openReportGenerated,
   );
-  const sessionIds = new Set(activeSessions.map((s) => s.id));
+  const sessionIds = new Set(occupyingSessions.map((s) => s.id));
   const propertiesWithOpenSessions = new Set(
-    activeSessions
+    occupyingSessions
       .map(
         (s) =>
           s.propertyId ?? propertyIdByAddress.get(s.address.toLowerCase().trim()) ?? '',

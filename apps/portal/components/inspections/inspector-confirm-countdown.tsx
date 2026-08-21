@@ -4,15 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { cn } from '@/lib/utils';
 
@@ -49,7 +40,6 @@ export function InspectorConfirmCountdown({
   className?: string;
 }) {
   const [now, setNow] = useState(() => Date.now());
-  const [dialogOpen, setDialogOpen] = useState(true);
   const [expiring, setExpiring] = useState(false);
   const expireStartedRef = useRef(false);
 
@@ -110,53 +100,31 @@ export function InspectorConfirmCountdown({
   const timer = formatRemaining(remaining);
 
   return (
-    <>
-      <div
-        className={cn(
-          'rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3',
-          className,
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <Clock className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-400" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Inspector confirm timer</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              If no inspector confirms this job in 48 hours it will be closed and refunded.
-            </p>
-            <p className="mt-2 font-mono text-lg font-semibold tabular-nums tracking-wide">
-              {expiring ? (
-                <span className="inline-flex items-center gap-2 text-sm">
-                  <Loader2 className="size-4 animate-spin" />
-                  Closing…
-                </span>
-              ) : (
-                timer
-              )}
-            </p>
-          </div>
+    <div
+      className={cn(
+        'rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3',
+        className,
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <Clock className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-400" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Inspector confirm timer</p>
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+            If no inspector confirms this job in 48 hours it will be closed and refunded.
+          </p>
+          <p className="mt-2 font-mono text-lg font-semibold tabular-nums tracking-wide">
+            {expiring ? (
+              <span className="inline-flex items-center gap-2 text-sm">
+                <Loader2 className="size-4 animate-spin" />
+                Closing…
+              </span>
+            ) : (
+              timer
+            )}
+          </p>
         </div>
       </div>
-
-      <Dialog open={dialogOpen && !expired} onOpenChange={setDialogOpen}>
-        <DialogContent elevated className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Waiting for inspector confirm</DialogTitle>
-            <DialogDescription>
-              An inspector has 48 hours from when you placed this order to confirm the job.
-              If the timer runs out, the case is closed and the fee is refunded.
-            </DialogDescription>
-          </DialogHeader>
-          <p className="text-center font-mono text-3xl font-semibold tabular-nums tracking-wide">
-            {timer}
-          </p>
-          <DialogFooter>
-            <Button type="button" onClick={() => setDialogOpen(false)}>
-              Continue to case
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
