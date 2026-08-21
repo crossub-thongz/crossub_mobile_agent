@@ -207,7 +207,7 @@ export function RegisterConfirmPanel({
                 {openInspectionRateLabel(catalog.inspections.openInspection)}
               </strong>
             </li>
-            <li>Prepaid — pay after the inspector accepts the job</li>
+            <li>Prepaid — pay when you place the inspection order</li>
             <li>Inspection module only — upgrade to Full Service anytime</li>
           </ul>
         ) : null}

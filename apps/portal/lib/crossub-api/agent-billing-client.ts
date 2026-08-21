@@ -442,7 +442,7 @@ export async function preparePlatformCharge(
 }
 
 /**
- * Quote and pay a platform charge upfront — used for tribunal (inspections bill on inspector accept).
+ * Quote and pay a platform charge upfront — inspections and tribunal pay at create.
  * Returns null when billing is disabled or the service is included in Full Service allowance.
  * @throws when Stripe payment is required but cannot be completed inline (use preparePlatformCharge).
  */

@@ -88,8 +88,8 @@ export function resolveOpenPlatformPaymentInspectionId(args: {
 }
 
 /**
- * CROSSUB open in-case billing — same gate as ingoing: only after the inspector
- * claims/accepts. Creating or scheduling alone must not ask for payment.
+ * CROSSUB open in-case billing for leftover unpaid jobs. New orders are paid when
+ * created; this gate still covers staff-created jobs and older unpaid accepts.
  */
 export function isOpenPlatformPaymentActiveForCase(args: {
   inspection: Inspection;

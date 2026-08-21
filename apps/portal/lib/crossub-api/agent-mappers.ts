@@ -336,6 +336,13 @@ const INSPECTION_STATUS_LABEL: Record<AgentInspection['status'], string> = {
   [INSPECTION_STATUS.CANCELLED]: 'Cancelled',
 };
 
+function inspectionStatusLabel(dto: AgentInspection): string {
+  if (dto.unacceptedRefunded) return 'Refunded';
+  const type = INSPECTION_TYPE_VIEW[dto.type] ?? 'ROUTINE';
+  if (type === 'OPEN' && dto.status === INSPECTION_STATUS.CANCELLED) return 'Deleted';
+  return INSPECTION_STATUS_LABEL[dto.status] ?? dto.status;
+}
+
 function inspectionReportStatus(
   dto: AgentInspection,
 ): Inspection['reportStatus'] {
@@ -358,11 +365,10 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
         undefined,
       scheduledAt: i.scheduledDate ?? i.inspectionDate ?? undefined,
       moveInDate: i.moveInDate ?? undefined,
-      status:
-        type === 'OPEN' && i.status === INSPECTION_STATUS.CANCELLED
-          ? 'Deleted'
-          : (INSPECTION_STATUS_LABEL[i.status] ?? i.status),
+      status: inspectionStatusLabel(i),
       apiStatus: i.status,
+      inspectorConfirmDeadlineAt: i.inspectorConfirmDeadlineAt ?? undefined,
+      unacceptedRefunded: i.unacceptedRefunded === true,
       reportStatus: inspectionReportStatus(i),
       reportUrl: i.reportUrl ?? undefined,
       createdAt: i.createdAt ?? undefined,

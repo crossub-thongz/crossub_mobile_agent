@@ -152,7 +152,7 @@ export async function requestAgentOpenInspection(
  */
 export async function requestAgentRoutineInspection(
   propertyId: string,
-  body: { flow?: 'self' | 'in_person'; note?: string } = {},
+  body: { flow?: 'self' | 'in_person'; note?: string; platformChargeId?: string } = {},
 ): Promise<AgentWorkflowCreateResult> {
   return agentFetch(`${base(propertyId)}/inspection/routine`, {
     method: 'POST',

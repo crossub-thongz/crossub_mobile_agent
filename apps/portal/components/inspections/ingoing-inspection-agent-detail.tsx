@@ -57,6 +57,7 @@ import {
 } from '@/lib/ingoing-inspection-display';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
+import { InspectorConfirmCountdown } from '@/components/inspections/inspector-confirm-countdown';
 import { InspectionViewPaymentButton } from '@/components/billing/inspection-view-payment-button';
 import { isFieldInspectionPlatformPaymentActive } from '@/lib/billing/inspection-platform-payment';
 import type { InspectionDetail, InspectionRecord, OnSiteProgression } from '@/lib/inspections-types';
@@ -353,6 +354,21 @@ export function IngoingInspectionAgentDetail({
           active
         />
       ) : null}
+
+      <InspectorConfirmCountdown
+        inspectionId={snapshot.record?.id ?? inspection.id}
+        deadlineAt={
+          snapshot.record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt
+        }
+        refunded={
+          snapshot.record?.unacceptedRefunded === true || inspection.unacceptedRefunded === true
+        }
+        apiStatus={snapshot.record?.status ?? inspection.apiStatus}
+        onClosed={() => {
+          void refreshSnapshot();
+          void refresh();
+        }}
+      />
 
       <section className="rounded-2xl border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">

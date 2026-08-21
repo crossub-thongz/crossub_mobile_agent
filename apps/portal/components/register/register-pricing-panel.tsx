@@ -36,8 +36,10 @@ function InspectionOnlyPricingDetails({ catalog }: { catalog: RegistrationPricin
   return (
     <div className="border-t border-border/60 pt-4">
       <ul className="text-muted-foreground mb-4 space-y-1.5 text-xs leading-relaxed">
-        <li>Prepaid — pay after the inspector accepts the job</li>
-        <li>Orders confirmed within 24 hours of payment; auto-refund if unaccepted</li>
+        <li>Prepaid — pay when you place the inspection order</li>
+        <li>
+          If no inspector confirms within 48 hours, the job is closed and the fee is refunded
+        </li>
         <li>
           Open inspections (when CROSSUB conducts):{' '}
           <strong className="text-foreground">

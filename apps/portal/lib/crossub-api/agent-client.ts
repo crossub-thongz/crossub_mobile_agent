@@ -23,6 +23,8 @@ export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   moveInDate?: string | null;
   /** Prior inspector when staff reassigned a DRAFT job before work started. */
   previousInspectorName?: string | null;
+  inspectorConfirmDeadlineAt?: string | null;
+  unacceptedRefunded?: boolean;
 };
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
   closureReason?: string | null;

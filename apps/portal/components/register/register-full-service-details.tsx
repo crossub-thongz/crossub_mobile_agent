@@ -115,7 +115,7 @@ export function FullServicePricingDetails({
         </li>
         <li className="flex gap-2">
           <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
-          Orders confirmed within 24 hours; auto-refund if unaccepted (inspections &amp; tribunal)
+          Orders confirmed within 48 hours; auto-refund if no inspector confirms (inspections &amp; tribunal)
         </li>
       </ul>
     </div>

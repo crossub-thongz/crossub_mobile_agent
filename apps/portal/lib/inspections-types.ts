@@ -62,6 +62,10 @@ export interface InspectionRecord {
   photoCount: number
   createdAt: string
   updatedAt: string
+  /** ISO — 48h inspector-confirm window for prepaid orders (DRAFT only). */
+  inspectorConfirmDeadlineAt?: string | null
+  /** Case closed and prepaid fee refunded — no inspector confirmed in 48 hours. */
+  unacceptedRefunded?: boolean
 }
 
 export interface InspectionListResult {

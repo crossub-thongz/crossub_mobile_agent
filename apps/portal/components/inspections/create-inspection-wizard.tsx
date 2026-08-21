@@ -76,6 +76,12 @@ import {
 import type { Inspection, Property } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
+import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
+import { prepareInspectionOrderPayment } from '@/lib/billing/inspection-order-payment';
+import {
+  StripePaymentDialog,
+  type StripePaymentDialogState,
+} from '@/components/billing/stripe-payment-dialog';
 
 export type InspectionCreateType = 'OPEN' | 'INGOING' | 'OUTGOING' | 'ROUTINE';
 
@@ -225,6 +231,10 @@ export function CreateInspectionWizard({
   const [inspectionType, setInspectionType] = useState<InspectionCreateType | null>(initialType);
   const [propertyId, setPropertyId] = useState(validPreselected);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const pendingPaidCreateRef = useRef<((platformChargeId?: string) => Promise<void>) | null>(
+    null,
+  );
   const [prefillLoading, setPrefillLoading] = useState(false);
   const prefillSessionRef = useRef<string | null>(null);
   const agentDataRef = useRef({
@@ -531,6 +541,36 @@ export function CreateInspectionWizard({
     }
   };
 
+  const withInspectionOrderPayment = async (
+    serviceType: Parameters<typeof prepareInspectionOrderPayment>[0],
+    orderPropertyId: string,
+    run: (platformChargeId?: string) => Promise<void>,
+  ) => {
+    const prepared = await prepareInspectionOrderPayment(serviceType, orderPropertyId);
+    if (prepared.status === 'needs_card') {
+      pendingPaidCreateRef.current = run;
+      setPaymentDialog(prepared.dialog);
+      return;
+    }
+    await run(prepared.chargeId ?? undefined);
+  };
+
+  const handleInspectionPaymentSuccess = async () => {
+    const run = pendingPaidCreateRef.current;
+    const chargeId = paymentDialog?.chargeId;
+    pendingPaidCreateRef.current = null;
+    setPaymentDialog(null);
+    setSubmitting(true);
+    try {
+      await finalizeBillingChargePayment(chargeId);
+      await run?.(chargeId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not create inspection');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const submit = async () => {
     if (!property || !inspectionType) return;
     if (!apiConnected) {
@@ -614,23 +654,30 @@ export function CreateInspectionWizard({
             openPreferredStartLocal,
             openPreferredEndLocal,
           );
-          const result = await requestAgentOpenInspection(property.id, cycleId, {
-            ...preferred,
-            preferredNotes: openPreferredNotes.trim() || undefined,
-          });
-          toast.success(OPEN_REQUEST_SUBMITTED);
-          const inspection = await resolveCreatedOpenInspection(
+          await withInspectionOrderPayment(
+            'open_inspection',
             property.id,
-            result.openInspectionId,
-            cycleId,
+            async (platformChargeId) => {
+              const result = await requestAgentOpenInspection(property.id, cycleId, {
+                ...preferred,
+                preferredNotes: openPreferredNotes.trim() || undefined,
+                ...(platformChargeId ? { platformChargeId } : {}),
+              });
+              toast.success(OPEN_REQUEST_SUBMITTED);
+              const inspection = await resolveCreatedOpenInspection(
+                property.id,
+                result.openInspectionId,
+                cycleId,
+              );
+              if (inspection) {
+                registerInspection(inspection);
+                onCreated?.({ inspectionId: inspection.id, inspection });
+              } else {
+                onCreated?.({});
+              }
+              await refresh();
+            },
           );
-          if (inspection) {
-            registerInspection(inspection);
-            onCreated?.({ inspectionId: inspection.id, inspection });
-          } else {
-            onCreated?.({});
-          }
-          await refresh();
           return;
         }
 
@@ -669,39 +716,46 @@ export function CreateInspectionWizard({
             openLeaseTermChoice,
             openCustomLeaseTermWeeks,
           );
-          let cycleId = leasingCycle?.id;
-          if (!cycleId) {
-            const created = await createAgentLeasingCycle(property.id, {
-              rentPerWeek: rent,
-              availableFrom: new Date(openPreferredAvailableFrom).toISOString(),
-              fixedTermWeeks,
-              tenantMovedOut: true,
-              // Avoid a duplicate OPEN pool job — we request open explicitly below.
-              skipOpenInspection: true,
-            });
-            cycleId = created.id;
-          }
-          const result = await requestAgentOpenInspection(property.id, cycleId!, {
-            ...preferred,
-            preferredNotes: openPreferredNotes.trim() || undefined,
-          });
-          toast.success(
-            leasingCycle?.id
-              ? OPEN_REQUEST_SUBMITTED
-              : `New leasing created — `,
-          );
-          const inspection = await resolveCreatedOpenInspection(
+          await withInspectionOrderPayment(
+            'open_inspection',
             property.id,
-            result.openInspectionId,
-            cycleId!,
+            async (platformChargeId) => {
+              let cycleId = leasingCycle?.id;
+              if (!cycleId) {
+                const created = await createAgentLeasingCycle(property.id, {
+                  rentPerWeek: rent,
+                  availableFrom: new Date(openPreferredAvailableFrom).toISOString(),
+                  fixedTermWeeks,
+                  tenantMovedOut: true,
+                  // Avoid a duplicate OPEN pool job — we request open explicitly below.
+                  skipOpenInspection: true,
+                });
+                cycleId = created.id;
+              }
+              const result = await requestAgentOpenInspection(property.id, cycleId!, {
+                ...preferred,
+                preferredNotes: openPreferredNotes.trim() || undefined,
+                ...(platformChargeId ? { platformChargeId } : {}),
+              });
+              toast.success(
+                leasingCycle?.id
+                  ? OPEN_REQUEST_SUBMITTED
+                  : `New leasing created — `,
+              );
+              const inspection = await resolveCreatedOpenInspection(
+                property.id,
+                result.openInspectionId,
+                cycleId!,
+              );
+              if (inspection) {
+                registerInspection(inspection);
+                onCreated?.({ inspectionId: inspection.id, inspection });
+              } else {
+                onCreated?.({});
+              }
+              await refresh();
+            },
           );
-          if (inspection) {
-            registerInspection(inspection);
-            onCreated?.({ inspectionId: inspection.id, inspection });
-          } else {
-            onCreated?.({});
-          }
-          await refresh();
           return;
         }
 
@@ -731,26 +785,41 @@ export function CreateInspectionWizard({
         const standaloneLeaseTermWeeks = manualStandaloneCrossubOpen
           ? resolveStandaloneOpenLeaseTermWeeks(openLeaseTermChoice, openCustomLeaseTermWeeks)
           : null;
-        const session = await openViewingsApi.create({
-          propertyId: property.id,
-          startTime: start,
-          endTime: end,
-          shortNote: openConductedBy === 'crossub' ? openPreferredNotes : undefined,
-          agentName: agentContact.agentName || undefined,
-          agentPhone: agentContact.agentPhone || undefined,
-          agentRole: 'leasing_agent',
-          ...(manualStandaloneCrossubOpen && openTenantMovedOut != null
-            ? {
-                tenantMovedOut: openTenantMovedOut,
-                preferredRentPerWeek: Number(openPreferredRentPerWeek),
-                preferredLeaseTerm: `${standaloneLeaseTermWeeks} weeks`,
-                preferredAvailableFrom: new Date(openPreferredAvailableFrom).toISOString(),
-              }
-            : {}),
-        });
-        const view = mapOpenSessionToInspection(session, property.id);
-        toast.success('Open inspection requested');
-        finalizeInspectionCreate(view);
+        const createStandaloneViewing = async () => {
+          const session = await openViewingsApi.create({
+            propertyId: property.id,
+            startTime: start,
+            endTime: end,
+            shortNote: openConductedBy === 'crossub' ? openPreferredNotes : undefined,
+            agentName: agentContact.agentName || undefined,
+            agentPhone: agentContact.agentPhone || undefined,
+            agentRole: 'leasing_agent',
+            ...(manualStandaloneCrossubOpen && openTenantMovedOut != null
+              ? {
+                  tenantMovedOut: openTenantMovedOut,
+                  preferredRentPerWeek: Number(openPreferredRentPerWeek),
+                  preferredLeaseTerm: `${standaloneLeaseTermWeeks} weeks`,
+                  preferredAvailableFrom: new Date(openPreferredAvailableFrom).toISOString(),
+                }
+              : {}),
+          });
+          const view = mapOpenSessionToInspection(session, property.id);
+          toast.success(
+            openConductedBy === 'crossub'
+              ? 'Open inspection requested'
+              : 'Self open inspection scheduled',
+          );
+          finalizeInspectionCreate(view);
+        };
+        if (openConductedBy === 'crossub') {
+          await withInspectionOrderPayment(
+            'open_inspection',
+            property.id,
+            createStandaloneViewing,
+          );
+          return;
+        }
+        await createStandaloneViewing();
         return;
       }
 
@@ -760,38 +829,45 @@ export function CreateInspectionWizard({
         // tenancy they arranged, not a slot in CROSSUB's diary. Only the inspection time
         // moved to us (CRS-0068).
         if (!ingoing.moveInDate) throw new Error('Move-in date is required');
-        const created = await createAgentIngoingInspection(property.id, {
-          moveInDate: ingoing.moveInDate,
-          tenantName: ingoing.tenantName.trim(),
-          tenantEmail: ingoing.tenantEmail.trim() || undefined,
-          tenantPhone: ingoing.tenantPhone.trim() || undefined,
-          priority: ingoing.priority,
-          accessInstructions: ingoing.accessInstructions.trim() || undefined,
-          notes: ingoing.notes?.trim() || undefined,
-        });
-        let view: Inspection;
-        try {
-          const record = await inspectionsApi.get(created.id);
-          view = mapInspectionRecordToView(record);
-        } catch {
-          view = {
-            id: created.id,
-            trackingNumber: workflowCaseReferenceLabel(created.id, 'ingoing'),
-            type: 'INGOING',
-            propertyId: property.id,
-            propertyAddress: property.address,
-            // No time, and the fallback view must not invent one — an optimistic card
-            // showing "now" is the same fabrication as the server writing `createdAt`
-            // into the scheduled column.
-            status: 'Scheduled',
-            reportStatus: 'pending',
-            createdAt: new Date().toISOString(),
-            timeline: [],
-            source: 'inspection',
-          };
-        }
-        toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
-        finalizeInspectionCreate(view);
+        await withInspectionOrderPayment(
+          'ingoing_inspection',
+          property.id,
+          async (platformChargeId) => {
+            const created = await createAgentIngoingInspection(property.id, {
+              moveInDate: ingoing.moveInDate,
+              tenantName: ingoing.tenantName.trim(),
+              tenantEmail: ingoing.tenantEmail.trim() || undefined,
+              tenantPhone: ingoing.tenantPhone.trim() || undefined,
+              priority: ingoing.priority,
+              accessInstructions: ingoing.accessInstructions.trim() || undefined,
+              notes: ingoing.notes?.trim() || undefined,
+              ...(platformChargeId ? { platformChargeId } : {}),
+            });
+            let view: Inspection;
+            try {
+              const record = await inspectionsApi.get(created.id);
+              view = mapInspectionRecordToView(record);
+            } catch {
+              view = {
+                id: created.id,
+                trackingNumber: workflowCaseReferenceLabel(created.id, 'ingoing'),
+                type: 'INGOING',
+                propertyId: property.id,
+                propertyAddress: property.address,
+                // No time, and the fallback view must not invent one — an optimistic card
+                // showing "now" is the same fabrication as the server writing `createdAt`
+                // into the scheduled column.
+                status: 'Scheduled',
+                reportStatus: 'pending',
+                createdAt: new Date().toISOString(),
+                timeline: [],
+                source: 'inspection',
+              };
+            }
+            toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
+            finalizeInspectionCreate(view);
+          },
+        );
         return;
       }
 
@@ -812,6 +888,23 @@ export function CreateInspectionWizard({
          * whether the tenant self-conducts. The cadence comes from the property's state
          * (NSW 3/yr, VIC 2/yr) and each instance date from the account manager.
          */
+        if (routine.flow === 'in_person' && !existingRoutineSchedule) {
+          await withInspectionOrderPayment(
+            'routine_inspection',
+            property.id,
+            async (platformChargeId) => {
+              await requestAgentRoutineInspection(property.id, {
+                flow: routine.flow,
+                note: routine.note?.trim() || undefined,
+                ...(platformChargeId ? { platformChargeId } : {}),
+              });
+              toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
+              void refresh();
+              if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=ROUTINE`);
+            },
+          );
+          return;
+        }
         await requestAgentRoutineInspection(property.id, {
           flow: routine.flow,
           note: routine.note?.trim() || undefined,
@@ -830,30 +923,32 @@ export function CreateInspectionWizard({
          * would drive before anyone knew when the job would run, which is the same mistake
          * in a second field, and it is why the outgoing form's Inspector box is gone too.
          */
-        let inspectionId: string | undefined;
-        {
-          /**
-           * One path now, and the vacating case rides along as a note.
-           *
-           * The wizard used to fork here: with a vacating case it called
-           * `terminationApi.scheduleInspection` — a staff end-leasing route — with the
-           * agent's date. That fork is what made "who chose this time" have two different
-           * answers depending on which screen the agent came from. Both are requests now;
-           * the officer working the end-leasing case still schedules it, and the case
-           * reference travels with the request so they can find it.
-           */
-          const created = await createAgentOutgoingInspection(property.id, {
-            notes: vacatingCaseId
-              ? `${VACATING_CASE_NOTE_PREFIX} ${workflowCaseReferenceLabel(vacatingCaseId, 'end_leasing')}`
-              : undefined,
-            tenantName: property.tenantName?.trim() || undefined,
-            tenantEmail: property.tenantContact?.email?.trim() || undefined,
-            tenantPhone: property.tenantContact?.phone?.trim() || undefined,
-          });
-          inspectionId = created.id;
+        await withInspectionOrderPayment(
+          'outgoing_inspection',
+          property.id,
+          async (platformChargeId) => {
+            /**
+             * One path now, and the vacating case rides along as a note.
+             *
+             * The wizard used to fork here: with a vacating case it called
+             * `terminationApi.scheduleInspection` — a staff end-leasing route — with the
+             * agent's date. That fork is what made "who chose this time" have two different
+             * answers depending on which screen the agent came from. Both are requests now;
+             * the officer working the end-leasing case still schedules it, and the case
+             * reference travels with the request so they can find it.
+             */
+            const created = await createAgentOutgoingInspection(property.id, {
+              notes: vacatingCaseId
+                ? `${VACATING_CASE_NOTE_PREFIX} ${workflowCaseReferenceLabel(vacatingCaseId, 'end_leasing')}`
+                : undefined,
+              tenantName: property.tenantName?.trim() || undefined,
+              tenantEmail: property.tenantContact?.email?.trim() || undefined,
+              tenantPhone: property.tenantContact?.phone?.trim() || undefined,
+              ...(platformChargeId ? { platformChargeId } : {}),
+            });
+            const inspectionId = created.id;
 
-          let view: Inspection | null = null;
-          if (inspectionId) {
+            let view: Inspection | null = null;
             try {
               const record = await inspectionsApi.get(inspectionId);
               view = mapInspectionRecordToView(record);
@@ -872,16 +967,16 @@ export function CreateInspectionWizard({
                 source: 'inspection',
               };
             }
-          }
-          toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
-          if (view) {
-            finalizeInspectionCreate(view);
-          } else {
-            void refresh();
-            if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=OUTGOING`);
-          }
-          return;
-        }
+            toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
+            if (view) {
+              finalizeInspectionCreate(view);
+            } else {
+              void refresh();
+              if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=OUTGOING`);
+            }
+          },
+        );
+        return;
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not create inspection');
@@ -1114,6 +1209,16 @@ export function CreateInspectionWizard({
           Choose an inspection type and property to see the prefilled form.
         </p>
       )}
+      <StripePaymentDialog
+        state={paymentDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            pendingPaidCreateRef.current = null;
+            setPaymentDialog(null);
+          }
+        }}
+        onSuccess={() => void handleInspectionPaymentSuccess()}
+      />
     </div>
   );
 }
@@ -1204,7 +1309,7 @@ function OpenInspectionForm({
           </div>
           {conductedBy === 'crossub' ? (
             <p className="text-muted-foreground text-[11px]">
-              The $55 inc GST open-inspection fee applies after the inspector accepts the job.
+              The $55 inc GST open-inspection fee is charged when you place this order.
             </p>
           ) : conductedBy === 'agent' ? (
             <p className="text-amber-700 dark:text-amber-400 text-[11px]">

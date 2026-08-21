@@ -172,7 +172,7 @@ export function PricingRateCatalog({
             subtitle={catalog.level1.description}
           >
             <ul className="pricing-check-list">
-              <li>Prepaid — pay after the inspector accepts the job</li>
+              <li>Prepaid — pay when you place the inspection order</li>
               <li>Open, Routine, Ingoing, Outgoing, and Tribunal follow per the cards below</li>
               <li>
                 Open inspections (when CROSSUB conducts):{' '}
@@ -310,7 +310,7 @@ export function PricingRateCatalog({
                 ? 'not charged for this account'
                 : openIsFree && catalog.inspections.lettingFee
                   ? 'Letting fee still applies if CROSSUB finds the tenant.'
-                  : 'Level 1 prepaid on inspector accept · Level 2 on the monthly invoice.'}
+                  : 'Level 1 prepaid when you place the order · Level 2 on the monthly invoice.'}
             </p>
             <PricingAddButton onClick={orderActions?.addOpen} label="Add open inspection" />
           </div>

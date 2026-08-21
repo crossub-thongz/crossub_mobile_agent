@@ -219,7 +219,7 @@ export default function PricingPage() {
               <ul className="pricing-check-list">
                 <li>Place inspection orders at anytime</li>
                 <li>
-                  Pay after the inspector accepts the job (Bill page), or tribunal when opening a
+                  Pay when you place the inspection order, or tribunal when opening a
                   case
                 </li>
                 <li>Open, Routine, Ingoing, Outgoing, and Tribunal follow per the cards below</li>

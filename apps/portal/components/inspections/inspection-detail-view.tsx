@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { AgentFieldInspectionDetail } from '@/components/inspections/agent-field-inspection-detail';
+import { InspectorConfirmCountdown } from '@/components/inspections/inspector-confirm-countdown';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
 import { InspectionViewPaymentButton } from '@/components/billing/inspection-view-payment-button';
 import {
@@ -545,6 +546,32 @@ export function InspectionDetailView({
 
   return (
     <div className="space-y-5">
+      <InspectorConfirmCountdown
+        inspectionId={
+          poolInspectionRecord?.id ??
+          openBillingInspectionId ??
+          routineInspectionRecord?.id ??
+          insp.id
+        }
+        deadlineAt={
+          routineInspectionRecord?.inspectorConfirmDeadlineAt ??
+          poolInspectionRecord?.inspectorConfirmDeadlineAt ??
+          insp.inspectorConfirmDeadlineAt
+        }
+        refunded={
+          routineInspectionRecord?.unacceptedRefunded === true ||
+          poolInspectionRecord?.unacceptedRefunded === true ||
+          insp.unacceptedRefunded === true
+        }
+        apiStatus={
+          routineInspectionRecord?.status ??
+          poolInspectionRecord?.status ??
+          insp.apiStatus
+        }
+        onClosed={() => {
+          void refresh();
+        }}
+      />
       {insp.type === 'OPEN' && openPlatformPaymentActive ? (
         <InspectionPlatformPaymentPrompt
           inspectionId={openBillingInspectionId ?? insp.id}
@@ -591,7 +618,15 @@ export function InspectionDetailView({
               <span className="bg-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                 {INSPECTION_TYPE_LABEL[insp.type]}
               </span>
-              <StatusBadge label={insp.status} />
+              <StatusBadge
+                label={
+                  routineInspectionRecord?.unacceptedRefunded ||
+                  poolInspectionRecord?.unacceptedRefunded ||
+                  insp.unacceptedRefunded
+                    ? 'Refunded'
+                    : insp.status
+                }
+              />
             </div>
             <CaseAddressAssignedBar
               address={insp.propertyAddress}

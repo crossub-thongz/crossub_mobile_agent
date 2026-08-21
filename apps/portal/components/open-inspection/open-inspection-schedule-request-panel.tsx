@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { SaturdayDatetimeField } from '@/components/open-inspection/saturday-datetime-field';
+import {
+  StripePaymentDialog,
+  type StripePaymentDialogState,
+} from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +22,8 @@ import {
   OPEN_REQUEST_TITLE,
 } from '@/constants/open-batch';
 import { requestAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
+import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
+import { prepareInspectionOrderPayment } from '@/lib/billing/inspection-order-payment';
 import { finalizeAgentOpenInspectionSchedule } from '@/lib/open-inspection/finalize-agent-open-schedule';
 import {
   addHoursToDatetimeLocal,
@@ -47,6 +53,10 @@ export function OpenInspectionScheduleRequestPanel({
   const [keyCollectLocation, setKeyCollectLocation] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [startingNow, setStartingNow] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
+  const pendingPaidCreateRef = useRef<((platformChargeId?: string) => Promise<void>) | null>(
+    null,
+  );
 
   const parseDurationHours = (): number | null => {
     const hours = Number(durationHours);
@@ -64,18 +74,49 @@ export function OpenInspectionScheduleRequestPanel({
     body: Parameters<typeof requestAgentOpenInspection>[2],
     successMessage: string,
   ) => {
-    const result = await requestAgentOpenInspection(propertyId, cycleId, body);
-    toast.success(successMessage);
+    const run = async (platformChargeId?: string) => {
+      const result = await requestAgentOpenInspection(propertyId, cycleId, {
+        ...body,
+        ...(platformChargeId ? { platformChargeId } : {}),
+      });
+      toast.success(successMessage);
 
-    const inspectionId = await finalizeAgentOpenInspectionSchedule({
-      propertyId,
-      cycleId,
-      result,
-      registerInspection,
-      applyCycleView,
-      refresh,
-    });
-    onScheduled?.(inspectionId);
+      const inspectionId = await finalizeAgentOpenInspectionSchedule({
+        propertyId,
+        cycleId,
+        result,
+        registerInspection,
+        applyCycleView,
+        refresh,
+      });
+      onScheduled?.(inspectionId);
+    };
+
+    const prepared = await prepareInspectionOrderPayment('open_inspection', propertyId);
+    if (prepared.status === 'needs_card') {
+      pendingPaidCreateRef.current = run;
+      setPaymentDialog(prepared.dialog);
+      return;
+    }
+    await run(prepared.chargeId ?? undefined);
+  };
+
+  const handleOpenPaymentSuccess = async () => {
+    const run = pendingPaidCreateRef.current;
+    const chargeId = paymentDialog?.chargeId;
+    pendingPaidCreateRef.current = null;
+    setPaymentDialog(null);
+    setSubmitting(true);
+    try {
+      await finalizeBillingChargePayment(chargeId);
+      await run?.(chargeId);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Could not add this property to the open list',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const submit = async () => {
@@ -288,6 +329,16 @@ export function OpenInspectionScheduleRequestPanel({
           </Button>
         ) : null}
       </div>
+      <StripePaymentDialog
+        state={paymentDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            pendingPaidCreateRef.current = null;
+            setPaymentDialog(null);
+          }
+        }}
+        onSuccess={() => void handleOpenPaymentSuccess()}
+      />
     </section>
   );
 }

@@ -540,6 +540,10 @@ export interface Inspection {
   }[];
   /** Where this row was loaded from — inspection record vs open-viewing session. */
   source?: 'inspection' | 'open_viewing';
+  /** ISO — 48h inspector-confirm window for prepaid orders (DRAFT only). */
+  inspectorConfirmDeadlineAt?: string | null;
+  /** Case closed and prepaid fee refunded — no inspector confirmed in 48 hours. */
+  unacceptedRefunded?: boolean;
 }
 
 export type RentReviewWorkflowState =

@@ -19,7 +19,7 @@ export const REGISTER_SERVICE_LEVEL_LABEL: Record<AgentPortalServiceLevel, strin
 
 export const REGISTER_SERVICE_LEVEL_DESCRIPTION: Record<AgentPortalServiceLevel, string> = {
   LEVEL_1_INSPECTION_ONLY:
-    'Add properties and order inspections and tribunal support. Pay when the inspector accepts. Inspection module only — upgrade anytime for leasing, maintenance, and accounting.',
+    'Add properties and order inspections and tribunal support. Pay when you place the order. Inspection module only — upgrade anytime for leasing, maintenance, and accounting.',
   LEVEL_2_FULL_MANAGEMENT:
     'Full property management — inspections, leasing, maintenance, accounting, and more. Included routine/ingoing/outgoing inspections per property; monthly invoice for platform fees.',
 };

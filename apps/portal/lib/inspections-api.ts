@@ -109,4 +109,9 @@ export const inspectionsApi = {
     api
       .patch<{ inspection: InspectionRecord }>(`/inspections/${id}/reject-report`, input)
       .then((r) => r.inspection),
+
+  expireUnaccepted: (id: string): Promise<InspectionRecord> =>
+    api
+      .post<{ inspection: InspectionRecord }>(`/inspections/${id}/expire-unaccepted`, {})
+      .then((r) => r.inspection),
 }
