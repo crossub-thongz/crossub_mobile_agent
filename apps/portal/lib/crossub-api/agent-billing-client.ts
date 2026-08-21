@@ -57,12 +57,9 @@ export function platformChargeShowsAllowanceRemaining(
   >,
 ): boolean {
   if (!LEVEL2_ALLOWANCE_SERVICE_TYPES.has(row.serviceType)) return false;
+  if (row.includedInAllowance === true || row.status === 'included') return true;
   if (row.allowanceRemaining != null) return row.allowanceRemaining > 0;
-  return (
-    row.includedInAllowance === true ||
-    row.status === 'included' ||
-    Number(row.amount) === 0
-  );
+  return Number(row.amount) === 0;
 }
 
 /** Invoice amount: remaining included slots, or the price once none remain. */
