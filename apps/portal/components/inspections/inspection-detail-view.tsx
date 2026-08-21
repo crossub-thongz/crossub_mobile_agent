@@ -165,7 +165,19 @@ export function InspectionDetailView({
       })
       .catch(() => {
         if (cancelled) return;
-        setResolveState('missing');
+        return openViewingsApi
+          .get(inspectionId)
+          .then((session) => {
+            if (cancelled) return;
+            const mapped = mapOpenSessionToInspection(session);
+            registerInspection(mapped);
+            setFetchedBase(mapped);
+            setResolveState('ready');
+          })
+          .catch(() => {
+            if (cancelled) return;
+            setResolveState('missing');
+          });
       });
 
     return () => {

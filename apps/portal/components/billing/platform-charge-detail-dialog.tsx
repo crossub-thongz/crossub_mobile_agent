@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
 import type { StripePaymentDialogState } from '@/components/billing/stripe-payment-dialog';
+import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -70,7 +71,7 @@ export function PlatformChargeDetailDialog({
     }
 
     let cancelled = false;
-    setLoading(true);
+    if (!state?.charge) setLoading(true);
     void fetchAgentBillingCharge(chargeId)
       .then((row) => {
         if (!cancelled) setDetail(row);
@@ -88,7 +89,7 @@ export function PlatformChargeDetailDialog({
     return () => {
       cancelled = true;
     };
-  }, [chargeId, onOpenChange]);
+  }, [chargeId]);
 
   const row = detail ?? state?.charge ?? null;
   const payable = row?.status === 'awaiting_payment';
@@ -140,11 +141,11 @@ export function PlatformChargeDetailDialog({
             <DialogDescription>{row?.description ?? 'Loading bill details…'}</DialogDescription>
           </DialogHeader>
 
-          {loading || !row ? (
+          {loading && !row ? (
             <div className="flex justify-center py-10">
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
-          ) : (
+          ) : !row ? null : (
             <div className="space-y-4">
               <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
                 <div className="flex justify-between gap-3">
@@ -171,6 +172,17 @@ export function PlatformChargeDetailDialog({
                     <span className="font-medium">{row.createdByName}</span>
                   </div>
                 ) : null}
+                {row.jobCaseName ? (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Job case</span>
+                    <JobCaseReferenceLink
+                      charge={row}
+                      prefix=""
+                      className="text-right"
+                      onNavigate={() => onOpenChange(false)}
+                    />
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex gap-3 rounded-lg border border-sky-500/25 bg-sky-500/5 p-3 text-sm">
@@ -191,6 +203,16 @@ export function PlatformChargeDetailDialog({
                       <span className="text-muted-foreground">Property / job: </span>
                       <span>{row.description}</span>
                     </li>
+                    {row.jobCaseName ? (
+                      <li>
+                        <span className="text-muted-foreground">Job case: </span>
+                        <JobCaseReferenceLink
+                          charge={row}
+                          prefix=""
+                          onNavigate={() => onOpenChange(false)}
+                        />
+                      </li>
+                    ) : null}
                     {row.calculationDetail ? (
                       <li>
                         <span className="text-muted-foreground">Calculation: </span>

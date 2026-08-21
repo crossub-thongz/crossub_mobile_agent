@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
   PlatformChargeDetailDialog,
   type PlatformChargeDetailDialogState,
@@ -118,15 +119,24 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
             const paid = row.status === 'paid';
             return (
               <li key={row.id}>
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() =>
                     setChargeDialog({
                       charge: row,
                       defaultPaymentMethod,
                     })
                   }
-                  className="border-border/80 bg-card hover:border-primary/30 w-full rounded-2xl border p-4 text-left transition"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    setChargeDialog({
+                      charge: row,
+                      defaultPaymentMethod,
+                    });
+                  }}
+                  className="border-border/80 bg-card hover:border-primary/30 w-full cursor-pointer rounded-2xl border p-4 text-left transition"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 space-y-1">
@@ -142,6 +152,14 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
                         </span>
                       </div>
                       <p className="text-muted-foreground text-xs leading-snug">{row.description}</p>
+                      {row.jobCaseName ? (
+                        <p className="text-xs">
+                          <JobCaseReferenceLink
+                            charge={row}
+                            onNavigate={() => setChargeDialog(null)}
+                          />
+                        </p>
+                      ) : null}
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold tabular-nums">
@@ -188,7 +206,7 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
                     <CreditCard className="size-3.5" />
                     View details
                   </p>
-                </button>
+                </div>
               </li>
             );
           })}

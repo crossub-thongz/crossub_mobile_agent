@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PageIntro } from '@/components/agent/page-intro';
+import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
   PlatformChargeDetailDialog,
   type PlatformChargeDetailDialogState,
@@ -554,6 +555,11 @@ export default function BillPage() {
                         </span>
                       </div>
                       <p className="text-muted-foreground mt-1 text-sm">{row.description}</p>
+                      {row.jobCaseName ? (
+                        <p className="mt-1 text-sm">
+                          <JobCaseReferenceLink charge={row} />
+                        </p>
+                      ) : null}
                       {row.calculationDetail ? (
                         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                           {row.calculationDetail}

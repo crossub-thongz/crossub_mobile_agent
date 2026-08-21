@@ -16,6 +16,10 @@ export type AgentBillingCharge = {
   calculationSummary?: string | null;
   /** Present when this postpaid charge was rolled into a monthly invoice (Level 2). */
   monthlyInvoiceId?: string | null;
+  /** Linked job case reference, e.g. RI-6148518 or OP-3561029. */
+  jobCaseName?: string | null;
+  /** Case id to open — viewing session id for CROSSUB-conducted opens. */
+  jobCaseId?: string | null;
 };
 
 export type AgentBillingSummary = {

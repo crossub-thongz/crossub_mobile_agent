@@ -54,6 +54,7 @@ import {
   propertyInspectionFocusPath,
   readPropertyInspectionFocusId,
 } from '@/lib/property-inspection-navigation';
+import { readPropertyTribunalFocusId } from '@/lib/billing/job-case-focus';
 import { useAgentStore } from '@/lib/store';
 import type { Property } from '@/lib/types';
 import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
@@ -162,6 +163,7 @@ export default function PropertyDetailPage() {
   const arrearsSectionRef = useRef<HTMLElement | null>(null);
   const leasingFocusBond = isPropertyLeasingBondFocus(searchParams);
   const inspectionFocusId = readPropertyInspectionFocusId(searchParams);
+  const tribunalFocusId = readPropertyTribunalFocusId(searchParams);
 
   const openPropertyInspection = useCallback(
     (inspectionId: string) => {
@@ -208,6 +210,11 @@ export default function PropertyDetailPage() {
     setTab('Inspection');
     setSelectedInspectionId(inspectionFocusId);
   }, [inspectionFocusId, propertyTabs]);
+
+  useEffect(() => {
+    if (!tribunalFocusId || !propertyTabs.includes('Tribunal')) return;
+    setTab('Tribunal');
+  }, [tribunalFocusId, propertyTabs]);
 
   useEffect(() => {
     if (searchParams.get('focus') !== 'arrears' || tab !== 'Accounting') return;
@@ -584,6 +591,7 @@ export default function PropertyDetailPage() {
             inspections={tasks.inspections}
             tenantSelections={propertyLeasingCases}
             currentLease={currentLease}
+            focusCaseId={tribunalFocusId}
             onRefresh={() => void refresh()}
           />
         )}

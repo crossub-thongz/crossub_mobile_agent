@@ -84,15 +84,10 @@ export function PropertyInspectionTab({
   const [deleteTarget, setDeleteTarget] = useState<Inspection | null>(null);
   const [historyScope, setHistoryScope] = useState<PropertyHistoryScope>('completed');
 
-  const inspectionIdsKey = inspections
-    .map((row) => row.id)
-    .sort()
-    .join(',');
-
   useEffect(() => {
     if (!apiConnected || !propertyId) return;
     let cancelled = false;
-    const knownIds = new Set(inspectionIdsKey.split(',').filter(Boolean));
+    const knownIds = new Set(inspections.map((row) => row.id).filter(Boolean));
     void (async () => {
       try {
         const { schedule } = await routineInspectionApi.getByProperty(propertyId);
@@ -109,12 +104,12 @@ export function PropertyInspectionTab({
       } catch {
         /* schedule-only properties have nothing extra to show */
       }
-      if (!cancelled) await refresh();
     })();
     return () => {
       cancelled = true;
     };
-  }, [apiConnected, propertyId, refresh, registerInspection]);
+    // Only heal once per property visit — do not refresh the portfolio in a loop.
+  }, [apiConnected, propertyId, registerInspection]);
 
   const emptyDescription = isVacant
     ? VACANT_TENANCY_INSPECTIONS_HINT

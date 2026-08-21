@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { PropertyTribunalCasesTable } from '@/components/agent/property-tribunal-cases-table';
@@ -30,6 +30,7 @@ export function PropertyTribunalTab({
   inspections,
   tenantSelections,
   currentLease,
+  focusCaseId,
   onRefresh,
 }: {
   property: Property;
@@ -42,13 +43,18 @@ export function PropertyTribunalTab({
   inspections: Inspection[];
   tenantSelections: TenantSelectionCase[];
   currentLease?: LeasingRecord;
+  focusCaseId?: string | null;
   onRefresh?: () => void;
 }) {
   const { properties } = useAgentData();
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(focusCaseId ?? null);
   const [tribunalOpen, setTribunalOpen] = useState(false);
   const selectedCase =
     tribunalCases.find((row) => row.id === selectedCaseId) ?? null;
+
+  useEffect(() => {
+    if (focusCaseId) setSelectedCaseId(focusCaseId);
+  }, [focusCaseId]);
 
   return (
     <div className="space-y-4">
