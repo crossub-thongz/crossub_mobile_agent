@@ -12,6 +12,7 @@ export type AgentBillingCharge = {
   paidAt?: string | null;
   refundedAt?: string | null;
   voidedAt?: string | null;
+  voidReason?: string | null;
   createdAt: string;
   createdByName?: string | null;
   calculationDetail?: string | null;
@@ -22,6 +23,8 @@ export type AgentBillingCharge = {
   jobCaseName?: string | null;
   /** Case id to open — viewing session id for CROSSUB-conducted opens. */
   jobCaseId?: string | null;
+  /** True when this Level 2 job used a yearly included allowance slot. */
+  includedInAllowance?: boolean;
 };
 
 export type AgentBillingSummary = {

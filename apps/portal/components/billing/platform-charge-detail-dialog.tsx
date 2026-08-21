@@ -192,7 +192,11 @@ export function PlatformChargeDetailDialog({
                     <JobCaseReferenceLink
                       charge={row}
                       prefix=""
-                      className="text-right"
+                      className={cn(
+                        'text-right',
+                        (row.status === 'void' || row.status === 'refunded') &&
+                          'text-muted-foreground line-through',
+                      )}
                       onNavigate={() => onOpenChange(false)}
                     />
                   </div>
@@ -223,6 +227,11 @@ export function PlatformChargeDetailDialog({
                         <JobCaseReferenceLink
                           charge={row}
                           prefix=""
+                          className={
+                            row.status === 'void' || row.status === 'refunded'
+                              ? 'text-muted-foreground line-through'
+                              : undefined
+                          }
                           onNavigate={() => onOpenChange(false)}
                         />
                       </li>

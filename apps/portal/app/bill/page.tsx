@@ -542,7 +542,16 @@ export default function BillPage() {
                   <li key={entry.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-medium">{serviceLabel(row.serviceType)}</p>
+                        <p
+                          className={cn(
+                            'text-sm font-medium',
+                            row.status === 'void' || row.status === 'refunded'
+                              ? 'text-muted-foreground line-through'
+                              : null,
+                          )}
+                        >
+                          {serviceLabel(row.serviceType)}
+                        </p>
                         <span
                           className={cn(
                             'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize',
@@ -555,10 +564,24 @@ export default function BillPage() {
                           {row.collectionMode}
                         </span>
                       </div>
-                      <p className="text-muted-foreground mt-1 text-sm">{row.description}</p>
+                      <p
+                        className={cn(
+                          'text-muted-foreground mt-1 text-sm',
+                          (row.status === 'void' || row.status === 'refunded') && 'line-through',
+                        )}
+                      >
+                        {row.description}
+                      </p>
                       {row.jobCaseName ? (
                         <p className="mt-1 text-sm">
-                          <JobCaseReferenceLink charge={row} />
+                          <JobCaseReferenceLink
+                            charge={row}
+                            className={
+                              row.status === 'void' || row.status === 'refunded'
+                                ? 'text-muted-foreground line-through'
+                                : undefined
+                            }
+                          />
                         </p>
                       ) : null}
                       {row.calculationDetail ? (
@@ -578,7 +601,13 @@ export default function BillPage() {
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <p className="text-sm font-semibold tabular-nums">
+                      <p
+                        className={cn(
+                          'text-sm font-semibold tabular-nums',
+                          (row.status === 'void' || row.status === 'refunded') &&
+                            'text-muted-foreground line-through',
+                        )}
+                      >
                         {formatCurrency(row.amount)}
                       </p>
                       <div className="flex flex-wrap justify-end gap-2">

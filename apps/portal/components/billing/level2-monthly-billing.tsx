@@ -3,6 +3,7 @@
 import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import type {
   AgentBillingCharge,
   AgentBillingMonthlyInvoice,
@@ -35,6 +36,22 @@ export type Level2MonthGroup = {
 
 function serviceLabel(raw: string): string {
   return SERVICE_LABEL[raw] ?? raw.replace(/_/g, ' ');
+}
+
+function isNotCharged(row: AgentBillingCharge): boolean {
+  return row.status === 'void' || row.status === 'refunded';
+}
+
+function notChargedCaption(row: AgentBillingCharge): string {
+  if (row.status === 'refunded') return 'Refunded — not charged';
+  const reason = (row.voidReason ?? '').toLowerCase();
+  if (reason.includes('cancel') || reason.includes('deleted')) {
+    return 'Not charged — job cancelled';
+  }
+  if (reason.includes('inspector')) {
+    return 'Not charged — no inspector confirmed within 48 hours';
+  }
+  return 'Not charged';
 }
 
 function monthKeyFromIso(iso: string): string {
@@ -324,17 +341,36 @@ export function Level2MonthlyBillingList({
               </p>
             ) : (
               <ul className="divide-y">
-                {group.charges.map((row) => (
+                {group.charges.map((row) => {
+                  const struck = isNotCharged(row);
+                  return (
                   <li
                     key={row.id}
                     className="flex flex-wrap items-start justify-between gap-3 px-4 py-3"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{serviceLabel(row.serviceType)}</p>
-                      <p className="text-muted-foreground mt-0.5 text-sm">{row.description}</p>
-                      {row.status === 'void' ? (
+                    <div className={cn('min-w-0 flex-1', struck && 'text-muted-foreground')}>
+                      <p className={cn('text-sm font-medium', struck && 'line-through')}>
+                        {serviceLabel(row.serviceType)}
+                      </p>
+                      <p
+                        className={cn(
+                          'text-muted-foreground mt-0.5 text-sm',
+                          struck && 'line-through',
+                        )}
+                      >
+                        {row.description}
+                      </p>
+                      {row.jobCaseName ? (
+                        <p className="mt-1 text-sm">
+                          <JobCaseReferenceLink
+                            charge={row}
+                            className={struck ? 'text-muted-foreground line-through' : undefined}
+                          />
+                        </p>
+                      ) : null}
+                      {struck ? (
                         <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-                          Not charged — no inspector confirmed within 48 hours
+                          {notChargedCaption(row)}
                         </p>
                       ) : null}
                       {row.calculationDetail ? (
@@ -360,7 +396,7 @@ export function Level2MonthlyBillingList({
                       <p
                         className={cn(
                           'text-sm font-semibold tabular-nums',
-                          row.status === 'void' && 'text-muted-foreground line-through',
+                          struck && 'text-muted-foreground line-through',
                         )}
                       >
                         {formatCurrency(row.amount)}
@@ -377,7 +413,8 @@ export function Level2MonthlyBillingList({
                       </Button>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
 

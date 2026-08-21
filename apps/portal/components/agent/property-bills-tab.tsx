@@ -33,6 +33,7 @@ const SERVICE_LABEL: Record<string, string> = {
 
 const STATUS_TONE: Record<string, string> = {
   paid: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  included: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
   awaiting_payment: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   accrued: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
   invoiced: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
@@ -46,6 +47,7 @@ function serviceLabel(raw: string): string {
 
 function statusLabel(raw: string): string {
   if (raw === 'void') return 'Not charged';
+  if (raw === 'included') return 'Included';
   return raw.replace(/_/g, ' ');
 }
 
@@ -98,9 +100,9 @@ export function PropertyBillsTab({
           <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
             {invoiceMode ? (
               <>
-                CROSSUB platform fees for this property. Accrued items appear on your monthly
-                invoice — fees are not charged if no inspector confirms within 48 hours. Open the
-                agency{' '}
+                Every inspection and tribunal case on this property appears here. Accrued items
+                appear on your monthly invoice — included, cancelled, and unaccepted jobs are listed
+                and not charged. Open the agency{' '}
                 <Link href={ROUTES.BILL} className="text-primary font-medium hover:underline">
                   Invoice
                 </Link>{' '}
@@ -141,14 +143,15 @@ export function PropertyBillsTab({
           title={invoiceMode ? 'No invoice items yet' : 'No platform bills yet'}
           description={
             invoiceMode
-              ? 'Inspection and tribunal fees for this property appear here after they are accrued. Unaccepted jobs are marked not charged and never invoiced.'
+              ? 'Inspections and tribunal cases for this property appear here as soon as they are created. Unaccepted jobs are marked not charged and never invoiced.'
               : 'Inspection and tribunal platform charges for this property will appear here after they are quoted or accepted.'
           }
         />
       ) : (
         <ul className="space-y-3">
           {charges.map((row) => {
-            const paid = row.status === 'paid';
+            const paid = row.status === 'paid' || row.status === 'included';
+            const struck = row.status === 'void' || row.status === 'refunded';
             return (
               <li key={row.id}>
                 <div
@@ -171,9 +174,11 @@ export function PropertyBillsTab({
                   className="border-border/80 bg-card hover:border-primary/30 w-full cursor-pointer rounded-2xl border p-4 text-left transition"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0 space-y-1">
+                    <div className={cn('min-w-0 space-y-1', struck && 'text-muted-foreground')}>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold">{serviceLabel(row.serviceType)}</p>
+                        <p className={cn('text-sm font-semibold', struck && 'line-through')}>
+                          {serviceLabel(row.serviceType)}
+                        </p>
                         <span
                           className={cn(
                             'rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
@@ -183,22 +188,34 @@ export function PropertyBillsTab({
                           {statusLabel(row.status)}
                         </span>
                       </div>
-                      <p className="text-muted-foreground text-xs leading-snug">{row.description}</p>
+                      <p className={cn('text-muted-foreground text-xs leading-snug', struck && 'line-through')}>
+                        {row.description}
+                      </p>
                       {row.jobCaseName ? (
                         <p className="text-xs">
                           <JobCaseReferenceLink
                             charge={row}
                             onNavigate={() => setChargeDialog(null)}
+                            className={struck ? 'text-muted-foreground line-through' : undefined}
                           />
                         </p>
                       ) : null}
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold tabular-nums">
+                      <p
+                        className={cn(
+                          'text-sm font-semibold tabular-nums',
+                          struck && 'text-muted-foreground line-through',
+                        )}
+                      >
                         {formatCurrency(row.amount)}
                       </p>
                       <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
-                        {row.collectionMode === 'postpaid' ? 'Monthly invoice' : 'Prepaid'}
+                        {row.status === 'included' || row.includedInAllowance
+                          ? 'Included'
+                          : row.collectionMode === 'postpaid'
+                            ? 'Monthly invoice'
+                            : 'Prepaid'}
                       </p>
                     </div>
                   </div>
@@ -211,21 +228,25 @@ export function PropertyBillsTab({
                     <div>
                       <dt className="text-muted-foreground">Paid</dt>
                       <dd className="font-medium">
-                        {row.paidAt
-                          ? formatDateTime(row.paidAt)
-                          : row.status === 'accrued'
-                            ? invoiceMode
-                              ? 'Accrued — on monthly invoice if inspector confirms'
-                              : 'Accrued — pay with monthly invoice'
-                            : row.status === 'invoiced'
-                              ? 'On monthly invoice'
-                              : row.status === 'refunded'
-                                ? '—'
-                                : row.status === 'void'
-                                  ? 'Not charged — no inspector confirmed'
-                                  : paid
-                                    ? 'Paid'
-                                    : 'Not paid yet'}
+                        {row.status === 'included' || row.includedInAllowance
+                          ? 'Included in Full Service'
+                          : row.paidAt
+                            ? formatDateTime(row.paidAt)
+                            : row.status === 'accrued'
+                              ? invoiceMode
+                                ? 'Accrued — on monthly invoice if inspector confirms'
+                                : 'Accrued — pay with monthly invoice'
+                              : row.status === 'invoiced'
+                                ? 'On monthly invoice'
+                                : row.status === 'refunded'
+                                  ? '—'
+                                  : row.status === 'void'
+                                    ? row.voidReason?.trim()
+                                      ? row.voidReason
+                                      : 'Not charged'
+                                    : paid
+                                      ? 'Paid'
+                                      : 'Not paid yet'}
                       </dd>
                     </div>
                     {row.refundedAt ? (

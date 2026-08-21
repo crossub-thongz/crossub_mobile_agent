@@ -21,6 +21,7 @@ function isViewablePayment(charge: AgentBillingCharge | null | undefined): boole
   if (!charge) return false;
   return (
     charge.status === 'paid' ||
+    charge.status === 'included' ||
     charge.status === 'accrued' ||
     charge.status === 'invoiced'
   );
