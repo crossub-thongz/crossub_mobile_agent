@@ -39,23 +39,51 @@ const LEVEL2_ALLOWANCE_SERVICE_TYPES = new Set([
   'outgoing_inspection',
 ]);
 
+const LEVEL2_ALLOWANCE_LIMITS: Record<string, number> = {
+  routine_inspection: 3,
+  ingoing_inspection: 1,
+  outgoing_inspection: 1,
+};
+
+export function platformChargeShowsAllowanceRemaining(
+  row: Pick<
+    AgentBillingCharge,
+    | 'serviceType'
+    | 'status'
+    | 'amount'
+    | 'includedInAllowance'
+    | 'allowanceLimit'
+    | 'allowanceRemaining'
+  >,
+): boolean {
+  if (!LEVEL2_ALLOWANCE_SERVICE_TYPES.has(row.serviceType)) return false;
+  if (row.allowanceRemaining != null) return row.allowanceRemaining > 0;
+  return (
+    row.includedInAllowance === true ||
+    row.status === 'included' ||
+    Number(row.amount) === 0
+  );
+}
+
 /** Invoice amount: remaining included slots, or the price once none remain. */
 export function platformChargeAmountLabel(
   row: Pick<
     AgentBillingCharge,
-    'serviceType' | 'amount' | 'allowanceLimit' | 'allowanceRemaining'
+    | 'serviceType'
+    | 'status'
+    | 'amount'
+    | 'includedInAllowance'
+    | 'allowanceLimit'
+    | 'allowanceRemaining'
   >,
   formatMoney: (amount: number) => string,
 ): string {
-  if (
-    LEVEL2_ALLOWANCE_SERVICE_TYPES.has(row.serviceType) &&
-    row.allowanceLimit != null &&
-    row.allowanceRemaining != null &&
-    row.allowanceRemaining > 0
-  ) {
-    return `${row.allowanceRemaining} of ${row.allowanceLimit} remaining`;
+  if (!platformChargeShowsAllowanceRemaining(row)) {
+    return formatMoney(row.amount);
   }
-  return formatMoney(row.amount);
+  const limit = row.allowanceLimit ?? LEVEL2_ALLOWANCE_LIMITS[row.serviceType] ?? 0;
+  const remaining = row.allowanceRemaining ?? limit;
+  return `${remaining} of ${limit} remaining`;
 }
 
 export type AgentBillingSummary = {

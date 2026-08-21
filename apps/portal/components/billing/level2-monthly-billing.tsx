@@ -4,9 +4,11 @@ import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
-import type {
-  AgentBillingCharge,
-  AgentBillingMonthlyInvoice,
+import {
+  platformChargeAmountLabel,
+  platformChargeShowsAllowanceRemaining,
+  type AgentBillingCharge,
+  type AgentBillingMonthlyInvoice,
 } from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
@@ -341,6 +343,7 @@ export function Level2MonthlyBillingList({
               <ul className="divide-y">
                 {group.charges.map((row) => {
                   const struck = isNotCharged(row);
+                  const showRemaining = platformChargeShowsAllowanceRemaining(row);
                   return (
                   <li
                     key={row.id}
@@ -371,7 +374,7 @@ export function Level2MonthlyBillingList({
                           {notChargedCaption(row)}
                         </p>
                       ) : null}
-                      {row.calculationDetail ? (
+                      {row.calculationDetail && !showRemaining ? (
                         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                           {row.calculationDetail}
                         </p>
@@ -380,7 +383,9 @@ export function Level2MonthlyBillingList({
                         {[
                           row.createdByName ? `Created by ${row.createdByName}` : null,
                           `Created ${formatDateTime(row.createdAt)}`,
-                          row.paidAt ? `Paid ${formatDateTime(row.paidAt)}` : null,
+                          row.paidAt && !showRemaining
+                            ? `Paid ${formatDateTime(row.paidAt)}`
+                            : null,
                           row.refundedAt ? `Refunded ${formatDateTime(row.refundedAt)}` : null,
                           row.voidedAt && row.status === 'void'
                             ? `Not charged ${formatDateTime(row.voidedAt)}`
@@ -393,11 +398,12 @@ export function Level2MonthlyBillingList({
                     <div className="flex shrink-0 flex-col items-end gap-2">
                       <p
                         className={cn(
-                          'text-sm font-semibold tabular-nums',
+                          'text-sm font-semibold',
+                          !showRemaining && 'tabular-nums',
                           struck && 'text-muted-foreground line-through',
                         )}
                       >
-                        {formatCurrency(row.amount)}
+                        {platformChargeAmountLabel(row, formatCurrency)}
                       </p>
                       <Button
                         type="button"
