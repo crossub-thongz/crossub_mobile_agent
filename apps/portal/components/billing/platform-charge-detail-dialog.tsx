@@ -20,6 +20,7 @@ import {
 import {
   fetchAgentBillingCharge,
   payAgentBillingCharge,
+  platformChargeAmountLabel,
   type AgentBillingCharge,
   type AgentBillingDefaultPaymentMethod,
 } from '@/lib/crossub-api/agent-billing-client';
@@ -259,10 +260,12 @@ export function PlatformChargeDetailDialog({
                     ? 'Amount refunded'
                     : row.status === 'paid'
                       ? 'Amount paid'
-                      : 'Amount due'}
+                      : row.allowanceRemaining != null && row.allowanceRemaining > 0
+                        ? 'Included allowance'
+                        : 'Amount due'}
                 </p>
                 <p className="mt-0.5 text-base font-semibold tabular-nums">
-                  {formatCurrency(row.amount)}
+                  {platformChargeAmountLabel(row, formatCurrency)}
                 </p>
               </div>
             </div>

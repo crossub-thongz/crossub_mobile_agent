@@ -25,7 +25,38 @@ export type AgentBillingCharge = {
   jobCaseId?: string | null;
   /** True when this Level 2 job used a yearly included allowance slot. */
   includedInAllowance?: boolean;
+  /** Yearly included allowance for this inspection type. */
+  allowanceLimit?: number | null;
+  /** Completed jobs that have used an included slot this year. */
+  allowanceUsed?: number | null;
+  /** Included slots still remaining (deducted only after completion). */
+  allowanceRemaining?: number | null;
 };
+
+const LEVEL2_ALLOWANCE_SERVICE_TYPES = new Set([
+  'routine_inspection',
+  'ingoing_inspection',
+  'outgoing_inspection',
+]);
+
+/** Invoice amount: remaining included slots, or the price once none remain. */
+export function platformChargeAmountLabel(
+  row: Pick<
+    AgentBillingCharge,
+    'serviceType' | 'amount' | 'allowanceLimit' | 'allowanceRemaining'
+  >,
+  formatMoney: (amount: number) => string,
+): string {
+  if (
+    LEVEL2_ALLOWANCE_SERVICE_TYPES.has(row.serviceType) &&
+    row.allowanceLimit != null &&
+    row.allowanceRemaining != null &&
+    row.allowanceRemaining > 0
+  ) {
+    return `${row.allowanceRemaining} of ${row.allowanceLimit} remaining`;
+  }
+  return formatMoney(row.amount);
+}
 
 export type AgentBillingSummary = {
   prepaidEnabled: boolean;

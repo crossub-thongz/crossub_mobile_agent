@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import {
   fetchAgentBillingSummary,
   listAgentChargeHistory,
+  platformChargeAmountLabel,
   type AgentBillingCharge,
   type AgentBillingDefaultPaymentMethod,
 } from '@/lib/crossub-api/agent-billing-client';
@@ -208,14 +209,16 @@ export function PropertyBillsTab({
                           struck && 'text-muted-foreground line-through',
                         )}
                       >
-                        {formatCurrency(row.amount)}
+                        {platformChargeAmountLabel(row, formatCurrency)}
                       </p>
                       <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
-                        {row.status === 'included' || row.includedInAllowance
-                          ? 'Included'
-                          : row.collectionMode === 'postpaid'
-                            ? 'Monthly invoice'
-                            : 'Prepaid'}
+                        {row.status === 'void'
+                          ? 'Not charged'
+                          : row.status === 'included' || row.includedInAllowance
+                            ? 'Included'
+                            : row.collectionMode === 'postpaid'
+                              ? 'Monthly invoice'
+                              : 'Prepaid'}
                       </p>
                     </div>
                   </div>
@@ -228,7 +231,11 @@ export function PropertyBillsTab({
                     <div>
                       <dt className="text-muted-foreground">Paid</dt>
                       <dd className="font-medium">
-                        {row.status === 'included' || row.includedInAllowance
+                        {row.status === 'void'
+                          ? row.voidReason?.trim()
+                            ? row.voidReason
+                            : 'Not charged'
+                          : row.status === 'included' || row.includedInAllowance
                           ? 'Included in Full Service'
                           : row.paidAt
                             ? formatDateTime(row.paidAt)
