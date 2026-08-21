@@ -737,11 +737,7 @@ export function CreateInspectionWizard({
                 preferredNotes: openPreferredNotes.trim() || undefined,
                 ...(platformChargeId ? { platformChargeId } : {}),
               });
-              toast.success(
-                leasingCycle?.id
-                  ? OPEN_REQUEST_SUBMITTED
-                  : `New leasing created — `,
-              );
+              toast.success(OPEN_REQUEST_SUBMITTED);
               const inspection = await resolveCreatedOpenInspection(
                 property.id,
                 result.openInspectionId,
@@ -888,21 +884,36 @@ export function CreateInspectionWizard({
          * whether the tenant self-conducts. The cadence comes from the property's state
          * (NSW 3/yr, VIC 2/yr) and each instance date from the account manager.
          */
-        if (routine.flow === 'in_person' && !existingRoutineSchedule) {
-          await withInspectionOrderPayment(
-            'routine_inspection',
-            property.id,
-            async (platformChargeId) => {
-              await requestAgentRoutineInspection(property.id, {
-                flow: routine.flow,
-                note: routine.note?.trim() || undefined,
-                ...(platformChargeId ? { platformChargeId } : {}),
-              });
-              toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
+        if (routine.flow === 'in_person') {
+          const needsNewInPersonCase =
+            !existingRoutineSchedule ||
+            routineScheduleNeedsNewInstance(
+              existingRoutineSchedule.currentInspectionStatus,
+            );
+          const submitRoutine = async (platformChargeId?: string) => {
+            const created = await requestAgentRoutineInspection(property.id, {
+              flow: routine.flow,
+              note: routine.note?.trim() || undefined,
+              ...(platformChargeId ? { platformChargeId } : {}),
+            });
+            toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
+            try {
+              const record = await inspectionsApi.get(created.id);
+              finalizeInspectionCreate(mapInspectionRecordToView(record));
+            } catch {
               void refresh();
               if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=ROUTINE`);
-            },
-          );
+            }
+          };
+          if (needsNewInPersonCase) {
+            await withInspectionOrderPayment(
+              'routine_inspection',
+              property.id,
+              submitRoutine,
+            );
+            return;
+          }
+          await submitRoutine();
           return;
         }
         await requestAgentRoutineInspection(property.id, {

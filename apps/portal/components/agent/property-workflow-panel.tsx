@@ -27,6 +27,7 @@ import {
   createAgentTerminationCase,
 } from '@/lib/crossub-api/agent-workflow-client';
 import { LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { isInspectionOnlyLevel, resolvePortalServiceLevel } from '@/lib/portal-service-level';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
@@ -295,6 +296,9 @@ export function PropertyWorkflowCreateDialog({
   onSuccess: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
   const { refresh, apiConnected, endPropertyManagement } = useAgentData();
+  const inspectionOnly = isInspectionOnlyLevel(
+    resolvePortalServiceLevel(agency?.portalServiceLevel),
+  );
   const { blockIfUnverified } = useEmailVerificationGuard();
   const [submitting, setSubmitting] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(false);
@@ -584,9 +588,13 @@ export function PropertyWorkflowCreateDialog({
           ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
         });
         toast.success(
-          crossubConductsOpen
-            ? 'Letting cycle created — schedule the open inspection when ready; ingoing order created pending schedule'
-            : 'Letting cycle created — you conduct the open inspection; ingoing order created pending schedule',
+          inspectionOnly
+            ? crossubConductsOpen
+              ? 'Letting cycle created — schedule the open inspection when ready'
+              : 'Letting cycle created — you conduct the open inspection'
+            : crossubConductsOpen
+              ? 'Letting cycle created — schedule the open inspection when ready; ingoing order created pending schedule'
+              : 'Letting cycle created — you conduct the open inspection; ingoing order created pending schedule',
         );
         if (apiConnected) {
           try {

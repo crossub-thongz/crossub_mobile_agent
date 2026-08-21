@@ -48,6 +48,9 @@ export async function prepareInspectionOrderPayment(
         amountAud: prepared.paymentRequired.amountAud,
         calculationDetail: prepared.paymentRequired.calculationDetail,
         calculationSummary: prepared.paymentRequired.calculationSummary,
+        customerSessionClientSecret: prepared.paymentRequired.customerSessionClientSecret,
+        preferSavedCard: prepared.paymentRequired.preferSavedCard,
+        defaultPaymentMethod: prepared.paymentRequired.defaultPaymentMethod,
         chargeId: prepared.paymentRequired.chargeId,
       },
     };

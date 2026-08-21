@@ -296,7 +296,13 @@ export async function fetchAgentBillingCharge(chargeId: string): Promise<AgentBi
 export async function payAgentBillingCharge(
   chargeId: string,
   opts?: { devConfirm?: boolean },
-): Promise<{ charge: AgentBillingCharge; paymentComplete: boolean; clientSecret?: string | null }> {
+): Promise<{
+  charge: AgentBillingCharge;
+  paymentComplete: boolean;
+  clientSecret?: string | null;
+  customerSessionClientSecret?: string | null;
+  preferSavedCard?: boolean;
+}> {
   return agentFetch(`/agent/billing/charges/${encodeURIComponent(chargeId)}/pay`, {
     method: 'POST',
     body: JSON.stringify({ devConfirm: opts?.devConfirm ?? true }),
@@ -387,6 +393,9 @@ export type PlatformChargePrepareResult = {
     description: string;
     calculationDetail?: string | null;
     calculationSummary?: string | null;
+    customerSessionClientSecret?: string | null;
+    preferSavedCard?: boolean;
+    defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
   };
 };
 
@@ -424,6 +433,7 @@ export async function preparePlatformCharge(
   if (paid.paymentComplete) return { chargeId: paid.charge.id };
 
   if (paid.clientSecret) {
+    const defaultPaymentMethod = summary.defaultPaymentMethod ?? null;
     return {
       chargeId: charge.id,
       paymentRequired: {
@@ -434,6 +444,9 @@ export async function preparePlatformCharge(
         description: charge.description,
         calculationDetail: charge.calculationDetail,
         calculationSummary: charge.calculationSummary,
+        customerSessionClientSecret: paid.customerSessionClientSecret ?? null,
+        preferSavedCard: paid.preferSavedCard ?? Boolean(defaultPaymentMethod?.id),
+        defaultPaymentMethod,
       },
     };
   }

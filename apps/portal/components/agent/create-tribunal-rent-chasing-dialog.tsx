@@ -499,6 +499,9 @@ export function CreateTribunalRentChasingDialog({
           amountAud: prepared.paymentRequired.amountAud,
           calculationDetail: prepared.paymentRequired.calculationDetail,
           calculationSummary: prepared.paymentRequired.calculationSummary,
+          customerSessionClientSecret: prepared.paymentRequired.customerSessionClientSecret,
+          preferSavedCard: prepared.paymentRequired.preferSavedCard,
+          defaultPaymentMethod: prepared.paymentRequired.defaultPaymentMethod,
         });
         return;
       }
