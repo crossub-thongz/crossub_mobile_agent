@@ -89,6 +89,8 @@ export interface AgentInvitePreview {
   contactName: string | null;
   expired: boolean;
   used: boolean;
+  requiresServiceLevel?: boolean;
+  portalServiceLevel?: AgentPortalServiceLevel | null;
 }
 
 export async function fetchAgentInvitePreview(token: string): Promise<AgentInvitePreview> {
@@ -101,9 +103,11 @@ export async function fetchAgentInvitePreview(token: string): Promise<AgentInvit
 export async function completeAgentInviteRegistration(
   token: string,
   acceptTerms: boolean,
+  portalServiceLevel: AgentPortalServiceLevel,
 ): Promise<{ user: AuthUser; credentialsSent: boolean }> {
   return api.post(`/auth/register-agent-invite/${encodeURIComponent(token)}`, {
     acceptTerms,
+    portalServiceLevel,
   });
 }
 

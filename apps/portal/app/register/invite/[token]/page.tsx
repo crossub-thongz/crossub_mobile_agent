@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
+import { RegisterPricingPanel } from '@/components/register/register-pricing-panel';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,7 @@ import {
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import { ApiError } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
+import type { AgentPortalServiceLevel } from '@/lib/portal-service-level';
 
 function EmailCopyRow({ email }: { email: string }) {
   const [copied, setCopied] = useState(false);
@@ -59,6 +61,8 @@ export default function AgentInviteRegisterPage() {
   const [invite, setInvite] = useState<AgentInvitePreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [portalServiceLevel, setPortalServiceLevel] =
+    useState<AgentPortalServiceLevel | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [registeredUser, setRegisteredUser] = useState<AuthUser | null>(null);
 
@@ -77,9 +81,13 @@ export default function AgentInviteRegisterPage() {
       toast.error('Please accept the terms and conditions to continue.');
       return;
     }
+    if (!portalServiceLevel) {
+      toast.error('Please select Inspection Only Service or Full Service.');
+      return;
+    }
     setSubmitting(true);
     try {
-      const result = await completeAgentInviteRegistration(token, true);
+      const result = await completeAgentInviteRegistration(token, true, portalServiceLevel);
       await refresh();
       setRegisteredUser(result.user);
       toast.success('Account created — choose your password to continue.');
@@ -175,15 +183,22 @@ export default function AgentInviteRegisterPage() {
         <p className="text-muted-foreground text-sm">Complete your registration</p>
       </div>
 
-      <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg">
+      <div className="w-full max-w-3xl rounded-xl border bg-card p-8 shadow-lg">
         <p className="text-sm">
           Hi <strong>{who}</strong>, welcome to CROSSUB for{' '}
           <strong>{invite.agencyName}</strong>.
         </p>
         <p className="text-muted-foreground mt-2 text-sm">
-          Accept the terms below to create your Agent Portal account. You&apos;ll choose your
-          password immediately after registration.
+          Choose your service plan, then accept the terms below to create your Agent Portal
+          account. You&apos;ll choose your password immediately after registration.
         </p>
+
+        <div className="mt-6">
+          <RegisterPricingPanel
+            selectedLevel={portalServiceLevel}
+            onSelectLevel={setPortalServiceLevel}
+          />
+        </div>
 
         <div className="mt-6 rounded-lg border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">
           <p className="font-medium text-foreground">Terms &amp; system access agreement</p>
@@ -209,7 +224,7 @@ export default function AgentInviteRegisterPage() {
 
         <Button
           className="mt-6 w-full"
-          disabled={!acceptTerms || submitting}
+          disabled={!acceptTerms || !portalServiceLevel || submitting}
           onClick={() => void onComplete()}
         >
           {submitting ? (
