@@ -154,8 +154,6 @@ export function buildLevel2MonthGroups(
       paymentStatus = 'paid';
     } else if (invoice) {
       paymentStatus = 'unpaid';
-    } else if (ended) {
-      paymentStatus = 'unpaid';
     } else {
       paymentStatus = 'accruing';
     }
@@ -227,7 +225,7 @@ export function Level2MonthlyBillingList({
   openingInvoiceId,
   disabled = false,
   onViewInvoice,
-  onOpenInvoiceById,
+  onOpenInvoiceById: _onOpenInvoiceById,
   onViewCharge,
 }: Level2MonthlyBillingListProps) {
   const groups = buildLevel2MonthGroups(charges, invoices, { overdueLockDays });
@@ -295,8 +293,8 @@ export function Level2MonthlyBillingList({
                 ) : (
                   <p className="text-muted-foreground text-xs">
                     {group.paymentStatus === 'accruing'
-                      ? 'Charges this month — invoice available after month end'
-                      : 'Monthly invoice not issued yet'}
+                      ? 'Charges this month — your invoice appears after CROSSUB Accounting approves it'
+                      : 'Invoice will appear here after CROSSUB Accounting approves it'}
                   </p>
                 )}
               </div>
@@ -434,27 +432,9 @@ export function Level2MonthlyBillingList({
                   )}
                   View invoice
                 </Button>
-              ) : group.charges.some((c) => c.monthlyInvoiceId) ? (
-                <Button
-                  type="button"
-                  className="w-full sm:w-auto"
-                  variant="outline"
-                  onClick={() => {
-                    const id = group.charges.find((c) => c.monthlyInvoiceId)?.monthlyInvoiceId;
-                    if (id) onOpenInvoiceById(id);
-                  }}
-                  disabled={disabled || openingInvoiceId != null}
-                >
-                  {openingInvoiceId ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <FileText className="size-4" />
-                  )}
-                  View invoice
-                </Button>
               ) : (
                 <p className="text-muted-foreground text-xs">
-                  View invoice will appear here once this month’s invoice is issued.
+                  View invoice appears here after CROSSUB Accounting approves and sends it.
                 </p>
               )}
             </footer>
