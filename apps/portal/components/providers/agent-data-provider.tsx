@@ -147,6 +147,13 @@ import type {
 import { maintenanceDetail, tenantSelectionDetail, ROUTES } from '@/constants/routes';
 import { LIVE_POLL_MS } from '@/lib/live-sync';
 
+function isRecentAddedInspection(row: Inspection, maxAgeMs = 48 * 60 * 60 * 1000): boolean {
+  if (row.type === 'OPEN') return true;
+  const at = row.createdAt ? Date.parse(row.createdAt) : NaN;
+  if (!Number.isFinite(at)) return true;
+  return Date.now() - at < maxAgeMs;
+}
+
 function messageThreadKey(thread: {
   id: string;
   propertyId?: string;
@@ -710,13 +717,15 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       byId.set(row.id, row);
     }
     // Optimistic create rows stick in localStorage until pruned. Once the agency
-    // book is loaded, drop non-OPEN orphans so admin hard-deletes don't ghost
+    // book is loaded, drop stale non-OPEN orphans so admin hard-deletes don't ghost
     // (OPEN still waits on live inspections — it may only exist as a viewing session).
+    // Keep a recently created routine/ingoing/outgoing so pay-at-create cases don't
+    // vanish before the portfolio snapshot includes them.
     for (const row of added) {
       if (byId.has(row.id)) continue;
-      if (portfolio != null && row.type !== 'OPEN') continue;
-      if (apiInspections != null && row.type === 'OPEN') continue;
       if (isHiddenOpenPoolTwin(row)) continue;
+      if (portfolio != null && row.type !== 'OPEN' && !isRecentAddedInspection(row)) continue;
+      if (apiInspections != null && row.type === 'OPEN') continue;
       byId.set(row.id, row);
     }
     return [...byId.values()].sort((a, b) => {

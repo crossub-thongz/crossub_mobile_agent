@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,6 +28,10 @@ import {
   type PropertyHistoryScope,
 } from '@/lib/property-history-scope';
 import { inspectionJobRows } from '@/lib/property-job-rows';
+import { inspectionsApi } from '@/lib/inspections-api';
+import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
+import { isActiveRoutineInspectionStatus } from '@/lib/routine/routine-instance-state';
+import { routineInspectionApi } from '@/lib/routine-inspection-api';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { VACANT_TENANCY_INSPECTIONS_HINT } from '@/lib/property-leasing';
 import type {
@@ -75,10 +79,43 @@ export function PropertyInspectionTab({
   onViewInspection?: (inspectionId: string) => void;
   onRefresh?: () => void;
 }) {
-  const { apiConnected, refresh } = useAgentData();
+  const { apiConnected, refresh, registerInspection } = useAgentData();
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Inspection | null>(null);
   const [historyScope, setHistoryScope] = useState<PropertyHistoryScope>('completed');
+
+  const inspectionIdsKey = inspections
+    .map((row) => row.id)
+    .sort()
+    .join(',');
+
+  useEffect(() => {
+    if (!apiConnected || !propertyId) return;
+    let cancelled = false;
+    const knownIds = new Set(inspectionIdsKey.split(',').filter(Boolean));
+    void (async () => {
+      try {
+        const { schedule } = await routineInspectionApi.getByProperty(propertyId);
+        const inspectionId = schedule?.currentInspectionId;
+        if (
+          cancelled ||
+          !inspectionId ||
+          knownIds.has(inspectionId) ||
+          !isActiveRoutineInspectionStatus(schedule.currentInspectionStatus)
+        ) {
+          return;
+        }
+        const record = await inspectionsApi.get(inspectionId);
+        if (cancelled) return;
+        registerInspection(mapInspectionRecordToView(record));
+      } catch {
+        /* schedule-only properties have nothing extra to show */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiConnected, propertyId, inspectionIdsKey, registerInspection]);
 
   const emptyDescription = isVacant
     ? VACANT_TENANCY_INSPECTIONS_HINT

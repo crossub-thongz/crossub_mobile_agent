@@ -410,7 +410,9 @@ export const useAgentStore = create<AgentStore>()(
             if (knownIds.has(row.id)) return true;
             // OPEN may exist only as a viewing session until mapped — keep those.
             if (row.type === 'OPEN') return true;
-            return false;
+            const at = row.createdAt ? Date.parse(row.createdAt) : NaN;
+            if (!Number.isFinite(at)) return true;
+            return Date.now() - at < 48 * 60 * 60 * 1000;
           });
           if (next.length === s.addedInspections.length) return s;
           return { addedInspections: next };

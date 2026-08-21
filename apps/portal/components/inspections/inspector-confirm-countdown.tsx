@@ -139,7 +139,7 @@ export function InspectorConfirmCountdown({
       </div>
 
       <Dialog open={dialogOpen && !expired} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent elevated className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Waiting for inspector confirm</DialogTitle>
             <DialogDescription>
