@@ -166,6 +166,12 @@ export function PlatformChargeDetailDialog({
                     <span className="font-medium">{formatDateTime(row.paidAt)}</span>
                   </div>
                 ) : null}
+                {row.refundedAt ? (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Refunded</span>
+                    <span className="font-medium">{formatDateTime(row.refundedAt)}</span>
+                  </div>
+                ) : null}
                 {row.createdByName ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Ordered by</span>
@@ -232,7 +238,11 @@ export function PlatformChargeDetailDialog({
                 )}
               >
                 <p className="text-sm font-medium">
-                  {row.status === 'paid' ? 'Amount paid' : 'Amount due'}
+                  {row.status === 'refunded'
+                    ? 'Amount refunded'
+                    : row.status === 'paid'
+                      ? 'Amount paid'
+                      : 'Amount due'}
                 </p>
                 <p className="mt-0.5 text-base font-semibold tabular-nums">
                   {formatCurrency(row.amount)}

@@ -177,23 +177,27 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
                       <dd className="font-medium">{formatDateTime(row.createdAt)}</dd>
                     </div>
                     <div>
-                      <dt className="text-muted-foreground">
-                        {paid ? 'Paid' : 'Payment'}
-                      </dt>
+                      <dt className="text-muted-foreground">Paid</dt>
                       <dd className="font-medium">
-                        {paid && row.paidAt
+                        {row.paidAt
                           ? formatDateTime(row.paidAt)
-                          : paid
-                            ? 'Paid'
-                            : row.status === 'accrued'
-                              ? 'Accrued — pay with monthly invoice'
-                              : row.status === 'invoiced'
-                                ? 'On monthly invoice'
-                                : row.status === 'refunded'
-                                  ? 'Refunded'
+                          : row.status === 'accrued'
+                            ? 'Accrued — pay with monthly invoice'
+                            : row.status === 'invoiced'
+                              ? 'On monthly invoice'
+                              : row.status === 'refunded'
+                                ? '—'
+                                : paid
+                                  ? 'Paid'
                                   : 'Not paid yet'}
                       </dd>
                     </div>
+                    {row.refundedAt ? (
+                      <div>
+                        <dt className="text-muted-foreground">Refunded</dt>
+                        <dd className="font-medium">{formatDateTime(row.refundedAt)}</dd>
+                      </div>
+                    ) : null}
                     {row.calculationDetail ? (
                       <div className="sm:col-span-2">
                         <dt className="text-muted-foreground">How it&apos;s calculated</dt>

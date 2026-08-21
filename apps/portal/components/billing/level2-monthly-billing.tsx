@@ -339,6 +339,8 @@ export function Level2MonthlyBillingList({
                         {[
                           row.createdByName ? `Created by ${row.createdByName}` : null,
                           `Created ${formatDateTime(row.createdAt)}`,
+                          row.paidAt ? `Paid ${formatDateTime(row.paidAt)}` : null,
+                          row.refundedAt ? `Refunded ${formatDateTime(row.refundedAt)}` : null,
                         ]
                           .filter(Boolean)
                           .join(' · ')}

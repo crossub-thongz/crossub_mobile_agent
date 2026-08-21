@@ -568,9 +568,9 @@ export default function BillPage() {
                       <p className="text-muted-foreground mt-1 text-xs">
                         {[
                           row.createdByName ? `Created by ${row.createdByName}` : null,
-                          row.paidAt
-                            ? `Paid ${formatDateTime(row.paidAt)}`
-                            : `Created ${formatDateTime(row.createdAt)}`,
+                          `Created ${formatDateTime(row.createdAt)}`,
+                          row.paidAt ? `Paid ${formatDateTime(row.paidAt)}` : null,
+                          row.refundedAt ? `Refunded ${formatDateTime(row.refundedAt)}` : null,
                         ]
                           .filter(Boolean)
                           .join(' · ')}

@@ -10,6 +10,7 @@ export type AgentBillingCharge = {
   description: string;
   propertyId?: string | null;
   paidAt?: string | null;
+  refundedAt?: string | null;
   createdAt: string;
   createdByName?: string | null;
   calculationDetail?: string | null;
