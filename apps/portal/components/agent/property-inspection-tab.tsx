@@ -98,24 +98,23 @@ export function PropertyInspectionTab({
         const { schedule } = await routineInspectionApi.getByProperty(propertyId);
         const inspectionId = schedule?.currentInspectionId;
         if (
-          cancelled ||
-          !inspectionId ||
-          knownIds.has(inspectionId) ||
-          !isActiveRoutineInspectionStatus(schedule.currentInspectionStatus)
+          !cancelled &&
+          inspectionId &&
+          !knownIds.has(inspectionId) &&
+          isActiveRoutineInspectionStatus(schedule.currentInspectionStatus)
         ) {
-          return;
+          const record = await inspectionsApi.get(inspectionId);
+          if (!cancelled) registerInspection(mapInspectionRecordToView(record));
         }
-        const record = await inspectionsApi.get(inspectionId);
-        if (cancelled) return;
-        registerInspection(mapInspectionRecordToView(record));
       } catch {
         /* schedule-only properties have nothing extra to show */
       }
+      if (!cancelled) await refresh();
     })();
     return () => {
       cancelled = true;
     };
-  }, [apiConnected, propertyId, inspectionIdsKey, registerInspection]);
+  }, [apiConnected, propertyId, refresh, registerInspection]);
 
   const emptyDescription = isVacant
     ? VACANT_TENANCY_INSPECTIONS_HINT
