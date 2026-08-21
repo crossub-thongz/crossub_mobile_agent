@@ -155,7 +155,9 @@ export function buildLevel2MonthGroups(
     const totalAud =
       invoice != null
         ? invoice.amountDue
-        : monthCharges.reduce((sum, row) => sum + row.amount, 0);
+        : monthCharges
+            .filter((row) => row.status !== 'void')
+            .reduce((sum, row) => sum + row.amount, 0);
 
     groups.push({
       key,
@@ -330,6 +332,11 @@ export function Level2MonthlyBillingList({
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{serviceLabel(row.serviceType)}</p>
                       <p className="text-muted-foreground mt-0.5 text-sm">{row.description}</p>
+                      {row.status === 'void' ? (
+                        <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+                          Not charged — no inspector confirmed within 48 hours
+                        </p>
+                      ) : null}
                       {row.calculationDetail ? (
                         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                           {row.calculationDetail}
@@ -341,13 +348,21 @@ export function Level2MonthlyBillingList({
                           `Created ${formatDateTime(row.createdAt)}`,
                           row.paidAt ? `Paid ${formatDateTime(row.paidAt)}` : null,
                           row.refundedAt ? `Refunded ${formatDateTime(row.refundedAt)}` : null,
+                          row.voidedAt && row.status === 'void'
+                            ? `Not charged ${formatDateTime(row.voidedAt)}`
+                            : null,
                         ]
                           .filter(Boolean)
                           .join(' · ')}
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <p className="text-sm font-semibold tabular-nums">
+                      <p
+                        className={cn(
+                          'text-sm font-semibold tabular-nums',
+                          row.status === 'void' && 'text-muted-foreground line-through',
+                        )}
+                      >
                         {formatCurrency(row.amount)}
                       </p>
                       <Button

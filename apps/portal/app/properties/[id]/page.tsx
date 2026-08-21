@@ -62,7 +62,9 @@ import { useRecordRecentPropertyVisit } from '@/hooks/use-record-recent-visit';
 import { formatCarSpaces } from '@/lib/property-overview';
 import {
   PROPERTY_DETAIL_TABS,
+  propertyBillingTabLabel,
   propertyDetailTabsForAgency,
+  isPropertyInspectionOnly,
   type PropertyDetailTab,
 } from '@/lib/portal-service-level';
 import { countNeedActionsByTab } from '@/lib/need-action-tabs';
@@ -154,6 +156,9 @@ export default function PropertyDetailPage() {
         ? propertyDetailTabsForAgency(agencies, property.agencyId)
         : [...PROPERTY_DETAIL_TABS],
     [agencies, property],
+  );
+  const billingTabLabel = propertyBillingTabLabel(
+    property ? isPropertyInspectionOnly(agencies, property.agencyId) : true,
   );
   const [tab, setTab] = useState<ViewTab>('Documents');
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
@@ -441,6 +446,7 @@ export default function PropertyDetailPage() {
           onChange={setTab}
           needActionCounts={needActionCountsByTab}
           messageAlertCount={messageAlertCount}
+          tabLabels={{ Bills: billingTabLabel }}
         />
 
         {tab !== 'Gii' && tab !== 'Message' ? (
@@ -477,7 +483,9 @@ export default function PropertyDetailPage() {
 
         {tab === 'Fees' && <PropertyFeesTab property={property} propertyId={id} />}
 
-        {tab === 'Bills' && <PropertyBillsTab propertyId={id} />}
+        {tab === 'Bills' && (
+          <PropertyBillsTab propertyId={id} invoiceMode={billingTabLabel === 'Invoice'} />
+        )}
 
         {tab === 'Rent Review' && (
           <PropertyRentReviewTab

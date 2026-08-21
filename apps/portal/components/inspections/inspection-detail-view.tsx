@@ -565,6 +565,7 @@ export function InspectionDetailView({
           routineInspectionRecord?.id ??
           insp.id
         }
+        propertyId={insp.propertyId}
         deadlineAt={
           routineInspectionRecord?.inspectorConfirmDeadlineAt ??
           poolInspectionRecord?.inspectorConfirmDeadlineAt ??

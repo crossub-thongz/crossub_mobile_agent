@@ -24,7 +24,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
-import { filterNavByAccess } from '@/lib/portal-service-level';
+import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { cn, displayName } from '@/lib/utils';
 
@@ -74,10 +74,13 @@ export function AgentShell({
   const [headerHeight, setHeaderHeight] = useState(56);
   const { hasFullManagementAccess, unreadNotificationCount, needActionItems } = useAgentData();
   const propertyNeedActionCount = needActionItems.length;
+  const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = [
     ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
-    ...filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess),
+    ...filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess).map((item) =>
+      item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item,
+    ),
   ];
 
   useEffect(() => {

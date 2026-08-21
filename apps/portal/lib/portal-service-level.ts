@@ -75,6 +75,16 @@ export function isPropertyInspectionOnly(
   return isInspectionOnlyLevel(getAgencyPortalLevel(agencies, propertyAgencyId));
 }
 
+/** Property tab + section heading: Level 1 Bills, Level 2 Invoice. */
+export function propertyBillingTabLabel(isInspectionOnly: boolean): 'Bills' | 'Invoice' {
+  return isInspectionOnly ? 'Bills' : 'Invoice';
+}
+
+/** Sidebar / bill page: Level 1 Bills, Level 2 Invoice. */
+export function agencyBillingNavLabel(hasFullManagementAccess: boolean): 'Bills' | 'Invoice' {
+  return hasFullManagementAccess ? 'Invoice' : 'Bills';
+}
+
 export const FULL_MANAGEMENT_ROUTE_PREFIXES = [
   ROUTES.LEASING,
   ROUTES.MAINTENANCE,

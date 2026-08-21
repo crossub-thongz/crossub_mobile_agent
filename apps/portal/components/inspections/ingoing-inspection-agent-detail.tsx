@@ -357,6 +357,7 @@ export function IngoingInspectionAgentDetail({
 
       <InspectorConfirmCountdown
         inspectionId={snapshot.record?.id ?? inspection.id}
+        propertyId={inspection.propertyId}
         deadlineAt={
           snapshot.record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt
         }

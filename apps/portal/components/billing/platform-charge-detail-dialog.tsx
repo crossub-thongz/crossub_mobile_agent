@@ -150,7 +150,9 @@ export function PlatformChargeDetailDialog({
               <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Status</span>
-                  <span className="font-medium capitalize">{row.status.replace(/_/g, ' ')}</span>
+                  <span className="font-medium capitalize">
+                    {row.status === 'void' ? 'Not charged' : row.status.replace(/_/g, ' ')}
+                  </span>
                 </div>
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Collection</span>
@@ -170,6 +172,12 @@ export function PlatformChargeDetailDialog({
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Refunded</span>
                     <span className="font-medium">{formatDateTime(row.refundedAt)}</span>
+                  </div>
+                ) : null}
+                {row.voidedAt && row.status === 'void' ? (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Not charged</span>
+                    <span className="font-medium">{formatDateTime(row.voidedAt)}</span>
                   </div>
                 ) : null}
                 {row.createdByName ? (

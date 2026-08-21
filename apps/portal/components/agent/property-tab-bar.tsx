@@ -93,19 +93,18 @@ function PropertyTabButton<T extends string>({
   onChange,
   variant,
   needActionCount = 0,
+  labelOverrides,
 }: {
   tab: T;
   active: T;
   onChange: (tab: T) => void;
   variant: 'mobile' | 'desktop';
   needActionCount?: number;
+  labelOverrides?: Partial<Record<string, string>>;
 }) {
   const Icon = TAB_ICONS[tab] ?? Building2;
   const isActive = active === tab;
-  const label =
-    variant === 'mobile'
-      ? (TAB_SHORT_LABELS[tab] ?? TAB_DISPLAY_LABELS[tab] ?? tab)
-      : (TAB_DISPLAY_LABELS[tab] ?? tab);
+  const label = resolveTabLabel(tab, variant === 'mobile' ? 'short' : 'full', labelOverrides);
 
   const ariaLabel =
     needActionCount > 0
@@ -145,8 +144,14 @@ function PropertyTabButton<T extends string>({
   );
 }
 
-function tabShortLabel(tab: string): string {
-  return TAB_SHORT_LABELS[tab] ?? TAB_DISPLAY_LABELS[tab] ?? tab;
+function resolveTabLabel(
+  tab: string,
+  variant: 'full' | 'short',
+  overrides?: Partial<Record<string, string>>,
+): string {
+  if (overrides?.[tab]) return overrides[tab]!;
+  if (variant === 'short') return TAB_SHORT_LABELS[tab] ?? TAB_DISPLAY_LABELS[tab] ?? tab;
+  return TAB_DISPLAY_LABELS[tab] ?? tab;
 }
 
 function PropertySectionPicker<T extends string>({
@@ -156,6 +161,7 @@ function PropertySectionPicker<T extends string>({
   active,
   onSelect,
   needActionCounts,
+  tabLabels,
 }: {
   open: boolean;
   onClose: () => void;
@@ -163,6 +169,7 @@ function PropertySectionPicker<T extends string>({
   active: PropertyViewTab<T>;
   onSelect: (tab: PropertyViewTab<T>) => void;
   needActionCounts?: Partial<Record<T, number>>;
+  tabLabels?: Partial<Record<string, string>>;
 }) {
   const listRef = useRef<HTMLUListElement>(null);
   const activeItemRef = useRef<HTMLButtonElement>(null);
@@ -205,7 +212,7 @@ function PropertySectionPicker<T extends string>({
             {tabs.map((tab, index) => {
               const selected = active === tab;
               const count = needActionCounts?.[tab] ?? 0;
-              const label = TAB_DISPLAY_LABELS[tab] ?? tab;
+              const label = resolveTabLabel(tab, 'full', tabLabels);
 
               return (
                 <li key={tab}>
@@ -338,6 +345,7 @@ export function PropertyTabBar<T extends string>({
   onChange,
   needActionCounts,
   messageAlertCount = 0,
+  tabLabels,
 }: {
   tabs: readonly T[];
   active: PropertyViewTab<T>;
@@ -345,6 +353,8 @@ export function PropertyTabBar<T extends string>({
   needActionCounts?: Partial<Record<T, number>>;
   /** Need-action + unread alerts rolled into the Message tab (mobile). */
   messageAlertCount?: number;
+  /** Override display labels (e.g. Bills → Invoice for Level 2). */
+  tabLabels?: Partial<Record<string, string>>;
 }) {
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
 
@@ -358,7 +368,7 @@ export function PropertyTabBar<T extends string>({
     !isGiiActive && !isMessageActive && overflowTabs.includes(active as T);
 
   const activeSectionLabel = sectionActive
-    ? tabShortLabel(active as string)
+    ? resolveTabLabel(active as string, 'short', tabLabels)
     : 'Sections';
   const ActiveSectionIcon = sectionActive
     ? (TAB_ICONS[active as string] ?? LayoutGrid)
@@ -418,6 +428,7 @@ export function PropertyTabBar<T extends string>({
           active={active}
           onSelect={onChange}
           needActionCounts={needActionCounts}
+          tabLabels={tabLabels}
         />
       </div>
 
@@ -434,6 +445,7 @@ export function PropertyTabBar<T extends string>({
               onChange={(next) => onChange(next as PropertyViewTab<T>)}
               variant="desktop"
               needActionCount={needActionCounts?.[tab] ?? 0}
+              labelOverrides={tabLabels}
             />
           ))}
       </div>

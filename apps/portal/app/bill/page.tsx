@@ -67,6 +67,7 @@ const STATUS_TONE: Record<string, string> = {
   accrued: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
   invoiced: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
   refunded: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
+  void: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
   sent: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
   overdue: 'border-destructive/30 bg-destructive/10 text-destructive',
 };
@@ -327,14 +328,14 @@ export default function BillPage() {
   };
 
   return (
-    <AgentShell title="Bill">
+    <AgentShell title={isLevel2 ? 'Invoice' : 'Bills'}>
       <div className="space-y-5">
         <PageIntro
-          title="CROSSUB SERVICES billing"
+          title={isLevel2 ? 'Invoice' : 'Bills'}
           description={
             isLevel2
-              ? 'Monthly service invoices for your agency — grouped by month with paid status.'
-              : 'Prepaid service charges and monthly service invoices for your agency.'
+              ? 'Monthly service invoices for your agency. Accrued inspection fees are not charged if no inspector confirms within 48 hours.'
+              : 'Prepaid service charges for your agency. Unaccepted jobs are refunded after 48 hours.'
           }
         />
 
@@ -548,7 +549,7 @@ export default function BillPage() {
                             STATUS_TONE[row.status] ?? 'border-border text-muted-foreground',
                           )}
                         >
-                          {row.status.replace(/_/g, ' ')}
+                          {row.status === 'void' ? 'Not charged' : row.status.replace(/_/g, ' ')}
                         </span>
                         <span className="text-muted-foreground text-[11px] uppercase">
                           {row.collectionMode}

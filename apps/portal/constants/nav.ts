@@ -44,7 +44,7 @@ export const MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
   { href: ROUTES.FAQ, label: 'FAQ', icon: HelpCircle },
   { href: ROUTES.PRICING, label: 'Pricing', icon: Tags },
-  { href: ROUTES.BILL, label: 'Bill', icon: Receipt },
+  { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
 ];
 
 /** Mobile bottom bar — Dashboard & Properties live in the overflow menu. */

@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionsApi } from '@/lib/inspections-api';
+import { isPropertyInspectionOnly } from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -31,6 +33,8 @@ export function InspectorConfirmCountdown({
   apiStatus,
   onClosed,
   className,
+  postpaid,
+  propertyId,
 }: {
   inspectionId: string;
   deadlineAt?: string | null;
@@ -38,7 +42,17 @@ export function InspectorConfirmCountdown({
   apiStatus?: string | null;
   onClosed?: () => void;
   className?: string;
+  /** Level 2: fee is voided (not invoiced) instead of Stripe-refunded. */
+  postpaid?: boolean;
+  propertyId?: string | null;
 }) {
+  const { agencies, properties, hasFullManagementAccess } = useAgentData();
+  const inferredPostpaid = useMemo(() => {
+    if (postpaid != null) return postpaid;
+    const agencyId = properties.find((row) => row.id === propertyId)?.agencyId;
+    if (agencyId) return !isPropertyInspectionOnly(agencies, agencyId);
+    return hasFullManagementAccess;
+  }, [postpaid, properties, propertyId, agencies, hasFullManagementAccess]);
   const [now, setNow] = useState(() => Date.now());
   const [expiring, setExpiring] = useState(false);
   const expireStartedRef = useRef(false);
@@ -66,7 +80,11 @@ export function InspectorConfirmCountdown({
       .expireUnaccepted(inspectionId)
       .then((updated) => {
         if (updated.unacceptedRefunded || updated.status === 'CANCELLED') {
-          toast.info('This job was closed and refunded — no inspector confirmed in 48 hours.');
+          toast.info(
+            inferredPostpaid
+              ? 'This job was closed — you will not be charged because no inspector confirmed in 48 hours.'
+              : 'This job was closed and refunded — no inspector confirmed in 48 hours.',
+          );
         }
         onClosed?.();
       })
@@ -76,7 +94,7 @@ export function InspectorConfirmCountdown({
       .finally(() => {
         setExpiring(false);
       });
-  }, [expired, inspectionId, onClosed]);
+  }, [expired, inspectionId, onClosed, inferredPostpaid]);
 
   if (refunded) {
     return (
@@ -86,10 +104,11 @@ export function InspectorConfirmCountdown({
           className,
         )}
       >
-        <p className="text-sm font-semibold">Refunded</p>
+        <p className="text-sm font-semibold">{inferredPostpaid ? 'Not charged' : 'Refunded'}</p>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-          This job was closed because no inspector confirmed within 48 hours. The platform
-          fee has been refunded.
+          {inferredPostpaid
+            ? 'This job was closed because no inspector confirmed within 48 hours. This fee will not appear on your monthly invoice.'
+            : 'This job was closed because no inspector confirmed within 48 hours. The platform fee has been refunded.'}
         </p>
       </div>
     );
@@ -111,7 +130,8 @@ export function InspectorConfirmCountdown({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Inspector confirm timer</p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            If no inspector confirms this job in 48 hours it will be closed and refunded.
+            If no inspector confirms this job in 48 hours it will be closed
+            {inferredPostpaid ? ' and you will not be charged.' : ' and refunded.'}
           </p>
           <p className="mt-2 font-mono text-lg font-semibold tabular-nums tracking-wide">
             {expiring ? (

@@ -11,7 +11,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { MOBILE_MENU_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { filterNavByAccess } from '@/lib/portal-service-level';
+import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
 function isActive(pathname: string, href: string): boolean {
@@ -75,7 +75,10 @@ export function AgentSidebar({
   const pathname = usePathname();
   const { hasFullManagementAccess, needActionItems } = useAgentData();
   const propertyNeedActionCount = needActionItems.length;
-  const menuNav = filterNavByAccess(MOBILE_MENU_NAV, hasFullManagementAccess);
+  const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
+  const menuNav = filterNavByAccess(MOBILE_MENU_NAV, hasFullManagementAccess).map((item) =>
+    item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item,
+  );
 
   return (
     <aside

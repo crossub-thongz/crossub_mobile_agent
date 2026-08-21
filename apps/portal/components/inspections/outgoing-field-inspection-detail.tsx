@@ -388,6 +388,7 @@ export function OutgoingFieldInspectionDetail({
 
       <InspectorConfirmCountdown
         inspectionId={record?.id ?? inspection.id}
+        propertyId={inspection.propertyId}
         deadlineAt={record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt}
         refunded={record?.unacceptedRefunded === true || inspection.unacceptedRefunded === true}
         apiStatus={record?.status ?? inspection.apiStatus}

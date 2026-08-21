@@ -37,6 +37,7 @@ const STATUS_TONE: Record<string, string> = {
   accrued: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
   invoiced: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
   refunded: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
+  void: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
 };
 
 function serviceLabel(raw: string): string {
@@ -44,10 +45,17 @@ function serviceLabel(raw: string): string {
 }
 
 function statusLabel(raw: string): string {
+  if (raw === 'void') return 'Not charged';
   return raw.replace(/_/g, ' ');
 }
 
-export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
+export function PropertyBillsTab({
+  propertyId,
+  invoiceMode = false,
+}: {
+  propertyId: string;
+  invoiceMode?: boolean;
+}) {
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [loading, setLoading] = useState(true);
   const [defaultPaymentMethod, setDefaultPaymentMethod] =
@@ -65,12 +73,18 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
       setCharges(rows);
       setDefaultPaymentMethod(summary?.defaultPaymentMethod ?? null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not load property bills');
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : invoiceMode
+            ? 'Could not load property invoice items'
+            : 'Could not load property bills',
+      );
       setCharges([]);
     } finally {
       setLoading(false);
     }
-  }, [propertyId]);
+  }, [propertyId, invoiceMode]);
 
   useEffect(() => {
     void load();
@@ -80,14 +94,28 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">Bills</h2>
+          <h2 className="text-base font-semibold">{invoiceMode ? 'Invoice' : 'Bills'}</h2>
           <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-            CROSSUB platform charges for this property — status, amount paid, and how each fee was
-            calculated. Pay outstanding items from the agency{' '}
-            <Link href={ROUTES.BILL} className="text-primary font-medium hover:underline">
-              Bill
-            </Link>{' '}
-            page.
+            {invoiceMode ? (
+              <>
+                CROSSUB platform fees for this property. Accrued items appear on your monthly
+                invoice — fees are not charged if no inspector confirms within 48 hours. Open the
+                agency{' '}
+                <Link href={ROUTES.BILL} className="text-primary font-medium hover:underline">
+                  Invoice
+                </Link>{' '}
+                page for monthly totals.
+              </>
+            ) : (
+              <>
+                CROSSUB platform charges for this property — status, amount paid, and how each fee
+                was calculated. Pay outstanding items from the agency{' '}
+                <Link href={ROUTES.BILL} className="text-primary font-medium hover:underline">
+                  Bills
+                </Link>{' '}
+                page.
+              </>
+            )}
           </p>
         </div>
         <Button
@@ -105,13 +133,17 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
       {loading && charges.length === 0 ? (
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <Loader2 className="size-4 animate-spin" />
-          Loading bills…
+          {invoiceMode ? 'Loading invoice…' : 'Loading bills…'}
         </div>
       ) : charges.length === 0 ? (
         <EmptyState
           icon={Receipt}
-          title="No platform bills yet"
-          description="Inspection and tribunal platform charges for this property will appear here after they are quoted or accepted."
+          title={invoiceMode ? 'No invoice items yet' : 'No platform bills yet'}
+          description={
+            invoiceMode
+              ? 'Inspection and tribunal fees for this property appear here after they are accrued. Unaccepted jobs are marked not charged and never invoiced.'
+              : 'Inspection and tribunal platform charges for this property will appear here after they are quoted or accepted.'
+          }
         />
       ) : (
         <ul className="space-y-3">
@@ -182,20 +214,30 @@ export function PropertyBillsTab({ propertyId }: { propertyId: string }) {
                         {row.paidAt
                           ? formatDateTime(row.paidAt)
                           : row.status === 'accrued'
-                            ? 'Accrued — pay with monthly invoice'
+                            ? invoiceMode
+                              ? 'Accrued — on monthly invoice if inspector confirms'
+                              : 'Accrued — pay with monthly invoice'
                             : row.status === 'invoiced'
                               ? 'On monthly invoice'
                               : row.status === 'refunded'
                                 ? '—'
-                                : paid
-                                  ? 'Paid'
-                                  : 'Not paid yet'}
+                                : row.status === 'void'
+                                  ? 'Not charged — no inspector confirmed'
+                                  : paid
+                                    ? 'Paid'
+                                    : 'Not paid yet'}
                       </dd>
                     </div>
                     {row.refundedAt ? (
                       <div>
                         <dt className="text-muted-foreground">Refunded</dt>
                         <dd className="font-medium">{formatDateTime(row.refundedAt)}</dd>
+                      </div>
+                    ) : null}
+                    {row.voidedAt && row.status === 'void' ? (
+                      <div>
+                        <dt className="text-muted-foreground">Not charged</dt>
+                        <dd className="font-medium">{formatDateTime(row.voidedAt)}</dd>
                       </div>
                     ) : null}
                     {row.calculationDetail ? (
