@@ -719,7 +719,8 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     }
     for (const row of liveRows) {
       if (isHiddenOpenPoolTwin(row)) continue;
-      byId.set(row.id, row);
+      const existing = byId.get(row.id);
+      byId.set(row.id, existing ? pickFresherInspection(existing, row) : row);
     }
     // Optimistic create rows stick in localStorage until pruned. Once the agency
     // book is loaded, drop stale non-OPEN orphans so admin hard-deletes don't ghost

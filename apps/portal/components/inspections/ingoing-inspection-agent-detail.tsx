@@ -57,7 +57,12 @@ import {
   resolveIngoingInspectionDateDisplay,
   type AgentIngoingGateStatus,
 } from '@/lib/ingoing-inspection-display';
-import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
+import {
+  mergeInspectionDetail,
+  mergeInspectionRecord,
+  mergeOnSiteProgression,
+  mergeReportUrl,
+} from '@/lib/inspections/field-inspection-snapshot-merge';
 import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection-platform-payment-prompt';
 import { InspectorConfirmCountdown } from '@/components/inspections/inspector-confirm-countdown';
 import { InspectionViewPaymentButton } from '@/components/billing/inspection-view-payment-button';
@@ -165,8 +170,6 @@ export function IngoingInspectionAgentDetail({
 
       const signName: string | null = detail?.signName ?? null;
       const signUrl: string | null = detail?.signUrl ?? null;
-      let reportUrl: string | null =
-        detail?.reportUrl ?? progression?.reportUrl ?? record?.reportUrl ?? inspection.reportUrl ?? null;
 
       let leasingTenantApproved = false;
       let tenantName: string | null = record?.tenantName?.trim() || null;
@@ -214,20 +217,32 @@ export function IngoingInspectionAgentDetail({
         if (linkedToThisJob) break;
       }
 
-      setSnapshot({
-        record,
-        progression,
-        detail,
-        signName,
-        signUrl,
-        reportUrl,
-        leasingTenantApproved,
-        tenantName,
-        tenantEmail,
-        tenantPhone,
-        moveInDate,
+      let mergedRecord: InspectionRecord | null = null;
+      setSnapshot((prev) => {
+        mergedRecord = mergeInspectionRecord(prev.record, record);
+        const mergedProgression = mergeOnSiteProgression(prev.progression, progression);
+        const mergedDetail = mergeInspectionDetail(prev.detail, detail);
+        return {
+          record: mergedRecord,
+          progression: mergedProgression,
+          detail: mergedDetail,
+          signName: signName ?? prev.signName,
+          signUrl: signUrl ?? prev.signUrl,
+          reportUrl: mergeReportUrl(
+            detail?.reportUrl,
+            progression?.reportUrl,
+            record?.reportUrl,
+            inspection.reportUrl,
+            prev.reportUrl,
+          ),
+          leasingTenantApproved: leasingTenantApproved || prev.leasingTenantApproved,
+          tenantName: tenantName ?? prev.tenantName,
+          tenantEmail: tenantEmail ?? prev.tenantEmail,
+          tenantPhone: tenantPhone ?? prev.tenantPhone,
+          moveInDate: moveInDate ?? prev.moveInDate,
+        };
       });
-      if (record) registerInspection(mapInspectionRecordToView(record));
+      if (mergedRecord) registerInspection(mapInspectionRecordToView(mergedRecord));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load inspection');
@@ -238,7 +253,6 @@ export function IngoingInspectionAgentDetail({
     apiConnected,
     inspection.id,
     inspection.propertyId,
-    inspection.reportUrl,
     leasingCycles,
     propertyLeasingCycle?.id,
     registerInspection,
@@ -248,7 +262,7 @@ export function IngoingInspectionAgentDetail({
     void refreshSnapshot();
   }, [refreshSnapshot]);
 
-  useLivePoll(refreshSnapshot, apiConnected);
+  useLivePoll(refreshSnapshot, apiConnected, { immediate: false });
 
   const { record, progression, detail, signName, signUrl, reportUrl, leasingTenantApproved } =
     snapshot;

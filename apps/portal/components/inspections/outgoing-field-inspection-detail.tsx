@@ -46,6 +46,12 @@ import {
   deriveAgentAckState,
   isReportSubmitted,
 } from '@/lib/inspections/agent-field-inspection-status';
+import {
+  mergeInspectionDetail,
+  mergeInspectionRecord,
+  mergeOnSiteProgression,
+  mergeReportUrl,
+} from '@/lib/inspections/field-inspection-snapshot-merge';
 import { isInspectionReportReadyForView } from '@/lib/inspections/inspection-report-ready';
 import {
   AGENT_OUTGOING_GATE_HINT,
@@ -163,12 +169,6 @@ export function OutgoingFieldInspectionDetail({
           : Promise.resolve(null),
       ]);
 
-      const reportUrl =
-        detail?.reportUrl ??
-        progression?.reportUrl ??
-        record?.reportUrl ??
-        inspection.reportUrl ??
-        null;
 
       const terminationCaseId =
         terminationCase?.inspection.inspectionId === inspection.id
@@ -201,20 +201,38 @@ export function OutgoingFieldInspectionDetail({
         property?.tenantContact?.phone?.trim() ||
         null;
 
-      setSnapshot({
-        record,
-        progression,
-        detail,
-        reportUrl,
-        tenantAttendance: terminationCase?.inspection.tenantAttendance ?? 'pending',
-        terminationCaseId,
-        agentAcknowledged: terminationCase?.reportComparison.agentAcknowledged ?? false,
-        agentAcknowledgedAt: terminationCase?.reportComparison.agentAcknowledgedAt ?? null,
-        tenantName,
-        tenantEmail,
-        tenantPhone,
+      let mergedRecord: InspectionRecord | null = null;
+      setSnapshot((prev) => {
+        mergedRecord = mergeInspectionRecord(prev.record, record);
+        const mergedProgression = mergeOnSiteProgression(prev.progression, progression);
+        const mergedDetail = mergeInspectionDetail(prev.detail, detail);
+        return {
+          record: mergedRecord,
+          progression: mergedProgression,
+          detail: mergedDetail,
+          reportUrl: mergeReportUrl(
+            detail?.reportUrl,
+            progression?.reportUrl,
+            record?.reportUrl,
+            inspection.reportUrl,
+            prev.reportUrl,
+          ),
+          tenantAttendance:
+            terminationCase?.inspection.tenantAttendance ?? prev.tenantAttendance,
+          terminationCaseId:
+            terminationCaseId ?? prev.terminationCaseId,
+          agentAcknowledged:
+            terminationCase?.reportComparison.agentAcknowledged ??
+            prev.agentAcknowledged,
+          agentAcknowledgedAt:
+            terminationCase?.reportComparison.agentAcknowledgedAt ??
+            prev.agentAcknowledgedAt,
+          tenantName: tenantName ?? prev.tenantName,
+          tenantEmail: tenantEmail ?? prev.tenantEmail,
+          tenantPhone: tenantPhone ?? prev.tenantPhone,
+        };
       });
-      if (record) registerInspection(mapInspectionRecordToView(record));
+      if (mergedRecord) registerInspection(mapInspectionRecordToView(mergedRecord));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load inspection');
@@ -224,7 +242,6 @@ export function OutgoingFieldInspectionDetail({
   }, [
     apiConnected,
     inspection.id,
-    inspection.reportUrl,
     linkedVacating?.id,
     property?.tenantName,
     property?.tenantContact?.email,
@@ -236,7 +253,7 @@ export function OutgoingFieldInspectionDetail({
     void refresh();
   }, [refresh]);
 
-  useLivePoll(refresh, apiConnected);
+  useLivePoll(refresh, apiConnected, { immediate: false });
 
   const {
     record,

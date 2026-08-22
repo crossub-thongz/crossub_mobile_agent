@@ -9,6 +9,7 @@ import type {
   OpenConductedBy,
   OpenListingContext,
 } from '@/lib/open-inspection';
+import { pickFresherInspection } from '@/lib/inspection-mappers';
 import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, PropertyPartyContact, ThreadMessage } from '@/lib/types';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatPropertyFullAddress } from '@/lib/utils';
@@ -398,12 +399,18 @@ export const useAgentStore = create<AgentStore>()(
         return inspection;
       },
       registerInspection: (inspection) =>
-        set((s) => ({
-          addedInspections: [
-            inspection,
-            ...s.addedInspections.filter((row) => row.id !== inspection.id),
-          ],
-        })),
+        set((s) => {
+          const existing = s.addedInspections.find((row) => row.id === inspection.id);
+          const merged = existing
+            ? pickFresherInspection(existing, inspection)
+            : inspection;
+          return {
+            addedInspections: [
+              merged,
+              ...s.addedInspections.filter((row) => row.id !== inspection.id),
+            ],
+          };
+        }),
       pruneStaleAddedInspections: (knownIds) =>
         set((s) => {
           const next = s.addedInspections.filter((row) => {
