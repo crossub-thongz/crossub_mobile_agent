@@ -41,12 +41,12 @@ export function mergeInspectionCaseAudit(input: {
 
   if (
     (custody?.collectComplete || (custody?.collectPhotos?.length ?? 0) > 0 || custody?.collectedAt) &&
-    !hasLabel(/key collection proof/i)
+    !hasLabel(/key collection proof|handover \(collecting keys\)/i)
   ) {
     const at = custody?.collectedAt ?? input.record?.updatedAt ?? new Date().toISOString();
     byId.set(`audit-key-collect-${inspectionId}`, {
       id: `audit-key-collect-${inspectionId}`,
-      label: 'Key collection proof recorded',
+      label: 'Handover (collecting keys) recorded',
       actor: inspectorActor,
       at,
     });
@@ -54,12 +54,12 @@ export function mergeInspectionCaseAudit(input: {
 
   if (
     (custody?.returnComplete || (custody?.returnPhotos?.length ?? 0) > 0 || custody?.returnedAt) &&
-    !hasLabel(/key return proof/i)
+    !hasLabel(/key return proof|handover \(returning keys\)/i)
   ) {
     const at = custody?.returnedAt ?? input.record?.updatedAt ?? new Date().toISOString();
     byId.set(`audit-key-return-${inspectionId}`, {
       id: `audit-key-return-${inspectionId}`,
-      label: 'Key return proof recorded',
+      label: 'Handover (returning keys) recorded',
       actor: inspectorActor,
       at,
     });

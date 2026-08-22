@@ -25,6 +25,7 @@ import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/le
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { FieldInspectionReportReviewSection } from '@/components/inspections/field-inspection-report-review-section';
+import { HandoverNotesBlock } from '@/components/inspections/handover-custody-notes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { InspectorNameWithHistory } from '@/components/inspections/inspector-name-with-history';
@@ -555,7 +556,7 @@ export function IngoingInspectionAgentDetail({
         <section className="rounded-2xl border border-dashed bg-card/60 p-4">
           <p className="text-sm font-medium">Awaiting inspector acceptance</p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Once an inspector accepts this job it moves to Scheduled. Key collection proof and the
+            Once an inspector accepts this job it moves to Scheduled. Handover (collecting keys) and the
             remaining completion steps will appear under Scheduled.
           </p>
         </section>
@@ -569,8 +570,8 @@ export function IngoingInspectionAgentDetail({
           </p>
           <StepCard
             icon={KeyRound}
-            title="Key collection proof"
-            description="Photo proof uploaded by the inspector in the mobile app."
+            title="Handover (collecting keys)"
+            description="Inspector records handover with tenant or agent in the mobile app."
             status={keyCollected ? LEASING_ITEM_STATUS.DONE : LEASING_ITEM_STATUS.IN_PROGRESS}
           >
             {collectPhotos.length > 0 ? (
@@ -578,14 +579,12 @@ export function IngoingInspectionAgentDetail({
                 {custody?.collectedAt ? (
                   <StepFact label="Collected" value={formatCustodyTime(custody.collectedAt)} />
                 ) : null}
-                {custody?.collectNotes ? (
-                  <p className="text-muted-foreground text-xs">{custody.collectNotes}</p>
-                ) : null}
+                <HandoverNotesBlock notes={custody?.collectNotes} />
                 <ProofPhotoGrid urls={collectPhotos} label="Inspector upload" />
               </div>
             ) : (
               <p className="text-muted-foreground text-xs">
-                Waiting for the inspector to upload key collection proof…
+                Waiting for the inspector to upload handover proof…
               </p>
             )}
           </StepCard>
@@ -631,15 +630,15 @@ export function IngoingInspectionAgentDetail({
               <BoolStatus
                 done={false}
                 doneLabel="Report submitted"
-                pendingLabel="Available after key collection proof"
+                pendingLabel="Available after handover (collecting keys)"
               />
             )}
           </StepCard>
 
           <StepCard
             icon={KeyRound}
-            title="Key return proof"
-            description="Keys returned after the ingoing report is filed."
+            title="Handover (returning keys)"
+            description="Inspector records handover with tenant or agent after the ingoing report is filed."
             status={
               keyReturned
                 ? LEASING_ITEM_STATUS.DONE
@@ -653,14 +652,12 @@ export function IngoingInspectionAgentDetail({
                 {custody?.returnedAt ? (
                   <StepFact label="Returned" value={formatCustodyTime(custody.returnedAt)} />
                 ) : null}
-                {custody?.returnNotes ? (
-                  <p className="text-muted-foreground text-xs">{custody.returnNotes}</p>
-                ) : null}
+                <HandoverNotesBlock notes={custody?.returnNotes} />
                 <ProofPhotoGrid urls={returnPhotos} label="Inspector upload" />
               </div>
             ) : reportSubmitted ? (
               <p className="text-muted-foreground text-xs">
-                Waiting for the inspector to upload key return proof…
+                Waiting for the inspector to upload handover (returning keys) proof…
               </p>
             ) : (
               <p className="text-muted-foreground text-xs">

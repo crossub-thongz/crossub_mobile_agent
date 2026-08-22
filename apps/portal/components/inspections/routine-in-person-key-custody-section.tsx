@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { KeyRound, Loader2 } from 'lucide-react';
 
 import { StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
+import { HandoverNotesBlock } from '@/components/inspections/handover-custody-notes';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { inspectionsApi } from '@/lib/inspections-api';
 import type { OnSiteProgression } from '@/lib/inspections-types';
@@ -90,7 +91,7 @@ export function RoutineInPersonKeyCustodySection({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <KeyRound className="text-primary size-4" />
-          <h3 className="text-sm font-semibold">Key collection & return</h3>
+          <h3 className="text-sm font-semibold">Key handover</h3>
         </div>
         {loading ? (
           <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
@@ -104,6 +105,7 @@ export function RoutineInPersonKeyCustodySection({
         )}
       </div>
 
+      {/* Pickup arrangement — inspector records tenant/agent handover on collecting / returning keys.
       {progression?.keyCollection ? (
         <div className="bg-secondary/30 rounded-lg border p-3 text-xs">
           <p className="font-medium">Pickup arrangement</p>
@@ -115,12 +117,13 @@ export function RoutineInPersonKeyCustodySection({
           </p>
         </div>
       ) : null}
+      */}
 
       <div className="space-y-3">
         <StepCard
           icon={KeyRound}
-          title="Key collection proof"
-          description="Photo proof uploaded by the inspector in the mobile app."
+          title="Handover (collecting keys)"
+          description="Inspector records handover with tenant or agent in the mobile app."
           status={
             keyCollected
               ? LEASING_ITEM_STATUS.DONE
@@ -134,22 +137,20 @@ export function RoutineInPersonKeyCustodySection({
               {custody?.collectedAt ? (
                 <StepFact label="Collected" value={formatCustodyTime(custody.collectedAt)} />
               ) : null}
-              {custody?.collectNotes ? (
-                <p className="text-muted-foreground text-xs">{custody.collectNotes}</p>
-              ) : null}
+              <HandoverNotesBlock notes={custody?.collectNotes} />
               <ProofPhotoGrid urls={collectPhotos} label="Inspector upload" />
             </div>
           ) : inspectorAssigned ? (
             <p className="text-muted-foreground text-xs">
-              Waiting for the inspector to upload key collection proof…
+              Waiting for the inspector to upload handover proof…
             </p>
           ) : null}
         </StepCard>
 
         <StepCard
           icon={KeyRound}
-          title="Key return proof"
-          description="After the routine report is filed, the inspector uploads keys-returned proof."
+          title="Handover (returning keys)"
+          description="After the routine report is filed, the inspector records handover with tenant or agent."
           status={
             keyReturned
               ? LEASING_ITEM_STATUS.DONE
@@ -163,14 +164,12 @@ export function RoutineInPersonKeyCustodySection({
               {custody?.returnedAt ? (
                 <StepFact label="Returned" value={formatCustodyTime(custody.returnedAt)} />
               ) : null}
-              {custody?.returnNotes ? (
-                <p className="text-muted-foreground text-xs">{custody.returnNotes}</p>
-              ) : null}
+              <HandoverNotesBlock notes={custody?.returnNotes} />
               <ProofPhotoGrid urls={returnPhotos} label="Inspector upload" />
             </div>
           ) : reportSubmitted ? (
             <p className="text-muted-foreground text-xs">
-              Waiting for the inspector to upload key return proof…
+              Waiting for the inspector to upload handover (returning keys) proof…
             </p>
           ) : (
             <p className="text-muted-foreground text-xs">
