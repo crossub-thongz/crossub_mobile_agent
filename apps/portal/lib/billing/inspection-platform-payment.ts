@@ -44,7 +44,7 @@ export function isFieldInspectionPlatformPaymentActive(args: {
     .toLowerCase();
   if (status.includes('cancel')) return false;
   if (inspectorBillingEligible(args.record, args.inspection ?? null)) return true;
-  return args.gateStatus === 'scheduled';
+  return args.gateStatus === 'scheduled' || args.gateStatus === 'awaiting_approval';
 }
 
 export function resolveRoutinePlatformPaymentInspectionId(args: {

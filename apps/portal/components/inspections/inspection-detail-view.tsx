@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { notFound, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -114,7 +114,7 @@ import {
   routineInspectionApi,
   type ServerRoutineScheduleView,
 } from '@/lib/routine-inspection-api';
-import { mapInspectionRecordToView, mapOpenSessionToInspection, caseAuditToTimeline } from '@/lib/inspection-mappers';
+import { mapInspectionRecordToView, mapOpenSessionToInspection, caseAuditToTimeline, pickFresherInspection } from '@/lib/inspection-mappers';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { RoutineFlow } from '@/lib/routine/routine-case-status';
 import type { Inspection } from '@/lib/types';
@@ -135,25 +135,30 @@ export function InspectionDetailView({
   const { inspections, leasingCycles, apiConnected, registerInspection, refresh, properties } =
     useAgentData();
   const baseFromList = inspections.find((i) => i.id === inspectionId);
+  const baseFromListRef = useRef(baseFromList);
+  baseFromListRef.current = baseFromList;
   const [fetchedBase, setFetchedBase] = useState<Inspection | null>(null);
   const [resolveState, setResolveState] = useState<'pending' | 'ready' | 'missing'>(
     baseFromList ? 'ready' : 'pending',
   );
 
   useEffect(() => {
-    if (baseFromList) {
+    const listed = baseFromListRef.current;
+    if (listed?.source === 'open_viewing') {
       setFetchedBase(null);
       setResolveState('ready');
       return;
     }
 
     if (!apiConnected) {
-      setResolveState('missing');
+      setResolveState(listed ? 'ready' : 'missing');
       return;
     }
 
     let cancelled = false;
-    setResolveState('pending');
+    if (!listed) setResolveState('pending');
+    else setResolveState('ready');
+
     void inspectionsApi
       .get(inspectionId)
       .then((record) => {
@@ -165,6 +170,7 @@ export function InspectionDetailView({
       })
       .catch(() => {
         if (cancelled) return;
+        if (listed) return;
         return openViewingsApi
           .get(inspectionId)
           .then((session) => {
@@ -183,9 +189,12 @@ export function InspectionDetailView({
     return () => {
       cancelled = true;
     };
-  }, [apiConnected, baseFromList, inspectionId, registerInspection]);
+  }, [apiConnected, inspectionId, registerInspection]);
 
-  const base = baseFromList ?? fetchedBase;
+  const base =
+    baseFromList && fetchedBase
+      ? pickFresherInspection(baseFromList, fetchedBase)
+      : (baseFromList ?? fetchedBase);
   const isOpenViewingSource = base?.type === 'OPEN' && base?.source === 'open_viewing';
   const liveInsp = useInspectionDetailLiveSync(base, apiConnected && !isOpenViewingSource);
 

@@ -518,6 +518,11 @@ export interface Inspection {
   routineMode?: 'self' | 'in_person';
   /** When a routine inspection instance was finalised (ISO). */
   completedAt?: string;
+  /**
+   * When CROSSUB approved the finished job. Distinct from `completedAt`, which
+   * is the inspector's word that they finished.
+   */
+  approvedAt?: string | null;
   /** Reason recorded when a routine case was cancelled. */
   cancelReason?: string;
   /** OPEN inspections only — who runs the viewing */

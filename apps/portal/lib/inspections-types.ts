@@ -30,6 +30,11 @@ export interface InspectionRecord {
   scheduledDate: string | null
   inspectionDate: string | null
   completedDate: string | null
+  /**
+   * When CROSSUB approved the finished job. A COMPLETED job with a null
+   * `approvedAt` is still waiting for officer sign-off.
+   */
+  approvedAt?: string | null
   urgent: boolean
   reportUrl: string | null
   tenantName: string | null

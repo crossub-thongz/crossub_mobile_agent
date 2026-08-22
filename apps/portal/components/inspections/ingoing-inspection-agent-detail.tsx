@@ -38,6 +38,7 @@ import {
 } from '@/lib/inspection/agent-workflow-email';
 import { mergeInspectionCaseAudit } from '@/lib/inspection-case-audit';
 import { inspectionsApi } from '@/lib/inspections-api';
+import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import {
   deriveTenantAckState,
@@ -113,6 +114,7 @@ function ProofPhotoGrid({ urls, label }: { urls: string[]; label: string }) {
 function gateStatusTone(status: ReturnType<typeof deriveAgentIngoingGateStatus>): string {
   if (status === 'completed') return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
   if (status === 'scheduled') return 'bg-sky-500/10 text-sky-700 dark:text-sky-300';
+  if (status === 'awaiting_approval') return 'bg-amber-500/10 text-amber-800 dark:text-amber-200';
   return 'bg-amber-500/10 text-amber-800 dark:text-amber-200';
 }
 
@@ -125,7 +127,7 @@ export function IngoingInspectionAgentDetail({
   apiConnected: boolean;
   onCancelled?: () => void;
 }) {
-  const { leasingCycles, refresh } = useAgentData();
+  const { leasingCycles, refresh, registerInspection } = useAgentData();
   const propertyLeasingCycle = leasingCycles.find(
     (cycle) => cycle.propertyId === inspection.propertyId,
   );
@@ -225,6 +227,7 @@ export function IngoingInspectionAgentDetail({
         tenantPhone,
         moveInDate,
       });
+      if (record) registerInspection(mapInspectionRecordToView(record));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load inspection');
@@ -238,6 +241,7 @@ export function IngoingInspectionAgentDetail({
     inspection.reportUrl,
     leasingCycles,
     propertyLeasingCycle?.id,
+    registerInspection,
   ]);
 
   useEffect(() => {
@@ -270,6 +274,7 @@ export function IngoingInspectionAgentDetail({
     inspection,
     record,
     stepsComplete,
+    progressionStatus: progression?.inspectionStatus,
   });
   const liveGateIndex = agentIngoingGateIndex(gateStatus);
   const viewingStep = viewingGateStep ?? gateStatus;
@@ -330,6 +335,7 @@ export function IngoingInspectionAgentDetail({
     keyReturned,
     tenantAcked,
     accepted,
+    awaitingCrossubApproval: gateStatus === 'awaiting_approval',
   });
 
   const handleCancel = async (reason: string) => {
@@ -360,7 +366,9 @@ export function IngoingInspectionAgentDetail({
         inspectionId={snapshot.record?.id ?? inspection.id}
         propertyId={inspection.propertyId}
         deadlineAt={
-          snapshot.record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt
+          gateStatus === 'pending'
+            ? (snapshot.record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt)
+            : null
         }
         refunded={
           snapshot.record?.unacceptedRefunded === true || inspection.unacceptedRefunded === true
@@ -566,7 +574,11 @@ export function IngoingInspectionAgentDetail({
       {!loading && viewingStep !== 'pending' && liveGateIndex >= 1 ? (
         <div className="space-y-3">
           <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
-            {viewingStep === 'completed' ? 'Completion steps' : 'Scheduled — completion steps'}
+            {viewingStep === 'completed'
+              ? 'Completion steps'
+              : viewingStep === 'awaiting_approval'
+                ? 'Pending approval from CROSSUB — completion steps'
+                : 'Scheduled — completion steps'}
           </p>
           <StepCard
             icon={KeyRound}

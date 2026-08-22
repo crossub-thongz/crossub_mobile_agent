@@ -1,5 +1,6 @@
 import { INSPECTION_STATUS } from '@/constants/api-enums';
 import { SessionStatusEnum } from '@/constants/open-inspection-ops';
+import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import type { Inspection } from '@/lib/types';
 
 export const INSPECTION_TYPE_LABEL: Record<Inspection['type'], string> = {
@@ -39,8 +40,18 @@ export function isInspectionDone(inspection: Inspection): boolean {
   if (api === SessionStatusEnum.CLOSED) return true;
   if (api === SessionStatusEnum.CANCELLED) return true;
   if (api === INSPECTION_STATUS.PUBLISHED.toLowerCase()) return true;
-  if (api === INSPECTION_STATUS.COMPLETED.toLowerCase()) return true;
-  if (api === 'completed') return true;
+  if (
+    api === INSPECTION_STATUS.COMPLETED.toLowerCase() ||
+    api === 'completed'
+  ) {
+    if (inspection.type === 'INGOING' || inspection.type === 'OUTGOING') {
+      return hasLeftTaskPool({
+        completedAt: inspection.completedAt,
+        approvedAt: inspection.approvedAt,
+      });
+    }
+    return true;
+  }
   // Open report generated ⇒ case is done even if session status lagging.
   if (
     (inspection.type === 'OPEN' || inspection.source === 'open_viewing') &&

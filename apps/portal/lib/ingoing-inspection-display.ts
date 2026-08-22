@@ -1,23 +1,31 @@
+import { AGENT_AWAITING_CROSSUB_APPROVAL_LABEL } from '@/constants/inspection-approval';
 import { INSPECTION_RECORD_STATUS } from '@/constants/inspection-records';
 import { INSPECTION_STATUS } from '@/constants/api-enums';
+import { awaitsCrossubApproval, furthestInspectionStatus } from '@/lib/inspection-approval';
 import { isInspectionDone } from '@/lib/inspections/presentation';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
 import { suggestLeasingIngoingScheduledTime } from '@/lib/leasing/leasing-ingoing-handoff';
 
-/** Agent-facing ingoing gate: Pending → Scheduled → Completed */
-export type AgentIngoingGateStatus = 'pending' | 'scheduled' | 'completed';
+/** Agent-facing ingoing gate: Pending → Scheduled → Pending approval from CROSSUB → Completed */
+export type AgentIngoingGateStatus =
+  | 'pending'
+  | 'scheduled'
+  | 'awaiting_approval'
+  | 'completed';
 
 export const AGENT_INGOING_GATE_STEPS = [
   'pending',
   'scheduled',
+  'awaiting_approval',
   'completed',
 ] as const satisfies readonly AgentIngoingGateStatus[];
 
 export const AGENT_INGOING_GATE_LABEL: Record<AgentIngoingGateStatus, string> = {
   pending: 'Pending',
   scheduled: 'Scheduled',
+  awaiting_approval: AGENT_AWAITING_CROSSUB_APPROVAL_LABEL,
   completed: 'Completed',
 };
 
@@ -26,7 +34,10 @@ export const AGENT_INGOING_GATE_HINT: Record<AgentIngoingGateStatus, string> = {
     'New tenant details and inspector details. Inspection date targets 7 days before move-in until an inspector is assigned or accepts.',
   scheduled:
     'Inspector is on the job. Pay the Level 1 platform fee if prompted, then track key collection, report, key return, and tenant acknowledgement.',
-  completed: 'All four post-accept steps are done — this ingoing job case is complete.',
+  awaiting_approval:
+    'The inspector has submitted the report. CROSSUB is reviewing it before this job is complete.',
+  completed:
+    'CROSSUB has approved this job and all four post-accept steps are done — this ingoing job case is complete.',
 };
 
 export function agentIngoingGateIndex(status: AgentIngoingGateStatus): number {
@@ -79,15 +90,40 @@ export function inspectorHasAcceptedJob(
 /**
  * Pending until an inspector is on the job (pool accept or staff assign).
  * Scheduled after that (field work + 4 completion steps).
- * Completed when all four post-accept steps are done.
+ * Pending approval from CROSSUB once the inspector has finished and the report
+ * is waiting for officer sign-off.
+ * Completed when CROSSUB has approved and all four post-accept steps are done.
  */
 export function deriveAgentIngoingGateStatus(args: {
   inspection: Inspection;
   record: InspectionRecord | null;
   stepsComplete?: boolean;
+  progressionStatus?: string | null;
 }): AgentIngoingGateStatus {
-  const { inspection, record, stepsComplete } = args;
-  const apiStatus = (record?.status ?? inspection.apiStatus ?? '').toUpperCase();
+  const { inspection, record, stepsComplete, progressionStatus } = args;
+  const apiStatus = furthestInspectionStatus(
+    record?.status,
+    inspection.apiStatus,
+    progressionStatus,
+  );
+  const effectiveRecord =
+    record && apiStatus
+      ? { ...record, status: apiStatus as InspectionRecord['status'] }
+      : record;
+  const effectiveInspection = apiStatus
+    ? { ...inspection, apiStatus }
+    : inspection;
+
+  if (
+    awaitsCrossubApproval({
+      status: apiStatus,
+      completedAt: record?.completedDate ?? inspection.completedAt,
+      approvedAt: record?.approvedAt ?? inspection.approvedAt,
+      createdAt: record?.createdAt ?? inspection.createdAt,
+    })
+  ) {
+    return 'awaiting_approval';
+  }
 
   if (stepsComplete) return 'completed';
 
@@ -102,7 +138,7 @@ export function deriveAgentIngoingGateStatus(args: {
     if (stepsComplete === undefined) return 'completed';
   }
 
-  if (inspectorHasAcceptedJob(record, inspection)) return 'scheduled';
+  if (inspectorHasAcceptedJob(effectiveRecord, effectiveInspection)) return 'scheduled';
   // Staff assign skips accept — once a named inspector is on the job, move past Pending.
   if (
     record?.assignedInspectorId ||
@@ -162,12 +198,16 @@ export function formatInspectorFieldStatus(args: {
   /** When set, acknowledgement copy uses agent (outgoing) instead of tenant (ingoing). */
   ackParty?: 'tenant' | 'agent';
   accepted?: boolean;
+  awaitingCrossubApproval?: boolean;
 }): string {
   const ackParty = args.ackParty ?? 'tenant';
   const ackNoun = ackParty === 'agent' ? 'Agent' : 'Tenant';
   const ackLower = ackParty === 'agent' ? 'agent' : 'tenant';
   if (args.tenantAcked) return `${ackNoun} acknowledgement complete`;
   if (args.keyReturned) return `Keys returned — awaiting ${ackLower} acknowledgement`;
+  if (args.awaitingCrossubApproval) {
+    return 'Report submitted — pending approval from CROSSUB';
+  }
   if (args.reportSubmitted) return 'Report submitted — awaiting key return';
   if (args.keyCollected) return 'Keys collected — inspection in progress';
   if (args.accepted) return 'Accepted — awaiting key collection';

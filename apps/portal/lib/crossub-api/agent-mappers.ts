@@ -48,7 +48,9 @@ import { toPlainTextBody } from '@/lib/message-body';
 import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 import { TENANT_REJECTED_LABEL } from '@/lib/maintenance/tenant-rejected';
 import { formatPropertyFullAddress } from '@/lib/utils';
+import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
+import { AGENT_OUTGOING_GATE_LABEL, deriveAgentOutgoingGateStatus } from '@/lib/outgoing-inspection-display';
 import type {
   AgentArchiveView,
   ArchivedEndLeasingCase,
@@ -347,7 +349,17 @@ function inspectionReportStatus(
   dto: AgentInspection,
 ): Inspection['reportStatus'] {
   if (dto.status === INSPECTION_STATUS.PUBLISHED) return 'sent';
-  if (dto.status === INSPECTION_STATUS.COMPLETED) return 'approved';
+  if (dto.status === INSPECTION_STATUS.COMPLETED) {
+    if (
+      hasLeftTaskPool({
+        completedAt: dto.completedDate,
+        approvedAt: dto.approvedAt,
+      })
+    ) {
+      return 'approved';
+    }
+    return dto.reportUrl ? 'uploaded' : 'pending';
+  }
   return dto.reportUrl ? 'uploaded' : 'pending';
 }
 
@@ -372,12 +384,17 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       reportStatus: inspectionReportStatus(i),
       reportUrl: i.reportUrl ?? undefined,
       createdAt: i.createdAt ?? undefined,
+      completedAt: i.completedDate ?? undefined,
+      approvedAt: i.approvedAt ?? undefined,
       timeline: [],
       source: 'inspection' as const,
     };
     if (type === 'INGOING') {
-      const gate = deriveAgentIngoingGateStatus({ inspection: inspectionRow, record: null });
-      inspectionRow.status = AGENT_INGOING_GATE_LABEL[gate];
+      inspectionRow.status =
+        AGENT_INGOING_GATE_LABEL[deriveAgentIngoingGateStatus({ inspection: inspectionRow, record: null })];
+    } else if (type === 'OUTGOING') {
+      inspectionRow.status =
+        AGENT_OUTGOING_GATE_LABEL[deriveAgentOutgoingGateStatus({ inspection: inspectionRow, record: null })];
     }
     return inspectionRow;
   });

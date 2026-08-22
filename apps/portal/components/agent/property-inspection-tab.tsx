@@ -87,16 +87,24 @@ export function PropertyInspectionTab({
   useEffect(() => {
     if (!apiConnected || !propertyId) return;
     let cancelled = false;
-    const knownIds = new Set(inspections.map((row) => row.id).filter(Boolean));
     void (async () => {
       try {
-        const { schedule } = await routineInspectionApi.getByProperty(propertyId);
-        const inspectionId = schedule?.currentInspectionId;
+        const [{ inspections: rows }, scheduleResult] = await Promise.all([
+          inspectionsApi.list({ propertyId, pageSize: 200 }),
+          routineInspectionApi.getByProperty(propertyId).catch(() => null),
+        ]);
+        if (cancelled) return;
+        for (const record of rows) {
+          registerInspection(mapInspectionRecordToView(record));
+        }
+        const inspectionId = scheduleResult?.schedule?.currentInspectionId;
+        const knownIds = new Set(rows.map((row) => row.id).filter(Boolean));
         if (
-          !cancelled &&
           inspectionId &&
           !knownIds.has(inspectionId) &&
-          isActiveRoutineInspectionStatus(schedule.currentInspectionStatus)
+          isActiveRoutineInspectionStatus(
+            scheduleResult?.schedule?.currentInspectionStatus,
+          )
         ) {
           const record = await inspectionsApi.get(inspectionId);
           if (!cancelled) registerInspection(mapInspectionRecordToView(record));
@@ -108,7 +116,7 @@ export function PropertyInspectionTab({
     return () => {
       cancelled = true;
     };
-    // Only heal once per property visit — do not refresh the portfolio in a loop.
+    // Heal once per property visit — live GET in the case dialog keeps status current.
   }, [apiConnected, propertyId, registerInspection]);
 
   const emptyDescription = isVacant

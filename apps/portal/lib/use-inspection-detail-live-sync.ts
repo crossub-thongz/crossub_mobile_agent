@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { fetchInspectionDetail } from '@/lib/inspections/fetch';
-import { mapOpenSessionToInspection } from '@/lib/inspection-mappers';
-import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
+import {
+  mapInspectionRecordToView,
+  mapOpenSessionToInspection,
+  pickFresherInspection,
+} from '@/lib/inspection-mappers';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import type { Inspection } from '@/lib/types';
@@ -26,35 +29,26 @@ function mergeInspectionDetail(base: Inspection, detail: InspectionDetail | Open
       timeline: base.timeline.length > mapped.timeline.length ? base.timeline : mapped.timeline,
     };
   }
+  const mapped = mapInspectionRecordToView(detail);
   return {
     ...base,
-    inspector:
-      formatInspectorReassignmentLabel(
-        detail.inspectorName,
-        detail.previousInspectorName,
-      ) ??
-      detail.inspectorName ??
-      base.inspector,
-    scheduledAt: detail.scheduledDate ?? detail.inspectionDate ?? base.scheduledAt,
-    reportUrl: detail.reportUrl ?? base.reportUrl,
+    ...mapped,
+    propertyAddress:
+      (base.propertyAddress && base.propertyAddress !== '—'
+        ? base.propertyAddress
+        : null) ||
+      mapped.propertyAddress,
     areaOutcomes: detail.areas.map((area) => ({
       area: area.name ?? 'Area',
       outcome: area.rating,
     })),
+    timeline: base.timeline.length > mapped.timeline.length ? base.timeline : mapped.timeline,
   };
 }
 
 /** Keep detail fields enriched by polling when the list row refreshes with sparse data. */
 function preserveLiveInspectionFields(base: Inspection, prev: Inspection): Inspection {
-  return {
-    ...base,
-    scheduledAt: base.scheduledAt ?? prev.scheduledAt,
-    inspector: base.inspector ?? prev.inspector,
-    reportUrl: base.reportUrl ?? prev.reportUrl,
-    visitorCount: base.visitorCount ?? prev.visitorCount,
-    areaOutcomes: prev.areaOutcomes?.length ? prev.areaOutcomes : base.areaOutcomes,
-    timeline: prev.timeline.length > base.timeline.length ? prev.timeline : base.timeline,
-  };
+  return pickFresherInspection(base, prev);
 }
 
 /** Poll full inspection / open-viewing detail every 5 seconds (ingoing, outgoing, routine, open). */

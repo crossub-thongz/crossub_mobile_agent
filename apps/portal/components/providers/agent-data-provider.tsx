@@ -105,6 +105,7 @@ import {
 } from '@/lib/inspections/fetch';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { isInspectionDone } from '@/lib/inspections/presentation';
+import { pickFresherInspection } from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
@@ -728,8 +729,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     // Keep fetched OPEN *pool* rows (bill deep-link / get-by-id) so they appear on
     // the Inspection tab even when the viewing-session list omitted them.
     for (const row of added) {
-      if (byId.has(row.id)) continue;
       if (isHiddenOpenPoolTwin(row)) continue;
+      const existing = byId.get(row.id);
+      if (existing) {
+        byId.set(row.id, pickFresherInspection(existing, row));
+        continue;
+      }
       if (portfolio != null && row.type !== 'OPEN' && !isRecentAddedInspection(row)) continue;
       if (
         apiInspections != null &&

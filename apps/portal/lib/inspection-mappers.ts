@@ -9,9 +9,18 @@ import {
   type OpenInspectionSession,
   type SessionStatus,
 } from '@/constants/open-inspection-ops';
+import { hasLeftTaskPool, furthestInspectionStatus } from '@/lib/inspection-approval';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { workflowEventToTimelineEntry } from '@/lib/open-inspection/linked-case-history';
+import {
+  AGENT_INGOING_GATE_LABEL,
+  deriveAgentIngoingGateStatus,
+} from '@/lib/ingoing-inspection-display';
+import {
+  AGENT_OUTGOING_GATE_LABEL,
+  deriveAgentOutgoingGateStatus,
+} from '@/lib/outgoing-inspection-display';
 import type { Inspection } from '@/lib/types';
 import type { TimelineEntry } from '@/lib/types';
 import { resolveOpenConductedByFromSession } from '@/lib/open-inspection/open-conducted-by';
@@ -66,19 +75,28 @@ const STATUS_LABEL: Record<InspectionRecordStatus, string> = {
 };
 
 function reportStatusFromRecord(
-  status: InspectionRecordStatus,
-  reportUrl: string | null,
+  record: InspectionRecord,
 ): Inspection['reportStatus'] {
-  if (status === INSPECTION_RECORD_STATUS.PUBLISHED) return 'sent';
-  if (status === INSPECTION_RECORD_STATUS.COMPLETED) return 'approved';
-  if (reportUrl) return 'uploaded';
+  if (record.status === INSPECTION_RECORD_STATUS.PUBLISHED) return 'sent';
+  if (record.status === INSPECTION_RECORD_STATUS.COMPLETED) {
+    if (
+      hasLeftTaskPool({
+        completedAt: record.completedDate,
+        approvedAt: record.approvedAt,
+      })
+    ) {
+      return 'approved';
+    }
+    return record.reportUrl ? 'uploaded' : 'pending';
+  }
+  if (record.reportUrl) return 'uploaded';
   return 'pending';
 }
 
 export function mapInspectionRecordToView(record: InspectionRecord): Inspection {
   const type = RECORD_TYPE_VIEW[record.type] ?? 'ROUTINE';
   const timeline = caseAuditToTimeline(record.caseAudit);
-  return {
+  const view: Inspection = {
     id: record.id,
     trackingNumber: inspectionReferenceLabel(record.id, type),
     type,
@@ -97,14 +115,57 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
       record.status,
     ),
     apiStatus: record.status,
-    reportStatus: reportStatusFromRecord(record.status, record.reportUrl),
+    reportStatus: reportStatusFromRecord(record),
     reportUrl: record.reportUrl ?? undefined,
     createdAt: record.createdAt,
     completedAt: record.completedDate ?? undefined,
+    approvedAt: record.approvedAt ?? undefined,
+    inspectorConfirmDeadlineAt: record.inspectorConfirmDeadlineAt ?? undefined,
+    unacceptedRefunded: record.unacceptedRefunded === true,
     routineMode: record.routineFlow ?? undefined,
     cancelReason: record.cancelReason ?? undefined,
     timeline,
     source: 'inspection',
+  };
+  if (type === 'INGOING') {
+    view.status = AGENT_INGOING_GATE_LABEL[deriveAgentIngoingGateStatus({ inspection: view, record })];
+  } else if (type === 'OUTGOING') {
+    view.status = AGENT_OUTGOING_GATE_LABEL[deriveAgentOutgoingGateStatus({ inspection: view, record })];
+  }
+  return view;
+}
+
+function inspectionFreshnessRank(row: Inspection): number {
+  const order = [
+    'CANCELLED',
+    'DRAFT',
+    'IN_PROGRESS',
+    'FIRST_REVIEW',
+    'SECOND_REVIEW',
+    'COMPLETED',
+    'PUBLISHED',
+  ];
+  const status = furthestInspectionStatus(row.apiStatus);
+  const index = order.indexOf(status);
+  let rank = index < 0 ? 0 : index;
+  if (row.completedAt) rank += 0.5;
+  if (row.approvedAt) rank += 10;
+  return rank;
+}
+
+/** Prefer the further-along live row over a stale list snapshot. */
+export function pickFresherInspection(current: Inspection, incoming: Inspection): Inspection {
+  if (incoming.id !== current.id) return incoming;
+  const winner =
+    inspectionFreshnessRank(incoming) >= inspectionFreshnessRank(current)
+      ? { ...current, ...incoming }
+      : { ...incoming, ...current };
+  return {
+    ...winner,
+    inspector: winner.inspector ?? current.inspector ?? incoming.inspector,
+    reportUrl: winner.reportUrl ?? current.reportUrl ?? incoming.reportUrl,
+    timeline:
+      current.timeline.length >= incoming.timeline.length ? current.timeline : incoming.timeline,
   };
 }
 

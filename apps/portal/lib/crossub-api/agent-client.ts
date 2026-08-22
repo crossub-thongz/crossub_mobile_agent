@@ -25,6 +25,8 @@ export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   previousInspectorName?: string | null;
   inspectorConfirmDeadlineAt?: string | null;
   unacceptedRefunded?: boolean;
+  completedDate?: string | null;
+  approvedAt?: string | null;
 };
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
   closureReason?: string | null;
