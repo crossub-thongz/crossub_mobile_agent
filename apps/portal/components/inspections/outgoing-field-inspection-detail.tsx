@@ -474,6 +474,10 @@ export function OutgoingFieldInspectionDetail({
         propertyLabel={inspection.propertyAddress}
         inspectionType="outgoing"
         reportUrl={reportUrl}
+        approvedAt={record?.approvedAt ?? inspection.approvedAt}
+        reportDeclineReason={
+          record?.reportDeclineReason ?? inspection.reportDeclineReason
+        }
         agentAcknowledged={agentAcknowledged}
         onUpdated={refresh}
       />

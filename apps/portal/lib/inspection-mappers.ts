@@ -120,6 +120,7 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     createdAt: record.createdAt,
     completedAt: record.completedDate ?? undefined,
     approvedAt: record.approvedAt ?? undefined,
+    reportDeclineReason: record.reportDeclineReason ?? undefined,
     inspectorConfirmDeadlineAt: record.inspectorConfirmDeadlineAt ?? undefined,
     unacceptedRefunded: record.unacceptedRefunded === true,
     routineMode: record.routineFlow ?? undefined,

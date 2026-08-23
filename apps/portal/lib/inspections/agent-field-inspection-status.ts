@@ -147,11 +147,13 @@ export function canRejectFieldInspectionReport(
     tenantReportSigned?: boolean;
     leasingTenantApproved?: boolean;
     agentAcknowledged?: boolean;
+    approvedAt?: string | null;
   },
 ): boolean {
   if (!record) return false;
   if (record.type !== 'INGOING' && record.type !== 'OUTGOING') return false;
   if (record.status !== 'COMPLETED') return false;
+  if (options?.approvedAt || record.approvedAt) return false;
 
   const phase = record.workflowPhase;
   const hasReport = Boolean(record.reportUrl?.trim());
@@ -164,4 +166,31 @@ export function canRejectFieldInspectionReport(
   if (options?.agentAcknowledged) return false;
 
   return true;
+}
+
+export type FieldInspectionReportReviewState =
+  | 'hidden'
+  | 'pending_crossub'
+  | 'approved'
+  | 'rejected';
+
+/** Agent-facing report review: pending CROSSUB, approved, or rejected. */
+export function deriveFieldInspectionReportReviewState(args: {
+  record: InspectionRecord | null;
+  reportUrl?: string | null;
+  approvedAt?: string | null;
+  reportDeclineReason?: string | null;
+}): FieldInspectionReportReviewState {
+  const { record, reportUrl } = args;
+  const approvedAt = args.approvedAt ?? record?.approvedAt;
+  const declined = Boolean(
+    args.reportDeclineReason?.trim() || record?.reportDeclineReason?.trim(),
+  );
+
+  if (declined && !approvedAt) return 'rejected';
+  if (approvedAt) return 'approved';
+  if (isReportSubmitted(record, null) || Boolean(reportUrl?.trim())) {
+    return 'pending_crossub';
+  }
+  return 'hidden';
 }

@@ -386,6 +386,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       createdAt: i.createdAt ?? undefined,
       completedAt: i.completedDate ?? undefined,
       approvedAt: i.approvedAt ?? undefined,
+      reportDeclineReason: i.reportDeclineReason ?? undefined,
       timeline: [],
       source: 'inspection' as const,
     };

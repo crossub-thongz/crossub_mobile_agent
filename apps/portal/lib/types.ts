@@ -523,6 +523,8 @@ export interface Inspection {
    * is the inspector's word that they finished.
    */
   approvedAt?: string | null;
+  /** Active CROSSUB / officer rejection — inspector must redo and resubmit. */
+  reportDeclineReason?: string | null;
   /** Reason recorded when a routine case was cancelled. */
   cancelReason?: string;
   /** OPEN inspections only — who runs the viewing */

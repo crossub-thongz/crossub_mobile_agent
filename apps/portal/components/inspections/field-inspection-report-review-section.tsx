@@ -1,20 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
-
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
-import { useAgentData } from '@/components/providers/agent-data-provider';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { inspectionsApi } from '@/lib/inspections-api';
-import { mapInspectionRecordToView } from '@/lib/inspection-mappers';
 import type { InspectionRecord } from '@/lib/inspections-types';
-import {
-  canRejectFieldInspectionReport,
-  FIELD_INSPECTION_PHASE,
-} from '@/lib/inspections/agent-field-inspection-status';
+import { deriveFieldInspectionReportReviewState } from '@/lib/inspections/agent-field-inspection-status';
+import { cn } from '@/lib/utils';
 
 export function FieldInspectionReportReviewSection({
   inspectionId,
@@ -22,93 +11,83 @@ export function FieldInspectionReportReviewSection({
   propertyLabel,
   inspectionType,
   reportUrl,
-  onUpdated,
-  tenantReportSigned,
-  leasingTenantApproved,
-  agentAcknowledged,
+  approvedAt,
+  reportDeclineReason,
 }: {
   inspectionId: string;
   record: InspectionRecord | null;
   propertyLabel: string;
   inspectionType: 'ingoing' | 'outgoing';
   reportUrl?: string | null;
-  onUpdated: () => void | Promise<void>;
+  onUpdated?: () => void | Promise<void>;
   tenantReportSigned?: boolean;
   leasingTenantApproved?: boolean;
   agentAcknowledged?: boolean;
+  approvedAt?: string | null;
+  reportDeclineReason?: string | null;
 }) {
-  const { refresh, registerInspection } = useAgentData();
-  const [declineReason, setDeclineReason] = useState('');
-  const [showDecline, setShowDecline] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  const canReject = canRejectFieldInspectionReport(record, {
-    tenantReportSigned,
-    leasingTenantApproved,
-    agentAcknowledged,
+  const kindLabel = inspectionType === 'ingoing' ? 'Ingoing' : 'Outgoing';
+  const declineReason =
+    reportDeclineReason?.trim() || record?.reportDeclineReason?.trim() || '';
+  const state = deriveFieldInspectionReportReviewState({
+    record,
+    reportUrl,
+    approvedAt: approvedAt ?? record?.approvedAt,
+    reportDeclineReason: declineReason,
   });
 
-  const awaitingResubmit =
-    record?.reportDeclineReason &&
-    record.status === 'IN_PROGRESS' &&
-    record.workflowPhase === FIELD_INSPECTION_PHASE.IN_PROGRESS;
+  if (state === 'hidden') return null;
 
-  if (!canReject && !awaitingResubmit) {
-    return null;
-  }
-
-  const runDecline = async () => {
-    const reason = declineReason.trim();
-    if (!reason) {
-      toast.error('Please provide a reason for declining');
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const updated = await inspectionsApi.rejectReport(inspectionId, { reason });
-      registerInspection(mapInspectionRecordToView(updated));
-      await onUpdated();
-      await refresh();
-      setShowDecline(false);
-      setDeclineReason('');
-      toast.success('Report declined — inspector notified to redo and resubmit');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Action failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (awaitingResubmit && !canReject) {
+  if (state === 'rejected') {
     return (
-      <section className="space-y-2 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4">
-        <p className="text-sm font-semibold">Awaiting inspector resubmit</p>
+      <section className="space-y-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold">{kindLabel} report review</p>
+          <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
+            Rejected
+          </span>
+        </div>
         <p className="text-muted-foreground text-xs">
-          You declined this report. The inspector must redo the inspection and submit a
-          revised report.
+          CROSSUB rejected this report. The inspector must correct it and resubmit.
         </p>
-        {record?.reportDeclineReason ? (
+        {declineReason ? (
           <p className="text-sm">
-            <span className="text-muted-foreground">Your feedback: </span>
-            {record.reportDeclineReason}
+            <span className="text-muted-foreground">Reason: </span>
+            {declineReason}
           </p>
         ) : null}
       </section>
     );
   }
 
+  const pending = state === 'pending_crossub';
+
   return (
-    <section className="space-y-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4">
-      <div>
+    <section
+      className={cn(
+        'space-y-3 rounded-2xl border p-4',
+        pending
+          ? 'border-amber-500/25 bg-amber-500/5'
+          : 'border-emerald-500/25 bg-emerald-500/5',
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm font-semibold">
-          {inspectionType === 'ingoing' ? 'Ingoing' : 'Outgoing'} report review
+          {pending
+            ? `${kindLabel} report review pending approval from CROSSUB`
+            : `${kindLabel} report review`}
         </p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Preview or download the submitted report, then decline with feedback if the
-          inspector must redo and resubmit.
-        </p>
+        {pending ? null : (
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+            Approved
+          </span>
+        )}
       </div>
+      <p className="text-muted-foreground text-xs">
+        {pending
+          ? 'Preview or download the submitted report. CROSSUB is reviewing it before this job is complete.'
+          : 'CROSSUB has approved this report. You can view or download it.'}
+      </p>
 
       <InspectionReportDownloadActions
         inspectionId={inspectionId}
@@ -118,59 +97,6 @@ export function FieldInspectionReportReviewSection({
         canDownload
         variant="inline"
       />
-
-      {!showDecline ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="gap-1.5"
-          disabled={busy}
-          onClick={() => setShowDecline(true)}
-        >
-          <XCircle className="size-3.5" />
-          Decline report
-        </Button>
-      ) : (
-        <div className="space-y-2">
-          <Textarea
-            value={declineReason}
-            onChange={(e) => setDeclineReason(e.target.value)}
-            placeholder="Explain what the inspector needs to fix or resubmit…"
-            rows={3}
-            maxLength={500}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              className="gap-1.5"
-              disabled={busy}
-              onClick={() => void runDecline()}
-            >
-              {busy ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <XCircle className="size-3.5" />
-              )}
-              Confirm decline
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => {
-                setShowDecline(false);
-                setDeclineReason('');
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

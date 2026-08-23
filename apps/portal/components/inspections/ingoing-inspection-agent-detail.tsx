@@ -455,6 +455,10 @@ export function IngoingInspectionAgentDetail({
         propertyLabel={inspection.propertyAddress}
         inspectionType="ingoing"
         reportUrl={reportUrl}
+        approvedAt={record?.approvedAt ?? inspection.approvedAt}
+        reportDeclineReason={
+          record?.reportDeclineReason ?? inspection.reportDeclineReason
+        }
         tenantReportSigned={record?.tenantReportSigned}
         leasingTenantApproved={leasingTenantApproved}
         onUpdated={refreshSnapshot}
