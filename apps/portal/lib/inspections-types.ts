@@ -37,6 +37,9 @@ export interface InspectionRecord {
   approvedAt?: string | null
   urgent: boolean
   reportUrl: string | null
+  tenantReturnedReportUrl?: string | null
+  tenantReturnedSignedName?: string | null
+  tenantReturnedSubmittedAt?: string | null
   tenantName: string | null
   tenantEmail?: string | null
   tenantPhone?: string | null

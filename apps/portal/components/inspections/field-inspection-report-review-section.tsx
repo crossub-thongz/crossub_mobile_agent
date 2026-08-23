@@ -90,14 +90,45 @@ export function FieldInspectionReportReviewSection({
       </p>
 
       {pending ? null : (
-        <InspectionReportDownloadActions
-          inspectionId={inspectionId}
-          reportUrl={reportUrl}
-          propertyLabel={propertyLabel}
-          inspectionType={inspectionType}
-          canDownload
-          variant="inline"
-        />
+        <div className="grid gap-2">
+          <div>
+            <p className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-wide">
+              Inspector copy
+            </p>
+            <InspectionReportDownloadActions
+              inspectionId={inspectionId}
+              reportUrl={reportUrl}
+              propertyLabel={propertyLabel}
+              inspectionType={inspectionType}
+              canDownload
+              variant="inline"
+            />
+          </div>
+          {inspectionType === 'ingoing' ? (
+            record?.tenantReturnedReportUrl ? (
+              <div>
+                <p className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-wide">
+                  Tenant returned copy
+                </p>
+                <a
+                  href={record.tenantReturnedReportUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium underline"
+                >
+                  View signed tenant report
+                  {record.tenantReturnedSignedName
+                    ? ` · ${record.tenantReturnedSignedName}`
+                    : ''}
+                </a>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Tenant returned copy — waiting for the tenant to upload their signed report.
+              </p>
+            )
+          ) : null}
+        </div>
       )}
     </section>
   );

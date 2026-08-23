@@ -118,6 +118,9 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     apiStatus: record.status,
     reportStatus: reportStatusFromRecord(record),
     reportUrl: record.reportUrl ?? undefined,
+    tenantReturnedReportUrl: record.tenantReturnedReportUrl ?? undefined,
+    tenantReturnedSignedName: record.tenantReturnedSignedName ?? undefined,
+    tenantReturnedSubmittedAt: record.tenantReturnedSubmittedAt ?? undefined,
     createdAt: record.createdAt,
     completedAt: record.completedDate ?? undefined,
     approvedAt: record.approvedAt ?? undefined,
@@ -176,6 +179,10 @@ export function pickFresherInspection(current: Inspection, incoming: Inspection)
     ...winner,
     inspector: winner.inspector ?? current.inspector ?? incoming.inspector,
     reportUrl: winner.reportUrl ?? current.reportUrl ?? incoming.reportUrl,
+    tenantReturnedReportUrl:
+      winner.tenantReturnedReportUrl ??
+      current.tenantReturnedReportUrl ??
+      incoming.tenantReturnedReportUrl,
     timeline:
       current.timeline.length >= incoming.timeline.length ? current.timeline : incoming.timeline,
   };

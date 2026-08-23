@@ -648,13 +648,32 @@ export function IngoingInspectionAgentDetail({
                   pendingLabel="Report not yet submitted"
                 />
                 {reportReady ? (
-                  <InspectionReportDownloadActions
-                    inspectionId={inspection.id}
-                    reportUrl={reportUrl}
-                    propertyLabel={inspection.propertyAddress}
-                    inspectionType="ingoing"
-                    canDownload
-                  />
+                  <div className="space-y-2">
+                    <InspectionReportDownloadActions
+                      inspectionId={inspection.id}
+                      reportUrl={reportUrl}
+                      propertyLabel={inspection.propertyAddress}
+                      inspectionType="ingoing"
+                      canDownload
+                    />
+                    {record?.tenantReturnedReportUrl ? (
+                      <a
+                        href={record.tenantReturnedReportUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary block text-xs font-medium underline"
+                      >
+                        Tenant returned copy
+                        {record.tenantReturnedSignedName
+                          ? ` · signed by ${record.tenantReturnedSignedName}`
+                          : ''}
+                      </a>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">
+                        Tenant returned copy will appear here after they upload the signed report.
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-muted-foreground text-xs">
                     Waiting for CROSSUB to approve this report. View and download appear

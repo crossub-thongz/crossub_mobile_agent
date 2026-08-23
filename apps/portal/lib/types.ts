@@ -539,6 +539,9 @@ export interface Inspection {
   nextDueDate?: string;
   visitorCount?: number;
   reportUrl?: string;
+  tenantReturnedReportUrl?: string | null;
+  tenantReturnedSignedName?: string | null;
+  tenantReturnedSubmittedAt?: string | null;
   imageComparisons?: {
     area: string;
     ingoingLabel: string;
