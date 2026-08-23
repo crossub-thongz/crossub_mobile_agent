@@ -591,7 +591,7 @@ export function IngoingInspectionAgentDetail({
             {viewingStep === 'completed'
               ? 'Completion steps'
               : viewingStep === 'awaiting_approval'
-                ? 'Pending approval from CROSSUB — completion steps'
+                ? 'Pending Approval — completion steps'
                 : 'Scheduled — completion steps'}
           </p>
           <StepCard

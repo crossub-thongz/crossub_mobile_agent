@@ -8,7 +8,7 @@ import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
 import { suggestLeasingIngoingScheduledTime } from '@/lib/leasing/leasing-ingoing-handoff';
 
-/** Agent-facing ingoing gate: Pending → Scheduled → Pending approval from CROSSUB → Completed */
+/** Agent-facing ingoing gate: Pending → Scheduled → Pending Approval → Completed */
 export type AgentIngoingGateStatus =
   | 'pending'
   | 'scheduled'
@@ -33,11 +33,11 @@ export const AGENT_INGOING_GATE_HINT: Record<AgentIngoingGateStatus, string> = {
   pending:
     'New tenant details and inspector details. Inspection date targets 7 days before move-in until an inspector is assigned or accepts.',
   scheduled:
-    'Inspector is on the job. Pay the Level 1 platform fee if prompted, then track key collection, report, key return, and tenant acknowledgement.',
+    'Inspector has accepted the job. Track key collection, the inspection, and key return while they are on site.',
   awaiting_approval:
     'The inspector has submitted the report. CROSSUB is reviewing it before this job is complete.',
   completed:
-    'CROSSUB has approved this job and all four post-accept steps are done — this ingoing job case is complete.',
+    'The account manager has approved the inspector report. This job is complete.',
 };
 
 export function agentIngoingGateIndex(status: AgentIngoingGateStatus): number {
@@ -71,6 +71,8 @@ export function inspectorHasAcceptedJob(
     apiStatus === INSPECTION_RECORD_STATUS.COMPLETED ||
     apiStatus === INSPECTION_RECORD_STATUS.PUBLISHED ||
     apiStatus === INSPECTION_STATUS.IN_PROGRESS ||
+    apiStatus === INSPECTION_STATUS.FIRST_REVIEW ||
+    apiStatus === INSPECTION_STATUS.SECOND_REVIEW ||
     apiStatus === INSPECTION_STATUS.COMPLETED ||
     apiStatus === INSPECTION_STATUS.PUBLISHED
   ) {
@@ -89,10 +91,9 @@ export function inspectorHasAcceptedJob(
 
 /**
  * Pending until an inspector is on the job (pool accept or staff assign).
- * Scheduled after that (field work + 4 completion steps).
- * Pending approval from CROSSUB once the inspector has finished and the report
- * is waiting for officer sign-off.
- * Completed when CROSSUB has approved and all four post-accept steps are done.
+ * Scheduled after the inspector accepts.
+ * Pending Approval once the inspector has submitted the report.
+ * Completed when the account manager approves.
  */
 export function deriveAgentIngoingGateStatus(args: {
   inspection: Inspection;
@@ -100,7 +101,7 @@ export function deriveAgentIngoingGateStatus(args: {
   stepsComplete?: boolean;
   progressionStatus?: string | null;
 }): AgentIngoingGateStatus {
-  const { inspection, record, stepsComplete, progressionStatus } = args;
+  const { inspection, record, progressionStatus } = args;
   const apiStatus = furthestInspectionStatus(
     record?.status,
     inspection.apiStatus,
@@ -114,32 +115,36 @@ export function deriveAgentIngoingGateStatus(args: {
     ? { ...inspection, apiStatus }
     : inspection;
 
+  const approvedAt = record?.approvedAt ?? inspection.approvedAt;
+  const reportUrl = record?.reportUrl ?? inspection.reportUrl;
+  const status = apiStatus.toUpperCase();
+
   if (
+    approvedAt ||
+    status === INSPECTION_RECORD_STATUS.PUBLISHED ||
+    status === INSPECTION_STATUS.PUBLISHED
+  ) {
+    return 'completed';
+  }
+
+  const reportSubmitted =
+    Boolean(reportUrl?.trim()) ||
+    status === INSPECTION_RECORD_STATUS.FIRST_REVIEW ||
+    status === INSPECTION_RECORD_STATUS.SECOND_REVIEW ||
+    status === INSPECTION_RECORD_STATUS.COMPLETED ||
+    status === INSPECTION_STATUS.FIRST_REVIEW ||
+    status === INSPECTION_STATUS.SECOND_REVIEW ||
+    status === INSPECTION_STATUS.COMPLETED ||
     awaitsCrossubApproval({
       status: apiStatus,
       completedAt: record?.completedDate ?? inspection.completedAt,
-      approvedAt: record?.approvedAt ?? inspection.approvedAt,
+      approvedAt,
       createdAt: record?.createdAt ?? inspection.createdAt,
-    })
-  ) {
-    return 'awaiting_approval';
-  }
+    });
 
-  if (stepsComplete) return 'completed';
-
-  if (
-    apiStatus === INSPECTION_RECORD_STATUS.COMPLETED ||
-    apiStatus === INSPECTION_RECORD_STATUS.PUBLISHED ||
-    apiStatus === INSPECTION_STATUS.COMPLETED ||
-    apiStatus === INSPECTION_STATUS.PUBLISHED
-  ) {
-    // Report may be done before tenant ack — stay Scheduled until all 4 steps finish.
-    if (stepsComplete === false) return 'scheduled';
-    if (stepsComplete === undefined) return 'completed';
-  }
+  if (reportSubmitted) return 'awaiting_approval';
 
   if (inspectorHasAcceptedJob(effectiveRecord, effectiveInspection)) return 'scheduled';
-  // Staff assign skips accept — once a named inspector is on the job, move past Pending.
   if (
     record?.assignedInspectorId ||
     inspectorIsAssigned(record?.inspectorName ?? inspection.inspector)

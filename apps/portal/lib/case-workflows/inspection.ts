@@ -79,7 +79,7 @@ function resolveOpenInspectionStepId(inspection: Inspection): string {
   return 'scheduled';
 }
 
-/** Pending → Scheduled → Pending approval from CROSSUB → Completed for the agent ingoing job case. */
+/** Pending → Scheduled → Pending Approval → Completed for the agent ingoing job case. */
 export function ingoingInspectionWorkflowProgress(
   gateStatus: AgentIngoingGateStatus,
 ): CaseWorkflowProgress {
@@ -90,7 +90,7 @@ export function ingoingInspectionWorkflowProgress(
   );
 }
 
-/** Pending → Scheduled → Pending approval from CROSSUB → Completed for the agent outgoing job case. */
+/** Pending → Scheduled → Pending Approval → Completed for the agent outgoing job case. */
 export function outgoingInspectionWorkflowProgress(
   gateStatus: AgentOutgoingGateStatus,
 ): CaseWorkflowProgress {
