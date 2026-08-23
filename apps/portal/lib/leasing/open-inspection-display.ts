@@ -1,6 +1,6 @@
 import type { Inspection } from '@/lib/types';
 import type { LeasingOpenInspection, LeasingPropertyDetail } from '@/lib/leasing/types';
-import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
+import { formatCurrency, formatDate, formatDateTime, formatTime } from '@/lib/utils';
 
 export const OPEN_INSPECTION_PENDING = 'Pending';
 
