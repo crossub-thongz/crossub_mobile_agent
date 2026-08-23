@@ -126,6 +126,8 @@ type OpenInspectionEarlyStartSource = {
   startedEarly?: boolean;
   startedEarlyAt?: string;
   originalScheduledStart?: string;
+  finishedAt?: string;
+  scheduledEnd?: string;
 };
 
 /** Human label when the inspector began before the originally scheduled window. */
@@ -133,15 +135,22 @@ export function formatOpenInspectionEarlyStartNotice(
   source: OpenInspectionEarlyStartSource,
 ): string | null {
   if (!source.startedEarly) return null;
-  const original = source.originalScheduledStart;
-  const startedAt = source.startedEarlyAt;
-  if (original && startedAt) {
-    return `Inspector started early at ${formatTime(startedAt)} (originally scheduled from ${formatTime(original)})`;
+  const parts: string[] = [];
+  if (source.startedEarlyAt) {
+    let line = `Started early ${formatDateTime(source.startedEarlyAt)}`;
+    if (source.originalScheduledStart) {
+      line += ` (originally scheduled ${formatDateTime(source.originalScheduledStart)})`;
+    }
+    parts.push(line);
+  } else {
+    parts.push('Inspector started early');
   }
-  if (startedAt) {
-    return `Inspector started early at ${formatTime(startedAt)}`;
+  if (source.finishedAt) {
+    parts.push(`Job finished ${formatDateTime(source.finishedAt)}`);
+  } else if (source.scheduledEnd) {
+    parts.push(`Scheduled to finish ${formatDateTime(source.scheduledEnd)}`);
   }
-  return 'Inspector started early';
+  return parts.join('. ');
 }
 
 export function canCancelLetting(

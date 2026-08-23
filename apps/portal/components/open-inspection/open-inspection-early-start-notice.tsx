@@ -8,17 +8,23 @@ export function OpenInspectionEarlyStartNotice({
   startedEarly,
   startedEarlyAt,
   originalScheduledStart,
+  finishedAt,
+  scheduledEnd,
   className,
 }: {
   startedEarly?: boolean;
   startedEarlyAt?: string;
   originalScheduledStart?: string;
+  finishedAt?: string;
+  scheduledEnd?: string;
   className?: string;
 }) {
   const message = formatOpenInspectionEarlyStartNotice({
     startedEarly,
     startedEarlyAt,
     originalScheduledStart,
+    finishedAt,
+    scheduledEnd,
   });
   if (!message) return null;
 

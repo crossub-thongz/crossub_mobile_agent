@@ -90,6 +90,8 @@ export function OpenInspectionScheduledStage({
         startedEarly={session.startedEarly}
         startedEarlyAt={session.startedEarlyAt}
         originalScheduledStart={session.originalScheduledStart}
+        finishedAt={session.closedAt ?? session.openInspection?.completedDate ?? undefined}
+        scheduledEnd={session.endTime}
         className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:text-amber-50"
       />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

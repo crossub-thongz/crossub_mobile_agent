@@ -810,6 +810,8 @@ export function InspectionDetailView({
             startedEarly={leasingDetail.openInspection.startedEarly}
             startedEarlyAt={leasingDetail.openInspection.startedEarlyAt}
             originalScheduledStart={leasingDetail.openInspection.originalScheduledStart}
+            finishedAt={leasingDetail.openInspection.finishedAt}
+            scheduledEnd={leasingDetail.openInspection.scheduledTimeEnd}
             className="mb-3"
           />
           <InfoRow

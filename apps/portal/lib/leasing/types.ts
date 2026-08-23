@@ -58,6 +58,8 @@ export interface LeasingOpenInspection {
   startedEarly?: boolean;
   startedEarlyAt?: string;
   originalScheduledStart?: string;
+  /** When the viewing / open job actually finished. */
+  finishedAt?: string;
   viewingSessionId?: string;
   pushedToAgentApp: boolean;
   agentConducted?: boolean;

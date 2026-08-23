@@ -187,6 +187,8 @@ export interface OpenInspectionSession {
   startedEarly?: boolean;
   startedEarlyAt?: string;
   originalScheduledStart?: string;
+  /** When the viewing actually closed (job finished). */
+  closedAt?: string;
   createdAt?: string;
   sessionStatus: SessionStatus;
   agent: OpenInspectionAgent;

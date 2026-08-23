@@ -210,6 +210,7 @@ export function patchDetailFromCycleView(
       startedEarly: view.openInspection.startedEarly ?? undefined,
       startedEarlyAt: u(view.openInspection.startedEarlyAt ?? undefined),
       originalScheduledStart: u(view.openInspection.originalScheduledStart ?? undefined),
+      finishedAt: u(view.openInspection.finishedAt ?? undefined),
       viewingSessionId: view.viewingSessionId ?? undefined,
       pushedToAgentApp: view.openInspection.pushedToAgentApp,
       agentConducted: view.openInspection.agentConducted,
