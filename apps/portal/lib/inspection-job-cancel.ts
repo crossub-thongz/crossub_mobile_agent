@@ -12,6 +12,14 @@ import {
 } from '@/lib/outgoing-inspection-cancel';
 import type { Inspection } from '@/lib/types';
 
+export function markInspectionCancelledLocally(inspection: Inspection): Inspection {
+  return {
+    ...inspection,
+    apiStatus: 'CANCELLED',
+    status: inspection.type === 'OPEN' ? 'Deleted' : 'Cancelled',
+  };
+}
+
 export function canDeleteInspectionJob(inspection: Inspection): boolean {
   if (inspection.type === 'OPEN') return canDeleteOpenInspection(inspection);
   if (inspection.type === 'INGOING') return canCancelIngoingInspection(inspection, null);

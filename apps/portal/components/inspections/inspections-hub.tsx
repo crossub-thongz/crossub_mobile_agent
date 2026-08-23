@@ -35,6 +35,7 @@ import {
   canDeleteInspectionJob,
   cancelInspectionJob,
   inspectionJobDeleteCopy,
+  markInspectionCancelledLocally,
 } from '@/lib/inspection-job-cancel';
 import { inspectionToJobRow } from '@/lib/portfolio-case-dialog';
 import type { Inspection } from '@/lib/types';
@@ -69,7 +70,7 @@ export function InspectionsHub({
   propertyFilterId?: string | null;
   propertyLabel?: string;
 }) {
-  const { apiConnected, refresh } = useAgentData();
+  const { apiConnected, refresh, registerInspection } = useAgentData();
   const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
   const searchParams = useSearchParams();
   const typeParam = searchParams.get('type');
@@ -121,8 +122,9 @@ export function InspectionsHub({
       throw new Error('Connect to the API to delete cases');
     }
     await cancelInspectionJob(deleteTarget, reason);
+    registerInspection(markInspectionCancelledLocally(deleteTarget));
     toast.success(inspectionJobDeleteCopy(deleteTarget).success);
-    await refresh();
+    await refresh({ force: true });
   };
 
   const deleteCopy = deleteTarget ? inspectionJobDeleteCopy(deleteTarget) : null;

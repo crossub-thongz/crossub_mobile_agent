@@ -18,6 +18,7 @@ import {
   canDeleteInspectionJob,
   cancelInspectionJob,
   inspectionJobDeleteCopy,
+  markInspectionCancelledLocally,
 } from '@/lib/inspection-job-cancel';
 import {
   isActiveInspection,
@@ -211,9 +212,10 @@ export function PropertyInspectionTab({
       throw new Error('Connect to the API to delete cases');
     }
     await cancelInspectionJob(deleteTarget, reason);
+    registerInspection(markInspectionCancelledLocally(deleteTarget));
     toast.success(inspectionJobDeleteCopy(deleteTarget).success);
     handleDialogClose();
-    await refresh();
+    await refresh({ force: true });
     await onRefresh?.();
   };
 

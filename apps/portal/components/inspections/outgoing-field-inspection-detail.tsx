@@ -34,6 +34,7 @@ import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { TenantOutgoingAttendanceStatus } from '@/lib/end-leasing/types';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import { cancelOutgoingInspectionJob } from '@/lib/outgoing-inspection-cancel';
+import { markInspectionCancelledLocally } from '@/lib/inspection-job-cancel';
 import { canCancelOutgoingInspection } from '@/lib/outgoing-inspection-display';
 import {
   inspectionJobCaseEmails,
@@ -304,9 +305,10 @@ export function OutgoingFieldInspectionDetail({
 
   const handleCancel = async (reason: string) => {
     await cancelOutgoingInspectionJob(inspection, reason);
+    registerInspection(markInspectionCancelledLocally(inspection));
     toast.success('Outgoing inspection cancelled');
     await refresh();
-    await refreshPortfolio().catch(() => undefined);
+    await refreshPortfolio({ force: true }).catch(() => undefined);
     onCancelled?.();
   };
 

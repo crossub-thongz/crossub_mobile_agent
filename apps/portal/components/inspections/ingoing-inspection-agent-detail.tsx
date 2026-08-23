@@ -34,6 +34,7 @@ import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/const
 import { LEASING_INGOING_SCHEDULE_WINDOW_DAYS } from '@/lib/leasing/leasing-ingoing-handoff';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
+import { markInspectionCancelledLocally } from '@/lib/inspection-job-cancel';
 import {
   inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';
@@ -357,8 +358,9 @@ export function IngoingInspectionAgentDetail({
 
   const handleCancel = async (reason: string) => {
     await cancelIngoingInspectionJob(inspection, reason);
+    registerInspection(markInspectionCancelledLocally(inspection));
     toast.success('Ingoing inspection cancelled');
-    await refresh();
+    await refresh({ force: true });
     onCancelled?.();
   };
 

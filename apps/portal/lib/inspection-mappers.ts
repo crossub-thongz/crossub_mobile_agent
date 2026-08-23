@@ -10,6 +10,7 @@ import {
   type SessionStatus,
 } from '@/constants/open-inspection-ops';
 import { hasLeftTaskPool, furthestInspectionStatus } from '@/lib/inspection-approval';
+import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
 import { workflowEventToTimelineEntry } from '@/lib/open-inspection/linked-case-history';
@@ -157,6 +158,16 @@ function inspectionFreshnessRank(row: Inspection): number {
 /** Prefer the further-along live row over a stale list snapshot. */
 export function pickFresherInspection(current: Inspection, incoming: Inspection): Inspection {
   if (incoming.id !== current.id) return incoming;
+  // Cancelled/deleted is terminal — a stale DRAFT row must not revive a deleted case.
+  if (isDeletedInspection(current)) return current;
+  if (isDeletedInspection(incoming)) {
+    return {
+      ...current,
+      ...incoming,
+      apiStatus: incoming.apiStatus ?? current.apiStatus,
+      status: incoming.status,
+    };
+  }
   const winner =
     inspectionFreshnessRank(incoming) >= inspectionFreshnessRank(current)
       ? { ...current, ...incoming }
