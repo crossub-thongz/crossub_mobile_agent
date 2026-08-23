@@ -2,6 +2,8 @@ import { AGENT_AWAITING_CROSSUB_APPROVAL_LABEL } from '@/constants/inspection-ap
 import {
   deriveAgentIngoingGateStatus,
 } from '@/lib/ingoing-inspection-display';
+import { isInspectionDone } from '@/lib/inspections/presentation';
+import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
 
@@ -56,4 +58,18 @@ export function deriveAgentOutgoingGateStatus(args: {
   progressionStatus?: string | null;
 }): AgentOutgoingGateStatus {
   return deriveAgentIngoingGateStatus(args);
+}
+
+export function canCancelOutgoingInspection(
+  inspection: Inspection,
+  record: InspectionRecord | null,
+  stepsComplete?: boolean,
+): boolean {
+  if (inspection.type !== 'OUTGOING') return false;
+  if (isDeletedInspection(inspection)) return false;
+  if (deriveAgentOutgoingGateStatus({ inspection, record, stepsComplete }) === 'completed') {
+    return false;
+  }
+  if (isInspectionDone(inspection) && !isDeletedInspection(inspection)) return false;
+  return Boolean(inspection.propertyId);
 }

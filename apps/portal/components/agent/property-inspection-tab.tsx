@@ -15,9 +15,10 @@ import type { InspectionCreateResult } from '@/components/inspections/create-ins
 import { fromProperty } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import {
-  canDeleteOpenInspection,
-  cancelOpenInspectionJob,
-} from '@/lib/open-inspection-delete';
+  canDeleteInspectionJob,
+  cancelInspectionJob,
+  inspectionJobDeleteCopy,
+} from '@/lib/inspection-job-cancel';
 import {
   isActiveInspection,
   isDeletedInspection,
@@ -192,7 +193,7 @@ export function PropertyInspectionTab({
   };
 
   const canDeleteInspection = useCallback(
-    (inspection: Inspection) => apiConnected && canDeleteOpenInspection(inspection),
+    (inspection: Inspection) => apiConnected && canDeleteInspectionJob(inspection),
     [apiConnected],
   );
 
@@ -209,8 +210,8 @@ export function PropertyInspectionTab({
     if (!apiConnected) {
       throw new Error('Connect to the API to delete cases');
     }
-    await cancelOpenInspectionJob(deleteTarget, reason);
-    toast.success('Open inspection deleted');
+    await cancelInspectionJob(deleteTarget, reason);
+    toast.success(inspectionJobDeleteCopy(deleteTarget).success);
     handleDialogClose();
     await refresh();
     await onRefresh?.();
@@ -305,9 +306,17 @@ export function PropertyInspectionTab({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete open inspection"
-        description="The open inspection is cancelled and moves to History (Deleted filter). A reason is required."
-        confirmLabel="Delete open inspection"
+        title={deleteTarget ? inspectionJobDeleteCopy(deleteTarget).title : 'Delete inspection'}
+        description={
+          deleteTarget
+            ? inspectionJobDeleteCopy(deleteTarget).description
+            : 'This inspection is cancelled. A reason is required.'
+        }
+        confirmLabel={
+          deleteTarget
+            ? inspectionJobDeleteCopy(deleteTarget).confirmLabel
+            : 'Delete inspection'
+        }
         onConfirm={handleDeleteConfirm}
         onSuccess={() => setDeleteTarget(null)}
       />

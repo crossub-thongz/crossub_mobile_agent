@@ -33,6 +33,7 @@ import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-l
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import { LEASING_INGOING_SCHEDULE_WINDOW_DAYS } from '@/lib/leasing/leasing-ingoing-handoff';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
+import { cancelIngoingInspectionJob } from '@/lib/ingoing-inspection-cancel';
 import {
   inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';

@@ -343,6 +343,20 @@ export async function cancelAgentIngoingInspection(
   );
 }
 
+export async function cancelAgentOutgoingInspection(
+  propertyId: string,
+  inspectionId: string,
+  body: { reason: string },
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(
+    `${base(propertyId)}/inspection/outgoing/${encodeURIComponent(inspectionId)}/cancel`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
 /** Record rent reconciliation on the property ledger. */
 export type AgentRecordRentReconciliationInput = {
   amount: number;

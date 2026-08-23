@@ -10,12 +10,14 @@ import {
   Home,
   KeyRound,
   Loader2,
+  Trash2,
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InspectorNameWithHistory } from '@/components/inspections/inspector-name-with-history';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
+import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import {
   WorkflowProgressRail,
@@ -31,6 +33,8 @@ import { propertyDetail } from '@/constants/routes';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
 import type { TenantOutgoingAttendanceStatus } from '@/lib/end-leasing/types';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
+import { cancelOutgoingInspectionJob } from '@/lib/outgoing-inspection-cancel';
+import { canCancelOutgoingInspection } from '@/lib/outgoing-inspection-display';
 import {
   inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';
@@ -126,11 +130,13 @@ function gateStatusTone(status: ReturnType<typeof deriveAgentOutgoingGateStatus>
 export function OutgoingFieldInspectionDetail({
   inspection,
   apiConnected,
+  onCancelled,
 }: {
   inspection: Inspection;
   apiConnected: boolean;
+  onCancelled?: () => void;
 }) {
-  const { vacating, properties, registerInspection } = useAgentData();
+  const { vacating, properties, registerInspection, refresh: refreshPortfolio } = useAgentData();
   const linkedVacating = vacating.find((v) => v.propertyId === inspection.propertyId);
   const property = properties.find((p) => p.id === inspection.propertyId);
 
@@ -153,6 +159,7 @@ export function OutgoingFieldInspectionDetail({
   const [viewingGateStep, setViewingGateStep] = useState<AgentOutgoingGateStatus | null>(null);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [ackBusy, setAckBusy] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!apiConnected) {
@@ -293,6 +300,15 @@ export function OutgoingFieldInspectionDetail({
   });
   const liveGateIndex = agentOutgoingGateIndex(gateStatus);
   const viewingStep = viewingGateStep ?? gateStatus;
+  const canCancel = canCancelOutgoingInspection(inspection, record, stepsComplete);
+
+  const handleCancel = async (reason: string) => {
+    await cancelOutgoingInspectionJob(inspection, reason);
+    toast.success('Outgoing inspection cancelled');
+    await refresh();
+    await refreshPortfolio().catch(() => undefined);
+    onCancelled?.();
+  };
 
   useEffect(() => {
     setViewingGateStep((current) => {
@@ -468,6 +484,18 @@ export function OutgoingFieldInspectionDetail({
               </div>
             </div>
           </div>
+          {canCancel ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:text-destructive h-8 gap-1.5 text-xs"
+              onClick={() => setCancelOpen(true)}
+            >
+              <Trash2 className="size-3.5" />
+              Cancel
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -850,6 +878,16 @@ export function OutgoingFieldInspectionDetail({
           Connect to the API to see live key proof and acknowledgement status.
         </p>
       ) : null}
+
+      <WorkflowCaseDeleteDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title="Cancel outgoing inspection"
+        description="The outgoing order is cancelled. To inspect again later, add a new outgoing order from the property workflow. A reason is required."
+        confirmLabel="Cancel outgoing inspection"
+        onConfirm={handleCancel}
+        onSuccess={() => setCancelOpen(false)}
+      />
     </div>
   );
 }

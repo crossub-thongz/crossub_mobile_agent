@@ -32,9 +32,10 @@ import {
   isInspectionDone,
 } from '@/lib/inspections/presentation';
 import {
-  canDeleteOpenInspection,
-  cancelOpenInspectionJob,
-} from '@/lib/open-inspection-delete';
+  canDeleteInspectionJob,
+  cancelInspectionJob,
+  inspectionJobDeleteCopy,
+} from '@/lib/inspection-job-cancel';
 import { inspectionToJobRow } from '@/lib/portfolio-case-dialog';
 import type { Inspection } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -110,7 +111,7 @@ export function InspectionsHub({
   }, [inspections, propertyFilterId, typeFilter, statusFilter, search]);
 
   const canDeleteInspection = useCallback(
-    (inspection: Inspection) => apiConnected && canDeleteOpenInspection(inspection),
+    (inspection: Inspection) => apiConnected && canDeleteInspectionJob(inspection),
     [apiConnected],
   );
 
@@ -119,10 +120,12 @@ export function InspectionsHub({
     if (!apiConnected) {
       throw new Error('Connect to the API to delete cases');
     }
-    await cancelOpenInspectionJob(deleteTarget, reason);
-    toast.success('Open inspection deleted');
+    await cancelInspectionJob(deleteTarget, reason);
+    toast.success(inspectionJobDeleteCopy(deleteTarget).success);
     await refresh();
   };
+
+  const deleteCopy = deleteTarget ? inspectionJobDeleteCopy(deleteTarget) : null;
 
   return (
     <div className="space-y-5 min-w-0">
@@ -215,9 +218,12 @@ export function InspectionsHub({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete open inspection"
-        description="The open inspection is cancelled and removed from applicant browse. A reason is required."
-        confirmLabel="Delete open inspection"
+        title={deleteCopy?.title ?? 'Delete inspection'}
+        description={
+          deleteCopy?.description ??
+          'This inspection is cancelled. A reason is required.'
+        }
+        confirmLabel={deleteCopy?.confirmLabel ?? 'Delete inspection'}
         onConfirm={handleDeleteConfirm}
         onSuccess={() => setDeleteTarget(null)}
       />

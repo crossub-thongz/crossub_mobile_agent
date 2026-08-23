@@ -18,7 +18,11 @@ export function AgentFieldInspectionDetail({
 }) {
   if (inspection.type === 'OUTGOING') {
     return (
-      <OutgoingFieldInspectionDetail inspection={inspection} apiConnected={apiConnected} />
+      <OutgoingFieldInspectionDetail
+        inspection={inspection}
+        apiConnected={apiConnected}
+        onCancelled={onIngoingCancelled}
+      />
     );
   }
 
