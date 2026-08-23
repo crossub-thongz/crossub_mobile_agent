@@ -272,8 +272,11 @@ export function OutgoingFieldInspectionDetail({
   const keyCollected = custody?.collectComplete ?? collectPhotos.length > 0;
   const keyReturned = custody?.returnComplete ?? returnPhotos.length > 0;
   const reportSubmitted = isReportSubmitted(record, progression);
-  const reportReady =
-    reportSubmitted && isInspectionReportReadyForView(detail, { reportUrl });
+  const reportReady = isInspectionReportReadyForView(detail, {
+    reportUrl,
+    completedAt: detail?.completedDate ?? record?.completedDate,
+    approvedAt: detail?.approvedAt ?? record?.approvedAt,
+  });
   const agentAck = deriveAgentAckState(record, {
     agentAcknowledged,
     agentAcknowledgedAt,
@@ -672,7 +675,7 @@ export function OutgoingFieldInspectionDetail({
                   : LEASING_ITEM_STATUS.NOT_STARTED
             }
           >
-            {reportReady ? (
+            {reportSubmitted ? (
               <div className="space-y-2">
                 <BoolStatus
                   done
@@ -683,13 +686,20 @@ export function OutgoingFieldInspectionDetail({
                   }
                   pendingLabel="Report not yet submitted"
                 />
-                <InspectionReportDownloadActions
-                  inspectionId={inspection.id}
-                  reportUrl={reportUrl}
-                  propertyLabel={inspection.propertyAddress}
-                  inspectionType="outgoing"
-                  canDownload
-                />
+                {reportReady ? (
+                  <InspectionReportDownloadActions
+                    inspectionId={inspection.id}
+                    reportUrl={reportUrl}
+                    propertyLabel={inspection.propertyAddress}
+                    inspectionType="outgoing"
+                    canDownload
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    Waiting for CROSSUB to approve this report. View and download appear
+                    here after approval.
+                  </p>
+                )}
               </div>
             ) : (
               <BoolStatus

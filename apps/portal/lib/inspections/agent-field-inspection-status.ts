@@ -1,4 +1,5 @@
 import { INSPECTION_RECORD_STATUS } from '@/constants/inspection-records';
+import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { OnSiteProgression } from '@/lib/inspections-types';
 
@@ -45,6 +46,14 @@ export function canViewInspectionReport(
   },
 ): boolean {
   if (!isReportSubmitted(record, progression)) return false;
+  if (
+    !hasLeftTaskPool({
+      completedAt: record?.completedDate,
+      approvedAt: record?.approvedAt,
+    })
+  ) {
+    return false;
+  }
   const reportUrl = options?.reportUrl ?? progression?.reportUrl ?? record?.reportUrl;
   if (reportUrl?.trim()) return true;
   return isReportSubmitted(record, progression);

@@ -85,18 +85,20 @@ export function FieldInspectionReportReviewSection({
       </div>
       <p className="text-muted-foreground text-xs">
         {pending
-          ? 'Preview or download the submitted report. CROSSUB is reviewing it before this job is complete.'
+          ? 'CROSSUB is reviewing this report. View and download appear here after approval.'
           : 'CROSSUB has approved this report. You can view or download it.'}
       </p>
 
-      <InspectionReportDownloadActions
-        inspectionId={inspectionId}
-        reportUrl={reportUrl}
-        propertyLabel={propertyLabel}
-        inspectionType={inspectionType}
-        canDownload
-        variant="inline"
-      />
+      {pending ? null : (
+        <InspectionReportDownloadActions
+          inspectionId={inspectionId}
+          reportUrl={reportUrl}
+          propertyLabel={propertyLabel}
+          inspectionType={inspectionType}
+          canDownload
+          variant="inline"
+        />
+      )}
     </section>
   );
 }
