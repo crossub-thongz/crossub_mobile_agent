@@ -2,6 +2,13 @@
 
 ## 2026-08-24
 
+### Added
+- **The Account Manager tab asks which property before it offers to call anyone.** Daniel Zhou, 24 Aug 2026, after confirming both managers now answer: *"就剩下选择property的问题了"*. An agency's portfolio can be split across two Account Managers, so the card the dashboard used to show was answering a question nobody had asked — it resolved the *first* property carrying a manager and put a Call button under that name, which for half a split portfolio is the wrong person, dialled in one tap.
+
+  The tab now leads with a searchable list of the agency's own properties (filtered on the formatted address, sorted by it, each row showing the manager it belongs to), and the contact card appears only once an address is chosen. Opening the panel from a property skips the step entirely — the question is already answered — and a `useEffect` moves the selection when the panel is re-opened on a different property, because the dock keeps this component mounted and a stale selection is the same wrong-manager bug wearing a different hat.
+
+  The message-thread button and Gii now follow the chosen property too, not the one the panel was opened from: picking an address here and then messaging would otherwise file the message against a different home.
+
 ### Changed
 - **The dialer waits four seconds for the key instead of six.** The six covered a twelve-second recording that no longer needs covering. The tone is sent on a timer rather than on an answer event, so this cannot go much lower on reasoning alone: too early and it lands before the line picks up and is lost, leaving the caller in the menu the tap was meant to skip. One test call to the agency line settles whether it can go lower still.
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Mail, Phone, PhoneCall, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -94,8 +94,24 @@ export function PhonePanel({
   const closePanel = useShellDockStore((s) => s.closePanel);
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>('contacts');
   const [search, setSearch] = useState('');
+  // Which property the Account Manager tab is answering for. An agency's portfolio can be
+  // split across two managers, so "who is my Account Manager" has no answer until a property
+  // is named — opening the panel from a property answers it, opening it from the dashboard
+  // does not, and the tab asks.
+  const [amPropertyId, setAmPropertyId] = useState<string | undefined>(propertyId);
+  const [amSearch, setAmSearch] = useState('');
+
+  // Re-opening the panel on a different property must move the tab with it. The dock keeps
+  // this component mounted, so without this the card would keep answering for the address the
+  // agent looked at last — the exact wrong-manager failure this step exists to prevent.
+  useEffect(() => {
+    if (propertyId) setAmPropertyId(propertyId);
+  }, [propertyId]);
 
   const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
+  const amProperty = amPropertyId
+    ? properties.find((p) => p.id === amPropertyId)
+    : undefined;
 
   const phonebook = useMemo(() => {
     const all = buildAgentPhonebook(properties, agencies);
@@ -104,8 +120,11 @@ export function PhonePanel({
   }, [properties, agencies, propertyId]);
 
   const accountManager = useMemo(
-    () => resolveAccountManagerContact(properties, agencies, propertyId),
-    [properties, agencies, propertyId],
+    () =>
+      amPropertyId
+        ? resolveAccountManagerContact(properties, agencies, amPropertyId)
+        : null,
+    [properties, agencies, amPropertyId],
   );
   const accountManagerPhone = accountManager?.phone;
   const accountManagerName = accountManager?.name;
@@ -125,6 +144,20 @@ export function PhonePanel({
     );
   }, [phonebook, search]);
 
+  const amProperties = useMemo(() => {
+    const q = amSearch.trim().toLowerCase();
+    const rows = q
+      ? properties.filter((p) =>
+          formatPropertyFullAddress(p).toLowerCase().includes(q),
+        )
+      : properties;
+    // The address is what an agent recognises, so sort by it rather than by whatever order
+    // the portfolio arrived in.
+    return [...rows].sort((a, b) =>
+      formatPropertyFullAddress(a).localeCompare(formatPropertyFullAddress(b)),
+    );
+  }, [properties, amSearch]);
+
   const handleCall = (number: string, name?: string, extension?: string) => {
     if (!number.trim()) return;
     placePhoneCall(number, extension);
@@ -134,8 +167,14 @@ export function PhonePanel({
   const openGiiAccountManager = () => {
     onClose?.();
     closePanel();
-    if (propertyId && property) {
-      openGii({ propertyId, propertyAddress: formatPropertyFullAddress(property) });
+    // The property the agent chose in this tab wins over the one the panel was opened from,
+    // for the same reason the message thread uses it: it is the address they are asking about.
+    const context = amProperty ?? property;
+    if (context) {
+      openGii({
+        propertyId: context.id,
+        propertyAddress: formatPropertyFullAddress(context),
+      });
       return;
     }
     openGii();
@@ -230,7 +269,80 @@ export function PhonePanel({
         </div>
       ) : (
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-          {accountManager ? (
+          {/*
+            Which property, before which manager. An agency's portfolio can sit with two
+            different Account Managers, so a card shown before a property is named is a guess
+            — and a guess that dials. Naming the property first is the whole point of this
+            step: the card below then answers for that address and nothing else.
+          */}
+          {amProperty ? (
+            <div className="border-border/60 flex items-center justify-between gap-2 rounded-xl border px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+                  Property
+                </p>
+                <p className="truncate text-sm font-medium">
+                  {formatPropertyFullAddress(amProperty)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAmPropertyId(undefined);
+                  setAmSearch('');
+                }}
+                className="text-primary shrink-0 text-xs font-semibold"
+              >
+                Change
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-semibold">Which property?</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Your portfolio is looked after by more than one Account Manager, so pick the
+                  address you are calling about.
+                </p>
+              </div>
+              <div className="relative">
+                <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                <Input
+                  value={amSearch}
+                  onChange={(e) => setAmSearch(e.target.value)}
+                  placeholder="Search your properties…"
+                  className="h-8 pl-8 text-sm"
+                />
+              </div>
+              <ul className="border-border/60 max-h-64 overflow-y-auto rounded-xl border">
+                {amProperties.length === 0 ? (
+                  <li className="text-muted-foreground px-3 py-6 text-center text-sm">
+                    No property matches that address.
+                  </li>
+                ) : (
+                  amProperties.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onClick={() => setAmPropertyId(p.id)}
+                        className="border-border/40 hover:bg-muted/40 w-full border-b px-3 py-2.5 text-left text-sm last:border-b-0"
+                      >
+                        <span className="block truncate font-medium">
+                          {formatPropertyFullAddress(p)}
+                        </span>
+                        {p.accountManagerName ? (
+                          <span className="text-muted-foreground block truncate text-xs">
+                            {p.accountManagerName}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
+          {amProperty && accountManager ? (
             <div className="bg-card rounded-xl border p-3">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
@@ -272,11 +384,17 @@ export function PhonePanel({
           <p className="text-muted-foreground text-xs leading-relaxed">
             Your CROSSUB Account Manager — message the team or ask Gii for help with this portfolio.
           </p>
-          {propertyId ? (
-            <TalkToStaffSupportButton propertyId={propertyId} onOpened={onClose} />
+          {/*
+            The message thread is scoped to the property the agent just named, not to the one
+            the panel happened to be opened from — otherwise choosing an address here and then
+            messaging would file the message against a different home.
+          */}
+          {amPropertyId ? (
+            <TalkToStaffSupportButton propertyId={amPropertyId} onOpened={onClose} />
           ) : (
             <p className="text-muted-foreground rounded-xl border border-dashed px-3 py-3 text-sm">
-              Open a property to start a property-scoped message with your Account Manager.
+              Choose a property above to start a property-scoped message with your Account
+              Manager.
             </p>
           )}
           <button
