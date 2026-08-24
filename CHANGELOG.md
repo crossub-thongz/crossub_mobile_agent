@@ -3,6 +3,8 @@
 ## 2026-08-24
 
 ### Changed
+- **The dialer waits four seconds for the key instead of six.** The six covered a twelve-second recording that no longer needs covering. The tone is sent on a timer rather than on an answer event, so this cannot go much lower on reasoning alone: too early and it lands before the line picks up and is lost, leaving the caller in the menu the tap was meant to skip. One test call to the agency line settles whether it can go lower still.
+
 - **The card no longer promises a direct connection it cannot make.** Managers are now reached two ways — Miara on her own mobile, Angel and QiaoLin through the agency line's menu key — and "no key" does not mean "no menu": Miara's agencies get no key because her line has no menu, while an unmapped officer's agencies get none because nobody assigned one, and they will hear the menu. The caption claims a straight connection only when a key is present and says "you may hear a short menu first" otherwise.
 
 - **One tap now connects: the app presses the AGENT line's menu key for the agent.** Reading the line's Calilio configuration showed why dialling it was not enough on its own — `+61 468 037 966` answers with a twelve-second recording and a keypad menu, and a caller who presses nothing is connected to nobody. Nothing in the phone system routes by *who* is calling, so 「属于哪个AGENT就联系到谁」 has to come from this side: the app knows whose portfolio it is showing, and now sends the digit itself (`tel:+61468037966,,,3`, three ~2-second pauses; `;` is avoided because it means *wait* and makes the phone ask the caller to confirm — the tap being removed).

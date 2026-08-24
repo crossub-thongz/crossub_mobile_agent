@@ -15,9 +15,14 @@
 export const DIAL_PAUSE = ',';
 
 /**
- * Pauses inserted before the digit. The line's greeting runs about twelve seconds and the
- * menu accepts a key while it is still playing, so this waits only long enough for the call
- * to be answered and the audio path to open — pressing sooner drops the tone, and waiting
- * out the whole greeting would make a one-tap call feel broken.
+ * Pauses inserted before the digit — long enough for the call to be answered, and no longer.
+ *
+ * The tone is sent on a timer, not on an event: too early and it lands before the line picks
+ * up and is simply lost, leaving the caller sitting in the menu the app was supposed to skip.
+ * Too late and a one-tap call feels broken. Four seconds is the compromise, and it stopped
+ * needing to cover the twelve-second recording once that greeting was cut down — the menu
+ * accepts a key while the prompt is still playing, so the only thing being waited on is the
+ * answer itself. Worth retuning against a real handset rather than by reasoning: one test
+ * call to the agency line either connects or leaves you listening to the menu.
  */
-export const DIAL_MENU_PAUSES = 3;
+export const DIAL_MENU_PAUSES = 2;
