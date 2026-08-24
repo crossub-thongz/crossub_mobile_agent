@@ -5,11 +5,13 @@ import { fileToBase64WithProgress } from '@/lib/file-upload';
 
 import { crossub } from './client';
 
-/** The three `accountManager*` fields ship ahead of the next contract publish. */
+/** The `accountManager*` fields ship ahead of the next contract publish. */
 type AgentAccountManagerFields = {
   accountManagerName?: string | null;
   accountManagerEmail?: string | null;
   accountManagerPhone?: string | null;
+  /** Keypad digit to send once the line answers, so the agent skips the menu. */
+  accountManagerExtension?: string | null;
 };
 
 export type AgentAgency = components['schemas']['AgentAgencyResponseDto'] &

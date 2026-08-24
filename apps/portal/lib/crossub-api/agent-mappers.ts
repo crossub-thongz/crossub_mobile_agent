@@ -257,6 +257,7 @@ export function mapAgentProperty(
     accountManagerName: dto.accountManagerName ?? undefined,
     accountManagerEmail: dto.accountManagerEmail ?? undefined,
     accountManagerPhone: dto.accountManagerPhone ?? undefined,
+    accountManagerExtension: dto.accountManagerExtension ?? undefined,
   };
 }
 
@@ -311,6 +312,7 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     accountManagerName: asString(a.accountManagerName),
     accountManagerEmail: asString(a.accountManagerEmail),
     accountManagerPhone: asString(a.accountManagerPhone),
+    accountManagerExtension: asString(a.accountManagerExtension),
   }));
 }
 

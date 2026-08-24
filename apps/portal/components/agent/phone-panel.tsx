@@ -14,6 +14,7 @@ import {
   buildAgentPhonebook,
   phonebookContactsForProperty,
   resolveAccountManagerContact,
+  type AgentAccountManager,
   type AgentPhonebookContact,
   type AgentPhonebookGroup,
 } from '@/lib/agent-phonebook';
@@ -46,6 +47,21 @@ function contactCaption(contact: AgentPhonebookContact): string {
   const parts = contact.group === 'crossub' ? [] : [contact.phone];
   if (contact.subtitle) parts.push(contact.subtitle);
   return parts.join(' · ');
+}
+
+/**
+ * What the card promises under the Call button, which depends on whether we can press the
+ * menu key for them. With a key the call lands on their own manager; without one they will
+ * hear the menu, and saying so beats letting them think the button failed.
+ */
+function accountManagerCaption(manager: AgentAccountManager): string {
+  if (!manager.phone) {
+    return 'No line available right now — email or message and your Account Manager will call you back.';
+  }
+  if (manager.extension) {
+    return `Connects you straight to ${manager.name}.`;
+  }
+  return 'You will hear a short menu — choose your Account Manager to be put through.';
 }
 
 function accountManagerInitials(name: string): string {
@@ -89,6 +105,7 @@ export function PhonePanel({
   );
   const accountManagerPhone = accountManager?.phone;
   const accountManagerName = accountManager?.name;
+  const accountManagerExtension = accountManager?.extension;
 
   const propertyLabel = property ? formatPropertyFullAddress(property) : undefined;
 
@@ -104,9 +121,9 @@ export function PhonePanel({
     );
   }, [phonebook, search]);
 
-  const handleCall = (number: string, name?: string) => {
+  const handleCall = (number: string, name?: string, extension?: string) => {
     if (!number.trim()) return;
-    placePhoneCall(number);
+    placePhoneCall(number, extension);
     toast.success(`Calling ${name ?? number}…`);
   };
 
@@ -187,7 +204,7 @@ export function PhonePanel({
                         <li key={contact.id}>
                           <button
                             type="button"
-                            onClick={() => handleCall(contact.phone, contact.name)}
+                            onClick={() => handleCall(contact.phone, contact.name, contact.extension)}
                             className="border-border/40 hover:bg-muted/40 flex w-full items-center justify-between gap-2 border-b px-3 py-2.5 text-left text-sm"
                           >
                             <div className="min-w-0">
@@ -225,7 +242,9 @@ export function PhonePanel({
               {accountManagerPhone ? (
                 <button
                   type="button"
-                  onClick={() => handleCall(accountManagerPhone, accountManagerName)}
+                  onClick={() =>
+                    handleCall(accountManagerPhone, accountManagerName, accountManagerExtension)
+                  }
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
                 >
                   <PhoneCall className="size-4 shrink-0" />
@@ -242,9 +261,7 @@ export function PhonePanel({
                 </a>
               ) : null}
               <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                {accountManagerPhone
-                  ? 'Calls go straight to the manager looking after your portfolio.'
-                  : 'No line available right now — email or message and your Account Manager will call you back.'}
+                {accountManagerCaption(accountManager)}
               </p>
             </div>
           ) : null}

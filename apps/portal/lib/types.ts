@@ -146,6 +146,7 @@ export interface Property {
   accountManagerName?: string;
   accountManagerEmail?: string;
   accountManagerPhone?: string;
+  accountManagerExtension?: string;
 }
 
 export type AgencyStatus = 'ONBOARDING' | 'ACTIVE' | 'INACTIVE';
@@ -182,6 +183,7 @@ export interface Agency {
   accountManagerName?: string;
   accountManagerEmail?: string;
   accountManagerPhone?: string;
+  accountManagerExtension?: string;
 }
 
 export interface LeasingRecord {

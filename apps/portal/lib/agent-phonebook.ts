@@ -6,6 +6,8 @@ export interface AgentPhonebookContact {
   id: string;
   name: string;
   phone: string;
+  /** Keypad digit to send after the line answers — CROSSUB contacts only. */
+  extension?: string;
   email?: string;
   group: AgentPhonebookGroup;
   /** Property address or agency name for context. */
@@ -51,11 +53,16 @@ export interface AgentAccountManager {
   name: string;
   email?: string;
   phone?: string;
+  /** Keypad digit that reaches this manager past the line's menu. */
+  extension?: string;
 }
 
 type AccountManagerFields = Pick<
   Property,
-  'accountManagerName' | 'accountManagerEmail' | 'accountManagerPhone'
+  | 'accountManagerName'
+  | 'accountManagerEmail'
+  | 'accountManagerPhone'
+  | 'accountManagerExtension'
 >;
 
 /**
@@ -102,6 +109,10 @@ export function resolveAccountManagerContact(
     name: identified?.accountManagerName ?? ACCOUNT_MANAGER_FALLBACK_NAME,
     email: identified?.accountManagerEmail,
     phone,
+    // The digit identifies the MANAGER, not the line, so it comes from the same record the
+    // name did. Taking it from wherever the line came from would press a key for one manager
+    // while the card names another.
+    extension: identified?.accountManagerExtension,
   };
 }
 
@@ -114,7 +125,7 @@ export function buildAgentPhonebook(
   const seen = new Set<string>();
 
   const add = (contact: AgentPhonebookContact) => {
-    const key = `${contact.group}:${contact.phone}:${contact.name}`;
+    const key = `${contact.group}:${contact.phone}:${contact.extension ?? ''}:${contact.name}`;
     if (seen.has(key)) return;
     seen.add(key);
     contacts.push(contact);
@@ -129,6 +140,7 @@ export function buildAgentPhonebook(
         id: `am-property-${property.id}`,
         name: property.accountManagerName ?? ACCOUNT_MANAGER_FALLBACK_NAME,
         phone: property.accountManagerPhone,
+        extension: property.accountManagerExtension,
         email: property.accountManagerEmail ?? undefined,
         group: 'crossub',
         subtitle: ACCOUNT_MANAGER_SUBTITLE,
@@ -142,6 +154,7 @@ export function buildAgentPhonebook(
         id: `am-agency-${agency.id}`,
         name: agency.accountManagerName ?? ACCOUNT_MANAGER_FALLBACK_NAME,
         phone: agency.accountManagerPhone,
+        extension: agency.accountManagerExtension,
         email: agency.accountManagerEmail ?? undefined,
         group: 'crossub',
         subtitle: ACCOUNT_MANAGER_SUBTITLE,
