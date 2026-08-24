@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-24
+
+### Changed
+- **The Call button no longer prints a number, and it dials the agency line rather than a person.** Daniel Zhou retested the 20 Aug fix on his phone and still reached the tenant switchboard, and Geng settled the shape of the answer on 24 Aug: *"所有的ACCOUNT MANAGER的电话，全部都是AGENT联系我们的电话"* — every Account Manager is reached on one agency-facing line, and the phone system routes the caller to whoever holds their portfolio (*"属于哪个AGENT就联系到谁"*). The API now sends that single line on every property and agency record instead of the officer's own phone, so the button is back for every agency, including the portfolios with no officer assigned.
+
+  The button reads **"Call your Account Manager"** and the CROSSUB rows in Contacts print only their subtitle, because Geng's second sentence was *"不显示电话号码"* — showing a shared line beside a named person invites an agency to save it as *that person's* number, when the routing decides who it reaches. Tenants, landlords and agency contacts are per-person numbers and still show theirs.
+
+  One consequence worth naming: a phone number no longer tells this app that an Account Manager was resolved, since every record now carries the same one. `resolveAccountManagerContact` and the phonebook builder therefore read *identity* from name-or-email and take the line separately — otherwise a property with no assigned officer would have filled the card with the "Your Account Manager" placeholder in preference to a real name sitting on the agency beside it. Type errors: 70 before, 70 after, none in touched files.
+
 ## 2026-08-20
 
 ### Changed

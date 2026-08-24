@@ -14,6 +14,7 @@ import {
   buildAgentPhonebook,
   phonebookContactsForProperty,
   resolveAccountManagerContact,
+  type AgentPhonebookContact,
   type AgentPhonebookGroup,
 } from '@/lib/agent-phonebook';
 import { placePhoneCall } from '@/lib/phone';
@@ -31,6 +32,21 @@ const CONTACT_GROUPS: AgentPhonebookGroup[] = [
   'landlord',
   'agency',
 ];
+
+/**
+ * What a contact row shows under the name.
+ *
+ * Geng Xu, 24 Aug 2026: *"AGENT联系的时候，不显示电话号码。属于哪个AGENT就联系到谁"* — an agency
+ * does not see the Account Manager number, because every manager shares one line and the
+ * phone system decides who it reaches. Printing it would invite an agency to save it as a
+ * personal number for a manager it may not actually route to. Tenants, landlords and agency
+ * contacts are real per-person numbers and still show.
+ */
+function contactCaption(contact: AgentPhonebookContact): string {
+  const parts = contact.group === 'crossub' ? [] : [contact.phone];
+  if (contact.subtitle) parts.push(contact.subtitle);
+  return parts.join(' · ');
+}
 
 function accountManagerInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -177,8 +193,7 @@ export function PhonePanel({
                             <div className="min-w-0">
                               <p className="truncate font-medium">{contact.name}</p>
                               <p className="text-muted-foreground truncate text-xs">
-                                {contact.phone}
-                                {contact.subtitle ? ` · ${contact.subtitle}` : ''}
+                                {contactCaption(contact)}
                               </p>
                             </div>
                             <PhoneCall className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -214,7 +229,7 @@ export function PhonePanel({
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
                 >
                   <PhoneCall className="size-4 shrink-0" />
-                  Call {accountManagerPhone}
+                  Call your Account Manager
                 </button>
               ) : null}
               {accountManager.email ? (
@@ -226,12 +241,11 @@ export function PhonePanel({
                   <span className="truncate">Email {accountManager.email}</span>
                 </a>
               ) : null}
-              {!accountManagerPhone ? (
-                <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                  No direct line published yet — email or message and your Account Manager
-                  will call you back. The number on our website is the tenant line.
-                </p>
-              ) : null}
+              <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                {accountManagerPhone
+                  ? 'Calls go straight to the manager looking after your portfolio.'
+                  : 'No line available right now — email or message and your Account Manager will call you back.'}
+              </p>
             </div>
           ) : null}
           <p className="text-muted-foreground text-xs leading-relaxed">

@@ -58,19 +58,29 @@ type AccountManagerFields = Pick<
   'accountManagerName' | 'accountManagerEmail' | 'accountManagerPhone'
 >;
 
-function hasAccountManager(source: AccountManagerFields): boolean {
-  return Boolean(
-    source.accountManagerName ||
-      source.accountManagerEmail ||
-      source.accountManagerPhone,
-  );
+/**
+ * Who the Account Manager *is*. Name and email only: since 24 Aug 2026 the API returns one
+ * shared agency-facing line on every record, so a phone number no longer tells us an
+ * Account Manager was resolved — treating it as identity would fill the card with the
+ * "Your Account Manager" placeholder even where a real name is on file elsewhere.
+ */
+function hasAccountManagerIdentity(source: AccountManagerFields): boolean {
+  return Boolean(source.accountManagerName || source.accountManagerEmail);
+}
+
+function accountManagerLine(source: AccountManagerFields | undefined): string | undefined {
+  return source?.accountManagerPhone ?? undefined;
 }
 
 /**
  * The CROSSUB staff member an agency should phone. A property's own Account Manager wins;
- * otherwise the first agency carrying any of the three fields, then the first property that
- * does. Returns null when nothing is on file — callers render nothing rather than a
- * placeholder card.
+ * otherwise the first agency carrying a name or email, then the first property that does.
+ *
+ * The number is resolved separately from the name because they no longer travel together:
+ * every record carries the same agency-facing line (the phone system routes the caller to
+ * their own manager), so a portfolio with no assigned officer still gets a working call
+ * button — it just asks for "Your Account Manager". Returns null only when neither a name
+ * nor a line is on file anywhere.
  */
 export function resolveAccountManagerContact(
   properties: Property[],
@@ -78,15 +88,20 @@ export function resolveAccountManagerContact(
   propertyId?: string,
 ): AgentAccountManager | null {
   const scoped = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
-  const source =
-    (scoped && hasAccountManager(scoped) ? scoped : undefined) ??
-    agencies.find(hasAccountManager) ??
-    properties.find(hasAccountManager);
-  if (!source) return null;
+  const identified =
+    (scoped && hasAccountManagerIdentity(scoped) ? scoped : undefined) ??
+    agencies.find(hasAccountManagerIdentity) ??
+    properties.find(hasAccountManagerIdentity);
+  const phone =
+    accountManagerLine(identified) ??
+    accountManagerLine(scoped) ??
+    accountManagerLine(agencies.find((a) => a.accountManagerPhone)) ??
+    accountManagerLine(properties.find((p) => p.accountManagerPhone));
+  if (!identified && !phone) return null;
   return {
-    name: source.accountManagerName ?? ACCOUNT_MANAGER_FALLBACK_NAME,
-    email: source.accountManagerEmail,
-    phone: source.accountManagerPhone,
+    name: identified?.accountManagerName ?? ACCOUNT_MANAGER_FALLBACK_NAME,
+    email: identified?.accountManagerEmail,
+    phone,
   };
 }
 
@@ -106,9 +121,10 @@ export function buildAgentPhonebook(
   };
 
   // Account Managers first: the same officer usually covers many properties, and the `seen`
-  // key (group:phone:name) collapses them into one row.
+  // key (group:phone:name) collapses them into one row. Every manager shares one line, so
+  // the name is what separates two rows here.
   for (const property of properties) {
-    if (property.accountManagerPhone) {
+    if (property.accountManagerPhone && hasAccountManagerIdentity(property)) {
       add({
         id: `am-property-${property.id}`,
         name: property.accountManagerName ?? ACCOUNT_MANAGER_FALLBACK_NAME,
@@ -121,7 +137,7 @@ export function buildAgentPhonebook(
   }
 
   for (const agency of agencies) {
-    if (agency.accountManagerPhone) {
+    if (agency.accountManagerPhone && hasAccountManagerIdentity(agency)) {
       add({
         id: `am-agency-${agency.id}`,
         name: agency.accountManagerName ?? ACCOUNT_MANAGER_FALLBACK_NAME,
