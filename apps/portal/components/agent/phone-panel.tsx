@@ -50,9 +50,13 @@ function contactCaption(contact: AgentPhonebookContact): string {
 }
 
 /**
- * What the card promises under the Call button, which depends on whether we can press the
- * menu key for them. With a key the call lands on their own manager; without one they will
- * hear the menu, and saying so beats letting them think the button failed.
+ * What the card promises under the Call button.
+ *
+ * A manager is reached one of two ways and the promise has to match: on their own direct
+ * line, where the call simply rings them, or on the shared agency line, where a key gets past
+ * the menu. The API sends a key only in the second case — so "no key" cannot be read as "no
+ * menu", and this stays deliberately non-committal there rather than promising a direct
+ * connection the line may not give.
  */
 function accountManagerCaption(manager: AgentAccountManager): string {
   if (!manager.phone) {
@@ -61,7 +65,7 @@ function accountManagerCaption(manager: AgentAccountManager): string {
   if (manager.extension) {
     return `Connects you straight to ${manager.name}.`;
   }
-  return 'You will hear a short menu — choose your Account Manager to be put through.';
+  return `Calls ${manager.name} — you may hear a short menu first.`;
 }
 
 function accountManagerInitials(name: string): string {
