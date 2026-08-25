@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-26
+
+### Changed
+- **`@crossub-thongz/api-contract` ^0.16.0 → ^0.17.0.** The published 0.16.0 this app was installing was cut on **15 Aug and is 32 contract regenerations behind** the API — far staler than the version string suggested, because the API's CI regenerates the contract and commits it back to `main` on every push while publishing is a manual `workflow_dispatch` carrying its own version. Content moves; the version does not, so "0.16.0" named several different documents. 0.17.0 was published for exactly this reason.
+- ⭐ **This app's 70 type errors are unchanged by the sync, so the stale contract was never their cause.** The error distribution is identical before and after, which rules out the explanation that looked obvious: nine errors in `lib/termination-case-api.ts` read fields the compiler said did not exist, and the natural guess was that the contract simply predated them. It did not. `tenantResponsibilityReviewStatus` and `tenantResponsibilityDeclineReason` **are** in the mobile contract — just not on the schema this file indexes them off; `tenantResponsibilityAgentAcknowledged` exists only in the full staff spec, never in `openapi.mobile.json`; and `taskNumber` appears in neither. These are app-side mismatches against the wrong response type, and they need fixing here rather than waiting on a release. Left untouched by this commit so the sync stays a sync.
+
 ## 2026-08-24
 
 ### Added

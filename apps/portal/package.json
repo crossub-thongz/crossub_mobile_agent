@@ -14,7 +14,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@crossub-thongz/api-contract": "^0.16.0",
+    "@crossub-thongz/api-contract": "^0.17.0",
     "@googlemaps/js-api-loader": "^1.16.8",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-dialog": "1.1.15",
