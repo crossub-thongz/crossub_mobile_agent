@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, Suspense } from 'react';
 import { ConnectionBanner } from '@/components/agent/connection-banner';
 import { AddFirstPropertyBanner } from '@/components/agent/add-first-property-banner';
 import { EmailVerificationBanner } from '@/components/agent/email-verification-banner';
+import { PlatformInvoiceReadyBanner } from '@/components/billing/platform-invoice-ready-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
@@ -299,6 +300,7 @@ export function AgentShell({
             }}
           >
             {user ? <EmailVerificationBanner /> : null}
+            {user ? <PlatformInvoiceReadyBanner /> : null}
             {user ? <AddFirstPropertyBanner /> : null}
             {showConnectionBanner && user && (
               <div className="mb-4">

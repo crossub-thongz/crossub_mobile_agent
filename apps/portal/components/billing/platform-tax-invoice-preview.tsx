@@ -13,42 +13,76 @@ function formatAuDate(iso: string | null | undefined): string {
   }).format(new Date(iso));
 }
 
+function issuerLetterheadLines(name: string, addressLines: string[]): string[] {
+  const suffix = ' Pty Ltd';
+  if (name.endsWith(suffix)) {
+    return [name.slice(0, -suffix.length).trim(), 'Pty Ltd', ...addressLines];
+  }
+  return [name, ...addressLines];
+}
+
 export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTaxInvoice }) {
+  const issuerLines = issuerLetterheadLines(invoice.issuerName, invoice.issuerAddressLines);
+
   return (
     <div className="space-y-5 rounded-2xl border bg-background p-4 text-sm sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-6">
-        <div className="space-y-1">
-          <p className="text-lg font-bold tracking-wide">{invoice.title}</p>
-          <p className="font-semibold">{invoice.agentName}</p>
-          {invoice.agentAbn ? (
-            <p className="text-muted-foreground text-xs">(ABN: {invoice.agentAbn})</p>
-          ) : null}
-          <div className="text-muted-foreground pt-2 text-xs leading-5">
-            <p className="font-medium text-foreground">{invoice.issuerName}</p>
-            {invoice.issuerAddressLines.map((line) => (
-              <p key={line}>{line}</p>
-            ))}
+      <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-[1.15fr_0.95fr_1fr]">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/crossub-logo.png"
+              alt="CROSSUB"
+              width={40}
+              height={40}
+              className="size-10 rounded-sm object-cover"
+            />
+            <div>
+              <p className="text-[18px] font-bold leading-none tracking-wide text-[#004063]">
+                CROSSUB
+              </p>
+              <p className="mt-1 text-[9px] italic tracking-[0.08em] text-[#004063]">
+                PROPERTY MANAGEMENT
+              </p>
+            </div>
           </div>
+          <p className="text-lg font-bold tracking-wide">{invoice.title}</p>
+          <p className="font-medium text-[#C0504D]">{invoice.agentName}</p>
+          {invoice.agentAbn ? <p className="text-xs">(ABN: {invoice.agentAbn})</p> : null}
         </div>
-        <dl className="grid min-w-[16rem] grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-          <dt className="text-muted-foreground">Invoice Date</dt>
-          <dd className="font-medium">{formatAuDate(invoice.invoiceDate)}</dd>
-          <dt className="text-muted-foreground">Invoice Number</dt>
-          <dd className="font-medium">{invoice.invoiceNumber}</dd>
-          <dt className="text-muted-foreground">Reference</dt>
-          <dd className="font-medium">{invoice.reference}</dd>
-          <dt className="text-muted-foreground">ABN</dt>
-          <dd className="font-medium">{invoice.issuerAbn}</dd>
+        <dl className="space-y-3 text-xs">
+          <div>
+            <dt className="font-semibold">Invoice Date</dt>
+            <dd>{formatAuDate(invoice.invoiceDate)}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold">Invoice Number</dt>
+            <dd>{invoice.invoiceNumber}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold">Reference</dt>
+            <dd className="text-[#C0504D]">{invoice.reference}</dd>
+          </div>
+          <div>
+            <dt className="font-semibold">ABN</dt>
+            <dd>{invoice.issuerAbn}</dd>
+          </div>
         </dl>
+        <div className="text-xs leading-5">
+          {issuerLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] border-collapse text-xs">
+        <table className="w-full min-w-[48rem] border-collapse text-xs">
           <thead>
             <tr className="border-y bg-muted/60 text-left">
               <th className="px-2 py-2 font-semibold">#</th>
               <th className="px-2 py-2 font-semibold">Address</th>
-              <th className="px-2 py-2 font-semibold">PM Fee</th>
+              <th className="px-2 py-2 font-semibold">Rent AUD</th>
+              <th className="px-2 py-2 font-semibold">Management Fee</th>
               <th className="px-2 py-2 font-semibold">Rate</th>
               <th className="px-2 py-2 text-right font-semibold">Amount/PRP</th>
             </tr>
@@ -58,10 +92,9 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
               <tr key={line.id} className="border-b align-top">
                 <td className="text-muted-foreground px-2 py-1.5 tabular-nums">{line.lineNo}</td>
                 <td className="px-2 py-1.5">{line.address}</td>
-                <td className="px-2 py-1.5 whitespace-pre-wrap">{line.pmFee}</td>
-                <td className="px-2 py-1.5">
-                  {[line.managementRate, line.crossubRate].filter(Boolean).join('  ')}
-                </td>
+                <td className="px-2 py-1.5 whitespace-pre-wrap">{line.rentAud ?? line.pmFee}</td>
+                <td className="px-2 py-1.5">{line.managementFee ?? ''}</td>
+                <td className="px-2 py-1.5">{line.crossubRate}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums">
                   {formatCurrency(line.amountExGst)}
                 </td>
@@ -70,6 +103,16 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
           </tbody>
         </table>
       </div>
+
+      {invoice.lines.some((line) => line.footnote) ? (
+        <ul className="text-muted-foreground space-y-0.5 text-[11px]">
+          {invoice.lines
+            .filter((line) => line.footnote)
+            .map((line) => (
+              <li key={`${line.id}-note`}>* {line.footnote}</li>
+            ))}
+        </ul>
+      ) : null}
 
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="space-y-1 text-xs">

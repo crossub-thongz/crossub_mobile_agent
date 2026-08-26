@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
+import { AlertTriangle, CreditCard, FileText, Loader2, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
@@ -629,10 +629,12 @@ export function Level2MonthlyBillingList({
                 >
                   {openingInvoiceId === group.invoice.id ? (
                     <Loader2 className="size-4 animate-spin" />
+                  ) : group.paymentStatus === 'unpaid' ? (
+                    <CreditCard className="size-4" />
                   ) : (
                     <FileText className="size-4" />
                   )}
-                  View invoice
+                  {group.paymentStatus === 'unpaid' ? 'Pay invoice' : 'View invoice'}
                 </Button>
               ) : (
                 <p className="text-muted-foreground text-xs">

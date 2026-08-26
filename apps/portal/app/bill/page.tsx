@@ -1,7 +1,7 @@
 'use client';
 
 import { CreditCard, FileText, Loader2, Lock, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
@@ -205,6 +205,7 @@ export default function BillPage() {
   const [invoiceDialog, setInvoiceDialog] = useState<PlatformMonthlyInvoiceDialogState>(null);
   const [setupDialog, setSetupDialog] = useState<StripeSetupDialogState | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+  const autoPayOpened = useRef(false);
 
   const stripeConfigured = Boolean(getStripePublishableKey());
   const usesMonthlyInvoice =
@@ -366,6 +367,17 @@ export default function BillPage() {
     }
   };
 
+  useEffect(() => {
+    if (loading || autoPayOpened.current || invoiceDialog != null) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('pay') !== '1') return;
+    const invoiceId = summary?.openInvoiceId ?? payableInvoices[0]?.id;
+    if (!invoiceId) return;
+    autoPayOpened.current = true;
+    window.history.replaceState({}, '', '/bill');
+    void openInvoiceById(invoiceId);
+  }, [loading, summary?.openInvoiceId, payableInvoices, invoiceDialog]);
+
   const handlePaymentSuccess = async (chargeId?: string | null) => {
     await finalizeBillingChargePayment(chargeId);
     toast.success('Payment complete');
@@ -515,21 +527,41 @@ export default function BillPage() {
         {summary && (summary.outstandingInvoiceAmount > 0 || outstandingTotal > 0) ? (
           <div
             className={cn(
-              'rounded-2xl border bg-card p-5 shadow-sm',
-              usesMonthlyInvoice && openInvoiceLockDays != null
-                ? openInvoiceLockDays <= 3
-                  ? 'border-destructive/30'
-                  : 'border-amber-500/30'
-                : 'border-border/80',
+              'rounded-2xl border p-5 shadow-sm',
+              usesMonthlyInvoice
+                ? summary.billingBlocked || (openInvoiceLockDays != null && openInvoiceLockDays <= 3)
+                  ? 'border-destructive/35 bg-destructive/10'
+                  : 'border-amber-500/35 bg-amber-500/10'
+                : 'border-border/80 bg-card',
             )}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Outstanding balance
+            <p
+              className={
+                usesMonthlyInvoice
+                  ? 'text-base font-semibold text-amber-950 dark:text-amber-100'
+                  : 'text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground'
+              }
+            >
+              {usesMonthlyInvoice
+                ? summary.billingBlocked ||
+                  payableInvoices.some((row) => row.status === 'overdue')
+                  ? 'Your invoice is overdue'
+                  : 'Your invoice is ready'
+                : 'Outstanding balance'}
             </p>
             <p className="mt-1.5 text-3xl font-semibold tracking-tight tabular-nums">
               {formatCurrency(outstandingTotal || summary.outstandingInvoiceAmount)}
             </p>
-            {summary.openInvoiceNumber ? (
+            {usesMonthlyInvoice ? (
+              <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/90">
+                Please pay
+                {summary.openInvoiceNumber ? ` ${summary.openInvoiceNumber}` : ' your CROSSUB invoice'}
+                {summary.nextInvoiceDueDate && !summary.billingBlocked
+                  ? ` by ${formatWhen(summary.nextInvoiceDueDate)}`
+                  : ''}
+                . Review the tax invoice, then pay to keep full access.
+              </p>
+            ) : summary.openInvoiceNumber ? (
               <p className="mt-1 text-sm text-muted-foreground">
                 {summary.openInvoiceNumber}
                 {summary.nextInvoiceDueDate
@@ -553,7 +585,6 @@ export default function BillPage() {
               {summary.openInvoiceId ? (
                 <Button
                   type="button"
-                  variant={showPayAll ? 'outline' : 'default'}
                   className="w-full sm:w-auto"
                   onClick={() => void openInvoiceById(summary.openInvoiceId!)}
                   disabled={
@@ -565,14 +596,32 @@ export default function BillPage() {
                 >
                   {openingInvoiceId === summary.openInvoiceId ? (
                     <Loader2 className="size-4 animate-spin" />
+                  ) : usesMonthlyInvoice ? (
+                    <CreditCard className="size-4" />
                   ) : (
                     <FileText className="size-4" />
                   )}
-                  View invoice
+                  {usesMonthlyInvoice ? 'Pay invoice' : 'View invoice'}
+                </Button>
+              ) : payableInvoices[0] && usesMonthlyInvoice ? (
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  onClick={() =>
+                    setInvoiceDialog({
+                      invoice: payableInvoices[0]!,
+                      defaultPaymentMethod: summary.defaultPaymentMethod,
+                    })
+                  }
+                  disabled={paymentDialog != null || invoiceDialog != null || payingAll}
+                >
+                  <CreditCard className="size-4" />
+                  Pay invoice
                 </Button>
               ) : null}
               {showPayAll ? (
                 <Button
+                  variant={usesMonthlyInvoice ? 'outline' : 'default'}
                   className="w-full sm:w-auto"
                   onClick={() => void payAll()}
                   disabled={payingAll || payingKey != null || paymentDialog != null}
