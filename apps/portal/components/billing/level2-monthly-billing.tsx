@@ -3,12 +3,15 @@
 import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { ChargeIncludedUsageLine } from '@/components/billing/included-allowance-usage';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
-  platformChargeAmountLabel,
+  derivePropertyIncludedUsage,
+  includedAllowanceRemainingLabel,
+  platformChargeServiceAmountLabel,
   platformChargeShowsAllowanceRemaining,
+  propertyLabelFromCharge,
   type AgentBillingCharge,
+  type AgentBillingIncludedUsageRow,
   type AgentBillingMonthlyInvoice,
 } from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
@@ -37,6 +40,25 @@ export type Level2MonthGroup = {
   totalAud: number;
 };
 
+export type Level2PropertyChargeGroup = {
+  key: string;
+  propertyId: string | null;
+  propertyLabel: string;
+  charges: AgentBillingCharge[];
+  billedTotal: number;
+  included: {
+    routine: { included: number; used: number; remaining: number };
+    ingoing: { included: number; used: number; remaining: number };
+    outgoing: { included: number; used: number; remaining: number };
+  } | null;
+};
+
+function billedChargeAmount(row: AgentBillingCharge): number {
+  if (row.status === 'void' || row.status === 'refunded') return 0;
+  if (row.status === 'included' || row.includedInAllowance) return 0;
+  return row.amount;
+}
+
 function serviceLabel(raw: string): string {
   return SERVICE_LABEL[raw] ?? raw.replace(/_/g, ' ');
 }
@@ -57,7 +79,7 @@ function notChargedCaption(row: AgentBillingCharge): string {
   return 'Not charged';
 }
 
-function monthKeyFromIso(iso: string): string {
+export function monthKeyFromIso(iso: string): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: SYDNEY_TZ,
     year: 'numeric',
@@ -68,7 +90,7 @@ function monthKeyFromIso(iso: string): string {
   return `${year}-${month}`;
 }
 
-function monthLabel(key: string): string {
+export function monthLabel(key: string): string {
   const [year, month] = key.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, 1));
   return date.toLocaleDateString('en-AU', {
@@ -192,6 +214,71 @@ export function buildLevel2MonthGroups(
   return groups.sort((a, b) => b.key.localeCompare(a.key));
 }
 
+export function groupChargesByProperty(
+  charges: AgentBillingCharge[],
+  includedUsageByProperty: AgentBillingIncludedUsageRow[] = [],
+): Level2PropertyChargeGroup[] {
+  const usageById = new Map(includedUsageByProperty.map((row) => [row.propertyId, row]));
+  const groups = new Map<string, Level2PropertyChargeGroup>();
+
+  for (const charge of charges) {
+    const key = charge.propertyId ?? (charge.serviceType === 'service_fee' ? 'service_fee' : 'agency');
+    let group = groups.get(key);
+    if (!group) {
+      const catalog = charge.propertyId ? usageById.get(charge.propertyId) : undefined;
+      group = {
+        key,
+        propertyId: charge.propertyId ?? null,
+        propertyLabel: catalog?.propertyLabel ?? propertyLabelFromCharge(charge),
+        charges: [],
+        billedTotal: 0,
+        included: null,
+      };
+      groups.set(key, group);
+    }
+    group.charges.push(charge);
+    group.billedTotal += billedChargeAmount(charge);
+  }
+
+  for (const group of groups.values()) {
+    if (!group.propertyId) {
+      group.included = null;
+      continue;
+    }
+    const catalog = usageById.get(group.propertyId);
+    group.included = catalog
+      ? {
+          routine: catalog.routine,
+          ingoing: catalog.ingoing,
+          outgoing: catalog.outgoing,
+        }
+      : derivePropertyIncludedUsage(group.charges);
+  }
+
+  return [...groups.values()].sort((a, b) => {
+    const aAgency = a.propertyId ? 0 : 1;
+    const bAgency = b.propertyId ? 0 : 1;
+    if (aAgency !== bAgency) return aAgency - bAgency;
+    return a.propertyLabel.localeCompare(b.propertyLabel);
+  });
+}
+
+function PropertyIncludedSummary({
+  usage,
+}: {
+  usage: NonNullable<Level2PropertyChargeGroup['included']>;
+}) {
+  return (
+    <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+      Routine {includedAllowanceRemainingLabel(usage.routine)}
+      {' · '}
+      Ingoing {includedAllowanceRemainingLabel(usage.ingoing)}
+      {' · '}
+      Outgoing {includedAllowanceRemainingLabel(usage.outgoing)}
+    </p>
+  );
+}
+
 function paymentStatusTone(status: Level2MonthGroup['paymentStatus']): string {
   if (status === 'paid') {
     return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
@@ -211,6 +298,7 @@ function paymentStatusLabel(status: Level2MonthGroup['paymentStatus']): string {
 type Level2MonthlyBillingListProps = {
   charges: AgentBillingCharge[];
   invoices: AgentBillingMonthlyInvoice[];
+  includedUsageByProperty?: AgentBillingIncludedUsageRow[];
   overdueLockDays?: number;
   billingBlocked?: boolean;
   openingInvoiceId: string | null;
@@ -223,6 +311,7 @@ type Level2MonthlyBillingListProps = {
 export function Level2MonthlyBillingList({
   charges,
   invoices,
+  includedUsageByProperty = [],
   overdueLockDays = DEFAULT_OVERDUE_LOCK_DAYS,
   billingBlocked = false,
   openingInvoiceId,
@@ -341,87 +430,119 @@ export function Level2MonthlyBillingList({
                 No service lines listed for this month yet.
               </p>
             ) : (
-              <ul className="divide-y">
-                {group.charges.map((row) => {
-                  const struck = isNotCharged(row);
-                  const showRemaining = platformChargeShowsAllowanceRemaining(row);
-                  return (
-                  <li
-                    key={row.id}
-                    className="flex flex-wrap items-start justify-between gap-3 px-4 py-3"
-                  >
-                    <div className={cn('min-w-0 flex-1', struck && 'text-muted-foreground')}>
-                      <p className={cn('text-sm font-medium', struck && 'line-through')}>
-                        {serviceLabel(row.serviceType)}
+              <div className="divide-y">
+                {groupChargesByProperty(group.charges, includedUsageByProperty).map((property) => (
+                  <section key={property.key}>
+                    <header className="bg-muted/40 px-4 py-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {property.propertyId
+                          ? 'Property'
+                          : property.key === 'service_fee'
+                            ? 'Full Service'
+                            : 'Agency'}
                       </p>
-                      <p
-                        className={cn(
-                          'text-muted-foreground mt-0.5 text-sm',
-                          struck && 'line-through',
-                        )}
-                      >
-                        {row.description}
-                      </p>
-                      {row.jobCaseName ? (
-                        <p className="mt-1 text-sm">
-                          <JobCaseReferenceLink
-                            charge={row}
-                            className={struck ? 'text-muted-foreground line-through' : undefined}
-                          />
+                      <div className="mt-0.5 flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{property.propertyLabel}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {property.charges.length} service
+                            {property.charges.length === 1 ? '' : 's'}
+                          </p>
+                          {property.included ? (
+                            <PropertyIncludedSummary usage={property.included} />
+                          ) : null}
+                        </div>
+                        <p className="shrink-0 text-sm font-semibold tabular-nums">
+                          {formatCurrency(property.billedTotal)}
                         </p>
-                      ) : null}
-                      {struck ? (
-                        <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-                          {notChargedCaption(row)}
-                        </p>
-                      ) : null}
-                      <ChargeIncludedUsageLine charge={row} />
-                      {row.calculationDetail && !showRemaining ? (
-                        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                          {row.calculationDetail}
-                        </p>
-                      ) : null}
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {[
-                          row.createdByName ? `Created by ${row.createdByName}` : null,
-                          `Created ${formatDateTime(row.createdAt)}`,
-                          row.paidAt && !showRemaining
-                            ? `Paid ${formatDateTime(row.paidAt)}`
-                            : null,
-                          row.refundedAt ? `Refunded ${formatDateTime(row.refundedAt)}` : null,
-                          row.voidedAt && row.status === 'void'
-                            ? `Not charged ${formatDateTime(row.voidedAt)}`
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <p
-                        className={cn(
-                          'text-sm font-semibold',
-                          !showRemaining && 'tabular-nums',
-                          struck && 'text-muted-foreground line-through',
-                        )}
-                      >
-                        {platformChargeAmountLabel(row, formatCurrency)}
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 px-2 text-xs"
-                        onClick={() => onViewCharge(row)}
-                        disabled={disabled}
-                      >
-                        Details
-                      </Button>
-                    </div>
-                  </li>
-                  );
-                })}
-              </ul>
+                      </div>
+                    </header>
+                    <ul className="divide-y">
+                      {property.charges.map((row) => {
+                        const struck = isNotCharged(row);
+                        const showRemaining = platformChargeShowsAllowanceRemaining(row);
+                        return (
+                          <li
+                            key={row.id}
+                            className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 pl-6"
+                          >
+                            <div className={cn('min-w-0 flex-1', struck && 'text-muted-foreground')}>
+                              <p className={cn('text-sm font-medium', struck && 'line-through')}>
+                                {serviceLabel(row.serviceType)}
+                              </p>
+                              <p
+                                className={cn(
+                                  'text-muted-foreground mt-0.5 text-sm',
+                                  struck && 'line-through',
+                                )}
+                              >
+                                {row.description}
+                              </p>
+                              {row.jobCaseName ? (
+                                <p className="mt-1 text-sm">
+                                  <JobCaseReferenceLink
+                                    charge={row}
+                                    className={
+                                      struck ? 'text-muted-foreground line-through' : undefined
+                                    }
+                                  />
+                                </p>
+                              ) : null}
+                              {struck ? (
+                                <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                  {notChargedCaption(row)}
+                                </p>
+                              ) : null}
+                              {row.calculationDetail && !showRemaining ? (
+                                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                                  {row.calculationDetail}
+                                </p>
+                              ) : null}
+                              <p className="text-muted-foreground mt-1 text-xs">
+                                {[
+                                  row.createdByName ? `Created by ${row.createdByName}` : null,
+                                  `Created ${formatDateTime(row.createdAt)}`,
+                                  row.paidAt && !showRemaining
+                                    ? `Paid ${formatDateTime(row.paidAt)}`
+                                    : null,
+                                  row.refundedAt
+                                    ? `Refunded ${formatDateTime(row.refundedAt)}`
+                                    : null,
+                                  row.voidedAt && row.status === 'void'
+                                    ? `Not charged ${formatDateTime(row.voidedAt)}`
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' · ')}
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-2">
+                              <p
+                                className={cn(
+                                  'text-sm font-semibold tabular-nums',
+                                  struck && 'text-muted-foreground line-through',
+                                )}
+                              >
+                                {platformChargeServiceAmountLabel(row, formatCurrency)}
+                              </p>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs"
+                                onClick={() => onViewCharge(row)}
+                                disabled={disabled}
+                              >
+                                Details
+                              </Button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             )}
 
             <footer className="border-t bg-muted/20 px-4 py-3">

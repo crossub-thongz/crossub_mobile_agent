@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PageIntro } from '@/components/agent/page-intro';
-import { AgencyIncludedUsageByProperty } from '@/components/billing/included-allowance-usage';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
   PlatformChargeDetailDialog,
@@ -481,10 +480,6 @@ export default function BillPage() {
           </div>
         ) : null}
 
-        {isLevel2 ? (
-          <AgencyIncludedUsageByProperty rows={includedUsageByProperty} />
-        ) : null}
-
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">
             {isLevel2 ? 'Monthly invoices' : 'All payments'}
@@ -517,6 +512,7 @@ export default function BillPage() {
           <Level2MonthlyBillingList
             charges={charges}
             invoices={invoices}
+            includedUsageByProperty={includedUsageByProperty}
             overdueLockDays={summary?.overdueLockDays ?? 7}
             billingBlocked={summary?.billingBlocked === true}
             openingInvoiceId={openingInvoiceId}

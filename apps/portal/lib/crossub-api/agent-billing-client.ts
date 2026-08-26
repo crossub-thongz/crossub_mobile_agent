@@ -86,24 +86,72 @@ export function platformChargeAllowanceUsage(
   return { used, included, remaining };
 }
 
-export function platformChargeAllowanceUsageLabel(
-  usage: PlatformChargeAllowanceUsage,
-): string {
-  if (usage.remaining > 0) {
-    return `${usage.used} used this year · ${usage.remaining} of ${usage.included} remaining`;
-  }
-  return `${usage.used} of ${usage.included} used this year · further jobs are billed`;
-}
-
-export function includedAllowanceUsageLabel(usage: {
+/** Compact remaining text for a property-row included slot. */
+export function includedAllowanceRemainingLabel(usage: {
   included: number;
   used: number;
   remaining: number;
 }): string {
   if (usage.remaining > 0) {
-    return `${usage.used} used · ${usage.remaining} of ${usage.included} remaining`;
+    return `${usage.remaining} of ${usage.included} remaining`;
   }
-  return `${usage.used} of ${usage.included} used · further jobs are billed`;
+  return `used (${usage.used} of ${usage.included})`;
+}
+
+export function platformChargeServiceAmountLabel(
+  row: Pick<AgentBillingCharge, 'status' | 'amount' | 'includedInAllowance'>,
+  formatMoney: (amount: number) => string,
+): string {
+  if (row.status === 'void') return 'Not charged';
+  if (row.status === 'included' || row.includedInAllowance) return 'Included';
+  return formatMoney(row.amount);
+}
+
+export function propertyLabelFromCharge(
+  row: Pick<AgentBillingCharge, 'description'>,
+): string {
+  const desc = row.description?.trim() ?? '';
+  const sep = ' — ';
+  const idx = desc.indexOf(sep);
+  if (idx >= 0) {
+    const after = desc.slice(idx + sep.length).trim();
+    if (after) return after;
+  }
+  return desc || 'Agency charges';
+}
+
+export function derivePropertyIncludedUsage(charges: AgentBillingCharge[]): {
+  routine: { included: number; used: number; remaining: number };
+  ingoing: { included: number; used: number; remaining: number };
+  outgoing: { included: number; used: number; remaining: number };
+} | null {
+  const types = [
+    ['routine_inspection', 'routine'],
+    ['ingoing_inspection', 'ingoing'],
+    ['outgoing_inspection', 'outgoing'],
+  ] as const;
+  let any = false;
+  const result = {
+    routine: { included: 3, used: 0, remaining: 3 },
+    ingoing: { included: 1, used: 0, remaining: 1 },
+    outgoing: { included: 1, used: 0, remaining: 1 },
+  };
+  for (const [serviceType, key] of types) {
+    const row = charges.find((charge) => charge.serviceType === serviceType);
+    const usage = row ? platformChargeAllowanceUsage(row) : null;
+    if (usage) {
+      any = true;
+      result[key] = {
+        included: usage.included,
+        used: usage.used,
+        remaining: usage.remaining,
+      };
+    } else {
+      const included = LEVEL2_ALLOWANCE_LIMITS[serviceType] ?? 0;
+      result[key] = { included, used: 0, remaining: included };
+    }
+  }
+  return any ? result : null;
 }
 
 /** Invoice amount: remaining included slots, or the price once none remain. */
