@@ -52,6 +52,7 @@ import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
 import { AGENT_OUTGOING_GATE_LABEL, deriveAgentOutgoingGateStatus } from '@/lib/outgoing-inspection-display';
 import type {
+  AgencyMembershipTier,
   AgentArchiveView,
   ArchivedEndLeasingCase,
   ArchivedLeasingCycle,

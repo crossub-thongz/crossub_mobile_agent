@@ -63,7 +63,7 @@ import type {
   Inspection,
   LeasingCycle,
   LeasingRecord,
-  MaintenanceItem,
+  MaintenanceRequest,
   Property,
   RentReviewCase,
   TenantSelectionCase,
@@ -120,7 +120,7 @@ export function PropertyWorkflowPanel({
   leasingCycles: LeasingCycle[];
   rentReviews: RentReviewCase[];
   vacatingCases: VacatingCase[];
-  maintenance: MaintenanceItem[];
+  maintenance: MaintenanceRequest[];
   inspections: Inspection[];
   tribunalCases: TribunalCase[];
   currentLease?: LeasingRecord;

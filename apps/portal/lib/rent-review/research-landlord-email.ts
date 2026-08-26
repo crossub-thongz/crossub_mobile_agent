@@ -110,7 +110,11 @@ function buildRentResearchSummaryBlock(input: {
 }
 
 export function researchPackDraftAttachmentUrls(
-  propertyId: string,
+  // `string | null` because `RentReviewWorkflowDetail.propertyId` is nullable and the two
+  // sibling URLs built alongside this call in lib/rent-review/communications.ts already
+  // interpolate it as-is. Widening keeps one behaviour rather than adding a guard on one
+  // of the three and not the others.
+  propertyId: string | null,
   reviewId: string,
   suggestedWeekly?: number | null,
 ): Record<string, string> {

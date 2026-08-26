@@ -62,7 +62,7 @@ function PlatformResearchRow({
   // Agent UI: never surface provider credential/config errors for RP Data / REA —
   // treat them as a normal pending research row.
   const hideCredentialNoise =
-    isCredentialGateStatus(platform?.status) || isCredentialError(platform?.error);
+    isCredentialGateStatus(platform?.status) || isCredentialError(platform?.error ?? undefined);
   const status = loading
     ? 'loading'
     : hideCredentialNoise

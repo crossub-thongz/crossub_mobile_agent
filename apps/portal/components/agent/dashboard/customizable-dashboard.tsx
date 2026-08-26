@@ -24,6 +24,7 @@ import {
   appendWidgetToLayout,
   type DashboardWidgetId,
 } from '@/lib/dashboard-widgets';
+import { isDashboardKpiWidgetAllowedForAgent } from '@/lib/portal-service-level';
 import {
   defaultDashboardSnapshot,
   DASHBOARD_LAYOUT_UPDATED_EVENT,

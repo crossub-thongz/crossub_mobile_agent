@@ -2,7 +2,7 @@ import type {
   Inspection,
   LeasingCycle,
   LeasingRecord,
-  MaintenanceItem,
+  MaintenanceRequest,
   Property,
   RentReviewCase,
   TribunalCase,
@@ -80,7 +80,7 @@ export interface PropertyWorkflowContext {
   leasingCycles: LeasingCycle[];
   rentReviews: RentReviewCase[];
   vacatingCases: VacatingCase[];
-  maintenance: MaintenanceItem[];
+  maintenance: MaintenanceRequest[];
   inspections: Inspection[];
   tribunalCases: TribunalCase[];
   currentLease?: LeasingRecord;
@@ -198,7 +198,7 @@ export function buildPropertyWorkflowContext(input: {
   leasingCycles: LeasingCycle[];
   rentReviews: RentReviewCase[];
   vacatingCases: VacatingCase[];
-  maintenance: MaintenanceItem[];
+  maintenance: MaintenanceRequest[];
   inspections: Inspection[];
   tribunalCases: TribunalCase[];
   currentLease?: LeasingRecord;

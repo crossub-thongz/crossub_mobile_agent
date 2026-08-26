@@ -18,9 +18,13 @@ export function terminationDocumentDownloadUrl(caseId: string, documentId: strin
 function terminationNoticeAttachments(
   caseData: TerminationCaseDetail,
 ): JobCaseEmailRecord['attachments'] {
+  // `caseId` IS the task number: termination-case-api.ts maps the server's `taskNumber`
+  // into it and already falls back to `TRM-<id>` when there is none. Reading `taskNumber`
+  // off the detail type never compiled -- the field lives on the SERVER shape, not this one
+  // -- and the local `TC-` fallback was a second, inconsistent reference format for the
+  // same case. One format, one source.
   const caseRef =
-    caseData.taskNumber?.trim() ||
-    `TC-${caseData.id.slice(0, 8).toUpperCase()}`;
+    caseData.caseId.trim() || `TRM-${caseData.id.slice(0, 8).toUpperCase()}`;
   const attachments: NonNullable<JobCaseEmailRecord['attachments']> = [
     {
       name: `notice-to-terminate-${caseRef}.pdf`,
@@ -100,7 +104,9 @@ export function enrichEndLeasingEmailRecords(
   caseData: TerminationCaseDetail,
   records: JobCaseEmailRecord[],
 ): JobCaseEmailRecord[] {
-  const reportAttachments = inspectionReportAttachments(caseData);
+  // `?? []` because the helper returns `attachments`, which is optional on the record type;
+  // `.length` below would otherwise read off undefined whenever a case has no report.
+  const reportAttachments = inspectionReportAttachments(caseData) ?? [];
 
   return records.map((record) => {
     if (record.attachments?.length) return record;

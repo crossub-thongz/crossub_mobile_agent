@@ -11,7 +11,7 @@ import type {
   Inspection,
   LeasingCycle,
   LeasingRecord,
-  MaintenanceItem,
+  MaintenanceRequest,
   Property,
   RentReviewCase,
   TenantSelectionCase,
@@ -39,7 +39,7 @@ export function PropertyTribunalTab({
   leasingCycles: LeasingCycle[];
   rentReviews: RentReviewCase[];
   vacatingCases: VacatingCase[];
-  maintenance: MaintenanceItem[];
+  maintenance: MaintenanceRequest[];
   inspections: Inspection[];
   tenantSelections: TenantSelectionCase[];
   currentLease?: LeasingRecord;

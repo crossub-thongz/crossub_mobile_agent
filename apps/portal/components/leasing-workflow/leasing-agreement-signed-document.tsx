@@ -64,7 +64,7 @@ export function LeasingAgreementSignedDocumentPanel({
               </Button>
               <Button asChild size="sm" variant="outline" className="h-7 gap-1 text-[11px]">
                 <a
-                  href={proofUrl}
+                  href={proofUrl ?? undefined}
                   download={fileName ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"

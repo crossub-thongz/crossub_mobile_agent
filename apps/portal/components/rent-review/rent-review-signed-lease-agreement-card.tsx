@@ -47,7 +47,7 @@ export function RentReviewSignedLeaseAgreementCard({
         const { blob, filename } = await loadRentReviewLeaseAgreementPdf(detail.id, {
           weekly: detail.proposedWeeklyRent ?? undefined,
           draft,
-          propertyId: detail.propertyId,
+          propertyId: detail.propertyId ?? undefined,
         });
         setPreviewUrl((prev) => {
           if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
@@ -127,7 +127,7 @@ export function RentReviewSignedLeaseAgreementCard({
               try {
                 const { blob, filename } = await loadRentReviewLeaseAgreementPdf(detail.id, {
                   weekly: detail.proposedWeeklyRent ?? undefined,
-                  propertyId: detail.propertyId,
+                  propertyId: detail.propertyId ?? undefined,
                 });
                 downloadRentReviewLeaseAgreementBlob(blob, filename);
               } catch (err) {

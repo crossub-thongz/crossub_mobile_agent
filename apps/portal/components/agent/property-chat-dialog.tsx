@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Mail, MessageSquareText, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { MessageBody } from '@/components/agent/message-body';
 import { MessageCompose } from '@/components/agent/message-compose';
 import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { useAgentData } from '@/components/providers/agent-data-provider';

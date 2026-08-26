@@ -1055,7 +1055,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
             contactName: user
               ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || undefined
               : undefined,
-            contactPhone: user?.phone,
+            contactPhone: user?.phone ?? undefined,
           });
           await refresh();
         }
@@ -1158,7 +1158,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           contactName: user
             ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || undefined
             : undefined,
-          contactPhone: user?.phone,
+          contactPhone: user?.phone ?? undefined,
         });
         await refresh();
       }
@@ -1226,8 +1226,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           startTime: start,
           endTime: end,
           shortNote: input.preferredNotes,
-          agentName: input.property.agentName,
-          agentPhone: input.property.agentPhone,
+          // The acting agent, not the property: `Property` carries no agentName/agentPhone
+          // and never has, so both of these were `undefined` on the wire and every session
+          // this app opened reached the API with no agent contact on it at all.
+          agentName:
+            [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || undefined,
+          agentPhone: user?.phone ?? undefined,
           agentRole: 'leasing_agent',
         });
         await refresh();
@@ -1250,7 +1254,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       }
       return storeAddOpenInspection(input);
     },
-    [apiConnected, refresh, storeAddOpenInspection],
+    [apiConnected, refresh, storeAddOpenInspection, user],
   );
 
   const uploadDocument = useCallback(
@@ -1265,21 +1269,26 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       if (file.size > MAX_UPLOAD_BYTES) {
         throw new Error(`File exceeds the ${MAX_UPLOAD_LABEL} limit`);
       }
+      // Resolve the property once, BEFORE the branch. Prefer an explicit propertyId
+      // (create-property / Documents tab); otherwise resolve from the address string.
+      // ⭐ This used to be declared inside `if (apiConnected)` while the offline branch
+      // below still read `prop?.id` — and optional chaining guards the property access,
+      // not the binding, so queuing a document while offline threw a bare
+      // `ReferenceError: prop is not defined` instead of queuing it.
+      const prop =
+        (options?.propertyId
+          ? properties.find((p) => p.id === options.propertyId)
+          : undefined) ??
+        properties.find(
+          (p) =>
+            formatPropertyFullAddress(p) === propertyAddress ||
+            `${p.address}, ${p.suburb}` === propertyAddress ||
+            (Boolean(p.address?.trim()) && propertyAddress.includes(p.address)),
+        );
+      const propertyId = options?.propertyId ?? prop?.id;
       // Connected: read the File as base64 and persist it (→ R2 + PortalDocument), then
-      // refresh() surfaces it. Prefer an explicit propertyId (create-property / Documents tab);
-      // otherwise resolve from the address string.
+      // refresh() surfaces it.
       if (apiConnected) {
-        const prop =
-          (options?.propertyId
-            ? properties.find((p) => p.id === options.propertyId)
-            : undefined) ??
-          properties.find(
-            (p) =>
-              formatPropertyFullAddress(p) === propertyAddress ||
-              `${p.address}, ${p.suburb}` === propertyAddress ||
-              Boolean(p.address?.trim()) && propertyAddress.includes(p.address),
-          );
-        const propertyId = options?.propertyId ?? prop?.id;
         try {
           await apiUploadAgentDocumentFileWithProgress(
             file,
@@ -1307,7 +1316,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         title: displayTitle,
         category,
         propertyAddress,
-        propertyId: options?.propertyId ?? prop?.id,
+        propertyId,
         blob: file,
       };
       await queueAgentDocumentUpload(record);

@@ -150,6 +150,18 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     tenantResponsibilityAgentCommentAt?: string | null
     landlordResponsibilityAgentComment?: string | null
     landlordResponsibilityAgentCommentAt?: string | null
+    // The agent's acknowledgement of each responsibility split, and the tenant's review of
+    // the tenant half. The server has always sent these (termination-case.mapping.ts, and
+    // `tenantResponsibilityReviewStatus` defaults to 'none' rather than null) -- this
+    // hand-written mirror simply never grew them, so `lib/termination-case-api.ts` read
+    // seven fields the compiler said did not exist while the data was arriving fine.
+    tenantResponsibilityAgentAcknowledged?: boolean | null
+    tenantResponsibilityAgentAcknowledgedAt?: string | null
+    landlordResponsibilityAgentAcknowledged?: boolean | null
+    landlordResponsibilityAgentAcknowledgedAt?: string | null
+    tenantResponsibilityReviewStatus?: 'none' | 'pending' | 'accepted' | 'declined'
+    tenantResponsibilityReviewAt?: string | null
+    tenantResponsibilityDeclineReason?: string | null
     draftSummaryEmail: {
       commConversationId: string | null
       subject: string | null

@@ -44,7 +44,12 @@ export function RentReviewLeaseAgreementContractPanel({
   const canEditTerms = !leaseAudit.sentDone && !signed;
   const canSend = leaseAudit.preparingDone && !leaseAudit.sentDone && !signed;
 
-  if (!accepted || !fixedRenewal || signed) return null;
+  // Every action in this panel is property-scoped (it sends and renders documents under
+  // /agent/properties/{propertyId}/...), so a review with no property has nothing to show.
+  // Narrowing to a local const rather than relying on `detail.propertyId` keeps the type
+  // through the async callbacks below — TS discards property-access narrowing inside a closure.
+  if (!accepted || !fixedRenewal || signed || !detail.propertyId) return null;
+  const propertyId = detail.propertyId;
 
   const run = async (action: () => Promise<RentReviewWorkflowDetail>, success: string) => {
     setBusy(true);
@@ -67,7 +72,7 @@ export function RentReviewLeaseAgreementContractPanel({
       const { blob, filename } = await loadRentReviewLeaseAgreementPdf(detail.id, {
         draft: true,
         weekly: detail.proposedWeeklyRent ?? undefined,
-        propertyId: detail.propertyId,
+        propertyId,
       });
       setPreviewUrl((prev) => {
         if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
@@ -142,7 +147,7 @@ export function RentReviewLeaseAgreementContractPanel({
                 () =>
                   rentReviewApi.sendLeaseAgreement(
                     detail.id,
-                    detail.propertyId,
+                    propertyId,
                     detail.leaseEndDate,
                   ),
                 'Lease agreement sent to tenant',
