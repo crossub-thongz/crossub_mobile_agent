@@ -56,6 +56,10 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
             <dd>{formatAuDate(invoice.invoiceDate)}</dd>
           </div>
           <div>
+            <dt className="font-semibold">Invoice Month</dt>
+            <dd>{invoice.periodLabel}</dd>
+          </div>
+          <div>
             <dt className="font-semibold">Invoice Number</dt>
             <dd>{invoice.invoiceNumber}</dd>
           </div>
