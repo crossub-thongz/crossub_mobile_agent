@@ -31,6 +31,35 @@ export function formatDateMedium(input: Date | string): string {
 
 export const formatDate = formatDateMedium;
 
+/** Calendar date from a YYYY-MM-DD agreement field, without timezone drift. */
+export function formatAgreementDate(isoDate: string): string {
+  const match = isoDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return isoDate.trim();
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!year || !month || !day) return isoDate.trim();
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/** Tenancy agreement period for invoice property rows. */
+export function formatAgreementPeriod(
+  start?: string | null,
+  end?: string | null,
+): string {
+  if (start && end) {
+    return `Agreement ${formatAgreementDate(start)} – ${formatAgreementDate(end)}`;
+  }
+  if (start) return `Agreement from ${formatAgreementDate(start)}`;
+  if (end) return `Agreement ends ${formatAgreementDate(end)}`;
+  return 'No current agreement';
+}
+
 /** Date with time. Example: "9 Jun 2026, 3:30 pm". */
 export function formatDateTimeMedium(input: Date | string): string {
   const d = toValidDate(input);

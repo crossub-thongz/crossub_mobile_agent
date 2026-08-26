@@ -375,6 +375,8 @@ export type AgentBillingIncludedUsageRow = {
   propertyId: string;
   propertyLabel: string;
   calendarYear: number;
+  agreementStart?: string | null;
+  agreementEnd?: string | null;
   routine: AgentBillingIncludedAllowanceUsage;
   ingoing: AgentBillingIncludedAllowanceUsage;
   outgoing: AgentBillingIncludedAllowanceUsage;

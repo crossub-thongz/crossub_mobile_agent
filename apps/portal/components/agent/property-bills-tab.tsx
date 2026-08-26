@@ -29,7 +29,8 @@ import {
   type AgentBillingIncludedUsageRow,
 } from '@/lib/crossub-api/agent-billing-client';
 import { ROUTES } from '@/constants/routes';
-import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
+import { fetchProperty } from '@/lib/crossub-api/agent-client';
+import { cn, formatAgreementPeriod, formatCurrency, formatDateTime } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -70,6 +71,8 @@ export function PropertyBillsTab({
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [loading, setLoading] = useState(true);
   const [includedUsage, setIncludedUsage] = useState<AgentBillingIncludedUsageRow | null>(null);
+  const [agreementStart, setAgreementStart] = useState<string | null>(null);
+  const [agreementEnd, setAgreementEnd] = useState<string | null>(null);
   const [defaultPaymentMethod, setDefaultPaymentMethod] =
     useState<AgentBillingDefaultPaymentMethod | null>(null);
   const [chargeDialog, setChargeDialog] = useState<PlatformChargeDetailDialogState>(null);
@@ -78,17 +81,20 @@ export function PropertyBillsTab({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rows, summary, pricing] = await Promise.all([
+      const [rows, summary, pricing, property] = await Promise.all([
         listAgentChargeHistory(propertyId),
         fetchAgentBillingSummary().catch(() => null),
         fetchAgentBillingPricing().catch(() => null),
+        fetchProperty(propertyId).catch(() => null),
       ]);
       setCharges(rows);
       setDefaultPaymentMethod(summary?.defaultPaymentMethod ?? null);
-      setIncludedUsage(
+      const usage =
         pricing?.level2.includedUsageByProperty?.find((row) => row.propertyId === propertyId) ??
-          null,
-      );
+        null;
+      setIncludedUsage(usage);
+      setAgreementStart(usage?.agreementStart ?? property?.leaseStart ?? null);
+      setAgreementEnd(usage?.agreementEnd ?? property?.leaseEnd ?? null);
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -152,6 +158,9 @@ export function PropertyBillsTab({
               </>
             )}
           </p>
+          <p className="text-muted-foreground mt-1.5 text-xs">
+            {formatAgreementPeriod(agreementStart, agreementEnd)}
+          </p>
         </div>
         <Button
           type="button"
@@ -199,6 +208,12 @@ export function PropertyBillsTab({
                         <p className="text-muted-foreground text-xs">
                           {property.charges.length} service
                           {property.charges.length === 1 ? '' : 's'}
+                        </p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {formatAgreementPeriod(
+                            property.agreementStart,
+                            property.agreementEnd,
+                          )}
                         </p>
                         {property.included ? (
                           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">

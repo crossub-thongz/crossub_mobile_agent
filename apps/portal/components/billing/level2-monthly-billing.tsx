@@ -14,7 +14,7 @@ import {
   type AgentBillingIncludedUsageRow,
   type AgentBillingMonthlyInvoice,
 } from '@/lib/crossub-api/agent-billing-client';
-import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatAgreementPeriod, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -46,6 +46,8 @@ export type Level2PropertyChargeGroup = {
   propertyLabel: string;
   charges: AgentBillingCharge[];
   billedTotal: number;
+  agreementStart: string | null;
+  agreementEnd: string | null;
   included: {
     routine: { included: number; used: number; remaining: number };
     ingoing: { included: number; used: number; remaining: number };
@@ -232,6 +234,8 @@ export function groupChargesByProperty(
         propertyLabel: catalog?.propertyLabel ?? propertyLabelFromCharge(charge),
         charges: [],
         billedTotal: 0,
+        agreementStart: catalog?.agreementStart ?? null,
+        agreementEnd: catalog?.agreementEnd ?? null,
         included: null,
       };
       groups.set(key, group);
@@ -448,6 +452,14 @@ export function Level2MonthlyBillingList({
                             {property.charges.length} service
                             {property.charges.length === 1 ? '' : 's'}
                           </p>
+                          {property.propertyId ? (
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {formatAgreementPeriod(
+                                property.agreementStart,
+                                property.agreementEnd,
+                              )}
+                            </p>
+                          ) : null}
                           {property.included ? (
                             <PropertyIncludedSummary usage={property.included} />
                           ) : null}

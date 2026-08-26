@@ -48,7 +48,6 @@ function serviceLabel(raw: string): string {
 /** "2 CROSSUB Demo Street (L2A), Haymarket Routine inspection" */
 function invoiceLineTitle(serviceType: string, description: string): string {
   const service = serviceLabel(serviceType);
-  if (serviceType === 'service_fee') return service;
   const marker = ' — ';
   const idx = description.indexOf(marker);
   if (idx === -1) return service;

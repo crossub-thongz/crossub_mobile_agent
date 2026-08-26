@@ -3,6 +3,7 @@ import { twMerge } from 'tailwind-merge';
 
 import {
   dayKey,
+  formatAgreementPeriod,
   formatDate,
   formatDateMedium,
   formatDateTime,
@@ -13,6 +14,7 @@ import {
 
 export {
   dayKey,
+  formatAgreementPeriod,
   formatDate,
   formatDateMedium,
   formatDateTime,

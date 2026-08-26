@@ -25,7 +25,7 @@ import {
   type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
 import { PORTAL_SERVICE_LEVEL_LABEL, type AgentPortalServiceLevel } from '@/lib/portal-service-level';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatAgreementPeriod, formatCurrency } from '@/lib/utils';
 
 import './pricing.css';
 
@@ -299,6 +299,7 @@ export default function PricingPage() {
                       <thead>
                         <tr>
                           <th>Property</th>
+                          <th>Agreement</th>
                           <th>Routine</th>
                           <th>Ingoing</th>
                           <th>Outgoing</th>
@@ -308,6 +309,9 @@ export default function PricingPage() {
                         {includedUsage.map((row) => (
                           <tr key={row.propertyId}>
                             <td className="font-medium">{row.propertyLabel}</td>
+                            <td className="text-muted-foreground text-xs">
+                              {formatAgreementPeriod(row.agreementStart, row.agreementEnd)}
+                            </td>
                             <td>
                               <AllowanceCell usage={row.routine} />
                             </td>
