@@ -91,7 +91,7 @@ function AllowanceCell({
     );
   }
   return (
-    <span className="pricing-allowance pricing-allowance--used" title="Allowance used — further jobs are invoiced">
+    <span className="pricing-allowance pricing-allowance--used" title="Allowance used — further jobs are prepaid">
       Used
       <span className="text-muted-foreground font-normal">
         {' '}
@@ -128,6 +128,8 @@ export default function PricingPage() {
     portalLevel != null ? PORTAL_SERVICE_LEVEL_LABEL[portalLevel] : null;
 
   const isLevel2 = portalLevel === 'LEVEL_2_FULL_MANAGEMENT';
+  const isLevel3 = portalLevel === 'LEVEL_3_LEGACY';
+  const hasIncludedInspections = isLevel2 || isLevel3;
   const example = catalog?.level2.serviceFeeExample;
   const included = catalog?.level2.includedPerPropertyPerYear;
   const includedUsage = catalog?.level2.includedUsageByProperty ?? [];
@@ -159,7 +161,7 @@ export default function PricingPage() {
             {portalLevel ? (
               <div
                 className="pricing-account-banner pricing-animate-in relative px-4 py-4 sm:px-5 sm:py-5"
-                data-level={isLevel2 ? 'level-2' : 'level-1'}
+                data-level={isLevel3 ? 'level-3' : isLevel2 ? 'level-2' : 'level-1'}
               >
                 <div className="relative flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -182,14 +184,16 @@ export default function PricingPage() {
                   </div>
                   <div className="rounded-xl border border-primary/25 bg-background/70 px-3 py-2 text-right backdrop-blur-sm">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Inspections
+                      How you pay
                     </p>
                     <p className="text-sm font-semibold text-foreground">
                       {catalog.platformBilling?.complimentaryAllServices
                         ? 'Complimentary · no payment'
-                        : isLevel2
-                          ? 'Postpaid · monthly invoice'
-                          : 'Prepaid · pay on accept'}
+                        : isLevel3
+                          ? 'Invoice + prepaid extras'
+                          : isLevel2
+                            ? 'Invoice + prepaid extras'
+                            : 'Prepaid · pay on order'}
                     </p>
                   </div>
                 </div>
@@ -279,20 +283,21 @@ export default function PricingPage() {
                     </div>
                   ) : null}
                   <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-                    Inspections and tribunal are always charged separately. Reference checks and the
-                    contract agreement are included in Full Service.
+                    Extra inspections after the yearly allowance, and every CROSSUB-conducted Open,
+                    are prepaid. Tribunal, management fee, and insurance go on the monthly invoice.
+                    Reference checks and the contract agreement are included in Full Service.
                   </p>
                 </div>
               ) : null}
 
-              {isLevel2 && includedUsage.length > 0 ? (
+              {hasIncludedInspections && includedUsage.length > 0 ? (
                 <div className="pricing-included-usage">
                   <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
                     Your included inspections remaining ({usageYear})
                   </p>
                   <p className="text-muted-foreground mb-3 text-xs leading-relaxed">
-                    Included jobs do not appear on Bill — they are free until you use your yearly
-                    allowance. After that, charges accrue to your monthly invoice.
+                    Included jobs do not appear as a charge on Invoice — they are free until you
+                    use your yearly allowance. After that, extras are prepaid like Level 1.
                   </p>
                   <div className="pricing-included-usage__scroll overflow-x-auto">
                     <table className="pricing-included-usage__table">
@@ -329,7 +334,7 @@ export default function PricingPage() {
                 </div>
               ) : null}
 
-              {isLevel2 && includedUsage.length === 0 ? (
+              {hasIncludedInspections && includedUsage.length === 0 ? (
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   Included inspection allowances apply per property. Add a property to see how many
                   free routine, ingoing, and outgoing inspections you have left this year.
@@ -370,6 +375,28 @@ export default function PricingPage() {
                 </div>
               ) : null}
             </PricingSection>
+
+            {catalog.level3 ? (
+              <PricingSection
+                accent="emerald"
+                icon={Sparkles}
+                badge="Level 3"
+                title="Legacy clients"
+                subtitle={catalog.level3.description}
+                delayClass="pricing-animate-in-delay-3"
+              >
+                <ul className="pricing-check-list">
+                  <li>Open inspections are not charged</li>
+                  <li>
+                    Included routine (3), ingoing (1) and outgoing (1) per property per year are
+                    free; extras are prepaid
+                  </li>
+                  <li>
+                    Monthly invoice: letting fee, management fee, tribunal, and insurance
+                  </li>
+                </ul>
+              </PricingSection>
+            ) : null}
 
             {catalog ? (
               <PricingOrderHost>

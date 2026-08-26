@@ -11,6 +11,7 @@ import {
   groupChargesByProperty,
   monthKeyFromIso,
   monthLabel,
+  PropertyIncludedSummary,
 } from '@/components/billing/level2-monthly-billing';
 import {
   PlatformChargeDetailDialog,
@@ -23,7 +24,6 @@ import {
   fetchAgentBillingSummary,
   listAgentChargeHistory,
   platformChargeServiceAmountLabel,
-  includedAllowanceRemainingLabel,
   type AgentBillingCharge,
   type AgentBillingDefaultPaymentMethod,
   type AgentBillingIncludedUsageRow,
@@ -39,6 +39,7 @@ const SERVICE_LABEL: Record<string, string> = {
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
   service_fee: 'Full Service fee',
+  letting_fee: 'Letting fee',
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -190,39 +191,36 @@ export function PropertyBillsTab({
           }
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {monthGroups.map((month) => (
-            <section key={month.key} className="overflow-hidden rounded-xl border bg-card">
-              <header className="border-b px-4 py-3">
-                <h3 className="text-sm font-semibold">{month.label}</h3>
+            <section
+              key={month.key}
+              className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm"
+            >
+              <header className="border-b bg-muted/30 px-5 py-4">
+                <h3 className="text-base font-semibold tracking-tight">{month.label}</h3>
               </header>
               {month.properties.map((property) => (
                 <div key={property.key} className="border-b last:border-b-0">
-                  <div className="bg-muted/40 px-4 py-2.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <div className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-5 py-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       Property
                     </p>
-                    <div className="mt-0.5 flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{property.propertyLabel}</p>
-                        <p className="text-muted-foreground text-xs">
+                    <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold leading-snug">
+                          {property.propertyLabel}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
                           {property.charges.length} service
                           {property.charges.length === 1 ? '' : 's'}
-                        </p>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {formatAgreementPeriod(
+                          {` · ${formatAgreementPeriod(
                             property.agreementStart,
                             property.agreementEnd,
-                          )}
+                          )}`}
                         </p>
                         {property.included ? (
-                          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                            Routine {includedAllowanceRemainingLabel(property.included.routine)}
-                            {' · '}
-                            Ingoing {includedAllowanceRemainingLabel(property.included.ingoing)}
-                            {' · '}
-                            Outgoing {includedAllowanceRemainingLabel(property.included.outgoing)}
-                          </p>
+                          <PropertyIncludedSummary usage={property.included} />
                         ) : null}
                       </div>
                       <p className="shrink-0 text-sm font-semibold tabular-nums">
@@ -253,7 +251,7 @@ export function PropertyBillsTab({
                                 defaultPaymentMethod,
                               });
                             }}
-                            className="hover:bg-muted/20 w-full cursor-pointer px-4 py-3 pl-6 text-left transition"
+                            className="hover:bg-muted/20 w-full cursor-pointer px-5 py-3.5 pl-8 text-left transition"
                           >
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className={cn('min-w-0 space-y-1', struck && 'text-muted-foreground')}>

@@ -151,7 +151,10 @@ export function coerceMoney(value: unknown): number | null {
 export function formatCurrency(amount: number | null | undefined): string {
   const n = coerceMoney(amount);
   if (n == null) return '—';
-  return `$${n.toLocaleString('en-AU')}`;
+  return `$${n.toLocaleString('en-AU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 /** Street + suburb + state + postcode for display and document matching. */

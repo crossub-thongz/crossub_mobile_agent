@@ -309,8 +309,13 @@ export type AgentBillingPricingCatalog = {
       agentIncomeAud: number;
       crossubFeeAud: number;
     };
-    /** Level 2 only — remaining included inspections per property this calendar year. */
+    /** Remaining included inspections per property this calendar year (Level 2 and Level 3). */
     includedUsageByProperty?: AgentBillingIncludedUsageRow[];
+  };
+  level3?: {
+    label: string;
+    collectionMode: string;
+    description: string;
   };
   platformBilling?: {
     complimentaryAllServices?: boolean;

@@ -4,27 +4,36 @@ import { ROUTES } from '@/constants/routes';
 
 export type AgentPortalServiceLevel =
   | 'LEVEL_1_INSPECTION_ONLY'
-  | 'LEVEL_2_FULL_MANAGEMENT';
+  | 'LEVEL_2_FULL_MANAGEMENT'
+  | 'LEVEL_3_LEGACY';
 
 export const PORTAL_SERVICE_LEVEL_LABEL: Record<AgentPortalServiceLevel, string> = {
   LEVEL_1_INSPECTION_ONLY: 'Inspection & tribunal',
   LEVEL_2_FULL_MANAGEMENT: 'Full management',
+  LEVEL_3_LEGACY: 'Legacy clients',
 };
 
+export type RegisterablePortalServiceLevel =
+  | 'LEVEL_1_INSPECTION_ONLY'
+  | 'LEVEL_2_FULL_MANAGEMENT';
+
 /** User-facing labels on the registration flow. */
-export const REGISTER_SERVICE_LEVEL_LABEL: Record<AgentPortalServiceLevel, string> = {
+export const REGISTER_SERVICE_LEVEL_LABEL: Record<RegisterablePortalServiceLevel, string> = {
   LEVEL_1_INSPECTION_ONLY: 'Inspection Only Service',
   LEVEL_2_FULL_MANAGEMENT: 'Full Service',
 };
 
-export const REGISTER_SERVICE_LEVEL_DESCRIPTION: Record<AgentPortalServiceLevel, string> = {
+export const REGISTER_SERVICE_LEVEL_DESCRIPTION: Record<
+  RegisterablePortalServiceLevel,
+  string
+> = {
   LEVEL_1_INSPECTION_ONLY:
     'Add properties and order inspections and tribunal support. Pay when you place the order. Inspection module only — upgrade anytime for leasing, maintenance, and accounting.',
   LEVEL_2_FULL_MANAGEMENT:
     'Full property management — inspections, leasing, maintenance, accounting, and more. Included routine/ingoing/outgoing inspections per property; monthly invoice for platform fees.',
 };
 
-export const PORTAL_SERVICE_LEVEL_ORDER: AgentPortalServiceLevel[] = [
+export const PORTAL_SERVICE_LEVEL_ORDER: RegisterablePortalServiceLevel[] = [
   'LEVEL_1_INSPECTION_ONLY',
   'LEVEL_2_FULL_MANAGEMENT',
 ];
@@ -32,6 +41,7 @@ export const PORTAL_SERVICE_LEVEL_ORDER: AgentPortalServiceLevel[] = [
 export const PORTAL_SERVICE_LEVEL_TAG: Record<AgentPortalServiceLevel, string> = {
   LEVEL_1_INSPECTION_ONLY: 'Level 1',
   LEVEL_2_FULL_MANAGEMENT: 'Level 2',
+  LEVEL_3_LEGACY: 'Level 3',
 };
 
 export const DEFAULT_PORTAL_SERVICE_LEVEL: AgentPortalServiceLevel =

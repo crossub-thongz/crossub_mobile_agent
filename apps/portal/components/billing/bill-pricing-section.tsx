@@ -16,6 +16,8 @@ type BillPricingSectionProps = {
 export function BillPricingSection({ catalog }: BillPricingSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const isLevel2 = catalog.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT';
+  const showServiceFeeCard =
+    isLevel2 || catalog.portalServiceLevel === 'LEVEL_3_LEGACY';
 
   return (
     <section className="rounded-xl border bg-card">
@@ -34,9 +36,11 @@ export function BillPricingSection({ catalog }: BillPricingSectionProps) {
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
               {catalog.platformBilling?.complimentaryAllServices
                 ? 'Complimentary account — inspections, tribunal, letting fee, and Full Service are not charged.'
-                : isLevel2
-                  ? `Inspection and tribunal rates plus your ${catalog.level2.serviceFeePercent}% Full Service platform fee on monthly invoices.`
-                  : 'Prepaid inspection and tribunal rates — pay when you place the order (or at tribunal create).'}
+                : catalog.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT'
+                  ? 'Extra inspections after included usage, and Opens, are prepaid. The monthly invoice is management fee, tribunal, and insurance.'
+                  : catalog.portalServiceLevel === 'LEVEL_3_LEGACY'
+                    ? 'Open inspections are free. Extra routine, ingoing and outgoing after included usage are prepaid. The monthly invoice is letting fee, management fee, tribunal, and insurance.'
+                    : 'Prepaid inspection and tribunal rates — pay when you place the order (or at tribunal create).'}
             </p>
           </div>
         </div>
@@ -53,7 +57,7 @@ export function BillPricingSection({ catalog }: BillPricingSectionProps) {
           <PricingRateCatalog
             catalog={catalog}
             showPlanSummaries
-            showServiceFeeCard={isLevel2}
+            showServiceFeeCard={showServiceFeeCard}
           />
         </div>
       ) : null}

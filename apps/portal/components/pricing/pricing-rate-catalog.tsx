@@ -230,8 +230,9 @@ export function PricingRateCatalog({
                   </div>
                 ) : null}
                 <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
-                  Inspections and tribunal are always charged separately. Reference checks and the
-                  contract agreement are included in Full Service.
+                  Extra inspections after the yearly allowance, and every CROSSUB-conducted Open,
+                  are prepaid. Tribunal, management fee, and insurance go on the monthly invoice.
+                  Reference checks and the contract agreement are included in Full Service.
                 </p>
               </div>
             ) : null}
@@ -262,6 +263,27 @@ export function PricingRateCatalog({
               </div>
             ) : null}
           </PricingSection>
+
+          {catalog.level3 ? (
+            <PricingSection
+              accent="emerald"
+              icon={Sparkles}
+              badge="Level 3"
+              title="Legacy clients"
+              subtitle={catalog.level3.description}
+            >
+              <ul className="pricing-check-list">
+                <li>Open inspections are not charged</li>
+                <li>
+                  Included routine (3), ingoing (1) and outgoing (1) per property per year are
+                  free; extras are prepaid
+                </li>
+                <li>
+                  Monthly invoice: letting fee, management fee, tribunal, and insurance
+                </li>
+              </ul>
+            </PricingSection>
+          ) : null}
         </>
       ) : null}
 
@@ -310,7 +332,7 @@ export function PricingRateCatalog({
                 ? 'not charged for this account'
                 : openIsFree && catalog.inspections.lettingFee
                   ? 'Letting fee still applies if CROSSUB finds the tenant.'
-                  : 'Level 1 prepaid when you place the order · Level 2 on the monthly invoice.'}
+                  : 'Level 1 and Level 2 extras prepaid when you place the order. Level 3 Opens are not charged.'}
             </p>
             <PricingAddButton onClick={orderActions?.addOpen} label="Add open inspection" />
           </div>

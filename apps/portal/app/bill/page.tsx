@@ -61,6 +61,7 @@ const SERVICE_LABEL: Record<string, string> = {
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
   service_fee: 'Service fee',
+  letting_fee: 'Letting fee',
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -103,6 +104,91 @@ function chargeOpensInvoice(row: AgentBillingCharge): boolean {
   return Boolean(row.monthlyInvoiceId) || row.status === 'invoiced';
 }
 
+function PrepaidChargeRow({
+  row,
+  disabled,
+  openingInvoiceId,
+  onOpenInvoice,
+  onViewCharge,
+}: {
+  row: AgentBillingCharge;
+  disabled: boolean;
+  openingInvoiceId: string | null;
+  onOpenInvoice: (invoiceId: string) => void;
+  onViewCharge: (row: AgentBillingCharge) => void;
+}) {
+  const payable = isPayableCharge(row);
+  const opensInvoice = chargeOpensInvoice(row);
+  const invoiceId = row.monthlyInvoiceId ?? null;
+  const viewLabel = opensInvoice ? 'View invoice' : 'View bill';
+  const struck = row.status === 'void' || row.status === 'refunded';
+
+  return (
+    <li className="flex flex-wrap items-start justify-between gap-3 p-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className={cn('text-sm font-medium', struck && 'text-muted-foreground line-through')}>
+            {serviceLabel(row.serviceType)}
+          </p>
+          <span
+            className={cn(
+              'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize',
+              STATUS_TONE[row.status] ?? 'border-border text-muted-foreground',
+            )}
+          >
+            {row.status === 'void' ? 'Not charged' : row.status.replace(/_/g, ' ')}
+          </span>
+        </div>
+        <p className={cn('text-muted-foreground mt-1 text-sm', struck && 'line-through')}>
+          {row.description}
+        </p>
+        {row.jobCaseName ? (
+          <p className="mt-1 text-sm">
+            <JobCaseReferenceLink
+              charge={row}
+              className={struck ? 'text-muted-foreground line-through' : undefined}
+            />
+          </p>
+        ) : null}
+        <p className="text-muted-foreground mt-1 text-xs">
+          {[
+            `Created ${formatDateTime(row.createdAt)}`,
+            row.paidAt ? `Paid ${formatDateTime(row.paidAt)}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        <p className={cn('text-sm font-semibold tabular-nums', struck && 'text-muted-foreground line-through')}>
+          {formatCurrency(row.amount)}
+        </p>
+        <Button
+          size="sm"
+          variant={payable ? 'default' : 'outline'}
+          onClick={() => {
+            if (opensInvoice && invoiceId) {
+              onOpenInvoice(invoiceId);
+              return;
+            }
+            onViewCharge(row);
+          }}
+          disabled={disabled}
+        >
+          {openingInvoiceId && invoiceId && openingInvoiceId === invoiceId ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : opensInvoice ? (
+            <FileText className="size-3.5" />
+          ) : payable ? (
+            <CreditCard className="size-3.5" />
+          ) : null}
+          {viewLabel}
+        </Button>
+      </div>
+    </li>
+  );
+}
+
 export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
@@ -121,7 +207,9 @@ export default function BillPage() {
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
 
   const stripeConfigured = Boolean(getStripePublishableKey());
-  const isLevel2 = summary?.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT';
+  const usesMonthlyInvoice =
+    summary?.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT' ||
+    summary?.portalServiceLevel === 'LEVEL_3_LEGACY';
 
   const payableCharges = useMemo(() => charges.filter(isPayableCharge), [charges]);
   const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
@@ -187,9 +275,17 @@ export default function BillPage() {
     })();
   }, [load]);
 
-  /** Level 1 keeps a flat prepaid + invoice list; Level 2 uses month groups. */
+  const prepaidExtras = useMemo(
+    () =>
+      charges
+        .filter((row) => row.collectionMode === 'prepaid')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [charges],
+  );
+
+  /** Level 1 keeps a flat prepaid + invoice list; Level 2 / 3 use month groups for invoice lines. */
   const payments = useMemo(() => {
-    if (isLevel2) return [] as PaymentRow[];
+    if (usesMonthlyInvoice) return [] as PaymentRow[];
     const rows: PaymentRow[] = [
       ...charges.map((row) => ({
         kind: 'charge' as const,
@@ -207,32 +303,34 @@ export default function BillPage() {
     return rows.sort(
       (a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime(),
     );
-  }, [charges, invoices, isLevel2]);
+  }, [charges, invoices, usesMonthlyInvoice]);
 
   const level2MonthGroups = useMemo(
     () =>
-      isLevel2
+      usesMonthlyInvoice
         ? buildLevel2MonthGroups(charges, invoices, {
             overdueLockDays: summary?.overdueLockDays ?? 7,
           })
         : [],
-    [charges, invoices, isLevel2, summary?.overdueLockDays],
+    [charges, invoices, usesMonthlyInvoice, summary?.overdueLockDays],
   );
 
   const openInvoiceLockDays = useMemo(() => {
-    if (!isLevel2 || summary?.billingBlocked || !summary?.nextInvoiceDueDate) return null;
+    if (!usesMonthlyInvoice || summary?.billingBlocked || !summary?.nextInvoiceDueDate) return null;
     return daysUntilAccountLock(
       summary.nextInvoiceDueDate,
       summary.overdueLockDays ?? 7,
     );
   }, [
-    isLevel2,
+    usesMonthlyInvoice,
     summary?.billingBlocked,
     summary?.nextInvoiceDueDate,
     summary?.overdueLockDays,
   ]);
 
-  const hasBillingRows = isLevel2 ? level2MonthGroups.length > 0 : payments.length > 0;
+  const hasBillingRows = usesMonthlyInvoice
+    ? level2MonthGroups.length > 0 || prepaidExtras.length > 0
+    : payments.length > 0;
   const outstandingCountDisplay = outstandingCount;
 
   const openInvoiceById = async (invoiceId: string) => {
@@ -335,13 +433,15 @@ export default function BillPage() {
   };
 
   return (
-    <AgentShell title={isLevel2 ? 'Invoice' : 'Bills'}>
+    <AgentShell title={usesMonthlyInvoice ? 'Invoice' : 'Bills'}>
       <div className="space-y-5">
         <PageIntro
-          title={isLevel2 ? 'Invoice' : 'Bills'}
+          title={usesMonthlyInvoice ? 'Invoice' : 'Bills'}
           description={
-            isLevel2
-              ? 'Monthly service invoices for your agency. Accrued inspection fees are not charged if no inspector confirms within 48 hours.'
+            usesMonthlyInvoice
+              ? summary?.portalServiceLevel === 'LEVEL_3_LEGACY'
+                ? 'Monthly invoice is letting fee, management fee, tribunal, and insurance. Extra routine, ingoing and outgoing inspections after included usage are prepaid. Open inspections are not charged.'
+                : 'Monthly invoice is management fee, tribunal, and insurance. Extra open, routine, ingoing and outgoing inspections after included usage are prepaid.'
               : 'Prepaid service charges for your agency. Unaccepted jobs are refunded after 48 hours.'
           }
         />
@@ -362,10 +462,10 @@ export default function BillPage() {
         ) : null}
 
         {stripeConfigured ? (
-          <div className="rounded-xl border bg-card p-4">
+          <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Default payment method
                 </p>
                 {summary?.defaultPaymentMethod ? (
@@ -413,11 +513,20 @@ export default function BillPage() {
         ) : null}
 
         {summary && (summary.outstandingInvoiceAmount > 0 || outstandingTotal > 0) ? (
-          <div className="rounded-xl border bg-card p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <div
+            className={cn(
+              'rounded-2xl border bg-card p-5 shadow-sm',
+              usesMonthlyInvoice && openInvoiceLockDays != null
+                ? openInvoiceLockDays <= 3
+                  ? 'border-destructive/30'
+                  : 'border-amber-500/30'
+                : 'border-border/80',
+            )}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Outstanding balance
             </p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums">
+            <p className="mt-1.5 text-3xl font-semibold tracking-tight tabular-nums">
               {formatCurrency(outstandingTotal || summary.outstandingInvoiceAmount)}
             </p>
             {summary.openInvoiceNumber ? (
@@ -428,7 +537,7 @@ export default function BillPage() {
                   : null}
               </p>
             ) : null}
-            {isLevel2 && openInvoiceLockDays != null ? (
+            {usesMonthlyInvoice && openInvoiceLockDays != null ? (
               <p
                 className={cn(
                   'mt-2 text-sm font-medium',
@@ -480,9 +589,9 @@ export default function BillPage() {
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">
-            {isLevel2 ? 'Monthly invoices' : 'All payments'}
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <h2 className="text-sm font-semibold tracking-tight">
+            {usesMonthlyInvoice ? 'Billing' : 'All payments'}
             {outstandingCountDisplay > 0 ? (
               <span className="text-muted-foreground ml-2 text-xs font-normal">
                 {outstandingCountDisplay} awaiting payment
@@ -503,40 +612,79 @@ export default function BillPage() {
           <EmptyState
             title="No payments yet"
             description={
-              isLevel2
-                ? 'Service charges and monthly invoices will appear here grouped by month.'
+              usesMonthlyInvoice
+                ? 'Monthly invoices and prepaid extras after included usage will appear here.'
                 : 'Prepaid inspections, tribunal sessions, and monthly service invoices will appear here.'
             }
           />
-        ) : isLevel2 ? (
-          <Level2MonthlyBillingList
-            charges={charges}
-            invoices={invoices}
-            includedUsageByProperty={includedUsageByProperty}
-            overdueLockDays={summary?.overdueLockDays ?? 7}
-            billingBlocked={summary?.billingBlocked === true}
-            openingInvoiceId={openingInvoiceId}
-            disabled={
-              paymentDialog != null ||
-              chargeDialog != null ||
-              invoiceDialog != null ||
-              payingAll ||
-              payingKey != null
-            }
-            onViewInvoice={(invoice) =>
-              setInvoiceDialog({
-                invoice,
-                defaultPaymentMethod: summary?.defaultPaymentMethod,
-              })
-            }
-            onOpenInvoiceById={(invoiceId) => void openInvoiceById(invoiceId)}
-            onViewCharge={(row) =>
-              setChargeDialog({
-                charge: row,
-                defaultPaymentMethod: summary?.defaultPaymentMethod,
-              })
-            }
-          />
+        ) : usesMonthlyInvoice ? (
+          <div className="space-y-6">
+            {prepaidExtras.length > 0 ? (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Prepaid inspections
+                </h3>
+                <ul className="divide-y rounded-xl border bg-card">
+                  {prepaidExtras.map((row) => (
+                    <PrepaidChargeRow
+                      key={row.id}
+                      row={row}
+                      disabled={
+                        paymentDialog != null ||
+                        chargeDialog != null ||
+                        invoiceDialog != null ||
+                        payingAll ||
+                        payingKey != null
+                      }
+                      openingInvoiceId={openingInvoiceId}
+                      onOpenInvoice={(invoiceId) => void openInvoiceById(invoiceId)}
+                      onViewCharge={(charge) =>
+                        setChargeDialog({
+                          charge,
+                          defaultPaymentMethod: summary?.defaultPaymentMethod,
+                        })
+                      }
+                    />
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {level2MonthGroups.length > 0 ? (
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Monthly invoices
+                </h3>
+                <Level2MonthlyBillingList
+                  charges={charges}
+                  invoices={invoices}
+                  includedUsageByProperty={includedUsageByProperty}
+                  overdueLockDays={summary?.overdueLockDays ?? 7}
+                  billingBlocked={summary?.billingBlocked === true}
+                  openingInvoiceId={openingInvoiceId}
+                  disabled={
+                    paymentDialog != null ||
+                    chargeDialog != null ||
+                    invoiceDialog != null ||
+                    payingAll ||
+                    payingKey != null
+                  }
+                  onViewInvoice={(invoice) =>
+                    setInvoiceDialog({
+                      invoice,
+                      defaultPaymentMethod: summary?.defaultPaymentMethod,
+                    })
+                  }
+                  onOpenInvoiceById={(invoiceId) => void openInvoiceById(invoiceId)}
+                  onViewCharge={(row) =>
+                    setChargeDialog({
+                      charge: row,
+                      defaultPaymentMethod: summary?.defaultPaymentMethod,
+                    })
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
         ) : (
           <ul className="divide-y rounded-xl border bg-card">
             {payments.map((entry) => {

@@ -156,7 +156,8 @@ export type AgencyMembershipTier = 'PRINCIPAL' | 'AGENT';
 
 export type AgentPortalServiceLevel =
   | 'LEVEL_1_INSPECTION_ONLY'
-  | 'LEVEL_2_FULL_MANAGEMENT';
+  | 'LEVEL_2_FULL_MANAGEMENT'
+  | 'LEVEL_3_LEGACY';
 
 /** A client agency (the AM's "client") the signed-in agent is assigned to manage. */
 export interface Agency {

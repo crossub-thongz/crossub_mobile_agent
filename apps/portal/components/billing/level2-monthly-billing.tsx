@@ -23,6 +23,7 @@ const SERVICE_LABEL: Record<string, string> = {
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
   service_fee: 'Full Service fee',
+  letting_fee: 'Letting fee',
 };
 
 const SYDNEY_TZ = 'Australia/Sydney';
@@ -150,7 +151,8 @@ export function buildLevel2MonthGroups(
 
   const chargesByMonth = new Map<string, AgentBillingCharge[]>();
   for (const charge of charges) {
-    if (charge.collectionMode !== 'postpaid') continue;
+  if (charge.collectionMode !== 'postpaid') continue;
+    if (charge.includedInAllowance || charge.status === 'included') continue;
     if (charge.status === 'refunded') continue;
 
     let key: string;
@@ -267,19 +269,46 @@ export function groupChargesByProperty(
   });
 }
 
-function PropertyIncludedSummary({
+function includedChipTone(remaining: number): string {
+  if (remaining > 0) {
+    return 'border-emerald-500/40 bg-emerald-500/15 text-emerald-950 dark:border-emerald-400/40 dark:bg-emerald-500/20 dark:text-emerald-50';
+  }
+  return 'border-amber-500/40 bg-amber-500/15 text-amber-950 dark:border-amber-400/40 dark:bg-amber-500/20 dark:text-amber-50';
+}
+
+export function PropertyIncludedSummary({
   usage,
 }: {
   usage: NonNullable<Level2PropertyChargeGroup['included']>;
 }) {
+  const items = [
+    { label: 'Routine', usage: usage.routine },
+    { label: 'Ingoing', usage: usage.ingoing },
+    { label: 'Outgoing', usage: usage.outgoing },
+  ] as const;
+
   return (
-    <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-      Routine {includedAllowanceRemainingLabel(usage.routine)}
-      {' · '}
-      Ingoing {includedAllowanceRemainingLabel(usage.ingoing)}
-      {' · '}
-      Outgoing {includedAllowanceRemainingLabel(usage.outgoing)}
-    </p>
+    <div className="mt-2.5 rounded-xl border border-sky-500/30 bg-sky-500/[0.08] px-3 py-2.5 dark:border-sky-400/25 dark:bg-sky-500/10">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-900 dark:text-sky-100">
+        Yearly included remaining
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-1.5">
+        {items.map((item) => (
+          <li
+            key={item.label}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold leading-none shadow-sm',
+              includedChipTone(item.usage.remaining),
+            )}
+          >
+            <span>{item.label}</span>
+            <span className="tabular-nums font-bold">
+              {includedAllowanceRemainingLabel(item.usage)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -297,6 +326,22 @@ function paymentStatusLabel(status: Level2MonthGroup['paymentStatus']): string {
   if (status === 'paid') return 'Paid';
   if (status === 'accruing') return 'Accruing';
   return 'Not paid';
+}
+
+const CHARGE_STATUS_TONE: Record<string, string> = {
+  paid: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  included: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+  awaiting_payment: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  accrued: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+  invoiced: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
+  refunded: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
+  void: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
+};
+
+function chargeStatusLabel(raw: string): string {
+  if (raw === 'void') return 'Not charged';
+  if (raw === 'included') return 'Included';
+  return raw.replace(/_/g, ' ');
 }
 
 type Level2MonthlyBillingListProps = {
@@ -331,7 +376,7 @@ export function Level2MonthlyBillingList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {groups.map((group) => {
         const showLockCountdown =
           !billingBlocked &&
@@ -339,28 +384,31 @@ export function Level2MonthlyBillingList({
           group.daysUntilAccountLock != null;
 
         return (
-          <section key={group.key} className="overflow-hidden rounded-xl border bg-card">
-            <header className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
-              <div className="min-w-0 space-y-1">
+          <section
+            key={group.key}
+            className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm"
+          >
+            <header className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/30 px-5 py-4">
+              <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-semibold">{group.label}</h3>
+                  <h3 className="text-base font-semibold tracking-tight">{group.label}</h3>
                   <span
                     className={cn(
-                      'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                      'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
                       paymentStatusTone(group.paymentStatus),
                     )}
                   >
                     {paymentStatusLabel(group.paymentStatus)}
                   </span>
                   {group.invoice?.status === 'overdue' ? (
-                    <span className="inline-flex rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                    <span className="inline-flex rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
                       Overdue
                     </span>
                   ) : null}
                   {showLockCountdown ? (
                     <span
                       className={cn(
-                        'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                        'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
                         group.daysUntilAccountLock! <= 3
                           ? 'border-destructive/30 bg-destructive/10 text-destructive'
                           : 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
@@ -372,7 +420,7 @@ export function Level2MonthlyBillingList({
                     </span>
                   ) : null}
                   {billingBlocked && group.paymentStatus === 'unpaid' ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
                       <Lock className="size-3" />
                       Account locked
                     </span>
@@ -394,18 +442,20 @@ export function Level2MonthlyBillingList({
                   </p>
                 )}
               </div>
-              <p className="text-sm font-semibold tabular-nums">{formatCurrency(group.totalAud)}</p>
+              <p className="text-lg font-semibold tabular-nums tracking-tight">
+                {formatCurrency(group.totalAud)}
+              </p>
             </header>
 
             {billingBlocked && group.paymentStatus === 'unpaid' ? (
-              <div className="flex gap-2 border-b border-destructive/25 bg-destructive/10 px-4 py-2.5 text-xs text-destructive">
+              <div className="flex gap-2 border-b border-destructive/25 bg-destructive/10 px-5 py-3 text-xs text-destructive">
                 <Lock className="mt-0.5 size-3.5 shrink-0" />
                 <p>Account locked — pay this invoice to restore full access to the Agent app.</p>
               </div>
             ) : showLockCountdown ? (
               <div
                 className={cn(
-                  'flex gap-2 border-b px-4 py-2.5 text-xs',
+                  'flex gap-2 border-b px-5 py-3 text-xs',
                   group.daysUntilAccountLock! <= 3
                     ? 'border-destructive/25 bg-destructive/10 text-destructive'
                     : 'border-amber-500/25 bg-amber-500/10 text-amber-900 dark:text-amber-100',
@@ -420,7 +470,7 @@ export function Level2MonthlyBillingList({
                 </p>
               </div>
             ) : group.showOverdueWarning ? (
-              <div className="flex gap-2 border-b border-amber-500/25 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-900 dark:text-amber-100">
+              <div className="flex gap-2 border-b border-amber-500/25 bg-amber-500/10 px-5 py-3 text-xs text-amber-900 dark:text-amber-100">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 <p>
                   This month has ended and the invoice is still unpaid. Pay as soon as it is
@@ -430,36 +480,36 @@ export function Level2MonthlyBillingList({
             ) : null}
 
             {group.charges.length === 0 ? (
-              <p className="text-muted-foreground px-4 py-4 text-sm">
+              <p className="text-muted-foreground px-5 py-5 text-sm">
                 No service lines listed for this month yet.
               </p>
             ) : (
               <div className="divide-y">
                 {groupChargesByProperty(group.charges, includedUsageByProperty).map((property) => (
                   <section key={property.key}>
-                    <header className="bg-muted/40 px-4 py-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <header className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-5 py-3.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         {property.propertyId
                           ? 'Property'
                           : property.key === 'service_fee'
                             ? 'Full Service'
                             : 'Agency'}
                       </p>
-                      <div className="mt-0.5 flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{property.propertyLabel}</p>
-                          <p className="text-muted-foreground text-xs">
+                      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold leading-snug">
+                            {property.propertyLabel}
+                          </p>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
                             {property.charges.length} service
                             {property.charges.length === 1 ? '' : 's'}
+                            {property.propertyId
+                              ? ` · ${formatAgreementPeriod(
+                                  property.agreementStart,
+                                  property.agreementEnd,
+                                )}`
+                              : null}
                           </p>
-                          {property.propertyId ? (
-                            <p className="text-muted-foreground mt-1 text-xs">
-                              {formatAgreementPeriod(
-                                property.agreementStart,
-                                property.agreementEnd,
-                              )}
-                            </p>
-                          ) : null}
                           {property.included ? (
                             <PropertyIncludedSummary usage={property.included} />
                           ) : null}
@@ -476,15 +526,26 @@ export function Level2MonthlyBillingList({
                         return (
                           <li
                             key={row.id}
-                            className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 pl-6"
+                            className="flex flex-wrap items-start justify-between gap-3 px-5 py-3.5 pl-8 hover:bg-muted/20"
                           >
                             <div className={cn('min-w-0 flex-1', struck && 'text-muted-foreground')}>
-                              <p className={cn('text-sm font-medium', struck && 'line-through')}>
-                                {serviceLabel(row.serviceType)}
-                              </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className={cn('text-sm font-medium', struck && 'line-through')}>
+                                  {serviceLabel(row.serviceType)}
+                                </p>
+                                <span
+                                  className={cn(
+                                    'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                    CHARGE_STATUS_TONE[row.status] ??
+                                      'border-border bg-muted text-muted-foreground',
+                                  )}
+                                >
+                                  {chargeStatusLabel(row.status)}
+                                </span>
+                              </div>
                               <p
                                 className={cn(
-                                  'text-muted-foreground mt-0.5 text-sm',
+                                  'text-muted-foreground mt-0.5 text-xs leading-snug',
                                   struck && 'line-through',
                                 )}
                               >
@@ -557,7 +618,7 @@ export function Level2MonthlyBillingList({
               </div>
             )}
 
-            <footer className="border-t bg-muted/20 px-4 py-3">
+            <footer className="border-t bg-muted/25 px-5 py-3.5">
               {group.invoice ? (
                 <Button
                   type="button"

@@ -182,10 +182,21 @@ export function PlatformMonthlyInvoiceDialog({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
-              <div className="flex justify-between gap-3">
+            <div className="grid gap-2.5 rounded-2xl border bg-muted/30 p-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Status</span>
-                <span className="font-medium capitalize">{detail.status}</span>
+                <span
+                  className={cn(
+                    'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize',
+                    detail.status === 'paid'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                      : detail.status === 'overdue'
+                        ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                        : 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+                  )}
+                >
+                  {detail.status}
+                </span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="text-muted-foreground">Billing period</span>
@@ -208,7 +219,7 @@ export function PlatformMonthlyInvoiceDialog({
             </div>
 
             {detail.calculationSummary ? (
-              <div className="flex gap-3 rounded-lg border border-sky-500/25 bg-sky-500/5 p-3 text-sm">
+              <div className="flex gap-3 rounded-xl border border-sky-500/25 bg-sky-500/5 p-3.5 text-sm">
                 <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-300" />
                 <div>
                   <p className="font-medium">How this invoice is calculated</p>
@@ -220,8 +231,8 @@ export function PlatformMonthlyInvoiceDialog({
             ) : null}
 
             {showFeeBreakdown ? (
-              <div className="rounded-lg border bg-card p-3 text-sm">
-                <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+              <div className="rounded-xl border bg-card p-4 text-sm">
+                <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
                   Invoice breakdown
                 </p>
                 <div className="space-y-1.5">
@@ -257,15 +268,15 @@ export function PlatformMonthlyInvoiceDialog({
             ) : null}
 
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Line items
               </p>
               {detail.lineItems.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No line items recorded on this invoice.</p>
               ) : (
-                <ul className="divide-y rounded-lg border">
+                <ul className="divide-y overflow-hidden rounded-xl border">
                   {detail.lineItems.map((row) => (
-                    <li key={row.id} className="flex items-start justify-between gap-3 p-3">
+                    <li key={row.id} className="flex items-start justify-between gap-3 px-4 py-3.5 hover:bg-muted/20">
                       <div className="min-w-0">
                         <p className="text-sm font-medium">
                           {invoiceLineTitle(row.serviceType, row.description)}
@@ -301,7 +312,7 @@ export function PlatformMonthlyInvoiceDialog({
             {!showFeeBreakdown ? (
               <div
                 className={cn(
-                  'flex items-center justify-between rounded-lg border px-3 py-2',
+                  'flex items-center justify-between rounded-xl border px-4 py-3',
                   detail.status === 'paid'
                     ? 'border-emerald-500/30 bg-emerald-500/10'
                     : 'border-border bg-card',
@@ -310,7 +321,7 @@ export function PlatformMonthlyInvoiceDialog({
                 <span className="text-sm font-medium">
                   {detail.status === 'paid' ? 'Amount paid' : 'Amount due'}
                 </span>
-                <span className="text-base font-semibold tabular-nums">
+                <span className="text-lg font-semibold tabular-nums tracking-tight">
                   {formatCurrency(detail.status === 'paid' ? lineTotal : detail.amountDue)}
                 </span>
               </div>
