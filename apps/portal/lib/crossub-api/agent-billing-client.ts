@@ -62,6 +62,50 @@ export function platformChargeShowsAllowanceRemaining(
   return Number(row.amount) === 0;
 }
 
+export type PlatformChargeAllowanceUsage = {
+  used: number;
+  included: number;
+  remaining: number;
+};
+
+/** Yearly included-slot usage for a routine / ingoing / outgoing charge. */
+export function platformChargeAllowanceUsage(
+  row: Pick<
+    AgentBillingCharge,
+    'serviceType' | 'allowanceLimit' | 'allowanceUsed' | 'allowanceRemaining'
+  >,
+): PlatformChargeAllowanceUsage | null {
+  if (!LEVEL2_ALLOWANCE_SERVICE_TYPES.has(row.serviceType)) return null;
+  const included = row.allowanceLimit ?? LEVEL2_ALLOWANCE_LIMITS[row.serviceType] ?? 0;
+  if (included <= 0 && row.allowanceUsed == null && row.allowanceRemaining == null) {
+    return null;
+  }
+  const remaining =
+    row.allowanceRemaining ?? Math.max(0, included - (row.allowanceUsed ?? 0));
+  const used = row.allowanceUsed ?? Math.max(0, included - remaining);
+  return { used, included, remaining };
+}
+
+export function platformChargeAllowanceUsageLabel(
+  usage: PlatformChargeAllowanceUsage,
+): string {
+  if (usage.remaining > 0) {
+    return `${usage.used} used this year · ${usage.remaining} of ${usage.included} remaining`;
+  }
+  return `${usage.used} of ${usage.included} used this year · further jobs are billed`;
+}
+
+export function includedAllowanceUsageLabel(usage: {
+  included: number;
+  used: number;
+  remaining: number;
+}): string {
+  if (usage.remaining > 0) {
+    return `${usage.used} used · ${usage.remaining} of ${usage.included} remaining`;
+  }
+  return `${usage.used} of ${usage.included} used · further jobs are billed`;
+}
+
 /** Invoice amount: remaining included slots, or the price once none remain. */
 export function platformChargeAmountLabel(
   row: Pick<

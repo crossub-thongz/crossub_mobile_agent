@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { PageIntro } from '@/components/agent/page-intro';
+import { AgencyIncludedUsageByProperty } from '@/components/billing/included-allowance-usage';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
   PlatformChargeDetailDialog,
@@ -36,12 +37,14 @@ import { Button } from '@/components/ui/button';
 import {
   confirmAgentPaymentMethodSetup,
   createAgentPaymentMethodSetup,
+  fetchAgentBillingPricing,
   fetchAgentBillingSummary,
   fetchAgentMonthlyInvoice,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
   payAllAgentBilling,
   type AgentBillingCharge,
+  type AgentBillingIncludedUsageRow,
   type AgentBillingMonthlyInvoice,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
@@ -105,6 +108,9 @@ export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
+  const [includedUsageByProperty, setIncludedUsageByProperty] = useState<
+    AgentBillingIncludedUsageRow[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [payingKey, setPayingKey] = useState<string | null>(null);
   const [payingAll, setPayingAll] = useState(false);
@@ -134,14 +140,16 @@ export default function BillPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [billing, chargeRows, invoiceRows] = await Promise.all([
+      const [billing, chargeRows, invoiceRows, pricing] = await Promise.all([
         fetchAgentBillingSummary(),
         listAgentChargeHistory(),
         listAgentInvoiceHistory(),
+        fetchAgentBillingPricing().catch(() => null),
       ]);
       setSummary(billing);
       setCharges(chargeRows);
       setInvoices(invoiceRows);
+      setIncludedUsageByProperty(pricing?.level2.includedUsageByProperty ?? []);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not load billing');
     } finally {
@@ -471,6 +479,10 @@ export default function BillPage() {
               ) : null}
             </div>
           </div>
+        ) : null}
+
+        {isLevel2 ? (
+          <AgencyIncludedUsageByProperty rows={includedUsageByProperty} />
         ) : null}
 
         <div className="flex items-center justify-between gap-2">

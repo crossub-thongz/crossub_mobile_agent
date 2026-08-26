@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { CreditCard, Loader2, Receipt } from 'lucide-react';
+import { CreditCard, Loader2, Receipt, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { ChargeIncludedUsageLine, PropertyIncludedUsageCard } from '@/components/billing/included-allowance-usage';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
   PlatformChargeDetailDialog,
@@ -14,11 +15,13 @@ import {
 import { StripePaymentDialog, type StripePaymentDialogState } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import {
+  fetchAgentBillingPricing,
   fetchAgentBillingSummary,
   listAgentChargeHistory,
   platformChargeAmountLabel,
   type AgentBillingCharge,
   type AgentBillingDefaultPaymentMethod,
+  type AgentBillingIncludedUsageRow,
 } from '@/lib/crossub-api/agent-billing-client';
 import { ROUTES } from '@/constants/routes';
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
@@ -61,6 +64,7 @@ export function PropertyBillsTab({
 }) {
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [includedUsage, setIncludedUsage] = useState<AgentBillingIncludedUsageRow | null>(null);
   const [defaultPaymentMethod, setDefaultPaymentMethod] =
     useState<AgentBillingDefaultPaymentMethod | null>(null);
   const [chargeDialog, setChargeDialog] = useState<PlatformChargeDetailDialogState>(null);
@@ -69,12 +73,17 @@ export function PropertyBillsTab({
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [rows, summary] = await Promise.all([
+      const [rows, summary, pricing] = await Promise.all([
         listAgentChargeHistory(propertyId),
         fetchAgentBillingSummary().catch(() => null),
+        fetchAgentBillingPricing().catch(() => null),
       ]);
       setCharges(rows);
       setDefaultPaymentMethod(summary?.defaultPaymentMethod ?? null);
+      setIncludedUsage(
+        pricing?.level2.includedUsageByProperty?.find((row) => row.propertyId === propertyId) ??
+          null,
+      );
     } catch (err) {
       toast.error(
         err instanceof Error
@@ -128,10 +137,12 @@ export function PropertyBillsTab({
           onClick={() => void load()}
           disabled={loading}
         >
-          {loading ? <Loader2 className="size-3.5 animate-spin" /> : null}
+          {loading ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
           Refresh
         </Button>
       </div>
+
+      {includedUsage ? <PropertyIncludedUsageCard usage={includedUsage} /> : null}
 
       {loading && charges.length === 0 ? (
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -201,6 +212,15 @@ export function PropertyBillsTab({
                           />
                         </p>
                       ) : null}
+                      <ChargeIncludedUsageLine charge={row} />
+                      <p className="text-muted-foreground text-xs">
+                        {[
+                          row.createdByName ? `Created by ${row.createdByName}` : null,
+                          `Created ${formatDateTime(row.createdAt)}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p
@@ -225,11 +245,7 @@ export function PropertyBillsTab({
 
                   <dl className="mt-3 grid gap-2 border-t border-border/60 pt-3 text-xs sm:grid-cols-2">
                     <div>
-                      <dt className="text-muted-foreground">Created</dt>
-                      <dd className="font-medium">{formatDateTime(row.createdAt)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Paid</dt>
+                      <dt className="text-muted-foreground">{paid ? 'Paid' : 'Payment'}</dt>
                       <dd className="font-medium">
                         {row.status === 'void'
                           ? row.voidReason?.trim()
@@ -266,6 +282,12 @@ export function PropertyBillsTab({
                       <div>
                         <dt className="text-muted-foreground">Not charged</dt>
                         <dd className="font-medium">{formatDateTime(row.voidedAt)}</dd>
+                      </div>
+                    ) : null}
+                    {row.calculationSummary ? (
+                      <div className="sm:col-span-2">
+                        <dt className="text-muted-foreground">Billing basis</dt>
+                        <dd className="mt-0.5 leading-relaxed">{row.calculationSummary}</dd>
                       </div>
                     ) : null}
                     {row.calculationDetail ? (

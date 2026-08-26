@@ -20,6 +20,8 @@ import {
 import {
   fetchAgentBillingCharge,
   payAgentBillingCharge,
+  platformChargeAllowanceUsage,
+  platformChargeAllowanceUsageLabel,
   platformChargeAmountLabel,
   platformChargeShowsAllowanceRemaining,
   type AgentBillingCharge,
@@ -95,6 +97,7 @@ export function PlatformChargeDetailDialog({
 
   const row = detail ?? state?.charge ?? null;
   const payable = row?.status === 'awaiting_payment';
+  const allowanceUsage = row ? platformChargeAllowanceUsage(row) : null;
 
   const pay = async () => {
     if (!row || !payable) return;
@@ -188,6 +191,14 @@ export function PlatformChargeDetailDialog({
                     <span className="font-medium">{row.createdByName}</span>
                   </div>
                 ) : null}
+                {allowanceUsage ? (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Included usage</span>
+                    <span className="text-right font-medium">
+                      {platformChargeAllowanceUsageLabel(allowanceUsage)}
+                    </span>
+                  </div>
+                ) : null}
                 {row.jobCaseName ? (
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Job case</span>
@@ -268,6 +279,11 @@ export function PlatformChargeDetailDialog({
                 <p className="mt-0.5 text-base font-semibold">
                   {platformChargeAmountLabel(row, formatCurrency)}
                 </p>
+                {allowanceUsage && platformChargeShowsAllowanceRemaining(row) ? (
+                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                    {platformChargeAllowanceUsageLabel(allowanceUsage)}
+                  </p>
+                ) : null}
               </div>
             </div>
           )}

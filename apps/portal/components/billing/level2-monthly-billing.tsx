@@ -3,6 +3,7 @@
 import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { ChargeIncludedUsageLine } from '@/components/billing/included-allowance-usage';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
   platformChargeAmountLabel,
@@ -374,6 +375,7 @@ export function Level2MonthlyBillingList({
                           {notChargedCaption(row)}
                         </p>
                       ) : null}
+                      <ChargeIncludedUsageLine charge={row} />
                       {row.calculationDetail && !showRemaining ? (
                         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                           {row.calculationDetail}
