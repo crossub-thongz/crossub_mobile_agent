@@ -1,6 +1,6 @@
 'use client';
 
-import { CreditCard, Info, Loader2 } from 'lucide-react';
+import { CreditCard, Download, Info, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  downloadAgentMonthlyInvoicePdf,
   fetchAgentMonthlyInvoice,
   payAgentMonthlyInvoice,
   type AgentBillingDefaultPaymentMethod,
@@ -22,6 +23,8 @@ import {
   type AgentBillingMonthlyInvoiceDetail,
 } from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
+
+import { PlatformTaxInvoicePreview } from './platform-tax-invoice-preview';
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -78,6 +81,7 @@ export function PlatformMonthlyInvoiceDialog({
   const [detail, setDetail] = useState<AgentBillingMonthlyInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const invoiceId = state?.invoice.id;
 
@@ -159,6 +163,28 @@ export function PlatformMonthlyInvoiceDialog({
     }
   };
 
+  const downloadPdf = async () => {
+    if (!invoice) return;
+    setDownloading(true);
+    try {
+      const blob = await downloadAgentMonthlyInvoicePdf(invoice.id);
+      const fileName = detail?.taxInvoice?.fileName ?? `${invoice.invoiceNumber}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not download invoice');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <Dialog
       open={state != null && paymentDialog == null}
@@ -167,18 +193,44 @@ export function PlatformMonthlyInvoiceDialog({
         onOpenChange(open);
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" elevated>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl" elevated>
         <DialogHeader>
-          <DialogTitle>Monthly platform invoice</DialogTitle>
+          <DialogTitle>CROSSUB tax invoice</DialogTitle>
           <DialogDescription>
-            {invoice?.invoiceNumber ?? 'Invoice'} · {formatWhen(invoice?.periodStart)} –{' '}
-            {formatWhen(invoice?.periodEnd)}
+            {invoice?.invoiceNumber ?? 'Invoice'} · due the 7th · unpaid accounts are held from the
+            14th
           </DialogDescription>
         </DialogHeader>
 
         {loading || !detail ? (
           <div className="flex justify-center py-10">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : detail.taxInvoice ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span
+                className={cn(
+                  'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize',
+                  detail.status === 'paid'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : detail.status === 'overdue'
+                      ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                      : 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
+                )}
+              >
+                {detail.status}
+              </span>
+            </div>
+            {detail.calculationSummary ? (
+              <div className="flex gap-3 rounded-xl border border-sky-500/25 bg-sky-500/5 p-3.5 text-sm">
+                <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-300" />
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  {detail.calculationSummary}
+                </p>
+              </div>
+            ) : null}
+            <PlatformTaxInvoicePreview invoice={detail.taxInvoice} />
           </div>
         ) : (
           <div className="space-y-4">
@@ -329,9 +381,22 @@ export function PlatformMonthlyInvoiceDialog({
           </div>
         )}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Close
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void downloadPdf()}
+            disabled={downloading || loading || !invoice}
+          >
+            {downloading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            Download PDF
           </Button>
           {payable && detail ? (
             <Button

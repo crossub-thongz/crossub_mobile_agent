@@ -1,3 +1,4 @@
+import { apiV1 } from '@/lib/api';
 import { agentFetch } from './agent-client';
 
 export type AgentBillingCharge = {
@@ -360,6 +361,45 @@ export type AgentBillingMonthlyInvoiceLineItem = {
   calculationDetail?: string | null;
 };
 
+export type AgentBillingTaxInvoiceLine = {
+  id: string;
+  lineNo: string;
+  address: string;
+  pmFee: string;
+  managementRate: string;
+  crossubRate: string;
+  amountExGst: number;
+  amountIncGst: number;
+  serviceType: string;
+  footnote?: string | null;
+};
+
+export type AgentBillingTaxInvoice = {
+  fileName: string;
+  title: string;
+  agentName: string;
+  agentAbn?: string | null;
+  issuerName: string;
+  issuerAddressLines: string[];
+  issuerAbn: string;
+  invoiceDate: string;
+  invoiceNumber: string;
+  reference: string;
+  periodLabel: string;
+  dueDate: string;
+  lockDate: string;
+  lines: AgentBillingTaxInvoiceLine[];
+  stationeryFeeExGst: number;
+  subtotalExGst: number;
+  gstPercent: number;
+  gstAmount: number;
+  totalIncGst: number;
+  bankName: string;
+  bankAccountName: string;
+  bankBsb: string;
+  bankAccountNumber: string;
+};
+
 export type AgentBillingMonthlyInvoiceDetail = AgentBillingMonthlyInvoice & {
   periodToken?: string;
   serviceFeePercent?: number;
@@ -368,6 +408,7 @@ export type AgentBillingMonthlyInvoiceDetail = AgentBillingMonthlyInvoice & {
   gstPercent?: number;
   calculationSummary?: string;
   lineItems: AgentBillingMonthlyInvoiceLineItem[];
+  taxInvoice?: AgentBillingTaxInvoice;
 };
 
 export type AgentBillingIncludedAllowanceUsage = {
@@ -503,6 +544,10 @@ export async function fetchAgentMonthlyInvoice(
   invoiceId: string,
 ): Promise<AgentBillingMonthlyInvoiceDetail> {
   return agentFetch(`/agent/billing/invoices/${encodeURIComponent(invoiceId)}`);
+}
+
+export async function downloadAgentMonthlyInvoicePdf(invoiceId: string): Promise<Blob> {
+  return apiV1.getBlob(`/agent/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`);
 }
 
 export async function payAgentMonthlyInvoice(
