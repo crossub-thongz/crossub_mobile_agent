@@ -546,7 +546,16 @@ export function PropertyWorkflowCreateDialog({
     schedule_ingoing_inspection: 'Schedule ingoing inspection',
     schedule_outgoing_inspection: 'Schedule outgoing inspection',
     schedule_routine_inspection: 'Schedule routine inspection',
-    open_tribunal: 'Rent Chasing',
+    // Labels match `propertyWorkflowActions()` in lib/property-workflow-actions.ts, which is
+    // where the same actions are named for the menu that opens this dialog.
+    // ⭐ `open_tribunal` read 'Rent Chasing' — the label belonging to `open_rent_chasing`,
+    // which was one of three accounting actions missing from this map entirely. Since this
+    // is `titles[actionId]` for the DialogTitle, those three opened a dialog with no title
+    // at all and the tribunal dialog announced itself as rent chasing.
+    open_tribunal: 'Add tribunal',
+    create_rent_reconciliation: 'Create rent reconciliation',
+    open_invoice_management: 'Invoice management',
+    open_rent_chasing: 'Rent chasing',
   };
 
   const inspectionCreateType =

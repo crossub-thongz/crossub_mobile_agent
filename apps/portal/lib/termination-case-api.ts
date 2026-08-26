@@ -74,7 +74,10 @@ function initials(name: string | null): string {
 }
 
 const n0 = (v: number | null): number => v ?? 0
-const undef = (v: string | null): string | undefined => v ?? undefined
+// Accepts undefined too: callers reach through optional objects (`s.terminationNotice?.x`),
+// so the input is `string | null | undefined`. `?? undefined` already collapsed both — only
+// the signature was narrower than the helper's own behaviour.
+const undef = (v: string | null | undefined): string | undefined => v ?? undefined
 
 function mapOverviewEmail(
   email:

@@ -1178,6 +1178,12 @@ export function auditEntriesForStep(
     job_created: [/job created|opened|submitted|report/i],
     review: [/review|responsibility|evidence|media|appliance/i],
     get_quote: [/quotation|quote|contractor|handyman/i],
+    // `SCHEDULE` sits between GET_QUOTE and IN_PROGRESS in MAINTENANCE_AGENT_STEP and was
+    // missing here, so `patterns[step]` returned undefined and `regs.some(...)` below threw
+    // a TypeError whenever the Schedule step's audit entries were read. Terms taken from the
+    // API's own scheduling audit lines ("Agent approved proposed schedule…", "…scheduling",
+    // availability and visit wording), not invented.
+    schedule: [/schedul|availabilit|visit|appointment|attend/i],
     in_progress: [/approv|declin|reject|in progress|on site|email|notif/i],
     job_completed: [/complete|evidence|invoice|paid|closed/i],
   };

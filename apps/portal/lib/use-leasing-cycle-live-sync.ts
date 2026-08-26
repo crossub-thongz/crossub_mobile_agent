@@ -48,5 +48,8 @@ export function useLeasingCycleLiveSync(
     }
   }, [enabled, apiConnected, cycleId, propertyId, applyCycleView]);
 
-  useLivePoll(syncCycle, enabled && Boolean(cycleId), LEASING_CYCLE_POLL_MS);
+  // The third argument is `LivePollOptions`, not a number — passing the interval bare meant
+  // it was dropped on the floor and this sync ran at the hook's default LIVE_POLL_MS, never
+  // at the 15s LEASING_CYCLE_POLL_MS it declares and imports.
+  useLivePoll(syncCycle, enabled && Boolean(cycleId), { intervalMs: LEASING_CYCLE_POLL_MS });
 }

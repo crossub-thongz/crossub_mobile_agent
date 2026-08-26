@@ -344,7 +344,10 @@ export function InspectionDetailView({
       ? properties.find((p) => p.id === insp.propertyId)
       : undefined;
     return buildPropertyWorkflowEmailContacts(propertyRow, {
-      tenantName: leasingDetail?.tenantName ?? propertyRow?.tenantName,
+      // `LeasingPropertyDetail` has no tenantName — a leasing cycle tracks APPLICANTS, not a
+      // sitting tenant — so that branch was always undefined and the property row is what
+      // actually supplied this. Dropping it changes nothing at runtime.
+      tenantName: propertyRow?.tenantName,
       agentEmail: leasingDetail?.agentInfo.email,
       agentName: leasingDetail?.agentInfo.name,
     });
@@ -405,7 +408,7 @@ export function InspectionDetailView({
   });
   const isSelfOpen = insp.type === 'OPEN' && openConductedBy === 'agent';
   const isCrossubManagedLeasingOpen =
-    isOpenLeasingCase && Boolean(leasingDetail) && !leasingDetail.openInspection.agentConducted;
+    isOpenLeasingCase && leasingDetail != null && !leasingDetail.openInspection.agentConducted;
   const needsScheduleRequest =
     isCrossubManagedLeasingOpen &&
     leasingDetail != null &&
@@ -533,12 +536,12 @@ export function InspectionDetailView({
   })();
   const isOpenResultsStep =
     !isStandaloneOpenViewing &&
-    Boolean(leasingDetail) &&
+    leasingDetail != null &&
     insp.type === 'OPEN' &&
     isLettingResultsStep(leasingDetail);
   const isOpenReportVisibleStep =
     !isStandaloneOpenViewing &&
-    Boolean(leasingDetail) &&
+    leasingDetail != null &&
     insp.type === 'OPEN' &&
     isLettingOpenReportVisibleStep(leasingDetail);
   const showSessionRail = Boolean(

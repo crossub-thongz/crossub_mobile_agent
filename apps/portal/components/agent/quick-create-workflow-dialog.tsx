@@ -32,6 +32,8 @@ const ACTION_TAB: Record<
   start_rent_review: 'rent_review',
   open_tribunal: 'tribunal',
   open_rent_chasing: 'accounting',
+  create_rent_reconciliation: 'accounting',
+  open_invoice_management: 'accounting',
 };
 
 const ACTION_LABEL: Partial<Record<PropertyWorkflowActionId, string>> = {

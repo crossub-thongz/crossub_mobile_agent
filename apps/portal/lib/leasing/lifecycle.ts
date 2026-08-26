@@ -55,6 +55,10 @@ const READINESS_BY_STEP: Record<LeasingLifecycleStep, number> = {
   [LEASING_LIFECYCLE_STEP.OPEN_INSPECTION]: 12,
   [LEASING_LIFECYCLE_STEP.OPEN_REPORT]: 55,
   [LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL]: 72,
+  // Between approval and onboarding, which is where RESULTS sits in the step order.
+  // Its absence was not inert: the lookup below is `READINESS_BY_STEP[step] ?? 0`, so a
+  // property sitting at Results reported 0% readiness rather than four fifths of the way.
+  [LEASING_LIFECYCLE_STEP.RESULTS]: 80,
   [LEASING_LIFECYCLE_STEP.ONBOARDING]: 88,
 };
 

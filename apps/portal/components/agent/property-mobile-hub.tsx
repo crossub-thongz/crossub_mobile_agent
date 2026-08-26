@@ -178,9 +178,11 @@ export function PropertyMobileHub({
         currentLease={currentLease}
         leasingCycle={leasingCycles[0]}
         tenantSelections={tenantSelections}
-        onSuccess={(result) => {
+        onSuccess={() => {
           setManualAction(null);
-          onWorkflowCreated?.(result);
+          // `onWorkflowCreated` is `() => void` — the result argument was accepted by JS and
+          // dropped. The other call site below already invokes it with no argument.
+          onWorkflowCreated?.();
         }}
       />
 

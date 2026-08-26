@@ -13,6 +13,8 @@ export const DOCUMENT_CATEGORY_LABELS: Record<AgentDocument['category'], string>
   maintenance: 'Maintenance',
   lease: 'Lease agreements',
   vacating: 'Vacating',
+  management_agreement: 'Management agreement',
+  application: 'Applications',
 };
 
 const REPORT_CATEGORIES = new Set<AgentDocument['category']>([

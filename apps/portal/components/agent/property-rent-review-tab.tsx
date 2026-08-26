@@ -238,7 +238,6 @@ export function PropertyRentReviewTab({
 
   const rentReviewTableProps = {
     showViewToggle: false,
-    showRentReviewSchedule: false,
     dateColumnLabel: 'Due date' as const,
     selectedId: selectedCaseId,
     onRowClick: openReviewById,
@@ -264,6 +263,12 @@ export function PropertyRentReviewTab({
           {RENT_REVIEW_ADVANCE_ORDER_DAYS} days before lease end;{' '}
           {RENT_REVIEW_STATUTORY_NOTICE_DAYS} days remain for the statutory tenant notice).
         </p>
+        {/*
+          This element used to spread `rentReviewTableProps` a SECOND time below its own
+          `showRentReviewSchedule`, so the spread's `false` won on the last write and the
+          schedule column never appeared on the active table. The duplicate spread is gone,
+          and the flag now lives on the table that wants it rather than in the shared object.
+        */}
         <PropertyJobCasesTable
           rows={activeJobRows}
           {...rentReviewTableProps}
@@ -275,7 +280,6 @@ export function PropertyRentReviewTab({
           }}
           emptyTitle="No rent review cases"
           emptyDescription="Start a rent review when the lease is due for renewal."
-          {...rentReviewTableProps}
         />
       </section>
 
@@ -320,6 +324,7 @@ export function PropertyRentReviewTab({
                 : 'Past rent reviews will appear here once completed.'
             }
             {...rentReviewTableProps}
+            showRentReviewSchedule={false}
           />
         )}
       </section>
