@@ -13,6 +13,34 @@ function formatAuDate(iso: string | null | undefined): string {
   }).format(new Date(iso));
 }
 
+function groupLinesByProperty<T extends { address: string }>(
+  lines: T[],
+): Array<{ address: string; lines: T[] }> {
+  const groups: Array<{ address: string; lines: T[] }> = [];
+  for (const line of lines) {
+    const address = line.address.trim() || 'Agency charges';
+    const last = groups[groups.length - 1];
+    if (last && last.address === address) last.lines.push(line);
+    else groups.push({ address, lines: [line] });
+  }
+  return groups;
+}
+
+const SERVICE_TYPE_LABEL: Record<string, string> = {
+  open_inspection: 'Open inspection',
+  routine_inspection: 'Routine inspection',
+  ingoing_inspection: 'Ingoing inspection',
+  outgoing_inspection: 'Outgoing inspection',
+  tribunal: 'Tribunal session',
+  service_fee: 'Full Service fee',
+  letting_fee: 'Letting fee',
+};
+
+function serviceLabelFor(line: { serviceLabel?: string; serviceType: string }): string {
+  if (line.serviceLabel?.trim()) return line.serviceLabel.trim();
+  return SERVICE_TYPE_LABEL[line.serviceType] ?? line.serviceType.replace(/_/g, ' ');
+}
+
 function issuerLetterheadLines(name: string, addressLines: string[]): string[] {
   const suffix = ' Pty Ltd';
   if (name.endsWith(suffix)) {
@@ -84,7 +112,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
           <thead>
             <tr className="border-y bg-muted/60 text-left">
               <th className="px-2 py-2 font-semibold">#</th>
-              <th className="px-2 py-2 font-semibold">Address</th>
+              <th className="px-2 py-2 font-semibold">Property / Service</th>
               <th className="px-2 py-2 font-semibold">Rent AUD</th>
               <th className="px-2 py-2 font-semibold">Management Fee</th>
               <th className="px-2 py-2 font-semibold">Rate</th>
@@ -92,18 +120,26 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
             </tr>
           </thead>
           <tbody>
-            {invoice.lines.map((line) => (
-              <tr key={line.id} className="border-b align-top">
-                <td className="text-muted-foreground px-2 py-1.5 tabular-nums">{line.lineNo}</td>
-                <td className="px-2 py-1.5">{line.address}</td>
-                <td className="px-2 py-1.5 whitespace-pre-wrap">{line.rentAud ?? line.pmFee}</td>
-                <td className="px-2 py-1.5">{line.managementFee ?? ''}</td>
-                <td className="px-2 py-1.5">{line.crossubRate}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">
-                  {formatCurrency(line.amountExGst)}
+            {groupLinesByProperty(invoice.lines).flatMap((group) => [
+              <tr key={`property-${group.address}`} className="bg-muted/40 border-b">
+                <td className="px-2 py-1.5" />
+                <td className="px-2 py-1.5 font-semibold" colSpan={5}>
+                  {group.address}
                 </td>
-              </tr>
-            ))}
+              </tr>,
+              ...group.lines.map((line) => (
+                <tr key={line.id} className="border-b align-top">
+                  <td className="text-muted-foreground px-2 py-1.5 tabular-nums">{line.lineNo}</td>
+                  <td className="px-2 py-1.5 pl-3 font-medium">{serviceLabelFor(line)}</td>
+                  <td className="px-2 py-1.5 whitespace-pre-wrap">{line.rentAud ?? line.pmFee}</td>
+                  <td className="px-2 py-1.5">{line.managementFee ?? ''}</td>
+                  <td className="px-2 py-1.5">{line.crossubRate}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">
+                    {formatCurrency(line.amountExGst)}
+                  </td>
+                </tr>
+              )),
+            ])}
           </tbody>
         </table>
       </div>

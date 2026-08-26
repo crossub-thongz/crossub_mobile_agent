@@ -365,6 +365,7 @@ export type AgentBillingTaxInvoiceLine = {
   id: string;
   lineNo: string;
   address: string;
+  serviceLabel?: string;
   rentAud?: string;
   managementFee?: string;
   pmFee: string;
