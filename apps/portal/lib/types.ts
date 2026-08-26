@@ -1,4 +1,5 @@
 import type { PropertyApprovalStatus } from '@/constants/api-enums';
+import type { AgentPortfolioId } from '@/lib/agent-scope';
 
 export type Priority = 'urgent' | 'high' | 'normal' | 'low';
 
@@ -63,8 +64,8 @@ export interface Property {
   homeOwnerName: string;
   homeOwnerContact: PropertyContact;
   homeOwnerAddress?: string;
-  /** Which agent manages this property — filtered per logged-in agent */
-  assignedAgentId: 'agent-1' | 'agent-2';
+  /** Which agent's book this row belongs to — see {@link AgentPortfolioId}. */
+  assignedAgentId: AgentPortfolioId;
   tenantName: string;
   tenantContact: PropertyContact;
   additionalLandlords?: PropertyPartyContact[];
@@ -631,7 +632,8 @@ export interface VacatingCase {
 
 export interface MessageThread {
   id: string;
-  assignedAgentId: 'agent-1' | 'agent-2';
+  /** Which agent's book this row belongs to — see {@link AgentPortfolioId}. */
+  assignedAgentId: AgentPortfolioId;
   /**
    * The persisted CROSSUB thread id, when this thread is backed by the live API. For an
    * optimistic thread that has since been persisted, `id` stays the original local id (so

@@ -75,10 +75,9 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+import type { AgentPortfolioId } from '@/lib/agent-scope';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatInspectorReassignmentLabel } from '@/lib/inspector-reassignment-label';
-
-type AgentPortfolioId = 'agent-1' | 'agent-2';
 
 type ExtendedAgentProperty = AgentProperty & {
   state?: string | null;

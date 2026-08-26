@@ -78,6 +78,7 @@ import {
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import {
   filterByPropertyIds,
+  isOwnedByAgent,
   resolveAgentPortfolioId,
   type AgentPortfolioId,
 } from '@/lib/agent-scope';
@@ -560,7 +561,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const properties = useMemo(() => {
     const scoped = (list: Property[]) =>
-      list.filter((p) => p.assignedAgentId === agentPortfolioId);
+      list.filter((p) => isOwnedByAgent(p.assignedAgentId, agentPortfolioId));
 
     if (apiConnected) {
       return scoped(apiProperties ?? []);
@@ -571,7 +572,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const archivedProperties = useMemo(() => {
     const scoped = (list: Property[]) =>
-      list.filter((p) => p.assignedAgentId === agentPortfolioId);
+      list.filter((p) => isOwnedByAgent(p.assignedAgentId, agentPortfolioId));
 
     if (apiConnected) {
       return scoped(apiArchivedProperties ?? []);
@@ -840,7 +841,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const messages = useMemo<MessageThread[]>(() => {
     const customThreads = customMessageThreads.filter(
-      (m) => m.assignedAgentId === agentPortfolioId,
+      (m) => isOwnedByAgent(m.assignedAgentId, agentPortfolioId),
     );
 
     // Fill the parties from the live property by id (or address fallback).
