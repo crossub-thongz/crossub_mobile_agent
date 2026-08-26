@@ -17,7 +17,9 @@ import type { AgentBillingCharge } from '@/lib/crossub-api/agent-billing-client'
 import { useLivePoll } from '@/lib/use-live-poll';
 import { cn } from '@/lib/utils';
 
-function isViewablePayment(charge: AgentBillingCharge | null | undefined): boolean {
+function isViewablePayment(
+  charge: AgentBillingCharge | null | undefined,
+): charge is AgentBillingCharge {
   if (!charge) return false;
   return (
     charge.status === 'paid' ||

@@ -288,7 +288,7 @@ export type CreateAgentPropertyInput = {
   routineInspectionFrequency?: 2 | 3;
 };
 
-export type UpdateAgentPropertyInput = CreateAgentPropertyInput;
+export type UpdateAgentPropertyInput = Partial<CreateAgentPropertyInput>;
 
 export async function createProperty(
   body: CreateAgentPropertyInput,

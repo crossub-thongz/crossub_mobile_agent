@@ -211,11 +211,11 @@ function shouldIgnoreRowActivate(target: EventTarget | null): boolean {
   return Boolean(target.closest('button, a, input, select, textarea, [data-row-action]'));
 }
 
-function mergeRowActivateHandlers(
+function mergeRowActivateHandlers<E extends SyntheticEvent>(
   activate: (event: SyntheticEvent) => void,
-  existing?: (event: SyntheticEvent) => void,
+  existing?: (event: E) => void,
 ) {
-  return (event: SyntheticEvent) => {
+  return (event: E) => {
     existing?.(event);
     activate(event);
   };

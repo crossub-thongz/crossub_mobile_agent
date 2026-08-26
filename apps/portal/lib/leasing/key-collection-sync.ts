@@ -45,6 +45,10 @@ export function keyCollectionFromApi(kc: AgentKeyCollection): {
     timeEnd: kc.timeEnd ?? undefined,
     location: kc.location ?? undefined,
     photos: kc.photos ?? [],
-    tenantReport: kc.report ?? null,
+    // Shapes match except `submittedAt`, which is `string | null` on the wire and an
+    // optional `string` here; lib/leasing/map-cycle.ts collapses it the same way.
+    tenantReport: kc.report
+      ? { ...kc.report, submittedAt: kc.report.submittedAt ?? undefined }
+      : null,
   };
 }

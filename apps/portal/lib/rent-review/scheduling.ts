@@ -102,6 +102,10 @@ export function resolveRentIncreaseAnchor(input: {
   termAnchor?: string | null;
   termWeeks?: number | null;
   lastRentIncreaseAt?: string | null;
+  // Forwarded whole to resolveCurrentTenancyLeaseEnd below, which anchors on it
+  // (tenancy end = the day before the new lease starts). The value was already reaching
+  // that function at runtime — only this declaration omitted it.
+  newLeaseStart?: string | null;
 }): string | null {
   const explicit =
     toDateOnly(input.rentIncreaseDate) ??

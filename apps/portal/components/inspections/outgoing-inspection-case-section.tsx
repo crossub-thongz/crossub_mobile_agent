@@ -42,7 +42,7 @@ export function OutgoingInspectionCaseSection({
   tenantAttendance: TenantOutgoingAttendanceStatus;
   statusCompleted: boolean;
   terminationCaseId?: string | null;
-  onAttendanceChange?: (attendance: 'yes' | 'no') => void;
+  onAttendanceChange?: (attendance: 'yes' | 'no' | 'pending') => void;
   emails: JobCaseEmailRecord[];
   emailTitle?: string;
 }) {

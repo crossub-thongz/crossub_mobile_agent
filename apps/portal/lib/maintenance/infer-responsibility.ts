@@ -6,6 +6,7 @@ import { resolveRfqContractorIds } from '@/lib/maintenance/resolve-rfq-contracto
 export type MaintenanceResponsibilityContext = {
   workspaceCase: Pick<
     MaintenanceWorkspaceCase,
+    | 'id'
     | 'responsibility'
     | 'auditEntries'
     | 'status'

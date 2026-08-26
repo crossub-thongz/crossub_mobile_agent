@@ -1,5 +1,9 @@
 import { api, apiV1 } from '@/lib/api';
-import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
+import type {
+  RentPlatformResearch,
+  RentPlatformResearchStatus,
+  RentReviewWorkflowDetail,
+} from '@/lib/rent-review/types';
 import {
   toDateOnly,
 } from '@/lib/rent-review/scheduling';
@@ -66,7 +70,21 @@ export function mapRentReviewWorkflowDetail(
       suggestedWeekly: d.ai.suggestedWeekly,
       increasePercent: d.ai.increasePercent,
       rationale: d.ai.rationale,
-      research: d.ai.research,
+      // The wire types `id` and `status` as bare strings while this app mirrors the API's
+      // own platform ids and status set as unions. Narrowing only those two fields keeps
+      // the rest of the snapshot type-checked, and carries an unrecognised value through
+      // rather than dropping the row — the panel already renders unknown statuses as a
+      // plain pending row.
+      research: d.ai.research
+        ? {
+            ...d.ai.research,
+            platforms: d.ai.research.platforms.map((platform) => ({
+              ...platform,
+              id: platform.id as RentPlatformResearch['id'],
+              status: platform.status as RentPlatformResearchStatus,
+            })),
+          }
+        : null,
     },
     tenantCounterWeekly: d.tenantCounterWeekly,
     tenantMoveOutDate: dateOnly(d.tenantMoveOutDate),

@@ -110,13 +110,26 @@ function seedPairsFromAreaPlan(
   }
 }
 
+/**
+ * `Array.isArray` narrows to `any[]`, which does not remove a `ReadonlyArray` member from a
+ * union — so the false branch still held the areas array and `.areas` was not on it. An
+ * explicit predicate is what actually splits these two shapes.
+ */
+function isReferenceIngoingAreas(
+  reference: ReferenceIngoingContext | ReferenceIngoingAreas | undefined,
+): reference is ReferenceIngoingAreas {
+  return Array.isArray(reference);
+}
+
 /** Group inspector uploads into before/after pairs; seed empty ingoing from reference. */
 export function buildOutgoingAreaPhotoPairs(
   areas: readonly InspectionDetailArea[],
   reference?: ReferenceIngoingContext | ReferenceIngoingAreas,
 ): OutgoingAreaPhotoPair[] {
-  const referenceAreas = Array.isArray(reference) ? reference : reference?.areas;
-  const referenceContext: ReferenceIngoingContext = Array.isArray(reference)
+  const referenceAreas = isReferenceIngoingAreas(reference)
+    ? reference
+    : reference?.areas;
+  const referenceContext: ReferenceIngoingContext = isReferenceIngoingAreas(reference)
     ? { areas: reference }
     : (reference ?? null);
   const map = new Map<string, OutgoingAreaPhotoPair>();

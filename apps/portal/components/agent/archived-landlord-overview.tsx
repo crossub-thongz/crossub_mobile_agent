@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import { ContactTile } from '@/components/agent/property-contact-tile';
 import type { ArchivedLandlordRecord } from '@/lib/property-archive';
 import { derivePaymentCycle } from '@/lib/property-overview';
@@ -14,7 +16,7 @@ function OverviewSection({ title, children }: { title: string; children: React.R
   );
 }
 
-function StatCell({ label, value }: { label: string; value: string }) {
+function StatCell({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
       <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">

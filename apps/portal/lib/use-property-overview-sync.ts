@@ -113,9 +113,9 @@ export function usePropertyOverviewSync(
         tenantSelections,
         recordTenant: record
           ? {
-              name: record.tenantName,
-              email: record.tenantEmail,
-              phone: record.tenantPhone,
+              name: record.tenantName ?? undefined,
+              email: record.tenantEmail ?? undefined,
+              phone: record.tenantPhone ?? undefined,
             }
           : undefined,
       });

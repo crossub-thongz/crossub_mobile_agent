@@ -57,7 +57,8 @@ export function MaintenanceJobTypeSummary({
           <PriorityBadge priority={priorityForBadge(item.priority)} />
         </SummaryField>
         <SummaryField label="Responsible party" className="sm:col-span-2">
-          {!resolvedResponsibility || resolvedResponsibility === 'pending' ? (
+          {/* `resolveMaintenanceResponsibility` normalises 'pending' to undefined itself. */}
+          {!resolvedResponsibility ? (
             <span className="text-muted-foreground text-sm font-medium">Pending assignment</span>
           ) : (
             <ResponsibilityBadge responsibility={resolvedResponsibility} />

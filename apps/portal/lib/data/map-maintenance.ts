@@ -64,6 +64,8 @@ function auditToTimeline(entries: ApiMaintenanceAuditLogEntry[]): TimelineEntry[
 }
 
 export interface MappedMaintenance extends MaintenanceRequest {
+  /** Set below and read via the workspace adapter — the agent-approval completion gate. */
+  agentApprovalReceived?: boolean;
   source: 'api';
   submittedQuotationId?: string;
   invoiceUploaded?: boolean;

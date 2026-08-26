@@ -31,7 +31,10 @@ export type PropertyRegistryWizardStep =
   | 'strata'
   | 'documents';
 
-export interface PropertyRegistryDraftPayload {
+// A `type` rather than an `interface` so it carries an implicit index signature and is
+// assignable to `registryDraft?: Record<string, unknown> | null` on its own. An interface
+// has no index signature, which is why the call site needed a cast TS flagged as unsound.
+export type PropertyRegistryDraftPayload = {
   version: 1;
   step: PropertyRegistryWizardStep;
   furthestStepIndex: number;
@@ -56,7 +59,7 @@ export interface PropertyRegistryDraftPayload {
   managementExtraDocuments: ExtraManagementDocumentRow[];
   leasingExtraDocuments: ExtraLeasingDocumentRow[];
   leasingExtraPropertyDocuments: ExtraLeasingDocumentRow[];
-}
+};
 
 export interface PropertyRegistryAutosaveState {
   form: NewPropertyRegistryValues;
@@ -337,6 +340,6 @@ export function buildRegistryApiBody(
           form: values,
           step: options.step,
           furthestStepIndex: options.furthestStepIndex,
-        }) as Record<string, unknown>),
+        })),
   };
 }

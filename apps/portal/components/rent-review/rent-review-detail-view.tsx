@@ -89,7 +89,7 @@ function RentReviewDetailContent({
             </p>
             <CaseAddressAssignedBar
               address={displayAddress}
-              assignedToName={propertyManager ?? detail.managingAgentLabel}
+              assignedToName={propertyManager}
               titleClassName="mt-1 text-base font-semibold"
               subtitle={<p className="text-muted-foreground text-xs">{detail.tenantName}</p>}
             />

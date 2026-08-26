@@ -134,7 +134,7 @@ export function LeasingStepOpenInspection({
 
   const openPlatformPaymentActive = isOpenPlatformPaymentActive({
     isCrossubOpen: crossubManagedOpen,
-    isSelfOpen: oi.agentConducted,
+    isSelfOpen: oi.agentConducted === true,
     isDone: reportReady || oi.status === 'done',
     poolInspectionRecord,
     inspection: linkedInspection ?? null,

@@ -898,8 +898,12 @@ const IMPORTANT_MAINTENANCE_EMAIL_KINDS = new Set([
   'contractor_rfq_declined',
 ]);
 
-function isImportantMaintenanceEmail(record: MaintenanceEmailRecord): boolean {
-  if (IMPORTANT_MAINTENANCE_EMAIL_KINDS.has(record.kind)) return true;
+function isImportantMaintenanceEmail(record: {
+  subject: string;
+  body: string;
+  kind?: string;
+}): boolean {
+  if (record.kind && IMPORTANT_MAINTENANCE_EMAIL_KINDS.has(record.kind)) return true;
   const hay = `${record.subject} ${record.body}`.toLowerCase();
   if (/status updated|attachment|evidence received|invoice received|job created/i.test(hay)) {
     return false;

@@ -127,7 +127,7 @@ export function PropertyOverviewJobDialog({
 
     const rentWeekly = workflowRentWeekly({
       propertyRentWeekly: property.rentWeekly,
-      tenantSelections,
+      tenantSelections: tenantSelections ?? [],
       currentLease,
     });
 

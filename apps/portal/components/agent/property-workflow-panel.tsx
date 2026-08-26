@@ -751,6 +751,10 @@ export function PropertyWorkflowCreateDialog({
           crossubCustomTermWeeks,
         );
 
+        if (crossubConductsOpen === null) {
+          throw new Error('Select whether CROSSUB should conduct the open inspection');
+        }
+
         try {
           const leasingResult = await createAgentLeasingCycle(propertyId, {
             rentPerWeek: rent,

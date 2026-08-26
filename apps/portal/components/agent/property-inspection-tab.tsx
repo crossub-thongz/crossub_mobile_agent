@@ -11,7 +11,10 @@ import { PropertyJobCasesTable } from '@/components/agent/property-job-cases-tab
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import type { InspectionCreateResult } from '@/components/inspections/create-inspection-wizard';
+import {
+  isWorkflowCreatedCase,
+  type PropertyWorkflowCreatedResult,
+} from '@/lib/property-workflow-created';
 import { fromProperty } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import {
@@ -137,10 +140,13 @@ export function PropertyInspectionTab({
     tribunalCases,
     tenantSelections,
     currentLease,
-    onCreated: (result?: InspectionCreateResult) => {
+    onCreated: (result?: PropertyWorkflowCreatedResult) => {
       void onRefresh?.();
       void refresh();
-      if (result?.inspection) {
+      // PropertyWorkflowPanel hands back `PropertyWorkflowCreatedCase | InspectionCreateResult`.
+      // Declaring only the inspection half made this handler unassignable to the prop, since a
+      // callback taking a narrower parameter cannot stand in for one taking the union.
+      if (result && !isWorkflowCreatedCase(result) && result.inspection) {
         const id = result.inspection.id;
         setSelectedCaseId(id);
         onViewInspection?.(id);

@@ -249,7 +249,8 @@ export function mapAgentProperty(
       undefined,
     paymentReference:
       (dto as AgentProperty & { paymentReference?: string | null }).paymentReference ??
-      list.paymentReference ??
+      (list as AgentPropertyListFields & { paymentReference?: string | null })
+        .paymentReference ??
       ext.paymentReference ??
       undefined,
     openTasks: 0,
