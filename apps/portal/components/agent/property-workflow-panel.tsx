@@ -1000,8 +1000,8 @@ export function PropertyWorkflowCreateDialog({
               {crossubConductsOpen === true ? (
                 <p className="text-muted-foreground text-[11px]">
                   CROSSUB will arrange the open inspection and contact the tenant or listing
-                  contacts on your behalf. The $55 inc GST open-inspection fee is charged when
-                  you request the open.
+                  contacts on your behalf. The open-inspection fee is charged when you
+                  request the open — the amount is shown before you pay.
                 </p>
               ) : crossubConductsOpen === false ? (
                 <p className="text-amber-700 dark:text-amber-400 text-[11px]">
@@ -1511,8 +1511,8 @@ export function PropertyWorkflowCreateDialog({
                   {crossubConductsOpen === true ? (
                     <p className="text-muted-foreground text-[11px]">
                       CROSSUB will arrange the open inspection for the new letting after the tenant
-                      vacates. The $55 inc GST open-inspection fee is charged when you request the
-                      open.
+                      vacates. The open-inspection fee is charged when you request the
+                      open — the amount is shown before you pay.
                     </p>
                   ) : crossubConductsOpen === false ? (
                     <p className="text-amber-700 dark:text-amber-400 text-[11px]">

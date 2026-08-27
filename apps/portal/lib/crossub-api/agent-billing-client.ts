@@ -200,7 +200,7 @@ export type AgentBillingDefaultPaymentMethod = {
   expYear: number;
 };
 
-/** Open inspections are billed at the same flat rate as routine ($55 inc GST). */
+/** Open inspections billed at this agency's live rate (staff can override the default). */
 export type AgentBillingOpenInspectionPricing = {
   summary?: string;
   incGstAud?: number;

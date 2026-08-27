@@ -32,8 +32,8 @@ export const OPEN_TIME_PENDING_DESCRIPTION =
 export const OPEN_REQUEST_TITLE = 'Request Open Inspection';
 
 export const OPEN_REQUEST_DESCRIPTION =
-  'Add this property to the weekly open list. The $55 inc GST fee is charged when you ' +
-  'place this request. Requests close at 12:00pm Wednesday; inspectors choose their ' +
+  'Add this property to the weekly open list. The open-inspection fee is charged when you ' +
+  'place this request (the amount is shown before you pay). Requests close at 12:00pm Wednesday; inspectors choose their ' +
   'properties that afternoon and the open times are set from the route they can actually ' +
   'drive. CROSSUB opens run on Saturdays.';
 

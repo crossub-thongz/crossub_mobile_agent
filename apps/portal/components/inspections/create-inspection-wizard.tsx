@@ -1320,7 +1320,7 @@ function OpenInspectionForm({
           </div>
           {conductedBy === 'crossub' ? (
             <p className="text-muted-foreground text-[11px]">
-              The $55 inc GST open-inspection fee is charged when you place this order.
+              The open-inspection fee is charged when you place this order. The amount is shown on the payment screen.
             </p>
           ) : conductedBy === 'agent' ? (
             <p className="text-amber-700 dark:text-amber-400 text-[11px]">
