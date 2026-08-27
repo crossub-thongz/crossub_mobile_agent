@@ -1,11 +1,9 @@
 'use client';
 
-import { CreditCard, Download, Info, Loader2 } from 'lucide-react';
+import { Download, Info, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
-import type { StripePaymentDialogState } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,8 +15,6 @@ import {
 import {
   downloadAgentMonthlyInvoicePdf,
   fetchAgentMonthlyInvoice,
-  payAgentMonthlyInvoice,
-  type AgentBillingDefaultPaymentMethod,
   type AgentBillingMonthlyInvoice,
   type AgentBillingMonthlyInvoiceDetail,
 } from '@/lib/crossub-api/agent-billing-client';
@@ -60,27 +56,19 @@ function invoiceLineTitle(serviceType: string, description: string): string {
 
 export type PlatformMonthlyInvoiceDialogState = {
   invoice: AgentBillingMonthlyInvoice;
-  defaultPaymentMethod?: AgentBillingDefaultPaymentMethod | null;
 } | null;
 
 type PlatformMonthlyInvoiceDialogProps = {
   state: PlatformMonthlyInvoiceDialogState;
   onOpenChange: (open: boolean) => void;
-  onPaid: () => void | Promise<void>;
-  paymentDialog: StripePaymentDialogState | null;
-  setPaymentDialog: (state: StripePaymentDialogState | null) => void;
 };
 
 export function PlatformMonthlyInvoiceDialog({
   state,
   onOpenChange,
-  onPaid,
-  paymentDialog,
-  setPaymentDialog,
 }: PlatformMonthlyInvoiceDialogProps) {
   const [detail, setDetail] = useState<AgentBillingMonthlyInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [paying, setPaying] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const invoiceId = state?.invoice.id;
@@ -120,48 +108,6 @@ export function PlatformMonthlyInvoiceDialog({
   const invoice = state?.invoice;
   const showFeeBreakdown =
     (detail?.serviceChargesSubtotal ?? 0) > 0 || (detail?.serviceFeeAmount ?? 0) > 0;
-  const payable = detail?.status === 'sent' || detail?.status === 'overdue';
-
-  const pay = async () => {
-    if (!invoice || !payable) return;
-    setPaying(true);
-    try {
-      const result = await payAgentMonthlyInvoice(invoice.id, { devConfirm: false });
-      const outcome = resolvePaymentFlow(
-        result,
-        {
-          title: 'Monthly platform invoice',
-          description: invoice.invoiceNumber,
-          amountAud: invoice.amountDue,
-          calculationDetail: detail
-            ? [
-                (detail.serviceChargesSubtotal ?? 0) > 0
-                  ? `Inspection & tribunal lines $${(detail.serviceChargesSubtotal ?? 0).toFixed(2)}`
-                  : null,
-                (detail.serviceFeeAmount ?? 0) > 0
-                  ? `Management fee $${(detail.serviceFeeAmount ?? 0).toFixed(2)}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' + ') || detail.calculationSummary
-            : null,
-          calculationSummary: detail?.calculationSummary,
-          defaultPaymentMethod: state?.defaultPaymentMethod,
-        },
-        setPaymentDialog,
-      );
-
-      if (outcome === 'complete') {
-        toast.success('Invoice paid');
-        await onPaid();
-        onOpenChange(false);
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Payment failed');
-    } finally {
-      setPaying(false);
-    }
-  };
 
   const downloadPdf = async () => {
     if (!invoice) return;
@@ -186,13 +132,7 @@ export function PlatformMonthlyInvoiceDialog({
   };
 
   return (
-    <Dialog
-      open={state != null && paymentDialog == null}
-      onOpenChange={(open) => {
-        if (!open && paymentDialog != null) return;
-        onOpenChange(open);
-      }}
-    >
+    <Dialog open={state != null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-5xl" elevated>
         <DialogHeader>
           <DialogTitle>CROSSUB tax invoice</DialogTitle>
@@ -382,12 +322,8 @@ export function PlatformMonthlyInvoiceDialog({
         )}
 
         <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
           <Button
             type="button"
-            variant="outline"
             onClick={() => void downloadPdf()}
             disabled={downloading || loading || !invoice}
           >
@@ -396,22 +332,8 @@ export function PlatformMonthlyInvoiceDialog({
             ) : (
               <Download className="size-4" />
             )}
-            Download PDF
+            Download
           </Button>
-          {payable && detail ? (
-            <Button
-              type="button"
-              onClick={() => void pay()}
-              disabled={paying || paymentDialog != null}
-            >
-              {paying ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <CreditCard className="size-4" />
-              )}
-              Pay {formatCurrency(detail.amountDue)}
-            </Button>
-          ) : null}
         </div>
       </DialogContent>
     </Dialog>

@@ -49,6 +49,7 @@ import {
   isPrepaidInspectionServiceType,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
+  payAgentMonthlyInvoice,
   payAllAgentBilling,
   type AgentBillingCharge,
   type AgentBillingIncludedUsageRow,
@@ -356,6 +357,7 @@ export default function BillPage() {
   const [payingKey, setPayingKey] = useState<string | null>(null);
   const [payingAll, setPayingAll] = useState(false);
   const [openingInvoiceId, setOpeningInvoiceId] = useState<string | null>(null);
+  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
   const [chargeDialog, setChargeDialog] = useState<PlatformChargeDetailDialogState>(null);
   const [invoiceDialog, setInvoiceDialog] = useState<PlatformMonthlyInvoiceDialogState>(null);
@@ -522,10 +524,7 @@ export default function BillPage() {
   const openInvoiceById = async (invoiceId: string) => {
     const existing = invoices.find((row) => row.id === invoiceId);
     if (existing) {
-      setInvoiceDialog({
-        invoice: existing,
-        defaultPaymentMethod: summary?.defaultPaymentMethod,
-      });
+      setInvoiceDialog({ invoice: existing });
       return;
     }
 
@@ -543,7 +542,6 @@ export default function BillPage() {
           amountDue: detail.amountDue,
           paidAt: detail.paidAt,
         },
-        defaultPaymentMethod: summary?.defaultPaymentMethod,
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not load invoice');
@@ -552,16 +550,42 @@ export default function BillPage() {
     }
   };
 
+  const payInvoiceById = async (invoiceId: string) => {
+    const invoice = invoices.find((row) => row.id === invoiceId);
+    setPayingInvoiceId(invoiceId);
+    try {
+      const result = await payAgentMonthlyInvoice(invoiceId, { devConfirm: false });
+      const outcome = resolvePaymentFlow(
+        result,
+        {
+          title: 'Monthly platform invoice',
+          description: invoice?.invoiceNumber ?? result.invoice.invoiceNumber,
+          amountAud: invoice?.amountDue ?? result.invoice.amountDue,
+          defaultPaymentMethod: summary?.defaultPaymentMethod,
+        },
+        setPaymentDialog,
+      );
+      if (outcome === 'complete') {
+        toast.success('Invoice paid');
+        await load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setPayingInvoiceId(null);
+    }
+  };
+
   useEffect(() => {
-    if (loading || autoPayOpened.current || invoiceDialog != null) return;
+    if (loading || autoPayOpened.current || paymentDialog != null) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('pay') !== '1') return;
     const invoiceId = summary?.openInvoiceId ?? payableInvoices[0]?.id;
     if (!invoiceId) return;
     autoPayOpened.current = true;
     window.history.replaceState({}, '', '/bill');
-    void openInvoiceById(invoiceId);
-  }, [loading, summary?.openInvoiceId, payableInvoices, invoiceDialog]);
+    void payInvoiceById(invoiceId);
+  }, [loading, summary?.openInvoiceId, payableInvoices, paymentDialog]);
 
   const handlePaymentSuccess = async (chargeId?: string | null) => {
     await finalizeBillingChargePayment(chargeId);
@@ -807,41 +831,74 @@ export default function BillPage() {
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               {billingTab !== 'bills' && summary.openInvoiceId ? (
-                <Button
-                  type="button"
-                  className="w-full sm:w-auto"
-                  onClick={() => void openInvoiceById(summary.openInvoiceId!)}
-                  disabled={
-                    openingInvoiceId != null ||
-                    paymentDialog != null ||
-                    invoiceDialog != null ||
-                    payingAll
-                  }
-                >
-                  {openingInvoiceId === summary.openInvoiceId ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : usesMonthlyInvoice ? (
-                    <CreditCard className="size-4" />
-                  ) : (
-                    <FileText className="size-4" />
-                  )}
-                  {usesMonthlyInvoice ? 'Pay invoice' : 'View invoice'}
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant={usesMonthlyInvoice ? 'outline' : 'default'}
+                    className="w-full sm:w-auto"
+                    onClick={() => void openInvoiceById(summary.openInvoiceId!)}
+                    disabled={
+                      openingInvoiceId != null ||
+                      paymentDialog != null ||
+                      invoiceDialog != null ||
+                      payingAll
+                    }
+                  >
+                    {openingInvoiceId === summary.openInvoiceId ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <FileText className="size-4" />
+                    )}
+                    View invoice
+                  </Button>
+                  {usesMonthlyInvoice ? (
+                    <Button
+                      type="button"
+                      className="w-full sm:w-auto"
+                      onClick={() => void payInvoiceById(summary.openInvoiceId!)}
+                      disabled={
+                        payingInvoiceId != null ||
+                        paymentDialog != null ||
+                        payingAll
+                      }
+                    >
+                      {payingInvoiceId === summary.openInvoiceId ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <CreditCard className="size-4" />
+                      )}
+                      Pay invoice
+                    </Button>
+                  ) : null}
+                </>
               ) : billingTab !== 'bills' && payableInvoices[0] && usesMonthlyInvoice ? (
-                <Button
-                  type="button"
-                  className="w-full sm:w-auto"
-                  onClick={() =>
-                    setInvoiceDialog({
-                      invoice: payableInvoices[0]!,
-                      defaultPaymentMethod: summary.defaultPaymentMethod,
-                    })
-                  }
-                  disabled={paymentDialog != null || invoiceDialog != null || payingAll}
-                >
-                  <CreditCard className="size-4" />
-                  Pay invoice
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => setInvoiceDialog({ invoice: payableInvoices[0]! })}
+                    disabled={paymentDialog != null || invoiceDialog != null || payingAll}
+                  >
+                    <FileText className="size-4" />
+                    View invoice
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full sm:w-auto"
+                    onClick={() => void payInvoiceById(payableInvoices[0]!.id)}
+                    disabled={
+                      payingInvoiceId != null || paymentDialog != null || payingAll
+                    }
+                  >
+                    {payingInvoiceId === payableInvoices[0]?.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="size-4" />
+                    )}
+                    Pay invoice
+                  </Button>
+                </>
               ) : null}
               {showPayAll ? (
                 <Button
@@ -915,12 +972,7 @@ export default function BillPage() {
                     payingAll ||
                     payingKey != null
                   }
-                  onViewInvoice={(invoice) =>
-                    setInvoiceDialog({
-                      invoice,
-                      defaultPaymentMethod: summary?.defaultPaymentMethod,
-                    })
-                  }
+                  onViewInvoice={(invoice) => setInvoiceDialog({ invoice })}
                   onOpenInvoiceById={(invoiceId) => void openInvoiceById(invoiceId)}
                   onViewCharge={(row) =>
                     setChargeDialog({
@@ -995,9 +1047,6 @@ export default function BillPage() {
         onOpenChange={(open) => {
           if (!open) setInvoiceDialog(null);
         }}
-        onPaid={handlePaymentSuccess}
-        paymentDialog={paymentDialog}
-        setPaymentDialog={setPaymentDialog}
       />
 
       <StripeSetupDialog

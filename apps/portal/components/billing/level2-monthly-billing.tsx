@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CreditCard, FileText, Loader2, Lock } from 'lucide-react';
+import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
@@ -162,9 +162,16 @@ export function buildLevel2MonthGroups(
 ): Level2MonthGroup[] {
   const now = options?.now ?? new Date();
   const overdueLockDays = options?.overdueLockDays ?? DEFAULT_OVERDUE_LOCK_DAYS;
-  const invoiceById = new Map(invoices.map((row) => [row.id, row]));
+  const invoiceById = new Map(
+    invoices
+      .filter((row) => {
+        const status = row.status.toLowerCase();
+        return status !== 'draft' && status !== 'void';
+      })
+      .map((row) => [row.id, row]),
+  );
   const invoiceByMonth = new Map<string, AgentBillingMonthlyInvoice>();
-  for (const invoice of invoices) {
+  for (const invoice of invoiceById.values()) {
     const key = monthKeyFromIso(invoice.periodStart || invoice.periodEnd);
     const existing = invoiceByMonth.get(key);
     if (!existing || new Date(invoice.periodEnd).getTime() > new Date(existing.periodEnd).getTime()) {
@@ -670,18 +677,16 @@ export function Level2MonthlyBillingList({
                 <Button
                   type="button"
                   className="w-full sm:w-auto"
-                  variant={group.paymentStatus === 'unpaid' ? 'default' : 'outline'}
+                  variant="outline"
                   onClick={() => onViewInvoice(group.invoice!)}
                   disabled={disabled || openingInvoiceId === group.invoice.id}
                 >
                   {openingInvoiceId === group.invoice.id ? (
                     <Loader2 className="size-4 animate-spin" />
-                  ) : group.paymentStatus === 'unpaid' ? (
-                    <CreditCard className="size-4" />
                   ) : (
                     <FileText className="size-4" />
                   )}
-                  {group.paymentStatus === 'unpaid' ? 'Pay invoice' : 'View invoice'}
+                  View invoice
                 </Button>
               ) : (
                 <p className="text-muted-foreground text-xs">
