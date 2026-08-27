@@ -597,13 +597,9 @@ export function PropertyWorkflowCreateDialog({
           ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
         });
         toast.success(
-          inspectionOnly
-            ? crossubConductsOpen
-              ? 'Letting cycle created — schedule the open inspection when ready'
-              : 'Letting cycle created — you conduct the open inspection'
-            : crossubConductsOpen
-              ? 'Letting cycle created — schedule the open inspection when ready; ingoing order created pending schedule'
-              : 'Letting cycle created — you conduct the open inspection; ingoing order created pending schedule',
+          crossubConductsOpen
+            ? 'Letting cycle created — schedule the open inspection when ready'
+            : 'Letting cycle created — you conduct the open inspection',
         );
         if (apiConnected) {
           try {
@@ -784,8 +780,8 @@ export function PropertyWorkflowCreateDialog({
           }
           toast.success(
             crossubConductsOpen
-              ? 'End leasing and new leasing created — schedule the open inspection when ready; ingoing and outgoing orders created'
-              : 'End leasing and new leasing created — you conduct open inspection; ingoing and outgoing orders created',
+              ? 'End leasing and new leasing created — schedule the open inspection when ready; outgoing order created'
+              : 'End leasing and new leasing created — you conduct open inspection; outgoing order created',
           );
         } catch (leasingErr) {
           toast.warning(
