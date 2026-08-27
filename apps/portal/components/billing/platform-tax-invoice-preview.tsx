@@ -20,7 +20,7 @@ function propertyGroupKey(address: string): string {
     .toLowerCase();
 }
 
-function groupLinesByProperty<T extends { address: string }>(
+function groupLinesByProperty<T extends { address: string; serviceType: string }>(
   lines: T[],
 ): Array<{ address: string; lineNo: string; lines: T[] }> {
   const groups: Array<{ address: string; key: string; lines: T[] }> = [];
@@ -41,7 +41,12 @@ function groupLinesByProperty<T extends { address: string }>(
   return groups.map((group, index) => ({
     address: group.address,
     lineNo: String(index + 1).padStart(3, '0'),
-    lines: group.lines,
+    lines: [...group.lines].sort((a, b) => {
+      const rankA = SERVICE_DISPLAY_RANK[a.serviceType] ?? 50;
+      const rankB = SERVICE_DISPLAY_RANK[b.serviceType] ?? 50;
+      if (rankA !== rankB) return rankA - rankB;
+      return a.serviceType.localeCompare(b.serviceType);
+    }),
   }));
 }
 
@@ -51,11 +56,23 @@ const SERVICE_TYPE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal session',
-  service_fee: 'Full Service fee',
+  service_fee: 'Management fee',
   letting_fee: 'Letting fee',
 };
 
+const SERVICE_DISPLAY_RANK: Record<string, number> = {
+  service_fee: 0,
+  letting_fee: 1,
+  tribunal: 2,
+  open_inspection: 3,
+  routine_inspection: 4,
+  ingoing_inspection: 5,
+  outgoing_inspection: 6,
+};
+
 function serviceLabelFor(line: { serviceLabel?: string; serviceType: string }): string {
+  if (line.serviceType === 'service_fee') return 'Management fee';
+  if (line.serviceType === 'letting_fee') return 'Letting fee';
   if (line.serviceLabel?.trim()) return line.serviceLabel.trim();
   return SERVICE_TYPE_LABEL[line.serviceType] ?? line.serviceType.replace(/_/g, ' ');
 }

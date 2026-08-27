@@ -22,9 +22,24 @@ const SERVICE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
-  service_fee: 'Full Service fee',
+  service_fee: 'Management fee',
   letting_fee: 'Letting fee',
 };
+
+/** Management fee, then letting fee, then every other service on that property. */
+function serviceDisplayRank(serviceType: string): number {
+  if (serviceType === 'service_fee') return 0;
+  if (serviceType === 'letting_fee') return 1;
+  return 2;
+}
+
+function sortPropertyServiceCharges(charges: AgentBillingCharge[]): AgentBillingCharge[] {
+  return [...charges].sort((a, b) => {
+    const rank = serviceDisplayRank(a.serviceType) - serviceDisplayRank(b.serviceType);
+    if (rank !== 0) return rank;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
 
 const SYDNEY_TZ = 'Australia/Sydney';
 const DEFAULT_OVERDUE_LOCK_DAYS = 7;
@@ -218,6 +233,22 @@ export function buildLevel2MonthGroups(
   return groups.sort((a, b) => b.key.localeCompare(a.key));
 }
 
+export function propertyGroupKindLabel(
+  group: Pick<Level2PropertyChargeGroup, 'propertyId' | 'key'>,
+): string {
+  if (group.propertyId) return 'Property';
+  if (group.key === 'service_fee') return 'Management fee';
+  if (group.key === 'letting_fee') return 'Letting fee';
+  return 'Agency';
+}
+
+function ungroupedChargeKey(charge: AgentBillingCharge): string {
+  if (charge.propertyId) return charge.propertyId;
+  if (charge.serviceType === 'service_fee') return 'service_fee';
+  if (charge.serviceType === 'letting_fee') return 'letting_fee';
+  return 'agency';
+}
+
 export function groupChargesByProperty(
   charges: AgentBillingCharge[],
   includedUsageByProperty: AgentBillingIncludedUsageRow[] = [],
@@ -226,7 +257,7 @@ export function groupChargesByProperty(
   const groups = new Map<string, Level2PropertyChargeGroup>();
 
   for (const charge of charges) {
-    const key = charge.propertyId ?? (charge.serviceType === 'service_fee' ? 'service_fee' : 'agency');
+    const key = ungroupedChargeKey(charge);
     let group = groups.get(key);
     if (!group) {
       const catalog = charge.propertyId ? usageById.get(charge.propertyId) : undefined;
@@ -247,6 +278,7 @@ export function groupChargesByProperty(
   }
 
   for (const group of groups.values()) {
+    group.charges = sortPropertyServiceCharges(group.charges);
     if (!group.propertyId) {
       group.included = null;
       continue;
@@ -262,9 +294,14 @@ export function groupChargesByProperty(
   }
 
   return [...groups.values()].sort((a, b) => {
-    const aAgency = a.propertyId ? 0 : 1;
-    const bAgency = b.propertyId ? 0 : 1;
-    if (aAgency !== bAgency) return aAgency - bAgency;
+    const rank = (group: Level2PropertyChargeGroup) => {
+      if (group.key === 'service_fee') return 0;
+      if (group.key === 'letting_fee') return 1;
+      if (group.propertyId) return 2;
+      return 3;
+    };
+    const byKind = rank(a) - rank(b);
+    if (byKind !== 0) return byKind;
     return a.propertyLabel.localeCompare(b.propertyLabel);
   });
 }
@@ -489,11 +526,7 @@ export function Level2MonthlyBillingList({
                   <section key={property.key}>
                     <header className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-5 py-3.5">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                        {property.propertyId
-                          ? 'Property'
-                          : property.key === 'service_fee'
-                            ? 'Full Service'
-                            : 'Agency'}
+                        {propertyGroupKindLabel(property)}
                       </p>
                       <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">

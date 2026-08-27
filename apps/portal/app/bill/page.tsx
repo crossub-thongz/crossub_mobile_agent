@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { FilterChips } from '@/components/agent/filter-chips';
 import { PageIntro } from '@/components/agent/page-intro';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
@@ -16,6 +17,9 @@ import {
   buildLevel2MonthGroups,
   daysUntilAccountLock,
   formatAccountLockCountdown,
+  groupChargesByProperty,
+  PropertyIncludedSummary,
+  propertyGroupKindLabel,
 } from '@/components/billing/level2-monthly-billing';
 import {
   StripePaymentDialog,
@@ -48,11 +52,15 @@ import {
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { getStripePublishableKey } from '@/lib/stripe-client';
-import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatAgreementPeriod, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
-type PaymentRow =
-  | { kind: 'charge'; id: string; sortAt: string; row: AgentBillingCharge }
-  | { kind: 'invoice'; id: string; sortAt: string; row: AgentBillingMonthlyInvoice };
+type BillingTab = 'all' | 'invoice' | 'bills';
+
+const BILLING_TABS = [
+  { id: 'all', label: 'All' },
+  { id: 'invoice', label: 'Invoice' },
+  { id: 'bills', label: 'Bills' },
+] as const;
 
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
@@ -60,7 +68,7 @@ const SERVICE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
-  service_fee: 'Service fee',
+  service_fee: 'Management fee',
   letting_fee: 'Letting fee',
 };
 
@@ -189,6 +197,70 @@ function PrepaidChargeRow({
   );
 }
 
+function PropertyGroupedChargeList({
+  charges,
+  includedUsageByProperty,
+  disabled,
+  openingInvoiceId,
+  onOpenInvoice,
+  onViewCharge,
+}: {
+  charges: AgentBillingCharge[];
+  includedUsageByProperty: AgentBillingIncludedUsageRow[];
+  disabled: boolean;
+  openingInvoiceId: string | null;
+  onOpenInvoice: (invoiceId: string) => void;
+  onViewCharge: (row: AgentBillingCharge) => void;
+}) {
+  const groups = groupChargesByProperty(charges, includedUsageByProperty);
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {groups.map((property) => (
+        <section
+          key={property.key}
+          className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm"
+        >
+          <header className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-4 py-3.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {propertyGroupKindLabel(property)}
+            </p>
+            <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-snug">{property.propertyLabel}</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {property.charges.length} service
+                  {property.charges.length === 1 ? '' : 's'}
+                  {property.propertyId
+                    ? ` · ${formatAgreementPeriod(property.agreementStart, property.agreementEnd)}`
+                    : null}
+                </p>
+                {property.included ? <PropertyIncludedSummary usage={property.included} /> : null}
+              </div>
+              <p className="shrink-0 text-sm font-semibold tabular-nums">
+                {formatCurrency(property.billedTotal)}
+              </p>
+            </div>
+          </header>
+          <ul className="divide-y">
+            {property.charges.map((row) => (
+              <PrepaidChargeRow
+                key={row.id}
+                row={row}
+                disabled={disabled}
+                openingInvoiceId={openingInvoiceId}
+                onOpenInvoice={onOpenInvoice}
+                onViewCharge={onViewCharge}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
@@ -205,6 +277,7 @@ export default function BillPage() {
   const [invoiceDialog, setInvoiceDialog] = useState<PlatformMonthlyInvoiceDialogState>(null);
   const [setupDialog, setSetupDialog] = useState<StripeSetupDialogState | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+  const [billingTab, setBillingTab] = useState<BillingTab>('all');
   const autoPayOpened = useRef(false);
 
   const stripeConfigured = Boolean(getStripePublishableKey());
@@ -284,37 +357,17 @@ export default function BillPage() {
     [charges],
   );
 
-  /** Level 1 keeps a flat prepaid + invoice list; Level 2 / 3 use month groups for invoice lines. */
-  const payments = useMemo(() => {
-    if (usesMonthlyInvoice) return [] as PaymentRow[];
-    const rows: PaymentRow[] = [
-      ...charges.map((row) => ({
-        kind: 'charge' as const,
-        id: `charge-${row.id}`,
-        sortAt: row.createdAt,
-        row,
-      })),
-      ...invoices.map((row) => ({
-        kind: 'invoice' as const,
-        id: `invoice-${row.id}`,
-        sortAt: row.periodEnd,
-        row,
-      })),
-    ];
-    return rows.sort(
-      (a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime(),
-    );
-  }, [charges, invoices, usesMonthlyInvoice]);
-
   const level2MonthGroups = useMemo(
     () =>
-      usesMonthlyInvoice
-        ? buildLevel2MonthGroups(charges, invoices, {
-            overdueLockDays: summary?.overdueLockDays ?? 7,
-          })
-        : [],
-    [charges, invoices, usesMonthlyInvoice, summary?.overdueLockDays],
+      buildLevel2MonthGroups(charges, invoices, {
+        overdueLockDays: summary?.overdueLockDays ?? 7,
+      }),
+    [charges, invoices, summary?.overdueLockDays],
   );
+
+  const invoiceCount = level2MonthGroups.length;
+  const billsCount = prepaidExtras.length;
+  const hasBillingRows = invoiceCount > 0 || billsCount > 0;
 
   const openInvoiceLockDays = useMemo(() => {
     if (!usesMonthlyInvoice || summary?.billingBlocked || !summary?.nextInvoiceDueDate) return null;
@@ -329,9 +382,6 @@ export default function BillPage() {
     summary?.overdueLockDays,
   ]);
 
-  const hasBillingRows = usesMonthlyInvoice
-    ? level2MonthGroups.length > 0 || prepaidExtras.length > 0
-    : payments.length > 0;
   const outstandingCountDisplay = outstandingCount;
 
   const openInvoiceById = async (invoiceId: string) => {
@@ -638,26 +688,29 @@ export default function BillPage() {
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <h2 className="text-sm font-semibold tracking-tight">
-            {usesMonthlyInvoice ? 'Billing' : 'All payments'}
-            {outstandingCountDisplay > 0 ? (
-              <span className="text-muted-foreground ml-2 text-xs font-normal">
-                {outstandingCountDisplay} awaiting payment
-              </span>
-            ) : null}
-          </h2>
-          <Button type="button" variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
-            <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
-            Refresh
-          </Button>
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold tracking-tight">
+              {usesMonthlyInvoice ? 'Billing' : 'All payments'}
+              {outstandingCountDisplay > 0 ? (
+                <span className="text-muted-foreground ml-2 text-xs font-normal">
+                  {outstandingCountDisplay} awaiting payment
+                </span>
+              ) : null}
+            </h2>
+            <Button type="button" variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
+              <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
+              Refresh
+            </Button>
+          </div>
+          <FilterChips options={BILLING_TABS} value={billingTab} onChange={setBillingTab} />
         </div>
 
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
           </div>
-        ) : !hasBillingRows ? (
+        ) : billingTab === 'all' && !hasBillingRows ? (
           <EmptyState
             title="No payments yet"
             description={
@@ -666,43 +719,33 @@ export default function BillPage() {
                 : 'Prepaid inspections, tribunal sessions, and monthly service invoices will appear here.'
             }
           />
-        ) : usesMonthlyInvoice ? (
+        ) : billingTab === 'invoice' && invoiceCount === 0 ? (
+          <EmptyState
+            title="No monthly invoices yet"
+            description={
+              usesMonthlyInvoice
+                ? 'Management fee, letting fee, tribunal, and insurance appear here by property once Accounting sends the invoice.'
+                : 'Monthly service invoices will appear here when they are issued.'
+            }
+          />
+        ) : billingTab === 'bills' && billsCount === 0 ? (
+          <EmptyState
+            title="No prepaid bills yet"
+            description={
+              usesMonthlyInvoice
+                ? 'Extra inspections after included usage are prepaid and grouped by property here.'
+                : 'Prepaid inspections and tribunal sessions will appear here, grouped by property.'
+            }
+          />
+        ) : (
           <div className="space-y-6">
-            {prepaidExtras.length > 0 ? (
+            {billingTab !== 'bills' && invoiceCount > 0 ? (
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Prepaid inspections
-                </h3>
-                <ul className="divide-y rounded-xl border bg-card">
-                  {prepaidExtras.map((row) => (
-                    <PrepaidChargeRow
-                      key={row.id}
-                      row={row}
-                      disabled={
-                        paymentDialog != null ||
-                        chargeDialog != null ||
-                        invoiceDialog != null ||
-                        payingAll ||
-                        payingKey != null
-                      }
-                      openingInvoiceId={openingInvoiceId}
-                      onOpenInvoice={(invoiceId) => void openInvoiceById(invoiceId)}
-                      onViewCharge={(charge) =>
-                        setChargeDialog({
-                          charge,
-                          defaultPaymentMethod: summary?.defaultPaymentMethod,
-                        })
-                      }
-                    />
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            {level2MonthGroups.length > 0 ? (
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Monthly invoices
-                </h3>
+                {billingTab === 'all' ? (
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Invoice
+                  </h3>
+                ) : null}
                 <Level2MonthlyBillingList
                   charges={charges}
                   invoices={invoices}
@@ -733,176 +776,35 @@ export default function BillPage() {
                 />
               </div>
             ) : null}
+            {billingTab !== 'invoice' && billsCount > 0 ? (
+              <div className="space-y-2">
+                {billingTab === 'all' ? (
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Bills
+                  </h3>
+                ) : null}
+                <PropertyGroupedChargeList
+                  charges={prepaidExtras}
+                  includedUsageByProperty={includedUsageByProperty}
+                  disabled={
+                    paymentDialog != null ||
+                    chargeDialog != null ||
+                    invoiceDialog != null ||
+                    payingAll ||
+                    payingKey != null
+                  }
+                  openingInvoiceId={openingInvoiceId}
+                  onOpenInvoice={(invoiceId) => void openInvoiceById(invoiceId)}
+                  onViewCharge={(charge) =>
+                    setChargeDialog({
+                      charge,
+                      defaultPaymentMethod: summary?.defaultPaymentMethod,
+                    })
+                  }
+                />
+              </div>
+            ) : null}
           </div>
-        ) : (
-          <ul className="divide-y rounded-xl border bg-card">
-            {payments.map((entry) => {
-              if (entry.kind === 'charge') {
-                const row = entry.row;
-                const payable = isPayableCharge(row);
-                const opensInvoice = chargeOpensInvoice(row);
-                const invoiceId = row.monthlyInvoiceId ?? null;
-                const viewLabel = opensInvoice ? 'View invoice' : 'View bill';
-                return (
-                  <li key={entry.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p
-                          className={cn(
-                            'text-sm font-medium',
-                            row.status === 'void' || row.status === 'refunded'
-                              ? 'text-muted-foreground line-through'
-                              : null,
-                          )}
-                        >
-                          {serviceLabel(row.serviceType)}
-                        </p>
-                        <span
-                          className={cn(
-                            'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize',
-                            STATUS_TONE[row.status] ?? 'border-border text-muted-foreground',
-                          )}
-                        >
-                          {row.status === 'void' ? 'Not charged' : row.status.replace(/_/g, ' ')}
-                        </span>
-                        <span className="text-muted-foreground text-[11px] uppercase">
-                          {row.collectionMode}
-                        </span>
-                      </div>
-                      <p
-                        className={cn(
-                          'text-muted-foreground mt-1 text-sm',
-                          (row.status === 'void' || row.status === 'refunded') && 'line-through',
-                        )}
-                      >
-                        {row.description}
-                      </p>
-                      {row.jobCaseName ? (
-                        <p className="mt-1 text-sm">
-                          <JobCaseReferenceLink
-                            charge={row}
-                            className={
-                              row.status === 'void' || row.status === 'refunded'
-                                ? 'text-muted-foreground line-through'
-                                : undefined
-                            }
-                          />
-                        </p>
-                      ) : null}
-                      {row.calculationDetail ? (
-                        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                          {row.calculationDetail}
-                        </p>
-                      ) : null}
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {[
-                          row.createdByName ? `Created by ${row.createdByName}` : null,
-                          `Created ${formatDateTime(row.createdAt)}`,
-                          row.paidAt ? `Paid ${formatDateTime(row.paidAt)}` : null,
-                          row.refundedAt ? `Refunded ${formatDateTime(row.refundedAt)}` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <p
-                        className={cn(
-                          'text-sm font-semibold tabular-nums',
-                          (row.status === 'void' || row.status === 'refunded') &&
-                            'text-muted-foreground line-through',
-                        )}
-                      >
-                        {formatCurrency(row.amount)}
-                      </p>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant={payable ? 'default' : 'outline'}
-                          onClick={() => {
-                            if (opensInvoice && invoiceId) {
-                              void openInvoiceById(invoiceId);
-                              return;
-                            }
-                            setChargeDialog({
-                              charge: row,
-                              defaultPaymentMethod: summary?.defaultPaymentMethod,
-                            });
-                          }}
-                          disabled={
-                            paymentDialog != null ||
-                            chargeDialog != null ||
-                            invoiceDialog != null ||
-                            openingInvoiceId != null
-                          }
-                        >
-                          {openingInvoiceId && invoiceId && openingInvoiceId === invoiceId ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : opensInvoice ? (
-                            <FileText className="size-3.5" />
-                          ) : payable ? (
-                            <CreditCard className="size-3.5" />
-                          ) : null}
-                          {viewLabel}
-                        </Button>
-                      </div>
-                    </div>
-                  </li>
-                );
-              }
-
-              const row = entry.row;
-              const payable = isPayableInvoice(row);
-              return (
-                <li key={entry.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium">Monthly invoice</p>
-                      <span
-                        className={cn(
-                          'inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize',
-                          STATUS_TONE[row.status] ?? 'border-border text-muted-foreground',
-                        )}
-                      >
-                        {row.status}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground mt-1 text-sm">{row.invoiceNumber}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {formatWhen(row.periodStart)} – {formatWhen(row.periodEnd)}
-                      {row.dueDate ? ` · due ${formatWhen(row.dueDate)}` : null}
-                      {row.paidAt ? ` · paid ${formatDateTime(row.paidAt)}` : null}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    <p className="text-sm font-semibold tabular-nums">
-                      {formatCurrency(row.amountDue)}
-                    </p>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant={payable ? 'default' : 'outline'}
-                        onClick={() =>
-                          setInvoiceDialog({
-                            invoice: row,
-                            defaultPaymentMethod: summary?.defaultPaymentMethod,
-                          })
-                        }
-                        disabled={
-                          paymentDialog != null ||
-                          invoiceDialog != null ||
-                          openingInvoiceId != null
-                        }
-                      >
-                        {payable ? <CreditCard className="size-3.5" /> : <FileText className="size-3.5" />}
-                        View invoice
-                      </Button>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
         )}
       </div>
 

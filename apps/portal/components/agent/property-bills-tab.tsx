@@ -12,6 +12,7 @@ import {
   monthKeyFromIso,
   monthLabel,
   PropertyIncludedSummary,
+  propertyGroupKindLabel,
 } from '@/components/billing/level2-monthly-billing';
 import {
   PlatformChargeDetailDialog,
@@ -38,7 +39,7 @@ const SERVICE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
-  service_fee: 'Full Service fee',
+  service_fee: 'Management fee',
   letting_fee: 'Letting fee',
 };
 
@@ -204,7 +205,7 @@ export function PropertyBillsTab({
                 <div key={property.key} className="border-b last:border-b-0">
                   <div className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-5 py-3.5">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      Property
+                      {propertyGroupKindLabel(property)}
                     </p>
                     <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">

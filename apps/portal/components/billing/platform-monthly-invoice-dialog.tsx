@@ -32,7 +32,7 @@ const SERVICE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
-  service_fee: 'Full Service fee',
+  service_fee: 'Management fee',
   letting_fee: 'Letting fee',
 };
 
@@ -139,7 +139,7 @@ export function PlatformMonthlyInvoiceDialog({
                   ? `Inspection & tribunal lines $${(detail.serviceChargesSubtotal ?? 0).toFixed(2)}`
                   : null,
                 (detail.serviceFeeAmount ?? 0) > 0
-                  ? `Full Service fee $${(detail.serviceFeeAmount ?? 0).toFixed(2)}`
+                  ? `Management fee $${(detail.serviceFeeAmount ?? 0).toFixed(2)}`
                   : null,
               ]
                 .filter(Boolean)
@@ -299,7 +299,7 @@ export function PlatformMonthlyInvoiceDialog({
                   {(detail.serviceFeeAmount ?? 0) > 0 ? (
                     <div className="flex justify-between gap-3">
                       <span className="text-muted-foreground">
-                        Full Service fee
+                        Management fee
                         {detail.serviceFeePercent != null
                           ? ` (${detail.serviceFeePercent}% of management income)`
                           : null}

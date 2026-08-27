@@ -33,7 +33,8 @@ const SERVICE_LABEL: Record<string, string> = {
   ingoing_inspection: 'Ingoing inspection',
   outgoing_inspection: 'Outgoing inspection',
   tribunal: 'Tribunal',
-  service_fee: 'Full Service fee',
+  service_fee: 'Management fee',
+  letting_fee: 'Letting fee',
 };
 
 function serviceLabel(raw: string): string {
