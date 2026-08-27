@@ -78,6 +78,10 @@ export function getAgencyPortalLevel(
   return resolvePortalServiceLevel(agency?.portalServiceLevel);
 }
 
+export function isLegacyLevel(level: AgentPortalServiceLevel): boolean {
+  return level === 'LEVEL_3_LEGACY';
+}
+
 export function isPropertyInspectionOnly(
   agencies: Agency[],
   propertyAgencyId?: string,

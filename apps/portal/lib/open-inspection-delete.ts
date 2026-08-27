@@ -1,7 +1,6 @@
 import { INSPECTION_RECORD_STATUS } from '@/constants/inspection-records';
 import { SessionStatusEnum } from '@/constants/open-inspection-ops';
 import { cancelAgentOpenInspection } from '@/lib/crossub-api/agent-workflow-client';
-import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { Inspection } from '@/lib/types';
 
 export function isDeletedInspection(inspection: Inspection): boolean {
@@ -28,13 +27,10 @@ export async function cancelOpenInspectionJob(
   inspection: Inspection,
   reason: string,
 ): Promise<void> {
-  if (inspection.source === 'open_viewing') {
-    // force: CLOSED (report-complete) sessions need archive-cancel, not a lifecycle skip.
-    await openViewingsApi.cancel(inspection.id, reason, { force: true });
-    return;
-  }
   if (!inspection.propertyId) {
     throw new Error('Property is required to delete this open inspection');
   }
+  // Always the agent-portal cancel: it withdraws the linked New Leasing case
+  // while the letting is still on the open-inspection step (session ids included).
   await cancelAgentOpenInspection(inspection.propertyId, inspection.id, { reason });
 }

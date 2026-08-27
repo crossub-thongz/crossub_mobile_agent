@@ -589,6 +589,7 @@ export function InspectionDetailView({
           insp.id
         }
         propertyId={insp.propertyId}
+        inspectionType={insp.type}
         deadlineAt={
           routineInspectionRecord?.awaitingAgentPayment === true ||
           poolInspectionRecord?.awaitingAgentPayment === true ||

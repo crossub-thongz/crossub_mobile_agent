@@ -6,7 +6,11 @@ import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionsApi } from '@/lib/inspections-api';
-import { isPropertyInspectionOnly } from '@/lib/portal-service-level';
+import {
+  getAgencyPortalLevel,
+  isLegacyLevel,
+  isPropertyInspectionOnly,
+} from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -35,6 +39,7 @@ export function InspectorConfirmCountdown({
   className,
   postpaid,
   propertyId,
+  inspectionType,
 }: {
   inspectionId: string;
   deadlineAt?: string | null;
@@ -45,6 +50,7 @@ export function InspectorConfirmCountdown({
   /** Level 2: fee is voided (not invoiced) instead of Stripe-refunded. */
   postpaid?: boolean;
   propertyId?: string | null;
+  inspectionType?: string | null;
 }) {
   const { agencies, properties, hasFullManagementAccess } = useAgentData();
   const inferredPostpaid = useMemo(() => {
@@ -53,6 +59,11 @@ export function InspectorConfirmCountdown({
     if (agencyId) return !isPropertyInspectionOnly(agencies, agencyId);
     return hasFullManagementAccess;
   }, [postpaid, properties, propertyId, agencies, hasFullManagementAccess]);
+  const hideUnbilledOpenTimer = useMemo(() => {
+    if ((inspectionType ?? '').toUpperCase() !== 'OPEN') return false;
+    const agencyId = properties.find((row) => row.id === propertyId)?.agencyId;
+    return isLegacyLevel(getAgencyPortalLevel(agencies, agencyId));
+  }, [inspectionType, properties, propertyId, agencies]);
   const [now, setNow] = useState(() => Date.now());
   const [expiring, setExpiring] = useState(false);
   const expireStartedRef = useRef(false);
@@ -60,7 +71,7 @@ export function InspectorConfirmCountdown({
   onClosedRef.current = onClosed;
 
   const draft = (apiStatus ?? '').toUpperCase() === 'DRAFT';
-  const active = Boolean(deadlineAt) && draft && !refunded;
+  const active = Boolean(deadlineAt) && draft && !refunded && !hideUnbilledOpenTimer;
 
   useEffect(() => {
     if (!active) return;
