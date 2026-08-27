@@ -5,7 +5,6 @@ import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
-  derivePropertyIncludedUsage,
   includedAllowanceRemainingLabel,
   isMonthlyInvoiceServiceType,
   platformChargeServiceAmountLabel,
@@ -305,13 +304,15 @@ export function groupChargesByProperty(
       continue;
     }
     const catalog = usageById.get(group.propertyId);
+    // Catalog is attached only for Level 2 / Level 3. Do not invent 3/1/1
+    // remaining from prepaid Level 1 charges when includedUsageByProperty is empty.
     group.included = catalog
       ? {
           routine: catalog.routine,
           ingoing: catalog.ingoing,
           outgoing: catalog.outgoing,
         }
-      : derivePropertyIncludedUsage(group.charges);
+      : null;
   }
 
   return [...groups.values()].sort((a, b) => {

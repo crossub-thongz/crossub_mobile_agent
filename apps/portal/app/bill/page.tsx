@@ -31,6 +31,7 @@ import {
   PlatformMonthlyInvoiceDialog,
   type PlatformMonthlyInvoiceDialogState,
 } from '@/components/billing/platform-monthly-invoice-dialog';
+import { AgentPaymentHistoryList } from '@/components/billing/payment-history';
 import {
   StripeSetupDialog,
   type StripeSetupDialogState,
@@ -49,11 +50,13 @@ import {
   isPrepaidInspectionServiceType,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
+  listAgentPaymentHistory,
   payAgentMonthlyInvoice,
   payAllAgentBilling,
   type AgentBillingCharge,
   type AgentBillingIncludedUsageRow,
   type AgentBillingMonthlyInvoice,
+  type AgentBillingPayment,
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { getStripePublishableKey } from '@/lib/stripe-client';
@@ -350,6 +353,7 @@ export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
   const [invoices, setInvoices] = useState<AgentBillingMonthlyInvoice[]>([]);
+  const [payments, setPayments] = useState<AgentBillingPayment[]>([]);
   const [includedUsageByProperty, setIncludedUsageByProperty] = useState<
     AgentBillingIncludedUsageRow[]
   >([]);
@@ -381,15 +385,17 @@ export default function BillPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [billing, chargeRows, invoiceRows, pricing] = await Promise.all([
+      const [billing, chargeRows, invoiceRows, pricing, paymentRows] = await Promise.all([
         fetchAgentBillingSummary(),
         listAgentChargeHistory(),
         listAgentInvoiceHistory(),
         fetchAgentBillingPricing().catch(() => null),
+        listAgentPaymentHistory().catch(() => []),
       ]);
       setSummary(billing);
       setCharges(chargeRows);
       setInvoices(invoiceRows);
+      setPayments(paymentRows);
       setIncludedUsageByProperty(pricing?.level2.includedUsageByProperty ?? []);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not load billing');
@@ -923,94 +929,139 @@ export default function BillPage() {
           <div className="flex justify-center py-16">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
           </div>
-        ) : billingTab === 'all' && !hasBillingRows ? (
-          <EmptyState
-            title="No payments yet"
-            description={
-              usesMonthlyInvoice
-                ? 'Monthly invoices and prepaid extras after included usage will appear here.'
-                : 'Prepaid inspections, tribunal sessions, and monthly service invoices will appear here.'
-            }
-          />
-        ) : billingTab === 'invoice' && invoiceCount === 0 ? (
-          <EmptyState
-            title="No monthly invoices yet"
-            description={
-              usesMonthlyInvoice
-                ? 'Management fee and letting fee appear here by property once Accounting sends the invoice. Inspections are prepaid on Bills.'
-                : 'Monthly service invoices will appear here when they are issued.'
-            }
-          />
-        ) : billingTab === 'bills' && billsCount === 0 ? (
-          <EmptyState
-            title="No prepaid bills yet"
-            description={
-              usesMonthlyInvoice
-                ? 'Extra inspections after included usage are prepaid and grouped by property here.'
-                : 'Prepaid inspections and tribunal sessions will appear here, grouped by property.'
-            }
-          />
         ) : (
           <div className="space-y-6">
-            {billingTab !== 'bills' && invoiceCount > 0 ? (
-              <div className="space-y-2">
-                {billingTab === 'all' ? (
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Invoice
-                  </h3>
+            {billingTab === 'all' && !hasBillingRows ? (
+              <EmptyState
+                title="No payments yet"
+                description={
+                  usesMonthlyInvoice
+                    ? 'Monthly invoices and prepaid extras after included usage will appear here.'
+                    : 'Prepaid inspections, tribunal sessions, and monthly service invoices will appear here.'
+                }
+              />
+            ) : billingTab === 'invoice' && invoiceCount === 0 ? (
+              <EmptyState
+                title="No monthly invoices yet"
+                description={
+                  usesMonthlyInvoice
+                    ? 'Management fee and letting fee appear here by property once Accounting sends the invoice. Inspections are prepaid on Bills.'
+                    : 'Monthly service invoices will appear here when they are issued.'
+                }
+              />
+            ) : billingTab === 'bills' && billsCount === 0 ? (
+              <EmptyState
+                title="No prepaid bills yet"
+                description={
+                  usesMonthlyInvoice
+                    ? 'Extra inspections after included usage are prepaid and grouped by property here.'
+                    : 'Prepaid inspections and tribunal sessions will appear here, grouped by property.'
+                }
+              />
+            ) : (
+              <div className="space-y-6">
+                {billingTab !== 'bills' && invoiceCount > 0 ? (
+                  <div className="space-y-2">
+                    {billingTab === 'all' ? (
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Invoice
+                      </h3>
+                    ) : null}
+                    <Level2MonthlyBillingList
+                      charges={charges}
+                      invoices={invoices}
+                      overdueLockDays={summary?.overdueLockDays ?? 7}
+                      billingBlocked={summary?.billingBlocked === true}
+                      openingInvoiceId={openingInvoiceId}
+                      disabled={
+                        paymentDialog != null ||
+                        chargeDialog != null ||
+                        invoiceDialog != null ||
+                        payingAll ||
+                        payingKey != null
+                      }
+                      onViewInvoice={(invoice) => setInvoiceDialog({ invoice })}
+                      onOpenInvoiceById={(invoiceId) => void openInvoiceById(invoiceId)}
+                      onViewCharge={(row) =>
+                        setChargeDialog({
+                          charge: row,
+                          defaultPaymentMethod: summary?.defaultPaymentMethod,
+                        })
+                      }
+                    />
+                  </div>
                 ) : null}
-                <Level2MonthlyBillingList
-                  charges={charges}
-                  invoices={invoices}
-                  overdueLockDays={summary?.overdueLockDays ?? 7}
-                  billingBlocked={summary?.billingBlocked === true}
-                  openingInvoiceId={openingInvoiceId}
-                  disabled={
-                    paymentDialog != null ||
-                    chargeDialog != null ||
-                    invoiceDialog != null ||
-                    payingAll ||
-                    payingKey != null
-                  }
-                  onViewInvoice={(invoice) => setInvoiceDialog({ invoice })}
-                  onOpenInvoiceById={(invoiceId) => void openInvoiceById(invoiceId)}
-                  onViewCharge={(row) =>
-                    setChargeDialog({
-                      charge: row,
-                      defaultPaymentMethod: summary?.defaultPaymentMethod,
-                    })
-                  }
-                />
-              </div>
-            ) : null}
-            {billingTab !== 'invoice' && billsCount > 0 ? (
-              <div className="space-y-2">
-                {billingTab === 'all' ? (
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Bills
-                  </h3>
+                {billingTab !== 'invoice' && billsCount > 0 ? (
+                  <div className="space-y-2">
+                    {billingTab === 'all' ? (
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Bills
+                      </h3>
+                    ) : null}
+                    <PrepaidMonthlyBillingList
+                      charges={prepaidExtras}
+                      includedUsageByProperty={includedUsageByProperty}
+                      disabled={
+                        paymentDialog != null ||
+                        chargeDialog != null ||
+                        invoiceDialog != null ||
+                        payingAll ||
+                        payingKey != null
+                      }
+                      openingInvoiceId={openingInvoiceId}
+                      onOpenInvoice={(invoiceId) => void openInvoiceById(invoiceId)}
+                      onViewCharge={(charge) =>
+                        setChargeDialog({
+                          charge,
+                          defaultPaymentMethod: summary?.defaultPaymentMethod,
+                        })
+                      }
+                    />
+                  </div>
                 ) : null}
-                <PrepaidMonthlyBillingList
-                  charges={prepaidExtras}
-                  includedUsageByProperty={includedUsageByProperty}
-                  disabled={
-                    paymentDialog != null ||
-                    chargeDialog != null ||
-                    invoiceDialog != null ||
-                    payingAll ||
-                    payingKey != null
-                  }
-                  openingInvoiceId={openingInvoiceId}
-                  onOpenInvoice={(invoiceId) => void openInvoiceById(invoiceId)}
-                  onViewCharge={(charge) =>
-                    setChargeDialog({
-                      charge,
-                      defaultPaymentMethod: summary?.defaultPaymentMethod,
-                    })
-                  }
-                />
               </div>
-            ) : null}
+            )}
+            <AgentPaymentHistoryList
+              payments={payments}
+              disabled={
+                paymentDialog != null ||
+                chargeDialog != null ||
+                invoiceDialog != null ||
+                payingAll ||
+                payingKey != null
+              }
+              onViewInvoice={(invoiceId) => void openInvoiceById(invoiceId)}
+              onViewCharge={(chargeId) => {
+                const row = charges.find((charge) => charge.id === chargeId);
+                if (row) {
+                  setChargeDialog({
+                    charge: row,
+                    defaultPaymentMethod: summary?.defaultPaymentMethod,
+                  });
+                  return;
+                }
+                const item = payments
+                  .flatMap((payment) => payment.items)
+                  .find((entry) => entry.kind === 'charge' && entry.id === chargeId);
+                if (!item) return;
+                setChargeDialog({
+                  charge: {
+                    id: item.id,
+                    serviceType: item.serviceType ?? 'open_inspection',
+                    collectionMode: 'prepaid',
+                    status: item.status,
+                    amount: item.amount,
+                    currency: 'AUD',
+                    description: item.description,
+                    propertyId: item.propertyId,
+                    jobCaseName: item.jobCaseName,
+                    jobCaseId: item.jobCaseId,
+                    createdAt: '',
+                  },
+                  defaultPaymentMethod: summary?.defaultPaymentMethod,
+                });
+              }}
+            />
           </div>
         )}
       </div>

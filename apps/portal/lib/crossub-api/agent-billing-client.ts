@@ -80,6 +80,7 @@ export function platformChargeShowsAllowanceRemaining(
   >,
 ): boolean {
   if (!LEVEL2_ALLOWANCE_SERVICE_TYPES.has(row.serviceType)) return false;
+  if (row.allowanceLimit == null && row.allowanceRemaining == null) return false;
   if (row.includedInAllowance === true || row.status === 'included') return true;
   if (row.allowanceRemaining != null) return row.allowanceRemaining > 0;
   return Number(row.amount) === 0;
@@ -99,10 +100,11 @@ export function platformChargeAllowanceUsage(
   >,
 ): PlatformChargeAllowanceUsage | null {
   if (!LEVEL2_ALLOWANCE_SERVICE_TYPES.has(row.serviceType)) return null;
-  const included = row.allowanceLimit ?? LEVEL2_ALLOWANCE_LIMITS[row.serviceType] ?? 0;
-  if (included <= 0 && row.allowanceUsed == null && row.allowanceRemaining == null) {
+  if (row.allowanceLimit == null && row.allowanceUsed == null && row.allowanceRemaining == null) {
     return null;
   }
+  const included = row.allowanceLimit ?? LEVEL2_ALLOWANCE_LIMITS[row.serviceType] ?? 0;
+  if (included <= 0) return null;
   const remaining =
     row.allowanceRemaining ?? Math.max(0, included - (row.allowanceUsed ?? 0));
   const used = row.allowanceUsed ?? Math.max(0, included - remaining);
@@ -153,28 +155,28 @@ export function derivePropertyIncludedUsage(charges: AgentBillingCharge[]): {
     ['ingoing_inspection', 'ingoing'],
     ['outgoing_inspection', 'outgoing'],
   ] as const;
-  let any = false;
   const result = {
-    routine: { included: 3, used: 0, remaining: 3 },
-    ingoing: { included: 1, used: 0, remaining: 1 },
-    outgoing: { included: 1, used: 0, remaining: 1 },
+    routine: null as { included: number; used: number; remaining: number } | null,
+    ingoing: null as { included: number; used: number; remaining: number } | null,
+    outgoing: null as { included: number; used: number; remaining: number } | null,
   };
   for (const [serviceType, key] of types) {
     const row = charges.find((charge) => charge.serviceType === serviceType);
     const usage = row ? platformChargeAllowanceUsage(row) : null;
     if (usage) {
-      any = true;
       result[key] = {
         included: usage.included,
         used: usage.used,
         remaining: usage.remaining,
       };
-    } else {
-      const included = LEVEL2_ALLOWANCE_LIMITS[serviceType] ?? 0;
-      result[key] = { included, used: 0, remaining: included };
     }
   }
-  return any ? result : null;
+  if (!result.routine || !result.ingoing || !result.outgoing) return null;
+  return {
+    routine: result.routine,
+    ingoing: result.ingoing,
+    outgoing: result.outgoing,
+  };
 }
 
 /** Invoice amount: remaining included slots, or the price once none remain. */
@@ -566,6 +568,36 @@ export async function listAgentChargeHistory(
     ? `?propertyId=${encodeURIComponent(propertyId.trim())}`
     : '';
   return agentFetch(`/agent/billing/charges${query}`);
+}
+
+export type AgentBillingPaymentItem = {
+  kind: 'charge' | 'invoice';
+  id: string;
+  amount: number;
+  description: string;
+  status: string;
+  serviceType?: string | null;
+  propertyId?: string | null;
+  jobCaseName?: string | null;
+  jobCaseId?: string | null;
+  invoiceNumber?: string | null;
+};
+
+export type AgentBillingPayment = {
+  id: string;
+  paidAt: string;
+  amountAud: number;
+  currency: string;
+  itemCount: number;
+  status: string;
+  items: AgentBillingPaymentItem[];
+};
+
+export async function listAgentPaymentHistory(): Promise<AgentBillingPayment[]> {
+  const result = await agentFetch<{ payments?: AgentBillingPayment[] }>(
+    '/agent/billing/payments',
+  );
+  return result.payments ?? [];
 }
 
 export async function listAgentInvoiceHistory(): Promise<AgentBillingMonthlyInvoice[]> {
