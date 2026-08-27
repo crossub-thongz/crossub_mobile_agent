@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import type { PricingOrderActions } from '@/components/pricing/pricing-order-host';
+import { FullServiceFeeExample } from '@/components/pricing/full-service-fee-example';
 import { Button } from '@/components/ui/button';
 import {
   level2IncludedPackageItems,
@@ -238,29 +239,7 @@ export function PricingRateCatalog({
             ) : null}
 
             {example && !complimentary ? (
-              <div className="pricing-callout">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
-                  <p className="font-semibold">Full Service fee example</p>
-                </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Standard {example.managementRatePercent}% management rate ·{' '}
-                  {catalog.level2.serviceFeePercent}% of your management income invoiced monthly
-                </p>
-                <div className="pricing-callout__formula">
-                  Weekly rent {formatCurrency(example.weeklyRentAud)} ×{' '}
-                  {example.managementRatePercent}% management ={' '}
-                  {formatCurrency(example.agentIncomeAud)} agent income
-                  <br />
-                  CROSSUB fee {formatCurrency(example.agentIncomeAud)} ×{' '}
-                  {catalog.level2.serviceFeePercent}% ={' '}
-                  {formatCurrency(example.crossubFeeAud)} / week × 4 weeks ={' '}
-                  <strong className="text-foreground">
-                    {formatCurrency(example.crossubFeeAud * 4)}
-                  </strong>{' '}
-                  per month
-                </div>
-              </div>
+              <FullServiceFeeExample catalog={catalog} />
             ) : null}
           </PricingSection>
 

@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react';
 
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import { RentReviewWorkflowTimeline } from '@/components/rent-review/rent-review-workflow-timeline';
+import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { Button } from '@/components/ui/button';
 import { rentReviewWorkflowProgress } from '@/lib/case-workflows';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
@@ -25,7 +26,10 @@ function RentReviewCaseDialogSummary({ review }: { review: RentReviewCase }) {
       ) : null}
       <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
         <div>
-          <p className="text-muted-foreground">Current rent</p>
+          <p className="text-muted-foreground flex items-center gap-1">
+            Current rent
+            {review.currentRent > 0 ? <RentEquivalentsHint weekly={review.currentRent} /> : null}
+          </p>
           <p className="font-medium tabular-nums">{formatCurrency(review.currentRent)}/wk</p>
         </div>
         <div>

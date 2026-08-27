@@ -184,7 +184,7 @@ export function RegisterConfirmPanel({
               </span>
               <span className="text-muted-foreground">
                 {' '}
-                of your management income · invoiced monthly
+                of your management income · min 4% rate · billed by active days
               </span>
             </p>
             <FullServiceFeeExample catalog={catalog} />

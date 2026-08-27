@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { resolveOpenBillingInspectionId } from '@/lib/billing/resolve-open-billing-inspection-id';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
@@ -44,6 +44,19 @@ async function resolvePoolInspectionIdForOpenCase(args: {
   return null;
 }
 
+function samePoolInspectionRecord(
+  previous: InspectionRecord | null,
+  next: InspectionRecord | null,
+): boolean {
+  if (previous === next) return true;
+  if (!previous || !next) return false;
+  return (
+    previous.id === next.id &&
+    previous.status === next.status &&
+    previous.updatedAt === next.updatedAt
+  );
+}
+
 /** Load viewing session + pool inspection rows for open-case email history. */
 export function useOpenInspectionEmailSources(args: {
   enabled: boolean;
@@ -53,55 +66,61 @@ export function useOpenInspectionEmailSources(args: {
   isViewingSessionSource?: boolean;
   poll?: boolean;
 }) {
+  const { enabled, apiConnected, focusInspectionId, isViewingSessionSource, poll } = args;
   const [openSession, setOpenSession] = useState<OpenInspectionSession | null>(null);
   const [poolInspectionRecord, setPoolInspectionRecord] = useState<InspectionRecord | null>(null);
   const [resolvedPoolInspectionId, setResolvedPoolInspectionId] = useState<string | null>(null);
 
+  const leasingDetailRef = useRef(args.leasingDetail);
+  leasingDetailRef.current = args.leasingDetail;
+  const openSessionRef = useRef(openSession);
+  openSessionRef.current = openSession;
+
   const openSessionId = useMemo(() => {
-    if (!args.enabled) return null;
+    if (!enabled) return null;
     const fromLeasing = args.leasingDetail?.openInspection?.viewingSessionId?.trim();
     if (fromLeasing) return fromLeasing;
-    if (args.isViewingSessionSource && args.focusInspectionId) {
-      return args.focusInspectionId;
+    if (isViewingSessionSource && focusInspectionId) {
+      return focusInspectionId;
     }
     return null;
   }, [
-    args.enabled,
-    args.focusInspectionId,
-    args.isViewingSessionSource,
+    enabled,
+    focusInspectionId,
+    isViewingSessionSource,
     args.leasingDetail?.openInspection?.viewingSessionId,
   ]);
 
   const poolInspectionId = useMemo(() => {
-    if (!args.enabled) return null;
+    if (!enabled) return null;
     return (
       resolvedPoolInspectionId ??
       resolveOpenPoolInspectionId({
         leasingDetail: args.leasingDetail,
         openSession,
-        focusInspectionId: args.focusInspectionId,
-        isViewingSessionSource: args.isViewingSessionSource,
+        focusInspectionId,
+        isViewingSessionSource,
       })
     );
   }, [
-    args.enabled,
-    args.focusInspectionId,
-    args.isViewingSessionSource,
+    enabled,
+    focusInspectionId,
+    isViewingSessionSource,
     args.leasingDetail,
     openSession,
     resolvedPoolInspectionId,
   ]);
 
   const syncAll = useCallback(async () => {
-    if (!args.enabled) {
-      setOpenSession(null);
-      setPoolInspectionRecord(null);
-      setResolvedPoolInspectionId(null);
+    if (!enabled) {
+      setOpenSession((prev) => (prev === null ? prev : null));
+      setPoolInspectionRecord((prev) => (prev === null ? prev : null));
+      setResolvedPoolInspectionId((prev) => (prev === null ? prev : null));
       return;
     }
 
     let session: OpenInspectionSession | null = null;
-    if (args.apiConnected && openSessionId) {
+    if (apiConnected && openSessionId) {
       try {
         session = await openViewingsApi.get(openSessionId);
         setOpenSession((previous) => mergeOpenInspectionSessionPoll(previous, session!));
@@ -109,45 +128,37 @@ export function useOpenInspectionEmailSources(args: {
         /* keep last good session on transient poll errors */
       }
     } else {
-      setOpenSession(null);
+      setOpenSession((prev) => (prev === null ? prev : null));
     }
 
-    const poolId = args.apiConnected
+    const poolId = apiConnected
       ? await resolvePoolInspectionIdForOpenCase({
-          leasingDetail: args.leasingDetail,
-          openSession: session ?? openSession,
-          focusInspectionId: args.focusInspectionId,
-          isViewingSessionSource: args.isViewingSessionSource,
+          leasingDetail: leasingDetailRef.current,
+          openSession: session ?? openSessionRef.current,
+          focusInspectionId,
+          isViewingSessionSource,
         })
       : null;
-    setResolvedPoolInspectionId(poolId);
+    setResolvedPoolInspectionId((prev) => (prev === poolId ? prev : poolId));
 
-    if (!args.apiConnected || !poolId) {
-      setPoolInspectionRecord(null);
+    if (!apiConnected || !poolId) {
+      setPoolInspectionRecord((prev) => (prev === null ? prev : null));
       return;
     }
 
     try {
       const record = await inspectionsApi.get(poolId);
-      setPoolInspectionRecord(record);
+      setPoolInspectionRecord((prev) => (samePoolInspectionRecord(prev, record) ? prev : record));
     } catch {
       /* keep last good record on transient poll errors */
     }
-  }, [
-    args.apiConnected,
-    args.enabled,
-    args.focusInspectionId,
-    args.isViewingSessionSource,
-    args.leasingDetail,
-    openSession,
-    openSessionId,
-  ]);
+  }, [apiConnected, enabled, focusInspectionId, isViewingSessionSource, openSessionId]);
 
   useEffect(() => {
     void syncAll();
   }, [syncAll]);
 
-  useLivePoll(syncAll, Boolean(args.poll && args.enabled && args.apiConnected));
+  useLivePoll(syncAll, Boolean(poll && enabled && apiConnected), { immediate: false });
 
   const mergeSessionUpdate = useCallback((session: OpenInspectionSession) => {
     setOpenSession((previous) => mergeOpenInspectionSessionPoll(previous, session));

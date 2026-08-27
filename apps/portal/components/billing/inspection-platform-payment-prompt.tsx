@@ -60,23 +60,8 @@ export function InspectionPlatformPaymentPrompt({
   const payInFlightRef = useRef(false);
   const activeChargeIdRef = useRef<string | null>(null);
 
-  const chargeArgs = useCallback(
-    () => ({
-      inspectionId: billingInspectionId.trim() || inspectionId.trim(),
-      poolInspectionId: poolInspectionId ?? billingInspectionId,
-      propertyId,
-      viewingSessionId,
-      inspectionType,
-    }),
-    [
-      billingInspectionId,
-      inspectionId,
-      inspectionType,
-      poolInspectionId,
-      propertyId,
-      viewingSessionId,
-    ],
-  );
+  const billingInspectionIdRef = useRef(billingInspectionId);
+  billingInspectionIdRef.current = billingInspectionId;
 
   const load = useCallback(async (): Promise<AgentBillingCharge | null> => {
     if (!active) {
@@ -92,11 +77,18 @@ export function InspectionPlatformPaymentPrompt({
       const billing = await fetchAgentBillingSummary();
       setSummary(billing);
 
+      const currentBillingId = billingInspectionIdRef.current;
       const { charge: linked, billingInspectionId: resolvedId } =
-        await loadInspectionPlatformCharge(chargeArgs());
+        await loadInspectionPlatformCharge({
+          inspectionId: currentBillingId.trim() || inspectionId.trim(),
+          poolInspectionId: poolInspectionId ?? currentBillingId,
+          propertyId,
+          viewingSessionId,
+          inspectionType,
+        });
 
-      if (resolvedId && resolvedId !== billingInspectionId) {
-        setBillingInspectionId(resolvedId);
+      if (resolvedId) {
+        setBillingInspectionId((prev) => (prev === resolvedId ? prev : resolvedId));
       }
       setCharge(linked);
       return linked;
@@ -107,7 +99,7 @@ export function InspectionPlatformPaymentPrompt({
     } finally {
       setLoading(false);
     }
-  }, [active, billingInspectionId, chargeArgs, inspectionId, propertyId, viewingSessionId]);
+  }, [active, inspectionId, inspectionType, poolInspectionId, propertyId, viewingSessionId]);
 
   useEffect(() => {
     setBillingInspectionId(inspectionId);
@@ -124,7 +116,13 @@ export function InspectionPlatformPaymentPrompt({
     try {
       let linked = charge;
       if (!linked || linked.status !== 'awaiting_payment') {
-        const prepared = await prepareInspectionPlatformCharge(chargeArgs());
+        const prepared = await prepareInspectionPlatformCharge({
+          inspectionId: billingInspectionId.trim() || inspectionId.trim(),
+          poolInspectionId: poolInspectionId ?? billingInspectionId,
+          propertyId,
+          viewingSessionId,
+          inspectionType,
+        });
         if (prepared.billingInspectionId !== billingInspectionId) {
           setBillingInspectionId(prepared.billingInspectionId);
         }
@@ -185,7 +183,18 @@ export function InspectionPlatformPaymentPrompt({
     } finally {
       setPaying(false);
     }
-  }, [billingInspectionId, charge, chargeArgs, load, paymentDialog, summary?.defaultPaymentMethod]);
+  }, [
+    billingInspectionId,
+    charge,
+    inspectionId,
+    inspectionType,
+    load,
+    paymentDialog,
+    poolInspectionId,
+    propertyId,
+    summary?.defaultPaymentMethod,
+    viewingSessionId,
+  ]);
 
   const handleStripeSuccess = useCallback(async () => {
     const chargeId = paymentDialog?.chargeId ?? activeChargeIdRef.current;
@@ -253,16 +262,20 @@ export function InspectionPlatformPaymentPrompt({
   }
 
   // Prompt stays until payment succeeds — then it is fully dismissed.
-  if (charge?.status === 'paid') {
+  // No linked charge (Level 3 opens, included $0, already paid) → hide.
+  if (
+    !charge ||
+    charge.status === 'paid' ||
+    charge.status === 'included' ||
+    charge.status === 'accrued'
+  ) {
     return null;
   }
 
-  const awaitingPrepaid =
-    !charge || charge.status === 'awaiting_payment' || charge.collectionMode === 'prepaid';
-
-  if (!awaitingPrepaid) return null;
+  if (charge.status !== 'awaiting_payment') return null;
 
   const paymentDialogOpen = paymentDialog != null;
+  const staffOrdered = Boolean(charge.createdByName);
 
   return (
     <>
@@ -277,9 +290,11 @@ export function InspectionPlatformPaymentPrompt({
             Payment required
           </p>
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            An inspector is on this job. Pay the platform fee
-            {charge ? ` (${formatCurrency(charge.amount)})` : ''} before they can start.
-            This prompt stays until payment succeeds. Unpaid fees also appear on the{' '}
+            {staffOrdered
+              ? `CROSSUB created this inspection case${charge.createdByName ? ` (${charge.createdByName})` : ''}. Pay the platform fee`
+              : 'Pay the platform fee'}
+            {` (${formatCurrency(charge.amount)})`} to continue. The inspector confirm
+            timer starts after payment. Unpaid fees also appear on the{' '}
             <Link href="/bill" className="text-primary font-medium hover:underline">
               Bill
             </Link>{' '}

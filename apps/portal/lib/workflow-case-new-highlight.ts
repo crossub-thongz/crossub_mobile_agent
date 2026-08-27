@@ -47,12 +47,13 @@ export function isWorkflowCaseSeen(module: AgentWorkflowCaseModule, caseId: stri
 export function seedWorkflowCaseSnapshot(
   module: AgentWorkflowCaseModule,
   caseIds: string[],
-): void {
-  if (typeof window === 'undefined') return;
+): boolean {
+  if (typeof window === 'undefined') return false;
   const snapshot = loadSnapshot(module);
-  if (snapshot.size > 0) return;
-  if (caseIds.length === 0) return;
+  if (snapshot.size > 0) return false;
+  if (caseIds.length === 0) return false;
   saveSnapshot(module, new Set(caseIds));
+  return true;
 }
 
 export function isWorkflowCaseNew(module: AgentWorkflowCaseModule, caseId: string): boolean {

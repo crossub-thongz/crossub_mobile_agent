@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
@@ -10,6 +10,7 @@ import {
   hasContact,
 } from '@/components/agent/property-contact-tile';
 import { PropertyTenancyManagementSections } from '@/components/agent/property-tenancy-management-sections';
+import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import {
@@ -38,18 +39,21 @@ function StatCell({
   hint,
   onClick,
   onEdit,
+  labelAccessory,
 }: {
   label: string;
   value: string;
   hint?: string;
   onClick?: () => void;
   onEdit?: () => void;
+  labelAccessory?: ReactNode;
 }) {
   return (
     <div className="rounded-lg border border-border/40 bg-background/60 px-2.5 py-2">
       <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-          {label}
+        <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide">
+          <span>{label}</span>
+          {labelAccessory}
         </p>
         {onEdit ? (
           <button
@@ -240,6 +244,11 @@ export function PropertyProfileDetails({
                 label="Weekly rent"
                 value={weeklyRentLabel}
                 hint={upcomingRentHint}
+                labelAccessory={
+                  displayRent != null && displayRent > 0 ? (
+                    <RentEquivalentsHint weekly={displayRent} />
+                  ) : undefined
+                }
               />
               <StatCell label="Lease status" value={profileLeaseStatus} />
             </div>

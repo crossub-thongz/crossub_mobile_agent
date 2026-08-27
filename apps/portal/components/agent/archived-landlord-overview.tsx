@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 
+import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { ContactTile } from '@/components/agent/property-contact-tile';
 import type { ArchivedLandlordRecord } from '@/lib/property-archive';
 import { derivePaymentCycle } from '@/lib/property-overview';
@@ -16,11 +17,20 @@ function OverviewSection({ title, children }: { title: string; children: React.R
   );
 }
 
-function StatCell({ label, value }: { label: string; value: ReactNode }) {
+function StatCell({
+  label,
+  value,
+  labelAccessory,
+}: {
+  label: string;
+  value: ReactNode;
+  labelAccessory?: ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
-      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-        {label}
+      <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide">
+        <span>{label}</span>
+        {labelAccessory}
       </p>
       <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
     </div>
@@ -167,6 +177,7 @@ export function ArchivedLandlordOverview({
           <StatCell
             label="Weekly rent"
             value={rentWeekly > 0 ? `${formatCurrency(rentWeekly)}/wk` : '—'}
+            labelAccessory={rentWeekly > 0 ? <RentEquivalentsHint weekly={rentWeekly} /> : undefined}
           />
         </div>
       </OverviewSection>

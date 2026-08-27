@@ -13,10 +13,12 @@ import { formatPropertyFullAddress } from '@/lib/utils';
 import type { WorkflowCaseRefKind } from '@/lib/workflow-case-reference';
 
 export function useRecordRecentPropertyVisit(property: Property | undefined | null) {
+  const propertyId = property?.id;
+  const label = property ? formatPropertyFullAddress(property) : '';
   useEffect(() => {
-    if (!property?.id) return;
-    recordRecentPropertyVisit(property.id, formatPropertyFullAddress(property));
-  }, [property]);
+    if (!propertyId) return;
+    recordRecentPropertyVisit(propertyId, label);
+  }, [label, propertyId]);
 }
 
 export function useRecordRecentCaseVisit(input: {

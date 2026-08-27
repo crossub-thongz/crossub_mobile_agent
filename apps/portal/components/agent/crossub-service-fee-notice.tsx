@@ -8,12 +8,13 @@ import { hasFullManagementAccess } from '@/lib/portal-service-level';
 import { formatCurrency } from '@/lib/utils';
 import {
   crossubMonthlyServiceFeeIncGst,
-  crossubServiceFeeFromAgentIncome,
+  effectiveManagementRatePercent,
+  STANDARD_MANAGEMENT_RATE_PERCENT,
   type ManagementRateGstMode,
 } from '@/lib/crossub-service-fee-math';
 
 /** Standard management rate agents record on Full Service properties. */
-export const CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT = 4;
+export const CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT = STANDARD_MANAGEMENT_RATE_PERCENT;
 
 type Props = {
   managementRatePercent?: number | null;
@@ -70,24 +71,25 @@ export function CrossubServiceFeeNotice({
   const rent = weeklyRentAud != null && weeklyRentAud > 0 ? weeklyRentAud : 500;
 
   const worked = useMemo(() => {
-    const effectiveRate = rate ?? CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT;
-    const { weeklyGross, weeklyExGst, monthlyIncGst } = crossubMonthlyServiceFeeIncGst({
+    const effectiveRate = effectiveManagementRatePercent(rate);
+    const {
+      weeklyGross,
+      feePerActiveDayAud,
+      monthlyIncGst,
+      pmFeePerDay,
+    } = crossubMonthlyServiceFeeIncGst({
       weeklyRentAud: rent,
       managementRatePercent: effectiveRate,
       serviceFeePercent,
       managementRateGst,
     });
-    const monthlyEx = crossubServiceFeeFromAgentIncome((weeklyExGst * 52) / 12, serviceFeePercent);
-    const weeklyFeeEx = crossubServiceFeeFromAgentIncome(weeklyExGst, serviceFeePercent);
     return {
       effectiveRate,
       rent,
       weeklyGross,
-      weeklyExGst,
-      weeklyFeeEx,
-      crossubFee: weeklyFeeEx,
+      pmFeePerDay,
+      feePerActiveDayAud,
       monthlyIncGst,
-      gstInclusive: managementRateGst === 'include',
     };
   }, [rate, rent, serviceFeePercent, managementRateGst]);
 
@@ -99,7 +101,8 @@ export function CrossubServiceFeeNotice({
         <strong className="text-foreground">CROSSUB Full Service:</strong> record a{' '}
         <strong>{CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT}%</strong> management fee below.
         CROSSUB platform charge is <strong>{serviceFeePercent}%</strong> of your management
-        income (invoiced monthly).
+        income, using a {CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT}% minimum rate, billed by
+        active days.
       </p>
     );
   }
@@ -108,30 +111,22 @@ export function CrossubServiceFeeNotice({
     <div className="rounded-lg border border-violet-500/30 bg-violet-500/8 p-4 text-sm">
       <p className="font-semibold text-foreground">CROSSUB Full Service platform charge</p>
       <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-        Enter a{' '}
+        CROSSUB invoices{' '}
+        <strong className="text-foreground">{serviceFeePercent}%</strong> of your management
+        income, using your actual management rate with a{' '}
         <strong className="text-foreground">
-          {CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT}% management fee
-        </strong>{' '}
-        in the Management Fee row (what you charge the landlord on weekly rent). CROSSUB invoices{' '}
-        <strong className="text-foreground">{serviceFeePercent}%</strong> of that management
-        income each month on Full Service accounts.
+          {CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT}% minimum incl. GST
+        </strong>
+        , billed by active days each month.
       </p>
       <div className="mt-3 space-y-1.5 rounded-md border border-border/60 bg-background/80 px-3 py-2.5 font-mono text-xs">
         <p>
-          Weekly rent {formatCurrency(worked.rent)} × {worked.effectiveRate}% management ={' '}
-          <strong>{formatCurrency(worked.weeklyGross)}</strong> / week
-          {worked.gstInclusive ? ' (inc GST)' : ' (ex GST)'}
+          {formatCurrency(worked.rent)} × {worked.effectiveRate}% ÷ 7 × {serviceFeePercent}% ={' '}
+          <strong>{formatCurrency(worked.feePerActiveDayAud)}</strong> per active day
         </p>
-        {worked.gstInclusive ? (
-          <p>
-            Ex-GST management income ={' '}
-            <strong>{formatCurrency(worked.weeklyExGst)}</strong> / week (÷ 1.10)
-          </p>
-        ) : null}
         <p>
-          CROSSUB charge {formatCurrency(worked.weeklyExGst)} × {serviceFeePercent}% ={' '}
-          {formatCurrency(worked.crossubFee)} / week ex GST →{' '}
-          <strong>{formatCurrency(worked.monthlyIncGst)}</strong> / month inc GST
+          30 active days × {formatCurrency(worked.feePerActiveDayAud)} ={' '}
+          <strong>{formatCurrency(worked.monthlyIncGst)}</strong> total fee
         </p>
       </div>
       <p className="text-muted-foreground mt-2 text-xs">
@@ -158,15 +153,14 @@ export function CrossubPlatformFeeSummaryRow({
   weeklyRentAud?: number | null;
   serviceFeePercent?: number;
 }) {
-  const rate = parseRate(managementRatePercent) ?? CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT;
+  const billedRate = effectiveManagementRatePercent(managementRatePercent);
   const rent = weeklyRentAud != null && weeklyRentAud > 0 ? weeklyRentAud : 500;
-  const { weeklyExGst, monthlyIncGst } = crossubMonthlyServiceFeeIncGst({
+  const { monthlyIncGst, feePerActiveDayAud } = crossubMonthlyServiceFeeIncGst({
     weeklyRentAud: rent,
-    managementRatePercent: rate,
+    managementRatePercent: billedRate,
     serviceFeePercent,
     managementRateGst,
   });
-  const crossubFee = crossubServiceFeeFromAgentIncome(weeklyExGst, serviceFeePercent);
 
   return (
     <div className="grid grid-cols-1 gap-2 rounded-lg border border-violet-500/25 bg-violet-500/5 p-3 sm:grid-cols-2 sm:items-end lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto]">
@@ -174,7 +168,7 @@ export function CrossubPlatformFeeSummaryRow({
         <p className="text-[11px] uppercase tracking-wider text-muted-foreground">CROSSUB charge</p>
         <p className="text-sm font-medium text-foreground">Full Service platform fee</p>
         <p className="text-muted-foreground text-xs">
-          {serviceFeePercent}% of ex-GST management income · 10% GST on invoice
+          {serviceFeePercent}% of management income · min 4% incl GST · billed by active days
         </p>
       </div>
       <div className="space-y-1">
@@ -183,7 +177,8 @@ export function CrossubPlatformFeeSummaryRow({
           {formatCurrency(monthlyIncGst)} / month
         </p>
         <p className="text-muted-foreground text-xs">
-          {formatCurrency(crossubFee)} / week ex GST on {formatCurrency(rent)} rent @ {rate}%
+          {formatCurrency(feePerActiveDayAud)} per active day on {formatCurrency(rent)} rent @{' '}
+          {billedRate}%
           {managementRateGst === 'include' ? ' (mgmt inc GST)' : ''}
         </p>
       </div>

@@ -331,6 +331,11 @@ export type AgentBillingPricingCatalog = {
       managementRatePercent: number;
       agentIncomeAud: number;
       crossubFeeAud: number;
+      feePerActiveDayAud?: number;
+      exampleActiveDays?: number;
+      totalFeeAud?: number;
+      daysInWeek?: number;
+      serviceFeePercent?: number;
     };
     /** Remaining included inspections per property this calendar year (Level 2 and Level 3). */
     includedUsageByProperty?: AgentBillingIncludedUsageRow[];
@@ -394,6 +399,7 @@ export type AgentBillingTaxInvoiceLine = {
   managementRate: string;
   crossubRate: string;
   activeDays?: string;
+  activeDaysCount?: number | null;
   amountExGst: number;
   amountIncGst: number;
   serviceType: string;

@@ -15,8 +15,8 @@ export function useSeedWorkflowCaseSnapshot(
   const joined = caseIds.join('\u0000');
 
   useEffect(() => {
-    seedSnapshot(module, caseIds);
-  }, [module, joined, seedSnapshot, caseIds]);
+    seedSnapshot(module, joined ? joined.split('\u0000') : []);
+  }, [module, joined, seedSnapshot]);
 }
 
 export function useWorkflowCaseIsNew(

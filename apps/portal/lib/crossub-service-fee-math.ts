@@ -1,11 +1,27 @@
 /** Shared Full Service fee math — mirrors billing-pricing.util on the API. */
 export type ManagementRateGstMode = 'include' | 'exclude' | '' | null | undefined;
 
+export const STANDARD_MANAGEMENT_RATE_PERCENT = 4;
+
+export function effectiveManagementRatePercent(
+  managementRatePercent: number | null | undefined,
+): number {
+  const rate =
+    managementRatePercent != null && Number.isFinite(managementRatePercent)
+      ? managementRatePercent
+      : 0;
+  return Math.max(rate, STANDARD_MANAGEMENT_RATE_PERCENT);
+}
+
+function roundAud(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 export function agentGrossIncomeFromRent(
   weeklyRentAud: number,
   managementRatePercent: number,
 ): number {
-  return Math.round(weeklyRentAud * (managementRatePercent / 100) * 100) / 100;
+  return roundAud(weeklyRentAud * (managementRatePercent / 100));
 }
 
 export function agentIncomeExGstFromRent(
@@ -16,7 +32,7 @@ export function agentIncomeExGstFromRent(
 ): number {
   const gross = agentGrossIncomeFromRent(weeklyRentAud, managementRatePercent);
   if (managementRateGst === 'include') {
-    return Math.round((gross / (1 + gstPercent / 100)) * 100) / 100;
+    return roundAud(gross / (1 + gstPercent / 100));
   }
   return gross;
 }
@@ -25,7 +41,19 @@ export function crossubServiceFeeFromAgentIncome(
   agentIncomeAud: number,
   serviceFeePercent: number,
 ): number {
-  return Math.round(agentIncomeAud * (serviceFeePercent / 100) * 100) / 100;
+  return roundAud(agentIncomeAud * (serviceFeePercent / 100));
+}
+
+/** Weekly rent × management rate (min 4%) ÷ 7 × CROSSUB %. */
+export function fullServiceFeePerActiveDayIncGst(args: {
+  weeklyRentAud: number;
+  managementRatePercent: number;
+  serviceFeePercent: number;
+}): number {
+  const rate = effectiveManagementRatePercent(args.managementRatePercent);
+  return (
+    ((args.weeklyRentAud * (rate / 100)) / 7) * (args.serviceFeePercent / 100)
+  );
 }
 
 export function crossubMonthlyServiceFeeIncGst(args: {
@@ -34,18 +62,33 @@ export function crossubMonthlyServiceFeeIncGst(args: {
   serviceFeePercent: number;
   managementRateGst?: ManagementRateGstMode;
   gstPercent?: number;
-}): { weeklyGross: number; weeklyExGst: number; monthlyIncGst: number } {
-  const gstPercent = args.gstPercent ?? 10;
-  const weeklyGross = agentGrossIncomeFromRent(args.weeklyRentAud, args.managementRatePercent);
+  activeDays?: number;
+}): {
+  weeklyGross: number;
+  weeklyExGst: number;
+  monthlyIncGst: number;
+  feePerActiveDayAud: number;
+  pmFeePerDay: number;
+} {
+  const rate = effectiveManagementRatePercent(args.managementRatePercent);
+  const weeklyGross = agentGrossIncomeFromRent(args.weeklyRentAud, rate);
   const weeklyExGst = agentIncomeExGstFromRent(
     args.weeklyRentAud,
-    args.managementRatePercent,
+    rate,
     args.managementRateGst,
-    gstPercent,
+    args.gstPercent ?? 10,
   );
-  const monthlyEx = (weeklyExGst * 52) / 12;
-  const feeEx = crossubServiceFeeFromAgentIncome(monthlyEx, args.serviceFeePercent);
-  const gstAmount = Math.round(feeEx * (gstPercent / 100) * 100) / 100;
-  const monthlyIncGst = Math.round((feeEx + gstAmount) * 100) / 100;
-  return { weeklyGross, weeklyExGst, monthlyIncGst };
+  const feePerActiveDayAud = fullServiceFeePerActiveDayIncGst({
+    weeklyRentAud: args.weeklyRentAud,
+    managementRatePercent: rate,
+    serviceFeePercent: args.serviceFeePercent,
+  });
+  const days = args.activeDays ?? 30;
+  return {
+    weeklyGross,
+    weeklyExGst,
+    feePerActiveDayAud: roundAud(feePerActiveDayAud),
+    pmFeePerDay: roundAud(weeklyGross / 7),
+    monthlyIncGst: roundAud(feePerActiveDayAud * days),
+  };
 }

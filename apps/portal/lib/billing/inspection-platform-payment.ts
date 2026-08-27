@@ -31,8 +31,9 @@ export function inspectorBillingEligible(
 }
 
 /**
- * Ingoing / outgoing: show payment after an inspector is assigned/accepted until paid.
- * Completion does not dismiss the prompt — only a successful payment does.
+ * Ingoing / outgoing: show payment for staff-created pending jobs and after an
+ * inspector is assigned/accepted, until paid. The prompt hides itself when there
+ * is no awaiting prepaid charge (included slots, Level 3, already paid).
  */
 export function isFieldInspectionPlatformPaymentActive(args: {
   gateStatus: FieldInspectionGateStatus;
@@ -44,7 +45,11 @@ export function isFieldInspectionPlatformPaymentActive(args: {
     .toLowerCase();
   if (status.includes('cancel')) return false;
   if (inspectorBillingEligible(args.record, args.inspection ?? null)) return true;
-  return args.gateStatus === 'scheduled' || args.gateStatus === 'awaiting_approval';
+  return (
+    args.gateStatus === 'pending' ||
+    args.gateStatus === 'scheduled' ||
+    args.gateStatus === 'awaiting_approval'
+  );
 }
 
 export function resolveRoutinePlatformPaymentInspectionId(args: {
@@ -88,8 +93,9 @@ export function resolveOpenPlatformPaymentInspectionId(args: {
 }
 
 /**
- * CROSSUB open in-case billing for leftover unpaid jobs. New orders are paid when
- * created; this gate still covers staff-created jobs and older unpaid accepts.
+ * CROSSUB-managed opens: prompt as soon as the case exists (staff New Leasing
+ * creates the job before the agent pays). The prompt hides itself when there is
+ * no awaiting prepaid charge.
  */
 export function isOpenPlatformPaymentActiveForCase(args: {
   inspection: Inspection;
@@ -105,16 +111,11 @@ export function isOpenPlatformPaymentActiveForCase(args: {
   ) {
     return false;
   }
-  if (
-    !isCrossubManagedOpenInspection({
-      session: args.openSession,
-      leasingDetail: args.leasingDetail,
-      inspection: args.inspection,
-    })
-  ) {
-    return false;
-  }
-  return inspectorBillingEligible(args.poolInspectionRecord, args.inspection);
+  return isCrossubManagedOpenInspection({
+    session: args.openSession,
+    leasingDetail: args.leasingDetail,
+    inspection: args.inspection,
+  });
 }
 
 /** CROSSUB open inspections — agent-run / self open are not billed. */
@@ -128,6 +129,5 @@ export function isOpenPlatformPaymentActive(args: {
   openSession?: OpenInspectionSession | null;
 }): boolean {
   if (args.isSelfOpen) return false;
-  if (!args.isCrossubOpen) return false;
-  return inspectorBillingEligible(args.poolInspectionRecord, args.inspection ?? null);
+  return args.isCrossubOpen;
 }

@@ -147,7 +147,7 @@ export default function PropertyDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [agentPortfolioId, id, listProperty]);
+  }, [agentPortfolioId, id, listProperty?.id]);
 
   useRecordRecentPropertyVisit(property);
   const propertyTabs = useMemo(
@@ -155,7 +155,7 @@ export default function PropertyDetailPage() {
       property
         ? propertyDetailTabsForAgency(agencies, property.agencyId)
         : [...PROPERTY_DETAIL_TABS],
-    [agencies, property],
+    [agencies, property?.agencyId, property?.id],
   );
   const billingTabLabel = propertyBillingTabLabel(
     property ? isPropertyInspectionOnly(agencies, property.agencyId) : true,
@@ -195,7 +195,8 @@ export default function PropertyDetailPage() {
   }, [id, router]);
 
   useEffect(() => {
-    setTab(normalizeTab(searchParams.get('tab'), propertyTabs));
+    const next = normalizeTab(searchParams.get('tab'), propertyTabs);
+    setTab((prev) => (prev === next ? prev : next));
   }, [searchParams, propertyTabs]);
 
   /** Desktop uses the shell sidebar for Gii — never keep mobile-only tabs active. */
@@ -212,8 +213,8 @@ export default function PropertyDetailPage() {
 
   useEffect(() => {
     if (!inspectionFocusId || !propertyTabs.includes('Inspection')) return;
-    setTab('Inspection');
-    setSelectedInspectionId(inspectionFocusId);
+    setTab((prev) => (prev === 'Inspection' ? prev : 'Inspection'));
+    setSelectedInspectionId((prev) => (prev === inspectionFocusId ? prev : inspectionFocusId));
   }, [inspectionFocusId, propertyTabs]);
 
   useEffect(() => {
@@ -267,6 +268,17 @@ export default function PropertyDetailPage() {
     const query = next.toString();
     router.replace(query ? `/properties/${id}?${query}` : `/properties/${id}`);
   }, [id, router, searchParams]);
+
+  const handleViewInspection = useCallback(
+    (inspectionId: string | null) => {
+      if (inspectionId) {
+        setSelectedInspectionId(inspectionId);
+        return;
+      }
+      clearPropertyInspectionFocus();
+    },
+    [clearPropertyInspectionFocus],
+  );
 
   if (!property) {
     if (propertyLoadState === 'missing') notFound();
@@ -564,7 +576,7 @@ export default function PropertyDetailPage() {
             tenantSelections={propertyLeasingCases}
             currentLease={currentLease}
             isVacant={isVacant}
-            onViewInspection={setSelectedInspectionId}
+            onViewInspection={handleViewInspection}
             onRefresh={() => void refresh()}
           />
         )}
