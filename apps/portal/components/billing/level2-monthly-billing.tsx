@@ -7,6 +7,7 @@ import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-li
 import {
   derivePropertyIncludedUsage,
   includedAllowanceRemainingLabel,
+  isMonthlyInvoiceServiceType,
   platformChargeServiceAmountLabel,
   platformChargeShowsAllowanceRemaining,
   propertyLabelFromCharge,
@@ -166,7 +167,8 @@ export function buildLevel2MonthGroups(
 
   const chargesByMonth = new Map<string, AgentBillingCharge[]>();
   for (const charge of charges) {
-  if (charge.collectionMode !== 'postpaid') continue;
+    if (!isMonthlyInvoiceServiceType(charge.serviceType)) continue;
+    if (charge.collectionMode !== 'postpaid') continue;
     if (charge.includedInAllowance || charge.status === 'included') continue;
     if (charge.status === 'refunded') continue;
 

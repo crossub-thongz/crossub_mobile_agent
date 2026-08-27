@@ -43,6 +43,7 @@ import {
   fetchAgentBillingPricing,
   fetchAgentBillingSummary,
   fetchAgentMonthlyInvoice,
+  isPrepaidInspectionServiceType,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
   payAllAgentBilling,
@@ -352,7 +353,11 @@ export default function BillPage() {
   const prepaidExtras = useMemo(
     () =>
       charges
-        .filter((row) => row.collectionMode === 'prepaid')
+        .filter(
+          (row) =>
+            isPrepaidInspectionServiceType(row.serviceType) ||
+            row.collectionMode === 'prepaid',
+        )
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [charges],
   );
@@ -502,9 +507,9 @@ export default function BillPage() {
           description={
             usesMonthlyInvoice
               ? summary?.portalServiceLevel === 'LEVEL_3_LEGACY'
-                ? 'Monthly invoice is letting fee, management fee, tribunal, and insurance. Extra routine, ingoing and outgoing inspections after included usage are prepaid. Open inspections are not charged.'
-                : 'Monthly invoice is management fee, tribunal, and insurance. Extra open, routine, ingoing and outgoing inspections after included usage are prepaid.'
-              : 'Prepaid service charges for your agency. Unaccepted jobs are refunded after 48 hours.'
+                ? 'Monthly invoice is letting fee and management fee. Extra inspections after included usage are prepaid on Bills. Open inspections are not charged.'
+                : 'Monthly invoice is management fee. Extra open, routine, ingoing and outgoing inspections after included usage are prepaid on Bills.'
+              : 'Prepaid inspection charges for your agency. Unaccepted jobs are refunded after 48 hours.'
           }
         />
 
@@ -724,7 +729,7 @@ export default function BillPage() {
             title="No monthly invoices yet"
             description={
               usesMonthlyInvoice
-                ? 'Management fee, letting fee, tribunal, and insurance appear here by property once Accounting sends the invoice.'
+                ? 'Management fee and letting fee appear here by property once Accounting sends the invoice. Inspections are prepaid on Bills.'
                 : 'Monthly service invoices will appear here when they are issued.'
             }
           />
@@ -749,7 +754,6 @@ export default function BillPage() {
                 <Level2MonthlyBillingList
                   charges={charges}
                   invoices={invoices}
-                  includedUsageByProperty={includedUsageByProperty}
                   overdueLockDays={summary?.overdueLockDays ?? 7}
                   billingBlocked={summary?.billingBlocked === true}
                   openingInvoiceId={openingInvoiceId}

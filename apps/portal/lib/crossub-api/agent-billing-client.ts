@@ -34,6 +34,28 @@ export type AgentBillingCharge = {
   allowanceRemaining?: number | null;
 };
 
+export const PREPAID_INSPECTION_SERVICE_TYPES = new Set([
+  'open_inspection',
+  'routine_inspection',
+  'ingoing_inspection',
+  'outgoing_inspection',
+]);
+
+/** Monthly tax invoice lines: management fee, letting fee (legacy), tribunal. */
+export const MONTHLY_INVOICE_SERVICE_TYPES = new Set([
+  'service_fee',
+  'letting_fee',
+  'tribunal',
+]);
+
+export function isPrepaidInspectionServiceType(serviceType: string): boolean {
+  return PREPAID_INSPECTION_SERVICE_TYPES.has(serviceType);
+}
+
+export function isMonthlyInvoiceServiceType(serviceType: string): boolean {
+  return MONTHLY_INVOICE_SERVICE_TYPES.has(serviceType);
+}
+
 const LEVEL2_ALLOWANCE_SERVICE_TYPES = new Set([
   'routine_inspection',
   'ingoing_inspection',
