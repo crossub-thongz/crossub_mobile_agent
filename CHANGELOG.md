@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-27
+
+### Fixed
+- ⭐ **CRS-0150: the rent review form seeded its "current rent" from the lease, not from the property record.** `resolveWeeklyRent` read `LeasingRecord.rentWeekly` first and reached `Property.rentWeekly` only fifth — and the lease figure is the rent **as at signing**, deliberately never rewritten. On any property whose rent has moved since the tenancy was let, the form opened on the superseded number. That matters more here than anywhere else it has been fixed: `RentReview.currentRent` is stored verbatim from this form and nothing downstream ever re-reads the record, so it becomes the base of the increase, the *"current rent"* line on the statutory notice the tenant receives, and the denominator of every percentage in the landlord pack. The resolver is now split in two — `resolveCurrentWeeklyRent` (registry first) for the rent review, `resolveSigningWeeklyRent` (lease first, unchanged) for the bond estimate, because a bond is four weeks of the rent that was *agreed*, not of the rent in force today. The staff web app was moved onto this ordering the same day; this is the same change in the app agents actually raise reviews from.
+- ⭐⭐ **A wheel over a focused `type="number"` field was silently stepping its value.** No keystroke, no visual event, nothing in the DOM to say it happened — scroll a dialog to reach its submit button with the cursor still over a money field and the amount already read and accepted is now different. On production, two rent reviews raised sixteen minutes apart on 27 Aug captured base rents of **$529** and **$930** against records holding **$530.00** and **$900.00**; neither figure exists on any record anywhere, one step down and thirty steps up. `components/ui/input.tsx` now registers a **native, non-passive** `wheel` listener that calls `preventDefault()` while the field holds focus. All three parts are load-bearing and each fails silently alone: React attaches its own wheel handlers passively at the root, so `preventDefault()` from an `onWheel` prop is ignored; without `{ passive: false }` it is ignored again; and without the focus check, scrolling *past* an input would eat the page's scroll. This covers every numeric field in the portal, not just the rent one.
+- ⚠️ **Two `tsc --noEmit` errors in `register-confirm-panel.tsx` are pre-existing on `main`** (`LEVEL_3_LEGACY` missing from `Record<RegisterablePortalServiceLevel, string>`) and are untouched by this change.
+
 ## 2026-08-26
 
 ### Fixed
