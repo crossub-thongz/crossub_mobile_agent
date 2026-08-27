@@ -31,7 +31,6 @@ export function resolvePropertyLeasingJob(input: {
 }): PropertyLeasingJob {
   const {
     isVacant,
-    inOpenInspectionPhase,
     hasActiveLeasingCycle,
     tenantSelections,
     vacatingCases,
@@ -42,8 +41,7 @@ export function resolvePropertyLeasingJob(input: {
 
   if (
     tenantSelections.length > 0 ||
-    hasActiveLeasingCycle ||
-    (inOpenInspectionPhase && isVacant)
+    hasActiveLeasingCycle
   ) {
     const pending = tenantSelections.find((t) => t.requiresApproval);
     const primary = pending ?? tenantSelections[0];

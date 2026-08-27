@@ -17,6 +17,7 @@ import { LeasingTenancySummary } from '@/components/agent/leasing-tenancy-summar
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
   cancelAgentLeasingCycle,
   cancelAgentTerminationCase,
@@ -113,6 +114,7 @@ export function PropertyLeasingJobPanel({
   deletedEndLeasingCases?: ArchivedEndLeasingCase[];
 }) {
   const { apiConnected, refresh } = useAgentData();
+  const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
   const workflowCases = useMemo(
     () =>
       filterLeasingTabWorkflowCases(
@@ -275,6 +277,7 @@ export function PropertyLeasingJobPanel({
     }
     if (deleteTarget.category === 'leasing') {
       await cancelAgentLeasingCycle(propertyId, deleteTarget.id, { reason, force: true });
+      clearDetail(propertyId);
     } else if (deleteTarget.category === 'end_leasing') {
       await cancelAgentTerminationCase(propertyId, deleteTarget.id, { reason });
     } else {

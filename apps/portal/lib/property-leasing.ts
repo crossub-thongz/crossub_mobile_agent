@@ -1,4 +1,5 @@
 import type { Inspection, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
+import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
 /** True when the property profile has a real tenant name (not vacant placeholders). */
@@ -93,6 +94,7 @@ export function getActiveOpenInspection(
     (i) =>
       i.propertyId === propertyId &&
       i.type === 'OPEN' &&
+      !isDeletedInspection(i) &&
       !i.status.toLowerCase().includes('complete'),
   );
 }
@@ -118,6 +120,7 @@ export function getActiveOutgoingInspection(
     (i) =>
       i.propertyId === propertyId &&
       i.type === 'OUTGOING' &&
+      !isDeletedInspection(i) &&
       !i.status.toLowerCase().includes('complete'),
   );
 }

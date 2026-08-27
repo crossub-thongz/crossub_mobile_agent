@@ -42,8 +42,7 @@ export function LeasingWorkflowTimeline({
   const { leasingCycles, apiConnected } = useAgentData();
   const propertyCycles = (leasingCycles ?? []).filter((c) => c.propertyId === propertyId);
   const activeCycleId = splitLeasingCyclesByHistory(propertyCycles).active[0]?.id;
-  const resolvedCycleId =
-    leasingCycleId ?? activeCycleId ?? propertyCycles[0]?.id;
+  const resolvedCycleId = leasingCycleId ?? activeCycleId;
   const initializedKeyRef = useRef<string | null>(null);
   const bondFocusAppliedRef = useRef(false);
 
