@@ -72,6 +72,8 @@ export interface InspectionRecord {
   updatedAt: string
   /** ISO — 48h inspector-confirm window for prepaid orders (DRAFT only). */
   inspectorConfirmDeadlineAt?: string | null
+  /** Prepaid platform fee is still unpaid after a staff-created order. */
+  awaitingAgentPayment?: boolean
   /** Case closed and prepaid fee refunded — no inspector confirmed in 48 hours. */
   unacceptedRefunded?: boolean
 }

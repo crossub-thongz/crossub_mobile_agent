@@ -383,6 +383,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       status: inspectionStatusLabel(i),
       apiStatus: i.status,
       inspectorConfirmDeadlineAt: i.inspectorConfirmDeadlineAt ?? undefined,
+      awaitingAgentPayment: i.awaitingAgentPayment === true,
       unacceptedRefunded: i.unacceptedRefunded === true,
       reportStatus: inspectionReportStatus(i),
       reportUrl: i.reportUrl ?? undefined,

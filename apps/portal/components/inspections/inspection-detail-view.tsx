@@ -590,9 +590,13 @@ export function InspectionDetailView({
         }
         propertyId={insp.propertyId}
         deadlineAt={
-          routineInspectionRecord?.inspectorConfirmDeadlineAt ??
-          poolInspectionRecord?.inspectorConfirmDeadlineAt ??
-          insp.inspectorConfirmDeadlineAt
+          routineInspectionRecord?.awaitingAgentPayment === true ||
+          poolInspectionRecord?.awaitingAgentPayment === true ||
+          insp.awaitingAgentPayment === true
+            ? null
+            : (routineInspectionRecord?.inspectorConfirmDeadlineAt ??
+              poolInspectionRecord?.inspectorConfirmDeadlineAt ??
+              insp.inspectorConfirmDeadlineAt)
         }
         refunded={
           routineInspectionRecord?.unacceptedRefunded === true ||

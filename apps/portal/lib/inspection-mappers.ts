@@ -126,6 +126,7 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     approvedAt: record.approvedAt ?? undefined,
     reportDeclineReason: record.reportDeclineReason ?? undefined,
     inspectorConfirmDeadlineAt: record.inspectorConfirmDeadlineAt ?? undefined,
+    awaitingAgentPayment: record.awaitingAgentPayment === true,
     unacceptedRefunded: record.unacceptedRefunded === true,
     routineMode: record.routineFlow ?? undefined,
     cancelReason: record.cancelReason ?? undefined,

@@ -436,9 +436,11 @@ export function OutgoingFieldInspectionDetail({
         propertyId={inspection.propertyId}
         apiStatus={record?.status ?? inspection.apiStatus}
         deadlineAt={
-          gateStatus === 'pending'
-            ? (record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt)
-            : null
+          record?.awaitingAgentPayment === true || inspection.awaitingAgentPayment === true
+            ? null
+            : gateStatus === 'pending'
+              ? (record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt)
+              : null
         }
         refunded={record?.unacceptedRefunded === true || inspection.unacceptedRefunded === true}
         onClosed={() => {

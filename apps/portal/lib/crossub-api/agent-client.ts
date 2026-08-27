@@ -26,6 +26,7 @@ export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   /** Prior inspector when staff reassigned a DRAFT job before work started. */
   previousInspectorName?: string | null;
   inspectorConfirmDeadlineAt?: string | null;
+  awaitingAgentPayment?: boolean;
   unacceptedRefunded?: boolean;
   completedDate?: string | null;
   approvedAt?: string | null;

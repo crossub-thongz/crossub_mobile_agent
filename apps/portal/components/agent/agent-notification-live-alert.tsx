@@ -16,6 +16,7 @@ import {
 } from '@/lib/notification-alert-state';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { agentNotificationDisplay } from '@/lib/notification-activity';
+import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
 import { useAgentStore } from '@/lib/store';
 import type { AgentNotification } from '@/lib/types';
 import { cn, formatRelative } from '@/lib/utils';
@@ -47,7 +48,16 @@ export function AgentNotificationLiveAlert() {
 
     if (!seededRef.current) {
       seededRef.current = true;
+      const paymentReminders = notifications.filter(
+        (n) =>
+          !n.read &&
+          isAgentPaymentNotification(n) &&
+          notificationMatchesPrefs(n, prefs),
+      );
       for (const id of ids) knownIdsRef.current.add(id);
+      if (paymentReminders.length > 0) {
+        setQueue(paymentReminders);
+      }
       return;
     }
 
@@ -56,7 +66,7 @@ export function AgentNotificationLiveAlert() {
         !knownIdsRef.current.has(n.id) &&
         !n.read &&
         notificationMatchesPrefs(n, prefs) &&
-        !hasAlertedNotification(n.id),
+        (isAgentPaymentNotification(n) || !hasAlertedNotification(n.id)),
     );
 
     for (const id of ids) knownIdsRef.current.add(id);
@@ -85,7 +95,9 @@ export function AgentNotificationLiveAlert() {
 
   const dismissCurrent = () => {
     if (!current) return;
-    markNotificationAlerted(current.id);
+    if (!isAgentPaymentNotification(current)) {
+      markNotificationAlerted(current.id);
+    }
     setVisible(false);
     window.setTimeout(() => {
       setQueue((prev) => prev.filter((n) => n.id !== current.id));
@@ -94,7 +106,9 @@ export function AgentNotificationLiveAlert() {
 
   const openCurrent = () => {
     if (!current) return;
-    markNotificationAlerted(current.id);
+    if (!isAgentPaymentNotification(current)) {
+      markNotificationAlerted(current.id);
+    }
     markNotificationRead(current.id);
     setVisible(false);
     window.setTimeout(() => {
@@ -180,7 +194,9 @@ export function AgentNotificationLiveAlert() {
               <Link
                 href={ROUTES.NOTIFICATIONS}
                 onClick={() => {
-                  markNotificationAlerted(current.id);
+                  if (!isAgentPaymentNotification(current)) {
+                    markNotificationAlerted(current.id);
+                  }
                   setQueue((prev) => prev.filter((n) => n.id !== current.id));
                 }}
                 className="text-primary ml-auto text-[11px] font-medium hover:underline"

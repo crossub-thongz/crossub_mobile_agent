@@ -385,9 +385,12 @@ export function IngoingInspectionAgentDetail({
         inspectionId={snapshot.record?.id ?? inspection.id}
         propertyId={inspection.propertyId}
         deadlineAt={
-          gateStatus === 'pending'
-            ? (snapshot.record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt)
-            : null
+          snapshot.record?.awaitingAgentPayment === true ||
+          inspection.awaitingAgentPayment === true
+            ? null
+            : gateStatus === 'pending'
+              ? (snapshot.record?.inspectorConfirmDeadlineAt ?? inspection.inspectorConfirmDeadlineAt)
+              : null
         }
         refunded={
           snapshot.record?.unacceptedRefunded === true || inspection.unacceptedRefunded === true
