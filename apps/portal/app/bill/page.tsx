@@ -18,6 +18,8 @@ import {
   daysUntilAccountLock,
   formatAccountLockCountdown,
   groupChargesByProperty,
+  monthKeyFromIso,
+  monthLabel,
   PropertyIncludedSummary,
   propertyGroupKindLabel,
 } from '@/components/billing/level2-monthly-billing';
@@ -262,6 +264,77 @@ function PropertyGroupedChargeList({
   );
 }
 
+function billedBillAmount(row: AgentBillingCharge): number {
+  if (row.status === 'void' || row.status === 'refunded' || row.status === 'included' || row.includedInAllowance) {
+    return 0;
+  }
+  return row.amount;
+}
+
+function PrepaidMonthlyBillingList({
+  charges,
+  includedUsageByProperty,
+  disabled,
+  openingInvoiceId,
+  onOpenInvoice,
+  onViewCharge,
+}: {
+  charges: AgentBillingCharge[];
+  includedUsageByProperty: AgentBillingIncludedUsageRow[];
+  disabled: boolean;
+  openingInvoiceId: string | null;
+  onOpenInvoice: (invoiceId: string) => void;
+  onViewCharge: (row: AgentBillingCharge) => void;
+}) {
+  const months = useMemo(() => {
+    const byMonth = new Map<string, AgentBillingCharge[]>();
+    for (const row of charges) {
+      const key = monthKeyFromIso(row.createdAt);
+      const list = byMonth.get(key) ?? [];
+      list.push(row);
+      byMonth.set(key, list);
+    }
+    return [...byMonth.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, rows]) => ({
+        key,
+        label: monthLabel(key),
+        charges: rows,
+        totalAud: rows.reduce((sum, row) => sum + billedBillAmount(row), 0),
+      }));
+  }, [charges]);
+
+  if (months.length === 0) return null;
+
+  return (
+    <div className="space-y-5">
+      {months.map((month) => (
+        <section
+          key={month.key}
+          className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm"
+        >
+          <header className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/30 px-5 py-4">
+            <h3 className="text-base font-semibold tracking-tight">{month.label}</h3>
+            <p className="text-lg font-semibold tabular-nums tracking-tight">
+              {formatCurrency(month.totalAud)}
+            </p>
+          </header>
+          <div className="p-3">
+            <PropertyGroupedChargeList
+              charges={month.charges}
+              includedUsageByProperty={includedUsageByProperty}
+              disabled={disabled}
+              openingInvoiceId={openingInvoiceId}
+              onOpenInvoice={onOpenInvoice}
+              onViewCharge={onViewCharge}
+            />
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export default function BillPage() {
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charges, setCharges] = useState<AgentBillingCharge[]>([]);
@@ -297,7 +370,13 @@ export default function BillPage() {
   );
 
   const outstandingCount = payableCharges.length + payableInvoices.length;
-  const showPayAll = outstandingCount >= 2;
+  const showPayAll = billingTab === 'all' && outstandingCount >= 2;
+  const openInvoiceAmount = useMemo(() => {
+    if (summary?.outstandingInvoiceAmount && summary.outstandingInvoiceAmount > 0) {
+      return summary.outstandingInvoiceAmount;
+    }
+    return payableInvoices.reduce((sum, row) => sum + row.amountDue, 0);
+  }, [summary?.outstandingInvoiceAmount, payableInvoices]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -362,6 +441,12 @@ export default function BillPage() {
     [charges],
   );
 
+  const payableBills = useMemo(() => prepaidExtras.filter(isPayableCharge), [prepaidExtras]);
+  const billsOutstandingTotal = useMemo(
+    () => payableBills.reduce((sum, row) => sum + row.amount, 0),
+    [payableBills],
+  );
+
   const level2MonthGroups = useMemo(
     () =>
       buildLevel2MonthGroups(charges, invoices, {
@@ -373,6 +458,18 @@ export default function BillPage() {
   const invoiceCount = level2MonthGroups.length;
   const billsCount = prepaidExtras.length;
   const hasBillingRows = invoiceCount > 0 || billsCount > 0;
+  const tabOutstandingTotal =
+    billingTab === 'invoice'
+      ? openInvoiceAmount
+      : billingTab === 'bills'
+        ? billsOutstandingTotal
+        : outstandingTotal;
+  const tabOutstandingCount =
+    billingTab === 'invoice'
+      ? payableInvoices.length
+      : billingTab === 'bills'
+        ? payableBills.length
+        : outstandingCount;
 
   const openInvoiceLockDays = useMemo(() => {
     if (!usesMonthlyInvoice || summary?.billingBlocked || !summary?.nextInvoiceDueDate) return null;
@@ -387,7 +484,7 @@ export default function BillPage() {
     summary?.overdueLockDays,
   ]);
 
-  const outstandingCountDisplay = outstandingCount;
+  const outstandingCountDisplay = tabOutstandingCount;
 
   const openInvoiceById = async (invoiceId: string) => {
     const existing = invoices.find((row) => row.id === invoiceId);
@@ -579,11 +676,29 @@ export default function BillPage() {
           </div>
         ) : null}
 
-        {summary && (summary.outstandingInvoiceAmount > 0 || outstandingTotal > 0) ? (
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold tracking-tight">
+              {usesMonthlyInvoice ? 'Billing' : 'All payments'}
+              {outstandingCountDisplay > 0 ? (
+                <span className="text-muted-foreground ml-2 text-xs font-normal">
+                  {outstandingCountDisplay} awaiting payment
+                </span>
+              ) : null}
+            </h2>
+            <Button type="button" variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
+              <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
+              Refresh
+            </Button>
+          </div>
+          <FilterChips options={BILLING_TABS} value={billingTab} onChange={setBillingTab} />
+        </div>
+
+        {summary && tabOutstandingTotal > 0 ? (
           <div
             className={cn(
               'rounded-2xl border p-5 shadow-sm',
-              usesMonthlyInvoice
+              usesMonthlyInvoice && billingTab !== 'bills'
                 ? summary.billingBlocked || (openInvoiceLockDays != null && openInvoiceLockDays <= 3)
                   ? 'border-destructive/35 bg-destructive/10'
                   : 'border-amber-500/35 bg-amber-500/10'
@@ -592,22 +707,40 @@ export default function BillPage() {
           >
             <p
               className={
-                usesMonthlyInvoice
+                usesMonthlyInvoice && billingTab !== 'bills'
                   ? 'text-base font-semibold text-amber-950 dark:text-amber-100'
                   : 'text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground'
               }
             >
-              {usesMonthlyInvoice
-                ? summary.billingBlocked ||
-                  payableInvoices.some((row) => row.status === 'overdue')
-                  ? 'Your invoice is overdue'
-                  : 'Your invoice is ready'
-                : 'Outstanding balance'}
+              {billingTab === 'bills'
+                ? 'Prepaid bills'
+                : billingTab === 'all'
+                  ? 'Invoice + bills'
+                  : usesMonthlyInvoice
+                    ? summary.billingBlocked ||
+                      payableInvoices.some((row) => row.status === 'overdue')
+                      ? 'Your invoice is overdue'
+                      : 'Your invoice is ready'
+                    : 'Outstanding balance'}
             </p>
             <p className="mt-1.5 text-3xl font-semibold tracking-tight tabular-nums">
-              {formatCurrency(outstandingTotal || summary.outstandingInvoiceAmount)}
+              {formatCurrency(tabOutstandingTotal)}
             </p>
-            {usesMonthlyInvoice ? (
+            {billingTab === 'bills' ? (
+              <p className="text-muted-foreground mt-1 text-sm">
+                Extra inspections this month are prepaid. Pay each bill below.
+              </p>
+            ) : billingTab === 'all' && usesMonthlyInvoice ? (
+              <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/90">
+                {openInvoiceAmount > 0
+                  ? `${summary.openInvoiceNumber ? `${summary.openInvoiceNumber} ` : 'Invoice '}${formatCurrency(openInvoiceAmount)}`
+                  : 'No monthly invoice due'}
+                {billsOutstandingTotal > 0
+                  ? ` + ${payableBills.length} prepaid bill${payableBills.length === 1 ? '' : 's'} ${formatCurrency(billsOutstandingTotal)}`
+                  : ''}
+                .
+              </p>
+            ) : usesMonthlyInvoice ? (
               <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/90">
                 Please pay
                 {summary.openInvoiceNumber ? ` ${summary.openInvoiceNumber}` : ' your CROSSUB invoice'}
@@ -624,7 +757,7 @@ export default function BillPage() {
                   : null}
               </p>
             ) : null}
-            {usesMonthlyInvoice && openInvoiceLockDays != null ? (
+            {usesMonthlyInvoice && billingTab !== 'bills' && openInvoiceLockDays != null ? (
               <p
                 className={cn(
                   'mt-2 text-sm font-medium',
@@ -637,7 +770,7 @@ export default function BillPage() {
               </p>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
-              {summary.openInvoiceId ? (
+              {billingTab !== 'bills' && summary.openInvoiceId ? (
                 <Button
                   type="button"
                   className="w-full sm:w-auto"
@@ -658,7 +791,7 @@ export default function BillPage() {
                   )}
                   {usesMonthlyInvoice ? 'Pay invoice' : 'View invoice'}
                 </Button>
-              ) : payableInvoices[0] && usesMonthlyInvoice ? (
+              ) : billingTab !== 'bills' && payableInvoices[0] && usesMonthlyInvoice ? (
                 <Button
                   type="button"
                   className="w-full sm:w-auto"
@@ -686,30 +819,12 @@ export default function BillPage() {
                   ) : (
                     <CreditCard className="size-4" />
                   )}
-                  Pay all ({outstandingCount} bills · {formatCurrency(outstandingTotal)})
+                  Pay all ({outstandingCount} · {formatCurrency(outstandingTotal)})
                 </Button>
               ) : null}
             </div>
           </div>
         ) : null}
-
-        <div className="space-y-3 pt-1">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold tracking-tight">
-              {usesMonthlyInvoice ? 'Billing' : 'All payments'}
-              {outstandingCountDisplay > 0 ? (
-                <span className="text-muted-foreground ml-2 text-xs font-normal">
-                  {outstandingCountDisplay} awaiting payment
-                </span>
-              ) : null}
-            </h2>
-            <Button type="button" variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
-              <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
-              Refresh
-            </Button>
-          </div>
-          <FilterChips options={BILLING_TABS} value={billingTab} onChange={setBillingTab} />
-        </div>
 
         {loading ? (
           <div className="flex justify-center py-16">
@@ -787,7 +902,7 @@ export default function BillPage() {
                     Bills
                   </h3>
                 ) : null}
-                <PropertyGroupedChargeList
+                <PrepaidMonthlyBillingList
                   charges={prepaidExtras}
                   includedUsageByProperty={includedUsageByProperty}
                   disabled={

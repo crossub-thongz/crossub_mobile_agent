@@ -167,8 +167,15 @@ export function buildLevel2MonthGroups(
 
   const chargesByMonth = new Map<string, AgentBillingCharge[]>();
   for (const charge of charges) {
-    if (!isMonthlyInvoiceServiceType(charge.serviceType)) continue;
-    if (charge.collectionMode !== 'postpaid') continue;
+    const linkedInvoice =
+      charge.monthlyInvoiceId && invoiceById.has(charge.monthlyInvoiceId)
+        ? invoiceById.get(charge.monthlyInvoiceId)
+        : undefined;
+    const alreadyOnInvoice = Boolean(linkedInvoice);
+    if (!alreadyOnInvoice) {
+      if (!isMonthlyInvoiceServiceType(charge.serviceType)) continue;
+      if (charge.collectionMode !== 'postpaid') continue;
+    }
     if (charge.includedInAllowance || charge.status === 'included') continue;
     if (charge.status === 'refunded') continue;
 
