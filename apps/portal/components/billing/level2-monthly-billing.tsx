@@ -145,8 +145,8 @@ export function formatAccountLockCountdown(days: number): string {
 }
 
 /**
- * Group Level 2 postpaid charges + monthly invoices by Sydney calendar month.
- * Invoice period (prefer periodEnd) wins for linked charges; otherwise charge createdAt.
+ * Group Level 2 invoice-eligible charges + monthly invoices by Sydney calendar month.
+ * Invoice periodStart is the billing month (periodEnd can land on 1 Sep in Sydney).
  */
 export function buildLevel2MonthGroups(
   charges: AgentBillingCharge[],
@@ -158,7 +158,7 @@ export function buildLevel2MonthGroups(
   const invoiceById = new Map(invoices.map((row) => [row.id, row]));
   const invoiceByMonth = new Map<string, AgentBillingMonthlyInvoice>();
   for (const invoice of invoices) {
-    const key = monthKeyFromIso(invoice.periodEnd || invoice.periodStart);
+    const key = monthKeyFromIso(invoice.periodStart || invoice.periodEnd);
     const existing = invoiceByMonth.get(key);
     if (!existing || new Date(invoice.periodEnd).getTime() > new Date(existing.periodEnd).getTime()) {
       invoiceByMonth.set(key, invoice);
@@ -172,17 +172,15 @@ export function buildLevel2MonthGroups(
         ? invoiceById.get(charge.monthlyInvoiceId)
         : undefined;
     const alreadyOnInvoice = Boolean(linkedInvoice);
-    if (!alreadyOnInvoice) {
-      if (!isMonthlyInvoiceServiceType(charge.serviceType)) continue;
-      if (charge.collectionMode !== 'postpaid') continue;
-    }
+    if (!isMonthlyInvoiceServiceType(charge.serviceType)) continue;
+    if (!alreadyOnInvoice && charge.collectionMode !== 'postpaid') continue;
     if (charge.includedInAllowance || charge.status === 'included') continue;
     if (charge.status === 'refunded') continue;
 
     let key: string;
     if (charge.monthlyInvoiceId && invoiceById.has(charge.monthlyInvoiceId)) {
       const invoice = invoiceById.get(charge.monthlyInvoiceId)!;
-      key = monthKeyFromIso(invoice.periodEnd || invoice.periodStart);
+      key = monthKeyFromIso(invoice.periodStart || invoice.periodEnd);
     } else {
       key = monthKeyFromIso(charge.createdAt);
     }

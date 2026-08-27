@@ -45,6 +45,7 @@ import {
   fetchAgentBillingPricing,
   fetchAgentBillingSummary,
   fetchAgentMonthlyInvoice,
+  isMonthlyInvoiceServiceType,
   isPrepaidInspectionServiceType,
   listAgentChargeHistory,
   listAgentInvoiceHistory,
@@ -359,24 +360,12 @@ export default function BillPage() {
     summary?.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT' ||
     summary?.portalServiceLevel === 'LEVEL_3_LEGACY';
 
-  const payableCharges = useMemo(() => charges.filter(isPayableCharge), [charges]);
   const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
 
-  const outstandingTotal = useMemo(
-    () =>
-      payableCharges.reduce((sum, row) => sum + row.amount, 0) +
-      payableInvoices.reduce((sum, row) => sum + row.amountDue, 0),
-    [payableCharges, payableInvoices],
+  const openInvoiceAmount = useMemo(
+    () => payableInvoices.reduce((sum, row) => sum + row.amountDue, 0),
+    [payableInvoices],
   );
-
-  const outstandingCount = payableCharges.length + payableInvoices.length;
-  const showPayAll = billingTab === 'all' && outstandingCount >= 2;
-  const openInvoiceAmount = useMemo(() => {
-    if (summary?.outstandingInvoiceAmount && summary.outstandingInvoiceAmount > 0) {
-      return summary.outstandingInvoiceAmount;
-    }
-    return payableInvoices.reduce((sum, row) => sum + row.amountDue, 0);
-  }, [summary?.outstandingInvoiceAmount, payableInvoices]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -432,11 +421,13 @@ export default function BillPage() {
   const prepaidExtras = useMemo(
     () =>
       charges
-        .filter(
-          (row) =>
-            isPrepaidInspectionServiceType(row.serviceType) ||
-            row.collectionMode === 'prepaid',
-        )
+        .filter((row) => {
+          if (isMonthlyInvoiceServiceType(row.serviceType)) return false;
+          if (row.monthlyInvoiceId) return false;
+          return (
+            isPrepaidInspectionServiceType(row.serviceType) || row.collectionMode === 'prepaid'
+          );
+        })
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [charges],
   );
@@ -446,6 +437,9 @@ export default function BillPage() {
     () => payableBills.reduce((sum, row) => sum + row.amount, 0),
     [payableBills],
   );
+  const outstandingTotal = openInvoiceAmount + billsOutstandingTotal;
+  const outstandingCount = payableInvoices.length + payableBills.length;
+  const showPayAll = billingTab === 'all' && outstandingCount >= 2;
 
   const level2MonthGroups = useMemo(
     () =>
@@ -738,7 +732,10 @@ export default function BillPage() {
                 {billsOutstandingTotal > 0
                   ? ` + ${payableBills.length} prepaid bill${payableBills.length === 1 ? '' : 's'} ${formatCurrency(billsOutstandingTotal)}`
                   : ''}
-                .
+                {openInvoiceAmount > 0 && billsOutstandingTotal > 0
+                  ? ` = ${formatCurrency(outstandingTotal)}`
+                  : ''}
+                . Invoice is management fee only; inspections are prepaid bills.
               </p>
             ) : usesMonthlyInvoice ? (
               <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/90">
