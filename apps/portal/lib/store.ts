@@ -9,7 +9,7 @@ import type {
   OpenConductedBy,
   OpenListingContext,
 } from '@/lib/open-inspection';
-import { pickFresherInspection } from '@/lib/inspection-mappers';
+import { inspectionIdentityKey, pickFresherInspection } from '@/lib/inspection-mappers';
 import type { AgentDocument, Inspection, MessageMention, MessageThread, Property, PropertyPartyContact, ThreadMessage } from '@/lib/types';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatPropertyFullAddress } from '@/lib/utils';
@@ -404,6 +404,13 @@ export const useAgentStore = create<AgentStore>()(
           const merged = existing
             ? pickFresherInspection(existing, inspection)
             : inspection;
+          if (
+            existing &&
+            (existing === merged ||
+              inspectionIdentityKey(existing) === inspectionIdentityKey(merged))
+          ) {
+            return s;
+          }
           return {
             addedInspections: [
               merged,

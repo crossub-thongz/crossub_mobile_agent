@@ -124,7 +124,7 @@ export function InspectionsHub({
     await cancelInspectionJob(deleteTarget, reason);
     registerInspection(markInspectionCancelledLocally(deleteTarget));
     toast.success(inspectionJobDeleteCopy(deleteTarget).success);
-    await refresh({ force: true });
+    await refresh();
   };
 
   const deleteCopy = deleteTarget ? inspectionJobDeleteCopy(deleteTarget) : null;

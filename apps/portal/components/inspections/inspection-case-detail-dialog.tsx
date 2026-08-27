@@ -21,7 +21,7 @@ export function InspectionCaseDetailDialog({
   size?: 'default' | 'wide' | 'xl';
 }) {
   const { inspections } = useAgentData();
-  if (!inspectionId) return null;
+  if (!open || !inspectionId) return null;
 
   const inspection = inspections.find((item) => item.id === inspectionId);
 

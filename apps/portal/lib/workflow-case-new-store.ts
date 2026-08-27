@@ -19,10 +19,8 @@ interface WorkflowCaseNewStore {
 export const useWorkflowCaseNewStore = create<WorkflowCaseNewStore>((set, get) => ({
   revision: 0,
   seedSnapshot: (module, caseIds) => {
-    seedWorkflowCaseSnapshot(module, caseIds);
-    if (caseIds.length > 0) {
-      set((state) => ({ revision: state.revision + 1 }));
-    }
+    if (!seedWorkflowCaseSnapshot(module, caseIds)) return;
+    set((state) => ({ revision: state.revision + 1 }));
   },
   isNew: (module, caseId) => {
     void get().revision;

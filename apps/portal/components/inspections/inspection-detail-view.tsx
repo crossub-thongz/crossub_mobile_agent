@@ -98,6 +98,7 @@ import { openViewingsApi } from '@/lib/open-viewings-api';
 import {
   canDeleteOpenInspection,
   cancelOpenInspectionJob,
+  isDeletedInspection,
 } from '@/lib/open-inspection-delete';
 import { canCompleteOpenSessionReview } from '@/lib/open-inspection-session-rail';
 import { resolveOpenConductedBy } from '@/lib/open-inspection/open-conducted-by';
@@ -141,10 +142,17 @@ export function InspectionDetailView({
   const [resolveState, setResolveState] = useState<'pending' | 'ready' | 'missing'>(
     baseFromList ? 'ready' : 'pending',
   );
+  const listedDeleted = Boolean(baseFromList && isDeletedInspection(baseFromList));
 
   useEffect(() => {
     const listed = baseFromListRef.current;
     if (listed?.source === 'open_viewing') {
+      setFetchedBase(null);
+      setResolveState('ready');
+      return;
+    }
+
+    if (listed && isDeletedInspection(listed)) {
       setFetchedBase(null);
       setResolveState('ready');
       return;
@@ -189,7 +197,7 @@ export function InspectionDetailView({
     return () => {
       cancelled = true;
     };
-  }, [apiConnected, inspectionId, registerInspection]);
+  }, [apiConnected, inspectionId, listedDeleted, registerInspection]);
 
   const base =
     baseFromList && fetchedBase
@@ -305,7 +313,10 @@ export function InspectionDetailView({
   }, [
     activeLeasingCycle?.rentPerWeek,
     ensureLeasingDetail,
-    insp,
+    insp?.id,
+    insp?.propertyAddress,
+    insp?.propertyId,
+    insp?.type,
     linkedLeasingCycleId,
   ]);
 

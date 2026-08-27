@@ -56,6 +56,8 @@ export function InspectorConfirmCountdown({
   const [now, setNow] = useState(() => Date.now());
   const [expiring, setExpiring] = useState(false);
   const expireStartedRef = useRef(false);
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
 
   const draft = (apiStatus ?? '').toUpperCase() === 'DRAFT';
   const active = Boolean(deadlineAt) && draft && !refunded;
@@ -86,15 +88,15 @@ export function InspectorConfirmCountdown({
               : 'This job was closed and refunded — no inspector confirmed in 48 hours.',
           );
         }
-        onClosed?.();
+        onClosedRef.current?.();
       })
       .catch(() => {
-        onClosed?.();
+        onClosedRef.current?.();
       })
       .finally(() => {
         setExpiring(false);
       });
-  }, [expired, inspectionId, onClosed, inferredPostpaid]);
+  }, [expired, inspectionId, inferredPostpaid]);
 
   if (refunded) {
     return (

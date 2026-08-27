@@ -158,6 +158,19 @@ function inspectionFreshnessRank(row: Inspection): number {
   return rank;
 }
 
+/** Stable key so poll/store updates can skip React setState when nothing material changed. */
+export function inspectionIdentityKey(row: Inspection): string {
+  return [
+    row.id,
+    row.apiStatus ?? '',
+    row.status ?? '',
+    row.createdAt ?? '',
+    row.inspectorConfirmDeadlineAt ?? '',
+    row.unacceptedRefunded ? '1' : '0',
+    row.source ?? '',
+  ].join('|');
+}
+
 /** Prefer the further-along live row over a stale list snapshot. */
 export function pickFresherInspection(current: Inspection, incoming: Inspection): Inspection {
   if (incoming.id !== current.id) return incoming;

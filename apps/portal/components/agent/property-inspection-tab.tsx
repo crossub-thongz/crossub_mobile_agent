@@ -81,7 +81,7 @@ export function PropertyInspectionTab({
   tenantSelections: TenantSelectionCase[];
   currentLease?: LeasingRecord;
   isVacant: boolean;
-  onViewInspection?: (inspectionId: string) => void;
+  onViewInspection?: (inspectionId: string | null) => void;
   onRefresh?: () => void;
 }) {
   const { apiConnected, refresh, registerInspection } = useAgentData();
@@ -220,9 +220,9 @@ export function PropertyInspectionTab({
     await cancelInspectionJob(deleteTarget, reason);
     registerInspection(markInspectionCancelledLocally(deleteTarget));
     toast.success(inspectionJobDeleteCopy(deleteTarget).success);
-    handleDialogClose();
-    await refresh({ force: true });
-    await onRefresh?.();
+    setSelectedCaseId(null);
+    onViewInspection?.(null);
+    await refresh();
   };
 
   const inspectionTableProps = {
