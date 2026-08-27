@@ -73,8 +73,15 @@ export type Level2PropertyChargeGroup = {
 };
 
 function billedChargeAmount(row: AgentBillingCharge): number {
-  if (row.status === 'void' || row.status === 'refunded') return 0;
-  if (row.status === 'included' || row.includedInAllowance) return 0;
+  if (
+    row.status === 'void' ||
+    row.status === 'refunded' ||
+    row.status === 'paid' ||
+    row.status === 'included' ||
+    row.includedInAllowance
+  ) {
+    return 0;
+  }
   return row.amount;
 }
 
@@ -219,11 +226,11 @@ export function buildLevel2MonthGroups(
         : null;
 
     const totalAud =
-      invoice != null
-        ? invoice.amountDue
-        : monthCharges
-            .filter((row) => row.status !== 'void')
-            .reduce((sum, row) => sum + row.amount, 0);
+      invoice?.status === 'paid'
+        ? 0
+        : invoice != null
+          ? invoice.amountDue
+          : monthCharges.reduce((sum, row) => sum + billedChargeAmount(row), 0);
 
     groups.push({
       key,

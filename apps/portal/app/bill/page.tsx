@@ -60,12 +60,6 @@ import { cn, formatAgreementPeriod, formatCurrency, formatDate, formatDateTime }
 
 type BillingTab = 'all' | 'invoice' | 'bills';
 
-const BILLING_TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'invoice', label: 'Invoice' },
-  { id: 'bills', label: 'Bills' },
-] as const;
-
 const SERVICE_LABEL: Record<string, string> = {
   open_inspection: 'Open inspection',
   routine_inspection: 'Routine inspection',
@@ -266,10 +260,25 @@ function PropertyGroupedChargeList({
 }
 
 function billedBillAmount(row: AgentBillingCharge): number {
-  if (row.status === 'void' || row.status === 'refunded' || row.status === 'included' || row.includedInAllowance) {
+  if (
+    row.status === 'void' ||
+    row.status === 'refunded' ||
+    row.status === 'paid' ||
+    row.status === 'included' ||
+    row.includedInAllowance
+  ) {
     return 0;
   }
   return row.amount;
+}
+
+function isCountableBillingRow(status: string): boolean {
+  return status !== 'void' && status !== 'refunded';
+}
+
+function paidRatioLabel(paid: number, total: number): string {
+  if (total <= 0) return '';
+  return `${paid}/${total} paid`;
 }
 
 function PrepaidMonthlyBillingList({
@@ -449,8 +458,38 @@ export default function BillPage() {
     [charges, invoices, summary?.overdueLockDays],
   );
 
+  const invoicePaidCount = invoices.filter((row) => row.status === 'paid').length;
+  const invoiceTotalCount = invoices.filter((row) => row.status !== 'void').length;
+  const billsPaidCount = prepaidExtras.filter((row) => row.status === 'paid').length;
+  const billsTotalCount = prepaidExtras.filter((row) => isCountableBillingRow(row.status)).length;
+  const allPaidCount = invoicePaidCount + billsPaidCount;
+  const allTotalCount = invoiceTotalCount + billsTotalCount;
   const invoiceCount = level2MonthGroups.length;
   const billsCount = prepaidExtras.length;
+  const billingTabs = useMemo(
+    () =>
+      [
+        {
+          id: 'all' as const,
+          label: paidRatioLabel(allPaidCount, allTotalCount)
+            ? `All · ${paidRatioLabel(allPaidCount, allTotalCount)}`
+            : 'All',
+        },
+        {
+          id: 'invoice' as const,
+          label: paidRatioLabel(invoicePaidCount, invoiceTotalCount)
+            ? `Invoice · ${paidRatioLabel(invoicePaidCount, invoiceTotalCount)}`
+            : 'Invoice',
+        },
+        {
+          id: 'bills' as const,
+          label: paidRatioLabel(billsPaidCount, billsTotalCount)
+            ? `Bills · ${paidRatioLabel(billsPaidCount, billsTotalCount)}`
+            : 'Bills',
+        },
+      ] as const,
+    [allPaidCount, allTotalCount, invoicePaidCount, invoiceTotalCount, billsPaidCount, billsTotalCount],
+  );
   const hasBillingRows = invoiceCount > 0 || billsCount > 0;
   const tabOutstandingTotal =
     billingTab === 'invoice'
@@ -685,7 +724,7 @@ export default function BillPage() {
               Refresh
             </Button>
           </div>
-          <FilterChips options={BILLING_TABS} value={billingTab} onChange={setBillingTab} />
+          <FilterChips options={billingTabs} value={billingTab} onChange={setBillingTab} />
         </div>
 
         {summary && tabOutstandingTotal > 0 ? (
