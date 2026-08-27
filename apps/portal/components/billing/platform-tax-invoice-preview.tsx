@@ -160,7 +160,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
                   <td className="px-2 py-1.5 whitespace-pre-wrap">{line.rentAud ?? ''}</td>
                   <td className="px-2 py-1.5">{line.managementFee ?? ''}</td>
                   <td className="px-2 py-1.5">{line.crossubRate}</td>
-                  <td className="px-2 py-1.5">{line.activeDays ?? ''}</td>
+                  <td className="px-2 py-1.5 whitespace-pre-wrap">{line.activeDays ?? ''}</td>
                   <td className="text-foreground px-2 py-1.5 text-right tabular-nums">
                     {formatCurrency(line.amountExGst)}
                   </td>
