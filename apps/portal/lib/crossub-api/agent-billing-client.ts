@@ -399,6 +399,7 @@ export type AgentBillingTaxInvoiceLine = {
   managementRate: string;
   crossubRate: string;
   activeDays?: string;
+  activeDaysCount?: number | null;
   amountExGst: number;
   amountIncGst: number;
   serviceType: string;

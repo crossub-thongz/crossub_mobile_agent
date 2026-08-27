@@ -90,6 +90,22 @@ function issuerLetterheadLines(name: string, addressLines: string[]): string[] {
   return [trimmed, ...addressLines];
 }
 
+function ActiveDaysDisplay({
+  count,
+  range,
+}: {
+  count?: number | null;
+  range?: string | null;
+}) {
+  if (count == null && !range?.trim()) return null;
+  return (
+    <div className="space-y-0.5">
+      {count != null ? <p className="text-foreground font-medium tabular-nums">{count}</p> : null}
+      {range?.trim() ? <p className="whitespace-pre-wrap">{range}</p> : null}
+    </div>
+  );
+}
+
 export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTaxInvoice }) {
   const issuerLines = issuerLetterheadLines(invoice.issuerName, invoice.issuerAddressLines);
 
@@ -150,13 +166,14 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[56rem] border-collapse text-xs">
+        <table className="w-full min-w-[64rem] border-collapse text-xs">
           <thead>
             <tr className="border-y bg-muted/60 text-left">
               <th className="px-2 py-2 font-semibold">#</th>
               <th className="px-2 py-2 font-semibold">Address</th>
               <th className="px-2 py-2 font-semibold">Rent</th>
               <th className="px-2 py-2 font-semibold">PM Fee / Day</th>
+              <th className="px-2 py-2 font-semibold">Management Rate</th>
               <th className="px-2 py-2 font-semibold">Rate</th>
               <th className="px-2 py-2 font-semibold">Active Days</th>
               <th className="px-2 py-2 text-right font-semibold">Amount/PRP</th>
@@ -166,7 +183,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
             {groupLinesByProperty(invoice.lines).flatMap((group) => [
               <tr key={`property-${group.address}`} className="bg-muted/40 border-b">
                 <td className="px-2 py-1.5 font-semibold tabular-nums">{group.lineNo}</td>
-                <td className="px-2 py-1.5 font-semibold" colSpan={6}>
+                <td className="px-2 py-1.5 font-semibold" colSpan={7}>
                   {group.address}
                 </td>
               </tr>,
@@ -176,8 +193,11 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
                   <td className="px-2 py-1.5 pl-3">{serviceLabelFor(line)}</td>
                   <td className="px-2 py-1.5 whitespace-pre-wrap">{line.rentAud ?? ''}</td>
                   <td className="px-2 py-1.5">{line.managementFee ?? ''}</td>
+                  <td className="px-2 py-1.5">{line.managementRate}</td>
                   <td className="px-2 py-1.5">{line.crossubRate}</td>
-                  <td className="px-2 py-1.5 whitespace-pre-wrap">{line.activeDays ?? ''}</td>
+                  <td className="px-2 py-1.5">
+                    <ActiveDaysDisplay count={line.activeDaysCount} range={line.activeDays} />
+                  </td>
                   <td className="text-foreground px-2 py-1.5 text-right tabular-nums">
                     {formatCurrency(line.amountExGst)}
                   </td>
