@@ -75,8 +75,7 @@ export function isRoutinePlatformPaymentActive(args: {
   return (
     args.inspection.type === 'ROUTINE' &&
     args.routineFlow === 'in_person' &&
-    !args.isCancelledRoutine &&
-    inspectorBillingEligible(args.routineInspectionRecord, args.inspection)
+    !args.isCancelledRoutine
   );
 }
 

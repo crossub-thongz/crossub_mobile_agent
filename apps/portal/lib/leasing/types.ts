@@ -66,6 +66,7 @@ export interface LeasingOpenInspection {
   agentNotifiedToAdvertise: boolean;
   advertising: LeasingAdvertisingStatus;
   advertisingNote?: string;
+  awaitingAgentPayment?: boolean;
 }
 
 export interface LeasingViewerInvite {
@@ -211,6 +212,7 @@ export interface LeasingIngoingInspectionState {
   reportAvailable: boolean;
   tenantConfirmed: boolean;
   disputes: LeasingIngoingDispute[];
+  awaitingAgentPayment?: boolean;
 }
 
 export interface LeasingIngoingApprovalState {

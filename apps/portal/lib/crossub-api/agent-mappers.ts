@@ -51,6 +51,7 @@ import { formatPropertyFullAddress } from '@/lib/utils';
 import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
 import { AGENT_OUTGOING_GATE_LABEL, deriveAgentOutgoingGateStatus } from '@/lib/outgoing-inspection-display';
+import { INSPECTION_AWAITING_PAYMENT_LABEL } from '@/lib/inspections/awaiting-payment';
 import type {
   AgencyMembershipTier,
   AgentArchiveView,
@@ -343,6 +344,7 @@ const INSPECTION_STATUS_LABEL: Record<AgentInspection['status'], string> = {
 
 function inspectionStatusLabel(dto: AgentInspection): string {
   if (dto.unacceptedRefunded) return 'Refunded';
+  if (dto.awaitingAgentPayment) return INSPECTION_AWAITING_PAYMENT_LABEL;
   const type = INSPECTION_TYPE_VIEW[dto.type] ?? 'ROUTINE';
   if (type === 'OPEN' && dto.status === INSPECTION_STATUS.CANCELLED) return 'Deleted';
   return INSPECTION_STATUS_LABEL[dto.status] ?? dto.status;
@@ -395,11 +397,13 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
       source: 'inspection' as const,
     };
     if (type === 'INGOING') {
-      inspectionRow.status =
-        AGENT_INGOING_GATE_LABEL[deriveAgentIngoingGateStatus({ inspection: inspectionRow, record: null })];
+      inspectionRow.status = i.awaitingAgentPayment
+        ? INSPECTION_AWAITING_PAYMENT_LABEL
+        : AGENT_INGOING_GATE_LABEL[deriveAgentIngoingGateStatus({ inspection: inspectionRow, record: null })];
     } else if (type === 'OUTGOING') {
-      inspectionRow.status =
-        AGENT_OUTGOING_GATE_LABEL[deriveAgentOutgoingGateStatus({ inspection: inspectionRow, record: null })];
+      inspectionRow.status = i.awaitingAgentPayment
+        ? INSPECTION_AWAITING_PAYMENT_LABEL
+        : AGENT_OUTGOING_GATE_LABEL[deriveAgentOutgoingGateStatus({ inspection: inspectionRow, record: null })];
     }
     return inspectionRow;
   });

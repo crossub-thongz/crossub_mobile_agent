@@ -12,6 +12,7 @@ import {
   type AgentOutgoingGateStatus,
   deriveAgentOutgoingGateStatus,
 } from '@/lib/outgoing-inspection-display';
+import { INSPECTION_AWAITING_PAYMENT_LABEL } from '@/lib/inspections/awaiting-payment';
 import type { Inspection } from '@/lib/types';
 
 import { buildCaseWorkflowProgress } from './build-progress';
@@ -115,29 +116,29 @@ function resolveRoutineInspectionStepId(inspection: Inspection): string {
 }
 
 export function inspectionWorkflowProgress(inspection: Inspection): CaseWorkflowProgress {
-  if (inspection.type === 'INGOING') {
-    return ingoingInspectionWorkflowProgress(
-      deriveAgentIngoingGateStatus({ inspection, record: null }),
-    );
-  }
+  const progress =
+    inspection.type === 'INGOING'
+      ? ingoingInspectionWorkflowProgress(
+          deriveAgentIngoingGateStatus({ inspection, record: null }),
+        )
+      : inspection.type === 'OUTGOING'
+        ? outgoingInspectionWorkflowProgress(
+            deriveAgentOutgoingGateStatus({ inspection, record: null }),
+          )
+        : inspection.type === 'OPEN' || inspection.source === 'open_viewing'
+          ? buildCaseWorkflowProgress(
+              'Open inspection workflow',
+              OPEN_AGENT_STEPS,
+              resolveOpenInspectionStepId(inspection),
+            )
+          : buildCaseWorkflowProgress(
+              'Routine inspection workflow',
+              INSPECTION_AGENT_STEPS,
+              resolveRoutineInspectionStepId(inspection),
+            );
 
-  if (inspection.type === 'OUTGOING') {
-    return outgoingInspectionWorkflowProgress(
-      deriveAgentOutgoingGateStatus({ inspection, record: null }),
-    );
+  if (inspection.awaitingAgentPayment) {
+    return { ...progress, currentStepLabel: INSPECTION_AWAITING_PAYMENT_LABEL };
   }
-
-  if (inspection.type === 'OPEN' || inspection.source === 'open_viewing') {
-    return buildCaseWorkflowProgress(
-      'Open inspection workflow',
-      OPEN_AGENT_STEPS,
-      resolveOpenInspectionStepId(inspection),
-    );
-  }
-
-  return buildCaseWorkflowProgress(
-    'Routine inspection workflow',
-    INSPECTION_AGENT_STEPS,
-    resolveRoutineInspectionStepId(inspection),
-  );
+  return progress;
 }

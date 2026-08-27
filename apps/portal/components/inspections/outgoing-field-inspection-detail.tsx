@@ -73,6 +73,11 @@ import { InspectionPlatformPaymentPrompt } from '@/components/billing/inspection
 import { InspectorConfirmCountdown } from '@/components/inspections/inspector-confirm-countdown';
 import { InspectionViewPaymentButton } from '@/components/billing/inspection-view-payment-button';
 import { isFieldInspectionPlatformPaymentActive } from '@/lib/billing/inspection-platform-payment';
+import {
+  INSPECTION_AWAITING_PAYMENT_BADGE_CLASS,
+  INSPECTION_AWAITING_PAYMENT_LABEL,
+  isAwaitingAgentPayment,
+} from '@/lib/inspections/awaiting-payment';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -419,6 +424,7 @@ export function OutgoingFieldInspectionDetail({
     record,
     inspection,
   });
+  const awaitingPayment = isAwaitingAgentPayment(record, inspection);
 
   return (
     <div className="space-y-4">
@@ -462,10 +468,14 @@ export function OutgoingFieldInspectionDetail({
                 <span
                   className={cn(
                     'rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                    gateStatusTone(gateStatus),
+                    awaitingPayment
+                      ? INSPECTION_AWAITING_PAYMENT_BADGE_CLASS
+                      : gateStatusTone(gateStatus),
                   )}
                 >
-                  {AGENT_OUTGOING_GATE_LABEL[gateStatus]}
+                  {awaitingPayment
+                    ? INSPECTION_AWAITING_PAYMENT_LABEL
+                    : AGENT_OUTGOING_GATE_LABEL[gateStatus]}
                 </span>
               </div>
               <h1 className="text-base font-semibold leading-snug">{inspection.propertyAddress}</h1>
@@ -523,7 +533,14 @@ export function OutgoingFieldInspectionDetail({
         </p>
         <WorkflowProgressRail
           steps={AGENT_OUTGOING_GATE_STEPS}
-          labels={AGENT_OUTGOING_GATE_LABEL}
+          labels={
+            awaitingPayment
+              ? {
+                  ...AGENT_OUTGOING_GATE_LABEL,
+                  [gateStatus]: INSPECTION_AWAITING_PAYMENT_LABEL,
+                }
+              : AGENT_OUTGOING_GATE_LABEL
+          }
           currentStep={viewingStep}
           liveStep={gateStatus}
           progressFillIndex={liveGateIndex}
@@ -540,7 +557,9 @@ export function OutgoingFieldInspectionDetail({
         />
         <p className="text-muted-foreground px-1 pb-1 text-xs leading-relaxed">
           <span className="font-medium text-foreground">
-            {AGENT_OUTGOING_GATE_LABEL[viewingStep]}
+            {awaitingPayment && viewingStep === gateStatus
+              ? INSPECTION_AWAITING_PAYMENT_LABEL
+              : AGENT_OUTGOING_GATE_LABEL[viewingStep]}
           </span>
           {' — '}
           {AGENT_OUTGOING_GATE_HINT[viewingStep]}

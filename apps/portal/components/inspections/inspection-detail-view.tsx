@@ -32,6 +32,10 @@ import {
   resolveOpenPlatformPaymentInspectionId,
   resolveRoutinePlatformPaymentInspectionId,
 } from '@/lib/billing/inspection-platform-payment';
+import {
+  INSPECTION_AWAITING_PAYMENT_LABEL,
+  isAwaitingAgentPayment,
+} from '@/lib/inspections/awaiting-payment';
 import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { RoutineCaseStatusSection } from '@/components/inspections/routine-case-status-section';
@@ -512,6 +516,12 @@ export function InspectionDetailView({
       leasingDetail,
       openSession,
     });
+  const awaitingPayment = isAwaitingAgentPayment(
+    routineInspectionRecord,
+    poolInspectionRecord,
+    insp,
+    openSession?.openInspection,
+  );
   const routineReportInspectionId =
     routineInspectionRecord?.id ??
     routineSchedule?.currentInspectionId ??
@@ -665,8 +675,11 @@ export function InspectionDetailView({
                   poolInspectionRecord?.unacceptedRefunded ||
                   insp.unacceptedRefunded
                     ? 'Refunded'
-                    : insp.status
+                    : awaitingPayment
+                      ? INSPECTION_AWAITING_PAYMENT_LABEL
+                      : insp.status
                 }
+                variant={awaitingPayment ? 'warning' : 'default'}
               />
             </div>
             <CaseAddressAssignedBar

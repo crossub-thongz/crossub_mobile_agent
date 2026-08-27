@@ -164,6 +164,8 @@ export interface OpenInspectionPoolJob {
   /** When this agent confirmed the scheduled time. Null means not yet — CROSSUB is waiting. */
   agentConfirmedAt: string | null;
   reportSentToAgentAt: string | null;
+  /** Prepaid Open fee is still unpaid — inspectors cannot claim or start. */
+  awaitingAgentPayment?: boolean;
 }
 
 export interface OpenInspectionSession {

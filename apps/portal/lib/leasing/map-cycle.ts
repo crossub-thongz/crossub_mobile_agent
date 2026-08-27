@@ -136,6 +136,7 @@ function mapOnboarding(view: ServerLeasingCycleView): LeasingPropertyDetail['onb
       inspectionId: ob?.ingoingInspection.inspectionId ?? undefined,
       reportAvailable: Boolean(ob?.ingoingInspection.inspectionId),
       tenantConfirmed: ob?.ingoingInspection.tenantConfirmed ?? false,
+      awaitingAgentPayment: ob?.ingoingInspection.awaitingAgentPayment === true,
       disputes: asArray(view.disputes).map((d) => ({
         id: d.id,
         area: d.area ?? '',
@@ -217,6 +218,7 @@ export function patchDetailFromCycleView(
       agentNotifiedToAdvertise: view.openInspection.agentNotifiedToAdvertise,
       advertising: view.openInspection.advertising as LeasingAdvertisingStatus,
       advertisingNote: u(view.openInspection.advertisingNote),
+      awaitingAgentPayment: view.openInspection.awaitingAgentPayment === true,
     },
     openReport: {
       status: asItemStatus(view.openReport.status),

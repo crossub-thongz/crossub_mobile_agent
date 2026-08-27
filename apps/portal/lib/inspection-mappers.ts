@@ -25,6 +25,7 @@ import {
 import type { Inspection } from '@/lib/types';
 import type { TimelineEntry } from '@/lib/types';
 import { resolveOpenConductedByFromSession } from '@/lib/open-inspection/open-conducted-by';
+import { INSPECTION_AWAITING_PAYMENT_LABEL } from '@/lib/inspections/awaiting-payment';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
 export function caseAuditToTimeline(
@@ -134,9 +135,15 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
     source: 'inspection',
   };
   if (type === 'INGOING') {
-    view.status = AGENT_INGOING_GATE_LABEL[deriveAgentIngoingGateStatus({ inspection: view, record })];
+    view.status = record.awaitingAgentPayment
+      ? INSPECTION_AWAITING_PAYMENT_LABEL
+      : AGENT_INGOING_GATE_LABEL[deriveAgentIngoingGateStatus({ inspection: view, record })];
   } else if (type === 'OUTGOING') {
-    view.status = AGENT_OUTGOING_GATE_LABEL[deriveAgentOutgoingGateStatus({ inspection: view, record })];
+    view.status = record.awaitingAgentPayment
+      ? INSPECTION_AWAITING_PAYMENT_LABEL
+      : AGENT_OUTGOING_GATE_LABEL[deriveAgentOutgoingGateStatus({ inspection: view, record })];
+  } else if (record.awaitingAgentPayment) {
+    view.status = INSPECTION_AWAITING_PAYMENT_LABEL;
   }
   return view;
 }
@@ -219,6 +226,7 @@ export function mapOpenSessionToInspection(
       : session.tenantMovedOut === true
         ? 'new_listing'
         : undefined;
+  const awaitingPayment = session.openInspection?.awaitingAgentPayment === true;
   return {
     id: session.id,
     trackingNumber: inspectionReferenceLabel(session.id, 'OPEN'),
@@ -227,13 +235,16 @@ export function mapOpenSessionToInspection(
     propertyAddress: session.address || session.property,
     scheduledAt: session.startTime,
     createdAt: session.createdAt,
+    awaitingAgentPayment: awaitingPayment,
     status:
       session.sessionStatus === SessionStatusEnum.CANCELLED
         ? OPEN_DELETED_LABEL
         : session.openReportGenerated ||
             session.sessionStatus === SessionStatusEnum.CLOSED
           ? 'Completed'
-          : openSessionStatusLabel(session.sessionStatus),
+          : awaitingPayment
+            ? INSPECTION_AWAITING_PAYMENT_LABEL
+            : openSessionStatusLabel(session.sessionStatus),
     apiStatus:
       session.sessionStatus === SessionStatusEnum.CANCELLED
         ? SessionStatusEnum.CANCELLED

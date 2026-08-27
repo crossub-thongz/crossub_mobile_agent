@@ -31,7 +31,7 @@ export function StatusBadge({
 }: {
   label: string;
   priority?: Priority;
-  variant?: 'default' | 'approval' | 'success';
+  variant?: 'default' | 'approval' | 'success' | 'warning';
   className?: string;
 }) {
   const styles =
@@ -39,9 +39,11 @@ export function StatusBadge({
       ? 'bg-primary/15 text-primary border-primary/30'
       : variant === 'success'
         ? 'bg-primary/10 text-primary border-primary/20'
-        : priority
-          ? PRIORITY[priority].className
-          : 'bg-secondary text-muted-foreground border-border';
+        : variant === 'warning'
+          ? 'bg-amber-500/15 text-amber-800 border-amber-500/30 dark:text-amber-200'
+          : priority
+            ? PRIORITY[priority].className
+            : 'bg-secondary text-muted-foreground border-border';
 
   return (
     <span

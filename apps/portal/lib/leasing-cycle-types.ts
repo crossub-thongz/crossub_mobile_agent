@@ -114,6 +114,7 @@ export interface ServerLeasingOnboarding {
     assignee: string | null
     inspectionId: string | null
     tenantConfirmed: boolean
+    awaitingAgentPayment?: boolean
   }
   ingoingReportApproval: {
     status: string
@@ -216,6 +217,7 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
     agentNotifiedToAdvertise: boolean
     advertising: string
     advertisingNote: string | null
+    awaitingAgentPayment?: boolean
   }
   openReport: {
     status: string
