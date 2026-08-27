@@ -15,7 +15,10 @@ import { patchDetailFromCycleView } from '@/lib/leasing/map-cycle';
 import { getLeasingDetailSeed } from '@/lib/leasing/seed';
 import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { AgentKeyCollection } from '@/lib/crossub-api/agent-client';
-import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
+import {
+  isWithdrawnServerLeasingCycle,
+  type ServerLeasingCycleView,
+} from '@/lib/leasing-cycle-types';
 
 type LeasingWorkflowStore = {
   details: Record<string, LeasingPropertyDetail>;
@@ -422,6 +425,10 @@ export const useLeasingWorkflowStore = create<LeasingWorkflowStore>((set, get) =
   },
 
   applyCycleView(propertyId, view) {
+    if (isWithdrawnServerLeasingCycle(view)) {
+      get().clearDetail(propertyId);
+      return;
+    }
     set((s) => {
       const current = s.details[propertyId];
       if (!current) return s;

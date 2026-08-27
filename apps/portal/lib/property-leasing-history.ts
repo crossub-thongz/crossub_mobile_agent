@@ -16,6 +16,12 @@ export function isCompletedLeasingCycle(cycle: LeasingCycle): boolean {
   return cycle.isActive === false && cycle.lifecycleStep === 'ONBOARDING';
 }
 
+/** Withdrawn letting — belongs in Deleted history, not New leasing. */
+export function isCancelledLeasingCycle(cycle: LeasingCycle): boolean {
+  if (isCompletedLeasingCycle(cycle)) return false;
+  return cycle.isActive === false;
+}
+
 /**
  * Split letting cycles into active (in-flight) vs history (completed onboarding).
  * A lone completed cycle must still land in history — not stay under New leasing.
@@ -28,6 +34,7 @@ export function splitLeasingCyclesByHistory(cycles: LeasingCycle[]): {
   const history: LeasingCycle[] = [];
 
   for (const cycle of cycles) {
+    if (isCancelledLeasingCycle(cycle)) continue;
     if (isCompletedLeasingCycle(cycle)) {
       history.push(cycle);
     } else {

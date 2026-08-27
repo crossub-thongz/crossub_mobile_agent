@@ -74,7 +74,6 @@ export function buildPropertyLeasingWorkflowCases(input: {
     rentReviews,
     rentReviewDecisions,
     currentLease,
-    inOpenInspectionPhase,
     isVacant,
   } = input;
 
@@ -95,19 +94,18 @@ export function buildPropertyLeasingWorkflowCases(input: {
     });
   }
 
-  if (
-    activeCycles.length === 0 &&
-    (tenantSelections.length > 0 || (inOpenInspectionPhase && isVacant))
-  ) {
+  // Tenant applications can exist before a letting cycle is filed. Do not invent a
+  // New leasing row from a leftover open inspection after the cycle was deleted.
+  if (activeCycles.length === 0 && tenantSelections.length > 0) {
     const pending = tenantSelections.find((t) => t.requiresApproval);
     const primary = pending ?? tenantSelections[0];
     cases.push({
-      id: primary?.id ?? `leasing-${propertyId}`,
+      id: primary.id,
       category: 'leasing',
-      label: workflowCaseReferenceLabel(primary?.id ?? propertyId, 'leasing'),
-      status: primary ? 'tenant selection' : 'new leasing',
-      currentStep: primary ? 'Application approval' : 'Open inspection',
-      detail: primary?.applicantName,
+      label: workflowCaseReferenceLabel(primary.id, 'leasing'),
+      status: 'tenant selection',
+      currentStep: 'Application approval',
+      detail: primary.applicantName,
     });
   }
 

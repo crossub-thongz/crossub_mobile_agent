@@ -14,6 +14,8 @@ export interface ServerLeasingCycleSummary {
   propertyAddress: string | null
   cycle: number
   isActive: boolean
+  cancelledAt?: string | null
+  cancelReason?: string | null
   lifecycleStep: string
   activeStepHint: string | null
   /** Server-derived SLA tier (on_track | due_soon | overdue | escalated) from the daily sweep. */
@@ -337,4 +339,13 @@ export interface ScheduleIngoingInput {
 export interface AddDisputeInput {
   area?: string
   description: string
+}
+
+/** Agent-cancelled letting — not a completed onboarding case. */
+export function isWithdrawnServerLeasingCycle(view: {
+  isActive: boolean
+  cancelReason?: string | null
+  cancelledAt?: string | Date | null
+}): boolean {
+  return Boolean(view.cancelReason?.toString().trim() || view.cancelledAt)
 }

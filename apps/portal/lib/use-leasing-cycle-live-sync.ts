@@ -5,7 +5,10 @@ import { useCallback, useRef } from 'react';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { isUuid } from '@/lib/file-upload';
 import { fetchLeasingCycleView } from '@/lib/leasing/fetch-leasing-cycle';
-import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
+import {
+  isWithdrawnServerLeasingCycle,
+  type ServerLeasingCycleView,
+} from '@/lib/leasing-cycle-types';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { LEASING_CYCLE_POLL_MS } from '@/lib/live-sync';
 import { useLivePoll } from '@/lib/use-live-poll';
@@ -23,6 +26,7 @@ export function useLeasingCycleLiveSync(
 ): void {
   const { apiConnected } = useAgentData();
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
+  const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
   const syncInFlightRef = useRef(false);
   const onSyncedRef = useRef(options?.onSynced);
   onSyncedRef.current = options?.onSynced;
@@ -39,6 +43,10 @@ export function useLeasingCycleLiveSync(
     syncInFlightRef.current = true;
     try {
       const view = await fetchLeasingCycleView(cycleId);
+      if (isWithdrawnServerLeasingCycle(view)) {
+        clearDetail(propertyId);
+        return;
+      }
       applyCycleView(propertyId, view);
       onSyncedRef.current?.(view);
     } catch {
@@ -46,7 +54,7 @@ export function useLeasingCycleLiveSync(
     } finally {
       syncInFlightRef.current = false;
     }
-  }, [enabled, apiConnected, cycleId, propertyId, applyCycleView]);
+  }, [enabled, apiConnected, cycleId, propertyId, applyCycleView, clearDetail]);
 
   // The third argument is `LivePollOptions`, not a number — passing the interval bare meant
   // it was dropped on the floor and this sync ran at the hook's default LIVE_POLL_MS, never
