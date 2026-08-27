@@ -183,12 +183,21 @@ function resolveRentReviewTenantName(input: {
   return { name: '' };
 }
 
-function resolveWeeklyRent(input: {
+interface WeeklyRentSources {
   property: Property;
   currentLease?: LeasingRecord;
   cycleView?: ServerLeasingCycleView | null;
   leasingCycle?: LeasingCycle;
-}): number {
+}
+
+/**
+ * The rent as at SIGNING — the lease first, the property record last.
+ *
+ * Right for anything anchored to the start of the tenancy, which is why the bond estimate below
+ * still uses it: a bond is four weeks of the rent that was agreed, not of the rent in force
+ * today. Wrong for anything measuring a CHANGE from today — see `resolveCurrentWeeklyRent`.
+ */
+function resolveSigningWeeklyRent(input: WeeklyRentSources): number {
   if (input.currentLease?.rentWeekly && input.currentLease.rentWeekly > 0) {
     return input.currentLease.rentWeekly;
   }
@@ -202,6 +211,24 @@ function resolveWeeklyRent(input: {
   }
   if (input.property.rentWeekly > 0) return input.property.rentWeekly;
   return 0;
+}
+
+/**
+ * ⭐ The rent in force TODAY — the property record first, everything else as a fallback.
+ *
+ * CRS-0056 / CRS-0109 / CRS-0149. `Property.rentWeekly` is the only one of these that a
+ * completed rent review updates; `LeasingRecord.rentWeekly` is the rent as at signing and is
+ * deliberately never rewritten. Seeding a new review's "current rent" from the lease therefore
+ * proposed an increase off a figure an earlier review had already replaced — and that number
+ * goes onto the statutory notice the tenant receives, because `RentReview.currentRent` is
+ * stored verbatim from this form and nothing downstream ever re-reads the record.
+ *
+ * The staff web app was moved onto this ordering on 27 Aug 2026; this is the same change in the
+ * app the agents actually raise reviews from.
+ */
+function resolveCurrentWeeklyRent(input: WeeklyRentSources): number {
+  if (input.property.rentWeekly > 0) return input.property.rentWeekly;
+  return resolveSigningWeeklyRent(input);
 }
 
 function resolveBondHeld(input: {
@@ -223,7 +250,8 @@ function resolveBondHeld(input: {
   if (input.property.bondAmount != null && input.property.bondAmount > 0) {
     return { amount: Math.round(input.property.bondAmount), hint: 'From property record' };
   }
-  const rent = resolveWeeklyRent(input);
+  // The signing rent, deliberately: a bond is four weeks of the rent that was agreed.
+  const rent = resolveSigningWeeklyRent(input);
   if (rent > 0) {
     return {
       amount: Math.round(rent * LEASING_CYCLE_BOND_RENT_MULTIPLIER),
@@ -334,7 +362,7 @@ export function buildRentReviewPrefill(
     tenantSelections: options?.tenantSelections,
   });
 
-  const weekly = resolveWeeklyRent({
+  const weekly = resolveCurrentWeeklyRent({
     property,
     currentLease,
     cycleView: options?.cycleView,
