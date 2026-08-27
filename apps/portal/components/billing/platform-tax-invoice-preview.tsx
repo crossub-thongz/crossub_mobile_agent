@@ -13,15 +13,30 @@ function formatAuDate(iso: string | null | undefined): string {
   }).format(new Date(iso));
 }
 
+function propertyGroupKey(address: string): string {
+  return address
+    .replace(/,?\s*(NSW|VIC|QLD|SA|WA|TAS|NT|ACT)\s+\d{4}\s*$/i, '')
+    .trim()
+    .toLowerCase();
+}
+
 function groupLinesByProperty<T extends { address: string }>(
   lines: T[],
 ): Array<{ address: string; lineNo: string; lines: T[] }> {
-  const groups: Array<{ address: string; lines: T[] }> = [];
+  const groups: Array<{ address: string; key: string; lines: T[] }> = [];
+  const byKey = new Map<string, { address: string; key: string; lines: T[] }>();
   for (const line of lines) {
     const address = line.address.trim() || 'Agency charges';
-    const last = groups[groups.length - 1];
-    if (last && last.address === address) last.lines.push(line);
-    else groups.push({ address, lines: [line] });
+    const key = propertyGroupKey(address) || address.toLowerCase();
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.lines.push(line);
+      if (address.length > existing.address.length) existing.address = address;
+    } else {
+      const group = { address, key, lines: [line] };
+      byKey.set(key, group);
+      groups.push(group);
+    }
   }
   return groups.map((group, index) => ({
     address: group.address,
@@ -79,8 +94,10 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
             </p>
           </div>
           <p className="text-lg font-bold tracking-wide">{invoice.title}</p>
-          <p className="font-medium text-[#C0504D]">{invoice.agentName}</p>
-          {invoice.agentAbn ? <p className="text-xs">(ABN: {invoice.agentAbn})</p> : null}
+          <div className="space-y-1">
+            <p className="font-medium text-[#C0504D]">{invoice.agentName}</p>
+            <p className="text-xs">(ABN: {invoice.agentAbn ?? '—'})</p>
+          </div>
         </div>
         <dl className="space-y-3 text-xs">
           <div>
