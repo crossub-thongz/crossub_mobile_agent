@@ -199,7 +199,7 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
                     <ActiveDaysDisplay count={line.activeDaysCount} range={line.activeDays} />
                   </td>
                   <td className="text-foreground px-2 py-1.5 text-right tabular-nums">
-                    {formatCurrency(line.amountExGst)}
+                    {formatCurrency(line.amountIncGst)}
                   </td>
                 </tr>
               )),

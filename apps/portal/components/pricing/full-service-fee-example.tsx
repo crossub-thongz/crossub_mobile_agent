@@ -26,7 +26,8 @@ function exampleFigures(catalog: FullServiceFeeExampleCatalog) {
     serviceFeePercent,
     exampleActiveDays,
     feePerActiveDayAud: example?.feePerActiveDayAud ?? roundAud(dailyUnrounded),
-    totalFeeAud: example?.totalFeeAud ?? roundAud(dailyUnrounded * exampleActiveDays),
+    totalFeeAud:
+      example?.totalFeeAud ?? roundAud(roundAud(dailyUnrounded) * exampleActiveDays),
   };
 }
 
