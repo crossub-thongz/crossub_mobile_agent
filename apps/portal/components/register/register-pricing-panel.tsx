@@ -189,7 +189,7 @@ export function RegisterPricingPanel({
                             </span>
                             <span className="text-muted-foreground">
                               {' '}
-                              of your management income · invoiced monthly
+                              of your management income · min 4% rate · billed by active days
                             </span>
                           </p>
                           <p className="text-muted-foreground text-xs leading-relaxed">

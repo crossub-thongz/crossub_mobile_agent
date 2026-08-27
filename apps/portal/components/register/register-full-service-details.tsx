@@ -1,50 +1,19 @@
 'use client';
 
-import { CalendarCheck, Check, DoorOpen, FileText, Home, Sparkles, UserSearch } from 'lucide-react';
+import { CalendarCheck, Check, DoorOpen, FileText, Home, UserSearch } from 'lucide-react';
 
+import { FullServiceFeeExample } from '@/components/pricing/full-service-fee-example';
 import {
   type AgentBillingPricingCatalog,
   level2IncludedPackageItems,
 } from '@/lib/crossub-api/agent-billing-client';
-import { formatCurrency } from '@/lib/utils';
 
 export type RegistrationPricingCatalog = Omit<
   AgentBillingPricingCatalog,
   'portalServiceLevel'
 >;
 
-export function FullServiceFeeExample({ catalog }: { catalog: RegistrationPricingCatalog }) {
-  const example = catalog.level2.serviceFeeExample;
-  if (!example) return null;
-
-  return (
-    <div className="rounded-lg border border-violet-500/25 bg-violet-500/8 p-3">
-      <div className="flex items-center gap-2">
-        <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
-        <p className="font-semibold">Full Service fee example</p>
-      </div>
-      <p className="text-muted-foreground mt-1 text-xs">
-        Standard {example.managementRatePercent}% management rate ·{' '}
-        {catalog.level2.serviceFeePercent}% of your management income invoiced monthly
-      </p>
-      <div className="text-muted-foreground mt-2 space-y-1 font-mono text-xs leading-relaxed">
-        <p>
-          Weekly rent {formatCurrency(example.weeklyRentAud)} × {example.managementRatePercent}%
-          management = {formatCurrency(example.agentIncomeAud)} agent income
-        </p>
-        <p>
-          CROSSUB fee {formatCurrency(example.agentIncomeAud)} ×{' '}
-          {catalog.level2.serviceFeePercent}% = {formatCurrency(example.crossubFeeAud)} / week × 4
-          weeks ={' '}
-          <strong className="text-foreground">
-            {formatCurrency(example.crossubFeeAud * 4)}
-          </strong>{' '}
-          per month
-        </p>
-      </div>
-    </div>
-  );
-}
+export { FullServiceFeeExample };
 
 export function FullServicePricingDetails({
   catalog,

@@ -18,6 +18,7 @@ import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level
 import { AgentShell } from '@/components/layout/agent-shell';
 import { PricingOrderHost } from '@/components/pricing/pricing-order-host';
 import { PricingRateCatalog } from '@/components/pricing/pricing-rate-catalog';
+import { FullServiceFeeExample } from '@/components/pricing/full-service-fee-example';
 import {
   fetchAgentBillingPricing,
   level2IncludedPackageItems,
@@ -25,7 +26,7 @@ import {
   type AgentBillingPricingCatalog,
 } from '@/lib/crossub-api/agent-billing-client';
 import { PORTAL_SERVICE_LEVEL_LABEL, type AgentPortalServiceLevel } from '@/lib/portal-service-level';
-import { cn, formatAgreementPeriod, formatCurrency } from '@/lib/utils';
+import { cn, formatAgreementPeriod } from '@/lib/utils';
 
 import './pricing.css';
 
@@ -350,29 +351,7 @@ export default function PricingPage() {
               </div>
 
               {example ? (
-                <div className="pricing-callout">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
-                    <p className="font-semibold">Full Service fee example</p>
-                  </div>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Standard {example.managementRatePercent}% management rate ·{' '}
-                    {catalog.level2.serviceFeePercent}% of your management income invoiced monthly
-                  </p>
-                  <div className="pricing-callout__formula">
-                    Weekly rent {formatCurrency(example.weeklyRentAud)} ×{' '}
-                    {example.managementRatePercent}% management ={' '}
-                    {formatCurrency(example.agentIncomeAud)} agent income
-                    <br />
-                    CROSSUB fee {formatCurrency(example.agentIncomeAud)} ×{' '}
-                    {catalog.level2.serviceFeePercent}% ={' '}
-                    {formatCurrency(example.crossubFeeAud)} / week × 4 weeks ={' '}
-                    <strong className="text-foreground">
-                      {formatCurrency(example.crossubFeeAud * 4)}
-                    </strong>{' '}
-                    per month
-                  </div>
-                </div>
+                <FullServiceFeeExample catalog={catalog} />
               ) : null}
             </PricingSection>
 
