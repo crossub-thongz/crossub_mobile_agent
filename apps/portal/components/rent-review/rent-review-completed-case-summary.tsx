@@ -3,6 +3,7 @@
 import { rentReviewLeaseTypeLabel } from '@/lib/rent-review/agent-workflow-model';
 import { RentReviewSignedLeaseAgreementCard } from '@/components/rent-review/rent-review-signed-lease-agreement-card';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
+import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { formatRentReviewTermLabel } from '@/lib/rent-review-lease-helpers';
 import {
   buildTenantAcceptanceSummary,
@@ -32,9 +33,12 @@ function CompletedResearchSection({ detail }: { detail: RentReviewWorkflowDetail
       <div className="grid gap-4 sm:grid-cols-2">
         <dl className="space-y-3 text-sm">
           <div>
-            <dt className="text-muted-foreground text-xs">Current rent</dt>
+            <dt className="text-muted-foreground flex items-center gap-1 text-xs">
+              Current rent
+              <RentEquivalentsHint weekly={detail.currentWeeklyRent} />
+            </dt>
             <dd className="mt-0.5 font-semibold tabular-nums">
-              {formatCurrency(detail.currentWeeklyRent)}
+              {formatCurrency(detail.currentWeeklyRent)}/wk
             </dd>
           </div>
           <div>

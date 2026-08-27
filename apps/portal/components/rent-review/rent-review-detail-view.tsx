@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
+import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -95,7 +96,10 @@ function RentReviewDetailContent({
             />
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div>
-                <p className="text-muted-foreground">Current rent</p>
+                <p className="text-muted-foreground flex items-center gap-1">
+                  Current rent
+                  <RentEquivalentsHint weekly={detail.currentWeeklyRent} />
+                </p>
                 <p className="font-medium tabular-nums">{formatCurrency(detail.currentWeeklyRent)}/wk</p>
               </div>
               <div>
