@@ -77,6 +77,7 @@ export function PropertyBillsTab({
   const [agreementEnd, setAgreementEnd] = useState<string | null>(null);
   const [defaultPaymentMethod, setDefaultPaymentMethod] =
     useState<AgentBillingDefaultPaymentMethod | null>(null);
+  const [billingOff, setBillingOff] = useState(false);
   const [chargeDialog, setChargeDialog] = useState<PlatformChargeDetailDialogState>(null);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
 
@@ -90,6 +91,7 @@ export function PropertyBillsTab({
         fetchProperty(propertyId).catch(() => null),
       ]);
       setCharges(rows);
+      setBillingOff(summary?.platformBillingDisabled === true);
       setDefaultPaymentMethod(summary?.defaultPaymentMethod ?? null);
       const usage =
         pricing?.level2.includedUsageByProperty?.find((row) => row.propertyId === propertyId) ??
@@ -132,6 +134,8 @@ export function PropertyBillsTab({
         properties: groupChargesByProperty(rows, usage),
       }));
   }, [charges, includedUsage]);
+
+  if (billingOff) return null;
 
   return (
     <div className="space-y-4">

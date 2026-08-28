@@ -133,7 +133,14 @@ export async function prepareInspectionPlatformCharge(args: {
   error?: string;
 }> {
   const loaded = await loadInspectionPlatformCharge(args);
-  if (loaded.charge?.status === 'paid') return loaded;
+  if (
+    loaded.charge?.status === 'paid' ||
+    loaded.charge?.status === 'included' ||
+    loaded.charge?.status === 'accrued' ||
+    loaded.charge?.includedInAllowance
+  ) {
+    return loaded;
+  }
   if (loaded.charge?.status === 'awaiting_payment') return loaded;
 
   const candidateIds = buildCandidateIds({

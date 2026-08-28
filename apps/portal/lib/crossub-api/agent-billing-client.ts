@@ -202,6 +202,7 @@ export function platformChargeAmountLabel(
 
 export type AgentBillingSummary = {
   prepaidEnabled: boolean;
+  platformBillingDisabled?: boolean;
   portalServiceLevel?: string;
   inspectionsCollectionMode?: 'prepaid' | 'postpaid';
   serviceFeePercent?: number;

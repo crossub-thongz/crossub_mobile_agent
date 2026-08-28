@@ -15,6 +15,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { filterNavByAccess } from '@/lib/portal-service-level';
+import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
 import { cn } from '@/lib/utils';
 
 import '@/components/agent/more/more-hub.css';
@@ -178,12 +179,15 @@ function MoreSectionCard({
 export function MoreHub() {
   const isV2 = useIsAgentUiV2();
   const { logout } = useAuth();
-  const { hasFullManagementAccess, primaryAgency } = useAgentData();
+  const { hasFullManagementAccess, primaryAgency, platformBillingDisabled } = useAgentData();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set());
 
   const sections = MORE_PAGE_SECTIONS.map((section) => ({
     ...section,
-    items: filterNavByAccess(section.items, hasFullManagementAccess),
+    items: filterHiddenBillingNav(
+      filterNavByAccess(section.items, hasFullManagementAccess),
+      platformBillingDisabled,
+    ),
   })).filter((section) => section.items.length > 0);
 
   const toggleSection = (sectionId: string) => {

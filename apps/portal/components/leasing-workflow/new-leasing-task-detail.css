@@ -1,0 +1,26 @@
+.new-leasing-task__status-card {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #7c3aed 8%, white),
+    color-mix(in oklab, #7c3aed 4%, white)
+  );
+}
+
+.dark .new-leasing-task__status-card {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #7c3aed 18%, transparent),
+    color-mix(in oklab, #7c3aed 8%, transparent)
+  );
+}
+
+.new-leasing-task__activity-line {
+  left: calc(1rem + 4rem + 1rem + 0.5rem - 0.5px);
+  top: 1.75rem;
+  bottom: 1.75rem;
+  width: 1px;
+}
+
+.new-leasing-task__progress {
+  scrollbar-width: thin;
+}

@@ -44,7 +44,7 @@ export function CrossubServiceFeeNotice({
   forceShow = false,
   compact = false,
 }: Props) {
-  const { agencies } = useAgentData();
+  const { agencies, platformBillingDisabled } = useAgentData();
   const [serviceFeePercent, setServiceFeePercent] = useState(
     serviceFeePercentProp ?? 30,
   );
@@ -93,6 +93,7 @@ export function CrossubServiceFeeNotice({
     };
   }, [rate, rent, serviceFeePercent, managementRateGst]);
 
+  if (platformBillingDisabled) return null;
   if (!show) return null;
 
   if (compact) {

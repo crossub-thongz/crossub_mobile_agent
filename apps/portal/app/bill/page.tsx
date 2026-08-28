@@ -51,6 +51,7 @@ import {
   listAgentChargeHistory,
   listAgentInvoiceHistory,
   listAgentPaymentHistory,
+  payAgentBillingCharge,
   payAgentMonthlyInvoice,
   payAllAgentBilling,
   type AgentBillingCharge,
@@ -582,16 +583,53 @@ export default function BillPage() {
     }
   };
 
+  const payPrepaidCharge = async (row: AgentBillingCharge) => {
+    setPayingKey(row.id);
+    try {
+      const result = await payAgentBillingCharge(row.id, { devConfirm: false });
+      const outcome = resolvePaymentFlow(
+        result,
+        {
+          title: SERVICE_LABEL[row.serviceType] ?? 'Platform fee',
+          description: row.description,
+          amountAud: row.amount,
+          calculationDetail: row.calculationDetail,
+          calculationSummary: row.calculationSummary,
+          defaultPaymentMethod: summary?.defaultPaymentMethod,
+          chargeId: row.id,
+        },
+        setPaymentDialog,
+      );
+      if (outcome === 'complete') {
+        await finalizeBillingChargePayment(row.id);
+        toast.success('Payment complete');
+        await load();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Payment failed');
+    } finally {
+      setPayingKey(null);
+    }
+  };
+
   useEffect(() => {
     if (loading || autoPayOpened.current || paymentDialog != null) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('pay') !== '1') return;
     const invoiceId = summary?.openInvoiceId ?? payableInvoices[0]?.id;
-    if (!invoiceId) return;
+    if (!invoiceId && payableBills.length === 0) return;
     autoPayOpened.current = true;
     window.history.replaceState({}, '', '/bill');
-    void payInvoiceById(invoiceId);
-  }, [loading, summary?.openInvoiceId, payableInvoices, paymentDialog]);
+    if (invoiceId && payableBills.length === 0) {
+      void payInvoiceById(invoiceId);
+      return;
+    }
+    if (!invoiceId && payableBills.length === 1) {
+      void payPrepaidCharge(payableBills[0]!);
+      return;
+    }
+    void payAll();
+  }, [loading, summary?.openInvoiceId, payableInvoices, payableBills, paymentDialog]);
 
   const handlePaymentSuccess = async (chargeId?: string | null) => {
     await finalizeBillingChargePayment(chargeId);
@@ -658,6 +696,17 @@ export default function BillPage() {
       setPayingAll(false);
     }
   };
+
+  if (summary?.platformBillingDisabled) {
+    return (
+      <AgentShell title="Bills">
+        <PageIntro
+          title="Bills"
+          description="Platform billing is paused for your service plan. There is nothing to pay."
+        />
+      </AgentShell>
+    );
+  }
 
   return (
     <AgentShell title={usesMonthlyInvoice ? 'Invoice' : 'Bills'}>

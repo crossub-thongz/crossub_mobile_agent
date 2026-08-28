@@ -1,14 +1,19 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import { leasingDetail } from '@/constants/routes';
 import { markAgentWorkflowCaseOpenedFromJob } from '@/lib/mark-agent-workflow-case-opened';
 import type { PortfolioAgentData } from '@/lib/portfolio-case-dialog';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { useAgentStore } from '@/lib/store';
 
 export function usePortfolioCaseDialog() {
+  const router = useRouter();
+  const isV2 = useIsAgentUiV2();
   const [selectedJob, setSelectedJob] = useState<PropertyJobRow | null>(null);
   const agentData = useAgentData();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
@@ -31,9 +36,17 @@ export function usePortfolioCaseDialog() {
   );
 
   const openJob = useCallback((job: PropertyJobRow | null) => {
-    if (job) markAgentWorkflowCaseOpenedFromJob(job);
+    if (!job) {
+      setSelectedJob(null);
+      return;
+    }
+    markAgentWorkflowCaseOpenedFromJob(job);
+    if (isV2 && job.kind === 'leasing') {
+      router.push(leasingDetail(job.id));
+      return;
+    }
     setSelectedJob(job);
-  }, []);
+  }, [isV2, router]);
 
   const closeJob = useCallback(() => {
     setSelectedJob(null);

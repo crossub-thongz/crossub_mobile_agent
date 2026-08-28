@@ -34,6 +34,10 @@ import {
   deleteDocument as apiDeleteDocument,
   type AgentPortfolio,
 } from '@/lib/crossub-api/agent-client';
+import {
+  fetchAgentBillingSummary,
+} from '@/lib/crossub-api/agent-billing-client';
+import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
 import { sanitizeCreatePropertyBody } from '@/lib/sanitize-create-property-body';
 import {
   buildRegistryApiBody,
@@ -220,6 +224,8 @@ interface AgentDataContextValue {
   hasFullManagementAccess: boolean;
   /** True when every assigned agency is Level 1 (inspection and tribunal only). */
   isInspectionOnlyAgent: boolean;
+  /** Kill switch: Level 2/3 platform billing is off for this agent. */
+  platformBillingDisabled: boolean;
   inspections: Inspection[];
   rentReviews: RentReviewCase[];
   vacating: VacatingCase[];
@@ -348,6 +354,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const [apiDocuments, setApiDocuments] = useState<AgentDocument[] | null>(null);
   // Live client agencies (mapped). null = not loaded / failed → empty list.
   const [apiAgencies, setApiAgencies] = useState<Agency[] | null>(null);
+  const [platformBillingDisabled, setPlatformBillingDisabled] = useState(false);
   const [apiInspections, setApiInspections] = useState<Inspection[] | null>(null);
   // localThreadId → server thread id, populated when an optimistic thread is persisted via
   // createThread. Lets the messages memo promote the local thread (keeping its id so the
@@ -414,11 +421,12 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       const propsForMessages = mappedProps ?? [];
       // Messages + notifications + documents + agencies load after the portfolio; each
       // domain degrades independently (one hiccup never blanks the others).
-      const [threadsRes, notifsRes, docsRes, agenciesRes] = await Promise.allSettled([
+      const [threadsRes, notifsRes, docsRes, agenciesRes, billingRes] = await Promise.allSettled([
         fetchMessageThreads(),
         fetchNotifications(),
         fetchDocuments(),
         fetchAgencies(),
+        fetchAgentBillingSummary(),
       ]);
       setApiMessages(
         threadsRes.status === 'fulfilled'
@@ -437,6 +445,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         agenciesRes.status === 'fulfilled'
           ? mapAgentAgencies(agenciesRes.value)
           : null,
+      );
+      setPlatformBillingDisabled(
+        billingRes.status === 'fulfilled' &&
+          billingRes.value.platformBillingDisabled === true,
       );
       try {
         if (showBlockingLoad) {
@@ -1362,14 +1374,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const notifications = useMemo<AgentNotification[]>(() => {
     const base: AgentNotification[] = apiNotifications ?? [];
-    return base.map((n) => ({
+    const mapped = base.map((n) => ({
       ...n,
       read: n.read || readIds.has(n.id),
       propertyAddress: n.propertyAddress
         ? resolvePropertyDisplayAddress(properties, undefined, n.propertyAddress)
         : n.propertyAddress,
     }));
-  }, [apiNotifications, readIds, properties]);
+    if (!platformBillingDisabled) return mapped;
+    return mapped.filter((n) => !isAgentPaymentNotification(n));
+  }, [apiNotifications, readIds, properties, platformBillingDisabled]);
 
   const unreadNotificationCount = useMemo(
     () =>
@@ -1567,6 +1581,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     portalAccessReady,
     hasFullManagementAccess,
     isInspectionOnlyAgent,
+    platformBillingDisabled,
     inspections,
     rentReviews,
     vacating,

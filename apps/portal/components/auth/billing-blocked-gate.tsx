@@ -55,7 +55,7 @@ export function BillingBlockedGate({ children }: { children: React.ReactNode }) 
     };
   }, [status, pathname, onExemptPage]);
 
-  const blocked = summary?.billingBlocked === true;
+  const blocked = summary?.billingBlocked === true && summary?.platformBillingDisabled !== true;
 
   useEffect(() => {
     if (!checked || !blocked || onExemptPage || isPublicRoute(pathname)) return;

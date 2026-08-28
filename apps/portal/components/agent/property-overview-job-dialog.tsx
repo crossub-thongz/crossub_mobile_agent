@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
 import { RentReconciliationCaseDialog } from '@/components/accounting/rent-reconciliation-case-dialog';
 import {
   PropertyLeasingCaseWorkflowDialog,
@@ -9,8 +12,10 @@ import { PropertyRentReviewCaseWorkflowDialog } from '@/components/agent/propert
 import { RentChasingArrearsDialog } from '@/components/agent/rent-chasing-arrears-dialog';
 import { TribunalCaseDetailDialog } from '@/components/agent/tribunal-case-detail-dialog';
 import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-case-detail-dialog';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { fromProperty } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
+import { leasingDetail } from '@/constants/routes';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
@@ -79,9 +84,21 @@ export function PropertyOverviewJobDialog({
   onViewRentReview?: (reviewId: string) => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
 }) {
+  const router = useRouter();
+  const isV2 = useIsAgentUiV2();
   const open = job != null;
 
+  useEffect(() => {
+    if (!isV2 || !job || job.kind !== 'leasing') return;
+    router.replace(leasingDetail(job.id, fromProperty(propertyId, profileTabForJobKind(job.kind))));
+    onClose();
+  }, [isV2, job, onClose, propertyId, router]);
+
   if (!job) {
+    return null;
+  }
+
+  if (isV2 && job.kind === 'leasing') {
     return null;
   }
 

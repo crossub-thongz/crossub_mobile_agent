@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -17,6 +18,9 @@ import { LeasingTenancySummary } from '@/components/agent/leasing-tenancy-summar
 import { PropertyWorkflowPanel } from '@/components/agent/property-workflow-panel';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import { leasingDetail } from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
   cancelAgentLeasingCycle,
@@ -113,6 +117,8 @@ export function PropertyLeasingJobPanel({
   deletedLeasingCycles?: ArchivedLeasingCycle[];
   deletedEndLeasingCases?: ArchivedEndLeasingCase[];
 }) {
+  const router = useRouter();
+  const isV2 = useIsAgentUiV2();
   const { apiConnected, refresh } = useAgentData();
   const clearDetail = useLeasingWorkflowStore((s) => s.clearDetail);
   const workflowCases = useMemo(
@@ -297,9 +303,13 @@ export function PropertyLeasingJobPanel({
         workflowCases.find((workflowCase) => workflowCase.id === id) ??
         historyCases.find((workflowCase) => workflowCase.id === id) ??
         null;
+      if (isV2 && item?.category === 'leasing') {
+        router.push(leasingDetail(id, fromProperty(propertyId, 'Leasing')));
+        return;
+      }
       setDialogCase(item);
     },
-    [historyCases, workflowCases],
+    [historyCases, isV2, propertyId, router, workflowCases],
   );
 
   const openLeasingCycle = useCallback(

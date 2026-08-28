@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Briefcase,
   Calendar,
@@ -11,6 +12,9 @@ import {
 } from 'lucide-react';
 
 import { PropertyOverviewJobDialog } from '@/components/agent/property-overview-job-dialog';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import { leasingDetail } from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { isPropertyVacant } from '@/lib/property-leasing';
@@ -218,6 +222,8 @@ export function PropertyProfileTasksTab({
   onOpenInspectionCreated?: (inspectionId: string) => void;
   onNavigate: (href: string) => void;
 }) {
+  const router = useRouter();
+  const isV2 = useIsAgentUiV2();
   const [categoryFilter, setCategoryFilter] =
     useState<PropertyProfileTaskCategoryFilter>('all');
   const [statusFilter, setStatusFilter] = useState<PropertyProfileTaskStatusFilter>('in_progress');
@@ -308,7 +314,13 @@ export function PropertyProfileTasksTab({
   const visibleTasks = showAll ? filteredTasks : filteredTasks.slice(0, VISIBLE_LIMIT);
   const hasMore = filteredTasks.length > VISIBLE_LIMIT && !showAll;
 
+  const navContext = useMemo(() => fromProperty(propertyId, 'Tasks'), [propertyId]);
+
   const openTask = (task: PropertyProfileTask) => {
+    if (isV2 && task.jobRow?.kind === 'leasing') {
+      router.push(leasingDetail(task.jobRow.id, navContext));
+      return;
+    }
     if (task.jobRow) {
       setSelectedJob(task.jobRow);
       return;

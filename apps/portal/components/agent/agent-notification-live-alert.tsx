@@ -18,6 +18,7 @@ import {
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { agentNotificationDisplay } from '@/lib/notification-activity';
 import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
+import { requestAgentPayNow } from '@/lib/billing/agent-pay-now';
 import { useAgentStore } from '@/lib/store';
 import type { AgentNotification } from '@/lib/types';
 import { cn, formatRelative } from '@/lib/utils';
@@ -187,7 +188,21 @@ export function AgentNotificationLiveAlert() {
               {display.body}
             </p>
             {current.actionRequired ? (
-              <p className="text-primary mt-1 text-xs font-medium">{current.actionRequired}</p>
+              isAgentPaymentNotification(current) ? (
+                <button
+                  type="button"
+                  className="text-primary mt-1 text-xs font-medium hover:underline"
+                  onClick={() => {
+                    markNotificationRead(current.id);
+                    requestAgentPayNow({ href: current.href });
+                    dismissCurrent();
+                  }}
+                >
+                  {current.actionRequired}
+                </button>
+              ) : (
+                <p className="text-primary mt-1 text-xs font-medium">{current.actionRequired}</p>
+              )
             ) : null}
             <p className="text-muted-foreground mt-1 text-[10px]">{formatRelative(current.at)}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">

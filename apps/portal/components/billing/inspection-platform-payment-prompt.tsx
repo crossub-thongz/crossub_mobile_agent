@@ -237,6 +237,10 @@ export function InspectionPlatformPaymentPrompt({
     (!summary && !loading);
   const postpaidAgency = collectionMode === 'postpaid';
 
+  if (summary?.platformBillingDisabled) {
+    return null;
+  }
+
   if (summary && !prepaidAgency && !postpaidAgency) {
     return null;
   }
@@ -267,7 +271,9 @@ export function InspectionPlatformPaymentPrompt({
     !charge ||
     charge.status === 'paid' ||
     charge.status === 'included' ||
-    charge.status === 'accrued'
+    charge.status === 'accrued' ||
+    charge.includedInAllowance ||
+    Number(charge.amount) <= 0
   ) {
     return null;
   }

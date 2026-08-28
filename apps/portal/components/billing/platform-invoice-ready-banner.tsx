@@ -64,7 +64,8 @@ export function PlatformInvoiceReadyBanner() {
   if (!user || status !== 'authed') return null;
   if (isHiddenRoute(pathname) || pathname === ROUTES.BILL) return null;
   if (needsPasswordChange(user) || needsSystemAccessAgreement(user)) return null;
-  if (!summary || !usesMonthlyInvoice(summary.portalServiceLevel)) return null;
+  if (!summary || summary.platformBillingDisabled) return null;
+  if (!usesMonthlyInvoice(summary.portalServiceLevel)) return null;
   if (!summary.openInvoiceId || !(summary.outstandingInvoiceAmount > 0)) return null;
 
   const overdue = summary.billingBlocked;
