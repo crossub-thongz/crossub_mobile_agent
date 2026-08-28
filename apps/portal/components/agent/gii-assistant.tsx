@@ -1069,7 +1069,7 @@ export function GiiAssistant({
       <>
         {isPanelDock ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {scrollContent}
             </div>
             <div className={dockClassName}>{dockShell}</div>
@@ -1217,7 +1217,7 @@ export function GiiAssistant({
         ref={scrollContainerRef}
         className={cn(
           'space-y-3 px-4 py-3',
-          usePageScroll ? undefined : 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+          usePageScroll ? undefined : 'scrollbar-subtle min-h-0 flex-1 overflow-y-auto overscroll-contain',
         )}
       >
         {!data.loading && !effectiveLaunch.initialPrompt ? (

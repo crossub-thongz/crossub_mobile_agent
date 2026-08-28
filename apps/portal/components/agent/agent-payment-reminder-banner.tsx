@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { isPublicRoute, ROUTES } from '@/constants/routes';
 import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
@@ -48,6 +49,7 @@ function isPrepaidAwaitingCharge(row: AgentBillingCharge): boolean {
  */
 export function AgentPaymentReminderBanner() {
   const pathname = usePathname();
+  const isV2 = useIsAgentUiV2();
   const { user, status } = useAuth();
   const { notifications } = useAgentData();
   const [charges, setCharges] = useState<AgentBillingCharge[] | null>(null);
@@ -92,7 +94,10 @@ export function AgentPaymentReminderBanner() {
   return (
     <div
       role="status"
-      className="mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed"
+      className={cn(
+        'mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed',
+        isV2 && 'mt-4 lg:mt-6',
+      )}
     >
       <div className="flex flex-wrap items-start gap-3">
         <CreditCard

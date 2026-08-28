@@ -198,6 +198,48 @@
   backdrop-filter: blur(18px) saturate(1.2);
 }
 
+/* V2 sidebar — floating frosted glass panel (reference mock). */
+[data-ui='v2'] .agent-sidebar-v2 {
+  background: color-mix(in oklab, var(--card) 72%, transparent) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.18);
+  backdrop-filter: blur(22px) saturate(1.18);
+  border: 1px solid color-mix(in oklab, white 55%, var(--crossub-border));
+  border-radius: 1rem;
+  box-shadow:
+    0 4px 28px rgba(0, 64, 99, 0.08),
+    inset 0 1px 0 color-mix(in oklab, white 85%, transparent);
+}
+
+[data-ui='v2'] .agent-sidebar-v2 .agent-sidebar-v2__nav-link--active {
+  background: color-mix(in oklab, white 78%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 64, 99, 0.04);
+}
+
+[data-ui='v2'].dark .agent-sidebar-v2 {
+  background: color-mix(in oklab, var(--card) 78%, transparent) !important;
+  border-color: color-mix(in oklab, var(--border) 55%, transparent);
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.28);
+}
+
+[data-ui='v2'].dark .agent-sidebar-v2 .agent-sidebar-v2__nav-link--active {
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+}
+
+[data-ui='v2'].dark .agent-sidebar-v2 .agent-sidebar-v2__agency:hover {
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+}
+
+/* V2 shell header — frosted bar above main content. */
+[data-ui='v2'] .agent-shell-v2-header {
+  background: color-mix(in oklab, var(--card) 78%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+}
+
+[data-ui='v2'].dark .agent-shell-v2-header {
+  background: color-mix(in oklab, var(--card) 84%, transparent);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -266,6 +308,52 @@
 
   .faq-section:target {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+  }
+
+  /* Thin scrollbar — hidden until hover, focus, or active scroll. */
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-subtle:hover,
+  .scrollbar-subtle:focus-within,
+  .scrollbar-subtle.is-scrolling {
+    scrollbar-color: color-mix(in oklab, var(--crossub-navy) 22%, transparent) transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+    transition: background-color 0.25s ease;
+  }
+
+  .scrollbar-subtle:hover::-webkit-scrollbar-thumb,
+  .scrollbar-subtle:focus-within::-webkit-scrollbar-thumb,
+  .scrollbar-subtle.is-scrolling::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--crossub-navy) 22%, transparent);
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--crossub-navy) 34%, transparent);
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   @supports (interpolate-size: allow-keywords) {

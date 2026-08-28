@@ -10,10 +10,12 @@ export function AgentNotificationBell({
   unreadCount,
   className,
   iconClassName,
+  badgeClassName,
 }: {
   unreadCount: number;
   className?: string;
   iconClassName?: string;
+  badgeClassName?: string;
 }) {
   return (
     <Link
@@ -30,7 +32,12 @@ export function AgentNotificationBell({
     >
       <Bell className={cn('size-5', iconClassName)} />
       {unreadCount > 0 && (
-        <span className="bg-primary absolute top-1 right-1 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ring-2 ring-background">
+        <span
+          className={cn(
+            'bg-primary absolute top-1 right-1 flex min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ring-2 ring-background',
+            badgeClassName,
+          )}
+        >
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}

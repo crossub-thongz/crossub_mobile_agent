@@ -20,6 +20,7 @@ import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
+import { AgentShellV2Header } from '@/components/layout/agent-shell-v2-header';
 import { ShellBackButton } from '@/components/layout/shell-back-button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -29,6 +30,7 @@ import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
+import { useScrollbarReveal } from '@/lib/use-scrollbar-reveal';
 import { cn, displayName } from '@/lib/utils';
 
 import '@/components/agent/dashboard/v2-dashboard.css';
@@ -75,6 +77,7 @@ export function AgentShell({
   const pathname = usePathname();
   const isV2 = useIsAgentUiV2();
   const isDashboardHome = pathname === ROUTES.DASHBOARD;
+  useScrollbarReveal();
   const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -209,7 +212,7 @@ export function AgentShell({
           )}
         </header>
 
-        {title && !immersive && (
+        {title && !immersive && !isV2 && (
           <header className="border-border bg-background/95 z-40 hidden shrink-0 flex-col gap-2 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
@@ -264,7 +267,7 @@ export function AgentShell({
           </header>
         )}
 
-        {!title && !immersive && !isShellHomePath(pathname) && (
+        {!title && !immersive && !isShellHomePath(pathname) && !isV2 && (
           <header className="border-border bg-background/95 z-40 hidden shrink-0 border-b px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:flex">
             <div className="flex w-full items-center justify-between gap-4">
               <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
@@ -292,9 +295,57 @@ export function AgentShell({
           </header>
         )}
 
+        {isV2 && !immersive ? (
+          <>
+            <AgentShellV2Header
+              unreadNotificationCount={unreadNotificationCount}
+              onLogout={() => void logout()}
+            />
+            {title ? (
+              <header className="border-border/50 hidden shrink-0 border-b px-6 py-3 lg:block">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
+                    <ShellBackButton
+                      backHref={backHref}
+                      backLabel={backLabel}
+                      showLogoOnHome={false}
+                      className="hover:bg-primary/5 shrink-0 rounded-lg px-2 py-1.5 transition"
+                    />
+                  </Suspense>
+                  <div className="min-w-0">
+                    <h1 className="truncate text-lg font-semibold tracking-tight">{title}</h1>
+                    {headerMeta ? (
+                      <button
+                        type="button"
+                        onClick={headerMeta.onToggle}
+                        aria-expanded={headerMeta.open}
+                        className="text-muted-foreground hover:text-foreground mt-0.5 flex max-w-full min-w-0 items-center gap-1 text-left text-xs transition"
+                      >
+                        <span className="truncate">{headerMeta.label}</span>
+                        <ChevronDown
+                          className={cn(
+                            'size-3.5 shrink-0 transition-transform',
+                            headerMeta.open && 'rotate-180',
+                          )}
+                          aria-hidden
+                        />
+                      </button>
+                    ) : user ? (
+                      <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
+                    ) : null}
+                  </div>
+                </div>
+                {headerMeta?.open ? (
+                  <div className="border-border mt-3 border-t pt-3">{headerMeta.panel}</div>
+                ) : null}
+              </header>
+            ) : null}
+          </>
+        ) : null}
+
         <main
           className={cn(
-            'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain',
+            'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain scrollbar-subtle',
             wide ? 'lg:p-0' : 'lg:px-8 lg:pb-8',
             title && !immersive && 'lg:pt-6',
             immersive && 'lg:pt-2 lg:pb-0',
