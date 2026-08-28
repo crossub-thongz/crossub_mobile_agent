@@ -29,30 +29,6 @@ import {
 import { needsPasswordChange, needsSystemAccessAgreement } from '@/lib/system-access-agreement';
 import { cn, formatCurrency } from '@/lib/utils';
 
-import { useAuth } from '@/components/providers/auth-provider';
-import { useAgentData } from '@/components/providers/agent-data-provider';
-import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import {
-  StripePaymentDialog,
-  type StripePaymentDialogState,
-} from '@/components/billing/stripe-payment-dialog';
-import { Button } from '@/components/ui/button';
-import { isPublicRoute, ROUTES } from '@/constants/routes';
-import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
-import {
-  AGENT_PAY_NOW_EVENT,
-  isPrepaidAwaitingCharge,
-  startAgentPrepaidPayment,
-  type AgentPayNowDetail,
-} from '@/lib/billing/agent-pay-now';
-import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
-import {
-  listAgentChargeHistory,
-  type AgentBillingCharge,
-} from '@/lib/crossub-api/agent-billing-client';
-import { needsPasswordChange, needsSystemAccessAgreement } from '@/lib/system-access-agreement';
-import { cn, formatCurrency } from '@/lib/utils';
-
 const HIDDEN_ROUTES = [
   ROUTES.SYSTEM_ACCESS_AGREEMENT,
   ROUTES.CHANGE_PASSWORD,
