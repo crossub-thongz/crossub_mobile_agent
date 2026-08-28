@@ -25,9 +25,13 @@ function memberName(member: AgencyTeamMember): string {
 export function AgencyTeamPanel({
   agencyId,
   canManage,
+  title = 'Agency team',
+  currentUserId,
 }: {
   agencyId: string;
   canManage: boolean;
+  title?: string;
+  currentUserId?: string;
 }) {
   const [team, setTeam] = useState<AgencyTeamResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +92,7 @@ export function AgencyTeamPanel({
   }
 
   return (
-    <InfoPanel title="Agency team" icon={Users}>
+    <InfoPanel title={title} icon={Users}>
       {loading ? (
         <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
           <Loader2 className="size-4 animate-spin" />
@@ -96,46 +100,54 @@ export function AgencyTeamPanel({
         </div>
       ) : team && team.members.length > 0 ? (
         <ul className="divide-y rounded-xl border">
-          {team.members.map((member) => (
-            <li key={member.userId} className="flex items-start justify-between gap-3 p-3">
-              <div className="min-w-0">
-                <p className="font-medium leading-tight">{memberName(member)}</p>
-                <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs break-all">
-                  <Mail className="size-3 shrink-0" />
-                  {member.email}
-                </p>
-                <p className="text-muted-foreground mt-1 text-[10px]">
-                  {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
-                  {' · '}
-                  {member.assignedPropertyCount} propert
-                  {member.assignedPropertyCount === 1 ? 'y' : 'ies'}
-                </p>
-              </div>
-              {canManage && member.tier !== 'PRINCIPAL' ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground shrink-0 hover:text-destructive"
-                  aria-label="Remove team member"
-                  onClick={() => void onRemove(member.userId)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              ) : (
-                <span
-                  className={cn(
-                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                    member.tier === 'PRINCIPAL'
-                      ? 'bg-primary/15 text-primary'
-                      : 'bg-muted text-muted-foreground',
-                  )}
-                >
-                  {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
-                </span>
-              )}
-            </li>
-          ))}
+          {team.members.map((member) => {
+            const isSelf = currentUserId != null && member.userId === currentUserId;
+            return (
+              <li key={member.userId} className="flex items-start justify-between gap-3 p-3">
+                <div className="min-w-0">
+                  <p className="font-medium leading-tight">
+                    {memberName(member)}
+                    {isSelf ? (
+                      <span className="text-muted-foreground ml-1.5 text-xs font-normal">(You)</span>
+                    ) : null}
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs break-all">
+                    <Mail className="size-3 shrink-0" />
+                    {member.email}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-[10px]">
+                    {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
+                    {' · '}
+                    {member.assignedPropertyCount} propert
+                    {member.assignedPropertyCount === 1 ? 'y' : 'ies'}
+                  </p>
+                </div>
+                {canManage && member.tier !== 'PRINCIPAL' ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground shrink-0 hover:text-destructive"
+                    aria-label="Remove team member"
+                    onClick={() => void onRemove(member.userId)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                ) : (
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                      member.tier === 'PRINCIPAL'
+                        ? 'bg-primary/15 text-primary'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p className="text-muted-foreground text-sm">No team members yet.</p>

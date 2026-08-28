@@ -162,7 +162,7 @@ export function DashboardAskCrosPanel({
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Ask Anything…"
             disabled={sending}
-            className="border-input h-10 min-w-0 flex-1 rounded-xl border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-60"
+            className="border-input v2-frosted-surface h-10 min-w-0 flex-1 rounded-xl border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-60"
           />
           <button
             type="submit"

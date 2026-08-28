@@ -8,6 +8,7 @@ import { AlertTriangle, CheckCircle2, FileText, X } from 'lucide-react';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import {
@@ -21,6 +22,8 @@ import { useAgentStore } from '@/lib/store';
 import type { AgentNotification } from '@/lib/types';
 import { cn, formatRelative } from '@/lib/utils';
 
+import '@/components/agent/agent-notification-popover.css';
+
 function alertIcon(type: AgentNotification['type']) {
   if (type === 'urgent') return AlertTriangle;
   if (type === 'approval') return CheckCircle2;
@@ -29,8 +32,9 @@ function alertIcon(type: AgentNotification['type']) {
 
 export function AgentNotificationLiveAlert() {
   const router = useRouter();
+  const isV2 = useIsAgentUiV2();
   const { status } = useAuth();
-  const { notifications, loading, markNotificationRead } = useAgentData();
+  const { notifications, loading, markNotificationRead, markAllNotificationsRead } = useAgentData();
   const { openNotification } = useAgentNotificationDialog();
   const prefs = useAgentStore((s) => s.notificationPrefs);
 
@@ -104,6 +108,17 @@ export function AgentNotificationLiveAlert() {
     }, 200);
   };
 
+  const dismissAll = () => {
+    for (const notification of queue) {
+      if (!isAgentPaymentNotification(notification)) {
+        markNotificationAlerted(notification.id);
+      }
+    }
+    markAllNotificationsRead();
+    setVisible(false);
+    window.setTimeout(() => setQueue([]), 200);
+  };
+
   const openCurrent = () => {
     if (!current) return;
     if (!isAgentPaymentNotification(current)) {
@@ -122,12 +137,6 @@ export function AgentNotificationLiveAlert() {
 
   const display = agentNotificationDisplay(current);
   const Icon = alertIcon(current.type);
-  const tone =
-    current.type === 'urgent'
-      ? 'border-destructive/50 bg-background text-foreground'
-      : current.type === 'approval'
-        ? 'border-primary/50 bg-background text-foreground'
-        : 'border-border bg-background text-foreground';
 
   return (
     <div
@@ -139,8 +148,10 @@ export function AgentNotificationLiveAlert() {
     >
       <div
         className={cn(
-          'pointer-events-auto w-full max-w-md rounded-2xl border p-4 shadow-2xl ring-1 ring-black/5 transition-all duration-200 dark:ring-white/10',
-          tone,
+          'agent-notification-live-alert pointer-events-auto relative w-full max-w-md overflow-hidden rounded-2xl border p-4 transition-all duration-200',
+          isV2 ? 'v2-frosted-surface' : 'bg-card/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:ring-white/10',
+          current.type === 'urgent' && 'agent-notification-live-alert--urgent',
+          current.type === 'approval' && 'agent-notification-live-alert--approval',
           visible ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0',
         )}
       >
@@ -186,11 +197,18 @@ export function AgentNotificationLiveAlert() {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 text-xs"
+                className="h-8 border-border/60 bg-background/50 text-xs backdrop-blur-sm"
                 onClick={dismissCurrent}
               >
                 Dismiss
               </Button>
+              <button
+                type="button"
+                onClick={dismissAll}
+                className="text-muted-foreground hover:text-foreground text-[11px] font-medium transition-colors"
+              >
+                Dismiss all
+              </button>
               <Link
                 href={ROUTES.NOTIFICATIONS}
                 onClick={() => {
@@ -206,11 +224,20 @@ export function AgentNotificationLiveAlert() {
             </div>
           </div>
         </div>
-        {queue.length > 1 && (
-          <p className="text-muted-foreground mt-3 border-t pt-2 text-center text-[10px]">
-            +{queue.length - 1} more in queue
-          </p>
-        )}
+        {queue.length > 1 ? (
+          <div className="agent-notification-live-alert__footer mt-3 flex items-center justify-between gap-3 border-t pt-2">
+            <p className="text-muted-foreground text-[10px]">
+              +{queue.length - 1} more in queue
+            </p>
+            <button
+              type="button"
+              onClick={dismissAll}
+              className="text-primary text-[10px] font-semibold hover:underline"
+            >
+              Dismiss all ({queue.length})
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

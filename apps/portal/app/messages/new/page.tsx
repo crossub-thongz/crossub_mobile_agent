@@ -31,7 +31,7 @@ const RECIPIENTS: Record<MessageCategory, string[]> = {
   Inspection: ['Inspector', 'Inspection team', 'Landlord'],
   Accounting: ['Accounting team', 'Landlord', 'Tenant'],
   Tribunal: ['Tribunal team', 'Landlord', 'Tenant'],
-  Others: ['CROSSUB support', 'Landlord', 'Tenant'],
+  Others: ['CROSSUB Support', 'Landlord', 'Tenant'],
 };
 
 const MESSAGE_TYPES = ['App message', 'Email', 'Internal message'] as const;
@@ -39,7 +39,7 @@ const MESSAGE_TYPES = ['App message', 'Email', 'Internal message'] as const;
 export default function NewMessagePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { properties, ensureMessageThread } = useAgentData();
+  const { properties, ensureMessageThread, openStaffSupportThread } = useAgentData();
   const [search, setSearch] = useState('');
   const [propertyId, setPropertyId] = useState(() => searchParams.get('property') ?? '');
   const [category, setCategory] = useState<MessageCategory>('Others');
@@ -78,6 +78,17 @@ export default function NewMessagePage() {
   const onStart = () => {
     if (!propertyId) {
       toast.error('Select a property');
+      return;
+    }
+    if (recipient === 'CROSSUB Support') {
+      void openStaffSupportThread(propertyId)
+        .then((threadId) => {
+          toast.success('Opened CROSSUB support conversation');
+          router.push(messageDetail(threadId));
+        })
+        .catch((err) => {
+          toast.error(err instanceof Error ? err.message : 'Could not open CROSSUB support thread');
+        });
       return;
     }
     const subject = `${category} — ${recipient || 'General'}`;

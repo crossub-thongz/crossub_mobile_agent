@@ -95,8 +95,8 @@ export function AgentPaymentReminderBanner() {
     <div
       role="status"
       className={cn(
-        'mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed',
-        isV2 && 'mt-4 lg:mt-6',
+        'mb-4 rounded-xl border px-4 py-3 text-sm leading-relaxed',
+        isV2 ? 'v2-frosted-alert border-amber-500/35' : 'border-amber-500/35 bg-amber-500/10',
       )}
     >
       <div className="flex flex-wrap items-start gap-3">

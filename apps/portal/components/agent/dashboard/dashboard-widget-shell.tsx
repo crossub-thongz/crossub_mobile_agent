@@ -19,7 +19,7 @@ export function DashboardWidgetShell({
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-sm ui-v2:rounded-xl',
+        'flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border bg-card shadow-sm v2-frosted-surface ui-v2:rounded-xl ui-v2:shadow-none',
         editing && 'ring-primary/20 ring-2',
       )}
     >

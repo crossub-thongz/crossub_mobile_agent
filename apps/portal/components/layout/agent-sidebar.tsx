@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, ChevronDown, LogOut } from 'lucide-react';
+import { Building2, ChevronDown, ChevronRight, LogOut, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
@@ -23,6 +23,7 @@ const V2_SIDEBAR_PINNED_HREFS = new Set([
   ROUTES.FAQ,
   ROUTES.PRICING,
   ROUTES.BILL,
+  ROUTES.MORE,
 ]);
 
 const V2_AGENCY_MENU_HREFS = new Set([ROUTES.SETTINGS, ROUTES.PRICING, ROUTES.BILL]);
@@ -44,6 +45,7 @@ function NavLink({
   compact,
   badge,
   v2 = false,
+  trailingChevron = false,
 }: {
   href: string;
   label: string;
@@ -52,6 +54,7 @@ function NavLink({
   compact?: boolean;
   badge?: number;
   v2?: boolean;
+  trailingChevron?: boolean;
 }) {
   if (v2) {
     return (
@@ -80,6 +83,15 @@ function NavLink({
         </span>
         {badge && badge > 0 ? (
           <MessageUnreadBadge count={badge} size="sm" className="shrink-0 ring-2 ring-white/80" />
+        ) : null}
+        {trailingChevron ? (
+          <ChevronRight
+            className={cn(
+              'text-muted-foreground size-4 shrink-0 opacity-70',
+              compact && 'hidden group-hover/sidebar:block',
+            )}
+            aria-hidden
+          />
         ) : null}
       </Link>
     );
@@ -257,14 +269,29 @@ export function AgentSidebar({
   );
 
   const mainNav = menuNav.filter((item) => !V2_SIDEBAR_PINNED_HREFS.has(item.href));
-  const faqNav = menuNav.find((item) => item.href === ROUTES.FAQ);
   const agencyMenuItems = menuNav.filter((item) => V2_AGENCY_MENU_HREFS.has(item.href));
+
+  const v2SidebarNav = (() => {
+    const archiveIndex = mainNav.findIndex((item) => item.href === ROUTES.ARCHIVE);
+    const moreItem = {
+      href: ROUTES.MORE,
+      label: 'More',
+      icon: MoreHorizontal,
+      trailingChevron: true,
+    };
+    if (archiveIndex === -1) return [...mainNav, moreItem];
+    return [
+      ...mainNav.slice(0, archiveIndex + 1),
+      moreItem,
+      ...mainNav.slice(archiveIndex + 1),
+    ];
+  })();
 
   if (isV2) {
     return (
       <aside
         className={cn(
-          'agent-sidebar agent-sidebar-v2 group/sidebar sticky top-0 z-30 my-3 ml-3 hidden h-[calc(100%-1.5rem)] shrink-0 flex-col overflow-hidden transition-[width,box-shadow] duration-300 ease-out lg:flex',
+          'agent-sidebar agent-sidebar-v2 group/sidebar z-30 hidden h-full shrink-0 flex-col overflow-hidden transition-[width,box-shadow] duration-300 ease-out lg:flex',
           compact
             ? 'w-[72px] hover:z-40 hover:w-[252px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)]'
             : 'w-[252px]',
@@ -272,23 +299,22 @@ export function AgentSidebar({
       >
         <div
           className={cn(
-            'flex items-center gap-2 px-4 pt-4 pb-3',
+            'flex min-w-0 items-center gap-2 px-4 pt-4 pb-3',
             compact ? 'justify-center group-hover/sidebar:justify-start' : '',
           )}
         >
-          <CrossubLogo size="sm" className="shrink-0" />
-          <AgentSidebarStatus
-            compact={compact}
-            className={cn('min-w-0 flex-1', compact && 'hidden group-hover/sidebar:block')}
+          <CrossubLogo
+            size="sm"
+            showWordmark
+            href={ROUTES.DASHBOARD}
+            className="min-w-0"
+            wordmarkClassName={cn(compact && 'hidden group-hover/sidebar:inline')}
           />
-          <div className={cn('shrink-0', compact && 'hidden group-hover/sidebar:block')}>
-            <ThemeToggle />
-          </div>
         </div>
 
         <nav className="scrollbar-subtle flex-1 overflow-x-hidden overflow-y-auto px-3 py-1">
           <ul className="space-y-0.5">
-            {mainNav.map((item) => (
+            {v2SidebarNav.map((item) => (
               <li key={item.href}>
                 <NavLink
                   {...item}
@@ -296,6 +322,7 @@ export function AgentSidebar({
                   active={isActive(pathname, item.href)}
                   compact={compact}
                   badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
+                  trailingChevron={'trailingChevron' in item && item.trailingChevron}
                 />
               </li>
             ))}
@@ -303,15 +330,7 @@ export function AgentSidebar({
         </nav>
 
         <div className="px-3 pb-4 pt-2">
-          {faqNav ? (
-            <NavLink
-              {...faqNav}
-              v2
-              active={isActive(pathname, faqNav.href)}
-              compact={compact}
-            />
-          ) : null}
-          <div className="border-border/50 my-3 border-t" />
+          <div className="border-border/50 mb-3 border-t" />
           <AgentSidebarAgency
             compact={compact}
             onLogout={onLogout}

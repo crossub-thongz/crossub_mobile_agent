@@ -131,13 +131,21 @@ export function AgentShell({
     <div
       className={cn(
         'flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden',
-        !(isV2 && isDashboardHome) && 'bg-background',
-        isV2 && isDashboardHome && 'v2-dashboard-canvas',
+        isV2 && 'v2-dashboard-canvas',
+        !isV2 && 'bg-background',
       )}
     >
       <AgentSidebar onLogout={() => void logout()} />
 
-      <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {isV2 && !immersive ? (
+          <AgentShellV2Header
+            unreadNotificationCount={unreadNotificationCount}
+            onLogout={() => void logout()}
+          />
+        ) : null}
+
+        <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
         <div
           className={cn(
             'mx-auto flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden lg:flex-[3]',
@@ -295,59 +303,51 @@ export function AgentShell({
           </header>
         )}
 
-        {isV2 && !immersive ? (
-          <>
-            <AgentShellV2Header
-              unreadNotificationCount={unreadNotificationCount}
-              onLogout={() => void logout()}
-            />
-            {title ? (
-              <header className="border-border/50 hidden shrink-0 border-b px-6 py-3 lg:block">
-                <div className="flex min-w-0 items-center gap-3">
-                  <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
-                    <ShellBackButton
-                      backHref={backHref}
-                      backLabel={backLabel}
-                      showLogoOnHome={false}
-                      className="hover:bg-primary/5 shrink-0 rounded-lg px-2 py-1.5 transition"
+        {isV2 && title && !immersive ? (
+          <header className="border-border/50 hidden shrink-0 border-b px-6 py-3 lg:block">
+            <div className="flex min-w-0 items-center gap-3">
+              <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
+                <ShellBackButton
+                  backHref={backHref}
+                  backLabel={backLabel}
+                  showLogoOnHome={false}
+                  className="hover:bg-primary/5 shrink-0 rounded-lg px-2 py-1.5 transition"
+                />
+              </Suspense>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-semibold tracking-tight">{title}</h1>
+                {headerMeta ? (
+                  <button
+                    type="button"
+                    onClick={headerMeta.onToggle}
+                    aria-expanded={headerMeta.open}
+                    className="text-muted-foreground hover:text-foreground mt-0.5 flex max-w-full min-w-0 items-center gap-1 text-left text-xs transition"
+                  >
+                    <span className="truncate">{headerMeta.label}</span>
+                    <ChevronDown
+                      className={cn(
+                        'size-3.5 shrink-0 transition-transform',
+                        headerMeta.open && 'rotate-180',
+                      )}
+                      aria-hidden
                     />
-                  </Suspense>
-                  <div className="min-w-0">
-                    <h1 className="truncate text-lg font-semibold tracking-tight">{title}</h1>
-                    {headerMeta ? (
-                      <button
-                        type="button"
-                        onClick={headerMeta.onToggle}
-                        aria-expanded={headerMeta.open}
-                        className="text-muted-foreground hover:text-foreground mt-0.5 flex max-w-full min-w-0 items-center gap-1 text-left text-xs transition"
-                      >
-                        <span className="truncate">{headerMeta.label}</span>
-                        <ChevronDown
-                          className={cn(
-                            'size-3.5 shrink-0 transition-transform',
-                            headerMeta.open && 'rotate-180',
-                          )}
-                          aria-hidden
-                        />
-                      </button>
-                    ) : user ? (
-                      <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
-                    ) : null}
-                  </div>
-                </div>
-                {headerMeta?.open ? (
-                  <div className="border-border mt-3 border-t pt-3">{headerMeta.panel}</div>
+                  </button>
+                ) : user ? (
+                  <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
                 ) : null}
-              </header>
+              </div>
+            </div>
+            {headerMeta?.open ? (
+              <div className="border-border mt-3 border-t pt-3">{headerMeta.panel}</div>
             ) : null}
-          </>
+          </header>
         ) : null}
 
         <main
           className={cn(
             'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain scrollbar-subtle',
             wide ? 'lg:p-0' : 'lg:px-8 lg:pb-8',
-            title && !immersive && 'lg:pt-6',
+            title && !immersive && (isV2 ? 'lg:pt-3' : 'lg:pt-6'),
             immersive && 'lg:pt-2 lg:pb-0',
           )}
         >
@@ -465,15 +465,29 @@ export function AgentShell({
               type="button"
               onClick={() => setMoreOpen((v) => !v)}
               className={cn(
-                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
-                moreOpen ? 'text-primary' : 'text-muted-foreground',
-                'ui-v2:rounded-xl ui-v2:text-[10px]',
-                moreOpen && isV2 && 'v2-frosted-nav text-foreground',
+                'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium lg:hidden',
+                !isV2 && (moreOpen ? 'text-primary' : 'text-muted-foreground'),
+                'ui-v2:hidden',
               )}
             >
-              <Menu className={cn('size-5', moreOpen && 'stroke-[2.5] ui-v2:stroke-2')} />
+              <Menu className={cn('size-5', moreOpen && 'stroke-[2.5]')} />
               <span>More</span>
             </button>
+            {isV2 ? (
+              <Link
+                href={ROUTES.MORE}
+                className={cn(
+                  'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium lg:hidden',
+                  'ui-v2:rounded-xl',
+                  isActive(pathname, ROUTES.MORE)
+                    ? 'v2-frosted-nav text-foreground'
+                    : 'text-muted-foreground',
+                )}
+              >
+                <Menu className={cn('size-5', isActive(pathname, ROUTES.MORE) && 'stroke-2')} />
+                <span>More</span>
+              </Link>
+            ) : null}
           </div>
         </nav>
 
@@ -482,15 +496,16 @@ export function AgentShell({
 
         <aside
           className={cn(
-            'v2-cros-rail sticky top-0 hidden h-full min-h-0 shrink-0 overflow-hidden border-l lg:flex',
+            'v2-cros-rail hidden h-full min-h-0 shrink-0 overflow-hidden border-l lg:flex',
             isV2 ? 'w-[min(100%,380px)] min-w-[320px] max-w-[420px]' : 'w-1/4 min-w-[300px] max-w-[420px]',
-            isV2 && isDashboardHome
+            isV2
               ? 'v2-dashboard-chrome border-border/50'
               : 'border-border bg-background',
           )}
         >
           <GiiAssistant open variant="panel" />
         </aside>
+        </div>
       </div>
     </div>
   );

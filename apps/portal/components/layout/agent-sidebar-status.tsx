@@ -63,9 +63,11 @@ function resolveWeatherLocation(): Promise<{
 
 export function AgentSidebarStatus({
   compact = false,
+  variant = 'sidebar',
   className,
 }: {
   compact?: boolean;
+  variant?: 'sidebar' | 'header';
   className?: string;
 }) {
   const [now, setNow] = useState<Date | null>(null);
@@ -104,6 +106,59 @@ export function AgentSidebarStatus({
   }, []);
 
   const { date, time } = now ? formatSidebarDateTime(now) : { date: '—', time: '—' };
+
+  if (variant === 'header') {
+    return (
+      <div className={cn('hidden min-w-0 shrink-0 text-right lg:block', className)}>
+        <p className="text-foreground truncate text-xs font-medium leading-tight tabular-nums">
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen} modal={false}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'rounded-sm text-left transition-colors',
+                  'hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                )}
+                aria-label="Open calendar"
+              >
+                {date}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto p-0"
+              align="end"
+              side="bottom"
+              sideOffset={6}
+              onOpenAutoFocus={(event) => event.preventDefault()}
+            >
+              <Calendar
+                mode="single"
+                selected={now ?? undefined}
+                defaultMonth={now ?? undefined}
+                onSelect={() => setCalendarOpen(false)}
+              />
+            </PopoverContent>
+          </Popover>
+          <span className="text-muted-foreground mx-1">·</span>
+          <span>{time}</span>
+        </p>
+        <div className="text-muted-foreground mt-0.5 flex min-w-0 items-center justify-end gap-1 text-[11px] leading-tight">
+          {weatherLoading ? (
+            <Loader2 className="size-3 shrink-0 animate-spin opacity-60" />
+          ) : weather ? (
+            <>
+              <WeatherIcon code={weather.weatherCode} className="size-3 shrink-0 text-primary" />
+              <span className="truncate">
+                {weather.temperatureC}°C · {weather.condition}
+              </span>
+            </>
+          ) : (
+            <span className="truncate">Weather unavailable</span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

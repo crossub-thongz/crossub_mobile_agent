@@ -6,6 +6,8 @@ import { ChevronDown, MessageSquare, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
+import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -65,10 +67,10 @@ export function AgentShellV2Header({
   const role = userRoleLabel(user);
 
   return (
-    <header className="agent-shell-v2-header border-border/50 hidden shrink-0 items-center gap-4 border-b px-6 py-3 lg:flex">
+    <header className="agent-shell-v2-header border-border/50 hidden w-full shrink-0 items-center gap-4 border-b px-6 py-3 lg:flex">
       <Link
         href={ROUTES.SEARCH}
-        className="border-border/70 bg-card/80 hover:border-border flex min-w-0 flex-1 max-w-xl items-center gap-2.5 rounded-xl border px-3 py-2 shadow-sm transition-colors hover:bg-card"
+        className="v2-frosted-surface hover:border-border flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors"
       >
         <Search className="text-muted-foreground size-4 shrink-0" aria-hidden />
         <span className="text-muted-foreground min-w-0 flex-1 truncate text-sm">
@@ -79,7 +81,12 @@ export function AgentShellV2Header({
         </kbd>
       </Link>
 
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <AgentSidebarStatus variant="header" />
+        <ThemeToggle className="size-10 rounded-xl hover:bg-card/70" />
+
+        <div className="bg-border/60 mx-1 hidden h-8 w-px lg:block" aria-hidden />
+
         <Link
           href={ROUTES.MESSAGES}
           className="text-muted-foreground hover:bg-card/70 relative flex size-10 items-center justify-center rounded-xl transition-colors"

@@ -8,6 +8,7 @@ import { AgencyTeamPanel } from '@/components/agent/agency-team-panel';
 import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
 import { PropertyListCard } from '@/components/agent/property-list-card';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { Agency } from '@/lib/types';
 import { propertyDetail, ROUTES } from '@/constants/routes';
@@ -29,6 +30,7 @@ const STATUS_LABEL: Record<Agency['status'], string> = {
 export default function AgencyDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const { user } = useAuth();
   const { agencies, properties, messages } = useAgentData();
   const agency = agencies.find((a) => a.id === id);
 
@@ -111,7 +113,7 @@ export default function AgencyDetailPage() {
           )}
         </InfoPanel>
 
-        <AgencyTeamPanel agencyId={id} canManage={isPrincipal} />
+        <AgencyTeamPanel agencyId={id} canManage={isPrincipal} currentUserId={user?.id} />
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">

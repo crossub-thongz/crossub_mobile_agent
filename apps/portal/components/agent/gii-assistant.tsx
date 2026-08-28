@@ -350,12 +350,9 @@ export function GiiAssistant({
     return formatPropertyFullAddress(scopedProperty);
   }, [effectiveLaunch.propertyAddress, scopedProperty]);
 
+  /** V2 shell rail — Needs attention + Ask CROS on every portfolio page (not property/message scope). */
   const isDashboardV2Panel =
-    isPanel &&
-    isV2 &&
-    pathname === ROUTES.DASHBOARD &&
-    !scopedProperty &&
-    !messageScoped;
+    isPanel && isV2 && !scopedProperty && !messageScoped;
 
   // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
   // progress" set the Overview tab shows (one shared selector, so the two never disagree),
@@ -1151,7 +1148,7 @@ export function GiiAssistant({
       </div>
 
       {isDashboardV2Panel ? (
-        <div className="normal-case grid min-h-0 flex-1 grid-rows-[45fr_55fr] gap-3 p-3">
+        <div className="normal-case grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-3 p-3">
           <div className="v2-dashboard__card flex min-h-0 flex-col overflow-hidden">
             <DashboardNeedsAttentionPanel />
           </div>

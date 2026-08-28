@@ -35,6 +35,9 @@ export const ROUTES = {
   TENANTS_NEW: '/tenants/new',
   PROPERTY_TRANSFER: '/leasing/transfer',
   ARCHIVE: '/archive',
+  MORE: '/more',
+  TEAM: '/team',
+  SUPPORT_CONTACT: '/support/contact',
   AGREEMENTS: '/agreements',
 } as const;
 

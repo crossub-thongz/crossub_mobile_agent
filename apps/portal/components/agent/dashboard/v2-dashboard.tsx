@@ -550,7 +550,7 @@ export function V2Dashboard() {
       {showMobileAskBar ? (
         <form
           onSubmit={submitAsk}
-          className="border-border bg-card fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 rounded-full border px-2 py-1.5 shadow-sm lg:hidden"
+          className="v2-frosted-surface fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 rounded-full border px-2 py-1.5 lg:hidden"
         >
           <CrosAssistantLogo size="sm" />
           <input

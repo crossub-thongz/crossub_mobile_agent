@@ -1,0 +1,25 @@
+.more-hub {
+  padding-bottom: 2rem;
+}
+
+.more-hub__card-header {
+  border-color: color-mix(in oklab, var(--crossub-border) 35%, transparent);
+}
+
+@media (max-width: 1023px) {
+  .more-hub__card-header:hover {
+    background: color-mix(in oklab, var(--crossub-border) 12%, transparent);
+  }
+}
+
+.more-hub__row-icon {
+  margin-top: 0.125rem;
+}
+
+.more-hub__row + .more-hub__row {
+  border-top: 1px solid color-mix(in oklab, var(--crossub-border) 30%, transparent);
+}
+
+.more-hub .divide-y > * + * {
+  border-color: color-mix(in oklab, var(--crossub-border) 30%, transparent);
+}

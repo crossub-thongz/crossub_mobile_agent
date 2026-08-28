@@ -69,12 +69,13 @@
 
 .v2-dashboard-canvas,
 .v2-dashboard {
-  --dashboard-frost-bg: color-mix(in oklab, var(--card) 62%, transparent);
-  --dashboard-frost-border: color-mix(in oklab, var(--crossub-border) 42%, transparent);
-  --dashboard-frost-blur: blur(18px) saturate(1.14);
+  --dashboard-frost-bg: color-mix(in oklab, var(--card) 42%, transparent);
+  --dashboard-frost-border: color-mix(in oklab, var(--crossub-border) 38%, transparent);
+  --dashboard-frost-blur: blur(20px) saturate(1.2);
+  --dashboard-frost-highlight: inset 0 1px 0 color-mix(in oklab, white 72%, transparent);
   --dashboard-card-shadow:
-    0 1px 2px rgba(0, 64, 99, 0.05),
-    0 8px 24px rgba(0, 64, 99, 0.07);
+    0 1px 2px rgba(0, 64, 99, 0.04),
+    0 8px 24px rgba(0, 64, 99, 0.06);
   --dashboard-health-tint: var(--crossub-mint-wash);
 }
 
@@ -93,7 +94,7 @@
   border: 1px solid var(--dashboard-frost-border);
   -webkit-backdrop-filter: var(--dashboard-frost-blur);
   backdrop-filter: var(--dashboard-frost-blur);
-  box-shadow: var(--dashboard-card-shadow);
+  box-shadow: var(--dashboard-frost-highlight), var(--dashboard-card-shadow);
 }
 
 .v2-dashboard__card {
@@ -104,13 +105,13 @@
   background:
     linear-gradient(
       145deg,
-      color-mix(in oklab, var(--dashboard-health-tint) 52%, transparent) 0%,
-      color-mix(in oklab, var(--card) 58%, transparent) 52%,
-      color-mix(in oklab, var(--card) 62%, transparent) 100%
+      color-mix(in oklab, var(--dashboard-health-tint) 42%, transparent) 0%,
+      color-mix(in oklab, var(--card) 38%, transparent) 52%,
+      color-mix(in oklab, var(--card) 42%, transparent) 100%
     );
   border: 1px solid color-mix(in oklab, var(--crossub-mint) 26%, transparent);
   border-radius: 1rem;
-  box-shadow: var(--dashboard-card-shadow);
+  box-shadow: var(--dashboard-frost-highlight), var(--dashboard-card-shadow);
   -webkit-backdrop-filter: var(--dashboard-frost-blur);
   backdrop-filter: var(--dashboard-frost-blur);
 }
@@ -152,16 +153,34 @@
 .v2-dashboard__attention-card {
   background-color: var(
     --dashboard-frost-bg,
-    color-mix(in oklab, var(--card) 62%, transparent)
+    color-mix(in oklab, var(--card) 42%, transparent)
   ) !important;
-  border: 1px solid var(--dashboard-frost-border, color-mix(in oklab, var(--crossub-border) 42%, transparent));
-  -webkit-backdrop-filter: var(--dashboard-frost-blur, blur(18px) saturate(1.14));
-  backdrop-filter: var(--dashboard-frost-blur, blur(18px) saturate(1.14));
-  box-shadow: var(
-    --dashboard-card-shadow,
-    0 1px 2px rgba(0, 64, 99, 0.05),
-    0 8px 24px rgba(0, 64, 99, 0.07)
-  );
+  border: 1px solid var(--dashboard-frost-border, color-mix(in oklab, var(--crossub-border) 38%, transparent));
+  -webkit-backdrop-filter: var(--dashboard-frost-blur, blur(20px) saturate(1.2));
+  backdrop-filter: var(--dashboard-frost-blur, blur(20px) saturate(1.2));
+  box-shadow:
+    var(--dashboard-frost-highlight, inset 0 1px 0 color-mix(in oklab, white 72%, transparent)),
+    var(
+      --dashboard-card-shadow,
+      0 1px 2px rgba(0, 64, 99, 0.04),
+      0 8px 24px rgba(0, 64, 99, 0.06)
+    );
+}
+
+/* Frost solid card utilities anywhere on the v2 shell canvas. */
+.v2-dashboard-canvas :where(.bg-card, [class*='bg-card/']):not(
+    :where(.v2-frosted-nav, .v2-frosted-bar, .v2-frosted-surface, button, [role='menuitem'])
+  ) {
+  background-color: var(--dashboard-frost-bg) !important;
+  -webkit-backdrop-filter: var(--dashboard-frost-blur);
+  backdrop-filter: var(--dashboard-frost-blur);
+  box-shadow: var(--dashboard-frost-highlight), var(--dashboard-card-shadow);
+}
+
+.v2-dashboard-canvas :where(.border.bg-background, .border-input.bg-background) {
+  background-color: color-mix(in oklab, var(--card) 36%, transparent) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
+  backdrop-filter: blur(14px) saturate(1.12);
 }
 
 .v2-dashboard__card a.border,
@@ -180,9 +199,10 @@
 
 [data-ui='v2'].dark .v2-dashboard-canvas,
 [data-ui='v2'].dark .v2-dashboard {
-  --dashboard-frost-bg: color-mix(in oklab, var(--card) 74%, transparent);
-  --dashboard-frost-border: color-mix(in oklab, var(--border) 50%, transparent);
-  --dashboard-frost-blur: blur(20px) saturate(1.1);
+  --dashboard-frost-bg: color-mix(in oklab, var(--card) 56%, transparent);
+  --dashboard-frost-border: color-mix(in oklab, var(--border) 44%, transparent);
+  --dashboard-frost-blur: blur(22px) saturate(1.1);
+  --dashboard-frost-highlight: inset 0 1px 0 color-mix(in oklab, white 8%, transparent);
   --dashboard-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
   --dashboard-health-tint: color-mix(in oklab, var(--crossub-mint) 8%, var(--background));
 }
@@ -220,9 +240,9 @@
   background:
     linear-gradient(
       145deg,
-      color-mix(in oklab, var(--crossub-mint) 14%, transparent) 0%,
-      color-mix(in oklab, var(--card) 70%, transparent) 55%,
-      color-mix(in oklab, var(--card) 74%, transparent) 100%
+      color-mix(in oklab, var(--crossub-mint) 12%, transparent) 0%,
+      color-mix(in oklab, var(--card) 52%, transparent) 55%,
+      color-mix(in oklab, var(--card) 56%, transparent) 100%
     );
   border-color: color-mix(in oklab, var(--crossub-mint) 22%, transparent);
 }
