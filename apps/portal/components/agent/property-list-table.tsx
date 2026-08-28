@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useMemo, type ReactNode } from 'react';
 import { AlertCircle, AlertTriangle, Bell, Pencil, Trash2 } from 'lucide-react';
 
-import { ModuleTableTruncateText } from '@/components/agent/module-list-table';
+import {
+  MODULE_TABLE_COLUMN_WIDTHS,
+  ModuleTableTruncateText,
+  moduleTableCellClassName,
+} from '@/components/agent/module-list-table';
 import { SortableTableHeader } from '@/components/agent/sortable-table-header';
 import { Button } from '@/components/ui/button';
 import { messagesForProperty, needActionsForProperty } from '@/constants/routes';
@@ -181,18 +185,15 @@ export function PropertyListTable({
   }, [agencies, messageUnreadFor, needActionCountFor, properties, sortDirection, sortKey]);
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <table className="w-full table-fixed border-collapse text-left text-sm">
+    <div className="min-w-0 overflow-x-auto rounded-xl border bg-card shadow-sm">
+      <table className="w-full min-w-[52rem] table-fixed border-collapse text-left text-sm">
         <colgroup>
-          <col className="w-[21%]" />
-          <col className="w-[11%]" />
-          <col className="w-[13%]" />
-          <col className="w-[8%]" />
-          <col className="w-[11%]" />
-          <col className="w-[9%]" />
-          <col className="w-[10%]" />
-          <col className="w-[6rem]" />
-          <col className="w-[6.5rem]" />
+          {(isArchived
+            ? MODULE_TABLE_COLUMN_WIDTHS.propertyListArchived
+            : MODULE_TABLE_COLUMN_WIDTHS.propertyList
+          ).map((width, index) => (
+            <col key={`${width}-${index}`} style={{ width }} />
+          ))}
         </colgroup>
         <thead>
           <tr className="border-b bg-muted/30">
@@ -289,12 +290,12 @@ export function PropertyListTable({
                     isArchived && 'bg-muted/10',
                   )}
                 >
-                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
+                  <td className={moduleTableCellClassName()}>
                     <Link
                       href={rowHref(property)}
-                      className="font-medium leading-snug text-foreground hover:text-primary"
+                      className="block min-w-0 font-medium leading-snug text-foreground hover:text-primary"
                     >
-                      <ModuleTableTruncateText lines={2}>
+                      <ModuleTableTruncateText lines={1}>
                         {formatPropertyFullAddress(property)}
                       </ModuleTableTruncateText>
                     </Link>
@@ -325,47 +326,47 @@ export function PropertyListTable({
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-2 py-2.5 text-muted-foreground lg:px-3 lg:py-3">
-                    <ModuleTableTruncateText lines={2}>{property.tenantName || '—'}</ModuleTableTruncateText>
+                  <td className={moduleTableCellClassName('text-muted-foreground')}>
+                    <ModuleTableTruncateText lines={1}>{property.tenantName || '—'}</ModuleTableTruncateText>
                   </td>
-                  <td className="px-2 py-2.5 text-xs leading-snug text-muted-foreground tabular-nums lg:px-3 lg:py-3">
-                    <ModuleTableTruncateText lines={2}>{formatLeasePeriod(property)}</ModuleTableTruncateText>
+                  <td className={moduleTableCellClassName('text-xs leading-snug text-muted-foreground tabular-nums')}>
+                    <ModuleTableTruncateText lines={1}>{formatLeasePeriod(property)}</ModuleTableTruncateText>
                   </td>
-                  <td className="px-2 py-2.5 text-xs font-medium tabular-nums lg:px-3 lg:py-3">
-                    {formatRent(property)}
+                  <td className={moduleTableCellClassName('text-xs font-medium tabular-nums')}>
+                    <ModuleTableTruncateText lines={1}>{formatRent(property)}</ModuleTableTruncateText>
                   </td>
-                  <td className="px-2 py-2.5 text-muted-foreground lg:px-3 lg:py-3">
-                    <ModuleTableTruncateText lines={2}>
+                  <td className={moduleTableCellClassName('text-muted-foreground')}>
+                    <ModuleTableTruncateText lines={1}>
                       {resolveAgencyName(property, agencies)}
                     </ModuleTableTruncateText>
                   </td>
-                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
+                  <td className={moduleTableCellClassName()}>
                     {pmHref && pmName ? (
                       <a
                         href={pmHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary text-xs font-medium hover:underline"
+                        className="text-primary block min-w-0 text-xs font-medium hover:underline"
                       >
-                        <ModuleTableTruncateText lines={2}>{pmName}</ModuleTableTruncateText>
+                        <ModuleTableTruncateText lines={1}>{pmName}</ModuleTableTruncateText>
                       </a>
                     ) : (
                       <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </td>
-                  <td className="px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
+                  <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums whitespace-nowrap')}>
                     {createdIso && !Number.isNaN(new Date(createdIso).getTime())
                       ? formatDate(createdIso)
                       : '—'}
                   </td>
                   {isArchived ? (
-                    <td className="px-2 py-2.5 text-xs text-muted-foreground tabular-nums lg:px-3 lg:py-3">
+                    <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums whitespace-nowrap')}>
                       {property.endOfManagementDate
                         ? formatDate(property.endOfManagementDate)
                         : '—'}
                     </td>
                   ) : (
-                    <td className="px-2 py-2.5 align-middle lg:px-3 lg:py-3">
+                    <td className={moduleTableCellClassName('align-middle')}>
                       <div className="mx-auto flex w-fit items-center justify-center gap-1">
                         <TableIconLink
                           href={messagesForProperty(property.id)}
@@ -402,7 +403,7 @@ export function PropertyListTable({
                       </div>
                     </td>
                   )}
-                  <td className="px-2 py-2.5 lg:px-3 lg:py-3">
+                  <td className={moduleTableCellClassName()}>
                     <div className="flex items-center justify-end gap-0.5">
                       <Button variant="ghost" size="icon" className="size-8" asChild>
                         <Link

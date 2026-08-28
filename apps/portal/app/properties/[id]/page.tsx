@@ -17,6 +17,17 @@ import { PropertyMaintenanceTab } from '@/components/agent/property-maintenance-
 import { PropertyRemindersDialog } from '@/components/agent/property-reminders-dialog';
 import { PropertyApprovalBanner } from '@/components/agent/property-approval-banner';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
+import { PropertyProfileV2 } from '@/components/agent/property-profile/property-profile-v2';
+import { PropertyProfileActivitiesTab } from '@/components/agent/property-profile/property-profile-activities-tab';
+import { PropertyProfileDocumentsTab } from '@/components/agent/property-profile/property-profile-documents-tab';
+import { PropertyProfileFinancialsTab } from '@/components/agent/property-profile/property-profile-financials-tab';
+import { PropertyProfileTasksTab } from '@/components/agent/property-profile/property-profile-tasks-tab';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import {
+  normalizePropertyProfileSection,
+  type PropertyProfileSection,
+} from '@/lib/property-profile-v2-data';
+import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 import { PropertyMessageTab } from '@/components/agent/property-message-tab';
 import { PropertyTabBar, type PropertyViewTab } from '@/components/agent/property-tab-bar';
 import { PropertyTabNeedActionsBanner } from '@/components/agent/property-tab-need-actions-banner';
@@ -73,6 +84,21 @@ import { unreadMessagesForProperty } from '@/lib/communications-log';
 type Tab = PropertyDetailTab;
 type ViewTab = PropertyViewTab<Tab>;
 
+const TASK_WORKFLOW_TABS = [
+  'Maintenance',
+  'Leasing',
+  'Inspection',
+  'Rent Review',
+  'Tribunal',
+] as const satisfies readonly PropertyDetailTab[];
+
+const FINANCIAL_TABS = [
+  'Accounting',
+  'Fees',
+  'Bills',
+  'Rent Review',
+] as const satisfies readonly PropertyDetailTab[];
+
 function normalizeTab(raw: string | null, allowedTabs: readonly Tab[]): ViewTab {
   if (raw === 'Message') return 'Message';
   if (raw === 'Overview' || raw === 'Tenancy' || raw === 'Communication') {
@@ -88,6 +114,7 @@ export default function PropertyDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isV2 = useIsAgentUiV2();
   const id = params.id as string;
   const {
     properties,
@@ -116,7 +143,12 @@ export default function PropertyDetailPage() {
   const [propertyLoadState, setPropertyLoadState] = useState<'loading' | 'ready' | 'missing'>(() =>
     listProperty ? 'ready' : 'loading',
   );
+  const [localImageUrl, setLocalImageUrl] = useState<string | null | undefined>(undefined);
   const property = listProperty ?? fetchedProperty;
+  const displayProperty =
+    property && localImageUrl !== undefined
+      ? { ...property, imageUrl: localImageUrl }
+      : property;
   const isArchivedProperty = Boolean(
     property?.endOfManagementDate ||
       archivedProperties.some((p) => p.id === id),
@@ -161,6 +193,12 @@ export default function PropertyDetailPage() {
     property ? isPropertyInspectionOnly(agencies, property.agencyId) : true,
   );
   const [tab, setTab] = useState<ViewTab>('Documents');
+  const [profileSection, setProfileSection] = useState<PropertyProfileSection>('overview');
+  const [pendingAccountingAction, setPendingAccountingAction] =
+    useState<PropertyWorkflowActionId | null>(null);
+  const [financialSubView, setFinancialSubView] = useState<'overview' | 'fees' | 'bills'>(
+    'overview',
+  );
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
   const [selectedRentReviewId, setSelectedRentReviewId] = useState<string | null>(null);
   const [leasingChatOpen, setLeasingChatOpen] = useState(false);
@@ -197,6 +235,15 @@ export default function PropertyDetailPage() {
   useEffect(() => {
     const next = normalizeTab(searchParams.get('tab'), propertyTabs);
     setTab((prev) => (prev === next ? prev : next));
+    const sectionParam = searchParams.get('section');
+    if (sectionParam) {
+      setProfileSection(normalizePropertyProfileSection(sectionParam));
+      return;
+    }
+    if (next === 'Documents') setProfileSection('documents');
+    else if (next === 'Archive') setProfileSection('activities');
+    else if ((FINANCIAL_TABS as readonly string[]).includes(next)) setProfileSection('financials');
+    else if ((TASK_WORKFLOW_TABS as readonly string[]).includes(next)) setProfileSection('tasks');
   }, [searchParams, propertyTabs]);
 
   /** Desktop uses the shell sidebar for Gii — never keep mobile-only tabs active. */
@@ -348,6 +395,247 @@ export default function PropertyDetailPage() {
   const showAmenityIcons =
     property.bedrooms != null || property.bathrooms != null || property.carSpaces != null;
   const fullAddress = formatPropertyFullAddress(property);
+  const taskWorkflowTabs = propertyTabs.filter((t): t is Tab =>
+    (TASK_WORKFLOW_TABS as readonly string[]).includes(t),
+  );
+  const financialTabs = propertyTabs.filter((t): t is Tab =>
+    (FINANCIAL_TABS as readonly string[]).includes(t),
+  );
+
+  const updateProfileSection = (section: PropertyProfileSection) => {
+    if (section !== 'financials') {
+      setFinancialSubView('overview');
+    }
+    setProfileSection(section);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set('section', section);
+    if (section === 'tasks') {
+      const nextTab: Tab =
+        (TASK_WORKFLOW_TABS as readonly string[]).includes(tab as Tab) &&
+        taskWorkflowTabs.includes(tab as Tab)
+          ? (tab as Tab)
+          : taskWorkflowTabs[0] ?? 'Maintenance';
+      setTab(nextTab);
+      next.set('tab', nextTab);
+    } else if (section === 'financials') {
+      const nextTab: Tab =
+        (FINANCIAL_TABS as readonly string[]).includes(tab as Tab) &&
+        financialTabs.includes(tab as Tab)
+          ? (tab as Tab)
+          : financialTabs[0] ?? 'Accounting';
+      setTab(nextTab);
+      next.set('tab', nextTab);
+    } else if (section === 'documents') {
+      setTab('Documents');
+      next.set('tab', 'Documents');
+    } else if (section === 'activities') {
+      setTab('Archive');
+      next.set('tab', 'Archive');
+    }
+    router.replace(`/properties/${id}?${next.toString()}`);
+  };
+
+  useEffect(() => {
+    setLocalImageUrl(undefined);
+  }, [property?.imageUrl]);
+
+  const updateWorkflowTab = (nextTab: ViewTab) => {
+    setTab(nextTab);
+    const next = new URLSearchParams(searchParams.toString());
+    next.set('tab', nextTab);
+    router.replace(`/properties/${id}?${next.toString()}`);
+  };
+
+  const handleProfileWorkflowAction = (actionId: PropertyWorkflowActionId) => {
+    if (
+      actionId === 'create_rent_reconciliation' ||
+      actionId === 'open_invoice_management' ||
+      actionId === 'open_rent_chasing'
+    ) {
+      updateProfileSection('financials');
+      setPendingAccountingAction(actionId);
+      return true;
+    }
+    return false;
+  };
+
+  const profileBanners = (
+    <>
+      {isArchivedProperty ? (
+        <div className="rounded-xl border border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm">
+          <p className="font-medium text-foreground">Archived property</p>
+          <p className="text-muted-foreground mt-1">
+            Management ended
+            {property.endOfManagementDate
+              ? ` on ${formatDate(property.endOfManagementDate)}`
+              : ''}
+            . This record is read-only for reference.
+          </p>
+        </div>
+      ) : null}
+      {property.registryIntakeComplete === false ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
+          <p className="text-amber-950 dark:text-amber-100">
+            Property registration is incomplete. Resume the wizard to finish intake.
+          </p>
+          <Link
+            href={propertyRegistryResume(property.id)}
+            className="font-semibold text-amber-900 underline underline-offset-2 dark:text-amber-200"
+          >
+            Resume registration
+          </Link>
+        </div>
+      ) : null}
+      <PropertyApprovalBanner property={property} />
+    </>
+  );
+
+  if (isV2) {
+    return (
+      <AgentShell backHref={ROUTES.PROPERTIES} backLabel="Back to properties" hideGlobalFabs>
+        <PropertyProfileV2
+          property={displayProperty ?? property}
+          propertyId={id}
+          section={profileSection}
+          onSectionChange={updateProfileSection}
+          needActions={needActions}
+          currentLease={currentLease}
+          inspections={tasks.inspections}
+          propertyDocs={propertyDocs}
+          leasingCycles={propertyLeasingCycles}
+          tenantSelections={propertyLeasingCases}
+          vacatingCases={propertyVacatingCases}
+          rentReviews={tasks.rentReviews}
+          rentReviewDecisions={decisions}
+          maintenance={tasks.maintenance}
+          tribunalCases={propertyTribunalCases}
+          accounting={acct}
+          onViewBondLodgement={viewBondLodgement}
+          onRefresh={() => void refresh()}
+          onNeedActionNavigate={(href) => router.push(href)}
+          onCustomWorkflowAction={handleProfileWorkflowAction}
+          onPhotoUpdated={(url) => {
+            setLocalImageUrl(url);
+            void refresh();
+          }}
+          banners={profileBanners}
+          tasksPanel={
+            <PropertyProfileTasksTab
+              property={property}
+              propertyId={id}
+              maintenance={tasks.maintenance}
+              inspections={tasks.inspections}
+              propertyDocs={propertyDocs}
+              leasing={leasing}
+              currentLease={currentLease}
+              rentReviewDecisions={decisions}
+              tenancyRentReviews={tenancyRentReviews}
+              leasingCycles={propertyLeasingCycles}
+              tenantSelections={propertyLeasingCases}
+              vacatingCases={propertyVacatingCases}
+              tribunalCases={propertyTribunalCases}
+              accounting={acct}
+              needActions={needActions}
+              deletedLeasingCycles={propertyDeletedLeasingCycles}
+              deletedEndLeasingCases={propertyDeletedEndLeasingCases}
+              deletedRentReviews={propertyDeletedRentReviews}
+              onViewRentReview={setSelectedRentReviewId}
+              onOpenInspectionCreated={openPropertyInspection}
+              onNavigate={(href) => router.push(href)}
+            />
+          }
+          financialsPanel={
+            financialSubView === 'fees' ? (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setFinancialSubView('overview')}
+                  className="text-primary text-sm font-semibold"
+                >
+                  ← Back to financials
+                </button>
+                <PropertyFeesTab property={property} propertyId={id} />
+              </div>
+            ) : financialSubView === 'bills' ? (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setFinancialSubView('overview')}
+                  className="text-primary text-sm font-semibold"
+                >
+                  ← Back to financials
+                </button>
+                <PropertyBillsTab propertyId={id} invoiceMode={billingTabLabel === 'Invoice'} />
+              </div>
+            ) : (
+              <PropertyProfileFinancialsTab
+                property={property}
+                propertyId={id}
+                accounting={acct}
+                onRefresh={() => void refresh()}
+                initialWorkflowAction={pendingAccountingAction}
+                onInitialWorkflowActionHandled={() => setPendingAccountingAction(null)}
+                onOpenFees={() => setFinancialSubView('fees')}
+                onOpenBills={() => setFinancialSubView('bills')}
+              />
+            )
+          }
+          documentsPanel={
+            <PropertyProfileDocumentsTab
+              property={property}
+              propertyId={id}
+              fallbackDocuments={propertyDocs}
+              readOnlyGroups={readOnlyDocumentGroups}
+              readOnlyHint={
+                tenancyArchived
+                  ? 'Tenancy and tenant application documents are archived and cannot be edited.'
+                  : undefined
+              }
+            />
+          }
+          activitiesPanel={
+            <PropertyProfileActivitiesTab
+              property={property}
+              propertyId={id}
+              maintenance={tasks.maintenance}
+              inspections={tasks.inspections}
+              rentReviews={tasks.rentReviews}
+              tenantSelections={propertyLeasingCases}
+              vacatingCases={propertyVacatingCases}
+              tribunalCases={propertyTribunalCases}
+              accounting={acct}
+            />
+          }
+        />
+
+        <InspectionCaseDetailDialog
+          open={selectedInspectionId !== null}
+          onClose={clearPropertyInspectionFocus}
+          inspectionId={selectedInspectionId}
+          navContext={fromProperty(id, 'Inspection')}
+        />
+        <RentReviewDetailDialog
+          open={selectedRentReviewId !== null}
+          onClose={() => setSelectedRentReviewId(null)}
+          review={selectedRentReview}
+          navContext={fromProperty(id, 'Rent Review')}
+        />
+        <PropertyChatDialog
+          open={leasingChatOpen}
+          onClose={() => setLeasingChatOpen(false)}
+          propertyId={id}
+          propertyAddress={fullAddress}
+          category="Leasing"
+          title="Leasing messages"
+        />
+        <PropertyRemindersDialog
+          needActions={needActions}
+          open={remindersOpen}
+          onOpenChange={setRemindersOpen}
+        />
+      </AgentShell>
+    );
+  }
 
   return (
     <AgentShell backHref={ROUTES.PROPERTIES} backLabel="Properties">
@@ -434,8 +722,6 @@ export default function PropertyDetailPage() {
               )} */}
             </div>
           </div>
-
-          <PropertyApprovalBanner property={property} />
 
           <PropertyProfileDetails
             property={property}

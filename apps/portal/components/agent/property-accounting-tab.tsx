@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
@@ -99,6 +99,8 @@ export function PropertyAccountingTab({
   currentLease,
   arrearsSectionRef,
   onRefresh,
+  initialWorkflowAction,
+  onInitialWorkflowActionHandled,
 }: {
   property: Property;
   propertyId: string;
@@ -114,6 +116,8 @@ export function PropertyAccountingTab({
   tenantSelections: TenantSelectionCase[];
   currentLease?: LeasingRecord;
   onRefresh?: () => void;
+  initialWorkflowAction?: PropertyWorkflowActionId | null;
+  onInitialWorkflowActionHandled?: () => void;
 }) {
   const { apiConnected, primaryAgency, properties } = useAgentData();
   const { detail, refresh: refreshPortalDetail } = usePropertyPortalDetail(
@@ -207,6 +211,28 @@ export function PropertyAccountingTab({
     }
     return false;
   };
+
+  useEffect(() => {
+    if (!initialWorkflowAction) return;
+    if (initialWorkflowAction === 'create_rent_reconciliation') {
+      setRentReconOpen(true);
+      onInitialWorkflowActionHandled?.();
+      return;
+    }
+    if (initialWorkflowAction === 'open_invoice_management') {
+      if (!primaryAgency) {
+        toast.error('Complete your agency profile before creating invoices');
+      } else {
+        setInvoiceOpen(true);
+      }
+      onInitialWorkflowActionHandled?.();
+      return;
+    }
+    if (initialWorkflowAction === 'open_rent_chasing') {
+      setRentChasingOpen(true);
+      onInitialWorkflowActionHandled?.();
+    }
+  }, [initialWorkflowAction, onInitialWorkflowActionHandled, primaryAgency]);
 
   return (
     <div className="space-y-4">

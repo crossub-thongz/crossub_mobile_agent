@@ -140,6 +140,8 @@ export interface Property {
   rentPaidUntil?: string;
   /** Rent payment reference for bank transfers (agency initials + property ref). */
   paymentReference?: string;
+  /** Public cover image URL (R2) for listings and property profile. */
+  imageUrl?: string | null;
   openTasks: number;
   inspectionStatus: string;
   maintenanceStatus: string;

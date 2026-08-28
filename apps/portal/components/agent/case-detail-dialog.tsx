@@ -108,7 +108,7 @@ export function CaseDetailDialog({
     >
       <div
         className={cn(
-          'bg-background flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden border shadow-2xl',
+          'flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden border bg-white shadow-2xl dark:bg-background',
           'rounded-t-2xl md:h-auto md:rounded-2xl',
           desktopSizeClass,
         )}
@@ -135,7 +135,7 @@ export function CaseDetailDialog({
             <div className="bg-muted/80 h-1 w-10 rounded-full" />
           </div>
 
-          <div className="border-border bg-background/95 border-b backdrop-blur-sm">
+          <div className="border-border border-b bg-white backdrop-blur-sm dark:bg-background/95">
             <div className="flex items-start justify-between gap-2 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-3">
               <div className="min-w-0 flex-1">
                 <h2 id="case-detail-dialog-title" className="text-base font-semibold md:text-sm">
@@ -160,7 +160,7 @@ export function CaseDetailDialog({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-background">
           {children}
         </div>
       </div>

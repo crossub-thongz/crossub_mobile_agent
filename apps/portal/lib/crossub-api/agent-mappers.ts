@@ -253,6 +253,10 @@ export function mapAgentProperty(
         .paymentReference ??
       ext.paymentReference ??
       undefined,
+    imageUrl:
+      (dto as AgentProperty & { imageUrl?: string | null }).imageUrl ??
+      (list as AgentPropertyListFields & { imageUrl?: string | null }).imageUrl ??
+      undefined,
     openTasks: 0,
     inspectionStatus: '—',
     maintenanceStatus: '—',

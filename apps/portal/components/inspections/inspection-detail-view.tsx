@@ -410,7 +410,13 @@ export function InspectionDetailView({
   }
 
   if (insp.type === 'INGOING' || insp.type === 'OUTGOING') {
-    return <AgentFieldInspectionDetail inspection={insp} apiConnected={apiConnected} />;
+    return (
+      <AgentFieldInspectionDetail
+        inspection={insp}
+        apiConnected={apiConnected}
+        onIngoingCancelled={embedded ? () => onClose?.() : undefined}
+      />
+    );
   }
 
   const nextAction = inspectionNextAction(insp);
@@ -522,6 +528,13 @@ export function InspectionDetailView({
     insp,
     openSession?.openInspection,
   );
+  const showOpenPlatformPayment =
+    insp.type === 'OPEN' && (openPlatformPaymentActive || awaitingPayment);
+  const showRoutinePlatformPayment =
+    insp.type === 'ROUTINE' && (routineInPersonInProgress || awaitingPayment);
+  const panelClassCompact = embedded
+    ? 'rounded-2xl border bg-white px-2 py-1 dark:bg-card'
+    : 'rounded-2xl border bg-card px-2 py-1';
   const routineReportInspectionId =
     routineInspectionRecord?.id ??
     routineSchedule?.currentInspectionId ??
@@ -623,7 +636,7 @@ export function InspectionDetailView({
           void refresh();
         }}
       />
-      {insp.type === 'OPEN' && openPlatformPaymentActive ? (
+      {showOpenPlatformPayment ? (
         <InspectionPlatformPaymentPrompt
           inspectionId={openBillingInspectionId ?? insp.id}
           poolInspectionId={openBillingInspectionId ?? undefined}
@@ -634,7 +647,7 @@ export function InspectionDetailView({
         />
       ) : null}
 
-      {insp.type === 'ROUTINE' && routineInPersonInProgress ? (
+      {showRoutinePlatformPayment ? (
         <InspectionPlatformPaymentPrompt
           inspectionId={routinePlatformPaymentInspectionId ?? insp.id}
           propertyId={insp.propertyId}
@@ -784,7 +797,7 @@ export function InspectionDetailView({
       ) : null}
 
       {showSessionRail && openSession && !isStandaloneOpenViewing ? (
-        <section className="rounded-2xl border bg-card px-2 py-1">
+        <section className={panelClassCompact}>
           <OpenInspectionSessionRail session={openSession} />
         </section>
       ) : null}
@@ -793,6 +806,7 @@ export function InspectionDetailView({
         <OpenInspectionScheduleRequestPanel
           propertyId={insp.propertyId}
           cycleId={linkedLeasingCycleId}
+          className={embedded ? 'bg-white dark:bg-card' : undefined}
         />
       ) : null}
 
@@ -1286,7 +1300,7 @@ function FactTile({
 
 function InfoSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border bg-card p-4">
+    <section className="rounded-2xl border bg-white p-4 dark:bg-card">
       <h2 className="mb-3 text-sm font-semibold">{title}</h2>
       {children}
     </section>

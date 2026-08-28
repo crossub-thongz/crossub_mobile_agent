@@ -378,7 +378,7 @@ export function IngoingInspectionAgentDetail({
 
   return (
     <div className="space-y-4">
-      {platformPaymentActive ? (
+      {platformPaymentActive || awaitingPayment ? (
         <InspectionPlatformPaymentPrompt
           inspectionId={snapshot.record?.id ?? inspection.id}
           propertyId={inspection.propertyId}

@@ -287,6 +287,7 @@ export type CreateAgentPropertyInput = {
   registryIntakeComplete?: boolean;
   registryDraft?: Record<string, unknown> | null;
   routineInspectionFrequency?: 2 | 3;
+  imageUrl?: string;
 };
 
 export type UpdateAgentPropertyInput = Partial<CreateAgentPropertyInput>;
@@ -322,6 +323,22 @@ export async function updateProperty(
     }
     throw err;
   }
+}
+
+/** Upload a property cover photo (base64 → R2) and set `Property.imageUrl`. */
+export async function uploadPropertyImage(
+  propertyId: string,
+  input: {
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    contentBase64: string;
+  },
+): Promise<{ url: string }> {
+  return agentFetch(`/agent/properties/${propertyId}/image/upload`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export type AgentPropertyContact = {

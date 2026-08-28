@@ -223,7 +223,7 @@ export function OpenInspectionScheduleRequestPanel({
   const busy = submitting || startingNow;
 
   return (
-    <section className={cn('space-y-4 rounded-2xl border bg-card p-4', className)}>
+    <section className={cn('space-y-4 rounded-2xl border bg-white p-4 dark:bg-card', className)}>
       <div>
         <h2 className="text-sm font-semibold">{OPEN_REQUEST_TITLE}</h2>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">

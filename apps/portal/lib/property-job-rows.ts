@@ -605,6 +605,7 @@ export function buildPropertyOverviewJobRows(input: {
   tribunalCases: TribunalCase[];
   vacatingCases: VacatingCase[];
   accounting?: PropertyAccounting | null;
+  includeCompleted?: boolean;
 }): PropertyJobRow[] {
   // Leasing workflow cases also surface rent reviews and end-leasing rows — those are
   // already represented by rentReviewJobRows / vacatingJobRows below.
@@ -618,6 +619,7 @@ export function buildPropertyOverviewJobRows(input: {
     ...vacatingJobRows(input.vacatingCases),
     ...accountingJobRows(input.accounting),
   ]);
+  if (input.includeCompleted) return organizePropertyJobRows(rows);
   return splitPropertyJobRows(rows).inProgress;
 }
 
