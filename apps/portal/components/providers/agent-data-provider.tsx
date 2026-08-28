@@ -113,6 +113,7 @@ import { isInspectionDone } from '@/lib/inspections/presentation';
 import { pickFresherInspection } from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+import { openSessionInspectionId } from '@/lib/open-inspection/open-session-inspection-id';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { useAgentStore } from '@/lib/store';
 import { displayName, formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
@@ -1248,9 +1249,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
           agentRole: 'leasing_agent',
         });
         await refresh();
+        const inspectionId = openSessionInspectionId(session);
         return {
           id: session.id,
-          trackingNumber: inspectionReferenceLabel(session.id, 'OPEN'),
+          inspectionRecordId: inspectionId,
+          trackingNumber: inspectionReferenceLabel(inspectionId, 'OPEN'),
           type: 'OPEN' as const,
           propertyId: input.property.id,
           propertyAddress: formatPropertyFullAddress(input.property),

@@ -26,6 +26,7 @@ import type { Inspection } from '@/lib/types';
 import type { TimelineEntry } from '@/lib/types';
 import { resolveOpenConductedByFromSession } from '@/lib/open-inspection/open-conducted-by';
 import { INSPECTION_AWAITING_PAYMENT_LABEL } from '@/lib/inspections/awaiting-payment';
+import { openSessionInspectionId } from '@/lib/open-inspection/open-session-inspection-id';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 
 export function caseAuditToTimeline(
@@ -100,6 +101,7 @@ export function mapInspectionRecordToView(record: InspectionRecord): Inspection 
   const timeline = caseAuditToTimeline(record.caseAudit);
   const view: Inspection = {
     id: record.id,
+    inspectionRecordId: record.id,
     trackingNumber: inspectionReferenceLabel(record.id, type),
     type,
     propertyId: record.propertyId ?? '',
@@ -227,9 +229,11 @@ export function mapOpenSessionToInspection(
         ? 'new_listing'
         : undefined;
   const awaitingPayment = session.openInspection?.awaitingAgentPayment === true;
+  const inspectionId = openSessionInspectionId(session);
   return {
     id: session.id,
-    trackingNumber: inspectionReferenceLabel(session.id, 'OPEN'),
+    inspectionRecordId: inspectionId,
+    trackingNumber: inspectionReferenceLabel(inspectionId, 'OPEN'),
     type: 'OPEN',
     propertyId: resolvedPropertyId,
     propertyAddress: session.address || session.property,
@@ -278,6 +282,9 @@ export function mergeInspectionRows(
       !s.openReportGenerated,
   );
   const sessionIds = new Set(occupyingSessions.map((s) => s.id));
+  const occupyingInspectionIds = new Set(
+    occupyingSessions.map((s) => openSessionInspectionId(s)),
+  );
   const propertiesWithOpenSessions = new Set(
     occupyingSessions
       .map(
@@ -301,6 +308,7 @@ export function mergeInspectionRows(
       !isCancelledOpenRecord(r) &&
       r.propertyId &&
       !sessionIds.has(r.id) &&
+      !occupyingInspectionIds.has(r.id) &&
       !propertiesWithOpenSessions.has(r.propertyId),
   );
 

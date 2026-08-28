@@ -377,6 +377,7 @@ export function mapAgentInspections(dtos: AgentInspection[]): Inspection[] {
     const type = INSPECTION_TYPE_VIEW[i.type] ?? 'ROUTINE';
     const inspectionRow: Inspection = {
       id: i.id,
+      inspectionRecordId: i.id,
       trackingNumber: inspectionReferenceLabel(i.id, type),
       type,
       propertyId: i.propertyId ?? '',

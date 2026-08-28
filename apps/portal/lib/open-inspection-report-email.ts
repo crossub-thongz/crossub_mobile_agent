@@ -1,3 +1,5 @@
+import { inspectionReferenceLabel } from '@/lib/workflow-case-reference'
+
 /** Body text for open inspection report distribution emails (mirrors API notify util). */
 export function buildOpenInspectionReportDistributedBody(input: {
   propertyLabel: string
@@ -16,8 +18,9 @@ export function buildOpenInspectionReportDistributedBody(input: {
   ].join("\n")
 }
 
-export function openInspectionCaseRef(sessionId: string): string {
-  return `OP-${sessionId.replace(/\D/g, "").slice(0, 7).toUpperCase()}`
+/** OP- case ref from the OPEN inspection UUID (not the viewing session id). */
+export function openInspectionCaseRef(inspectionId: string): string {
+  return inspectionReferenceLabel(inspectionId, 'OPEN')
 }
 
 export function formatOpenInspectionViewingWindow(

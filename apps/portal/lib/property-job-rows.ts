@@ -28,7 +28,11 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatCurrency, formatScheduledAt } from '@/lib/utils';
-import { inspectionReferenceLabel, workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import {
+  inspectionReferenceLabel,
+  inspectionRefSourceId,
+  workflowCaseReferenceLabel,
+} from '@/lib/workflow-case-reference';
 import {
   inspectionCreatedAtIso,
   maintenanceCreatedAtIso,
@@ -355,7 +359,8 @@ export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
       kind: 'inspection',
       jobType: INSPECTION_JOB_TYPE[inspection.type],
       name:
-        inspection.trackingNumber || inspectionReferenceLabel(inspection.id, inspection.type),
+        inspection.trackingNumber ||
+        inspectionReferenceLabel(inspectionRefSourceId(inspection), inspection.type),
       description: [
         inspection.inspector ? inspection.inspector : null,
         scheduledLabel,

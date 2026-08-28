@@ -84,10 +84,11 @@ function openReportToAgentRecord(detail: LeasingPropertyDetail): JobCaseEmailRec
   if (!detail.openReport.sentToAgent || !detail.openReport.sentToAgentAt) return null;
   const oi = detail.openInspection;
   const propertyLabel = detail.propertyAddress;
+  const caseId = oi.inspectionId ?? oi.viewingSessionId ?? detail.propertyId;
   const sessionId = oi.viewingSessionId ?? detail.propertyId;
   const body = buildOpenInspectionReportDistributedBody({
     propertyLabel,
-    caseRef: openInspectionCaseRef(sessionId),
+    caseRef: openInspectionCaseRef(caseId),
     inspectorName: oi.inspectorName?.trim() || 'Inspector',
     viewingWindow: oi.scheduledTime
       ? formatOpenInspectionViewingWindow(oi.scheduledTime, oi.scheduledTimeEnd)

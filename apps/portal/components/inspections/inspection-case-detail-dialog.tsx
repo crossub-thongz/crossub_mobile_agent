@@ -29,7 +29,13 @@ export function InspectionCaseDetailDialog({
     <CaseDetailDialog
       open={open}
       onClose={onClose}
-      title={inspection?.trackingNumber ?? inspectionReferenceLabel(inspectionId, 'OPEN')}
+      title={
+        inspection?.trackingNumber ??
+        inspectionReferenceLabel(
+          inspection?.inspectionRecordId ?? inspectionId,
+          'OPEN',
+        )
+      }
       subtitle={
         inspection
           ? `${inspection.type} · ${inspection.propertyAddress}`

@@ -1,6 +1,6 @@
 import type { Inspection } from '@/lib/types';
 import { formatScheduledAt } from '@/lib/utils';
-import { inspectionCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import { inspectionCaseReferenceLabel, inspectionRefSourceId } from '@/lib/workflow-case-reference';
 
 export type PropertyInspectionWorkflowCategory = 'open' | 'ingoing' | 'outgoing' | 'routine';
 
@@ -54,7 +54,10 @@ export function buildPropertyInspectionWorkflowCases(
         category,
         label:
           inspection.trackingNumber ||
-          inspectionCaseReferenceLabel(inspection.id, inspectionRefKind(category)),
+          inspectionCaseReferenceLabel(
+            inspectionRefSourceId(inspection),
+            inspectionRefKind(category),
+          ),
         status: inspection.status,
         currentStep: inspection.status,
         detail: [

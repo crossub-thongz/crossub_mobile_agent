@@ -7,7 +7,7 @@ import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { DetailNavContext } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
-import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
+import { inspectionReferenceLabel, inspectionRefSourceId } from '@/lib/workflow-case-reference';
 import type { Inspection } from '@/lib/types';
 
 export function InspectionDetailDialog({
@@ -39,7 +39,10 @@ export function InspectionDetailDialog({
       <CaseDetailDialog
         open={open}
         onClose={onClose}
-        title={inspection.trackingNumber}
+        title={
+          inspection.trackingNumber ??
+          inspectionReferenceLabel(inspectionRefSourceId(inspection), inspection.type)
+        }
         subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
         size={size}
       >
@@ -56,7 +59,10 @@ export function InspectionDetailDialog({
     <CaseDetailDialog
       open={open}
       onClose={onClose}
-      title={inspection.trackingNumber ?? inspectionReferenceLabel(inspection.id, inspection.type)}
+      title={
+        inspection.trackingNumber ??
+        inspectionReferenceLabel(inspectionRefSourceId(inspection), inspection.type)
+      }
       subtitle={`${inspection.type} · ${inspection.propertyAddress}`}
       size={size}
     >

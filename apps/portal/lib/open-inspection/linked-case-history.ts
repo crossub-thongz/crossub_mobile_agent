@@ -62,7 +62,9 @@ export function resolveOpenPoolInspectionId(args: {
 }): string | null {
   const fromLeasing = args.leasingDetail?.openInspection?.inspectionId?.trim();
   if (fromLeasing) return fromLeasing;
-  const fromSession = args.openSession?.inspectionId?.trim();
+  const fromSession =
+    args.openSession?.inspectionId?.trim() ||
+    args.openSession?.openInspection?.inspectionId?.trim();
   if (fromSession) return fromSession;
   if (args.focusInspectionId && !args.isViewingSessionSource) {
     return args.focusInspectionId;

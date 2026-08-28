@@ -502,6 +502,11 @@ export interface MaintenanceRequest {
 
 export interface Inspection {
   id: string;
+  /**
+   * OPEN rows mapped from a viewing session keep `id` as the session UUID (viewing APIs).
+   * Case refs (OP-) must use this Inspection-table UUID instead.
+   */
+  inspectionRecordId?: string;
   trackingNumber: string;
   type: 'INGOING' | 'OUTGOING' | 'ROUTINE' | 'OPEN';
   propertyId: string;

@@ -79,6 +79,14 @@ export function inspectionReferenceLabel(id: string, type: InspectionTypeRef): s
   return inspectionCaseReferenceLabel(id, INSPECTION_TYPE_TO_REF_KIND[type]);
 }
 
+/** UUID to hash for II-/OI-/RI-/OP- — OPEN viewing rows store the inspection UUID separately. */
+export function inspectionRefSourceId(inspection: {
+  id: string;
+  inspectionRecordId?: string;
+}): string {
+  return inspection.inspectionRecordId?.trim() || inspection.id;
+}
+
 /** Lease approval reference for ingoing create — mirrors crossub_web prefill. */
 export function leasingCycleApprovalRef(
   cycleId?: string | null,
