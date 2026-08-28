@@ -50,6 +50,7 @@ export function AgentShell({
   showConnectionBanner,
   wide,
   immersive,
+  fillMain,
   headerMeta,
 }: {
   children: React.ReactNode;
@@ -66,6 +67,8 @@ export function AgentShell({
   wide?: boolean;
   /** Hide mobile chrome for immersive workspace pages */
   immersive?: boolean;
+  /** Fill the main column and scroll inside children (message thread dock, workspaces). */
+  fillMain?: boolean;
   /** Optional expandable row under the title (e.g. property address on message threads). */
   headerMeta?: {
     label: string;
@@ -345,18 +348,21 @@ export function AgentShell({
 
         <main
           className={cn(
-            'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain scrollbar-subtle',
+            'flex min-h-0 flex-1 flex-col overscroll-contain scrollbar-subtle',
+            fillMain || immersive ? 'overflow-hidden' : 'overflow-y-auto',
             wide ? 'lg:p-0' : 'lg:px-8 lg:pb-8',
             title && !immersive && (isV2 ? 'lg:pt-3' : 'lg:pt-6'),
             immersive && 'lg:pt-2 lg:pb-0',
+            fillMain && !immersive && 'lg:pb-0',
           )}
         >
           <div
             className={cn(
               wide ? (immersive ? 'flex min-h-0 flex-1 flex-col px-2 lg:px-4' : 'px-4 pb-4 lg:p-0') : 'px-4 py-4',
-              immersive
+              immersive || fillMain
                 ? 'flex min-h-0 flex-1 flex-col max-lg:pt-2 lg:pt-0'
                 : 'pb-24 lg:pb-0 max-lg:pt-[calc(var(--shell-header-offset)+var(--add-to-home-prompt-height,0px))] lg:pt-0 ui-v2:max-lg:pb-28',
+              fillMain && !immersive && 'overflow-hidden max-lg:pt-[calc(var(--shell-header-offset)+var(--add-to-home-prompt-height,0px))] max-lg:pb-24 ui-v2:max-lg:pb-28',
               isV2 && isDashboardHome && 'min-h-full',
             )}
             style={{

@@ -22,6 +22,7 @@ export function MessageCompose({
   homeOwnerName,
   tenantName,
   rows = 4,
+  variant = 'default',
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -31,6 +32,7 @@ export function MessageCompose({
   homeOwnerName: string;
   tenantName: string;
   rows?: number;
+  variant?: 'default' | 'v2';
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -178,7 +180,12 @@ export function MessageCompose({
           const query = detectMentionQuery(value, el.selectionStart ?? value.length);
           setMentionOpen(query != null);
         }}
-        className="border-input placeholder:text-muted-foreground w-full resize-none rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:bg-input/30"
+        className={cn(
+          'placeholder:text-muted-foreground w-full resize-none border px-3 py-2 text-sm outline-none',
+          variant === 'v2'
+            ? 'border-border/50 rounded-xl border bg-transparent focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-ring/30'
+            : 'border-input rounded-md bg-transparent focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:bg-input/30',
+        )}
       />
     </div>
   );

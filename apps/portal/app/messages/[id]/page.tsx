@@ -75,6 +75,7 @@ export default function MessageDetailPage() {
       title={thread.subject}
       backHref={ROUTES.MESSAGES}
       hideGlobalFabs
+      fillMain
       headerMeta={{
         label: thread.propertyAddress,
         open: contactsOpen,

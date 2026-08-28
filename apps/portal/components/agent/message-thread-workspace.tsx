@@ -5,9 +5,10 @@ import { useMemo } from 'react';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { buildGiiMessageContext } from '@/lib/gii-message-context';
 import type { MessageThread } from '@/lib/types';
-import { formatPropertyFullAddress } from '@/lib/utils';
+import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
 /** Message thread page — scrollable history with a sticky Gii + reply dock. */
 export function MessageThreadWorkspace({
@@ -32,7 +33,12 @@ export function MessageThreadWorkspace({
   replyEnabled?: boolean;
   children?: React.ReactNode;
 }) {
+  const isV2 = useIsAgentUiV2();
   const { properties, archivedProperties } = useAgentData();
+
+  const resolvedDockLayout =
+    dockLayout ?? (isV2 ? 'panel' : dockFixed ? 'viewport' : 'panel');
+  const usePanelDock = resolvedDockLayout === 'panel';
 
   const property = useMemo(() => {
     if (!thread.propertyId) return null;
@@ -55,28 +61,35 @@ export function MessageThreadWorkspace({
   }, [property, thread]);
 
   return (
-    <GiiAssistant
-      open
-      variant="message-dock"
-      scope={scope}
-      dockLayout={dockLayout ?? (dockFixed ? 'viewport' : 'panel')}
-      replyEnabled={replyEnabled}
-      messageReply={{
-        value: reply,
-        onChange: onReplyChange,
-        onSend: onReplySend,
-        homeOwnerName: thread.homeOwnerName,
-        tenantName: thread.tenantName,
-        placeholder: replyPlaceholder,
-      }}
-    >
-      {children ?? (
-        <div className="space-y-3">
-          {thread.messages.map((msg) => (
-            <MessageThreadBubble key={msg.id} msg={msg} maxWidth="max-w-[90%]" />
-          ))}
-        </div>
+    <div
+      className={cn(
+        usePanelDock && 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+        isV2 && usePanelDock && '-mx-4 max-lg:-mt-4 lg:mx-0',
       )}
-    </GiiAssistant>
+    >
+      <GiiAssistant
+        open
+        variant="message-dock"
+        scope={scope}
+        dockLayout={resolvedDockLayout}
+        replyEnabled={replyEnabled}
+        messageReply={{
+          value: reply,
+          onChange: onReplyChange,
+          onSend: onReplySend,
+          homeOwnerName: thread.homeOwnerName,
+          tenantName: thread.tenantName,
+          placeholder: replyPlaceholder,
+        }}
+      >
+        {children ?? (
+          <div className="space-y-3">
+            {thread.messages.map((msg) => (
+              <MessageThreadBubble key={msg.id} msg={msg} maxWidth="max-w-[90%]" />
+            ))}
+          </div>
+        )}
+      </GiiAssistant>
+    </div>
   );
 }

@@ -891,17 +891,46 @@ export function GiiAssistant({
       </>
     );
 
+    const dockTabActiveClass = 'bg-background text-foreground shadow-sm';
+    const dockTabTrackClass = 'bg-secondary/60';
+
     const dockShell = (
       <>
           {replyEnabled ? (
-            <div className="mb-2 flex gap-1 rounded-lg bg-secondary/60 p-0.5">
+            isV2 ? (
+              <div className="border-border/50 -mx-4 mb-3 flex border-b px-4">
+                <button
+                  type="button"
+                  onClick={() => setDockTab('gii')}
+                  className={cn(
+                    'text-muted-foreground hover:text-foreground flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition',
+                    dockTab === 'gii' && 'text-foreground border-primary -mb-px border-b-2',
+                  )}
+                >
+                  <CrosAssistantLogo size="sm" />
+                  {CROS_ASSISTANT_NAME}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDockTab('reply')}
+                  className={cn(
+                    'text-muted-foreground hover:text-foreground flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition',
+                    dockTab === 'reply' && 'text-foreground border-primary -mb-px border-b-2',
+                  )}
+                >
+                  <Send className="size-3.5" />
+                  Reply
+                </button>
+              </div>
+            ) : (
+            <div className={cn('mb-2 flex gap-1 rounded-lg p-0.5', dockTabTrackClass)}>
               <button
                 type="button"
                 onClick={() => setDockTab('gii')}
                 className={cn(
                   'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition',
                   dockTab === 'gii'
-                    ? 'bg-background text-foreground shadow-sm'
+                    ? dockTabActiveClass
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -914,7 +943,7 @@ export function GiiAssistant({
                 className={cn(
                   'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition',
                   dockTab === 'reply'
-                    ? 'bg-background text-foreground shadow-sm'
+                    ? dockTabActiveClass
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -922,6 +951,7 @@ export function GiiAssistant({
                 Reply
               </button>
             </div>
+            )
           ) : null}
 
           {dockTab === 'gii' || !replyEnabled ? (
@@ -975,7 +1005,12 @@ export function GiiAssistant({
                     }}
                     placeholder={`Ask ${CROS_ASSISTANT_NAME} about this message…`}
                     rows={2}
-                    className="min-h-14 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-3 py-2.5 text-sm leading-relaxed shadow-none"
+                    className={cn(
+                      'min-h-14 max-h-28 min-w-0 flex-1 resize-none overflow-y-auto px-3 py-2.5 text-sm leading-relaxed shadow-none',
+                      isV2
+                        ? 'border-border/50 rounded-xl border bg-transparent'
+                        : 'rounded-2xl border-border/80 bg-secondary/40',
+                    )}
                     disabled={sending || voiceActive}
                   />
                   <div className="mb-0.5 flex shrink-0 flex-col items-center gap-1.5">
@@ -1037,10 +1072,14 @@ export function GiiAssistant({
                 homeOwnerName={messageReply.homeOwnerName}
                 tenantName={messageReply.tenantName}
                 rows={2}
+                variant={isV2 ? 'v2' : 'default'}
               />
               <button
                 type="button"
-                className="bg-primary text-primary-foreground flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50"
+                className={cn(
+                  'bg-primary text-primary-foreground flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold shadow-sm disabled:opacity-50',
+                  isV2 && 'disabled:bg-primary/40',
+                )}
                 disabled={!messageReply.value.trim()}
                 onClick={messageReply.onSend}
               >
@@ -1053,7 +1092,10 @@ export function GiiAssistant({
     );
 
     const dockClassName = cn(
-      'border-border bg-background/95 z-10 w-full shrink-0 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur supports-[backdrop-filter]:bg-background/90',
+      'z-10 w-full shrink-0 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+      isV2
+        ? 'border-border/50 bg-transparent'
+        : 'border-border bg-background/95 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur supports-[backdrop-filter]:bg-background/90',
       isPanelDock
         ? undefined
         : cn(
@@ -1066,10 +1108,10 @@ export function GiiAssistant({
       <>
         {isPanelDock ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4">
               {scrollContent}
             </div>
-            <div className={dockClassName}>{dockShell}</div>
+            <div className={cn(dockClassName, isV2 && 'relative shrink-0')}>{dockShell}</div>
           </div>
         ) : (
           <>
