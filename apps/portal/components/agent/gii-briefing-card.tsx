@@ -21,11 +21,13 @@ import { cn } from '@/lib/utils';
  */
 export function GiiBriefingCard({
   briefing,
+  title = "Today's jobs for you",
   onNavigate,
   onAsk,
   onOpen,
 }: {
   briefing: GiiBriefing;
+  title?: string;
   onNavigate?: () => void;
   onAsk?: (row: PropertyNeedAction) => void;
   /** Open the portfolio job popup instead of navigating to the legacy workflow page. */
@@ -38,7 +40,7 @@ export function GiiBriefingCard({
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <span className="flex items-center gap-1.5 text-[11px] font-semibold">
           <ListTodo className="size-3.5 shrink-0 text-primary" />
-          Today&rsquo;s jobs for you
+          {title}
         </span>
         <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary tabular-nums">
           {briefing.total}

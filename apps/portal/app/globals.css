@@ -6,34 +6,49 @@
 
 /* CROSSUB — light default, dark via .dark class (aligned with crossub_web) */
 :root {
+  /* Brand kit — logo, crossub.com.au, crossub_web/DESIGN.md, crossub-brand.constants.ts */
+  --crossub-mint: #00d4a4;
+  --crossub-mint-deep: #00b48a;
+  --crossub-mint-soft: #7cebcb;
+  --crossub-mint-wash: #ecfdf8;
+  --crossub-navy: #004063;
+  --crossub-ink: #2d333e;
+  --crossub-body: #343434;
+  --crossub-muted: #737a82;
+  --crossub-border: #dae2e6;
+  --crossub-wash: #f7f9fa;
+  --crossub-info: #3772cf;
+  --crossub-warning: #c37d0d;
+  --crossub-error: #d45656;
+
   --background: #ffffff;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: var(--crossub-ink);
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --foreground: #0f172a;
-  --primary: #00b894;
+  --popover-foreground: var(--crossub-ink);
+  --foreground: var(--crossub-ink);
+  --primary: var(--crossub-mint);
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #ecfdf8;
-  --accent-foreground: #047857;
-  --destructive: #ef4444;
+  --secondary: var(--crossub-wash);
+  --secondary-foreground: var(--crossub-ink);
+  --muted: var(--crossub-wash);
+  --muted-foreground: var(--crossub-muted);
+  --accent: var(--crossub-mint-wash);
+  --accent-foreground: var(--crossub-mint-deep);
+  --destructive: var(--crossub-error);
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #00b894;
-  --chart-1: #00b894;
-  --chart-2: #3b82f6;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
+  --border: var(--crossub-border);
+  --input: var(--crossub-border);
+  --ring: var(--crossub-mint);
+  --chart-1: var(--crossub-mint);
+  --chart-2: var(--crossub-info);
+  --chart-3: var(--crossub-warning);
+  --chart-4: var(--crossub-error);
   --chart-5: #8b5cf6;
   --radius: 0.75rem;
-  --warning: #f59e0b;
-  --success: #00b894;
-  --info: #3b82f6;
+  --warning: var(--crossub-warning);
+  --success: var(--crossub-mint);
+  --info: var(--crossub-info);
 }
 
 .dark {
@@ -43,27 +58,27 @@
   --popover: #111617;
   --popover-foreground: #ffffff;
   --foreground: #ffffff;
-  --primary: #00d4a4;
+  --primary: var(--crossub-mint);
   --primary-foreground: #0b0f10;
   --secondary: #1c2326;
   --secondary-foreground: #ffffff;
   --muted: #1c2326;
   --muted-foreground: #6b7280;
-  --accent: #00d4a4;
+  --accent: var(--crossub-mint);
   --accent-foreground: #0b0f10;
-  --destructive: #ef4444;
+  --destructive: var(--crossub-error);
   --destructive-foreground: #ffffff;
   --border: #1c2326;
   --input: #1c2326;
-  --ring: #00d4a4;
-  --chart-1: #00d4a4;
-  --chart-2: #3b82f6;
-  --chart-3: #f59e0b;
-  --chart-4: #ef4444;
+  --ring: var(--crossub-mint);
+  --chart-1: var(--crossub-mint);
+  --chart-2: var(--crossub-info);
+  --chart-3: var(--crossub-warning);
+  --chart-4: var(--crossub-error);
   --chart-5: #8b5cf6;
   --warning: #f59e0b;
-  --success: #00d4a4;
-  --info: #3b82f6;
+  --success: var(--crossub-mint);
+  --info: var(--crossub-info);
 }
 
 /*
@@ -79,29 +94,29 @@
  * are stripped: borders do the work (crossub_web DESIGN.md §5).
  */
 [data-ui='v2'] {
-  --background: #f4f5f6;
+  --background: var(--crossub-wash);
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: var(--crossub-ink);
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --foreground: #0f172a;
-  --primary: #00b48a;
+  --popover-foreground: var(--crossub-ink);
+  --foreground: var(--crossub-ink);
+  --primary: var(--crossub-mint);
   --primary-foreground: #ffffff;
   --secondary: #eef0f2;
-  --secondary-foreground: #0f172a;
+  --secondary-foreground: var(--crossub-ink);
   --muted: #eef0f2;
-  --muted-foreground: #5b6570;
-  --accent: #ecfdf8;
-  --accent-foreground: #047857;
-  --destructive: #d45656;
+  --muted-foreground: var(--crossub-muted);
+  --accent: var(--crossub-mint-wash);
+  --accent-foreground: var(--crossub-mint-deep);
+  --destructive: var(--crossub-error);
   --destructive-foreground: #ffffff;
-  --border: #e4e6e9;
-  --input: #e4e6e9;
-  --ring: #00b48a;
+  --border: var(--crossub-border);
+  --input: var(--crossub-border);
+  --ring: var(--crossub-mint);
   --radius: 0.625rem;
-  --warning: #c37d0d;
-  --success: #00b48a;
-  --info: #3772cf;
+  --warning: var(--crossub-warning);
+  --success: var(--crossub-mint);
+  --info: var(--crossub-info);
 }
 
 [data-ui='v2'].dark {
@@ -111,22 +126,22 @@
   --popover: #111617;
   --popover-foreground: #ffffff;
   --foreground: #ffffff;
-  --primary: #00d4a4;
+  --primary: var(--crossub-mint);
   --primary-foreground: #0b0f10;
   --secondary: #1c2326;
   --secondary-foreground: #ffffff;
   --muted: #1c2326;
   --muted-foreground: #6b7280;
-  --accent: #00d4a4;
+  --accent: var(--crossub-mint);
   --accent-foreground: #0b0f10;
-  --destructive: #d45656;
+  --destructive: var(--crossub-error);
   --destructive-foreground: #ffffff;
   --border: #1c2326;
   --input: #1c2326;
-  --ring: #00d4a4;
+  --ring: var(--crossub-mint);
   --warning: #f59e0b;
-  --success: #00d4a4;
-  --info: #3b82f6;
+  --success: var(--crossub-mint);
+  --info: var(--crossub-info);
 }
 
 [data-ui='v2'] .shadow-xs,
@@ -150,6 +165,37 @@
 
 [data-ui='v2'] .rounded-3xl {
   border-radius: calc(var(--radius) + 6px);
+}
+
+/* Frosted glass — v2 nav selection (sidebar + mobile tab bar). */
+[data-ui='v2'] .v2-frosted-nav {
+  background-color: color-mix(in oklab, var(--card) 58%, transparent) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+  border: 1px solid color-mix(in oklab, var(--crossub-border) 42%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 64, 99, 0.04);
+}
+
+[data-ui='v2'] .v2-frosted-nav--hover:hover {
+  background-color: color-mix(in oklab, var(--card) 46%, transparent) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+  border: 1px solid color-mix(in oklab, var(--crossub-border) 35%, transparent);
+}
+
+[data-ui='v2'].dark .v2-frosted-nav {
+  background-color: color-mix(in oklab, var(--card) 72%, transparent) !important;
+  border-color: color-mix(in oklab, var(--border) 55%, transparent);
+}
+
+[data-ui='v2'].dark .v2-frosted-nav--hover:hover {
+  background-color: color-mix(in oklab, var(--card) 58%, transparent) !important;
+}
+
+[data-ui='v2'] .v2-frosted-bar {
+  background-color: color-mix(in oklab, var(--card) 72%, transparent) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
 }
 
 @theme inline {

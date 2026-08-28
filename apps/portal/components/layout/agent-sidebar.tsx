@@ -48,9 +48,12 @@ function NavLink({
           : 'gap-2.5 px-3 py-2',
         active
           ? isV2
-            ? 'bg-secondary text-foreground'
+            ? 'v2-frosted-nav text-foreground'
             : 'rounded-xl bg-primary/10 text-primary shadow-sm shadow-primary/5'
-          : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
+          : cn(
+              'text-muted-foreground hover:text-foreground',
+              isV2 ? 'v2-frosted-nav--hover border border-transparent' : 'hover:bg-secondary/80',
+            ),
       )}
     >
       {isV2 && active ? (
@@ -84,6 +87,8 @@ export function AgentSidebar({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
+  const isV2 = useIsAgentUiV2();
+  const isDashboardCanvas = isV2 && pathname === ROUTES.DASHBOARD;
   const { hasFullManagementAccess, needActionItems } = useAgentData();
   const propertyNeedActionCount = needActionItems.length;
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
@@ -94,10 +99,13 @@ export function AgentSidebar({
   return (
     <aside
       className={cn(
-        'border-border bg-card/95 group/sidebar sticky top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r shadow-[1px_0_0_0_rgba(0,0,0,0.03)] backdrop-blur-xl transition-[width,box-shadow] duration-300 ease-out lg:flex ui-v2:bg-background ui-v2:shadow-none',
+        'agent-sidebar border-border group/sidebar sticky top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r transition-[width,box-shadow] duration-300 ease-out lg:flex',
         compact
           ? 'w-[72px] hover:z-40 hover:w-[240px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)] ui-v2:hover:shadow-none'
           : 'w-[260px]',
+        isDashboardCanvas
+          ? 'v2-dashboard-chrome border-border/50 shadow-none'
+          : 'bg-card/95 shadow-[1px_0_0_0_rgba(0,0,0,0.03)] backdrop-blur-xl ui-v2:bg-background ui-v2:shadow-none',
       )}
     >
       <div

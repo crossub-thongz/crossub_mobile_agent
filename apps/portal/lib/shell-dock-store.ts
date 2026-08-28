@@ -22,27 +22,36 @@ export type GiiScope = Pick<
 
 type ShellDockStore = {
   activePanel: ShellDockPanel;
+  /** Mobile Gii bottom sheet — false keeps the compact ask bar visible. */
+  giiExpanded: boolean;
   giiLaunch: GiiLaunchContext | null;
   togglePanel: (id: Exclude<ShellDockPanel, null>) => void;
   closePanel: () => void;
   openGii: (launch?: GiiLaunchContext) => void;
+  minimizeGii: () => void;
+  expandGii: () => void;
   clearGiiLaunch: () => void;
 };
 
 export const useShellDockStore = create<ShellDockStore>((set) => ({
   activePanel: null,
+  giiExpanded: false,
   giiLaunch: null,
   togglePanel: (id) =>
     set((state) => ({
       activePanel: state.activePanel === id ? null : id,
       giiLaunch: id === 'gii' ? state.giiLaunch : state.giiLaunch,
+      giiExpanded: id === 'gii' ? true : state.giiExpanded,
     })),
-  closePanel: () => set({ activePanel: null }),
+  closePanel: () => set({ activePanel: null, giiExpanded: false }),
   openGii: (launch?: GiiLaunchContext | null) =>
     set((state) => ({
       activePanel: 'gii',
+      giiExpanded: true,
       giiLaunch: launch === undefined ? state.giiLaunch : launch,
     })),
+  minimizeGii: () => set({ giiExpanded: false }),
+  expandGii: () => set({ activePanel: 'gii', giiExpanded: true }),
   clearGiiLaunch: () => set({ giiLaunch: null }),
 }));
 

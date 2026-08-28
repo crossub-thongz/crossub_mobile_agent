@@ -3,7 +3,7 @@
 ## 2026-08-28
 
 ### Added
-- **Agent UI v2 behind `CROSSUB_AGENT_UI`.** The live look stays **v1** unless the process environment names `v2` (`2` / `new` / `redesign` also count). The flag is read per request in the root layout — the same live-env path as the staging banner, not a `NEXT_PUBLIC_*` bake — and stamped on `<html data-ui>`. v2 switches the whole app's tokens (cooler canvas, Deep Mint, tighter radius, no decorative shadows or hero gradients) and the chrome that every screen sits in: sidebar active row is a hairline mint bar instead of a mint wash, mobile tabs sit in a floating dock, login is flatter. Staging's `render.yaml` turns it on; production stays silent if the variable is missing.
+- **Agent UI v2 behind `CROSSUB_AGENT_UI`.** The live look stays **v1** unless the process environment names `v2` (`2` / `new` / `redesign` also count). The flag is read per request in the root layout — the same live-env path as the staging banner, not a `NEXT_PUBLIC_*` bake — and stamped on `<html data-ui>`. v2 switches the whole app's tokens (cooler canvas, Deep Mint, tighter radius, no decorative shadows or hero gradients) and the chrome that every screen sits in: sidebar active row is a hairline mint bar instead of a mint wash, mobile tabs sit in a floating dock, login is flatter. Staging's `render.yaml` turns it on; production stays silent if the variable is missing. The **dashboard** is the first screen rebuilt to the new home: greeting, portfolio overview/health, financial summary (Level 2), needs-your-attention, CROS-is-handling, recent activity, and a mobile Ask CROS bar — all from live portfolio data, not the old chart hub.
 
 ## 2026-08-27
 

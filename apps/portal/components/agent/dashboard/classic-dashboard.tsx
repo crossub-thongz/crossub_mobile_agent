@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 
 import { DashboardChartHub } from '@/components/agent/dashboard-chart-hub';
-import { DashboardPortfolioMapSection } from '@/components/agent/dashboard/dashboard-portfolio-map-section';
 import { InspectionOnlyPlanBanner } from '@/components/agent/inspection-only-plan-banner';
 import type { DashboardWidgetRenderContext } from '@/components/agent/dashboard/dashboard-widget-types';
 import { Button } from '@/components/ui/button';
@@ -30,8 +29,6 @@ export function ClassicDashboard({ context }: { context: DashboardWidgetRenderCo
           </Link>
         </Button>
       )}
-
-      <DashboardPortfolioMapSection properties={context.properties} />
 
       <DashboardChartHub k={context.dashboardKpis} hasFullManagementAccess={context.hasFullManagementAccess} />
     </div>

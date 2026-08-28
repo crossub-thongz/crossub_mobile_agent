@@ -9,8 +9,14 @@ import { cn } from '@/lib/utils';
 
 const SECTION_TITLE_CLASS = 'text-sm font-semibold lg:text-base';
 
-export function DashboardPortfolioMapSection({ properties }: { properties: Property[] }) {
-  const [collapsed, setCollapsed] = useState(true);
+export function DashboardPortfolioMapSection({
+  properties,
+  defaultExpanded = false,
+}: {
+  properties: Property[];
+  defaultExpanded?: boolean;
+}) {
+  const [collapsed, setCollapsed] = useState(!defaultExpanded);
 
   return (
     <section className="space-y-2">
@@ -20,7 +26,7 @@ export function DashboardPortfolioMapSection({ properties }: { properties: Prope
         onClick={() => setCollapsed((value) => !value)}
         aria-expanded={!collapsed}
       >
-        <h2 className={SECTION_TITLE_CLASS}>Portfolio map</h2>
+        <h2 className={SECTION_TITLE_CLASS}>Portfolio Map</h2>
         <ChevronDown
           className={cn(
             'text-muted-foreground size-4 shrink-0 transition-transform',

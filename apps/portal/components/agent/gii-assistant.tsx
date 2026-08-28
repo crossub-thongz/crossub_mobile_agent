@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Mic, Send, X } from 'lucide-react';
+import { Building2, Mic, Minus, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { GiiAssessmentCard } from '@/components/agent/gii-assessment-card';
+import {
+  DashboardAskCrosPanel,
+  DashboardNeedsAttentionPanel,
+} from '@/components/agent/dashboard/dashboard-cros-panel';
 import { GiiBriefingCard } from '@/components/agent/gii-briefing-card';
 import { GiiChatGreeting, GiiChatLine } from '@/components/agent/gii-chat-line';
 import {
@@ -20,9 +24,11 @@ import { MessageCompose } from '@/components/agent/message-compose';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { ROUTES } from '@/constants/routes';
 import {
   VOICE_BUTTON_ARIA_LABEL,
   VOICE_PHASE,
@@ -202,6 +208,7 @@ export function GiiAssistant({
   open,
   onClose,
   variant = 'modal',
+  expanded = true,
   scope,
   children,
   messageReply,
@@ -212,6 +219,8 @@ export function GiiAssistant({
   open: boolean;
   onClose?: () => void;
   variant?: 'modal' | 'panel' | 'embedded' | 'message-dock';
+  /** Mobile bottom sheet — when false the session stays mounted but hidden. */
+  expanded?: boolean;
   /** Embed overrides — property/message pages pass scope directly instead of via the shell store. */
   scope?: GiiScope;
   /** Message thread bubbles rendered above the Gii transcript (message-dock only). */
@@ -234,10 +243,12 @@ export function GiiAssistant({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const isV2 = useIsAgentUiV2();
   const data = useAgentData();
   const { user } = useAuth();
   const giiLaunch = useShellDockStore((s) => s.giiLaunch);
   const clearGiiLaunch = useShellDockStore((s) => s.clearGiiLaunch);
+  const minimizeGii = useShellDockStore((s) => s.minimizeGii);
 
   const effectiveLaunch = useMemo(
     () => ({
@@ -339,6 +350,13 @@ export function GiiAssistant({
     return formatPropertyFullAddress(scopedProperty);
   }, [effectiveLaunch.propertyAddress, scopedProperty]);
 
+  const isDashboardV2Panel =
+    isPanel &&
+    isV2 &&
+    pathname === ROUTES.DASHBOARD &&
+    !scopedProperty &&
+    !messageScoped;
+
   // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
   // progress" set the Overview tab shows (one shared selector, so the two never disagree),
   // not the smaller need-action subset. Portfolio scope keeps the need-action briefing.
@@ -386,6 +404,9 @@ export function GiiAssistant({
     () => buildGiiBriefing(briefingItems, briefingGroups, new Date(), user?.firstName),
     [briefingItems, briefingGroups, user?.firstName],
   );
+
+  const briefingTitle =
+    isV2 && pathname === ROUTES.DASHBOARD ? 'Needs Your Attention' : "Today's Jobs For You";
 
   const greetingText = useMemo(() => {
     if (messageScoped && scopedAddress) {
@@ -838,6 +859,12 @@ export function GiiAssistant({
 
   if (!open) return null;
 
+  if (isModal && !expanded) {
+    return (
+      <PortfolioCaseDialogHost job={selectedJob} onClose={closeJob} onOpenJob={openJob} />
+    );
+  }
+
   if (isMessageDock) {
     const scrollContent = (
       <>
@@ -1063,14 +1090,15 @@ export function GiiAssistant({
   const shell = (
     <div
       className={cn(
-        'flex flex-col bg-background',
+        'flex flex-col',
+        isDashboardV2Panel ? 'bg-transparent' : 'bg-background',
         isEmbedded
           ? 'w-full'
           : isPanel
             ? 'h-full max-h-full min-h-0 w-full overflow-hidden border-l'
             : cn(
                 'flex w-full max-w-lg flex-col border shadow-2xl',
-                'max-lg:h-dvh max-lg:max-h-dvh max-lg:min-h-0 max-lg:overflow-hidden max-lg:rounded-none',
+                'max-lg:h-full max-lg:min-h-0 max-lg:overflow-hidden max-lg:rounded-t-3xl max-lg:border-b-0',
                 'lg:h-[min(92vh,680px)] lg:min-h-0 lg:overflow-hidden lg:rounded-3xl',
                 'rounded-t-3xl sm:rounded-3xl',
               ),
@@ -1080,6 +1108,7 @@ export function GiiAssistant({
         className={cn(
           'flex shrink-0 items-center justify-between border-b px-4 py-3',
           isEmbedded && 'py-2.5',
+          isDashboardV2Panel && 'hidden',
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
@@ -1098,17 +1127,83 @@ export function GiiAssistant({
           </div>
         </div>
         {!isInline && onClose ? (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
-            aria-label={`Close ${CROS_ASSISTANT_NAME}`}
-          >
-            <X className="size-5" />
-          </button>
+          <div className="flex shrink-0 items-center gap-0.5">
+            {isModal ? (
+              <button
+                type="button"
+                onClick={minimizeGii}
+                className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
+                aria-label={`Minimize ${CROS_ASSISTANT_NAME}`}
+              >
+                <Minus className="size-4" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
+              aria-label={`Close ${CROS_ASSISTANT_NAME}`}
+            >
+              <X className="size-5" />
+            </button>
+          </div>
         ) : null}
       </div>
 
+      {isDashboardV2Panel ? (
+        <div className="normal-case grid min-h-0 flex-1 grid-rows-[45fr_55fr] gap-3 p-3">
+          <div className="v2-dashboard__card flex min-h-0 flex-col overflow-hidden">
+            <DashboardNeedsAttentionPanel />
+          </div>
+          <div className="v2-dashboard__card flex min-h-0 flex-col overflow-hidden">
+            <DashboardAskCrosPanel
+              query={query}
+              onQueryChange={setQuery}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void runQuery(query);
+              }}
+              onPrompt={(prompt) => void runQuery(prompt)}
+              sending={sending}
+              hasMessages={hasUserMessages}
+              chatScrollRef={scrollContainerRef}
+              chatEndRef={endRef}
+              onMinimize={minimizeGii}
+              onClose={onClose}
+            >
+              {lines.length > 0 ? (
+                <div className="space-y-3 pb-2">
+                  {lines.map((line) => (
+                    <div key={line.id} className="space-y-2">
+                      <GiiChatLine
+                        role={line.role}
+                        text={line.text}
+                        pending={line.pending}
+                        attachments={line.attachments}
+                      />
+                      {line.assessment ? <GiiAssessmentCard assessment={line.assessment} /> : null}
+                      {line.jobCases?.length ? (
+                        <GiiJobCaseButtons
+                          cases={line.jobCases}
+                          portfolioData={portfolioData}
+                          onOpen={openJob}
+                          onOpenMissing={openJobCaseLink}
+                        />
+                      ) : null}
+                      {line.lodgedRef ? (
+                        <p className="mr-auto text-xs font-medium text-primary">
+                          Case <span className="tabular-nums">{line.lodgedRef}</span> created
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </DashboardAskCrosPanel>
+          </div>
+        </div>
+      ) : (
+        <>
       {scopedAddress && !isEmbedded ? (
         <div className="border-b px-4 py-2">
           <div className="bg-primary/5 flex items-center gap-2 rounded-xl border border-primary/15 px-3 py-2">
@@ -1137,6 +1232,7 @@ export function GiiAssistant({
             ) : !messageScoped && !liveBriefing.isEmpty ? (
               <GiiBriefingCard
                 briefing={liveBriefing}
+                title={briefingTitle}
                 onNavigate={onClose}
                 onAsk={askAboutRow}
                 onOpen={openNeedAction}
@@ -1338,6 +1434,8 @@ export function GiiAssistant({
           Enter to send · Shift+Enter for a new line · Attach PDFs or images
         </p>
       </div>
+        </>
+      )}
     </div>
   );
 
@@ -1353,9 +1451,27 @@ export function GiiAssistant({
   return (
     <>
       <div
-        className="fixed inset-0 z-[95] bg-black/55 p-0 backdrop-blur-sm max-lg:overflow-hidden lg:flex lg:items-end lg:justify-center lg:overflow-hidden sm:p-4"
+        className={cn(
+          'fixed inset-0 z-[95]',
+          'max-lg:bg-black/40 max-lg:animate-in max-lg:fade-in-0 max-lg:duration-300',
+          'lg:flex lg:items-end lg:justify-center lg:bg-black/55 lg:backdrop-blur-sm lg:overflow-hidden lg:p-4',
+        )}
+        onClick={isModal ? minimizeGii : undefined}
+        role={isModal ? 'presentation' : undefined}
       >
-        {shell}
+        <div
+          className={cn(
+            'w-full max-w-lg',
+            'max-lg:fixed max-lg:inset-x-0 max-lg:mx-auto',
+            'max-lg:top-[calc(var(--env-banner-height,0px)+var(--shell-header-height,3.5rem)+0.75rem)]',
+            'max-lg:bottom-[calc(4.75rem+env(safe-area-inset-bottom))]',
+            isModal &&
+              'max-lg:animate-in max-lg:fade-in-0 max-lg:slide-in-from-bottom-6 max-lg:duration-300 max-lg:ease-out',
+          )}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {shell}
+        </div>
       </div>
       <PortfolioCaseDialogHost job={selectedJob} onClose={closeJob} onOpenJob={openJob} />
     </>

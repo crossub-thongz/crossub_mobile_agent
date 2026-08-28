@@ -1,0 +1,232 @@
+/* Agent dashboard v2 — canvas, cards, and section polish (layout unchanged). */
+
+/* Atmospheric canvas — mint + navy washes (CROSSUB marketing site feel). */
+.v2-dashboard-canvas,
+.v2-dashboard-canvas .v2-dashboard-chrome {
+  --dashboard-canvas-base: #edf5f2;
+  --dashboard-canvas-layers:
+    radial-gradient(
+      ellipse 90% 55% at 8% -5%,
+      color-mix(in oklab, var(--crossub-mint) 28%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 75% 50% at 100% 8%,
+      color-mix(in oklab, var(--crossub-navy) 14%, transparent),
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 65% 45% at 50% 108%,
+      color-mix(in oklab, var(--crossub-mint-soft) 22%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      165deg,
+      #f6fcfa 0%,
+      #eef6f3 38%,
+      #e8f0f8 100%
+    );
+  position: relative;
+  isolation: isolate;
+  background-color: var(--dashboard-canvas-base) !important;
+  background-image: var(--dashboard-canvas-layers) !important;
+  background-attachment: fixed !important;
+}
+
+.v2-dashboard-canvas::before,
+.v2-dashboard-canvas .v2-dashboard-chrome::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in oklab, var(--crossub-navy) 7%, transparent) 0.65px,
+    transparent 0.65px
+  );
+  background-size: 22px 22px;
+  background-attachment: fixed;
+  mask-image: linear-gradient(180deg, black 0%, black 35%, transparent 92%);
+}
+
+.v2-dashboard-canvas > * {
+  position: relative;
+  z-index: 1;
+}
+
+.v2-dashboard-canvas .v2-dashboard-chrome {
+  border-color: color-mix(in oklab, var(--crossub-border) 50%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.v2-dashboard-canvas .v2-dashboard-chrome > * {
+  position: relative;
+  z-index: 1;
+}
+
+.v2-dashboard-canvas,
+.v2-dashboard {
+  --dashboard-frost-bg: color-mix(in oklab, var(--card) 62%, transparent);
+  --dashboard-frost-border: color-mix(in oklab, var(--crossub-border) 42%, transparent);
+  --dashboard-frost-blur: blur(18px) saturate(1.14);
+  --dashboard-card-shadow:
+    0 1px 2px rgba(0, 64, 99, 0.05),
+    0 8px 24px rgba(0, 64, 99, 0.07);
+  --dashboard-health-tint: var(--crossub-mint-wash);
+}
+
+.v2-dashboard {
+  /* Bleed into AgentShell content padding so content fills the main column. */
+  margin: -1rem;
+  padding: 1rem;
+  min-height: calc(100% + 2rem);
+}
+
+.v2-dashboard__card,
+.v2-dashboard__lane,
+.v2-dashboard__empty,
+.v2-dashboard__health-chip {
+  background-color: var(--dashboard-frost-bg);
+  border: 1px solid var(--dashboard-frost-border);
+  -webkit-backdrop-filter: var(--dashboard-frost-blur);
+  backdrop-filter: var(--dashboard-frost-blur);
+  box-shadow: var(--dashboard-card-shadow);
+}
+
+.v2-dashboard__card {
+  border-radius: 1rem;
+}
+
+.v2-dashboard__health-card {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in oklab, var(--dashboard-health-tint) 52%, transparent) 0%,
+      color-mix(in oklab, var(--card) 58%, transparent) 52%,
+      color-mix(in oklab, var(--card) 62%, transparent) 100%
+    );
+  border: 1px solid color-mix(in oklab, var(--crossub-mint) 26%, transparent);
+  border-radius: 1rem;
+  box-shadow: var(--dashboard-card-shadow);
+  -webkit-backdrop-filter: var(--dashboard-frost-blur);
+  backdrop-filter: var(--dashboard-frost-blur);
+}
+
+.v2-dashboard__lane {
+  border-radius: 0.875rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.v2-dashboard__lane:hover {
+  border-color: color-mix(in oklab, var(--crossub-mint) 28%, var(--border));
+  box-shadow:
+    0 2px 4px rgba(0, 64, 99, 0.06),
+    0 10px 24px rgba(0, 64, 99, 0.08);
+}
+
+.v2-dashboard__section-title {
+  color: var(--crossub-ink);
+  letter-spacing: -0.01em;
+}
+
+.v2-dashboard__greeting {
+  color: var(--crossub-navy);
+}
+
+.v2-dashboard__health-chip {
+  border-radius: 9999px;
+}
+
+.v2-dashboard__empty {
+  border-style: dashed;
+  border-radius: 1rem;
+}
+
+/* Nested attention / list rows on frosted surfaces */
+.v2-dashboard__attention-card {
+  background-color: var(
+    --dashboard-frost-bg,
+    color-mix(in oklab, var(--card) 62%, transparent)
+  ) !important;
+  border: 1px solid var(--dashboard-frost-border, color-mix(in oklab, var(--crossub-border) 42%, transparent));
+  -webkit-backdrop-filter: var(--dashboard-frost-blur, blur(18px) saturate(1.14));
+  backdrop-filter: var(--dashboard-frost-blur, blur(18px) saturate(1.14));
+  box-shadow: var(
+    --dashboard-card-shadow,
+    0 1px 2px rgba(0, 64, 99, 0.05),
+    0 8px 24px rgba(0, 64, 99, 0.07)
+  );
+}
+
+.v2-dashboard__card a.border,
+.v2-dashboard a.rounded-2xl.border {
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+  backdrop-filter: blur(12px) saturate(1.08);
+}
+
+.v2-dashboard__card .divide-y > * + * {
+  border-color: color-mix(in oklab, var(--crossub-border) 35%, transparent);
+}
+
+.v2-dashboard__card .divide-x > * + * {
+  border-color: color-mix(in oklab, var(--crossub-border) 35%, transparent);
+}
+
+[data-ui='v2'].dark .v2-dashboard-canvas,
+[data-ui='v2'].dark .v2-dashboard {
+  --dashboard-frost-bg: color-mix(in oklab, var(--card) 74%, transparent);
+  --dashboard-frost-border: color-mix(in oklab, var(--border) 50%, transparent);
+  --dashboard-frost-blur: blur(20px) saturate(1.1);
+  --dashboard-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --dashboard-health-tint: color-mix(in oklab, var(--crossub-mint) 8%, var(--background));
+}
+
+[data-ui='v2'].dark .v2-dashboard-canvas,
+[data-ui='v2'].dark .v2-dashboard-canvas .v2-dashboard-chrome {
+  --dashboard-canvas-base: #0b0f10;
+  --dashboard-canvas-layers:
+    radial-gradient(
+      ellipse 80% 50% at 0% -8%,
+      color-mix(in oklab, var(--crossub-mint) 14%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 45% at 100% 0%,
+      color-mix(in oklab, var(--crossub-navy) 35%, transparent),
+      transparent 50%
+    ),
+    linear-gradient(180deg, #0b0f10 0%, #0d1214 50%, #0b1018 100%);
+  background-color: var(--dashboard-canvas-base) !important;
+  background-image: var(--dashboard-canvas-layers) !important;
+}
+
+[data-ui='v2'].dark .v2-dashboard-canvas::before,
+[data-ui='v2'].dark .v2-dashboard-canvas .v2-dashboard-chrome::before {
+  opacity: 0.2;
+  mask-image: linear-gradient(180deg, black 0%, transparent 80%);
+}
+
+[data-ui='v2'].dark .v2-dashboard__greeting {
+  color: var(--foreground);
+}
+
+[data-ui='v2'].dark .v2-dashboard__health-card {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in oklab, var(--crossub-mint) 14%, transparent) 0%,
+      color-mix(in oklab, var(--card) 70%, transparent) 55%,
+      color-mix(in oklab, var(--card) 74%, transparent) 100%
+    );
+  border-color: color-mix(in oklab, var(--crossub-mint) 22%, transparent);
+}
+
+[data-ui='v2'].dark .v2-dashboard__lane:hover {
+  box-shadow: none;
+}

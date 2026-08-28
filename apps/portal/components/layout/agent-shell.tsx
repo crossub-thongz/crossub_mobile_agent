@@ -23,12 +23,15 @@ import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { ShellBackButton } from '@/components/layout/shell-back-button';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { cn, displayName } from '@/lib/utils';
+
+import '@/components/agent/dashboard/v2-dashboard.css';
 
 function isActive(pathname: string, href: string): boolean {
   if (href === ROUTES.DASHBOARD) return pathname === href;
@@ -70,6 +73,8 @@ export function AgentShell({
   };
 }) {
   const pathname = usePathname();
+  const isV2 = useIsAgentUiV2();
+  const isDashboardHome = pathname === ROUTES.DASHBOARD;
   const { user, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -120,7 +125,13 @@ export function AgentShell({
   }, [moreOpen]);
 
   return (
-    <div className="flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden bg-background">
+    <div
+      className={cn(
+        'flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden',
+        !(isV2 && isDashboardHome) && 'bg-background',
+        isV2 && isDashboardHome && 'v2-dashboard-canvas',
+      )}
+    >
       <AgentSidebar onLogout={() => void logout()} />
 
       <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -295,6 +306,7 @@ export function AgentShell({
               immersive
                 ? 'flex min-h-0 flex-1 flex-col max-lg:pt-2 lg:pt-0'
                 : 'pb-24 lg:pb-0 max-lg:pt-[calc(var(--shell-header-offset)+var(--add-to-home-prompt-height,0px))] lg:pt-0 ui-v2:max-lg:pb-28',
+              isV2 && isDashboardHome && 'min-h-full',
             )}
             style={{
               ['--shell-header-height' as string]: `${headerHeight}px`,
@@ -362,7 +374,9 @@ export function AgentShell({
         <nav
           className={cn(
             'border-border bg-background/95 fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden',
-            'ui-v2:bottom-[max(0.5rem,env(safe-area-inset-bottom))] ui-v2:w-[min(100%-1.5rem,32rem)] ui-v2:rounded-2xl ui-v2:border ui-v2:bg-card/95 ui-v2:pb-0 ui-v2:backdrop-blur-none',
+            isV2
+              ? 'bottom-[max(0.5rem,env(safe-area-inset-bottom))] v2-frosted-bar w-[min(100%-1.5rem,32rem)] rounded-2xl border pb-0'
+              : '',
             immersive && 'hidden',
           )}
         >
@@ -378,7 +392,8 @@ export function AgentShell({
                     'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
                     active ? 'text-primary' : 'text-muted-foreground',
                     'ui-v2:rounded-xl ui-v2:text-[10px]',
-                    active && 'ui-v2:bg-secondary ui-v2:text-foreground',
+                    active && isV2 && 'v2-frosted-nav text-foreground',
+                    active && !isV2 && 'text-primary',
                   )}
                 >
                   <span className="relative">
@@ -402,7 +417,7 @@ export function AgentShell({
                 'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
                 moreOpen ? 'text-primary' : 'text-muted-foreground',
                 'ui-v2:rounded-xl ui-v2:text-[10px]',
-                moreOpen && 'ui-v2:bg-secondary ui-v2:text-foreground',
+                moreOpen && isV2 && 'v2-frosted-nav text-foreground',
               )}
             >
               <Menu className={cn('size-5', moreOpen && 'stroke-[2.5] ui-v2:stroke-2')} />
@@ -414,7 +429,15 @@ export function AgentShell({
         {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
         </div>
 
-        <aside className="bg-background sticky top-0 hidden h-full min-h-0 w-1/4 min-w-[300px] max-w-[420px] shrink-0 overflow-hidden lg:flex">
+        <aside
+          className={cn(
+            'v2-cros-rail sticky top-0 hidden h-full min-h-0 shrink-0 overflow-hidden border-l lg:flex',
+            isV2 ? 'w-[min(100%,380px)] min-w-[320px] max-w-[420px]' : 'w-1/4 min-w-[300px] max-w-[420px]',
+            isV2 && isDashboardHome
+              ? 'v2-dashboard-chrome border-border/50'
+              : 'border-border bg-background',
+          )}
+        >
           <GiiAssistant open variant="panel" />
         </aside>
       </div>

@@ -134,7 +134,7 @@ export function formatOpenInspectionWindow(
 export function formatRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const hours = Math.floor(diff / 3_600_000);
-  if (hours < 1) return 'just now';
+  if (hours < 1) return 'Just Now';
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;

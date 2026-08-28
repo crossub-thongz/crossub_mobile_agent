@@ -395,8 +395,9 @@ function MessageActionSheet({
 export function GlobalShellFabs({ pathname }: { pathname: string }) {
   const propertyId = propertyIdFromPath(pathname);
   const activePanel = useShellDockStore((s) => s.activePanel);
+  const giiExpanded = useShellDockStore((s) => s.giiExpanded);
   const closePanel = useShellDockStore((s) => s.closePanel);
-  const mobileGiiOpen = activePanel === 'gii';
+  const mobileGiiActive = activePanel === 'gii';
 
   return (
     <>
@@ -410,9 +411,9 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         onClose={closePanel}
         propertyId={propertyId}
       />
-      {mobileGiiOpen && !propertyId && !isActiveChatPath(pathname) ? (
+      {mobileGiiActive && !propertyId && !isActiveChatPath(pathname) ? (
         <div className="lg:hidden">
-          <GiiAssistant open variant="modal" onClose={closePanel} />
+          <GiiAssistant open expanded={giiExpanded} variant="modal" onClose={closePanel} />
         </div>
       ) : null}
     </>

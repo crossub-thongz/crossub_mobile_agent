@@ -35,3 +35,22 @@ export const PORTFOLIO_GII_PROMPTS = [
     prompt: 'What properties need my attention today?',
   },
 ] as const;
+
+/** Dashboard side-panel prompts (v2 home). */
+export const DASHBOARD_GII_PROMPTS = [
+  {
+    id: 'arrears',
+    label: 'Which properties are in arrears?',
+    prompt: 'Which properties are in arrears?',
+  },
+  {
+    id: 'maintenance-spend',
+    label: 'Maintenance jobs over $1,000',
+    prompt: 'Show me maintenance jobs over $1,000.',
+  },
+  {
+    id: 'inspections-due',
+    label: 'Inspections due this month',
+    prompt: 'What inspections are due this month?',
+  },
+] as const;
