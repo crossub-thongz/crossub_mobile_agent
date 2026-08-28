@@ -16,16 +16,16 @@ export function ClassicDashboard({ context }: { context: DashboardWidgetRenderCo
       <InspectionOnlyPlanBanner />
 
       {context.hasFullManagementAccess ? (
-        <Button asChild size="lg" className="h-12 w-full rounded-xl text-base font-semibold">
+        <Button asChild size="lg" className="h-12 w-full rounded-xl text-base font-semibold ui-v2:h-11 ui-v2:rounded-lg ui-v2:text-sm">
           <Link href={propertyNew()}>
-            <Plus className="size-5" />
+            <Plus className="size-5 ui-v2:size-4" />
             Add new property
           </Link>
         </Button>
       ) : (
-        <Button asChild size="lg" className="h-12 w-full rounded-xl text-base font-semibold">
+        <Button asChild size="lg" className="h-12 w-full rounded-xl text-base font-semibold ui-v2:h-11 ui-v2:rounded-lg ui-v2:text-sm">
           <Link href={propertyNew()}>
-            <Plus className="size-5" />
+            <Plus className="size-5 ui-v2:size-4" />
             Add property for inspection
           </Link>
         </Button>

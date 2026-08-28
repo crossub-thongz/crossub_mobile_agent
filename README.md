@@ -121,6 +121,7 @@ Leave `COOKIE_DOMAIN` empty so auth cookies bind to the portal hostname.
 |----------|-------|--------|
 | `NEXT_PUBLIC_API_URL` | `/api` | `/api` |
 | `API_INTERNAL_URL` | `http://localhost:3001` | `https://your-api.onrender.com` |
+| `CROSSUB_AGENT_UI` | unset (`v1`) or `v2` to preview the redesign | Staging blueprint sets `v2`. Leave **unset** on production. |
 | `PORT` | `3002` (dev script) | Set by Render |
 
 ## Build

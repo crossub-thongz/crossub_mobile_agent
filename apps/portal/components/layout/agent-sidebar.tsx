@@ -12,6 +12,7 @@ import { MOBILE_MENU_NAV } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { cn } from '@/lib/utils';
 
 function isActive(pathname: string, href: string): boolean {
@@ -34,20 +35,30 @@ function NavLink({
   compact?: boolean;
   badge?: number;
 }) {
+  const isV2 = useIsAgentUiV2();
+
   return (
     <Link
       href={href}
       title={label}
       className={cn(
-        'flex items-center rounded-xl text-sm font-medium transition-all duration-200',
+        'relative flex items-center rounded-lg text-sm font-medium transition-colors',
         compact
-          ? 'relative justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
-          : 'relative gap-2.5 px-3 py-2.5',
+          ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
+          : 'gap-2.5 px-3 py-2',
         active
-          ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
+          ? isV2
+            ? 'bg-secondary text-foreground'
+            : 'rounded-xl bg-primary/10 text-primary shadow-sm shadow-primary/5'
           : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
       )}
     >
+      {isV2 && active ? (
+        <span
+          className="bg-primary absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full"
+          aria-hidden
+        />
+      ) : null}
       <Icon className={cn('size-4 shrink-0', !active && 'opacity-70')} />
       <span
         className={cn(
@@ -83,9 +94,9 @@ export function AgentSidebar({
   return (
     <aside
       className={cn(
-        'border-border bg-card/95 group/sidebar sticky top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r shadow-[1px_0_0_0_rgba(0,0,0,0.03)] backdrop-blur-xl transition-[width,box-shadow] duration-300 ease-out lg:flex',
+        'border-border bg-card/95 group/sidebar sticky top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r shadow-[1px_0_0_0_rgba(0,0,0,0.03)] backdrop-blur-xl transition-[width,box-shadow] duration-300 ease-out lg:flex ui-v2:bg-background ui-v2:shadow-none',
         compact
-          ? 'w-[72px] hover:z-40 hover:w-[240px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)]'
+          ? 'w-[72px] hover:z-40 hover:w-[240px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)] ui-v2:hover:shadow-none'
           : 'w-[260px]',
       )}
     >
@@ -105,7 +116,7 @@ export function AgentSidebar({
       <nav className="flex-1 overflow-x-hidden overflow-y-auto p-2">
         {!compact ? (
           <>
-            <p className="text-muted-foreground mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide ui-v2:tracking-wider">
               Menu
             </p>
             <ul className="space-y-0.5">

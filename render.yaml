@@ -29,3 +29,5 @@ services:
         sync: false
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
         sync: false
+      - key: CROSSUB_AGENT_UI
+        value: v2

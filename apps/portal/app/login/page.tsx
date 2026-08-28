@@ -19,6 +19,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { useAuth } from '@/components/providers/auth-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,7 @@ import { ApiError, api } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
 import { loginLocalAccount } from '@/lib/local-auth';
 import { postAuthDestination } from '@/lib/system-access-agreement';
+import { cn } from '@/lib/utils';
 
 /**
  * ⚠️ `password` deliberately carries NO `.min(PASSWORD_MIN)`. Signing in VERIFIES a password;
@@ -56,6 +58,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const { refresh, status, user } = useAuth();
+  const isV2 = useIsAgentUiV2();
   const [showPassword, setShowPassword] = useState(false);
 
   useLayoutEffect(() => {
@@ -139,12 +142,24 @@ export default function LoginPage() {
       </div>
       <div className="mb-8 flex flex-col items-center gap-2">
         <CrossubLogo href="" size="lg" showTagline className="md:items-center" />
-        <p className="text-muted-foreground text-sm">Agent portal</p>
+        <p
+          className={cn(
+            'text-muted-foreground text-sm',
+            isV2 && 'text-[11px] font-medium uppercase tracking-wider',
+          )}
+        >
+          Agent portal
+        </p>
       </div>
 
-      <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg">
-        <div className="mb-6 space-y-1 text-center">
-          <h1 className="text-xl font-semibold">Sign in</h1>
+      <div
+        className={cn(
+          'w-full max-w-md rounded-xl border bg-card p-8 shadow-lg',
+          isV2 && 'rounded-lg p-6 shadow-none',
+        )}
+      >
+        <div className={cn('mb-6 space-y-1', isV2 ? 'text-left' : 'text-center')}>
+          <h1 className={cn('text-xl font-semibold', isV2 && 'tracking-tight')}>Sign in</h1>
           <p className="text-sm text-muted-foreground">
             Use your CROSSUB account credentials
           </p>

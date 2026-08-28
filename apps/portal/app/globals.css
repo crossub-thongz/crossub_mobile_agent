@@ -2,6 +2,7 @@
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant ui-v2 (&:is([data-ui='v2'] *));
 
 /* CROSSUB — light default, dark via .dark class (aligned with crossub_web) */
 :root {
@@ -63,6 +64,92 @@
   --warning: #f59e0b;
   --success: #00d4a4;
   --info: #3b82f6;
+}
+
+/*
+ * Agent UI v2 — env-gated redesign (`CROSSUB_AGENT_UI=v2`).
+ *
+ * Tokens on <html data-ui="v2"> restyle every screen that already uses
+ * bg-background / bg-card / text-primary / rounded-* without touching
+ * page components. Production omits the attribute (resolver returns v1)
+ * and these rules never apply.
+ *
+ * Light is a cool off-white canvas so cards lift by fill, not shadow.
+ * Dark matches the staff console. Decorative shadows and hero gradients
+ * are stripped: borders do the work (crossub_web DESIGN.md §5).
+ */
+[data-ui='v2'] {
+  --background: #f4f5f6;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --foreground: #0f172a;
+  --primary: #00b48a;
+  --primary-foreground: #ffffff;
+  --secondary: #eef0f2;
+  --secondary-foreground: #0f172a;
+  --muted: #eef0f2;
+  --muted-foreground: #5b6570;
+  --accent: #ecfdf8;
+  --accent-foreground: #047857;
+  --destructive: #d45656;
+  --destructive-foreground: #ffffff;
+  --border: #e4e6e9;
+  --input: #e4e6e9;
+  --ring: #00b48a;
+  --radius: 0.625rem;
+  --warning: #c37d0d;
+  --success: #00b48a;
+  --info: #3772cf;
+}
+
+[data-ui='v2'].dark {
+  --background: #0b0f10;
+  --card: #111617;
+  --card-foreground: #ffffff;
+  --popover: #111617;
+  --popover-foreground: #ffffff;
+  --foreground: #ffffff;
+  --primary: #00d4a4;
+  --primary-foreground: #0b0f10;
+  --secondary: #1c2326;
+  --secondary-foreground: #ffffff;
+  --muted: #1c2326;
+  --muted-foreground: #6b7280;
+  --accent: #00d4a4;
+  --accent-foreground: #0b0f10;
+  --destructive: #d45656;
+  --destructive-foreground: #ffffff;
+  --border: #1c2326;
+  --input: #1c2326;
+  --ring: #00d4a4;
+  --warning: #f59e0b;
+  --success: #00d4a4;
+  --info: #3b82f6;
+}
+
+[data-ui='v2'] .shadow-xs,
+[data-ui='v2'] .shadow-sm,
+[data-ui='v2'] .shadow-md,
+[data-ui='v2'] .shadow-lg,
+[data-ui='v2'] .shadow-xl,
+[data-ui='v2'] .shadow-2xl {
+  box-shadow: none;
+}
+
+[data-ui='v2'] .bg-gradient-to-br,
+[data-ui='v2'] .bg-gradient-to-b,
+[data-ui='v2'] .bg-gradient-to-r {
+  background-image: none;
+}
+
+[data-ui='v2'] .rounded-2xl {
+  border-radius: calc(var(--radius) + 4px);
+}
+
+[data-ui='v2'] .rounded-3xl {
+  border-radius: calc(var(--radius) + 6px);
 }
 
 @theme inline {

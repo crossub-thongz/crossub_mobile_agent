@@ -137,6 +137,7 @@ export function AgentShell({
             // `--env-banner-height` is defined only on a non-production deployment and
             // defaults to `0px`, so this stays `top-0` on production.
             'fixed top-[var(--env-banner-height,0px)] left-1/2 w-full max-w-lg -translate-x-1/2 lg:hidden',
+            'ui-v2:bg-background ui-v2:backdrop-blur-none',
             immersive && 'hidden',
           )}
         >
@@ -165,7 +166,7 @@ export function AgentShell({
             <div className="border-border border-t px-3 py-2">
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  <h1 className="truncate text-base font-semibold">{title}</h1>
+                  <h1 className="truncate text-base font-semibold ui-v2:tracking-tight">{title}</h1>
                   {headerMeta ? (
                     <button
                       type="button"
@@ -210,7 +211,7 @@ export function AgentShell({
                   />
                 </Suspense>
                 <div className="min-w-0">
-                  <h1 className="truncate text-lg font-semibold">{title}</h1>
+                  <h1 className="truncate text-lg font-semibold ui-v2:tracking-tight">{title}</h1>
                   {headerMeta ? (
                     <button
                       type="button"
@@ -293,7 +294,7 @@ export function AgentShell({
               wide ? (immersive ? 'flex min-h-0 flex-1 flex-col px-2 lg:px-4' : 'px-4 pb-4 lg:p-0') : 'px-4 py-4',
               immersive
                 ? 'flex min-h-0 flex-1 flex-col max-lg:pt-2 lg:pt-0'
-                : 'pb-24 lg:pb-0 max-lg:pt-[calc(var(--shell-header-offset)+var(--add-to-home-prompt-height,0px))] lg:pt-0',
+                : 'pb-24 lg:pb-0 max-lg:pt-[calc(var(--shell-header-offset)+var(--add-to-home-prompt-height,0px))] lg:pt-0 ui-v2:max-lg:pb-28',
             )}
             style={{
               ['--shell-header-height' as string]: `${headerHeight}px`,
@@ -321,7 +322,7 @@ export function AgentShell({
               aria-label="Close menu"
               onClick={() => setMoreOpen(false)}
             />
-            <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-1/2 z-[60] w-full max-w-lg -translate-x-1/2 rounded-t-2xl border border-b-0 bg-card px-4 pt-4 pb-2 shadow-2xl lg:hidden">
+            <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-1/2 z-[60] w-full max-w-lg -translate-x-1/2 rounded-t-2xl border border-b-0 bg-card px-4 pt-4 pb-2 shadow-2xl lg:hidden ui-v2:rounded-t-xl ui-v2:shadow-none">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-semibold">More</p>
                 <button
@@ -361,10 +362,11 @@ export function AgentShell({
         <nav
           className={cn(
             'border-border bg-background/95 fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden',
+            'ui-v2:bottom-[max(0.5rem,env(safe-area-inset-bottom))] ui-v2:w-[min(100%-1.5rem,32rem)] ui-v2:rounded-2xl ui-v2:border ui-v2:bg-card/95 ui-v2:pb-0 ui-v2:backdrop-blur-none',
             immersive && 'hidden',
           )}
         >
-          <div className="flex h-16 items-stretch justify-around px-1">
+          <div className="flex h-16 items-stretch justify-around px-1 ui-v2:h-14 ui-v2:px-1.5 ui-v2:py-1">
             {primaryNav.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
               const needActionBadge = href === ROUTES.PROPERTIES ? propertyNeedActionCount : 0;
@@ -375,10 +377,12 @@ export function AgentShell({
                   className={cn(
                     'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
                     active ? 'text-primary' : 'text-muted-foreground',
+                    'ui-v2:rounded-xl ui-v2:text-[10px]',
+                    active && 'ui-v2:bg-secondary ui-v2:text-foreground',
                   )}
                 >
                   <span className="relative">
-                    <Icon className={cn('size-5', active && 'stroke-[2.5]')} />
+                    <Icon className={cn('size-5', active && 'stroke-[2.5] ui-v2:stroke-2')} />
                     {needActionBadge > 0 ? (
                       <MessageUnreadBadge
                         count={needActionBadge}
@@ -397,9 +401,11 @@ export function AgentShell({
               className={cn(
                 'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
                 moreOpen ? 'text-primary' : 'text-muted-foreground',
+                'ui-v2:rounded-xl ui-v2:text-[10px]',
+                moreOpen && 'ui-v2:bg-secondary ui-v2:text-foreground',
               )}
             >
-              <Menu className={cn('size-5', moreOpen && 'stroke-[2.5]')} />
+              <Menu className={cn('size-5', moreOpen && 'stroke-[2.5] ui-v2:stroke-2')} />
               <span>More</span>
             </button>
           </div>

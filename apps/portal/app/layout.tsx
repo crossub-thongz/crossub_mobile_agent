@@ -21,7 +21,9 @@ import { EnvironmentBanner } from '@/components/agent/environment-banner';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
+import { AgentUiProvider } from '@/components/providers/agent-ui-provider';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
+import { resolveAgentUi } from '@/lib/agent-ui';
 import './globals.css';
 
 const inter = Inter({
@@ -63,14 +65,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const agentUi = resolveAgentUi(process.env.CROSSUB_AGENT_UI);
+
   return (
-    <html lang="en" className="bg-background" suppressHydrationWarning>
+    <html
+      lang="en"
+      className="bg-background"
+      data-ui={agentUi}
+      suppressHydrationWarning
+    >
       <head>
         <Script id="crossub-theme-init" strategy="beforeInteractive">
           {`(function(){try{var t=localStorage.getItem('theme');var d=document.documentElement;if(t==='dark')d.classList.add('dark');else d.classList.remove('dark')}catch(e){}})();`}
         </Script>
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
+        <AgentUiProvider ui={agentUi}>
         {/*
           Outside every gate and provider, deliberately. The login page renders none of
           them, and the login page is where a wrong-host visit is mistaken for a wrong
@@ -111,6 +121,7 @@ export default function RootLayout({
           </AuthProvider>
           <ThemedToaster position="bottom-right" />
         </ThemeProvider>
+        </AgentUiProvider>
       </body>
     </html>
   );
