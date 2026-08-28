@@ -52,7 +52,8 @@ export function InspectorConfirmCountdown({
   propertyId?: string | null;
   inspectionType?: string | null;
 }) {
-  const { agencies, properties, hasFullManagementAccess } = useAgentData();
+  const { agencies, properties, hasFullManagementAccess, platformBillingDisabled } =
+    useAgentData();
   const inferredPostpaid = useMemo(() => {
     if (postpaid != null) return postpaid;
     const agencyId = properties.find((row) => row.id === propertyId)?.agencyId;
@@ -71,7 +72,12 @@ export function InspectorConfirmCountdown({
   onClosedRef.current = onClosed;
 
   const draft = (apiStatus ?? '').toUpperCase() === 'DRAFT';
-  const active = Boolean(deadlineAt) && draft && !refunded && !hideUnbilledOpenTimer;
+  const active =
+    Boolean(deadlineAt) &&
+    draft &&
+    !refunded &&
+    !hideUnbilledOpenTimer &&
+    !platformBillingDisabled;
 
   useEffect(() => {
     if (!active) return;
@@ -108,6 +114,8 @@ export function InspectorConfirmCountdown({
         setExpiring(false);
       });
   }, [expired, inspectionId, inferredPostpaid]);
+
+  if (platformBillingDisabled) return null;
 
   if (refunded) {
     return (
