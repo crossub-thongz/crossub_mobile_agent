@@ -1,0 +1,639 @@
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import {
+  ChevronRight,
+  MoreHorizontal,
+  Sparkles,
+  Star,
+  Wrench,
+} from 'lucide-react';
+
+import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
+import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
+import { TaskProgressRail } from '@/components/agent/tasks/task-progress-rail';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import {
+  inspectionDetail,
+  leasingDetail,
+  maintenanceDetail,
+  propertyDetail,
+  rentReviewDetail,
+  ROUTES,
+  vacatingDetail,
+} from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
+import {
+  buildMaintenanceActivityEntries,
+  buildMaintenanceJobDetailRows,
+  buildMaintenanceQuoteCards,
+  buildMaintenanceTaskStages,
+  maintenanceTaskReference,
+  quotationCount,
+  resolveMaintenanceStatusBanner,
+  type MaintenanceTaskTab,
+} from '@/lib/maintenance-task-detail';
+import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
+import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import type { PropertyJobRow } from '@/lib/property-job-rows';
+import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
+import type { MaintenanceRequest, Property } from '@/lib/types';
+import {
+  cn,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatPropertyFullAddress,
+  formatTime,
+} from '@/lib/utils';
+
+import './maintenance-task-detail.css';
+
+const TABS: { id: MaintenanceTaskTab; label: string }[] = [
+  { id: 'workflow', label: 'Workflow' },
+  { id: 'details', label: 'Details' },
+  { id: 'quotes', label: 'Quotes' },
+  { id: 'activity', label: 'Activity' },
+  { id: 'documents', label: 'Documents' },
+  { id: 'notes', label: 'Notes' },
+  { id: 'messages', label: 'Messages' },
+];
+
+function ActivityTimeline({
+  entries,
+}: {
+  entries: ReturnType<typeof buildMaintenanceActivityEntries>;
+}) {
+  if (entries.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">No activity recorded for this task yet.</p>
+    );
+  }
+
+  return (
+    <div className="maintenance-task__activity-card relative rounded-2xl border v2-frosted-surface px-4">
+      <span className="maintenance-task__activity-line bg-border absolute" aria-hidden />
+      {entries.map((entry, index) => (
+        <div
+          key={entry.id}
+          className={cn(
+            'relative flex gap-4 py-4',
+            index < entries.length - 1 && 'border-b border-border/50',
+          )}
+        >
+          <div className="w-16 shrink-0 pt-0.5 text-right text-sm font-medium tabular-nums">
+            {formatTime(entry.at)}
+          </div>
+          <div className="relative flex w-4 shrink-0 justify-center">
+            <span className="bg-rose-600 ring-card relative z-10 mt-1.5 size-2.5 rounded-full ring-[3px]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">{entry.title}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {formatDate(entry.at)} · by {entry.actor}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function relatedTaskHref(row: PropertyJobRow, propertyId: string): string {
+  const nav = fromProperty(propertyId, 'Tasks');
+  switch (row.kind) {
+    case 'maintenance':
+      return maintenanceDetail(row.id, nav);
+    case 'inspection':
+      return inspectionDetail(row.id, nav);
+    case 'rent_review':
+      return rentReviewDetail(row.id, nav);
+    case 'end_leasing':
+      return vacatingDetail(row.id, nav);
+    case 'leasing':
+      return leasingDetail(row.id, nav);
+    default:
+      return propertyDetail(propertyId);
+  }
+}
+
+export function MaintenanceTaskDetailView({
+  item,
+  property,
+  workspaceCase,
+  backHref,
+  backLabel,
+  onApproveQuote,
+  onDeclineQuote,
+  quoteAmount,
+  contractorName,
+  quoteExpiry,
+  recommendation,
+  quoteDocumentUrl,
+  requiresApproval,
+  liveSyncing,
+  syncing,
+  remindersSent,
+  reminderEta,
+  assignedToName,
+}: {
+  item: MaintenanceRequest;
+  property?: Property | null;
+  workspaceCase: MaintenanceWorkspaceCase;
+  backHref: string;
+  backLabel: string;
+  onApproveQuote?: () => void | Promise<void>;
+  onDeclineQuote?: (reason: string) => void | Promise<void>;
+  quoteAmount?: number;
+  contractorName?: string;
+  quoteExpiry?: string;
+  recommendation?: string;
+  quoteDocumentUrl?: string;
+  requiresApproval?: boolean;
+  liveSyncing?: boolean;
+  syncing?: boolean;
+  remindersSent?: number;
+  reminderEta?: string | null;
+  assignedToName?: string | null;
+}) {
+  const {
+    properties,
+    leasingRecords,
+    leasingCycles,
+    tenantSelections,
+    maintenanceAll,
+    inspections,
+    rentReviews,
+    vacating,
+    tribunalCases,
+    accounting,
+  } = useAgentData();
+
+  const [activeTab, setActiveTab] = useState<MaintenanceTaskTab>('workflow');
+
+  const propertyId = item.propertyId;
+  const resolvedProperty =
+    property ?? properties.find((row) => row.id === propertyId) ?? null;
+  const currentLease = leasingRecords.find(
+    (row) => row.propertyId === propertyId && row.status === 'current',
+  );
+
+  const banner = useMemo(
+    () =>
+      resolveMaintenanceStatusBanner({
+        workspaceCase,
+        item,
+        quoteAmount,
+        contractorName,
+        recommendation,
+      }),
+    [contractorName, item, quoteAmount, recommendation, workspaceCase],
+  );
+  const stages = useMemo(
+    () => buildMaintenanceTaskStages(workspaceCase),
+    [workspaceCase],
+  );
+  const jobRows = useMemo(
+    () =>
+      buildMaintenanceJobDetailRows({
+        workspaceCase,
+        item,
+        property: resolvedProperty,
+      }),
+    [item, resolvedProperty, workspaceCase],
+  );
+  const quoteCards = useMemo(
+    () => buildMaintenanceQuoteCards(workspaceCase, contractorName, quoteAmount),
+    [contractorName, quoteAmount, workspaceCase],
+  );
+  const activityEntries = useMemo(
+    () => buildMaintenanceActivityEntries(workspaceCase),
+    [workspaceCase],
+  );
+
+  const address =
+    resolvedProperty != null
+      ? formatPropertyFullAddress(resolvedProperty)
+      : item.propertyAddress;
+  const taskRef = maintenanceTaskReference(workspaceCase, item);
+  const createdLabel = workspaceCase.createdAt
+    ? formatDate(workspaceCase.createdAt)
+    : item.createdAt
+      ? formatDate(item.createdAt)
+      : '—';
+  const quotesCount = quotationCount(workspaceCase);
+
+  const relatedTasks = useMemo(() => {
+    if (!propertyId) return [];
+    const leasingCases = buildPropertyLeasingWorkflowCases({
+      propertyId,
+      leasingCycles: leasingCycles.filter((row) => row.propertyId === propertyId),
+      tenantSelections: tenantSelections.filter((row) => row.propertyId === propertyId),
+      vacatingCases: vacating.filter((row) => row.propertyId === propertyId),
+      rentReviews: rentReviews.filter((row) => row.propertyId === propertyId),
+      rentReviewDecisions: {},
+      currentLease,
+    });
+    const rows = buildPropertyOverviewJobRows({
+      maintenance: maintenanceAll.filter((row) => row.propertyId === propertyId),
+      inspections: inspections.filter((row) => row.propertyId === propertyId),
+      rentReviews: rentReviews.filter((row) => row.propertyId === propertyId),
+      rentReviewDecisions: {},
+      leasingCases,
+      tribunalCases: tribunalCases.filter((row) => row.propertyId === propertyId),
+      vacatingCases: vacating.filter((row) => row.propertyId === propertyId),
+      accounting: accounting.find((row) => row.propertyId === propertyId) ?? null,
+    });
+    return rows.filter((row) => !(row.kind === 'maintenance' && row.id === item.id)).slice(0, 4);
+  }, [
+    accounting,
+    currentLease,
+    inspections,
+    item.id,
+    leasingCycles,
+    maintenanceAll,
+    propertyId,
+    rentReviews,
+    tenantSelections,
+    tribunalCases,
+    vacating,
+  ]);
+
+  return (
+    <div className="maintenance-task px-4 py-5 lg:px-8 lg:py-6">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-6">
+      <header className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-rose-500/12 text-rose-700">
+              <Wrench className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold tracking-tight">
+                  {item.title || workspaceCase.issueType}
+                </h1>
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                    workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
+                      ? 'bg-muted text-muted-foreground'
+                      : banner.needsAction
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+                  )}
+                >
+                  {workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
+                    ? 'Completed'
+                    : banner.needsAction
+                      ? 'Need your action'
+                      : 'CROS handling'}
+                </span>
+              </div>
+              <p className="text-muted-foreground mt-1 text-sm">{address}</p>
+              <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                <span>Task type Maintenance</span>
+                <span>Reported {createdLabel}</span>
+                <span>Reference {taskRef}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold"
+            >
+              Actions
+            </button>
+            <button
+              type="button"
+              className="text-muted-foreground v2-frosted-surface rounded-xl border p-2"
+              aria-label="More options"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section className="maintenance-task__status-card rounded-2xl border border-rose-500/20 p-5">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div>
+            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+              Current status
+            </p>
+            <h2 className="mt-1 text-lg font-semibold text-rose-950 dark:text-rose-100">
+              {banner.title}
+            </h2>
+            <p className="text-muted-foreground mt-2 text-sm">{banner.subtitle}</p>
+          </div>
+          <div className="rounded-xl border border-rose-500/15 v2-frosted-surface p-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-rose-600" />
+              <p className="text-sm font-semibold">CROS recommendation</p>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-rose-950/80 dark:text-rose-100/80">
+              {banner.crosSummary[0] ||
+                'CROSSUB is handling this job and will notify you if a decision is needed.'}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {stages.length > 0 ? (
+        <section className="rounded-2xl border v2-frosted-surface p-4">
+          <TaskProgressRail stages={stages} tone="rose" />
+        </section>
+      ) : null}
+
+          <div className="border-b">
+            <div className="flex gap-1 overflow-x-auto">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'border-b-2 px-4 py-2 text-sm font-semibold whitespace-nowrap transition',
+                    activeTab === tab.id
+                      ? 'border-rose-600 text-rose-700'
+                      : 'text-muted-foreground hover:text-foreground border-transparent',
+                  )}
+                >
+                  {tab.label}
+                  {tab.id === 'quotes' && quotesCount > 0 ? ` (${quotesCount})` : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
+            <MaintenanceWorkspace
+              embedded
+              workspaceCase={workspaceCase}
+              backHref={backHref}
+              backLabel={backLabel}
+              assignedToName={assignedToName}
+              liveSyncing={liveSyncing}
+              syncing={syncing}
+              remindersSent={remindersSent}
+              reminderEta={reminderEta}
+              onApproveQuote={onApproveQuote}
+              onDeclineQuote={onDeclineQuote}
+              quoteAmount={quoteAmount}
+              contractorName={contractorName}
+              quoteExpiry={quoteExpiry}
+              recommendation={recommendation}
+              quoteDocumentUrl={quoteDocumentUrl}
+              requiresApproval={requiresApproval}
+            />
+          </div>
+
+          {activeTab === 'details' ? (
+            <div className="space-y-5">
+              <section className="rounded-2xl border v2-frosted-surface p-5">
+                <h3 className="text-sm font-semibold">Job details</h3>
+                <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {jobRows.map((row) => (
+                    <div key={row.label}>
+                      <dt className="text-muted-foreground text-xs">{row.label}</dt>
+                      <dd className="mt-1 text-sm font-medium">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+
+              {quoteCards.length > 0 ? (
+                <section>
+                  <h3 className="text-sm font-semibold">Quotes received</h3>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {quoteCards.map((quote) => (
+                      <article
+                        key={quote.id}
+                        className={cn(
+                          'rounded-2xl border v2-frosted-surface p-4',
+                          quote.selected && 'border-rose-500/40 ring-1 ring-rose-500/20',
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">{quote.contractorName}</p>
+                            <p className="mt-1 text-lg font-semibold tabular-nums">
+                              {quote.amount != null ? formatCurrency(quote.amount) : '—'}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {quote.recommended ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                                <Star className="size-3" />
+                                Recommended
+                              </span>
+                            ) : null}
+                            {quote.selected ? (
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                Selected
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              <section>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold">Activity timeline</h3>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('activity')}
+                    className="text-primary text-xs font-semibold hover:underline"
+                  >
+                    View all activity
+                  </button>
+                </div>
+                <ActivityTimeline entries={activityEntries.slice(0, 4)} />
+              </section>
+            </div>
+          ) : null}
+
+          {activeTab === 'quotes' ? (
+            <section className="space-y-3">
+              {quoteCards.length > 0 ? (
+                quoteCards.map((quote) => (
+                  <article key={quote.id} className="rounded-2xl border v2-frosted-surface p-4">
+                    <p className="text-sm font-semibold">{quote.contractorName}</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums">
+                      {quote.amount != null ? formatCurrency(quote.amount) : '—'}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs capitalize">{quote.status}</p>
+                  </article>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-sm">No quotes received yet.</p>
+              )}
+            </section>
+          ) : null}
+
+          {activeTab === 'activity' ? <ActivityTimeline entries={activityEntries} /> : null}
+
+          {activeTab === 'documents' ? (
+            <section className="space-y-3">
+              {quoteDocumentUrl ? (
+                <article className="rounded-2xl border v2-frosted-surface p-4">
+                  <p className="text-sm font-semibold">Quote document</p>
+                  <a
+                    href={quoteDocumentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary mt-2 inline-block text-xs font-semibold hover:underline"
+                  >
+                    View document
+                  </a>
+                </article>
+              ) : (
+                <p className="text-muted-foreground text-sm">No documents uploaded yet.</p>
+              )}
+            </section>
+          ) : null}
+
+          {activeTab === 'notes' ? (
+            <section className="rounded-2xl border v2-frosted-surface p-5">
+              <h3 className="text-sm font-semibold">Case notes</h3>
+              <p className="text-muted-foreground mt-3 text-sm leading-relaxed whitespace-pre-wrap">
+                {recommendation?.trim() || workspaceCase.description || 'No notes recorded yet.'}
+              </p>
+            </section>
+          ) : null}
+
+          {activeTab === 'messages' ? (
+            <section className="rounded-2xl border v2-frosted-surface p-2">
+              <WorkspaceChatPanel
+                workspaceCase={workspaceCase}
+                agentName={workspaceCase.agent?.name ?? assignedToName ?? 'Agent'}
+              />
+            </section>
+          ) : null}
+        </div>
+
+        <aside className="space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-6rem)] xl:self-start xl:overflow-y-auto">
+          <section className="rounded-2xl border v2-frosted-surface p-4">
+            <h3 className="text-sm font-semibold">Property &amp; tenancy</h3>
+            <div className="mt-3 overflow-hidden rounded-xl border v2-frosted-surface">
+              {resolvedProperty?.imageUrl ? (
+                <div className="relative aspect-[16/10] w-full">
+                  <Image
+                    src={resolvedProperty.imageUrl}
+                    alt={address}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : null}
+              <div className="p-3">
+                <p className="text-sm font-semibold">{address}</p>
+                <span className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  {resolvedProperty?.leaseStatus === 'vacant' ? 'Vacant' : 'Occupied'}
+                </span>
+                <dl className="mt-3 space-y-2 text-xs">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Tenant</dt>
+                    <dd className="font-medium">
+                      {workspaceCase.tenant?.name || resolvedProperty?.tenantName || '—'}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Lease period</dt>
+                    <dd className="text-right font-medium">
+                      {resolvedProperty?.leaseStart && resolvedProperty?.leaseEnd
+                        ? `${formatDate(resolvedProperty.leaseStart)} – ${formatDate(resolvedProperty.leaseEnd)}`
+                        : '—'}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Rent</dt>
+                    <dd className="font-medium">
+                      {resolvedProperty && resolvedProperty.rentWeekly > 0
+                        ? `${formatCurrency(resolvedProperty.rentWeekly)}/week`
+                        : '—'}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Rent status</dt>
+                    <dd className="font-medium text-emerald-700">
+                      {resolvedProperty?.rentPaidUntil
+                        ? `Paid up to ${formatDate(resolvedProperty.rentPaidUntil)}`
+                        : '—'}
+                    </dd>
+                  </div>
+                </dl>
+                {propertyId ? (
+                  <Link
+                    href={propertyDetail(propertyId)}
+                    className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+                  >
+                    View property
+                    <ChevronRight className="size-3.5" />
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          {contractorName ? (
+            <section className="rounded-2xl border v2-frosted-surface p-4">
+              <h3 className="text-sm font-semibold">Contractor</h3>
+              <div className="mt-3">
+                <p className="text-sm font-semibold">{contractorName}</p>
+                {quoteAmount != null ? (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Latest quote {formatCurrency(quoteAmount)}
+                    {quoteExpiry ? ` · expires ${formatDate(quoteExpiry)}` : ''}
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="rounded-2xl border v2-frosted-surface p-4">
+            <h3 className="text-sm font-semibold">Related tasks</h3>
+            <ul className="mt-3 space-y-3">
+              {relatedTasks.length === 0 ? (
+                <li className="text-muted-foreground text-sm">No other active tasks.</li>
+              ) : (
+                relatedTasks.map((task) => (
+                  <li key={task.id}>
+                    <Link
+                      href={relatedTaskHref(task, propertyId)}
+                      className="hover:bg-muted/40 v2-frosted-surface flex items-start justify-between gap-3 rounded-xl border p-3 transition"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{task.name}</p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">{task.status}</p>
+                      </div>
+                      <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                    </Link>
+                  </li>
+                ))
+              )}
+            </ul>
+            {propertyId ? (
+              <Link
+                href={`${ROUTES.TASKS}?property=${encodeURIComponent(propertyId)}`}
+                className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+              >
+                View all tasks
+                <ChevronRight className="size-3.5" />
+              </Link>
+            ) : null}
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}

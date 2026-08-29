@@ -15,7 +15,7 @@ export default function LeasingTaskDetailPage() {
   const router = useRouter();
   const cycleId = String(params.id);
   const isV2 = useIsAgentUiV2();
-  const back = useBackNavigation(ROUTES.LEASING, 'Leasing');
+  const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
 
   useRecordRecentCaseVisit({
     id: cycleId,
@@ -39,6 +39,7 @@ export default function LeasingTaskDetailPage() {
       backHref={back.href}
       backLabel={back.label}
       hideGlobalFabs
+      hideNeedAction
       wide
     >
       <NewLeasingTaskDetailView cycleId={cycleId} />

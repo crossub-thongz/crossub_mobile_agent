@@ -168,7 +168,14 @@
 }
 
 /* Frost solid card utilities anywhere on the v2 shell canvas. */
-.v2-dashboard-canvas :where(.bg-card, [class*='bg-card/']):not(
+.v2-dashboard-canvas :where(
+    .bg-card,
+    [class*='bg-card/'],
+    .rounded-2xl.bg-white,
+    .rounded-xl.bg-white,
+    .rounded-2xl[class*='bg-white/'],
+    .rounded-xl[class*='bg-white/']
+  ):not(
     :where(.v2-frosted-nav, .v2-frosted-bar, .v2-frosted-surface, button, [role='menuitem'])
   ) {
   background-color: var(--dashboard-frost-bg) !important;

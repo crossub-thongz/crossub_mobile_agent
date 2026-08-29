@@ -1,0 +1,52 @@
+.inspection-task__status-card {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #0284c7 14%, transparent),
+    color-mix(in oklab, var(--card) 38%, transparent)
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, white 72%, transparent),
+    0 1px 2px rgba(0, 64, 99, 0.04);
+}
+
+.inspection-task__status-card--action {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #e11d48 12%, transparent),
+    color-mix(in oklab, var(--card) 38%, transparent)
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, white 72%, transparent),
+    0 1px 2px rgba(0, 64, 99, 0.04);
+}
+
+.dark .inspection-task__status-card {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #0284c7 18%, transparent),
+    color-mix(in oklab, var(--card) 48%, transparent)
+  );
+}
+
+.dark .inspection-task__status-card--action {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, #e11d48 18%, transparent),
+    color-mix(in oklab, var(--card) 48%, transparent)
+  );
+}
+
+.inspection-task__activity-line {
+  left: calc(1rem + 4rem + 1rem + 0.5rem - 0.5px);
+  top: 1.75rem;
+  bottom: 1.75rem;
+  width: 1px;
+}
+
+.inspection-task__progress {
+  scrollbar-width: thin;
+}

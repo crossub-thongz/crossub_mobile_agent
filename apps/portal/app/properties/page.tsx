@@ -11,9 +11,12 @@ import { DashboardPortfolioMapSection } from '@/components/agent/dashboard/dashb
 import { FilterChips } from '@/components/agent/filter-chips';
 import { PropertyRemoveDialog } from '@/components/agent/property-remove-dialog';
 import { PropertyListView } from '@/components/agent/property-list-view';
+import { V2PropertiesPage } from '@/components/agent/properties/v2-properties-page';
+import { PropertiesPageHeaderActions } from '@/components/agent/properties/properties-page-header-actions';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Input } from '@/components/ui/input';
 import { propertyDetail, propertyNew, propertyRegistryResume } from '@/constants/routes';
 import { unreadMessagesForProperty } from '@/lib/communications-log';
@@ -30,6 +33,7 @@ const FILTERS = [
 ];
 
 export default function PropertiesPage() {
+  const isV2 = useIsAgentUiV2();
   const searchParams = useSearchParams();
   const urlFilter = searchParams.get('filter');
   const {
@@ -129,6 +133,18 @@ export default function PropertiesPage() {
       setRemoving(false);
     }
   };
+
+  if (isV2) {
+    return (
+      <AgentShell
+        title="Properties"
+        wide
+        headerActions={<PropertiesPageHeaderActions className="flex flex-wrap gap-2" />}
+      >
+        <V2PropertiesPage />
+      </AgentShell>
+    );
+  }
 
   return (
     <AgentShell title="Properties">

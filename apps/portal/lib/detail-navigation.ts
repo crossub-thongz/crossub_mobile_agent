@@ -27,6 +27,10 @@ export function fromLeasingWorkflow(propertyId: string): DetailNavContext {
   return { from: 'leasing-workflow', propertyId };
 }
 
+export function fromTasks(): DetailNavContext {
+  return { from: 'tasks' };
+}
+
 export function resolveBackNavigation(
   searchParams: Pick<URLSearchParams, 'get'>,
   fallback: { href: string; label: string },

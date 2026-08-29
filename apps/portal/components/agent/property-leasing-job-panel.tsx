@@ -245,10 +245,14 @@ export function PropertyLeasingJobPanel({
       await refresh();
       onWorkflowCreated?.();
       if (result && isWorkflowCreatedCase(result)) {
+        if (isV2 && result.kind === 'leasing') {
+          router.push(leasingDetail(result.id, fromProperty(propertyId, 'Leasing')));
+          return;
+        }
         setPendingOpenCaseId(result.id);
       }
     },
-    [onWorkflowCreated, refresh],
+    [isV2, onWorkflowCreated, propertyId, refresh, router],
   );
 
   const canDeleteCase = useCallback(

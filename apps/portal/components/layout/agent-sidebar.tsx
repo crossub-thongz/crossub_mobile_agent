@@ -325,7 +325,7 @@ export function AgentSidebar({
                   v2
                   active={isActive(pathname, item.href)}
                   compact={compact}
-                  badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
+                  badge={item.href === ROUTES.TASKS ? propertyNeedActionCount : undefined}
                   trailingChevron={'trailingChevron' in item && item.trailingChevron}
                 />
               </li>
@@ -381,9 +381,7 @@ export function AgentSidebar({
                   <NavLink
                     {...item}
                     active={isActive(pathname, item.href)}
-                    badge={
-                      item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined
-                    }
+                    badge={item.href === ROUTES.TASKS ? propertyNeedActionCount : undefined}
                   />
                 </li>
               ))}
@@ -397,7 +395,7 @@ export function AgentSidebar({
                   {...item}
                   active={isActive(pathname, item.href)}
                   compact
-                  badge={item.href === ROUTES.PROPERTIES ? propertyNeedActionCount : undefined}
+                  badge={item.href === ROUTES.TASKS ? propertyNeedActionCount : undefined}
                 />
               </li>
             ))}

@@ -9,9 +9,11 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { NeedActionTaskCard } from '@/components/agent/need-action-task-card';
 import { PageIntro } from '@/components/agent/page-intro';
+import { V2TasksPage } from '@/components/agent/tasks/v2-tasks-page';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
 import { formatPropertyFullAddress } from '@/lib/utils';
 
@@ -25,6 +27,7 @@ const CATEGORY_FILTERS = [
 ];
 
 export default function TasksPage() {
+  const isV2 = useIsAgentUiV2();
   const searchParams = useSearchParams();
   const urlFilter = searchParams.get('filter');
   const propertyFilter = searchParams.get('property');
@@ -49,6 +52,14 @@ export default function TasksPage() {
   const pageTitle = filteredProperty
     ? `${filteredProperty.address} — Need action`
     : 'Need Action';
+
+  if (isV2) {
+    return (
+      <AgentShell title="Tasks" wide hideNeedAction>
+        <V2TasksPage />
+      </AgentShell>
+    );
+  }
 
   return (
     <AgentShell title={pageTitle} hideNeedAction>

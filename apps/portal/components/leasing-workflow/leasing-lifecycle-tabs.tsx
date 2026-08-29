@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { LeasingLifecyclePhaseNav } from '@/components/leasing-workflow/leasing-lifecycle-phase-nav';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
+import { LeasingUnifiedWorkflowRail } from '@/components/leasing-workflow/leasing-unified-workflow-rail';
 import { LeasingStepApplicationApproval } from '@/components/leasing-workflow/leasing-step-application-approval';
 import { LeasingStepOnboarding } from '@/components/leasing-workflow/leasing-step-onboarding';
 import { LeasingStepOpenInspection } from '@/components/leasing-workflow/leasing-step-open-inspection';
@@ -33,11 +34,14 @@ export function LeasingLifecycleTabs({
   leasingCycleId,
   onCaseClosed,
   onOpenInspectionCreated,
+  unifiedRail = false,
 }: {
   detail: LeasingPropertyDetail;
   leasingCycleId?: string;
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
+  /** One continuous rail (inspection steps + letting phases after Results). */
+  unifiedRail?: boolean;
 }) {
   const activeStep = useLeasingWorkflowStore((s) => s.getActiveStep(detail.propertyId));
   const setActiveStep = useLeasingWorkflowStore((s) => s.setActiveStep);
@@ -60,13 +64,21 @@ export function LeasingLifecycleTabs({
 
   return (
     <div className="min-w-0 space-y-4">
-      <div className={showLettingRail ? undefined : 'hidden md:block'}>
-        <LeasingLifecycleStepRail
+      {unifiedRail ? (
+        <LeasingUnifiedWorkflowRail
           detail={liveDetail}
           currentStep={activeStep}
           onStepClick={(step) => setActiveStep(detail.propertyId, step)}
         />
-      </div>
+      ) : (
+        <div className={showLettingRail ? undefined : 'hidden md:block'}>
+          <LeasingLifecycleStepRail
+            detail={liveDetail}
+            currentStep={activeStep}
+            onStepClick={(step) => setActiveStep(detail.propertyId, step)}
+          />
+        </div>
+      )}
 
       {liveDetail.openInspection.agentConducted ? (
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3">
@@ -78,11 +90,13 @@ export function LeasingLifecycleTabs({
         </div>
       ) : null}
 
-      <LeasingLifecyclePhaseNav
-        detail={liveDetail}
-        activeStep={activeStep}
-        onStepClick={(step) => setActiveStep(detail.propertyId, step)}
-      />
+      {unifiedRail ? null : (
+        <LeasingLifecyclePhaseNav
+          detail={liveDetail}
+          activeStep={activeStep}
+          onStepClick={(step) => setActiveStep(detail.propertyId, step)}
+        />
+      )}
 
       <StepPanel
         step={contentStep}

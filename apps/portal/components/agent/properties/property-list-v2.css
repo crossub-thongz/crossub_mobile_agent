@@ -1,0 +1,11 @@
+.property-list-v2__panel {
+  max-height: calc(100vh - 8rem);
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 1279px) {
+  .property-list-v2__panel {
+    display: none;
+  }
+}

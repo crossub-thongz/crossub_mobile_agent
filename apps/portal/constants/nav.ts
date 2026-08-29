@@ -6,6 +6,7 @@ import {
   FolderArchive,
   HelpCircle,
   LayoutDashboard,
+  ListTodo,
   Receipt,
   Settings,
   Tags,
@@ -25,6 +26,7 @@ type NavItem = {
 export const PRIMARY_NAV: NavItem[] = [
   { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
   { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
+  { href: ROUTES.TASKS, label: 'Tasks', icon: ListTodo },
 ];
 
 /** Workflow modules under the sidebar “More” section. */
@@ -47,10 +49,9 @@ export const MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
 ];
 
-/** Mobile bottom bar — Dashboard & Properties live in the overflow menu. */
+/** Sidebar and mobile overflow — primary destinations plus workflow modules. */
 export const MOBILE_MENU_NAV: NavItem[] = [
-  { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
-  { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
+  ...PRIMARY_NAV,
   ...MORE_NAV,
   ...MORE_NAV_FOOTER,
 ];

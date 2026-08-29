@@ -6,6 +6,7 @@ import {
   PROPERTY_JOB_KIND_ICON,
   PROPERTY_JOB_KIND_LABEL,
 } from '@/constants/property-jobs';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import { cn } from '@/lib/utils';
 
@@ -37,13 +38,20 @@ export function GiiPropertyJobsCard({
   jobs: PropertyJobRow[];
   onOpen: (row: PropertyJobRow) => void;
 }) {
+  const isV2 = useIsAgentUiV2();
+
   if (jobs.length === 0) return null;
 
   const rows = jobs.slice(0, MAX_JOB_ROWS);
   const overflow = Math.max(0, jobs.length - rows.length);
 
   return (
-    <div className="mr-auto w-[92%] overflow-hidden rounded-2xl border bg-card">
+    <div
+      className={cn(
+        'mr-auto w-[92%] overflow-hidden rounded-2xl border',
+        isV2 ? 'v2-frosted-surface' : 'bg-card',
+      )}
+    >
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
         <span className="flex items-center gap-1.5 text-[11px] font-semibold">
           <Briefcase className="size-3.5 shrink-0 text-primary" />

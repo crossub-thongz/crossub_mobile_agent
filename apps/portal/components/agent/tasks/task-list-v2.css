@@ -1,0 +1,24 @@
+.task-list-v2.v2-dashboard {
+  margin: 0;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .task-list-v2.v2-dashboard {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.task-list-v2__panel {
+  max-height: calc(100vh - 8rem);
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 1279px) {
+  .task-list-v2__panel {
+    display: none;
+  }
+}

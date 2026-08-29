@@ -14,15 +14,8 @@ import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { deleteAgentTribunalCase } from '@/lib/crossub-api/agent-workflow-client';
 import type { TribunalCase } from '@/lib/types';
 import { formatDateTime } from '@/lib/utils';
+import { isRentChasingTribunalCase } from '@/lib/tribunal-case-kind';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
-
-function isRentChasingCase(matter: string, tribunalType?: string): boolean {
-  const matterLower = matter.trim().toLowerCase();
-  if (matterLower.includes('rent chasing') || matterLower.includes('rental arrears')) {
-    return true;
-  }
-  return (tribunalType ?? '').toUpperCase() === 'RENTAL_ARREARS';
-}
 
 export function TribunalCaseDetailDialog({
   open,
@@ -43,7 +36,7 @@ export function TribunalCaseDetailDialog({
   if (!open || !caseId) return null;
 
   const rentChasing = tribunalCase
-    ? isRentChasingCase(tribunalCase.matter, tribunalCase.tribunalType)
+    ? isRentChasingTribunalCase(tribunalCase.matter, tribunalCase.tribunalType)
     : true;
 
   const titleRef =

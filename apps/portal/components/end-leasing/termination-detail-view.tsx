@@ -4,9 +4,11 @@ import { useCallback, useEffect } from 'react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
-import { useAgentData } from '@/components/providers/agent-data-provider';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
+import { EndLeasingTaskDetailView } from '@/components/end-leasing/end-leasing-task-detail-view';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { shouldLivePollEndLeasingCase } from '@/lib/end-leasing/lifecycle';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
@@ -70,7 +72,12 @@ function TerminationDetailContent({
   caseData: TerminationCaseDetail;
   hideHeader?: boolean;
 }) {
+  const isV2 = useIsAgentUiV2();
   const { properties } = useAgentData();
+
+  if (isV2 && !hideHeader) {
+    return <EndLeasingTaskDetailView caseData={caseData} />;
+  }
   const displayAddress = resolvePropertyDisplayAddress(
     properties,
     caseData.propertyId,

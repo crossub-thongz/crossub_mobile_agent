@@ -29,6 +29,10 @@ export function DashboardPropertiesMap({
   dashboardTile = false,
   fillHeight = false,
   className,
+  frameClassName,
+  selectedPropertyId,
+  onPropertySelect,
+  gestureHandling = 'cooperative',
 }: {
   properties: Property[];
   /** Fill parent grid cell height instead of fixed viewport height. */
@@ -40,6 +44,14 @@ export function DashboardPropertiesMap({
   /** Expand map to fill available parent height. */
   fillHeight?: boolean;
   className?: string;
+  /** Extra classes on the bordered map frame (e.g. fixed height on the properties list). */
+  frameClassName?: string;
+  /** Highlight and centre the selected property marker when set. */
+  selectedPropertyId?: string | null;
+  /** Called when a map marker is clicked (e.g. properties list preview). */
+  onPropertySelect?: (propertyId: string) => void;
+  /** Google Maps scroll/zoom gesture mode — use greedy on the properties list map. */
+  gestureHandling?: 'cooperative' | 'greedy' | 'none' | 'auto';
 }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -92,7 +104,7 @@ export function DashboardPropertiesMap({
           zoom: DEFAULT_ZOOM,
           disableDefaultUI: true,
           zoomControl: true,
-          gestureHandling: 'cooperative',
+          gestureHandling,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
@@ -126,9 +138,21 @@ export function DashboardPropertiesMap({
           map: mapRef.current!,
           position,
           title: formatPropertyFullAddress(property),
+          icon:
+            selectedPropertyId === property.id
+              ? {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: '#0d9488',
+                  fillOpacity: 1,
+                  strokeColor: '#ffffff',
+                  strokeWeight: 2,
+                }
+              : undefined,
         });
 
         marker.addListener('click', () => {
+          onPropertySelect?.(property.id);
           const href = propertyDetail(property.id);
           const address = formatPropertyFullAddress(property);
           const content = `
@@ -160,7 +184,7 @@ export function DashboardPropertiesMap({
 
       google.maps.event.trigger(mapRef.current, 'resize');
     });
-  }, [mapsReady, mappable, mappableSignature]);
+  }, [gestureHandling, mapsReady, mappable, mappableSignature, onPropertySelect, selectedPropertyId]);
 
   useEffect(() => {
     if (!mapsReady || !mapContainerRef.current || !mapRef.current) return;
@@ -189,7 +213,7 @@ export function DashboardPropertiesMap({
   return (
     <div
       className={cn(
-        fillHeight || (embedded && !dashboardTile)
+        fillHeight || (embedded && !dashboardTile && !frameClassName)
           ? 'flex h-full min-h-0 flex-col gap-2'
           : 'flex flex-col gap-2',
         className,
@@ -198,12 +222,15 @@ export function DashboardPropertiesMap({
       <div
         className={cn(
           'overflow-hidden rounded-xl border bg-card shadow-sm',
-          embedded && !dashboardTile && !fillHeight && 'flex min-h-0 flex-1 flex-col',
+          embedded && !dashboardTile && !fillHeight && !frameClassName && 'flex min-h-0 flex-1 flex-col',
           fillHeight && 'flex min-h-0 flex-1 flex-col',
+          frameClassName && 'flex min-h-0 flex-col',
           dashboardTile &&
             !fillHeight &&
+            !frameClassName &&
             'aspect-[3/2] w-full shrink-0',
           fillHeight && 'h-full min-h-[min(calc(100dvh-14rem),720px)] w-full flex-1',
+          frameClassName,
         )}
       >
         <div
@@ -214,9 +241,11 @@ export function DashboardPropertiesMap({
               ? 'h-full min-h-0 flex-1'
               : dashboardTile
                 ? 'h-full min-h-0'
-                : embedded
-                  ? 'min-h-[180px] flex-1'
-                  : 'h-[min(52vh,360px)] min-h-[220px]',
+                : frameClassName
+                  ? 'h-full min-h-0 w-full'
+                  : embedded
+                    ? 'min-h-[180px] flex-1'
+                    : 'h-[min(52vh,360px)] min-h-[220px]',
           )}
           aria-label="Portfolio properties map"
         />

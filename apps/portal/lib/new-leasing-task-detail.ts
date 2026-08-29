@@ -1,6 +1,6 @@
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import { resolveOnboardingTenant, confirmedLeaseTerms } from '@/lib/leasing/onboarding-display';
-import type { LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { Property } from '@/lib/types';
 import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
@@ -18,9 +18,19 @@ export const NEW_LEASING_TASK_STAGE_LABELS = [
   'Move in',
 ] as const;
 
-export type NewLeasingTaskTab = 'details' | 'applicants' | 'activity' | 'documents' | 'notes';
+export type NewLeasingTaskTab =
+  | 'workflow'
+  | 'details'
+  | 'applicants'
+  | 'activity'
+  | 'documents'
+  | 'notes';
 
 export type NewLeasingTaskStageState = 'complete' | 'current' | 'pending';
+
+function leasingApplications(detail: LeasingPropertyDetail): LeasingApplicationDetail[] {
+  return detail.applicationsDetail ?? [];
+}
 
 export function resolveNewLeasingTaskStageIndex(detail: LeasingPropertyDetail): number {
   const agreement = detail.onboarding.agreement;
@@ -36,12 +46,12 @@ export function resolveNewLeasingTaskStageIndex(detail: LeasingPropertyDetail): 
   if (agreement.signingStatus === 'signed') return 7;
   if (agreement.signingStatus === 'sent' || agreement.signingStatus === 'viewed') return 6;
 
-  const approved = detail.applications.some(
+  const approved = leasingApplications(detail).some(
     (app) => app.agentDecision === LEASING_AGENT_DECISION.APPROVED,
   );
   if (approved || detail.activeStepHint === LEASING_LIFECYCLE_STEP.ONBOARDING) return 5;
 
-  const referenceDone = detail.applications.some(
+  const referenceDone = leasingApplications(detail).some(
     (app) =>
       app.referenceRecommendation === 'recommend' ||
       app.referenceRecommendation === 'reject' ||
@@ -49,10 +59,10 @@ export function resolveNewLeasingTaskStageIndex(detail: LeasingPropertyDetail): 
   );
   if (referenceDone) return 4;
 
-  const screened = detail.applications.some((app) => app.aiScore != null || app.sentToAgent);
+  const screened = leasingApplications(detail).some((app) => app.aiScore != null || app.sentToAgent);
   if (screened) return 3;
 
-  if (detail.applications.length > 0) return 2;
+  if (leasingApplications(detail).length > 0) return 2;
 
   if (detail.openReport.sentToAgent || detail.openReport.reportViewable) return 1;
 
@@ -81,8 +91,9 @@ export function buildNewLeasingTaskStages(detail: LeasingPropertyDetail): {
 
 function buildStageDateLabels(detail: LeasingPropertyDetail): (string | undefined)[] {
   const dates: (string | undefined)[] = Array(NEW_LEASING_TASK_STAGE_LABELS.length).fill(undefined);
-  const firstApplication = detail.applications[0];
-  const approved = detail.applications.find(
+  const applications = leasingApplications(detail);
+  const firstApplication = applications[0];
+  const approved = applications.find(
     (app) => app.agentDecision === LEASING_AGENT_DECISION.APPROVED,
   );
 
@@ -241,7 +252,7 @@ export function buildNewLeasingActivityEntries(detail: LeasingPropertyDetail): {
   title: string;
   actor: string;
 }[] {
-  return [...detail.timeline]
+  return [...(detail.timeline ?? [])]
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
     .slice(0, 6)
     .map((entry) => ({

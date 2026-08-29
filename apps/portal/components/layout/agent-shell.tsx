@@ -17,6 +17,7 @@ import { PlatformInvoiceReadyBanner } from '@/components/billing/platform-invoic
 import { AgentPaymentReminderBanner } from '@/components/agent/agent-payment-reminder-banner';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
+import { PropertyListShellPreview } from '@/components/agent/properties/property-list-shell-preview';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
@@ -32,6 +33,7 @@ import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-l
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { useScrollbarReveal } from '@/lib/use-scrollbar-reveal';
+import { useShellAsideStore } from '@/lib/shell-aside-store';
 import { cn, displayName } from '@/lib/utils';
 
 import '@/components/agent/dashboard/v2-dashboard.css';
@@ -53,12 +55,14 @@ export function AgentShell({
   immersive,
   fillMain,
   headerMeta,
+  headerActions,
 }: {
   children: React.ReactNode;
   title?: string;
   backHref?: string;
   /** Label for the back control when `backHref` is set */
   backLabel?: string;
+  /** Hide Need Action / CROS side rail (task detail pages use their own right column). */
   hideNeedAction?: boolean;
   /** Hide bottom-right + and chat FABs (e.g. auth screens) */
   hideGlobalFabs?: boolean;
@@ -77,6 +81,8 @@ export function AgentShell({
     onToggle: () => void;
     panel: React.ReactNode;
   };
+  /** Right-aligned actions on the v2 desktop page title row. */
+  headerActions?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isV2 = useIsAgentUiV2();
@@ -88,6 +94,12 @@ export function AgentShell({
   const [headerHeight, setHeaderHeight] = useState(56);
   const { hasFullManagementAccess, unreadNotificationCount, needActionItems, platformBillingDisabled } = useAgentData();
   const propertyNeedActionCount = needActionItems.length;
+  const propertiesPageActive = useShellAsideStore((s) => s.propertiesPageActive);
+  const propertyPreviewId = useShellAsideStore((s) => s.propertyPreviewId);
+  const showPropertyShellPreview =
+    isV2 && propertiesPageActive && Boolean(propertyPreviewId);
+  const hideCrosRail =
+    Boolean(hideNeedAction) || (isV2 && propertiesPageActive && !propertyPreviewId);
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
   const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
   const moreNav = filterHiddenBillingNav(
@@ -312,37 +324,44 @@ export function AgentShell({
 
         {isV2 && title && !immersive ? (
           <header className="border-border/50 hidden shrink-0 border-b px-6 py-3 lg:block">
-            <div className="flex min-w-0 items-center gap-3">
-              <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
-                <ShellBackButton
-                  backHref={backHref}
-                  backLabel={backLabel}
-                  showLogoOnHome={false}
-                  className="hover:bg-primary/5 shrink-0 rounded-lg px-2 py-1.5 transition"
-                />
-              </Suspense>
-              <div className="min-w-0">
-                <h1 className="truncate text-lg font-semibold tracking-tight">{title}</h1>
-                {headerMeta ? (
-                  <button
-                    type="button"
-                    onClick={headerMeta.onToggle}
-                    aria-expanded={headerMeta.open}
-                    className="text-muted-foreground hover:text-foreground mt-0.5 flex max-w-full min-w-0 items-center gap-1 text-left text-xs transition"
-                  >
-                    <span className="truncate">{headerMeta.label}</span>
-                    <ChevronDown
-                      className={cn(
-                        'size-3.5 shrink-0 transition-transform',
-                        headerMeta.open && 'rotate-180',
-                      )}
-                      aria-hidden
-                    />
-                  </button>
-                ) : user ? (
-                  <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
-                ) : null}
+            <div className="flex min-w-0 items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <Suspense fallback={<div className="h-9 w-20 shrink-0" aria-hidden />}>
+                  <ShellBackButton
+                    backHref={backHref}
+                    backLabel={backLabel}
+                    showLogoOnHome={false}
+                    className="hover:bg-primary/5 shrink-0 rounded-lg px-2 py-1.5 transition"
+                  />
+                </Suspense>
+                <div className="min-w-0">
+                  <h1 className="truncate text-lg font-semibold tracking-tight">{title}</h1>
+                  {headerMeta ? (
+                    <button
+                      type="button"
+                      onClick={headerMeta.onToggle}
+                      aria-expanded={headerMeta.open}
+                      className="text-muted-foreground hover:text-foreground mt-0.5 flex max-w-full min-w-0 items-center gap-1 text-left text-xs transition"
+                    >
+                      <span className="truncate">{headerMeta.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          'size-3.5 shrink-0 transition-transform',
+                          headerMeta.open && 'rotate-180',
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  ) : user ? (
+                    <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
+                  ) : null}
+                </div>
               </div>
+              {headerActions ? (
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  {headerActions}
+                </div>
+              ) : null}
             </div>
             {headerMeta?.open ? (
               <div className="border-border mt-3 border-t pt-3">{headerMeta.panel}</div>
@@ -444,7 +463,7 @@ export function AgentShell({
           <div className="flex h-16 items-stretch justify-around px-1 ui-v2:h-14 ui-v2:px-1.5 ui-v2:py-1">
             {primaryNav.map(({ href, label, icon: Icon }) => {
               const active = isActive(pathname, href);
-              const needActionBadge = href === ROUTES.PROPERTIES ? propertyNeedActionCount : 0;
+              const needActionBadge = href === ROUTES.TASKS ? propertyNeedActionCount : 0;
               return (
                 <Link
                   key={href}
@@ -506,14 +525,19 @@ export function AgentShell({
 
         <aside
           className={cn(
-            'v2-cros-rail hidden h-full min-h-0 shrink-0 overflow-hidden border-l lg:flex',
+            'v2-cros-rail h-full min-h-0 shrink-0 overflow-hidden border-l',
+            hideCrosRail ? 'hidden' : 'hidden lg:flex',
             isV2 ? 'w-[min(100%,380px)] min-w-[320px] max-w-[420px]' : 'w-1/4 min-w-[300px] max-w-[420px]',
             isV2
               ? 'v2-dashboard-chrome border-border/50'
               : 'border-border bg-background',
           )}
         >
-          <GiiAssistant open variant="panel" />
+          {showPropertyShellPreview && propertyPreviewId ? (
+            <PropertyListShellPreview propertyId={propertyPreviewId} />
+          ) : (
+            <GiiAssistant open variant="panel" />
+          )}
         </aside>
         </div>
       </div>

@@ -353,6 +353,7 @@ export function GiiAssistant({
   /** V2 shell rail — Needs attention + Ask CROS on every portfolio page (not property/message scope). */
   const isDashboardV2Panel =
     isPanel && isV2 && !scopedProperty && !messageScoped;
+  const isFrostedV2Panel = isPanel && isV2 && !isDashboardV2Panel;
 
   // On a property, Gii opens with that property's IN-PROGRESS JOBS — the same "Jobs in
   // progress" set the Overview tab shows (one shared selector, so the two never disagree),
@@ -1130,11 +1131,13 @@ export function GiiAssistant({
     <div
       className={cn(
         'flex flex-col',
-        isDashboardV2Panel ? 'bg-transparent' : 'bg-background',
+        isDashboardV2Panel && 'bg-transparent',
+        isFrostedV2Panel && 'v2-frosted-surface border-0 shadow-none',
+        !isDashboardV2Panel && !isFrostedV2Panel && 'bg-background',
         isEmbedded
           ? 'w-full'
           : isPanel
-            ? 'h-full max-h-full min-h-0 w-full overflow-hidden border-l'
+            ? 'h-full max-h-full min-h-0 w-full overflow-hidden'
             : cn(
                 'flex w-full max-w-lg flex-col border shadow-2xl',
                 'max-lg:h-full max-lg:min-h-0 max-lg:overflow-hidden max-lg:rounded-t-3xl max-lg:border-b-0',
@@ -1146,6 +1149,7 @@ export function GiiAssistant({
       <div
         className={cn(
           'flex shrink-0 items-center justify-between border-b px-4 py-3',
+          isFrostedV2Panel && 'border-border/40',
           isEmbedded && 'py-2.5',
           isDashboardV2Panel && 'hidden',
         )}
@@ -1244,8 +1248,15 @@ export function GiiAssistant({
       ) : (
         <>
       {scopedAddress && !isEmbedded ? (
-        <div className="border-b px-4 py-2">
-          <div className="bg-primary/5 flex items-center gap-2 rounded-xl border border-primary/15 px-3 py-2">
+        <div className="border-border/40 border-b px-4 py-2">
+          <div
+            className={cn(
+              'flex items-center gap-2 rounded-xl border px-3 py-2',
+              isFrostedV2Panel
+                ? 'v2-frosted-surface border-primary/20'
+                : 'border-primary/15 bg-primary/5',
+            )}
+          >
             <Building2 className="text-primary size-4 shrink-0" />
             <p className="min-w-0 truncate text-xs font-medium">{scopedAddress}</p>
           </div>
@@ -1337,7 +1348,14 @@ export function GiiAssistant({
         <div ref={endRef} aria-hidden className="h-px w-full shrink-0" />
       </div>
 
-      <div className="bg-background sticky bottom-0 z-10 shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div
+        className={cn(
+          'sticky bottom-0 z-10 shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+          isFrostedV2Panel
+            ? 'border-border/50 bg-transparent shadow-none'
+            : 'bg-background shadow-[0_-4px_16px_rgba(0,0,0,0.06)]',
+        )}
+      >
         {!sending && !hasUserMessages ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {suggestedPrompts.map((item) => (
@@ -1345,7 +1363,12 @@ export function GiiAssistant({
                 key={item.id}
                 type="button"
                 onClick={() => void runQuery(item.prompt)}
-                className="rounded-full border border-border/80 bg-secondary/50 px-2.5 py-1 text-[11px] font-medium transition hover:border-primary/30 hover:bg-primary/5"
+                className={cn(
+                  'rounded-full border border-border/80 px-2.5 py-1 text-[11px] font-medium transition hover:border-primary/30',
+                  isFrostedV2Panel
+                    ? 'v2-frosted-nav'
+                    : 'bg-secondary/50 hover:bg-primary/5',
+                )}
               >
                 {item.label}
               </button>
@@ -1418,7 +1441,8 @@ export function GiiAssistant({
               }
               rows={isEmbedded ? 3 : 4}
               className={cn(
-                'min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 bg-secondary/40 px-4 py-3 text-sm leading-relaxed shadow-none',
+                'min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border-border/80 px-4 py-3 text-sm leading-relaxed shadow-none',
+                isFrostedV2Panel ? 'v2-frosted-surface' : 'bg-secondary/40',
                 isEmbedded ? 'min-h-16 max-h-[160px]' : 'min-h-24 max-h-[220px]',
               )}
               autoFocus={isPanel}

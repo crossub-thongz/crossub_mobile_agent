@@ -6,7 +6,9 @@ import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { CaseAddressAssignedBar } from '@/components/agent/case-address-assigned-bar';
 import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
+import { RentReviewTaskDetailView } from '@/components/rent-review/rent-review-task-detail-view';
 import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { useLivePoll } from '@/lib/use-live-poll';
@@ -66,7 +68,17 @@ function RentReviewDetailContent({
   hideHeader?: boolean;
   onUpdated?: () => void;
 }) {
+  const isV2 = useIsAgentUiV2();
   const { properties } = useAgentData();
+
+  const handleUpdated = (_updated: RentReviewWorkflowDetail) => {
+    onUpdated?.();
+  };
+
+  if (isV2 && !hideHeader) {
+    return <RentReviewTaskDetailView detail={detail} onUpdated={handleUpdated} />;
+  }
+
   const displayAddress = resolvePropertyDisplayAddress(
     properties,
     detail.propertyId ?? '',
@@ -76,7 +88,7 @@ function RentReviewDetailContent({
     ? properties.find((p) => p.id === detail.propertyId)?.propertyManager
     : undefined;
 
-  const handleUpdated = (_updated: RentReviewWorkflowDetail) => {
+  const handleUpdatedInner = (_updated: RentReviewWorkflowDetail) => {
     onUpdated?.();
   };
 
@@ -117,7 +129,7 @@ function RentReviewDetailContent({
         </>
       ) : null}
 
-      <RentReviewAgentWorkflowPanel detail={detail} onUpdated={handleUpdated} />
+      <RentReviewAgentWorkflowPanel detail={detail} onUpdated={handleUpdatedInner} />
     </div>
   );
 }

@@ -21,6 +21,7 @@ export function LeasingWorkflowTimeline({
   onFocusBondHandled,
   onCaseClosed,
   onOpenInspectionCreated,
+  unifiedRail = false,
 }: {
   propertyId: string;
   /** When set (e.g. history row), load this cycle instead of the property's active letting. */
@@ -32,6 +33,7 @@ export function LeasingWorkflowTimeline({
   onFocusBondHandled?: () => void;
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
+  unifiedRail?: boolean;
 }) {
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
@@ -102,6 +104,7 @@ export function LeasingWorkflowTimeline({
         leasingCycleId={resolvedCycleId}
         onCaseClosed={onCaseClosed}
         onOpenInspectionCreated={onOpenInspectionCreated}
+        unifiedRail={unifiedRail}
       />
     </div>
   );

@@ -53,6 +53,7 @@ export function MaintenanceWorkspace({
   remindersSent = 0,
   reminderEta,
   assignedToName,
+  embedded = false,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   backHref: string;
@@ -70,6 +71,7 @@ export function MaintenanceWorkspace({
   syncing?: boolean;
   remindersSent?: number;
   reminderEta?: string | null;
+  embedded?: boolean;
 }) {
   const [bottomNavTab, setBottomNavTab] = useState<'details' | 'chat'>('details');
   const [caseFlagged, setCaseFlagged] = useState(false);
@@ -253,54 +255,19 @@ export function MaintenanceWorkspace({
     );
   };
 
-  return (
-    <div className="border-border bg-background flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
-      <WorkspaceHeader
-        workspaceCase={workspaceWithNotifications}
-        caseFlagged={caseFlagged}
-        backHref={backHref}
-        backLabel={backLabel}
-        liveSyncing={liveSyncing}
-        syncing={syncing}
-        onOpenChat={() => setBottomNavTab('chat')}
-        onToggleFlag={toggleFlag}
-        assignedToName={assignedToName}
-      />
+  const mainContent = (
+    <>
+      {bottomNavTab === 'details' ? (
+        <div className={cn(embedded ? 'space-y-5' : 'space-y-5 px-4 py-5 sm:px-5 sm:py-6')}>
+          {renderStageTags()}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        <aside className="border-border bg-muted/[0.2] shrink-0 overflow-y-auto border-b px-4 py-4 lg:w-[min(100%,240px)] lg:shrink-0 lg:border-r lg:border-b-0">
-          <div className="space-y-3">
-            <WorkspaceSideInformationPanel
-              tenantName={workspaceCase.tenant?.name ?? '—'}
-              tenantEmail={workspaceCase.tenant?.email}
-              tenantPhone={workspaceCase.tenant?.phone}
-              priority={workspaceCase.priority}
-              responsibility={workspaceCase.responsibility ?? null}
-              sourceLabel={SOURCE_LABELS[workspaceCase.source]}
-              statusBoxClassName={
-                workspaceCase.status === 'pending_evidence'
-                  ? 'border-amber-500/40 bg-amber-500/5'
-                  : 'border-border'
-              }
-              statusBoxContent={
-                <p className="text-[11px] font-semibold text-foreground">{statusLabel}</p>
-              }
-            />
-            <WorkspaceTimelinePanel entries={workspaceCase.auditEntries} />
-          </div>
-        </aside>
-
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {bottomNavTab === 'details' ? (
-              <div className="space-y-5 px-4 py-5 sm:px-5 sm:py-6">
-                {renderStageTags()}
-
-                <div>
-                  <p className="text-muted-foreground mt-3 mb-3 text-[10px] font-semibold uppercase tracking-wider">
-                    Workflow
-                  </p>
-                  <div className="flex w-full items-start justify-between gap-0 pb-1">
+          <div>
+            {!embedded ? (
+              <p className="text-muted-foreground mt-3 mb-3 text-[10px] font-semibold uppercase tracking-wider">
+                Workflow
+              </p>
+            ) : null}
+            <div className="flex w-full items-start justify-between gap-0 pb-1">
                     {steps.map((step, i) => {
                       const isPreviewStep =
                         quickJumpReadOnlyMode &&
@@ -612,14 +579,59 @@ export function MaintenanceWorkspace({
                     )}
                   </div>
                 </div>
-              </div>
-            ) : (
-              <WorkspaceChatPanel
-                workspaceCase={workspaceWithNotifications}
-                agentName={workspaceCase.agent?.name ?? 'Agent'}
-              />
-            )}
+        </div>
+      ) : (
+        <WorkspaceChatPanel
+          workspaceCase={workspaceWithNotifications}
+          agentName={workspaceCase.agent?.name ?? 'Agent'}
+        />
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="maintenance-workspace-embedded">{mainContent}</div>;
+  }
+
+  return (
+    <div className="border-border bg-background flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
+      <WorkspaceHeader
+        workspaceCase={workspaceWithNotifications}
+        caseFlagged={caseFlagged}
+        backHref={backHref}
+        backLabel={backLabel}
+        liveSyncing={liveSyncing}
+        syncing={syncing}
+        onOpenChat={() => setBottomNavTab('chat')}
+        onToggleFlag={toggleFlag}
+        assignedToName={assignedToName}
+      />
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <aside className="border-border bg-muted/[0.2] shrink-0 overflow-y-auto border-b px-4 py-4 lg:w-[min(100%,240px)] lg:shrink-0 lg:border-r lg:border-b-0">
+          <div className="space-y-3">
+            <WorkspaceSideInformationPanel
+              tenantName={workspaceCase.tenant?.name ?? '—'}
+              tenantEmail={workspaceCase.tenant?.email}
+              tenantPhone={workspaceCase.tenant?.phone}
+              priority={workspaceCase.priority}
+              responsibility={workspaceCase.responsibility ?? null}
+              sourceLabel={SOURCE_LABELS[workspaceCase.source]}
+              statusBoxClassName={
+                workspaceCase.status === 'pending_evidence'
+                  ? 'border-amber-500/40 bg-amber-500/5'
+                  : 'border-border'
+              }
+              statusBoxContent={
+                <p className="text-[11px] font-semibold text-foreground">{statusLabel}</p>
+              }
+            />
+            <WorkspaceTimelinePanel entries={workspaceCase.auditEntries} />
           </div>
+        </aside>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">{mainContent}</div>
         </div>
       </div>
 

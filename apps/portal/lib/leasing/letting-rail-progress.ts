@@ -229,3 +229,149 @@ export function resolveLeasingWorkflowContentStep(
 ): LeasingLifecycleStep {
   return activeStep;
 }
+
+/** Single-line v2 rail: inspection track, then letting phases after Results. */
+export const UNIFIED_LEASING_RAIL_STEP = {
+  ORDER_CREATED: LETTING_RAIL_STEP.ORDER_CREATED,
+  SCHEDULING: LETTING_RAIL_STEP.SCHEDULING,
+  SCHEDULED: LETTING_RAIL_STEP.SCHEDULED,
+  REPORT_AVAILABLE: LETTING_RAIL_STEP.REPORT_AVAILABLE,
+  RESULTS: LETTING_RAIL_STEP.RESULTS,
+  APPLICATION: LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL,
+  REFERENCE_CHECK: 'reference_check',
+  ONBOARDING: LEASING_LIFECYCLE_STEP.ONBOARDING,
+} as const;
+
+export type UnifiedLeasingRailStep =
+  (typeof UNIFIED_LEASING_RAIL_STEP)[keyof typeof UNIFIED_LEASING_RAIL_STEP];
+
+export const UNIFIED_LEASING_RAIL_STEP_ORDER: UnifiedLeasingRailStep[] = [
+  UNIFIED_LEASING_RAIL_STEP.ORDER_CREATED,
+  UNIFIED_LEASING_RAIL_STEP.SCHEDULING,
+  UNIFIED_LEASING_RAIL_STEP.SCHEDULED,
+  UNIFIED_LEASING_RAIL_STEP.REPORT_AVAILABLE,
+  UNIFIED_LEASING_RAIL_STEP.RESULTS,
+  UNIFIED_LEASING_RAIL_STEP.APPLICATION,
+  UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK,
+  UNIFIED_LEASING_RAIL_STEP.ONBOARDING,
+];
+
+export const UNIFIED_LEASING_RAIL_STEP_LABEL: Record<UnifiedLeasingRailStep, string> = {
+  [UNIFIED_LEASING_RAIL_STEP.ORDER_CREATED]: 'Order Created',
+  [UNIFIED_LEASING_RAIL_STEP.SCHEDULING]: 'Scheduling',
+  [UNIFIED_LEASING_RAIL_STEP.SCHEDULED]: 'Scheduled',
+  [UNIFIED_LEASING_RAIL_STEP.REPORT_AVAILABLE]: 'Report Available',
+  [UNIFIED_LEASING_RAIL_STEP.RESULTS]: 'Results',
+  [UNIFIED_LEASING_RAIL_STEP.APPLICATION]: 'Application',
+  [UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK]: 'Reference Check',
+  [UNIFIED_LEASING_RAIL_STEP.ONBOARDING]: 'Onboarding',
+};
+
+export const UNIFIED_LEASING_RAIL_MOBILE_LABEL: Record<UnifiedLeasingRailStep, string> = {
+  [UNIFIED_LEASING_RAIL_STEP.ORDER_CREATED]: 'Created',
+  [UNIFIED_LEASING_RAIL_STEP.SCHEDULING]: 'Scheduling',
+  [UNIFIED_LEASING_RAIL_STEP.SCHEDULED]: 'Scheduled',
+  [UNIFIED_LEASING_RAIL_STEP.REPORT_AVAILABLE]: 'Report',
+  [UNIFIED_LEASING_RAIL_STEP.RESULTS]: 'Results',
+  [UNIFIED_LEASING_RAIL_STEP.APPLICATION]: 'Application',
+  [UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK]: 'References',
+  [UNIFIED_LEASING_RAIL_STEP.ONBOARDING]: 'Onboarding',
+};
+
+export function unifiedRailStepToContentStep(
+  railStep: UnifiedLeasingRailStep,
+): LeasingLifecycleStep {
+  switch (railStep) {
+    case UNIFIED_LEASING_RAIL_STEP.ORDER_CREATED:
+    case UNIFIED_LEASING_RAIL_STEP.SCHEDULING:
+    case UNIFIED_LEASING_RAIL_STEP.SCHEDULED:
+      return LEASING_LIFECYCLE_STEP.OPEN_INSPECTION;
+    case UNIFIED_LEASING_RAIL_STEP.REPORT_AVAILABLE:
+      return LEASING_LIFECYCLE_STEP.OPEN_REPORT;
+    case UNIFIED_LEASING_RAIL_STEP.APPLICATION:
+      return LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL;
+    case UNIFIED_LEASING_RAIL_STEP.RESULTS:
+    case UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK:
+      return LEASING_LIFECYCLE_STEP.RESULTS;
+    case UNIFIED_LEASING_RAIL_STEP.ONBOARDING:
+      return LEASING_LIFECYCLE_STEP.ONBOARDING;
+    default:
+      return LEASING_LIFECYCLE_STEP.OPEN_INSPECTION;
+  }
+}
+
+export function contentStepToUnifiedRailStep(
+  contentStep: LeasingLifecycleStep,
+  liveRailStep: LettingRailStep,
+): UnifiedLeasingRailStep {
+  switch (contentStep) {
+    case LEASING_LIFECYCLE_STEP.OPEN_INSPECTION:
+      if (
+        liveRailStep === LETTING_RAIL_STEP.ORDER_CREATED ||
+        liveRailStep === LETTING_RAIL_STEP.SCHEDULING ||
+        liveRailStep === LETTING_RAIL_STEP.SCHEDULED
+      ) {
+        return liveRailStep;
+      }
+      return UNIFIED_LEASING_RAIL_STEP.SCHEDULED;
+    case LEASING_LIFECYCLE_STEP.OPEN_REPORT:
+      return UNIFIED_LEASING_RAIL_STEP.REPORT_AVAILABLE;
+    case LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL:
+      return UNIFIED_LEASING_RAIL_STEP.APPLICATION;
+    case LEASING_LIFECYCLE_STEP.RESULTS:
+      return UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK;
+    case LEASING_LIFECYCLE_STEP.ONBOARDING:
+      return UNIFIED_LEASING_RAIL_STEP.ONBOARDING;
+    default:
+      return liveRailStep;
+  }
+}
+
+export function deriveUnifiedLeasingRailProgress(
+  detail: LeasingPropertyDetail,
+  activeStep: LeasingLifecycleStep,
+  now: Date = new Date(),
+): { fillIndex: number } {
+  const inspection = deriveLettingRailProgress(detail, now);
+  const phase = deriveLeasingPhaseRailProgress(detail, activeStep);
+  const lastIndex = UNIFIED_LEASING_RAIL_STEP_ORDER.length - 1;
+  const phaseOffset = UNIFIED_LEASING_RAIL_STEP_ORDER.indexOf(
+    UNIFIED_LEASING_RAIL_STEP.APPLICATION,
+  );
+  const fillIndex = isLeasingPhaseStep(activeStep)
+    ? phaseOffset + phase.fillIndex
+    : inspection.fillIndex;
+  return { fillIndex: Math.min(fillIndex, lastIndex) };
+}
+
+export function isUnifiedLeasingRailStepCompleted(
+  detail: LeasingPropertyDetail,
+  step: UnifiedLeasingRailStep,
+  now: Date = new Date(),
+): boolean {
+  switch (step) {
+    case UNIFIED_LEASING_RAIL_STEP.APPLICATION:
+      return isLeasingPhaseStepCompleted(detail, LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL);
+    case UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK:
+      return isLeasingPhaseStepCompleted(detail, LEASING_LIFECYCLE_STEP.RESULTS);
+    case UNIFIED_LEASING_RAIL_STEP.ONBOARDING:
+      return isLeasingPhaseStepCompleted(detail, LEASING_LIFECYCLE_STEP.ONBOARDING);
+    default:
+      return isLettingRailStepCompleted(detail, step, now);
+  }
+}
+
+export function isUnifiedLeasingRailStepEnabled(
+  detail: LeasingPropertyDetail,
+  step: UnifiedLeasingRailStep,
+  now: Date = new Date(),
+): boolean {
+  switch (step) {
+    case UNIFIED_LEASING_RAIL_STEP.APPLICATION:
+    case UNIFIED_LEASING_RAIL_STEP.REFERENCE_CHECK:
+    case UNIFIED_LEASING_RAIL_STEP.ONBOARDING:
+      return true;
+    default:
+      return isLettingRailStepEnabled(detail, step, now);
+  }
+}

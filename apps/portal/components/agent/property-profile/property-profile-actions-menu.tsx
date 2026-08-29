@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
@@ -8,7 +9,10 @@ import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workfl
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
+import { leasingDetail } from '@/constants/routes';
+import { fromProperty } from '@/lib/detail-navigation';
 import {
   buildPropertyWorkflowContext,
   tabActionsFor,
@@ -16,6 +20,7 @@ import {
   type PropertyWorkflowActionId,
   type PropertyWorkflowTab,
 } from '@/lib/property-workflow-actions';
+import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import type {
   LeasingCycle,
   LeasingRecord,
@@ -65,6 +70,8 @@ export function PropertyProfileActionsMenu({
   onRefresh?: () => void;
   onCustomAction?: (actionId: PropertyWorkflowActionId) => boolean;
 }) {
+  const router = useRouter();
+  const isV2 = useIsAgentUiV2();
   const { primaryAgency, properties } = useAgentData();
   const { blockIfUnverified } = useEmailVerificationGuard();
   const [open, setOpen] = useState(false);
@@ -171,9 +178,17 @@ export function PropertyProfileActionsMenu({
         currentLease={currentLease}
         leasingCycle={activeCycle}
         tenantSelections={tenantSelections}
-        onSuccess={() => {
+        onSuccess={(result?: PropertyWorkflowCreatedResult) => {
           setWorkflowAction(null);
           onRefresh?.();
+          if (
+            isV2 &&
+            result &&
+            isWorkflowCreatedCase(result) &&
+            result.kind === 'leasing'
+          ) {
+            router.push(leasingDetail(result.id, fromProperty(propertyId, 'Tasks')));
+          }
         }}
       />
 
