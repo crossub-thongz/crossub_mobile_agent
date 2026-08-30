@@ -1,10 +1,17 @@
 import { fromTasks } from '@/lib/detail-navigation';
 import { ROUTES } from '@/constants/routes';
 import { propertyJobKindHref } from '@/lib/property-job-href';
+import {
+  isInspectionOnlyAgent,
+  isInspectionOnlyTaskCategory,
+  isPropertyInspectionOnly,
+  isTaskCategoryAllowedForAgent,
+} from '@/lib/portal-service-level';
 import { buildPropertyProfileTasks, type PropertyProfileTask } from '@/lib/property-profile-tasks';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
+  Agency,
   Inspection,
   LeasingCycle,
   LeasingRecord,
@@ -51,6 +58,28 @@ export const TASK_LIST_V2_CATEGORY_FILTERS: {
   { id: 'rent_review', label: 'Rent review' },
   { id: 'tribunal', label: 'Tribunal' },
 ];
+
+export function taskListV2CategoryFiltersForAccess(
+  hasFullAccess: boolean,
+): { id: TaskListV2Category; label: string }[] {
+  return TASK_LIST_V2_CATEGORY_FILTERS.filter((option) =>
+    isTaskCategoryAllowedForAgent(option.id, hasFullAccess),
+  );
+}
+
+/** Drop Level 2 workflows from Level 1 properties (inspection + tribunal only). */
+export function filterTaskListV2RowsForAgencies(
+  rows: TaskListV2Row[],
+  agencies: Agency[],
+): TaskListV2Row[] {
+  if (isInspectionOnlyAgent(agencies)) {
+    return rows.filter((row) => isInspectionOnlyTaskCategory(row.category));
+  }
+  return rows.filter((row) => {
+    if (!isPropertyInspectionOnly(agencies, row.property.agencyId)) return true;
+    return isInspectionOnlyTaskCategory(row.category);
+  });
+}
 
 export type TaskListV2Row = {
   id: string;

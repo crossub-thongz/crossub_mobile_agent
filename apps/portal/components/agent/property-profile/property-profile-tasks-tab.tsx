@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Briefcase,
@@ -17,11 +17,13 @@ import { hasDedicatedV2TaskPage, relatedPropertyJobHref } from '@/lib/property-j
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { isPropertyVacant } from '@/lib/property-leasing';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { isPropertyInspectionOnly } from '@/lib/portal-service-level';
 import {
   buildPropertyProfileTasks,
   countPropertyProfileTasksByCategory,
   filterPropertyProfileTasks,
-  PROPERTY_PROFILE_TASK_CATEGORY_FILTERS,
+  propertyProfileTaskCategoryFiltersForAccess,
   type PropertyProfileTask,
   type PropertyProfileTaskCategoryFilter,
   type PropertyProfileTaskStatusFilter,
@@ -223,11 +225,25 @@ export function PropertyProfileTasksTab({
 }) {
   const router = useRouter();
   const isV2 = useIsAgentUiV2();
+  const { agencies } = useAgentData();
+  const inspectionOnly = isPropertyInspectionOnly(agencies, property.agencyId);
+  const categoryFilters = propertyProfileTaskCategoryFiltersForAccess(inspectionOnly);
   const [categoryFilter, setCategoryFilter] =
     useState<PropertyProfileTaskCategoryFilter>('all');
   const [statusFilter, setStatusFilter] = useState<PropertyProfileTaskStatusFilter>('all');
   const [showAll, setShowAll] = useState(false);
   const [selectedJob, setSelectedJob] = useState<PropertyJobRow | null>(null);
+
+  useEffect(() => {
+    if (
+      inspectionOnly &&
+      categoryFilter !== 'all' &&
+      categoryFilter !== 'inspection' &&
+      categoryFilter !== 'tribunal'
+    ) {
+      setCategoryFilter('all');
+    }
+  }, [categoryFilter, inspectionOnly]);
 
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : leasing);
 
@@ -255,27 +271,30 @@ export function PropertyProfileTasksTab({
     ],
   );
 
-  const allTasks = useMemo(
-    () =>
-      buildPropertyProfileTasks({
-        property,
-        propertyId,
-        maintenance,
-        inspections,
-        rentReviews: tenancyRentReviews,
-        rentReviewDecisions,
-        leasingCycles,
-        tenantSelections,
-        vacatingCases,
-        tribunalCases,
-        accounting,
-        currentLease,
-        needActions,
-        deletedLeasingCycles,
-        deletedEndLeasingCases,
-        deletedRentReviews,
-      }),
-    [
+  const allTasks = useMemo(() => {
+    const tasks = buildPropertyProfileTasks({
+      property,
+      propertyId,
+      maintenance,
+      inspections,
+      rentReviews: tenancyRentReviews,
+      rentReviewDecisions,
+      leasingCycles,
+      tenantSelections,
+      vacatingCases,
+      tribunalCases,
+      accounting,
+      currentLease,
+      needActions,
+      deletedLeasingCycles,
+      deletedEndLeasingCases,
+      deletedRentReviews,
+    });
+    if (!inspectionOnly) return tasks;
+    return tasks.filter(
+      (task) => task.category === 'inspection' || task.category === 'tribunal',
+    );
+  }, [
       property,
       propertyId,
       maintenance,
@@ -292,6 +311,7 @@ export function PropertyProfileTasksTab({
       deletedLeasingCycles,
       deletedEndLeasingCases,
       deletedRentReviews,
+      inspectionOnly,
     ],
   );
 
@@ -331,7 +351,7 @@ export function PropertyProfileTasksTab({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
-          {PROPERTY_PROFILE_TASK_CATEGORY_FILTERS.map((filter) => {
+          {categoryFilters.map((filter) => {
             const count =
               filter.id === 'all'
                 ? tasksForCategoryCounts.length

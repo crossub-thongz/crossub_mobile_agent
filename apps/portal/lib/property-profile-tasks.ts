@@ -381,3 +381,12 @@ export const PROPERTY_PROFILE_TASK_CATEGORY_FILTERS: {
   { id: 'leasing', label: 'Leasing' },
   { id: 'tribunal', label: 'Tribunal' },
 ];
+
+export function propertyProfileTaskCategoryFiltersForAccess(
+  isInspectionOnly: boolean,
+): { id: PropertyProfileTaskCategoryFilter; label: string }[] {
+  if (!isInspectionOnly) return PROPERTY_PROFILE_TASK_CATEGORY_FILTERS;
+  return PROPERTY_PROFILE_TASK_CATEGORY_FILTERS.filter(
+    (filter) => filter.id === 'all' || filter.id === 'inspection' || filter.id === 'tribunal',
+  );
+}

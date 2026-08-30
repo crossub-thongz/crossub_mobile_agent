@@ -174,6 +174,21 @@ export const INSPECTION_ONLY_HIDDEN_QUICK_ACTIONS: BuiltinQuickActionId[] = [
   'message',
 ];
 
+/** Task-list categories Level 1 may see. Leasing, maintenance and rent review are Level 2. */
+export const INSPECTION_ONLY_TASK_CATEGORIES = ['inspection', 'tribunal'] as const;
+
+export function isInspectionOnlyTaskCategory(category: string): boolean {
+  return (INSPECTION_ONLY_TASK_CATEGORIES as readonly string[]).includes(category);
+}
+
+export function isTaskCategoryAllowedForAgent(
+  category: string,
+  hasFullAccess: boolean,
+): boolean {
+  if (hasFullAccess) return true;
+  return category === 'all' || isInspectionOnlyTaskCategory(category);
+};
+
 export const PROPERTY_DETAIL_TABS = [
   'Gii',
   'Documents',

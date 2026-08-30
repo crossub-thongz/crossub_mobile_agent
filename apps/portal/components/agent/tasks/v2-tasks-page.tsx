@@ -23,11 +23,13 @@ import {
   countTaskListV2Buckets,
   countTaskListV2Categories,
   filterTaskListV2Rows,
+  filterTaskListV2RowsForAgencies,
+  taskListV2CategoryFiltersForAccess,
   TASK_LIST_V2_BUCKET_FILTERS,
-  TASK_LIST_V2_CATEGORY_FILTERS,
   type TaskListV2Bucket,
   type TaskListV2Category,
 } from '@/lib/task-list-v2';
+import { isTaskCategoryAllowedForAgent } from '@/lib/portal-service-level';
 import { cn } from '@/lib/utils';
 
 import '@/components/agent/tasks/task-list-v2.css';
@@ -75,6 +77,9 @@ export function V2TasksPage() {
 
   const {
     properties,
+    agencies,
+    hasFullManagementAccess,
+    isInspectionOnlyAgent,
     leasingRecords,
     maintenanceAll,
     inspections,
@@ -103,24 +108,28 @@ export function V2TasksPage() {
 
   const allRows = useMemo(
     () =>
-      buildPortfolioTaskList({
-        properties: propertyFilter
-          ? properties.filter((property) => property.id === propertyFilter)
-          : properties,
-        leasingRecords,
-        maintenanceAll,
-        inspections,
-        rentReviews,
-        rentReviewDecisions,
-        leasingCycles,
-        tenantSelections,
-        vacating,
-        tribunalCases,
-        accounting,
-        getPropertyActions,
-      }),
+      filterTaskListV2RowsForAgencies(
+        buildPortfolioTaskList({
+          properties: propertyFilter
+            ? properties.filter((property) => property.id === propertyFilter)
+            : properties,
+          leasingRecords,
+          maintenanceAll,
+          inspections,
+          rentReviews,
+          rentReviewDecisions,
+          leasingCycles,
+          tenantSelections,
+          vacating,
+          tribunalCases,
+          accounting,
+          getPropertyActions,
+        }),
+        agencies,
+      ),
     [
       accounting,
+      agencies,
       getPropertyActions,
       inspections,
       leasingCycles,
@@ -135,6 +144,17 @@ export function V2TasksPage() {
       vacating,
     ],
   );
+
+  const categoryFilters = useMemo(
+    () => taskListV2CategoryFiltersForAccess(hasFullManagementAccess),
+    [hasFullManagementAccess],
+  );
+
+  useEffect(() => {
+    if (!isTaskCategoryAllowedForAgent(category, hasFullManagementAccess)) {
+      setCategory('all');
+    }
+  }, [category, hasFullManagementAccess]);
 
   const bucketCounts = useMemo(() => countTaskListV2Buckets(allRows), [allRows]);
   const categoryCounts = useMemo(
@@ -208,7 +228,7 @@ export function V2TasksPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b">
         <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
           <div className="flex gap-1">
-            {TASK_LIST_V2_CATEGORY_FILTERS.map((option) => (
+            {categoryFilters.map((option) => (
               <button
                 key={option.id}
                 type="button"
@@ -256,7 +276,9 @@ export function V2TasksPage() {
           description={
             search || category !== 'all' || bucket !== 'all'
               ? 'Try a different search or filter.'
-              : 'Active maintenance, inspections, leasing, and tribunal work will appear here.'
+              : isInspectionOnlyAgent
+                ? 'Active inspections and tribunal work will appear here.'
+                : 'Active maintenance, inspections, leasing, and tribunal work will appear here.'
           }
         />
       ) : (
