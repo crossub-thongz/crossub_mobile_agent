@@ -45,15 +45,13 @@ export function resolveBackNavigation(
     return { href, label: 'Property' };
   }
   if (from === 'leasing') {
-    const base = ROUTES.LEASING;
-    const href = tab ? `${base}?tab=${encodeURIComponent(tab)}` : base;
-    return { href, label: 'Leasing' };
+    return { href: `${ROUTES.TASKS}?filter=Leasing`, label: 'Tasks' };
   }
   if (from === 'leasing-workflow' && propertyId) {
     return { href: propertyLeasingWorkflow(propertyId), label: 'Leasing workflow' };
   }
   if (from === 'tasks') {
-    return { href: ROUTES.TASKS, label: 'Need action' };
+    return { href: ROUTES.TASKS, label: 'Tasks' };
   }
   return fallback;
 }

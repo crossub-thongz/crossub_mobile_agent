@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronRight,
   Home,
@@ -13,6 +13,10 @@ import {
   User,
 } from 'lucide-react';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import {
+  TaskWorkflowRailSlot,
+  TaskWorkflowRailSlotProvider,
+} from '@/components/agent/tasks/task-workflow-rail-slot';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PROPERTY_JOB_KIND_ICON } from '@/constants/property-jobs';
@@ -143,6 +147,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   const detail = useLeasingWorkflowStore((s) => s.getDetail);
 
   const [activeTab, setActiveTab] = useState<NewLeasingTaskTab>('workflow');
+  const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
   const cycle = useMemo(
     () => leasingCycles.find((row) => row.id === cycleId) ?? null,
@@ -241,6 +246,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   const createdLabel = cycle.createdAt ? formatDate(cycle.createdAt) : '—';
 
   return (
+    <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
     <div className="new-leasing-task px-4 py-5 lg:px-8 lg:py-6">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
@@ -277,6 +283,8 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
               <p className="text-muted-foreground mt-2 text-sm">{banner.subtitle}</p>
             </section>
           ) : null}
+
+          <TaskWorkflowRailSlot />
 
           <div className="space-y-5">
             <div className="border-b">
@@ -615,5 +623,6 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
         </aside>
       </div>
     </div>
+    </TaskWorkflowRailSlotProvider>
   );
 }

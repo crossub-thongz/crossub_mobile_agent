@@ -38,7 +38,7 @@ export function WorkflowMobileStepChips<T extends string>({
                 : isDone
                   ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
                   : 'border-border bg-card text-muted-foreground',
-              (!enabled || !onStepClick) && 'cursor-default opacity-50',
+              enabled && onStepClick ? 'cursor-pointer' : 'cursor-default opacity-50',
             )}
           >
             {labels[stepId]}

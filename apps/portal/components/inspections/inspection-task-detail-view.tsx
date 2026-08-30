@@ -2,13 +2,16 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, ClipboardList, Sparkles } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
-import { TaskProgressRail } from '@/components/agent/tasks/task-progress-rail';
+import {
+  TaskWorkflowRailSlot,
+  TaskWorkflowRailSlotProvider,
+} from '@/components/agent/tasks/task-workflow-rail-slot';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -16,7 +19,6 @@ import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import {
   buildInspectionActivityEntries,
   buildInspectionDetailRows,
-  buildInspectionTaskStages,
   inspectionTaskReference,
   resolveInspectionStatusBanner,
   type InspectionTaskTab,
@@ -96,6 +98,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<InspectionTaskTab>('workflow');
+  const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
   const inspection = inspections.find((row) => row.id === inspectionId) as Inspection | undefined;
 
   if (!inspection) notFound();
@@ -106,7 +109,6 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
 
-  const stages = useMemo(() => buildInspectionTaskStages(inspection), [inspection]);
   const banner = useMemo(() => resolveInspectionStatusBanner(inspection), [inspection]);
   const detailRows = useMemo(() => buildInspectionDetailRows(inspection), [inspection]);
   const activityEntries = useMemo(
@@ -155,6 +157,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
   const createdLabel = inspection.createdAt ? formatDate(inspection.createdAt) : '—';
 
   return (
+    <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
     <div className="inspection-task px-4 py-5 lg:px-8 lg:py-6">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
@@ -236,11 +239,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
         </div>
       </section>
 
-      {stages.length > 0 ? (
-        <section className="rounded-2xl border v2-frosted-surface p-4">
-          <TaskProgressRail stages={stages} tone={banner.needsAction ? 'rose' : 'sky'} />
-        </section>
-      ) : null}
+      <TaskWorkflowRailSlot />
 
           <div className="border-b">
             <div className="flex gap-1 overflow-x-auto">
@@ -395,5 +394,6 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
         </aside>
       </div>
     </div>
+    </TaskWorkflowRailSlotProvider>
   );
 }

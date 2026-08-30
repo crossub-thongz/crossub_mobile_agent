@@ -902,7 +902,7 @@ export function CreateInspectionWizard({
               finalizeInspectionCreate(mapInspectionRecordToView(record));
             } catch {
               void refresh();
-              if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=ROUTINE`);
+              if (navigateOnSuccess) router.push(`${ROUTES.TASKS}?filter=Inspection`);
             }
           };
           if (needsNewInPersonCase) {
@@ -922,7 +922,7 @@ export function CreateInspectionWizard({
         });
         toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
         void refresh();
-        if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=ROUTINE`);
+        if (navigateOnSuccess) router.push(`${ROUTES.TASKS}?filter=Inspection`);
         return;
       }
 
@@ -983,7 +983,7 @@ export function CreateInspectionWizard({
               finalizeInspectionCreate(view);
             } else {
               void refresh();
-              if (navigateOnSuccess) router.push(`${ROUTES.INSPECTIONS}?type=OUTGOING`);
+              if (navigateOnSuccess) router.push(`${ROUTES.TASKS}?filter=Inspection`);
             }
           },
         );

@@ -25,6 +25,10 @@ import {
   PROPERTY_PROFILE_SECTIONS,
   type PropertyProfileSection,
 } from '@/lib/property-profile-v2-data';
+import {
+  buildPropertyProfileTasks,
+  countPropertyProfileTabTasks,
+} from '@/lib/property-profile-tasks';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import {
@@ -427,7 +431,41 @@ export function PropertyProfileV2({
     accounting,
     portalAccounting: sync.accounting,
   });
-  const taskCount = needActions.length;
+  const taskCount = useMemo(
+    () =>
+      countPropertyProfileTabTasks(
+        buildPropertyProfileTasks({
+          property,
+          propertyId,
+          maintenance,
+          inspections,
+          rentReviews,
+          rentReviewDecisions,
+          leasingCycles,
+          tenantSelections,
+          vacatingCases,
+          tribunalCases,
+          accounting,
+          currentLease,
+          needActions,
+        }),
+      ),
+    [
+      accounting,
+      currentLease,
+      inspections,
+      leasingCycles,
+      maintenance,
+      needActions,
+      property,
+      propertyId,
+      rentReviewDecisions,
+      rentReviews,
+      tenantSelections,
+      tribunalCases,
+      vacatingCases,
+    ],
+  );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const calendarEvents = useMemo(
     () =>

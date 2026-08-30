@@ -7,6 +7,7 @@ import {
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
 import { WorkflowMobileStepChips } from '@/components/agent/workflow-mobile-step-chips';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { useLivePoll } from '@/lib/use-live-poll';
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
@@ -97,12 +98,10 @@ export function LeasingLifecycleStepRail({
     isLettingRailStepCompleted(detail, step, now) ||
     isLettingRailStepEnabled(detail, step, now);
 
-  const handleRailStepClick = onStepClick
-    ? (railStep: LettingRailStep) => {
-        setViewingRailStep(railStep);
-        onStepClick(railStepToContentStep(railStep));
-      }
-    : undefined;
+  const handleRailStepClick = (railStep: LettingRailStep) => {
+    setViewingRailStep(railStep);
+    onStepClick?.(railStepToContentStep(railStep));
+  };
 
   const mobileRailLabels: Record<LettingRailStep, string> = {
     [LETTING_RAIL_STEP.ORDER_CREATED]: 'Created',
@@ -113,7 +112,7 @@ export function LeasingLifecycleStepRail({
   };
 
   return (
-    <>
+    <TaskWorkflowRailPortal>
       <WorkflowMobileStepChips
         steps={LETTING_RAIL_STEP_ORDER}
         labels={mobileRailLabels}
@@ -143,6 +142,6 @@ export function LeasingLifecycleStepRail({
           className={className}
         />
       </div>
-    </>
+    </TaskWorkflowRailPortal>
   );
 }

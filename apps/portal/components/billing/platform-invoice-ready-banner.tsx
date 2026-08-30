@@ -76,8 +76,8 @@ export function PlatformInvoiceReadyBanner() {
       role="status"
       className={
         overdue
-          ? 'mb-4 rounded-xl border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm leading-relaxed'
-          : 'mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed'
+          ? 'mb-4 rounded-xl border border-destructive/35 bg-destructive/10 px-5 py-5 text-sm leading-relaxed'
+          : 'mb-4 rounded-xl border border-amber-500/35 bg-amber-500/10 px-5 py-5 text-sm leading-relaxed'
       }
     >
       <div className="flex flex-wrap items-start gap-3">

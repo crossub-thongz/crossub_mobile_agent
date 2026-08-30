@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Building2,
-  ClipboardList,
   FileText,
   FolderArchive,
   HelpCircle,
@@ -10,7 +9,6 @@ import {
   Receipt,
   Settings,
   Tags,
-  Wrench,
 } from 'lucide-react';
 
 import type { PortalNavAccess } from '@/lib/portal-service-level';
@@ -33,20 +31,21 @@ export const PRIMARY_NAV: NavItem[] = [
 export const MORE_NAV: NavItem[] = [
   // Sales service-agreement lock retired — hide until signing is required again.
   // { href: ROUTES.AGREEMENTS, label: 'Agreements', icon: FileSignature, portalAccess: 'full' },
-  { href: ROUTES.LEASING, label: 'Leasing', icon: FileText, portalAccess: 'full' },
-  { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
-  { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },
-  { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' },
-  { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
-  { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive, portalAccess: 'full' },
+  // Job hubs live on Tasks (view + create). Keep the list pages redirected.
+  // { href: ROUTES.LEASING, label: 'Leasing', icon: FileText, portalAccess: 'full' },
+  // { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
+  // { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },
+  { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText },
+  { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
+  // { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
+  { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive },
 ];
 
-/** Pinned below workflow modules — settings & billing. */
+/** Pinned below workflow modules — settings. */
 export const MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
   { href: ROUTES.FAQ, label: 'FAQ', icon: HelpCircle },
   { href: ROUTES.PRICING, label: 'Pricing', icon: Tags },
-  { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
 ];
 
 /** Sidebar and mobile overflow — primary destinations plus workflow modules. */

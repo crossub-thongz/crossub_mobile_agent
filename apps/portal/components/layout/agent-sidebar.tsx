@@ -23,11 +23,10 @@ const V2_SIDEBAR_PINNED_HREFS = new Set([
   ROUTES.SETTINGS,
   ROUTES.FAQ,
   ROUTES.PRICING,
-  ROUTES.BILL,
   ROUTES.MORE,
 ]);
 
-const V2_AGENCY_MENU_HREFS = new Set([ROUTES.SETTINGS, ROUTES.PRICING, ROUTES.BILL]);
+const V2_AGENCY_MENU_HREFS = new Set([ROUTES.SETTINGS, ROUTES.PRICING]);
 
 function isActive(pathname: string, href: string): boolean {
   if (href === ROUTES.DASHBOARD) return pathname === href;

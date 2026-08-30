@@ -23,6 +23,7 @@ import {
   WorkflowProgressRail,
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { BoolStatus, StepCard, StepFact } from '@/components/leasing-workflow/leasing-step-kit';
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { FieldInspectionReportReviewSection } from '@/components/inspections/field-inspection-report-review-section';
@@ -531,6 +532,7 @@ export function OutgoingFieldInspectionDetail({
         <p className="text-muted-foreground px-1 text-[10px] font-semibold uppercase tracking-wide">
           Outgoing progress
         </p>
+        <TaskWorkflowRailPortal>
         <WorkflowProgressRail
           steps={AGENT_OUTGOING_GATE_STEPS}
           labels={
@@ -555,6 +557,7 @@ export function OutgoingFieldInspectionDetail({
           }}
           onStepClick={(step) => setViewingGateStep(step)}
         />
+        </TaskWorkflowRailPortal>
         <p className="text-muted-foreground px-1 pb-1 text-xs leading-relaxed">
           <span className="font-medium text-foreground">
             {awaitingPayment && viewingStep === gateStatus

@@ -64,7 +64,7 @@ import {
   inspectionEmailRecordsForStep,
   inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';
-import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
+import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
   linkedOpenLeasingEmails,
   mergeOpenAndLeasingTimeline,
@@ -147,6 +147,9 @@ export function InspectionDetailView({
     baseFromList ? 'ready' : 'pending',
   );
   const listedDeleted = Boolean(baseFromList && isDeletedInspection(baseFromList));
+  const [viewingLifecycleStep, setViewingLifecycleStep] = useState<LeasingLifecycleStep | null>(
+    null,
+  );
 
   useEffect(() => {
     const listed = baseFromListRef.current;
@@ -224,6 +227,7 @@ export function InspectionDetailView({
   });
 
   const ensureLeasingDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
+  const setLeasingActiveStep = useLeasingWorkflowStore((s) => s.setActiveStep);
   const activeLeasingCycle = useMemo(
     () =>
       base?.propertyId
@@ -372,7 +376,7 @@ export function InspectionDetailView({
   const [flowChangeOpen, setFlowChangeOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
 
-  const back = useBackNavigation(ROUTES.INSPECTIONS, 'Inspections');
+  const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
 
   useRecordRecentCaseVisit({
     id: base?.id,
@@ -568,16 +572,23 @@ export function InspectionDetailView({
       phone: property.tenantContact?.phone,
     };
   })();
-  const isOpenResultsStep =
+  const liveIsOpenResultsStep =
     !isStandaloneOpenViewing &&
     leasingDetail != null &&
     insp.type === 'OPEN' &&
     isLettingResultsStep(leasingDetail);
-  const isOpenReportVisibleStep =
+  const liveIsOpenReportVisibleStep =
     !isStandaloneOpenViewing &&
     leasingDetail != null &&
     insp.type === 'OPEN' &&
     isLettingOpenReportVisibleStep(leasingDetail);
+  const isOpenResultsStep = viewingLifecycleStep
+    ? viewingLifecycleStep === LEASING_LIFECYCLE_STEP.RESULTS
+    : liveIsOpenResultsStep;
+  const isOpenReportVisibleStep = viewingLifecycleStep
+    ? viewingLifecycleStep === LEASING_LIFECYCLE_STEP.OPEN_REPORT ||
+      viewingLifecycleStep === LEASING_LIFECYCLE_STEP.RESULTS
+    : liveIsOpenReportVisibleStep;
   const showSessionRail = Boolean(
     openSession && insp.type === 'OPEN' && (isStandaloneOpenViewing || !isOpenReportVisibleStep),
   );
@@ -782,11 +793,16 @@ export function InspectionDetailView({
           <LeasingLifecycleStepRail
             detail={leasingDetail}
             currentStep={
-              isOpenResultsStep
+              viewingLifecycleStep ??
+              (isOpenResultsStep
                 ? LEASING_LIFECYCLE_STEP.RESULTS
-                : LEASING_LIFECYCLE_STEP.OPEN_INSPECTION
+                : LEASING_LIFECYCLE_STEP.OPEN_INSPECTION)
             }
             liveUpdates={false}
+            onStepClick={(step) => {
+              setViewingLifecycleStep(step);
+              if (insp.propertyId) setLeasingActiveStep(insp.propertyId, step);
+            }}
           />
           {isOpenResultsStep ? (
             <div className="flex justify-end">

@@ -18,6 +18,15 @@ export type PropertyWorkflowTab =
   | 'accounting'
   | 'tribunal';
 
+export const PROPERTY_WORKFLOW_ACTION_GROUPS: { title: string; tab: PropertyWorkflowTab }[] = [
+  { title: 'Leasing', tab: 'leasing' },
+  { title: 'Rent review', tab: 'rent_review' },
+  { title: 'Maintenance', tab: 'maintenance' },
+  { title: 'Inspection', tab: 'inspection' },
+  { title: 'Financial', tab: 'accounting' },
+  { title: 'Tribunal', tab: 'tribunal' },
+];
+
 export type PropertyWorkflowActionId =
   | 'start_leasing'
   | 'start_rent_review'

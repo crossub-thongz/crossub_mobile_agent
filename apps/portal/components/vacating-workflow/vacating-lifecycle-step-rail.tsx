@@ -4,6 +4,7 @@ import {
   WorkflowProgressRail,
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import {
   VACATING_LIFECYCLE_STEP_ORDER,
   VACATING_LIFECYCLE_STEP_SHORT_LABEL,
@@ -25,6 +26,7 @@ export function VacatingLifecycleStepRail({
   className?: string;
 }) {
   return (
+    <TaskWorkflowRailPortal>
     <WorkflowProgressRail
       steps={VACATING_LIFECYCLE_STEP_ORDER}
       labels={VACATING_LIFECYCLE_STEP_SHORT_LABEL}
@@ -39,5 +41,6 @@ export function VacatingLifecycleStepRail({
       onStepClick={onStepClick}
       className={className}
     />
+    </TaskWorkflowRailPortal>
   );
 }

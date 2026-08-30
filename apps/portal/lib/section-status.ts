@@ -41,7 +41,7 @@ export function buildSectionStatus(input: {
     {
       id: 'maintenance',
       label: 'Maintenance',
-      href: ROUTES.MAINTENANCE,
+      href: `${ROUTES.TASKS}?filter=Maintenance`,
       statusLabel: maintLabel,
       tone: maintTone,
       count: maintApproval || input.maintenanceOverdue || undefined,
@@ -49,7 +49,7 @@ export function buildSectionStatus(input: {
     {
       id: 'inspections',
       label: 'Inspections',
-      href: ROUTES.INSPECTIONS,
+      href: `${ROUTES.TASKS}?filter=Inspection`,
       statusLabel:
         inspActive > 0 ? `${inspActive} scheduled` : 'Nothing scheduled',
       tone: inspActive > 0 ? 'neutral' : 'ok',

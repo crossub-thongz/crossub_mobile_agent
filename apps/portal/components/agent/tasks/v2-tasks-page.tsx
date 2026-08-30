@@ -1,13 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
   Clock3,
-  Download,
-  Plus,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -15,10 +12,10 @@ import {
 import { useSearchParams } from 'next/navigation';
 
 import { EmptyState } from '@/components/agent/empty-state';
+import { NewTaskActionsMenu } from '@/components/agent/tasks/new-task-actions-menu';
 import { TaskListV2Table } from '@/components/agent/tasks/task-list-v2-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ROUTES } from '@/constants/routes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentStore } from '@/lib/store';
 import {
@@ -175,18 +172,7 @@ export function V2TasksPage() {
             Track all work being handled by CROSSUB
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" className="v2-frosted-surface rounded-xl" type="button">
-            <Download className="size-4" />
-            Export
-          </Button>
-          <Button className="rounded-xl" asChild>
-            <Link href={ROUTES.MAINTENANCE}>
-              <Plus className="size-4" />
-              New task
-            </Link>
-          </Button>
-        </div>
+        <NewTaskActionsMenu propertyId={propertyFilter ?? undefined} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

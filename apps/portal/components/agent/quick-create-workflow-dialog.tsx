@@ -24,30 +24,38 @@ import {
 } from '@/lib/property-workflow-actions';
 import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 
-const ACTION_TAB: Record<
-  Exclude<PropertyWorkflowActionId, `schedule_${string}` | 'start_leasing' | 'start_end_leasing'>,
-  PropertyWorkflowTab
-> = {
-  start_maintenance: 'maintenance',
+const ACTION_TAB: Record<PropertyWorkflowActionId, PropertyWorkflowTab> = {
+  start_leasing: 'leasing',
+  start_end_leasing: 'leasing',
   start_rent_review: 'rent_review',
-  open_tribunal: 'tribunal',
-  open_rent_chasing: 'accounting',
+  start_maintenance: 'maintenance',
+  schedule_open_inspection: 'inspection',
+  schedule_ingoing_inspection: 'inspection',
+  schedule_outgoing_inspection: 'inspection',
+  schedule_routine_inspection: 'inspection',
   create_rent_reconciliation: 'accounting',
   open_invoice_management: 'accounting',
+  open_rent_chasing: 'accounting',
+  open_tribunal: 'tribunal',
 };
 
 const ACTION_LABEL: Partial<Record<PropertyWorkflowActionId, string>> = {
+  start_leasing: 'Add New Leasing/Open',
+  start_end_leasing: 'End Leasing',
   start_maintenance: 'Add new repair job',
-  start_rent_review: 'Rent review',
-  open_tribunal: 'Rent chasing',
+  start_rent_review: 'Add rent review',
+  schedule_open_inspection: 'Open inspection',
+  schedule_ingoing_inspection: 'Ingoing inspection',
+  schedule_outgoing_inspection: 'Outgoing inspection',
+  schedule_routine_inspection: 'Routine inspection',
+  create_rent_reconciliation: 'Create rent reconciliation',
+  open_invoice_management: 'Invoice management',
+  open_tribunal: 'Add tribunal',
   open_rent_chasing: 'Rent chasing',
 };
 
-function workflowTabFor(actionId: PropertyWorkflowActionId): PropertyWorkflowTab | null {
-  if (actionId in ACTION_TAB) {
-    return ACTION_TAB[actionId as keyof typeof ACTION_TAB];
-  }
-  return null;
+function workflowTabFor(actionId: PropertyWorkflowActionId): PropertyWorkflowTab {
+  return ACTION_TAB[actionId];
 }
 
 export function QuickCreateWorkflowDialog({
@@ -61,7 +69,7 @@ export function QuickCreateWorkflowDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialPropertyId?: string;
-  onCreated?: (result?: PropertyWorkflowCreatedResult) => void;
+  onCreated?: (result?: PropertyWorkflowCreatedResult, propertyId?: string) => void;
 }) {
   const {
     properties,
@@ -167,7 +175,6 @@ export function QuickCreateWorkflowDialog({
   useEffect(() => {
     if (!open || !formOpen || !actionId || !propertyId) return;
     const tab = workflowTabFor(actionId);
-    if (!tab) return;
     const ctx = buildPropertyWorkflowContext({
       propertyId,
       leasingCycles: propertyLeasingCycles,
@@ -210,7 +217,7 @@ export function QuickCreateWorkflowDialog({
 
   const handleCreated = async (result?: PropertyWorkflowCreatedResult) => {
     await refresh();
-    onCreated?.(result);
+    onCreated?.(result, propertyId);
     closeAll();
   };
 

@@ -102,7 +102,6 @@ export function agencyBillingNavLabel(hasFullManagementAccess: boolean): 'Bills'
 export const FULL_MANAGEMENT_ROUTE_PREFIXES = [
   ROUTES.LEASING,
   ROUTES.MAINTENANCE,
-  ROUTES.ACCOUNTING,
   ROUTES.RENT_REVIEW,
   ROUTES.TENANT_SELECTION,
   ROUTES.TENANTS,
@@ -198,6 +197,7 @@ const INSPECTION_ONLY_PROPERTY_TABS: PropertyDetailTab[] = [
   'Bills',
   'Inspection',
   'Tribunal',
+  'Archive',
 ];
 
 const FULL_MANAGEMENT_PROPERTY_TABS: PropertyDetailTab[] = [...PROPERTY_DETAIL_TABS];

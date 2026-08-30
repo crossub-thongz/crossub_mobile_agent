@@ -12,6 +12,7 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ROUTES } from '@/constants/routes';
 import { agentNotificationDisplay } from '@/lib/notification-activity';
+import { markNotificationsAlerted } from '@/lib/notification-alert-state';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { useAgentStore } from '@/lib/store';
 import type { AgentNotification } from '@/lib/types';
@@ -60,6 +61,7 @@ export function AgentNotificationBell({
   };
 
   const handleDismissAll = () => {
+    markNotificationsAlerted(panelItems.map((notification) => notification.id));
     markAllNotificationsRead();
     setOpen(false);
   };

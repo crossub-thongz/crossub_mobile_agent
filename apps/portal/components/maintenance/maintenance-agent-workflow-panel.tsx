@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { MaintenanceSchedulePanel } from '@/components/maintenance/maintenance-schedule-panel';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
@@ -183,6 +184,7 @@ export function MaintenanceAgentWorkflowPanel({
 
   return (
     <div className="space-y-4">
+      <TaskWorkflowRailPortal>
       <WorkflowProgressRail
         steps={workflow.stepOrder}
         labels={MAINTENANCE_AGENT_STEP_LABEL}
@@ -205,6 +207,7 @@ export function MaintenanceAgentWorkflowPanel({
         }}
         onStepClick={handleStepClick}
       />
+      </TaskWorkflowRailPortal>
 
       <MaintenanceJobTypeSummary
         item={item}

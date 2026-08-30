@@ -14,6 +14,7 @@ import { ROUTES } from '@/constants/routes';
 import {
   hasAlertedNotification,
   markNotificationAlerted,
+  markNotificationsAlerted,
 } from '@/lib/notification-alert-state';
 import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { agentNotificationDisplay } from '@/lib/notification-activity';
@@ -51,13 +52,15 @@ export function AgentNotificationLiveAlert() {
 
     const ids = notifications.map((n) => n.id);
 
+    const isLiveAlertCandidate = (n: AgentNotification) =>
+      !n.read &&
+      notificationMatchesPrefs(n, prefs) &&
+      !hasAlertedNotification(n.id);
+
     if (!seededRef.current) {
       seededRef.current = true;
       const paymentReminders = notifications.filter(
-        (n) =>
-          !n.read &&
-          isAgentPaymentNotification(n) &&
-          notificationMatchesPrefs(n, prefs),
+        (n) => isLiveAlertCandidate(n) && isAgentPaymentNotification(n),
       );
       for (const id of ids) knownIdsRef.current.add(id);
       if (paymentReminders.length > 0) {
@@ -67,11 +70,7 @@ export function AgentNotificationLiveAlert() {
     }
 
     const newcomers = notifications.filter(
-      (n) =>
-        !knownIdsRef.current.has(n.id) &&
-        !n.read &&
-        notificationMatchesPrefs(n, prefs) &&
-        (isAgentPaymentNotification(n) || !hasAlertedNotification(n.id)),
+      (n) => !knownIdsRef.current.has(n.id) && isLiveAlertCandidate(n),
     );
 
     for (const id of ids) knownIdsRef.current.add(id);
@@ -91,6 +90,17 @@ export function AgentNotificationLiveAlert() {
   }, [status, loading, notifications, prefs]);
 
   useEffect(() => {
+    setQueue((prev) => {
+      const next = prev.filter((n) => {
+        if (hasAlertedNotification(n.id)) return false;
+        const latest = notifications.find((row) => row.id === n.id);
+        return latest ? !latest.read : true;
+      });
+      return next.length === prev.length ? prev : next;
+    });
+  }, [notifications]);
+
+  useEffect(() => {
     if (current) {
       setVisible(true);
       return;
@@ -100,9 +110,8 @@ export function AgentNotificationLiveAlert() {
 
   const dismissCurrent = () => {
     if (!current) return;
-    if (!isAgentPaymentNotification(current)) {
-      markNotificationAlerted(current.id);
-    }
+    markNotificationAlerted(current.id);
+    markNotificationRead(current.id);
     setVisible(false);
     window.setTimeout(() => {
       setQueue((prev) => prev.filter((n) => n.id !== current.id));
@@ -110,11 +119,7 @@ export function AgentNotificationLiveAlert() {
   };
 
   const dismissAll = () => {
-    for (const notification of queue) {
-      if (!isAgentPaymentNotification(notification)) {
-        markNotificationAlerted(notification.id);
-      }
-    }
+    markNotificationsAlerted(queue.map((notification) => notification.id));
     markAllNotificationsRead();
     setVisible(false);
     window.setTimeout(() => setQueue([]), 200);
@@ -122,9 +127,7 @@ export function AgentNotificationLiveAlert() {
 
   const openCurrent = () => {
     if (!current) return;
-    if (!isAgentPaymentNotification(current)) {
-      markNotificationAlerted(current.id);
-    }
+    markNotificationAlerted(current.id);
     markNotificationRead(current.id);
     setVisible(false);
     window.setTimeout(() => {
@@ -149,7 +152,7 @@ export function AgentNotificationLiveAlert() {
     >
       <div
         className={cn(
-          'agent-notification-live-alert pointer-events-auto relative w-full max-w-md overflow-hidden rounded-2xl border p-4 transition-all duration-200',
+          'agent-notification-live-alert pointer-events-auto relative w-full max-w-md overflow-hidden rounded-2xl border px-5 py-5 transition-all duration-200',
           isV2 ? 'v2-frosted-surface' : 'bg-card/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:ring-white/10',
           current.type === 'urgent' && 'agent-notification-live-alert--urgent',
           current.type === 'approval' && 'agent-notification-live-alert--approval',
@@ -227,9 +230,8 @@ export function AgentNotificationLiveAlert() {
               <Link
                 href={ROUTES.NOTIFICATIONS}
                 onClick={() => {
-                  if (!isAgentPaymentNotification(current)) {
-                    markNotificationAlerted(current.id);
-                  }
+                  markNotificationAlerted(current.id);
+                  markNotificationRead(current.id);
                   setQueue((prev) => prev.filter((n) => n.id !== current.id));
                 }}
                 className="text-primary ml-auto text-[11px] font-medium hover:underline"

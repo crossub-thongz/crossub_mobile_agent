@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
 import { WorkflowMobileStepChips } from '@/components/agent/workflow-mobile-step-chips';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
 import { EndLeasingBondReleasedPanel } from '@/components/end-leasing/end-leasing-bond-released-panel';
 import { EndLeasingOutgoingInspectionPanel } from '@/components/end-leasing/end-leasing-outgoing-inspection-panel';
@@ -102,6 +103,7 @@ export function EndLeasingAgentWorkflowPanel({
 
   return (
     <div className="space-y-4">
+      <TaskWorkflowRailPortal>
       <WorkflowMobileStepChips
         steps={END_LEASING_AGENT_STEP_ORDER}
         labels={END_LEASING_AGENT_STEP_LABEL}
@@ -134,6 +136,7 @@ export function EndLeasingAgentWorkflowPanel({
           onStepClick={handleStepClick}
         />
       </div>
+      </TaskWorkflowRailPortal>
 
       <div className="rounded-xl border bg-card">
         <div className="border-b px-3 py-3 md:px-4">

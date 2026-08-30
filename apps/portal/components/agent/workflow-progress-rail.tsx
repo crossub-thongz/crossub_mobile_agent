@@ -192,7 +192,7 @@ export function WorkflowProgressRail<T extends string>({
       {/* Full track */}
       <div
         className={cn(
-          'bg-border absolute rounded-full',
+          'bg-border pointer-events-none absolute rounded-full',
           markerLineTop,
           sizeStyle.lineHeight,
         )}
@@ -202,7 +202,7 @@ export function WorkflowProgressRail<T extends string>({
       {/* Filled progress */}
       <div
         className={cn(
-          'absolute rounded-full transition-[width] duration-200',
+          'pointer-events-none absolute rounded-full transition-[width] duration-200',
           markerLineTop,
           sizeStyle.lineHeight,
           toneStyle.trackFill,
@@ -217,7 +217,7 @@ export function WorkflowProgressRail<T extends string>({
         aria-hidden
       />
 
-      <div className="relative flex w-full">
+      <div className="relative z-10 flex w-full">
         {steps.map((step) => {
           const state = getStepState(step);
           const label = labels[step];
@@ -271,7 +271,7 @@ export function WorkflowProgressRail<T extends string>({
                 onClick={() => enabled && onStepClick(step)}
                 className={cn(
                   'flex min-w-0 flex-1 flex-col items-center rounded-lg px-0.5 py-0.5 transition-colors',
-                  enabled ? 'hover:bg-secondary/30' : 'cursor-not-allowed opacity-60',
+                  enabled ? 'cursor-pointer hover:bg-secondary/30' : 'cursor-not-allowed opacity-60',
                   isViewing && 'bg-primary/5',
                 )}
                 aria-current={isViewing ? 'step' : undefined}

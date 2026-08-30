@@ -218,7 +218,7 @@ export function InspectionPlatformPaymentPrompt({
     return (
       <section
         className={cn(
-          'rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm',
+          'rounded-2xl border border-border/80 bg-muted/20 px-5 py-5 text-sm',
           className,
         )}
       >
@@ -250,7 +250,7 @@ export function InspectionPlatformPaymentPrompt({
       return (
         <section
           className={cn(
-            'rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm',
+            'rounded-2xl border border-sky-500/30 bg-sky-500/10 px-5 py-5 text-sm',
             className,
           )}
         >
@@ -288,7 +288,7 @@ export function InspectionPlatformPaymentPrompt({
       {!paymentDialogOpen ? (
         <section
           className={cn(
-            'rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4',
+            'rounded-2xl border border-amber-500/40 bg-amber-500/10 px-5 py-5',
             className,
           )}
         >
@@ -331,7 +331,7 @@ export function InspectionPlatformPaymentPrompt({
       {paying && !paymentDialogOpen ? (
         <section
           className={cn(
-            'rounded-2xl border border-border/80 bg-muted/20 p-4 text-sm',
+            'rounded-2xl border border-border/80 bg-muted/20 px-5 py-5 text-sm',
             className,
           )}
         >

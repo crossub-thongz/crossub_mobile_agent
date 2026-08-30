@@ -4,6 +4,7 @@ import {
   WorkflowProgressRail,
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import {
   OPEN_SESSION_RAIL_STEP_LABEL,
@@ -29,6 +30,7 @@ export function OpenInspectionSessionRail({
   const displayStep = viewedStep ?? currentRailStep;
 
   return (
+    <TaskWorkflowRailPortal>
     <WorkflowProgressRail
       steps={OPEN_SESSION_RAIL_STEP_ORDER}
       labels={OPEN_SESSION_RAIL_STEP_LABEL}
@@ -44,5 +46,6 @@ export function OpenInspectionSessionRail({
       isStepEnabled={(step) => isOpenSessionRailStepNavigable(session, step)}
       className={className}
     />
+    </TaskWorkflowRailPortal>
   );
 }

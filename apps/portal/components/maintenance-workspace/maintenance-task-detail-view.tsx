@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ChevronRight,
   Sparkles,
@@ -13,7 +13,10 @@ import {
 import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
-import { TaskProgressRail } from '@/components/agent/tasks/task-progress-rail';
+import {
+  TaskWorkflowRailSlot,
+  TaskWorkflowRailSlotProvider,
+} from '@/components/agent/tasks/task-workflow-rail-slot';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -21,7 +24,6 @@ import {
   buildMaintenanceActivityEntries,
   buildMaintenanceJobDetailRows,
   buildMaintenanceQuoteCards,
-  buildMaintenanceTaskStages,
   maintenanceTaskReference,
   quotationCount,
   resolveMaintenanceStatusBanner,
@@ -145,6 +147,7 @@ export function MaintenanceTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<MaintenanceTaskTab>('workflow');
+  const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
   const propertyId = item.propertyId;
   const resolvedProperty =
@@ -163,10 +166,6 @@ export function MaintenanceTaskDetailView({
         recommendation,
       }),
     [contractorName, item, quoteAmount, recommendation, workspaceCase],
-  );
-  const stages = useMemo(
-    () => buildMaintenanceTaskStages(workspaceCase),
-    [workspaceCase],
   );
   const jobRows = useMemo(
     () =>
@@ -235,6 +234,7 @@ export function MaintenanceTaskDetailView({
   ]);
 
   return (
+    <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
     <div className="maintenance-task px-4 py-5 lg:px-8 lg:py-6">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
@@ -302,11 +302,7 @@ export function MaintenanceTaskDetailView({
         </div>
       </section>
 
-      {stages.length > 0 ? (
-        <section className="rounded-2xl border v2-frosted-surface p-4">
-          <TaskProgressRail stages={stages} tone="rose" />
-        </section>
-      ) : null}
+      <TaskWorkflowRailSlot />
 
           <div className="border-b">
             <div className="flex gap-1 overflow-x-auto">
@@ -594,5 +590,6 @@ export function MaintenanceTaskDetailView({
         </aside>
       </div>
     </div>
+    </TaskWorkflowRailSlotProvider>
   );
 }

@@ -7,6 +7,7 @@ import {
   resolveWorkflowStepState,
 } from '@/components/agent/workflow-progress-rail';
 import { WorkflowMobileStepChips } from '@/components/agent/workflow-mobile-step-chips';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { useLivePoll } from '@/lib/use-live-poll';
 import type { LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
@@ -62,7 +63,7 @@ export function LeasingUnifiedWorkflowRail({
     isUnifiedLeasingRailStepEnabled(detail, step, now);
 
   return (
-    <>
+    <TaskWorkflowRailPortal>
       <WorkflowMobileStepChips
         steps={UNIFIED_LEASING_RAIL_STEP_ORDER}
         labels={UNIFIED_LEASING_RAIL_MOBILE_LABEL}
@@ -92,6 +93,6 @@ export function LeasingUnifiedWorkflowRail({
           />
         </div>
       </div>
-    </>
+    </TaskWorkflowRailPortal>
   );
 }

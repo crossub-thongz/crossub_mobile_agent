@@ -2,16 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 
-import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
-import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
+import { QuickCreateWorkflowDialog } from '@/components/agent/quick-create-workflow-dialog';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
-import { tribunalDetail } from '@/constants/routes';
+import { inspectionDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
 import { createdWorkflowCaseHref } from '@/lib/property-job-href';
 import {
@@ -21,98 +19,98 @@ import {
   type PropertyWorkflowAction,
   type PropertyWorkflowActionId,
 } from '@/lib/property-workflow-actions';
-import { isWorkflowCreatedCase, type PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
-import type {
-  LeasingCycle,
-  LeasingRecord,
-  MaintenanceRequest,
-  Property,
-  RentReviewCase,
-  TenantSelectionCase,
-  TribunalCase,
-  VacatingCase,
-} from '@/lib/types';
-import type { Inspection } from '@/lib/types';
+import {
+  isWorkflowCreatedCase,
+  type PropertyWorkflowCreatedResult,
+} from '@/lib/property-workflow-created';
 import { cn } from '@/lib/utils';
 
-export function PropertyProfileActionsMenu({
-  property,
-  propertyId,
-  leasingCycles,
-  rentReviews,
-  vacatingCases,
-  maintenance,
-  inspections,
-  tribunalCases,
-  currentLease,
-  tenantSelections,
-  onRefresh,
-  onCustomAction,
-}: {
-  property: Property;
-  propertyId: string;
-  leasingCycles: LeasingCycle[];
-  rentReviews: RentReviewCase[];
-  vacatingCases: VacatingCase[];
-  maintenance: MaintenanceRequest[];
-  inspections: Inspection[];
-  tribunalCases: TribunalCase[];
-  currentLease?: LeasingRecord;
-  tenantSelections: TenantSelectionCase[];
-  onRefresh?: () => void;
-  onCustomAction?: (actionId: PropertyWorkflowActionId) => boolean;
-}) {
+export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
   const router = useRouter();
-  const isV2 = useIsAgentUiV2();
-  const { primaryAgency, properties } = useAgentData();
+  const {
+    hasFullManagementAccess,
+    refresh,
+    leasingCycles,
+    rentReviews,
+    vacating,
+    maintenanceAll,
+    inspections,
+    tribunalCases,
+    leasingRecords,
+  } = useAgentData();
   const { blockIfUnverified } = useEmailVerificationGuard();
   const [open, setOpen] = useState(false);
   const [workflowAction, setWorkflowAction] = useState<PropertyWorkflowActionId | null>(null);
-  const activeCycle = leasingCycles[0];
 
   const groupedActions = useMemo(() => {
+    const currentLease = propertyId
+      ? leasingRecords.find((l) => l.propertyId === propertyId && l.status === 'current') ??
+        leasingRecords.find((l) => l.propertyId === propertyId && l.status === 'upcoming')
+      : undefined;
     const ctx = buildPropertyWorkflowContext({
-      propertyId,
-      leasingCycles,
-      rentReviews,
-      vacatingCases,
-      maintenance,
-      inspections,
-      tribunalCases,
+      propertyId: propertyId ?? '',
+      leasingCycles: propertyId ? leasingCycles : [],
+      rentReviews: propertyId ? rentReviews : [],
+      vacatingCases: propertyId ? vacating : [],
+      maintenance: propertyId ? maintenanceAll : [],
+      inspections: propertyId ? inspections : [],
+      tribunalCases: propertyId ? tribunalCases : [],
       currentLease,
     });
-    return PROPERTY_WORKFLOW_ACTION_GROUPS.map((group) => ({
-      ...group,
-      actions: tabActionsFor(group.tab, ctx),
-    })).filter((group) => group.actions.length > 0);
+    const groups = hasFullManagementAccess
+      ? PROPERTY_WORKFLOW_ACTION_GROUPS
+      : PROPERTY_WORKFLOW_ACTION_GROUPS.filter(
+          (group) => group.tab === 'inspection' || group.tab === 'tribunal',
+        );
+    return groups
+      .map((group) => ({
+        ...group,
+        actions: tabActionsFor(group.tab, ctx).map((action) =>
+          propertyId ? action : { ...action, disabled: false },
+        ),
+      }))
+      .filter((group) => group.actions.length > 0);
   }, [
-    propertyId,
-    leasingCycles,
-    rentReviews,
-    vacatingCases,
-    maintenance,
+    hasFullManagementAccess,
     inspections,
+    leasingCycles,
+    leasingRecords,
+    maintenanceAll,
+    propertyId,
+    rentReviews,
     tribunalCases,
-    currentLease,
+    vacating,
   ]);
 
   const openAction = (action: PropertyWorkflowAction) => {
     if (action.disabled) return;
-    if (onCustomAction?.(action.id)) {
-      setOpen(false);
-      return;
-    }
     if (blockIfUnverified()) return;
     setOpen(false);
     setWorkflowAction(action.id);
+  };
+
+  const handleCreated = (result?: PropertyWorkflowCreatedResult, createdPropertyId?: string) => {
+    const pid = createdPropertyId ?? propertyId;
+    setWorkflowAction(null);
+    void refresh();
+    if (!result || !pid) return;
+    if (isWorkflowCreatedCase(result)) {
+      router.push(createdWorkflowCaseHref(result, pid));
+      return;
+    }
+    const inspectionId = result.inspectionId ?? result.inspection?.id;
+    if (inspectionId) {
+      router.push(inspectionDetail(inspectionId, fromProperty(pid, 'Tasks')));
+    }
   };
 
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" className="rounded-xl">
-            Actions
+          <Button type="button" className="rounded-xl">
+            <Plus className="size-4" />
+            New task
             <ChevronDown className="size-4" />
           </Button>
         </PopoverTrigger>
@@ -154,46 +152,14 @@ export function PropertyProfileActionsMenu({
         </PopoverContent>
       </Popover>
 
-      <PropertyWorkflowCreateDialog
+      <QuickCreateWorkflowDialog
         actionId={workflowAction}
-        open={
-          workflowAction != null &&
-          workflowAction !== 'open_tribunal' &&
-          workflowAction !== 'open_rent_chasing'
-        }
+        open={workflowAction != null}
         onOpenChange={(next) => {
           if (!next) setWorkflowAction(null);
         }}
-        property={property}
-        propertyId={propertyId}
-        agency={primaryAgency}
-        currentLease={currentLease}
-        leasingCycle={activeCycle}
-        tenantSelections={tenantSelections}
-        onSuccess={(result?: PropertyWorkflowCreatedResult) => {
-          setWorkflowAction(null);
-          onRefresh?.();
-          if (isV2 && result && isWorkflowCreatedCase(result)) {
-            router.push(createdWorkflowCaseHref(result, propertyId));
-          }
-        }}
-      />
-
-      <CreateTribunalRentChasingDialog
-        open={workflowAction === 'open_tribunal' || workflowAction === 'open_rent_chasing'}
-        onOpenChange={(next) => {
-          if (!next) setWorkflowAction(null);
-        }}
-        propertyId={propertyId}
-        properties={properties}
-        mode={workflowAction === 'open_tribunal' ? 'tribunal' : 'rent_chasing'}
-        onCreated={(caseId) => {
-          setWorkflowAction(null);
-          onRefresh?.();
-          if (isV2 && caseId) {
-            router.push(tribunalDetail(caseId, fromProperty(propertyId, 'Tasks')));
-          }
-        }}
+        initialPropertyId={propertyId}
+        onCreated={handleCreated}
       />
     </>
   );

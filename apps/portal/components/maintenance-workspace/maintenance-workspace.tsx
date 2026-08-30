@@ -35,6 +35,7 @@ import { WorkspaceSideInformationPanel } from './side-information-panel';
 import { WorkspaceHeader } from './workspace-header';
 import { WorkspaceChatPanel } from './workspace-chat-panel';
 import { WorkflowStepPreview } from './workflow-step-preview';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 
 export function MaintenanceWorkspace({
   workspaceCase,
@@ -267,6 +268,7 @@ export function MaintenanceWorkspace({
                 Workflow
               </p>
             ) : null}
+            <TaskWorkflowRailPortal>
             <div className="flex w-full items-start justify-between gap-0 pb-1">
                     {steps.map((step, i) => {
                       const isPreviewStep =
@@ -280,7 +282,9 @@ export function MaintenanceWorkspace({
                           onClick={() => handleWorkflowStepClick(step.id, step.status)}
                           className={cn(
                             'flex min-w-[56px] flex-1 flex-col items-center focus:outline-none',
-                            step.status === 'upcoming' && 'cursor-not-allowed opacity-60',
+                            step.status === 'upcoming'
+                              ? 'cursor-not-allowed opacity-60'
+                              : 'cursor-pointer',
                           )}
                         >
                           <div
@@ -331,6 +335,7 @@ export function MaintenanceWorkspace({
                     );
                     })}
                   </div>
+            </TaskWorkflowRailPortal>
                 </div>
 
                 {isReviewStep && (

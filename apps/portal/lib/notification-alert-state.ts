@@ -1,9 +1,8 @@
 const ALERTED_IDS_KEY = 'crossub-agent-alerted-notification-ids';
 
-function readAlertedIds(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
+function readStorage(storage: Storage): Set<string> {
   try {
-    const raw = sessionStorage.getItem(ALERTED_IDS_KEY);
+    const raw = storage.getItem(ALERTED_IDS_KEY);
     if (!raw) return new Set();
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return new Set();
@@ -13,17 +12,40 @@ function readAlertedIds(): Set<string> {
   }
 }
 
+function readAlertedIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  const local = readStorage(window.localStorage);
+  const session = readStorage(window.sessionStorage);
+  return new Set([...local, ...session]);
+}
+
+function writeAlertedIds(ids: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  const payload = JSON.stringify([...ids]);
+  try {
+    window.localStorage.setItem(ALERTED_IDS_KEY, payload);
+  } catch {
+    // ignore quota errors
+  }
+  try {
+    window.sessionStorage.setItem(ALERTED_IDS_KEY, payload);
+  } catch {
+    // ignore quota errors
+  }
+}
+
 export function hasAlertedNotification(id: string): boolean {
   return readAlertedIds().has(id);
 }
 
 export function markNotificationAlerted(id: string): void {
-  if (typeof window === 'undefined') return;
   const next = readAlertedIds();
   next.add(id);
-  try {
-    sessionStorage.setItem(ALERTED_IDS_KEY, JSON.stringify([...next]));
-  } catch {
-    // ignore quota errors
-  }
+  writeAlertedIds(next);
+}
+
+export function markNotificationsAlerted(ids: readonly string[]): void {
+  const next = readAlertedIds();
+  for (const id of ids) next.add(id);
+  writeAlertedIds(next);
 }

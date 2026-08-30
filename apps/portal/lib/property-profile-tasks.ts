@@ -346,6 +346,12 @@ export function countPropertyProfileTasksByCategory(
   );
 }
 
+export function countPropertyProfileTabTasks(tasks: PropertyProfileTask[]): number {
+  return tasks.filter(
+    (task) => task.lifecycle === 'active' || task.lifecycle === 'completed',
+  ).length;
+}
+
 export function filterPropertyProfileTasks(
   tasks: PropertyProfileTask[],
   category: PropertyProfileTaskCategoryFilter,
@@ -355,7 +361,10 @@ export function filterPropertyProfileTasks(
     if (category !== 'all' && task.category !== category) return false;
     if (status === 'needs_action' && task.status !== 'approval_required') return false;
     if (status === 'no_action' && task.status !== 'no_action') return false;
-    if (status === 'in_progress' && task.lifecycle !== 'active') return false;
+    if (status === 'in_progress') {
+      const stillNeedsAction = task.status === 'approval_required';
+      if (task.lifecycle !== 'active' && !stillNeedsAction) return false;
+    }
     if (status === 'completed' && task.lifecycle !== 'completed') return false;
     if (status === 'deleted' && task.lifecycle !== 'deleted') return false;
     if (status === 'archived' && task.lifecycle !== 'archived') return false;

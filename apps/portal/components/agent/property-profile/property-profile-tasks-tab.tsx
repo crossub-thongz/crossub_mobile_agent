@@ -225,7 +225,7 @@ export function PropertyProfileTasksTab({
   const isV2 = useIsAgentUiV2();
   const [categoryFilter, setCategoryFilter] =
     useState<PropertyProfileTaskCategoryFilter>('all');
-  const [statusFilter, setStatusFilter] = useState<PropertyProfileTaskStatusFilter>('in_progress');
+  const [statusFilter, setStatusFilter] = useState<PropertyProfileTaskStatusFilter>('all');
   const [showAll, setShowAll] = useState(false);
   const [selectedJob, setSelectedJob] = useState<PropertyJobRow | null>(null);
 
@@ -367,8 +367,8 @@ export function PropertyProfileTasksTab({
             }}
             className="bg-background rounded-xl border px-3 py-2 text-xs font-medium"
           >
-            <option value="in_progress">Active</option>
             <option value="all">All status</option>
+            <option value="in_progress">Active</option>
             <option value="completed">Completed</option>
             <option value="deleted">Deleted</option>
             <option value="archived">Archived</option>
@@ -382,8 +382,9 @@ export function PropertyProfileTasksTab({
         <div className="v2-dashboard__card rounded-2xl border px-4 py-10 text-center">
           <p className="text-sm font-medium">No tasks match these filters</p>
           <p className="text-muted-foreground mt-1 text-sm">
-            Active maintenance, inspections, leasing, and tribunal cases for this property appear
-            here. Use the status filter to view completed, deleted, or archived tasks.
+            {statusFilter === 'in_progress'
+              ? 'Active maintenance, inspections, leasing, and tribunal cases for this property appear here. Switch the status filter to All status or Completed to see finished jobs.'
+              : 'No maintenance, inspections, leasing, or tribunal cases match this filter.'}
           </p>
         </div>
       ) : (

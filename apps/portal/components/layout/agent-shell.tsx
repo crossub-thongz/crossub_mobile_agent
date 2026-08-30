@@ -106,10 +106,8 @@ export function AgentShell({
   const moreNav = filterHiddenBillingNav(
     [
       ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
-      ...filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess).map((item) =>
-        item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item,
-      ),
-    ],
+      ...filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess),
+    ].map((item) => (item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item)),
     platformBillingDisabled,
   );
 

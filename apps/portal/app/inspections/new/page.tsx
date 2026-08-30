@@ -27,7 +27,7 @@ export default function NewInspectionPage() {
 
   if (!selectedType) {
     return (
-      <AgentShell title="Add inspection" backHref={ROUTES.INSPECTIONS}>
+      <AgentShell title="Add inspection" backHref={ROUTES.TASKS}>
         <InspectionCreateTypeButtons onSelect={setSelectedType} />
       </AgentShell>
     );
@@ -36,7 +36,7 @@ export default function NewInspectionPage() {
   return (
     <AgentShell
       title={createOption?.scheduleLabel ?? 'Add inspection'}
-      backHref={ROUTES.INSPECTIONS}
+      backHref={ROUTES.TASKS}
     >
       <div className="space-y-4">
         <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedType(null)}>

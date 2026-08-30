@@ -2,11 +2,15 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, FileText } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import {
+  TaskWorkflowRailSlot,
+  TaskWorkflowRailSlotProvider,
+} from '@/components/agent/tasks/task-workflow-rail-slot';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -114,6 +118,7 @@ export function EndLeasingTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<EndLeasingTaskTab>('workflow');
+  const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
   const propertyId = caseData.propertyId ?? '';
   const property = properties.find((row) => row.id === propertyId) ?? null;
@@ -188,6 +193,7 @@ export function EndLeasingTaskDetailView({
   const createdLabel = caseData.createdAt ? formatDate(caseData.createdAt) : '—';
 
   return (
+    <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
     <div className="end-leasing-task px-4 py-5 lg:px-8 lg:py-6">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
@@ -234,6 +240,8 @@ export function EndLeasingTaskDetailView({
           <p className="text-muted-foreground mt-2 text-sm">{banner.subtitle}</p>
         </section>
       ) : null}
+
+          <TaskWorkflowRailSlot />
 
           <div className="border-b">
             <div className="flex gap-1 overflow-x-auto">
@@ -539,5 +547,6 @@ export function EndLeasingTaskDetailView({
 
       <SettlementDeductionDialog caseData={caseData} />
     </div>
+    </TaskWorkflowRailSlotProvider>
   );
 }

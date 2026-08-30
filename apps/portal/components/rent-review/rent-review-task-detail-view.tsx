@@ -2,11 +2,15 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, DollarSign } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import {
+  TaskWorkflowRailSlot,
+  TaskWorkflowRailSlotProvider,
+} from '@/components/agent/tasks/task-workflow-rail-slot';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
@@ -112,6 +116,7 @@ export function RentReviewTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<RentReviewTaskTab>('workflow');
+  const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
   const propertyId = detail.propertyId ?? '';
   const property = properties.find((row) => row.id === propertyId) ?? null;
@@ -174,6 +179,7 @@ export function RentReviewTaskDetailView({
   ]);
 
   return (
+    <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
     <div className="rent-review-task px-4 py-5 lg:px-8 lg:py-6">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0 space-y-6">
@@ -208,6 +214,8 @@ export function RentReviewTaskDetailView({
         </h2>
         <p className="text-muted-foreground mt-2 text-sm">{banner.subtitle}</p>
       </section>
+
+      <TaskWorkflowRailSlot />
 
       <div className="space-y-5">
           <div className="border-b">
@@ -520,5 +528,6 @@ export function RentReviewTaskDetailView({
         </aside>
       </div>
     </div>
+    </TaskWorkflowRailSlotProvider>
   );
 }

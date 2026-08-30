@@ -9,6 +9,10 @@ import { toast } from 'sonner';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import {
+  TaskWorkflowRailSlot,
+  TaskWorkflowRailSlotProvider,
+} from '@/components/agent/tasks/task-workflow-rail-slot';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -178,6 +182,7 @@ export function TribunalTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<TribunalTaskTab>('workflow');
+  const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
   const [rentChasingDetail, setRentChasingDetail] = useState<AgentTribunalRentChasingDetail | null>(
     null,
   );
@@ -277,6 +282,7 @@ export function TribunalTaskDetailView({
   );
 
   return (
+    <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
     <div className="tribunal-task px-4 py-5 lg:px-8 lg:py-6">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
@@ -311,6 +317,8 @@ export function TribunalTaskDetailView({
         </h2>
         <p className="text-muted-foreground mt-2 text-sm">{banner.subtitle}</p>
       </section>
+
+          <TaskWorkflowRailSlot />
 
           <div className="border-b">
             <div className="flex gap-1 overflow-x-auto">
@@ -621,5 +629,6 @@ export function TribunalTaskDetailView({
         </aside>
       </div>
     </div>
+    </TaskWorkflowRailSlotProvider>
   );
 }

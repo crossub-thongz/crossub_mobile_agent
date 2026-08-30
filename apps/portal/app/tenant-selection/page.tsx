@@ -14,7 +14,7 @@ export default function TenantSelectionListPage() {
   const { tenantSelections, apiConnected, apiError, loading, refresh } = useAgentData();
 
   return (
-    <AgentShell title="Tenant selection" backHref={ROUTES.LEASING}>
+    <AgentShell title="Tenant selection" backHref={ROUTES.TASKS}>
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">
           Applicants from the tenant app and CROSSUB leasing shortlist — loaded from{' '}

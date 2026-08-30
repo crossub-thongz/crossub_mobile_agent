@@ -27,14 +27,14 @@ const GROUP_DEFS: {
     match: (l, c) => c === 'Leasing' && l.toLowerCase().includes('lease'),
     label: 'Lease renewal required',
     category: 'Leasing',
-    href: `${ROUTES.LEASING}?tab=rent-review`,
+    href: `${ROUTES.TASKS}?filter=Leasing`,
   },
   {
     id: 'tribunal',
     match: (_, c) => c === 'Tribunal',
     label: 'Tribunal action required',
     category: 'Tribunal',
-    href: ROUTES.TRIBUNAL,
+    href: `${ROUTES.TASKS}?filter=Tribunal`,
   },
   {
     id: 'arrears',
@@ -48,7 +48,7 @@ const GROUP_DEFS: {
     match: (l, c) => c === 'Leasing' && l.toLowerCase().includes('application'),
     label: 'New leasing approval required',
     category: 'Leasing',
-    href: `${ROUTES.LEASING}?tab=new-leasing`,
+    href: `${ROUTES.TASKS}?filter=Leasing`,
   },
   {
     id: 'inspection',

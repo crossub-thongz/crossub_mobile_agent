@@ -13,7 +13,7 @@ export default function InspectionDetailPage() {
   const params = useParams();
   const inspectionId = String(params.id);
   const isV2 = useIsAgentUiV2();
-  const back = useBackNavigation(isV2 ? ROUTES.TASKS : ROUTES.INSPECTIONS, isV2 ? 'Tasks' : 'Inspections');
+  const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
 
   return (
     <AgentShell

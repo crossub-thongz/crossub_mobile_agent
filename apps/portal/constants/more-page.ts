@@ -4,6 +4,7 @@ import {
   Building2,
   CreditCard,
   FileText,
+  FolderArchive,
   HelpCircle,
   History,
   LogOut,
@@ -66,6 +67,13 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
         description: 'View your current plan and service configuration.',
         href: ROUTES.PRICING,
         icon: Tags,
+      },
+      {
+        id: 'archive',
+        title: 'Archive',
+        description: 'Closed and cancelled cases kept for reference.',
+        href: ROUTES.ARCHIVE,
+        icon: FolderArchive,
       },
       {
         id: 'portfolio-settings',

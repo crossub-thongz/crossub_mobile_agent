@@ -136,13 +136,13 @@ export function AgentPaymentReminderBanner() {
         <div
           role="status"
           className={cn(
-            'mb-4 rounded-xl border px-4 py-3 text-sm leading-relaxed',
+            'mb-4 rounded-xl border px-5 py-5 text-sm leading-relaxed',
             isV2 ? 'v2-frosted-alert border-amber-500/35' : 'border-amber-500/35 bg-amber-500/10',
           )}
         >
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="flex flex-wrap items-center gap-4">
             <CreditCard
-              className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-400"
+              className="size-4 shrink-0 text-amber-700 dark:text-amber-400"
               aria-hidden
             />
             <div className="min-w-0 flex-1">

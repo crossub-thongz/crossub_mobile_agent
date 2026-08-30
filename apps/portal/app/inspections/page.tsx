@@ -1,30 +1,25 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-import { InspectionsHub } from '@/components/inspections/inspections-hub';
-import { AgentShell } from '@/components/layout/agent-shell';
-import { useAgentData } from '@/components/providers/agent-data-provider';
-import { formatPropertyFullAddress } from '@/lib/utils';
+import { ROUTES } from '@/constants/routes';
 
+/**
+ * Inspections list hub is retired. View and create inspection jobs on Tasks.
+ * Previous InspectionsHub UI lived in this file.
+ */
 export default function InspectionsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const propertyParam = searchParams.get('property');
-  const { inspections, properties } = useAgentData();
 
-  const propertyLabel = propertyParam
-    ? properties.find((p) => p.id === propertyParam)
-    : undefined;
+  useEffect(() => {
+    const next = new URLSearchParams();
+    next.set('filter', 'Inspection');
+    const property = searchParams.get('property');
+    if (property) next.set('property', property);
+    router.replace(`${ROUTES.TASKS}?${next.toString()}`);
+  }, [router, searchParams]);
 
-  return (
-    <AgentShell title="Inspections">
-      <InspectionsHub
-        inspections={inspections}
-        propertyFilterId={propertyParam}
-        propertyLabel={
-          propertyLabel ? formatPropertyFullAddress(propertyLabel) : undefined
-        }
-      />
-    </AgentShell>
-  );
+  return null;
 }

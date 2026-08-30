@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { WorkflowProgressRail } from '@/components/agent/workflow-progress-rail';
+import { TaskWorkflowRailPortal } from '@/components/agent/tasks/task-workflow-rail-slot';
 import type { CommSendDraft } from '@/components/rent-review/rent-review-email-log';
 import { RentReviewAgentConfirmedPanel } from '@/components/rent-review/rent-review-agent-confirmed-panel';
 import { RentReviewCompletedPanel } from '@/components/rent-review/rent-review-completed-panel';
@@ -201,6 +202,7 @@ export function RentReviewAgentWorkflowPanel({
 
   return (
     <div className="space-y-4">
+      <TaskWorkflowRailPortal>
       <div className="md:hidden">
         <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
           Workflow step
@@ -255,6 +257,7 @@ export function RentReviewAgentWorkflowPanel({
           onStepClick={handleStepClick}
         />
       </div>
+      </TaskWorkflowRailPortal>
 
       <div className="rounded-xl border bg-card">
         <div className="border-b px-3 py-3 md:px-4">

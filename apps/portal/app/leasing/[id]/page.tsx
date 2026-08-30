@@ -26,7 +26,7 @@ export default function LeasingTaskDetailPage() {
 
   useEffect(() => {
     if (isV2) return;
-    router.replace(ROUTES.LEASING);
+    router.replace(ROUTES.TASKS);
   }, [isV2, router]);
 
   if (!isV2) {
