@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -305,11 +305,15 @@ export function PropertyLeasingDetailsSection({
   onChange,
   required = false,
   disabled,
+  hideHeading = false,
+  topContent,
 }: {
   values: LeasingDetailsValues;
   onChange: (patch: Partial<LeasingDetailsValues>) => void;
   required?: boolean;
   disabled?: boolean;
+  hideHeading?: boolean;
+  topContent?: ReactNode;
 }) {
   // Bond auto-calc — restore with Bond ($) field below
   // const weeklyRent = useMemo(
@@ -320,12 +324,15 @@ export function PropertyLeasingDetailsSection({
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
-      <div>
-        <p className="text-sm font-semibold">Leasing details</p>
-        <p className="text-muted-foreground text-xs">
-          Rent and agreement dates for this tenancy.
-        </p>
-      </div>
+      {!hideHeading ? (
+        <div>
+          <p className="text-sm font-semibold">Leasing details</p>
+          <p className="text-muted-foreground text-xs">
+            Rent and agreement dates for this tenancy.
+          </p>
+        </div>
+      ) : null}
+      {topContent}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Rent ($)" required={required}>

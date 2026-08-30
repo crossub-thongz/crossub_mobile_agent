@@ -1050,54 +1050,46 @@ export function NewPropertyRegistryForm({
       ) : null}
 
       {step === 'tenant' ? (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          <div className="space-y-3">
-            <div className="rounded-lg border border-border/60 bg-card p-4">
-              <FormField label="Lease status" required>
-                <select
-                  value={form.leaseStatus}
-                  onChange={(e) =>
-                    set('leaseStatus', e.target.value as Property['leaseStatus'] | '')
-                  }
-                  className={cn(selectClass, 'sm:max-w-xs')}
-                  required
-                >
-                  <option value="">Select status</option>
-                  {LEASE_STATUS_FORM_OPTIONS.map((option, index) => (
-                    <option key={`${option.value}-${option.label}-${index}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
+        <div className="grid items-start gap-x-4 gap-y-3 lg:grid-cols-2">
+          <div className="order-1 flex min-h-10 items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Tenancy details</p>
+              <p className="text-muted-foreground text-xs">
+                One card per tenant. Only one primary contact per tenancy.
+              </p>
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:bg-primary/10 -mt-0.5 h-8 shrink-0 px-2 text-xs font-medium"
+              disabled={formBusy || form.tenants.length >= MAX_TENANCY_TENANTS}
+              onClick={() =>
+                setForm((f) =>
+                  f.tenants.length >= MAX_TENANCY_TENANTS
+                    ? f
+                    : { ...f, tenants: [...f.tenants, emptyPartyContact()] },
+                )
+              }
+            >
+              <Plus className="size-3.5" />
+              Add another tenant
+            </Button>
+          </div>
 
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Tenancy details</p>
-                <p className="text-muted-foreground text-xs">
-                  One card per tenant. Only one primary contact per tenancy.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-primary hover:bg-primary/10 -mt-0.5 h-8 shrink-0 px-2 text-xs font-medium"
-                disabled={formBusy || form.tenants.length >= MAX_TENANCY_TENANTS}
-                onClick={() =>
-                  setForm((f) =>
-                    f.tenants.length >= MAX_TENANCY_TENANTS
-                      ? f
-                      : { ...f, tenants: [...f.tenants, emptyPartyContact()] },
-                  )
-                }
-              >
-                <Plus className="size-3.5" />
-                Add another tenant
-              </Button>
+          <div className="order-3 flex min-h-10 items-start justify-between gap-3 lg:order-2">
+            <div>
+              <p className="text-sm font-semibold">Leasing details</p>
+              <p className="text-muted-foreground text-xs">
+                Rent and agreement dates for this tenancy.
+              </p>
             </div>
+            <span className="invisible h-8 shrink-0 px-2 text-xs" aria-hidden>
+              Add another tenant
+            </span>
+          </div>
 
+          <div className="order-2 lg:order-3">
             <TenancyTenantCards
               parties={form.tenants}
               onChange={(tenants) => setForm((f) => ({ ...f, tenants }))}
@@ -1105,12 +1097,34 @@ export function NewPropertyRegistryForm({
             />
           </div>
 
-          <PropertyLeasingDetailsSection
-            values={form.leasing}
-            onChange={patchLeasing}
-            required={requireLeasing}
-            disabled={formBusy}
-          />
+          <div className="order-4">
+            <PropertyLeasingDetailsSection
+              values={form.leasing}
+              onChange={patchLeasing}
+              required={requireLeasing}
+              disabled={formBusy}
+              hideHeading
+              topContent={
+                <FormField label="Lease status" required>
+                  <select
+                    value={form.leaseStatus}
+                    onChange={(e) =>
+                      set('leaseStatus', e.target.value as Property['leaseStatus'] | '')
+                    }
+                    className={selectClass}
+                    required
+                  >
+                    <option value="">Select status</option>
+                    {LEASE_STATUS_FORM_OPTIONS.map((option, index) => (
+                      <option key={`${option.value}-${option.label}-${index}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              }
+            />
+          </div>
         </div>
       ) : null}
 

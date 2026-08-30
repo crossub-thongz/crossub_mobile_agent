@@ -149,11 +149,14 @@ export function CrossubServiceSummaryCard({
   managementRateGst,
   weeklyRentAud,
   serviceFeePercent = 30,
+  forceShow = false,
 }: {
   managementRatePercent?: number | null;
   managementRateGst?: ManagementRateGstMode;
   weeklyRentAud?: number | null;
   serviceFeePercent?: number;
+  /** Property intake — show even when platform billing UI is otherwise hidden. */
+  forceShow?: boolean;
 }) {
   const { platformBillingDisabled } = useAgentData();
   const billedRate = effectiveManagementRatePercent(managementRatePercent);
@@ -165,7 +168,7 @@ export function CrossubServiceSummaryCard({
     managementRateGst,
   });
 
-  if (platformBillingDisabled) return null;
+  if (!forceShow && platformBillingDisabled) return null;
 
   return (
     <div className="rounded-lg border border-violet-500/25 bg-violet-500/8 p-4">

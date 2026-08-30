@@ -257,7 +257,7 @@ export function PropertyManagementFeesSection({
   };
 
   return (
-    <>
+    <div className="space-y-4">
       <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -412,13 +412,14 @@ export function PropertyManagementFeesSection({
         </div>
       </div>
       <CrossubServiceSummaryCard
+        forceShow
         managementRatePercent={
           managementRateRaw.trim() ? Number(managementRateRaw.replace(/,/g, '')) : null
         }
         managementRateGst={managementRateGst}
         weeklyRentAud={weeklyRentAud}
       />
-    </>
+    </div>
   );
 }
 
