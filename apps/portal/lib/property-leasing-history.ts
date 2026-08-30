@@ -12,8 +12,11 @@ export function isHistoryEndLeasingCase(vacating: VacatingCase): boolean {
 /** Onboarding fully done — case belongs in History, not Active. */
 export function isCompletedLeasingCycle(cycle: LeasingCycle): boolean {
   if (cycle.onboardingStepId === 'completed') return true;
-  // Completed cycles are inactive ONBOARDING rows; tolerate missing onboardingStepId.
-  return cycle.isActive === false && cycle.lifecycleStep === 'ONBOARDING';
+  // Completed cycles are inactive ONBOARDING rows; tolerate missing onboardingStepId
+  // and mixed casing (portfolio Prisma enum vs GET /leasing/cycles/:id).
+  return (
+    cycle.isActive === false && cycle.lifecycleStep?.toUpperCase() === 'ONBOARDING'
+  );
 }
 
 /** Withdrawn letting — belongs in Deleted history, not New leasing. */

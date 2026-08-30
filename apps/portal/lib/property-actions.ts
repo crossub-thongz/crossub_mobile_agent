@@ -150,7 +150,11 @@ export function getPropertyNeedActions(
           ),
         });
       }
-      if (i.reportStatus === 'pending' && i.status.toLowerCase().includes('complete')) {
+      if (
+        i.type !== 'OPEN' &&
+        i.reportStatus === 'pending' &&
+        i.status.toLowerCase().includes('complete')
+      ) {
         actions.push({
           id: `insp-report-${i.id}`,
           propertyId: property.id,

@@ -139,6 +139,15 @@ export function resolveNewLeasingStatusBanner(detail: LeasingPropertyDetail): {
       }`
     : 'Awaiting applicant selection';
 
+  if (detail.cycleActive === false) {
+    return {
+      title: 'New leasing completed',
+      subtitle: tenantLine,
+      needsAction: false,
+      crosSummary: ['Onboarding is complete. This case is closed.'],
+    };
+  }
+
   const titles = [
     'Open inspection in progress',
     'Application received',

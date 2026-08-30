@@ -11,6 +11,7 @@ import {
   type LeasingLifecycleStep,
 } from '@/lib/leasing/constants';
 import type { LeasingContract, LeasingPropertyDetail } from '@/lib/leasing/types';
+import type { LeasingCycle } from '@/lib/types';
 import type { ReferenceCheckRecommendation } from '@/lib/leasing/reference-check-draft';
 import { parseReferenceCheckDraft } from '@/lib/leasing/reference-check-draft';
 import { fileNameFromDocumentUrl } from '@/lib/leasing-applicant-upload.util';
@@ -274,5 +275,33 @@ export function patchDetailFromCycleView(
       actor: event.actor,
       at: event.at,
     })),
+  };
+}
+
+function onboardingProceduresDone(view: ServerLeasingCycleView): boolean {
+  const ob = view.onboarding;
+  if (!ob) return false;
+  return (
+    asItemStatus(ob.deposit.status) === LEASING_ITEM_STATUS.DONE &&
+    asItemStatus(ob.bond.status) === LEASING_ITEM_STATUS.DONE &&
+    asItemStatus(ob.agreement.status) === LEASING_ITEM_STATUS.DONE &&
+    asItemStatus(ob.keyCollection.status) === LEASING_ITEM_STATUS.DONE
+  );
+}
+
+/** Portfolio-shaped cycle from GET /leasing/cycles/:id (including completed cases). */
+export function mapServerCycleViewToLeasingCycle(view: ServerLeasingCycleView): LeasingCycle {
+  const completed =
+    !view.isActive && !view.cancelledAt && onboardingProceduresDone(view);
+  return {
+    id: view.id,
+    propertyId: view.propertyId,
+    propertyAddress: view.propertyAddress ?? '—',
+    lifecycleStep: view.lifecycleStep.replaceAll('-', '_').toUpperCase(),
+    onboardingStepId: completed ? 'completed' : view.activeStepHint,
+    isActive: view.isActive,
+    rentPerWeek: view.rentPerWeek ?? view.rental.rentPerWeek ?? undefined,
+    availableFrom: view.rental.availableFrom ?? undefined,
+    createdAt: view.createdAt,
   };
 }

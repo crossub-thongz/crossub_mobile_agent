@@ -7,9 +7,8 @@ import {
   type PropertyJobPhase,
   type PropertyJobRow,
 } from '@/lib/property-job-rows';
-import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { buildPropertyLeasingTaskCases, type PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { isPropertyVacant } from '@/lib/property-leasing';
-import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
   ArchivedEndLeasingCase,
@@ -110,8 +109,8 @@ function needActionCategory(item: PropertyNeedAction): PropertyProfileTaskCatego
 function linkedJobId(needAction: PropertyNeedAction): string | null {
   if (needAction.id.startsWith('mnt-')) return needAction.id.slice(4);
   if (needAction.id.startsWith('rr-')) return needAction.id.slice(3);
-  if (needAction.id.startsWith('insp-')) return needAction.id.slice(5);
   if (needAction.id.startsWith('insp-report-')) return needAction.id.slice(12);
+  if (needAction.id.startsWith('insp-')) return needAction.id.slice(5);
   if (needAction.id.startsWith('trib-')) return needAction.id.slice(5);
   return null;
 }
@@ -257,7 +256,7 @@ export function buildPropertyProfileTasks(input: {
   } = input;
 
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
-  const leasingCases: PropertyLeasingWorkflowCase[] = buildPropertyLeasingWorkflowCases({
+  const leasingCases: PropertyLeasingWorkflowCase[] = buildPropertyLeasingTaskCases({
     propertyId,
     leasingCycles,
     tenantSelections,

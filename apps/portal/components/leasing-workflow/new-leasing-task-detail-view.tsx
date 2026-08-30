@@ -45,7 +45,9 @@ import {
   type PropertyJobRow,
 } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { isCompletedLeasingCycle } from '@/lib/property-leasing-history';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
+import { useResolvedLeasingCycle } from '@/lib/use-resolved-leasing-cycle';
 import {
   cn,
   formatCurrency,
@@ -147,14 +149,11 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   } = useAgentData();
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const detail = useLeasingWorkflowStore((s) => s.getDetail);
+  const { cycle, resolveState } = useResolvedLeasingCycle(cycleId);
 
   const [activeTab, setActiveTab] = useState<NewLeasingTaskTab>('workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
-  const cycle = useMemo(
-    () => leasingCycles.find((row) => row.id === cycleId) ?? null,
-    [leasingCycles, cycleId],
-  );
   const propertyId = cycle?.propertyId ?? '';
   const property = properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(
@@ -173,10 +172,13 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
 
   const leasingDetail = propertyId ? detail(propertyId) : null;
 
-  const banner = useMemo(
-    () => (leasingDetail ? resolveNewLeasingStatusBanner(leasingDetail) : null),
-    [leasingDetail],
-  );
+  const banner = useMemo(() => {
+    if (!leasingDetail) return null;
+    if (cycle && isCompletedLeasingCycle(cycle)) {
+      return resolveNewLeasingStatusBanner({ ...leasingDetail, cycleActive: false });
+    }
+    return resolveNewLeasingStatusBanner(leasingDetail);
+  }, [cycle, leasingDetail]);
   const leaseRows = useMemo(
     () => (property && leasingDetail ? buildNewLeasingLeaseDetailRows(property, leasingDetail) : []),
     [leasingDetail, property],
@@ -231,7 +233,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   ]);
 
   if (!cycle || !property) {
-    if (loading) {
+    if (loading || resolveState === 'pending') {
       return <TaskJobLoading label="Loading leasing task…" />;
     }
     return (

@@ -78,7 +78,8 @@ export function buildPropertyLeasingWorkflowCases(input: {
   } = input;
 
   const cases: PropertyLeasingWorkflowCase[] = [];
-  const { active: activeCycles } = splitLeasingCyclesByHistory(leasingCycles);
+  const { active: activeCycles, history: historicalCycles } =
+    splitLeasingCyclesByHistory(leasingCycles);
 
   for (const cycle of activeCycles) {
     const progress = leasingLifecycleProgress(cycle);
@@ -95,8 +96,14 @@ export function buildPropertyLeasingWorkflowCases(input: {
   }
 
   // Tenant applications can exist before a letting cycle is filed. Do not invent a
-  // New leasing row from a leftover open inspection after the cycle was deleted.
-  if (activeCycles.length === 0 && tenantSelections.length > 0) {
+  // New leasing row from a leftover open inspection after the cycle was deleted,
+  // and never reuse a tenant-selection or lease id once a completed cycle exists —
+  // /leasing/:id only resolves real cycle ids.
+  if (
+    activeCycles.length === 0 &&
+    historicalCycles.length === 0 &&
+    tenantSelections.length > 0
+  ) {
     const pending = tenantSelections.find((t) => t.requiresApproval);
     const primary = pending ?? tenantSelections[0];
     cases.push({
@@ -140,6 +147,7 @@ export function buildPropertyLeasingWorkflowCases(input: {
 
   if (
     cases.length === 0 &&
+    historicalCycles.length === 0 &&
     currentLease &&
     !isVacant
   ) {
@@ -195,6 +203,19 @@ export function buildPropertyLeasingHistoryCases(input: {
   }
 
   return sortPropertyLeasingWorkflowCases(cases);
+}
+
+/** Active plus completed new-leasing rows for Tasks (history stays off the Active tab). */
+export function buildPropertyLeasingTaskCases(
+  input: Parameters<typeof buildPropertyLeasingWorkflowCases>[0],
+): PropertyLeasingWorkflowCase[] {
+  const active = buildPropertyLeasingWorkflowCases(input);
+  const completedLeasing = buildPropertyLeasingHistoryCases({
+    propertyId: input.propertyId,
+    leasingCycles: input.leasingCycles,
+    vacatingCases: input.vacatingCases,
+  }).filter((item) => item.category === 'leasing');
+  return [...active, ...completedLeasing];
 }
 
 export function endLeasingWorkflowCaseFromVacating(
