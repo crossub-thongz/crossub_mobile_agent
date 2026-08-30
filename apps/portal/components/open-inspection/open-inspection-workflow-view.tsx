@@ -45,15 +45,11 @@ export function OpenInspectionWorkflowView({
 
   return (
     <div className="space-y-4">
-      {/* Empty shell: rail portals to TaskWorkflowRailSlot and leaves this box blank.
-      <section className="rounded-2xl border bg-card px-2 py-1">
-        <OpenInspectionSessionRail
-          session={session}
-          viewedStep={viewedStep}
-          onStepClick={onStepClick}
-        />
-      </section>
-      */}
+      <OpenInspectionSessionRail
+        session={session}
+        viewedStep={viewedStep}
+        onStepClick={onStepClick}
+      />
       <OpenInspectionStagePanel
         session={session}
         propertyLabel={propertyLabel}

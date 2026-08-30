@@ -3,7 +3,11 @@ import {
   type OpenInspectionSession,
 } from '@/constants/open-inspection-ops';
 import { inspectionsApi } from '@/lib/inspections-api';
-import { mergeInspectionRows } from '@/lib/inspection-mappers';
+import {
+  collectOpenViewingTwinKeys,
+  isOpenPoolTwinOfViewingSession,
+  mergeInspectionRows,
+} from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { InspectionDetail } from '@/lib/inspections-types';
 import type { Inspection } from '@/lib/types';
@@ -89,7 +93,11 @@ export function mergeOpenSessionsIntoInspections(
 ): Inspection[] {
   const addressMap = propertyIdByAddress(properties);
   const openRows = mergeInspectionRows([], sessions, addressMap);
-  const kept = (previous ?? []).filter((row) => row.source !== 'open_viewing');
+  const sessionTwinKeys = collectOpenViewingTwinKeys(openRows);
+  const kept = (previous ?? []).filter(
+    (row) =>
+      row.source !== 'open_viewing' && !isOpenPoolTwinOfViewingSession(row, sessionTwinKeys),
+  );
   const byId = new Map<string, Inspection>();
   for (const row of kept) byId.set(row.id, row);
   for (const row of openRows) byId.set(row.id, row);

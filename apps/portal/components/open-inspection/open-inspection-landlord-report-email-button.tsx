@@ -5,7 +5,7 @@ import { Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
+import { SessionStatusEnum, type OpenInspectionSession } from '@/constants/open-inspection-ops';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 
 export function OpenInspectionLandlordReportEmailButton({
@@ -19,9 +19,13 @@ export function OpenInspectionLandlordReportEmailButton({
 }) {
   const [sending, setSending] = useState(false);
   const autoSendAttemptedRef = useRef<string | null>(null);
+  const onSessionChangeRef = useRef(onSessionChange);
+  onSessionChangeRef.current = onSessionChange;
+
   const landlordEmail = session.landlord?.email?.trim() || '';
   const alreadySent = Boolean(session.landlordReportEmailedAt?.trim());
   const sentTo = session.landlordReportEmailedTo?.trim() || landlordEmail;
+  const sessionClosed = session.sessionStatus === SessionStatusEnum.CLOSED;
 
   const sendToLandlord = async () => {
     if (alreadySent) return;
@@ -31,7 +35,7 @@ export function OpenInspectionLandlordReportEmailButton({
         session.id,
         landlordEmail || undefined,
       );
-      onSessionChange?.(result.session);
+      onSessionChangeRef.current?.(result.session);
       toast.success('Open report emailed to landlord');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not email the report');
@@ -41,7 +45,7 @@ export function OpenInspectionLandlordReportEmailButton({
   };
 
   useEffect(() => {
-    if (alreadySent || !session.openReportGenerated) return;
+    if (alreadySent || !session.openReportGenerated || sessionClosed) return;
     if (autoSendAttemptedRef.current === session.id) return;
     autoSendAttemptedRef.current = session.id;
 
@@ -53,24 +57,18 @@ export function OpenInspectionLandlordReportEmailButton({
           session.id,
           landlordEmail || undefined,
         );
-        if (!cancelled) onSessionChange?.(result.session);
+        if (!cancelled) onSessionChangeRef.current?.(result.session);
       } catch {
         /* Manual retry remains available when no landlord email is on file. */
       } finally {
-        if (!cancelled) setSending(false);
+        setSending(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [
-    alreadySent,
-    landlordEmail,
-    onSessionChange,
-    session.id,
-    session.openReportGenerated,
-  ]);
+  }, [alreadySent, landlordEmail, session.id, session.openReportGenerated, sessionClosed]);
 
   return (
     <div className={className}>
@@ -88,7 +86,7 @@ export function OpenInspectionLandlordReportEmailButton({
           <Mail className="size-3.5" />
         )}
         {alreadySent
-          ? 'Sent to Landlord (Disabled)'
+          ? 'Sent to landlord'
           : sending
             ? 'Sending…'
             : 'Email report to landlord'}

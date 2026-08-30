@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, ClipboardList, Sparkles } from 'lucide-react';
 
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
+import { InspectionTaskDocuments } from '@/components/inspections/inspection-task-documents';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { TaskJobLoading, TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import {
@@ -258,7 +259,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
         </div>
       </section>
 
-      {/* <TaskWorkflowRailSlot /> */}
+      <TaskWorkflowRailSlot />
 
           <div className="border-b">
             <div className="flex gap-1 overflow-x-auto">
@@ -300,22 +301,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
 
           {activeTab === 'activity' ? <ActivityTimeline entries={activityEntries} /> : null}
 
-          {activeTab === 'documents' ? (
-            <section className="rounded-2xl border v2-frosted-surface p-5">
-              {inspection.reportUrl ? (
-                <a
-                  href={inspection.reportUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary text-sm font-semibold hover:underline"
-                >
-                  View inspection report
-                </a>
-              ) : (
-                <p className="text-muted-foreground text-sm">No documents uploaded yet.</p>
-              )}
-            </section>
-          ) : null}
+          {activeTab === 'documents' ? <InspectionTaskDocuments inspection={inspection} /> : null}
 
           {activeTab === 'notes' ? (
             <section className="rounded-2xl border v2-frosted-surface p-5">

@@ -40,6 +40,10 @@ import {
   tribunalCreatedAtIso,
   vacatingCreatedAtIso,
 } from '@/lib/record-created-at';
+import {
+  collectOpenViewingTwinKeys,
+  isOpenPoolTwinOfViewingSession,
+} from '@/lib/inspection-mappers';
 import { parseSortTime } from '@/lib/client-table-sort';
 
 export type PropertyJobPhase = 'in_progress' | 'completed';
@@ -341,7 +345,10 @@ export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobR
 }
 
 export function inspectionJobRows(inspections: Inspection[]): PropertyJobRow[] {
-  return inspections.map((inspection) => {
+  const twinKeys = collectOpenViewingTwinKeys(inspections);
+  return inspections
+    .filter((inspection) => !isOpenPoolTwinOfViewingSession(inspection, twinKeys))
+    .map((inspection) => {
     const progress = inspectionWorkflowProgress(inspection);
     const createdIso = inspectionCreatedAtIso(inspection);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);

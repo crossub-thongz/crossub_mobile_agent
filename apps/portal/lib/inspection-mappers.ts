@@ -168,15 +168,55 @@ function inspectionFreshnessRank(row: Inspection): number {
   return rank;
 }
 
+/**
+ * Ids that pair an OPEN viewing session with its inspector pool job.
+ * A New Leasing open creates both rows; they must collapse to one agent case.
+ */
+export function openViewingTwinKeys(
+  row: Pick<Inspection, 'id' | 'type' | 'source' | 'inspectionRecordId' | 'trackingNumber'>,
+): string[] {
+  if (row.type !== 'OPEN' || row.source !== 'open_viewing') return [];
+  const keys = [row.id];
+  const recordId = row.inspectionRecordId?.trim();
+  if (recordId) keys.push(recordId);
+  const tracking = row.trackingNumber?.trim();
+  if (tracking) keys.push(tracking);
+  return keys;
+}
+
+export function collectOpenViewingTwinKeys(rows: Inspection[]): Set<string> {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    for (const key of openViewingTwinKeys(row)) keys.add(key);
+  }
+  return keys;
+}
+
+/** True when this staff/pool OPEN is the twin of a viewing session already in the list. */
+export function isOpenPoolTwinOfViewingSession(
+  row: Inspection,
+  twinKeys: Set<string>,
+): boolean {
+  if (row.type !== 'OPEN' || row.source === 'open_viewing') return false;
+  if (twinKeys.has(row.id)) return true;
+  const recordId = row.inspectionRecordId?.trim();
+  if (recordId && twinKeys.has(recordId)) return true;
+  const tracking = row.trackingNumber?.trim();
+  if (tracking && twinKeys.has(tracking)) return true;
+  return false;
+}
+
 /** Match a list row by viewing-session id or the linked OPEN pool job id. */
 export function findInspectionInList(
   inspections: Inspection[],
   id: string,
 ): Inspection | undefined {
-  return (
-    inspections.find((row) => row.id === id) ??
-    inspections.find((row) => row.inspectionRecordId === id)
-  );
+  const exact = inspections.find((row) => row.id === id);
+  const byRecordId = inspections.find((row) => row.inspectionRecordId === id);
+  // Prefer the viewing session so the pool twin never wins the agent case page.
+  if (exact?.source === 'open_viewing') return exact;
+  if (byRecordId?.source === 'open_viewing') return byRecordId;
+  return exact ?? byRecordId;
 }
 
 /** Stable key so poll/store updates can skip React setState when nothing material changed. */
@@ -296,6 +336,13 @@ export function mergeInspectionRows(
   const occupyingInspectionIds = new Set(
     occupyingSessions.map((s) => openSessionInspectionId(s)),
   );
+  // Completed sessions must still hide *their* pool twin (same OP- case). Matching
+  // by inspection id, not property, so a newly paid OPEN on the same property stays.
+  const linkedPoolIds = new Set(
+    sessions
+      .filter((s) => s.sessionStatus !== SessionStatusEnum.CANCELLED)
+      .map((s) => openSessionInspectionId(s)),
+  );
   const propertiesWithOpenSessions = new Set(
     occupyingSessions
       .map(
@@ -320,6 +367,7 @@ export function mergeInspectionRows(
       r.propertyId &&
       !sessionIds.has(r.id) &&
       !occupyingInspectionIds.has(r.id) &&
+      !linkedPoolIds.has(r.id) &&
       !propertiesWithOpenSessions.has(r.propertyId),
   );
 

@@ -71,6 +71,11 @@ export function isOpenSessionRailStepNavigable(
   step: OpenSessionRailStep,
   now: Date = new Date(),
 ): boolean {
+  const reportReady =
+    session.openReportGenerated === true || Boolean(session.reviewCompletedAt);
+  if (reportReady || session.sessionStatus === SessionStatusEnum.CLOSED) {
+    return true;
+  }
   const { currentRailStep } = deriveOpenSessionRailProgress(session, now);
   const order = OPEN_SESSION_RAIL_STEP_ORDER;
   return order.indexOf(step) <= order.indexOf(currentRailStep);
@@ -86,7 +91,7 @@ export function isOpenSessionRailStepCompleted(
 
   switch (step) {
     case OPEN_SESSION_RAIL_STEP.SCHEDULED:
-      return canEnterOpenRailStep(session, now);
+      return canEnterOpenRailStep(session, now) || reportReady;
     case OPEN_SESSION_RAIL_STEP.OPEN:
       return reportReady;
     case OPEN_SESSION_RAIL_STEP.REPORT:

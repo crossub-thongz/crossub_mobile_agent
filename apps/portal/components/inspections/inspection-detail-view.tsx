@@ -43,12 +43,9 @@ import { RoutineSelfInspectionReviewSection } from '@/components/inspections/rou
 import { RoutineSelfPreviousSubmissionSection } from '@/components/inspections/routine-self-previous-submission-section';
 import { ChangeRoutineFlowDialog } from '@/components/inspections/change-routine-flow-dialog';
 import { RoutineAuditTrail } from '@/components/inspections/routine-audit-trail';
-import { OpenInspectionApplicantPanel } from '@/components/open-inspection/open-inspection-applicant-panel';
-import { OpenInspectionOpenStage } from '@/components/open-inspection/open-inspection-open-stage';
 import { OpenInspectionScheduleRequestPanel } from '@/components/open-inspection/open-inspection-schedule-request-panel';
 import { StartCrossubOpenNowButton } from '@/components/open-inspection/start-crossub-open-now-button';
 import { OpenInspectionEarlyStartNotice } from '@/components/open-inspection/open-inspection-early-start-notice';
-import { OpenInspectionSessionRail } from '@/components/open-inspection/open-inspection-session-rail';
 import { OpenInspectionWorkflowView } from '@/components/open-inspection/open-inspection-workflow-view';
 import { LeasingLifecycleStepRail } from '@/components/leasing-workflow/leasing-lifecycle-step-rail';
 import { JobCaseStageEmailHistory } from '@/components/agent/job-case-email-log';
@@ -64,7 +61,7 @@ import {
   inspectionEmailRecordsForStep,
   inspectionJobCaseEmails,
 } from '@/lib/inspection/agent-workflow-email';
-import { LEASING_AGENT_DECISION, LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
+import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
 import {
   linkedOpenLeasingEmails,
   mergeOpenAndLeasingTimeline,
@@ -104,7 +101,6 @@ import {
   cancelOpenInspectionJob,
   isDeletedInspection,
 } from '@/lib/open-inspection-delete';
-import { canCompleteOpenSessionReview } from '@/lib/open-inspection-session-rail';
 import { resolveOpenConductedBy } from '@/lib/open-inspection/open-conducted-by';
 import { crossubWebOpenInspectionUrl } from '@/lib/crossub-web-url';
 import {
@@ -371,7 +367,6 @@ export function InspectionDetailView({
       agentName: leasingDetail?.agentInfo.name,
     });
   }, [insp?.propertyId, leasingDetail, properties]);
-  const [completingReview, setCompletingReview] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [flowChangeOpen, setFlowChangeOpen] = useState(false);
   const [activityExpanded, setActivityExpanded] = useState(false);
@@ -454,14 +449,7 @@ export function InspectionDetailView({
     ? OPEN_CONDUCTED_BY_LABEL.agent
     : insp.inspector ?? 'Unassigned';
   const visitors = openSession?.visitors ?? [];
-  const applicantsWithApplications = visitors.filter((v) => v.application);
-  const approvedApplicants = applicantsWithApplications.filter(
-    (v) => v.application?.agentDecision === LEASING_AGENT_DECISION.APPROVED,
-  );
   const reportGenerated = openSession?.openReportGenerated === true;
-  const canCompleteReview = openSession
-    ? canCompleteOpenSessionReview(openSession)
-    : false;
   const hasReport =
     Boolean(
       routineInspectionRecord?.reportUrl ??
@@ -533,9 +521,6 @@ export function InspectionDetailView({
     insp.type === 'OPEN' && (openPlatformPaymentActive || awaitingPayment);
   const showRoutinePlatformPayment =
     insp.type === 'ROUTINE' && (routineInPersonInProgress || awaitingPayment);
-  const panelClassCompact = embedded
-    ? 'rounded-2xl border bg-white px-2 py-1 dark:bg-card'
-    : 'rounded-2xl border bg-card px-2 py-1';
   const routineReportInspectionId =
     routineInspectionRecord?.id ??
     routineSchedule?.currentInspectionId ??
@@ -545,7 +530,6 @@ export function InspectionDetailView({
     routineSchedule?.currentInspection?.reportUrl ??
     insp.reportUrl ??
     null;
-  const sources = openSession?.reportSourceCounts;
   const canDelete = apiConnected && canDeleteOpenInspection(insp);
   const property = insp.propertyId
     ? properties.find((p) => p.id === insp.propertyId)
@@ -586,11 +570,12 @@ export function InspectionDetailView({
     ? viewingLifecycleStep === LEASING_LIFECYCLE_STEP.OPEN_REPORT ||
       viewingLifecycleStep === LEASING_LIFECYCLE_STEP.RESULTS
     : liveIsOpenReportVisibleStep;
-  const showSessionRail = Boolean(
-    openSession && insp.type === 'OPEN' && (isStandaloneOpenViewing || !isOpenReportVisibleStep),
-  );
+  const showSessionRail = Boolean(openSession && insp.type === 'OPEN');
   const showLettingRail = Boolean(
-    insp.type === 'OPEN' && leasingDetail && !showSessionRail && !isStandaloneOpenViewing,
+    insp.type === 'OPEN' &&
+      leasingDetail &&
+      !showSessionRail &&
+      !isStandaloneOpenViewing,
   );
 
   const handleDeleteConfirm = async (reason: string) => {
@@ -801,21 +786,14 @@ export function InspectionDetailView({
               if (insp.propertyId) setLeasingActiveStep(insp.propertyId, step);
             }}
           />
-          {isOpenResultsStep ? (
-            <div className="flex justify-end">
-              <OpenNewLeasingCaseButton propertyId={insp.propertyId} />
-            </div>
-          ) : null}
         </div>
       ) : null}
 
-      {/* Empty shell: rail portals to TaskWorkflowRailSlot and leaves this box blank.
-      {showSessionRail && openSession && !isStandaloneOpenViewing ? (
-        <section className={panelClassCompact}>
-          <OpenInspectionSessionRail session={openSession} />
-        </section>
+      {isOpenResultsStep && insp.propertyId ? (
+        <div className="flex justify-end">
+          <OpenNewLeasingCaseButton propertyId={insp.propertyId} />
+        </div>
       ) : null}
-      */}
 
       {needsScheduleRequest && !isOpenResultsStep && linkedLeasingCycleId ? (
         <OpenInspectionScheduleRequestPanel
@@ -1044,7 +1022,7 @@ export function InspectionDetailView({
         </InfoSection>
       ) : null}
 
-      {openSession && insp.type === 'OPEN' && isStandaloneOpenViewing ? (
+      {openSession && insp.type === 'OPEN' ? (
         <OpenInspectionWorkflowView
           session={openSession}
           propertyLabel={insp.propertyAddress}
@@ -1055,70 +1033,6 @@ export function InspectionDetailView({
               : undefined
           }
         />
-      ) : null}
-
-      {openSession &&
-      insp.type === 'OPEN' &&
-      !isStandaloneOpenViewing &&
-      leasingDetail?.openInspection.agentConducted &&
-      !isOpenResultsStep ? (
-        <OpenInspectionOpenStage session={openSession} onSessionChange={mergeSessionUpdate} />
-      ) : null}
-
-      {openSession && insp.type === 'OPEN' && !isStandaloneOpenViewing && !isOpenResultsStep ? (
-        <InfoSection title={`Applicants (${applicantsWithApplications.length})`}>
-          <OpenInspectionApplicantPanel
-            session={openSession}
-            onSessionChange={(session) => {
-              mergeSessionUpdate(session);
-            }}
-            readOnly
-          />
-          <div className="mt-3 flex flex-wrap gap-2">
-            {!reportGenerated ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 gap-1.5 text-xs"
-                disabled={!canCompleteReview || completingReview}
-                onClick={async () => {
-                  setCompletingReview(true);
-                  try {
-                    const session = await openViewingsApi.completeReview(openSession.id);
-                    mergeSessionUpdate(session);
-                    toast.success('Review complete — open report generated');
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : 'Could not complete review');
-                  } finally {
-                    setCompletingReview(false);
-                  }
-                }}
-              >
-                <CheckCircle2 className="size-3.5" />
-                {completingReview ? 'Completing…' : 'Complete review'}
-              </Button>
-            ) : null}
-            {reportGenerated && !isOpenResultsStep ? (
-              <InspectionReportDownloadActions
-                inspectionId={openSession.id}
-                propertyLabel={insp.propertyAddress}
-                inspectionType="open"
-                fetchPdf={openViewingsApi.downloadReportPdf}
-                variant="inline"
-                size="sm"
-              />
-            ) : null}
-          </div>
-          {reportGenerated && sources && !isOpenResultsStep ? (
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <p className="text-muted-foreground col-span-2 font-medium uppercase tracking-wide">
-                Open report summary
-              </p>
-              <p>Tenant app: {sources.tenantApp}</p>
-              <p>Apply link / QR: {sources.linkOrQr}</p>
-            </div>
-          ) : null}
-        </InfoSection>
       ) : null}
 
       {visitors.length > 0 && !(openSession && insp.type === 'OPEN') && (
@@ -1181,7 +1095,7 @@ export function InspectionDetailView({
         </InfoSection>
       )}
 
-      {isOpenReportVisibleStep && hasReport && leasingDetail ? (
+      {isOpenReportVisibleStep && hasReport && leasingDetail && !showSessionRail ? (
         <OpenLeasingInspectionReportPanel
           detail={leasingDetail}
           openSession={openSession}

@@ -110,7 +110,11 @@ import {
 } from '@/lib/inspections/fetch';
 import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { isInspectionDone } from '@/lib/inspections/presentation';
-import { pickFresherInspection } from '@/lib/inspection-mappers';
+import {
+  collectOpenViewingTwinKeys,
+  isOpenPoolTwinOfViewingSession,
+  pickFresherInspection,
+} from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { openSessionInspectionId } from '@/lib/open-inspection/open-session-inspection-id';
@@ -704,10 +708,18 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         : [];
 
     // New-leasing OPEN creates both a ViewingSession (agent case) and an OPEN
-    // Inspection pool job (inspector task pool). Prefer a *live* session row and
-    // hide the pool twin so one create is not listed twice. A completed/cancelled
-    // session must not hide a newly paid OPEN — that is why paid opens vanished
-    // from the Inspection tab while the bill deep-link still opened the case.
+    // Inspection pool job (inspector task pool). Hide the pool twin of *any*
+    // viewing session (live or completed) by inspection id / OP- ref so one case
+    // is not listed twice. Property-level hide stays limited to *live* sessions
+    // so a completed open does not swallow a newly paid OPEN on the same property.
+    const sessionTwinKeys = collectOpenViewingTwinKeys(
+      [...portfolioRows, ...liveRows, ...added].filter(
+        (row) =>
+          row.type === 'OPEN' &&
+          row.source === 'open_viewing' &&
+          !isDeletedInspection(row),
+      ),
+    );
     const propertiesWithLiveOpenSessions = new Set(
       [...portfolioRows, ...liveRows]
         .filter(
@@ -721,10 +733,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         .map((row) => row.propertyId),
     );
     const isHiddenOpenPoolTwin = (row: Inspection) =>
-      row.type === 'OPEN' &&
-      row.source !== 'open_viewing' &&
-      Boolean(row.propertyId) &&
-      propertiesWithLiveOpenSessions.has(row.propertyId);
+      isOpenPoolTwinOfViewingSession(row, sessionTwinKeys) ||
+      (row.type === 'OPEN' &&
+        row.source !== 'open_viewing' &&
+        Boolean(row.propertyId) &&
+        propertiesWithLiveOpenSessions.has(row.propertyId));
 
     const byId = new Map<string, Inspection>();
     for (const row of portfolioRows) {
