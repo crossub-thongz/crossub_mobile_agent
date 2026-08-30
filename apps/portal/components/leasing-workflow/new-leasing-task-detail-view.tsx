@@ -33,6 +33,7 @@ import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
   buildNewLeasingActivityEntries,
+  buildNewLeasingDocumentGroups,
   buildNewLeasingLeaseDetailRows,
   buildNewLeasingRelatedTasks,
   buildNewLeasingWhatsNextCards,
@@ -194,6 +195,10 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   const tenant = leasingDetail ? resolveOnboardingTenant(leasingDetail) : null;
   const applications = leasingDetail?.applicationsDetail ?? [];
   const applicantCount = applications.length;
+  const documentGroups = useMemo(
+    () => (leasingDetail ? buildNewLeasingDocumentGroups(leasingDetail) : []),
+    [leasingDetail],
+  );
 
   const relatedTasks = useMemo(() => {
     if (!property) return [];
@@ -427,31 +432,41 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
             {activeTab === 'activity' ? <ActivityTimeline entries={activityEntries} /> : null}
 
             {activeTab === 'documents' ? (
-              <section className="space-y-3">
-                {applications.flatMap((application) =>
-                  (application.documents ?? []).map((doc) => (
-                    <article
-                      key={`${application.id}-${doc.fileName}`}
-                      className="rounded-2xl border v2-frosted-surface p-4"
-                    >
-                      <p className="text-sm font-semibold">{doc.fileName}</p>
-                      <p className="text-muted-foreground mt-1 text-xs">{application.applicant}</p>
-                      {doc.url ? (
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary mt-2 inline-block text-xs font-semibold hover:underline"
-                        >
-                          View document
-                        </a>
-                      ) : null}
-                    </article>
-                  )),
-                )}
-                {!applications.some((app) => (app.documents ?? []).length > 0) ? (
+              <section className="space-y-6">
+                {documentGroups.length > 0 ? (
+                  documentGroups.map((group) => (
+                    <div key={group.tab} className="space-y-3">
+                      <h3 className="text-sm font-semibold">{group.tab}</h3>
+                      {group.people.map((person) => (
+                        <div key={person.id} className="space-y-2">
+                          <p className="text-muted-foreground text-xs font-medium">
+                            From {person.from}
+                          </p>
+                          {person.documents.map((doc) => (
+                            <article
+                              key={doc.id}
+                              className="rounded-2xl border v2-frosted-surface p-4"
+                            >
+                              <p className="text-sm font-semibold">{doc.fileName}</p>
+                              {doc.url ? (
+                                <a
+                                  href={doc.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-primary mt-2 inline-block text-xs font-semibold hover:underline"
+                                >
+                                  View document
+                                </a>
+                              ) : null}
+                            </article>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))
+                ) : (
                   <p className="text-muted-foreground text-sm">No documents uploaded yet.</p>
-                ) : null}
+                )}
               </section>
             ) : null}
 

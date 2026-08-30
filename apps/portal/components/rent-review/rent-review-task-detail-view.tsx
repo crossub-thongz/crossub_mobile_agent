@@ -12,6 +12,7 @@ import {
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
+import { RentReviewTaskDocuments } from '@/components/rent-review/rent-review-task-documents';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -376,13 +377,7 @@ export function RentReviewTaskDetailView({
 
           {activeTab === 'activity' ? <ActivityTimeline entries={activityEntries} /> : null}
 
-          {activeTab === 'documents' ? (
-            <section className="rounded-2xl border v2-frosted-surface p-5">
-              <p className="text-muted-foreground text-sm">
-                Lease agreement and notice documents are available in the Workflow tab.
-              </p>
-            </section>
-          ) : null}
+          {activeTab === 'documents' ? <RentReviewTaskDocuments detail={detail} /> : null}
 
           {activeTab === 'notes' ? (
             <section className="rounded-2xl border v2-frosted-surface p-5">

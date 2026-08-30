@@ -1,9 +1,12 @@
 import {
   buildRentReviewAgentWorkflow,
   hasMarketResearchComplete,
+  hasTenantNoticeSent,
   type RentReviewAgentWorkflowModel,
 } from '@/lib/rent-review/agent-workflow-model';
 import {
+  isLeaseAgreementSigned,
+  isPreferredRenewalFixed,
   isTenantAccepted,
   isTenantDeclined,
 } from '@/lib/rent-review/tenant-decision-display';
@@ -270,4 +273,116 @@ export function tenantResponseSummary(detail: RentReviewWorkflowDetail): {
 export function formatRentReviewDateTime(iso?: string | null): string {
   if (!iso) return '—';
   return formatDateTime(iso);
+}
+
+export const RENT_REVIEW_DOCUMENT_TABS = [
+  'Market review',
+  'Notice',
+  'Lease agreement',
+] as const;
+
+export type RentReviewDocumentTab = (typeof RENT_REVIEW_DOCUMENT_TABS)[number];
+
+export type RentReviewDocumentKind = 'href' | 'research' | 'notice' | 'lease-draft' | 'lease-signed';
+
+export type RentReviewDocumentRow = {
+  id: string;
+  fileName: string;
+  href?: string;
+  kind: RentReviewDocumentKind;
+};
+
+export type RentReviewDocumentPersonGroup = {
+  id: string;
+  from: string;
+  documents: RentReviewDocumentRow[];
+};
+
+export type RentReviewDocumentTabGroup = {
+  tab: RentReviewDocumentTab;
+  people: RentReviewDocumentPersonGroup[];
+};
+
+function compareLabel(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: 'base' });
+}
+
+function pushTab(
+  groups: RentReviewDocumentTabGroup[],
+  tab: RentReviewDocumentTab,
+  from: string,
+  documents: RentReviewDocumentRow[],
+): void {
+  if (documents.length === 0) return;
+  groups.push({
+    tab,
+    people: [
+      {
+        id: `${tab}:${from}`,
+        from,
+        documents: [...documents].sort((a, b) => compareLabel(a.fileName, b.fileName)),
+      },
+    ],
+  });
+}
+
+/** Documents tab: workflow section, then who the file came from. */
+export function buildRentReviewDocumentGroups(
+  detail: RentReviewWorkflowDetail,
+): RentReviewDocumentTabGroup[] {
+  const groups: RentReviewDocumentTabGroup[] = [];
+  const researchReady = hasMarketResearchComplete(detail);
+  const noticeReady =
+    hasTenantNoticeSent(detail) ||
+    detail.proposedWeeklyRent != null ||
+    detail.ai.suggestedWeekly != null;
+  const signed = isLeaseAgreementSigned(detail);
+  const leaseDraft =
+    !signed &&
+    (isTenantAccepted(detail) || auditAt(detail, 'lease_agreement_sent')) &&
+    isPreferredRenewalFixed(detail);
+
+  if (researchReady) {
+    const researchHref = detail.propertyId
+      ? `/api/v1/agent/properties/${detail.propertyId}/workflows/rent-review/${detail.id}/research-report.html`
+      : undefined;
+    pushTab(groups, 'Market review', 'CROS System', [
+      {
+        id: `research:${detail.id}`,
+        fileName: 'CROSSUB Rent Review Report',
+        href: researchHref,
+        kind: researchHref ? 'href' : 'research',
+      },
+    ]);
+  }
+
+  if (noticeReady) {
+    pushTab(groups, 'Notice', 'CROS System', [
+      {
+        id: `notice:${detail.id}`,
+        fileName: `NSW notice of rent increase (${detail.id.slice(0, 8)})`,
+        kind: 'notice',
+      },
+    ]);
+  }
+
+  if (signed) {
+    pushTab(groups, 'Lease agreement', detail.tenantName?.trim() || 'Tenant', [
+      {
+        id: `lease-signed:${detail.id}`,
+        fileName: `Residential tenancy agreement (${detail.id.slice(0, 8)})`,
+        kind: 'lease-signed',
+      },
+    ]);
+  } else if (leaseDraft) {
+    pushTab(groups, 'Lease agreement', 'CROS System', [
+      {
+        id: `lease-draft:${detail.id}`,
+        fileName: `Lease agreement draft (${detail.id.slice(0, 8)})`,
+        kind: 'lease-draft',
+      },
+    ]);
+  }
+
+  return groups;
 }

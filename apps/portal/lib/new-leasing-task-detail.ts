@@ -1,6 +1,7 @@
 import { LEASING_AGENT_DECISION, LEASING_ITEM_STATUS, LEASING_LIFECYCLE_STEP } from '@/lib/leasing/constants';
 import { resolveOnboardingTenant, confirmedLeaseTerms } from '@/lib/leasing/onboarding-display';
 import type { LeasingApplicationDetail, LeasingPropertyDetail } from '@/lib/leasing/types';
+import { fileNameFromDocumentUrl } from '@/lib/leasing-applicant-upload.util';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { Property } from '@/lib/types';
 import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
@@ -283,4 +284,141 @@ export function buildNewLeasingRelatedTasks(
 
 export function newLeasingTaskReference(cycleId: string): string {
   return workflowCaseReferenceLabel(cycleId, 'leasing');
+}
+
+export const NEW_LEASING_DOCUMENT_TABS = [
+  'Applicants',
+  'Deposit',
+  'Bond',
+  'Agreement',
+  'Key collection',
+] as const;
+
+export type NewLeasingDocumentTab = (typeof NEW_LEASING_DOCUMENT_TABS)[number];
+
+export type NewLeasingDocumentRow = {
+  id: string;
+  fileName: string;
+  url?: string;
+};
+
+export type NewLeasingDocumentPersonGroup = {
+  id: string;
+  from: string;
+  documents: NewLeasingDocumentRow[];
+};
+
+export type NewLeasingDocumentTabGroup = {
+  tab: NewLeasingDocumentTab;
+  people: NewLeasingDocumentPersonGroup[];
+};
+
+function compareLabel(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: 'base' });
+}
+
+function proofRow(
+  id: string,
+  fileName: string | undefined,
+  url?: string,
+): NewLeasingDocumentRow | null {
+  const name = fileName?.trim() || (url ? fileNameFromDocumentUrl(url) : '');
+  if (!name && !url) return null;
+  return { id, fileName: name || 'Document', url };
+}
+
+function personGroup(
+  id: string,
+  from: string,
+  documents: Array<NewLeasingDocumentRow | null>,
+): NewLeasingDocumentPersonGroup | null {
+  const rows = documents.filter((row): row is NewLeasingDocumentRow => Boolean(row));
+  if (rows.length === 0) return null;
+  return {
+    id,
+    from,
+    documents: [...rows].sort((a, b) => compareLabel(a.fileName, b.fileName)),
+  };
+}
+
+/** Documents tab: workflow section, then who the file came from. */
+export function buildNewLeasingDocumentGroups(
+  detail: LeasingPropertyDetail,
+): NewLeasingDocumentTabGroup[] {
+  const tenantName = resolveOnboardingTenant(detail)?.applicant?.trim() || 'Tenant';
+  const groups: NewLeasingDocumentTabGroup[] = [];
+
+  const applicantPeople = detail.applicationsDetail
+    .map((application) =>
+      personGroup(
+        application.id,
+        application.applicant.trim() || 'Applicant',
+        (application.documents ?? []).map((doc, index) => ({
+          id: `${application.id}:${doc.url || doc.fileName}:${index}`,
+          fileName: doc.fileName || 'Document',
+          url: doc.url,
+        })),
+      ),
+    )
+    .filter((group): group is NewLeasingDocumentPersonGroup => Boolean(group))
+    .sort((a, b) => compareLabel(a.from, b.from));
+
+  if (applicantPeople.length > 0) {
+    groups.push({ tab: 'Applicants', people: applicantPeople });
+  }
+
+  const onboarding: Array<[NewLeasingDocumentTab, Array<NewLeasingDocumentRow | null>]> = [
+    [
+      'Deposit',
+      [
+        proofRow(
+          `deposit:${detail.onboarding.deposit.proofUrl ?? detail.onboarding.deposit.proofFileName ?? ''}`,
+          detail.onboarding.deposit.proofFileName,
+          detail.onboarding.deposit.proofUrl,
+        ),
+      ],
+    ],
+    [
+      'Bond',
+      [
+        proofRow(
+          `bond:${detail.onboarding.bond.proofUrl ?? detail.onboarding.bond.proofFileName ?? ''}`,
+          detail.onboarding.bond.proofFileName,
+          detail.onboarding.bond.proofUrl,
+        ),
+      ],
+    ],
+    [
+      'Agreement',
+      [
+        proofRow(
+          `agreement-signed:${detail.onboarding.agreement.signedProofUrl ?? ''}`,
+          detail.onboarding.agreement.signedProofFileName,
+          detail.onboarding.agreement.signedProofUrl,
+        ),
+        detail.onboarding.agreement.uploadedFileName &&
+        detail.onboarding.agreement.uploadedFileName !==
+          detail.onboarding.agreement.signedProofFileName
+          ? proofRow(
+              `agreement-upload:${detail.onboarding.agreement.uploadedFileName}`,
+              detail.onboarding.agreement.uploadedFileName,
+            )
+          : null,
+      ],
+    ],
+    [
+      'Key collection',
+      (detail.onboarding.keyCollection.photos ?? []).map((url, index) =>
+        proofRow(`key:${url}:${index}`, undefined, url),
+      ),
+    ],
+  ];
+
+  for (const [tab, rows] of onboarding) {
+    const person = personGroup(tab, tenantName, rows);
+    if (!person) continue;
+    groups.push({ tab, people: [person] });
+  }
+
+  return groups;
 }
