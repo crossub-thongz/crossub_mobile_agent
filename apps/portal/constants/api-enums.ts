@@ -181,6 +181,7 @@ export const PROPERTY_TYPE = {
   TOWNHOUSE: 'TOWNHOUSE',
   UNIT: 'UNIT',
   STUDIO: 'STUDIO',
+  DUPLEX: 'DUPLEX',
 } as const;
 
 export type PropertyType = (typeof PROPERTY_TYPE)[keyof typeof PROPERTY_TYPE];
@@ -191,6 +192,7 @@ export const PROPERTY_TYPE_LABEL: Record<PropertyType, string> = {
   [PROPERTY_TYPE.TOWNHOUSE]: 'Townhouse',
   [PROPERTY_TYPE.UNIT]: 'Unit',
   [PROPERTY_TYPE.STUDIO]: 'Studio',
+  [PROPERTY_TYPE.DUPLEX]: 'Duplex',
 };
 
 export const PROPERTY_TYPE_ORDER: PropertyType[] = [
@@ -198,7 +200,7 @@ export const PROPERTY_TYPE_ORDER: PropertyType[] = [
   PROPERTY_TYPE.HOUSE,
   PROPERTY_TYPE.TOWNHOUSE,
   PROPERTY_TYPE.UNIT,
-  PROPERTY_TYPE.STUDIO,
+  PROPERTY_TYPE.DUPLEX,
 ];
 
 /** PropertyStatus — registry occupancy / marketing state. */

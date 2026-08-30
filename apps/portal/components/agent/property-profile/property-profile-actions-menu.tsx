@@ -11,8 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
-import { leasingDetail } from '@/constants/routes';
+import { tribunalDetail } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { createdWorkflowCaseHref } from '@/lib/property-job-href';
 import {
   buildPropertyWorkflowContext,
   tabActionsFor,
@@ -181,13 +182,8 @@ export function PropertyProfileActionsMenu({
         onSuccess={(result?: PropertyWorkflowCreatedResult) => {
           setWorkflowAction(null);
           onRefresh?.();
-          if (
-            isV2 &&
-            result &&
-            isWorkflowCreatedCase(result) &&
-            result.kind === 'leasing'
-          ) {
-            router.push(leasingDetail(result.id, fromProperty(propertyId, 'Tasks')));
+          if (isV2 && result && isWorkflowCreatedCase(result)) {
+            router.push(createdWorkflowCaseHref(result, propertyId));
           }
         }}
       />
@@ -200,9 +196,12 @@ export function PropertyProfileActionsMenu({
         propertyId={propertyId}
         properties={properties}
         mode={workflowAction === 'open_tribunal' ? 'tribunal' : 'rent_chasing'}
-        onCreated={() => {
+        onCreated={(caseId) => {
           setWorkflowAction(null);
           onRefresh?.();
+          if (isV2 && caseId) {
+            router.push(tribunalDetail(caseId, fromProperty(propertyId, 'Tasks')));
+          }
         }}
       />
     </>

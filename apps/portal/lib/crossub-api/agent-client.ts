@@ -250,6 +250,14 @@ export type CreateAgentPropertyInput = {
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  /** Household at registration — one row per tenant/landlord, including the primary. */
+  contacts?: Array<{
+    role: 'TENANT' | 'LANDLORD';
+    name?: string;
+    email?: string;
+    phone?: string;
+    isPrimary?: boolean;
+  }>;
   latitude?: number;
   longitude?: number;
   leaseStartDate?: string;

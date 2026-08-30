@@ -5,8 +5,11 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { PropertyPartyContact } from '@/lib/property-parties';
-import { emptyPartyContact } from '@/lib/property-parties';
+import {
+  emptyPartyContact,
+  ensureExactlyOnePrimary,
+  type PropertyPartyContact,
+} from '@/lib/property-parties';
 
 interface ContactPartyListProps {
   title: string;
@@ -33,16 +36,16 @@ export function ContactPartyList({
   asFieldset = true,
   hideAddButton = false,
 }: ContactPartyListProps) {
-  const updateParty = (index: number, field: keyof PropertyPartyContact, value: string) => {
+  const updateParty = (index: number, field: 'name' | 'email' | 'phone', value: string) => {
     onChange(parties.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
   };
 
   const removeParty = (index: number) => {
     if (parties.length <= 1) {
-      onChange([emptyPartyContact()]);
+      onChange([emptyPartyContact({ isPrimary: true })]);
       return;
     }
-    onChange(parties.filter((_, i) => i !== index));
+    onChange(ensureExactlyOnePrimary(parties.filter((_, i) => i !== index)));
   };
 
   const addParty = () => {
@@ -65,7 +68,7 @@ export function ContactPartyList({
             <div className="space-y-1.5">
               <Label
                 htmlFor={`${title}-name-${index}`}
-                className="text-muted-foreground text-[11px] uppercase tracking-wider"
+                className="text-muted-foreground text-xs font-medium"
               >
                 Name
                 {parties.length > 1 ? (
@@ -85,7 +88,7 @@ export function ContactPartyList({
             <div className="space-y-1.5">
               <Label
                 htmlFor={`${title}-email-${index}`}
-                className="text-muted-foreground text-[11px] uppercase tracking-wider"
+                className="text-muted-foreground text-xs font-medium"
               >
                 Email
               </Label>
@@ -99,7 +102,7 @@ export function ContactPartyList({
             <div className="space-y-1.5">
               <Label
                 htmlFor={`${title}-phone-${index}`}
-                className="text-muted-foreground text-[11px] uppercase tracking-wider"
+                className="text-muted-foreground text-xs font-medium"
               >
                 Phone
               </Label>

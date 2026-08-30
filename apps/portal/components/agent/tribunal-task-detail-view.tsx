@@ -3,34 +3,22 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ChevronRight,
-  Gavel,
-  MoreHorizontal,
-} from 'lucide-react';
+import { ChevronRight, Gavel } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { ModuleCommunications } from '@/components/agent/module-communications';
+import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
-import {
-  inspectionDetail,
-  leasingDetail,
-  maintenanceDetail,
-  propertyDetail,
-  rentReviewDetail,
-  ROUTES,
-  vacatingDetail,
-} from '@/constants/routes';
+import { propertyDetail, ROUTES } from '@/constants/routes';
 import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { fetchAgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import type { AgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
-import { fromProperty } from '@/lib/detail-navigation';
+import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
-import type { PropertyJobRow } from '@/lib/property-job-rows';
 import {
   buildTribunalActivityEntries,
   buildTribunalDetailRows,
@@ -100,24 +88,6 @@ function ActivityTimeline({
       ))}
     </div>
   );
-}
-
-function relatedTaskHref(row: PropertyJobRow, propertyId: string): string {
-  const nav = fromProperty(propertyId, 'Tasks');
-  switch (row.kind) {
-    case 'maintenance':
-      return maintenanceDetail(row.id, nav);
-    case 'inspection':
-      return inspectionDetail(row.id, nav);
-    case 'rent_review':
-      return rentReviewDetail(row.id, nav);
-    case 'end_leasing':
-      return vacatingDetail(row.id, nav);
-    case 'leasing':
-      return leasingDetail(row.id, nav);
-    default:
-      return propertyDetail(propertyId);
-  }
 }
 
 function initials(name: string): string {
@@ -328,21 +298,7 @@ export function TribunalTaskDetailView({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold"
-            >
-              Actions
-            </button>
-            <button
-              type="button"
-              className="text-muted-foreground v2-frosted-surface rounded-xl border p-2"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </div>
+          <TaskPageActions propertyId={tribunalCase.propertyId} reference={taskRef} />
         </div>
       </header>
 
@@ -639,7 +595,7 @@ export function TribunalTaskDetailView({
                 relatedTasks.map((task) => (
                   <li key={task.id}>
                     <Link
-                      href={relatedTaskHref(task, propertyId)}
+                      href={relatedPropertyJobHref(task, propertyId)}
                       className="hover:bg-muted/40 v2-frosted-surface flex items-start justify-between gap-3 rounded-xl border p-3 transition"
                     >
                       <div className="min-w-0">

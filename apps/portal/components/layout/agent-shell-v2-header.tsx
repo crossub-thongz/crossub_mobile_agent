@@ -70,7 +70,7 @@ export function AgentShellV2Header({
     <header className="agent-shell-v2-header border-border/50 hidden w-full shrink-0 items-center gap-4 border-b px-6 py-3 lg:flex">
       <Link
         href={ROUTES.SEARCH}
-        className="v2-frosted-surface hover:border-border flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors"
+        className="v2-frosted-surface hover:border-border flex w-full max-w-sm min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors"
       >
         <Search className="text-muted-foreground size-4 shrink-0" aria-hidden />
         <span className="text-muted-foreground min-w-0 flex-1 truncate text-sm">

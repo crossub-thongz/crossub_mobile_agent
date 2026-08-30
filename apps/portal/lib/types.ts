@@ -28,11 +28,16 @@ export interface PropertyContact {
   phone?: string;
 }
 
-/** Additional landlord or tenant on a property intake form (beyond the primary contact). */
+/**
+ * One person on a tenancy or ownership — matches the `PropertyContact` and
+ * `TenancyTenant` tables (name, email, phone, and at most one `isPrimary` per role).
+ */
 export interface PropertyPartyContact {
   name: string;
   email?: string;
   phone?: string;
+  /** Statutory-notice recipient. At most one tenant (or landlord) per property. */
+  isPrimary?: boolean;
 }
 
 export type MessageCategory =

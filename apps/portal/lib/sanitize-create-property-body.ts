@@ -49,10 +49,24 @@ export function sanitizeCreatePropertyBody(
     tenantName: optionalTrimmed(body.tenantName),
     tenantEmail: optionalEmail(body.tenantEmail, 'Tenant email'),
     tenantPhone: optionalTrimmed(body.tenantPhone),
+    contacts: Array.isArray(body.contacts)
+      ? body.contacts
+          .map((contact) => ({
+            role: contact.role,
+            name: optionalTrimmed(contact.name),
+            email: contact.email?.trim()
+              ? optionalEmail(contact.email, 'Contact email')
+              : undefined,
+            phone: optionalTrimmed(contact.phone),
+            isPrimary: contact.isPrimary === true,
+          }))
+          .filter((contact) => contact.name || contact.email || contact.phone)
+      : undefined,
     latitude: optionalCoord(body.latitude),
     longitude: optionalCoord(body.longitude),
     leaseStartDate: optionalTrimmed(body.leaseStartDate),
     leaseEndDate: optionalTrimmed(body.leaseEndDate),
+    nextInspectionAt: optionalTrimmed(body.nextInspectionAt),
     nextRentReviewAt: optionalTrimmed(body.nextRentReviewAt),
     rentWeekly: body.rentWeekly,
     bondAmount: body.bondAmount,
@@ -77,6 +91,7 @@ export function sanitizeCreatePropertyBody(
     managementFees: Array.isArray(body.managementFees) ? body.managementFees : undefined,
     registryIntakeComplete: body.registryIntakeComplete,
     registryDraft: body.registryDraft,
+    routineInspectionFrequency: body.routineInspectionFrequency,
   };
 
   return Object.fromEntries(

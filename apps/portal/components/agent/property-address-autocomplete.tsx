@@ -195,8 +195,8 @@ export function PropertyAddressAutocomplete({
   const showMapColumn = mapsEnabled && !mapsFailed;
 
   const searchBlock = mapsEnabled ? (
-    <div className="space-y-1.5">
-      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+    <div className="max-w-md space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground">
         Search address
       </Label>
       <div className="relative">
@@ -233,25 +233,27 @@ export function PropertyAddressAutocomplete({
       <div ref={placesAttributionRef} className="hidden" aria-hidden />
 
       {showMapColumn ? (
-        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]">
-          <div className="flex min-w-0 flex-col gap-3">
-            {searchBlock}
-            {locationFields}
-          </div>
-          <div className="relative min-h-[280px] w-full lg:min-h-[360px]">
-            {!showMap ? (
-              <div className="border-border/60 text-muted-foreground flex h-full min-h-[280px] items-center justify-center rounded-md border bg-muted/20 text-xs lg:min-h-[360px]">
-                Loading map…
-              </div>
-            ) : null}
-            <div
-              ref={mapContainerRef}
-              className={cn(
-                'border-border/60 absolute inset-0 overflow-hidden rounded-md border',
-                !showMap && 'invisible',
-              )}
-              aria-label="Property location map"
-            />
+        <div className="space-y-3">
+          {searchBlock}
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(220px,0.85fr)]">
+            <div className="flex min-w-0 flex-col gap-3">
+              {locationFields}
+            </div>
+            <div className="relative mt-2 mb-6 min-h-[220px] w-full lg:mt-6 lg:mb-8 lg:min-h-[260px]">
+              {!showMap ? (
+                <div className="border-border/60 text-muted-foreground flex h-full min-h-[220px] items-center justify-center rounded-md border bg-muted/20 text-xs lg:min-h-[260px]">
+                  Loading map…
+                </div>
+              ) : null}
+              <div
+                ref={mapContainerRef}
+                className={cn(
+                  'border-border/60 absolute inset-0 overflow-hidden rounded-md border',
+                  !showMap && 'invisible',
+                )}
+                aria-label="Property location map"
+              />
+            </div>
           </div>
         </div>
       ) : (

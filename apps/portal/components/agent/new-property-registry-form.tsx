@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ContactPartyList } from '@/components/agent/contact-party-list';
+import { LandlordPartyCards } from '@/components/agent/landlord-party-cards';
+import { TenancyTenantCards } from '@/components/agent/tenancy-tenant-cards';
 import {
   PropertyDocumentsSection,
   PropertyLeasingDetailsSection,
@@ -15,7 +16,7 @@ import {
   type LeasingDetailsValues,
 } from '@/components/agent/property-leasing-details-section';
 import {
-  EMPTY_STRATA_DETAILS,
+  coerceStrataDetails,
   PropertyStrataDetailsSection,
   type StrataDetailsValues,
 } from '@/components/agent/property-strata-details-section';
@@ -53,7 +54,11 @@ import {
   LEASE_STATUS_FORM_OPTIONS,
   mapLeaseStatusToPropertyStatus,
 } from '@/lib/lease-status-options';
-import { emptyPartyContact, splitParties } from '@/lib/property-parties';
+import {
+  emptyPartyContact,
+  MAX_TENANCY_TENANTS,
+  splitParties,
+} from '@/lib/property-parties';
 import type { Property, PropertyPartyContact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
@@ -70,6 +75,7 @@ import {
   type PropertyRegistryAutosaveState,
   type PropertyRegistryWizardStep,
 } from '@/lib/property-registry-persist';
+import { weeklyRentFromAmount } from '@/lib/rent-calculations';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
@@ -108,7 +114,7 @@ function FormField({
 }) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+      <Label className="text-xs font-medium text-muted-foreground">
         {label}
         {required && <span className="text-rose-600 dark:text-rose-400"> *</span>}
       </Label>
@@ -148,14 +154,21 @@ export interface NewPropertyRegistryValues {
   bathrooms: string;
   parking: string;
   furnished: FurnishedChoice;
-  /** Routine inspections per year (2 or 3) — applies when property is occupied. */
+  /** Preferred cadence when occupied — kept for API, not shown on the property step. */
   routineInspectionFrequency: 2 | 3;
+  /** Date-only (`YYYY-MM-DD`). Optional; defaults to today on a new form. */
+  routineInspectionDue: string;
   landlords: PropertyPartyContact[];
   tenants: PropertyPartyContact[];
   strata: StrataDetailsValues;
   management: ManagementDetailsValues;
   leasing: LeasingDetailsValues;
   pendingDocuments: PendingPropertyDocument[];
+}
+
+export function todayIsoDate(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function mapLeaseStatusToPropertyStatusForApi(
@@ -212,9 +225,6 @@ function validatePropertyStep(form: NewPropertyRegistryValues): StepValidation {
   if (!form.propertyType) {
     errors.push('Select a property type');
   }
-  if (!form.leaseStatus) {
-    errors.push('Select a lease status');
-  }
   if (!form.furnished) {
     errors.push('Select furnished or unfurnished');
   }
@@ -231,9 +241,13 @@ function validatePropertyStep(form: NewPropertyRegistryValues): StepValidation {
 }
 
 function validateTenantStep(form: NewPropertyRegistryValues): StepValidation {
-  if (!leasingRequired(form)) return { valid: true, errors: [] };
-
   const errors: string[] = [];
+  if (!form.leaseStatus) {
+    errors.push('Select a lease status');
+  }
+  if (!leasingRequired(form)) {
+    return { valid: errors.length === 0, errors };
+  }
   const { leasing } = form;
   if (!leasing.rentAmount.trim() || Number(leasing.rentAmount) <= 0) {
     errors.push('Rent amount is required');
@@ -254,7 +268,7 @@ function validateLandlordStep(form: NewPropertyRegistryValues): StepValidation {
   const errors: string[] = [];
   const landlords = splitParties(form.landlords);
   if (!landlords.primary?.name) {
-    errors.push('At least one landlord name is required');
+    errors.push('At least one landlord name or company name is required');
   }
   return { valid: errors.length === 0, errors };
 }
@@ -385,9 +399,10 @@ export function NewPropertyRegistryForm({
     parking: '',
     furnished: '',
     routineInspectionFrequency: 2,
-    landlords: [emptyPartyContact()],
-    tenants: [emptyPartyContact()],
-    strata: { ...EMPTY_STRATA_DETAILS },
+    routineInspectionDue: todayIsoDate(),
+    landlords: [emptyPartyContact({ isPrimary: true })],
+    tenants: [emptyPartyContact({ isPrimary: true })],
+    strata: coerceStrataDetails({}),
     management: { ...EMPTY_MANAGEMENT_DETAILS },
     leasing: { ...EMPTY_LEASING },
     pendingDocuments: [],
@@ -779,15 +794,16 @@ export function NewPropertyRegistryForm({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-xs">
-          {resumeMode
-            ? 'Continue registering this property. Your progress is saved automatically.'
-            : 'Creates a property in the registry. The same record links to leasing, end leasing, maintenance, inspections, and accounting.'}
-        </p>
+        {resumeMode ? (
+          <p className="text-muted-foreground text-xs">
+            Continue registering this property. Your progress is saved automatically.
+          </p>
+        ) : null}
         {apiConnected && onAutosave ? (
           <p
             className={cn(
               'text-xs tabular-nums',
+              !resumeMode && 'ml-auto',
               autosaveStatus === 'error'
                 ? 'text-rose-600 dark:text-rose-400'
                 : 'text-muted-foreground',
@@ -810,6 +826,8 @@ export function NewPropertyRegistryForm({
         steps={WIZARD_STEPS}
         labels={WIZARD_STEP_LABEL}
         currentStep={step}
+        showStatusCaption={false}
+        labelCasing="sentence"
         getStepState={(s) => {
           const idx = WIZARD_STEPS.indexOf(s);
           const isDone = idx <= furthestStepIndex && s !== step;
@@ -837,14 +855,10 @@ export function NewPropertyRegistryForm({
       <StepErrorsBanner errors={stepErrors[step] ?? []} />
 
       {step === 'property' ? (
-        <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
+        <div className="space-y-5 rounded-lg border border-border/60 bg-card p-4">
           <p className="text-sm font-semibold">Property details</p>
 
-          <div className="space-y-1.5">
-            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Address
-            </Label>
-            <PropertyAddressAutocomplete
+          <PropertyAddressAutocomplete
               onPlaceSelect={handlePlaceSelect}
               latitude={form.latitude}
               longitude={form.longitude}
@@ -962,7 +976,6 @@ export function NewPropertyRegistryForm({
                 </>
               }
             />
-          </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <FormField label="Type" required>
@@ -980,23 +993,6 @@ export function NewPropertyRegistryForm({
                 ))}
               </select>
             </FormField>
-            <FormField label="Lease status" required>
-              <select
-                value={form.leaseStatus}
-                onChange={(e) =>
-                  set('leaseStatus', e.target.value as Property['leaseStatus'] | '')
-                }
-                className={selectClass}
-                required
-              >
-                <option value="">Select status</option>
-                {LEASE_STATUS_FORM_OPTIONS.map((option, index) => (
-                  <option key={`${option.value}-${option.label}-${index}`} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
             <FormField label="Furnished" required>
               <select
                 value={form.furnished}
@@ -1009,27 +1005,14 @@ export function NewPropertyRegistryForm({
                 <option value="yes">Furnished</option>
               </select>
             </FormField>
-          </div>
-
-          {form.leaseStatus && form.leaseStatus !== 'vacant' ? (
-            <FormField label="Routine inspection frequency" required>
-              <select
-                value={form.routineInspectionFrequency}
-                onChange={(e) =>
-                  set('routineInspectionFrequency', Number(e.target.value) as 2 | 3)
-                }
-                className={selectClass}
-                required
-              >
-                <option value={2}>Twice per year (every 6 months)</option>
-                <option value={3}>Three times per year (every 4 months)</option>
-              </select>
-              <p className="text-muted-foreground mt-1 text-[11px]">
-                Preferred cadence for this property. A routine inspection is only arranged
-                when an inspection order is placed — registration alone does not book one.
-              </p>
+            <FormField label="Routine inspection due">
+              <Input
+                type="date"
+                value={form.routineInspectionDue}
+                onChange={(e) => set('routineInspectionDue', e.target.value)}
+              />
             </FormField>
-          ) : null}
+          </div>
 
           <div className="grid grid-cols-3 gap-3">
             <FormField label="Beds" required>
@@ -1067,17 +1050,47 @@ export function NewPropertyRegistryForm({
       ) : null}
 
       {step === 'tenant' ? (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-border/60 bg-secondary/20 p-4">
-            <div className="mb-2.5 flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold">Tenant details (Optional)</p>
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border/60 bg-card p-4">
+              <FormField label="Lease status" required>
+                <select
+                  value={form.leaseStatus}
+                  onChange={(e) =>
+                    set('leaseStatus', e.target.value as Property['leaseStatus'] | '')
+                  }
+                  className={cn(selectClass, 'sm:max-w-xs')}
+                  required
+                >
+                  <option value="">Select status</option>
+                  {LEASE_STATUS_FORM_OPTIONS.map((option, index) => (
+                    <option key={`${option.value}-${option.label}-${index}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
+
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Tenancy details</p>
+                <p className="text-muted-foreground text-xs">
+                  One card per tenant. Only one primary contact per tenancy.
+                </p>
+              </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-primary hover:bg-primary/10 -mt-1 h-8 shrink-0 px-2 text-xs font-medium"
+                className="text-primary hover:bg-primary/10 -mt-0.5 h-8 shrink-0 px-2 text-xs font-medium"
+                disabled={formBusy || form.tenants.length >= MAX_TENANCY_TENANTS}
                 onClick={() =>
-                  setForm((f) => ({ ...f, tenants: [...f.tenants, emptyPartyContact()] }))
+                  setForm((f) =>
+                    f.tenants.length >= MAX_TENANCY_TENANTS
+                      ? f
+                      : { ...f, tenants: [...f.tenants, emptyPartyContact()] },
+                  )
                 }
               >
                 <Plus className="size-3.5" />
@@ -1085,14 +1098,10 @@ export function NewPropertyRegistryForm({
               </Button>
             </div>
 
-            <ContactPartyList
-              title="Tenant"
-              asFieldset={false}
-              hideAddButton
+            <TenancyTenantCards
               parties={form.tenants}
               onChange={(tenants) => setForm((f) => ({ ...f, tenants }))}
-              addLabel="Add another tenant"
-              vacantHint="Leave blank if the property is vacant."
+              disabled={formBusy}
             />
           </div>
 
@@ -1107,34 +1116,35 @@ export function NewPropertyRegistryForm({
 
       {step === 'landlord' ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-border/60 bg-secondary/20 p-4">
+          <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-semibold">
-                Landlord details <span className="text-rose-600 dark:text-rose-400">*</span>
-              </p>
+              <div>
+                <p className="text-sm font-semibold">Landlord details</p>
+                <p className="text-muted-foreground text-xs">
+                  At least one landlord is required.
+                </p>
+              </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-primary hover:bg-primary/10 -mt-1 h-8 shrink-0 px-2 text-xs font-medium"
+                className="text-primary hover:bg-primary/10 -mt-0.5 h-8 shrink-0 px-2 text-xs font-medium"
+                disabled={formBusy}
                 onClick={() =>
-                  setForm((f) => ({ ...f, landlords: [...f.landlords, emptyPartyContact()] }))
+                  setForm((f) => ({
+                    ...f,
+                    landlords: [...f.landlords, emptyPartyContact()],
+                  }))
                 }
               >
                 <Plus className="size-3.5" />
-                Add another landlord
+                Add landlord
               </Button>
             </div>
-            <p className="text-muted-foreground mb-2 text-xs">
-              At least one landlord name is required.
-            </p>
-            <ContactPartyList
-              title="Landlord"
-              asFieldset={false}
-              hideAddButton
+            <LandlordPartyCards
               parties={form.landlords}
               onChange={(landlords) => setForm((f) => ({ ...f, landlords }))}
-              addLabel="Add another landlord"
+              disabled={formBusy}
             />
           </div>
 
@@ -1152,9 +1162,10 @@ export function NewPropertyRegistryForm({
             onChange={patchManagement}
             disabled={formBusy}
             weeklyRentAud={
-              form.leasing.rentAmount.trim()
-                ? Number(form.leasing.rentAmount.replace(/,/g, ''))
-                : undefined
+              weeklyRentFromAmount(
+                Number(form.leasing.rentAmount.replace(/,/g, '')),
+                form.leasing.rentPeriod,
+              ) || undefined
             }
           />
         </div>

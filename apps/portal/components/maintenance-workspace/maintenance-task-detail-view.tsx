@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
   ChevronRight,
-  MoreHorizontal,
   Sparkles,
   Star,
   Wrench,
@@ -13,18 +12,11 @@ import {
 
 import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
+import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { TaskProgressRail } from '@/components/agent/tasks/task-progress-rail';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import {
-  inspectionDetail,
-  leasingDetail,
-  maintenanceDetail,
-  propertyDetail,
-  rentReviewDetail,
-  ROUTES,
-  vacatingDetail,
-} from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
+import { propertyDetail, ROUTES } from '@/constants/routes';
+import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   buildMaintenanceActivityEntries,
   buildMaintenanceJobDetailRows,
@@ -37,7 +29,6 @@ import {
 } from '@/lib/maintenance-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
-import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import {
@@ -99,24 +90,6 @@ function ActivityTimeline({
       ))}
     </div>
   );
-}
-
-function relatedTaskHref(row: PropertyJobRow, propertyId: string): string {
-  const nav = fromProperty(propertyId, 'Tasks');
-  switch (row.kind) {
-    case 'maintenance':
-      return maintenanceDetail(row.id, nav);
-    case 'inspection':
-      return inspectionDetail(row.id, nav);
-    case 'rent_review':
-      return rentReviewDetail(row.id, nav);
-    case 'end_leasing':
-      return vacatingDetail(row.id, nav);
-    case 'leasing':
-      return leasingDetail(row.id, nav);
-    default:
-      return propertyDetail(propertyId);
-  }
 }
 
 export function MaintenanceTaskDetailView({
@@ -301,21 +274,7 @@ export function MaintenanceTaskDetailView({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold"
-            >
-              Actions
-            </button>
-            <button
-              type="button"
-              className="text-muted-foreground v2-frosted-surface rounded-xl border p-2"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </div>
+          <TaskPageActions propertyId={item.propertyId} reference={taskRef} />
         </div>
       </header>
 
@@ -609,7 +568,7 @@ export function MaintenanceTaskDetailView({
                 relatedTasks.map((task) => (
                   <li key={task.id}>
                     <Link
-                      href={relatedTaskHref(task, propertyId)}
+                      href={propertyId ? relatedPropertyJobHref(task, propertyId) : '#'}
                       className="hover:bg-muted/40 v2-frosted-surface flex items-start justify-between gap-3 rounded-xl border p-3 transition"
                     >
                       <div className="min-w-0">

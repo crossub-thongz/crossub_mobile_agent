@@ -76,7 +76,7 @@ function FormField({
 }) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+      <Label className="text-xs font-medium text-muted-foreground">
         {label}
         {required && <span className="text-rose-600 dark:text-rose-400"> *</span>}
       </Label>

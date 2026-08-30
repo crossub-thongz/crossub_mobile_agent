@@ -3,25 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import {
-  ChevronRight,
-  DollarSign,
-  MoreHorizontal,
-} from 'lucide-react';
+import { ChevronRight, DollarSign } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import {
-  inspectionDetail,
-  leasingDetail,
-  maintenanceDetail,
-  propertyDetail,
-  rentReviewDetail,
-  ROUTES,
-  vacatingDetail,
-} from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
+import { propertyDetail, ROUTES } from '@/constants/routes';
+import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   buildRentReviewActivityEntries,
   buildRentReviewDetailRows,
@@ -32,7 +21,6 @@ import {
 } from '@/lib/rent-review-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
-import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import {
   cn,
@@ -92,24 +80,6 @@ function ActivityTimeline({
       ))}
     </div>
   );
-}
-
-function relatedTaskHref(row: PropertyJobRow, propertyId: string): string {
-  const nav = fromProperty(propertyId, 'Tasks');
-  switch (row.kind) {
-    case 'maintenance':
-      return maintenanceDetail(row.id, nav);
-    case 'inspection':
-      return inspectionDetail(row.id, nav);
-    case 'rent_review':
-      return rentReviewDetail(row.id, nav);
-    case 'end_leasing':
-      return vacatingDetail(row.id, nav);
-    case 'leasing':
-      return leasingDetail(row.id, nav);
-    default:
-      return propertyDetail(propertyId);
-  }
 }
 
 function initials(name: string): string {
@@ -225,21 +195,7 @@ export function RentReviewTaskDetailView({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold"
-            >
-              Actions
-            </button>
-            <button
-              type="button"
-              className="text-muted-foreground v2-frosted-surface rounded-xl border p-2"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </div>
+          <TaskPageActions propertyId={propertyId || null} reference={taskRef} />
         </div>
       </header>
 
@@ -538,7 +494,7 @@ export function RentReviewTaskDetailView({
                 relatedTasks.map((task) => (
                   <li key={task.id}>
                     <Link
-                      href={relatedTaskHref(task, propertyId)}
+                      href={relatedPropertyJobHref(task, propertyId)}
                       className="hover:bg-muted/40 v2-frosted-surface flex items-start justify-between gap-3 rounded-xl border p-3 transition"
                     >
                       <div className="min-w-0">

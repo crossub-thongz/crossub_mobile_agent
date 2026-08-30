@@ -3,26 +3,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import {
-  ChevronRight,
-  FileText,
-  MoreHorizontal,
-} from 'lucide-react';
+import { ChevronRight, FileText } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import {
-  inspectionDetail,
-  leasingDetail,
-  maintenanceDetail,
-  propertyDetail,
-  rentReviewDetail,
-  ROUTES,
-  vacatingDetail,
-} from '@/constants/routes';
+import { inspectionDetail, propertyDetail, ROUTES } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   buildEndLeasingActivityEntries,
   buildEndLeasingLeaseDetailRows,
@@ -35,7 +25,6 @@ import {
 } from '@/lib/end-leasing-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
-import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { resolvePropertyDisplayAddress } from '@/lib/property-address';
 import {
@@ -95,24 +84,6 @@ function ActivityTimeline({
       ))}
     </div>
   );
-}
-
-function relatedTaskHref(row: PropertyJobRow, propertyId: string): string {
-  const nav = fromProperty(propertyId, 'Tasks');
-  switch (row.kind) {
-    case 'maintenance':
-      return maintenanceDetail(row.id, nav);
-    case 'inspection':
-      return inspectionDetail(row.id, nav);
-    case 'rent_review':
-      return rentReviewDetail(row.id, nav);
-    case 'end_leasing':
-      return vacatingDetail(row.id, nav);
-    case 'leasing':
-      return leasingDetail(row.id, nav);
-    default:
-      return propertyDetail(propertyId);
-  }
 }
 
 function initials(name: string): string {
@@ -248,21 +219,7 @@ export function EndLeasingTaskDetailView({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold"
-            >
-              Actions
-            </button>
-            <button
-              type="button"
-              className="text-muted-foreground v2-frosted-surface rounded-xl border p-2"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </div>
+          <TaskPageActions propertyId={propertyId || null} reference={taskRef} />
         </div>
       </header>
 
@@ -394,7 +351,10 @@ export function EndLeasingTaskDetailView({
                   </p>
                   <p className="text-muted-foreground mt-2 text-sm">{caseData.inspection.status}</p>
                   <Link
-                    href={inspectionDetail(caseData.inspection.inspectionId)}
+                    href={inspectionDetail(
+                      caseData.inspection.inspectionId,
+                      propertyId ? fromProperty(propertyId, 'Tasks') : undefined,
+                    )}
                     className="text-primary mt-3 inline-block text-xs font-semibold hover:underline"
                   >
                     Open inspection
@@ -405,7 +365,10 @@ export function EndLeasingTaskDetailView({
                 <article className="rounded-2xl border v2-frosted-surface p-4">
                   <p className="text-sm font-semibold">Ingoing inspection</p>
                   <Link
-                    href={inspectionDetail(caseData.inspection.ingoingInspectionId)}
+                    href={inspectionDetail(
+                      caseData.inspection.ingoingInspectionId,
+                      propertyId ? fromProperty(propertyId, 'Tasks') : undefined,
+                    )}
                     className="text-primary mt-2 inline-block text-xs font-semibold hover:underline"
                   >
                     Open ingoing report
@@ -548,7 +511,7 @@ export function EndLeasingTaskDetailView({
                 relatedTasks.map((task) => (
                   <li key={task.id}>
                     <Link
-                      href={relatedTaskHref(task, propertyId)}
+                      href={relatedPropertyJobHref(task, propertyId)}
                       className="hover:bg-muted/40 v2-frosted-surface flex items-start justify-between gap-3 rounded-xl border p-3 transition"
                     >
                       <div className="min-w-0">

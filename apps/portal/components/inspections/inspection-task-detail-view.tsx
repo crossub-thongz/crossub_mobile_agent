@@ -3,22 +3,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ChevronRight, ClipboardList, MoreHorizontal, Sparkles } from 'lucide-react';
+import { ChevronRight, ClipboardList, Sparkles } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
+import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { TaskProgressRail } from '@/components/agent/tasks/task-progress-rail';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import {
-  inspectionDetail,
-  leasingDetail,
-  maintenanceDetail,
-  propertyDetail,
-  rentReviewDetail,
-  ROUTES,
-  vacatingDetail,
-} from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
+import { propertyDetail, ROUTES } from '@/constants/routes';
+import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
 import {
   buildInspectionActivityEntries,
@@ -28,7 +21,7 @@ import {
   resolveInspectionStatusBanner,
   type InspectionTaskTab,
 } from '@/lib/inspection-task-detail';
-import { buildPropertyOverviewJobRows, type PropertyJobRow } from '@/lib/property-job-rows';
+import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import type { Inspection } from '@/lib/types';
 import {
@@ -48,24 +41,6 @@ const TABS: { id: InspectionTaskTab; label: string }[] = [
   { id: 'documents', label: 'Documents' },
   { id: 'notes', label: 'Notes' },
 ];
-
-function relatedTaskHref(row: PropertyJobRow, propertyId: string): string {
-  const nav = fromProperty(propertyId, 'Tasks');
-  switch (row.kind) {
-    case 'maintenance':
-      return maintenanceDetail(row.id, nav);
-    case 'inspection':
-      return inspectionDetail(row.id, nav);
-    case 'rent_review':
-      return rentReviewDetail(row.id, nav);
-    case 'end_leasing':
-      return vacatingDetail(row.id, nav);
-    case 'leasing':
-      return leasingDetail(row.id, nav);
-    default:
-      return propertyDetail(propertyId);
-  }
-}
 
 function ActivityTimeline({
   entries,
@@ -143,8 +118,8 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
     if (!propertyId) return [];
     const leasingCases = buildPropertyLeasingWorkflowCases({
       propertyId,
-      leasingCycles,
-      tenantSelections,
+      leasingCycles: leasingCycles.filter((row) => row.propertyId === propertyId),
+      tenantSelections: tenantSelections.filter((row) => row.propertyId === propertyId),
       vacatingCases: vacating.filter((row) => row.propertyId === propertyId),
       rentReviews: rentReviews.filter((row) => row.propertyId === propertyId),
       rentReviewDecisions: {},
@@ -217,14 +192,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button type="button" className="rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold">
-              Actions
-            </button>
-            <button type="button" className="text-muted-foreground v2-frosted-surface rounded-xl border p-2" aria-label="More options">
-              <MoreHorizontal className="size-4" />
-            </button>
-          </div>
+          <TaskPageActions propertyId={propertyId} reference={taskRef} />
         </div>
       </header>
 
@@ -401,7 +369,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                 relatedTasks.map((task) => (
                   <li key={task.id}>
                     <Link
-                      href={relatedTaskHref(task, propertyId)}
+                      href={relatedPropertyJobHref(task, propertyId)}
                       className="hover:bg-muted/40 v2-frosted-surface flex items-start justify-between gap-3 rounded-xl border p-3 transition"
                     >
                       <div className="min-w-0">

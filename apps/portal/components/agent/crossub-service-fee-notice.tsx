@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Info } from 'lucide-react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { fetchAgentBillingSummary } from '@/lib/crossub-api/agent-billing-client';
@@ -138,6 +139,70 @@ export function CrossubServiceFeeNotice({
           View pricing
         </a>
       </p>
+    </div>
+  );
+}
+
+/** Read-only Full Service summary on the landlord intake step. */
+export function CrossubServiceSummaryCard({
+  managementRatePercent,
+  managementRateGst,
+  weeklyRentAud,
+  serviceFeePercent = 30,
+}: {
+  managementRatePercent?: number | null;
+  managementRateGst?: ManagementRateGstMode;
+  weeklyRentAud?: number | null;
+  serviceFeePercent?: number;
+}) {
+  const { platformBillingDisabled } = useAgentData();
+  const billedRate = effectiveManagementRatePercent(managementRatePercent);
+  const rent = weeklyRentAud != null && weeklyRentAud > 0 ? weeklyRentAud : 500;
+  const { monthlyIncGst } = crossubMonthlyServiceFeeIncGst({
+    weeklyRentAud: rent,
+    managementRatePercent: billedRate,
+    serviceFeePercent,
+    managementRateGst,
+  });
+
+  if (platformBillingDisabled) return null;
+
+  return (
+    <div className="rounded-lg border border-violet-500/25 bg-violet-500/8 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+            CROSSUB SERVICE
+          </p>
+          <p className="mt-0.5 text-sm font-semibold">Full Service</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Platform charge calculated from your management fees.
+          </p>
+        </div>
+        <p className="text-muted-foreground flex items-center gap-1 text-xs">
+          <Info className="size-3.5 shrink-0" aria-hidden />
+          Calculated automatically
+        </p>
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <p className="text-muted-foreground text-xs">Platform fee</p>
+          <p className="text-sm font-semibold">{serviceFeePercent}% of management income</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground text-xs">Minimum management rate</p>
+          <p className="text-sm font-semibold">
+            {STANDARD_MANAGEMENT_RATE_PERCENT.toFixed(2)}% of management income
+          </p>
+        </div>
+        <div>
+          <p className="text-muted-foreground text-xs">Estimated Crossub fee</p>
+          <p className="text-sm font-semibold tabular-nums">
+            {formatCurrency(monthlyIncGst)} / month
+          </p>
+          <p className="text-muted-foreground text-xs">Based on current fees</p>
+        </div>
+      </div>
     </div>
   );
 }

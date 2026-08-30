@@ -140,7 +140,7 @@ export default function AddPropertyPage() {
 
   return (
     <AgentShell
-      title={resumeMode ? 'Resume property' : 'Add property'}
+      title={resumeMode ? 'Resume property' : 'Add Property'}
       backHref={ROUTES.PROPERTIES}
       backLabel="Properties"
     >
@@ -148,7 +148,7 @@ export default function AddPropertyPage() {
         <p className="text-muted-foreground text-sm">
           {resumeMode
             ? 'Pick up where you left off. Changes save automatically as you work.'
-            : 'Register a new property with landlord, tenant, and management details. To hand a property over to another agent, use Leasing → Transfer OUT.'}
+            : 'Register a new property with landlord, tenant, and management details.'}
         </p>
 
         {loadingDraft ? (

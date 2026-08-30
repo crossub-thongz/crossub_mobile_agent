@@ -15,7 +15,7 @@ import { InspectionCaseDetailDialog } from '@/components/inspections/inspection-
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { fromProperty } from '@/lib/detail-navigation';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
-import { leasingDetail } from '@/constants/routes';
+import { hasDedicatedV2TaskPage, relatedPropertyJobHref } from '@/lib/property-job-href';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { workflowRentWeekly } from '@/lib/property-leasing-job';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
@@ -89,8 +89,8 @@ export function PropertyOverviewJobDialog({
   const open = job != null;
 
   useEffect(() => {
-    if (!isV2 || !job || job.kind !== 'leasing') return;
-    router.replace(leasingDetail(job.id, fromProperty(propertyId, profileTabForJobKind(job.kind))));
+    if (!isV2 || !job || !hasDedicatedV2TaskPage(job.kind)) return;
+    router.replace(relatedPropertyJobHref(job, propertyId));
     onClose();
   }, [isV2, job, onClose, propertyId, router]);
 
@@ -98,7 +98,7 @@ export function PropertyOverviewJobDialog({
     return null;
   }
 
-  if (isV2 && job.kind === 'leasing') {
+  if (isV2 && hasDedicatedV2TaskPage(job.kind)) {
     return null;
   }
 

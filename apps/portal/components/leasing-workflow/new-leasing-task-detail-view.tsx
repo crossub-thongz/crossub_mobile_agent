@@ -9,24 +9,21 @@ import {
   Home,
   Link2,
   Mail,
-  MoreHorizontal,
   Phone,
   User,
 } from 'lucide-react';
+import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PROPERTY_JOB_KIND_ICON } from '@/constants/property-jobs';
 import {
   inspectionDetail,
-  leasingDetail,
-  maintenanceDetail,
   propertyDetail,
-  rentReviewDetail,
   ROUTES,
   tenantSelectionDetail,
-  vacatingDetail,
 } from '@/constants/routes';
 import { fromProperty } from '@/lib/detail-navigation';
+import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import {
@@ -71,24 +68,6 @@ function initials(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
-}
-
-function relatedTaskHref(row: PropertyJobRow, propertyId: string): string {
-  const nav = fromProperty(propertyId, 'Tasks');
-  switch (row.kind) {
-    case 'maintenance':
-      return maintenanceDetail(row.id, nav);
-    case 'inspection':
-      return inspectionDetail(row.id, nav);
-    case 'rent_review':
-      return rentReviewDetail(row.id, nav);
-    case 'end_leasing':
-      return vacatingDetail(row.id, nav);
-    case 'leasing':
-      return leasingDetail(row.id, nav);
-    default:
-      return propertyDetail(propertyId);
-  }
 }
 
 function relatedTaskBadge(row: PropertyJobRow): { label: string; tone: 'neutral' | 'warn' } {
@@ -283,21 +262,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold"
-                >
-                  Actions
-                </button>
-                <button
-                  type="button"
-                  className="text-muted-foreground v2-frosted-surface rounded-xl border p-2"
-                  aria-label="More options"
-                >
-                  <MoreHorizontal className="size-4" />
-                </button>
-              </div>
+              <TaskPageActions propertyId={propertyId} reference={taskRef} />
             </div>
           </header>
 
@@ -582,7 +547,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
               </div>
               {tenant.id ? (
                 <Link
-                  href={tenantSelectionDetail(tenant.id)}
+                  href={tenantSelectionDetail(tenant.id, fromProperty(propertyId, 'Tasks'))}
                   className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
                 >
                   View applicant profile
@@ -607,7 +572,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                   return (
                     <li key={task.id}>
                       <Link
-                        href={relatedTaskHref(task, propertyId)}
+                        href={relatedPropertyJobHref(task, propertyId)}
                         className="hover:bg-muted/40 v2-frosted-surface flex items-start gap-2.5 rounded-xl border p-3 transition"
                       >
                         <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">

@@ -21,9 +21,8 @@ import {
 } from '@/lib/file-upload';
 import { cn } from '@/lib/utils';
 import {
-  CrossubPlatformFeeSummaryRow,
-  CrossubServiceFeeNotice,
   CROSSUB_STANDARD_MANAGEMENT_RATE_PERCENT,
+  CrossubServiceSummaryCard,
 } from '@/components/agent/crossub-service-fee-notice';
 
 const selectClass =
@@ -171,7 +170,7 @@ function FormField({
 }) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       {children}
     </div>
   );
@@ -258,22 +257,15 @@ export function PropertyManagementFeesSection({
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
+    <>
+      <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4">
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold">Fees</p>
-            <CrossubServiceFeeNotice
-              forceShow
-              compact
-              managementRatePercent={
-                managementRateRaw.trim()
-                  ? Number(managementRateRaw.replace(/,/g, ''))
-                  : null
-              }
-              managementRateGst={managementRateGst}
-              weeklyRentAud={weeklyRentAud}
-            />
+            <p className="text-sm font-semibold">Agency management fees</p>
+            <p className="text-muted-foreground text-xs">
+              Fees charged by the agency to the landlord.
+            </p>
           </div>
           <Button
             type="button"
@@ -415,27 +407,18 @@ export function PropertyManagementFeesSection({
                 </div>
               );
             })}
-            <CrossubPlatformFeeSummaryRow
-              managementRatePercent={
-                managementRateRaw.trim()
-                  ? Number(managementRateRaw.replace(/,/g, ''))
-                  : null
-              }
-              managementRateGst={managementRateGst}
-              weeklyRentAud={weeklyRentAud}
-            />
           </div>
         )}
+        </div>
       </div>
-      <CrossubServiceFeeNotice
-        forceShow
+      <CrossubServiceSummaryCard
         managementRatePercent={
           managementRateRaw.trim() ? Number(managementRateRaw.replace(/,/g, '')) : null
         }
         managementRateGst={managementRateGst}
         weeklyRentAud={weeklyRentAud}
       />
-    </div>
+    </>
   );
 }
 
@@ -480,7 +463,7 @@ function AgreementUploadRow({
       onUpload={onUpload}
       onPreview={onPreview}
       onRemove={onRemove}
-      className="w-full max-w-sm"
+      className="w-full"
     />
   );
 }
@@ -556,11 +539,9 @@ export function PropertyManagementAgreementSection({
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4">
       <div>
-        <p className="text-sm font-semibold">Management details</p>
+        <p className="text-sm font-semibold">Management agreement</p>
         <p className="text-muted-foreground text-xs">
-          {stagingOnly
-            ? `Add the property management agreement — files upload on the Documents tab after you complete the property (up to ${MAX_UPLOAD_LABEL} per file).`
-            : 'Upload the property management agreement for this landlord.'}
+          Upload the property management agreement.
         </p>
       </div>
 

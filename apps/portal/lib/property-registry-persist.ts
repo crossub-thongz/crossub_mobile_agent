@@ -15,11 +15,16 @@ import {
   parseCount,
   parseMoney,
   parsePercent,
+  todayIsoDate,
 } from '@/components/agent/new-property-registry-form';
-import { EMPTY_STRATA_DETAILS, type StrataDetailsValues } from '@/components/agent/property-strata-details-section';
+import {
+  coerceStrataDetails,
+  firstFilled,
+  type StrataDetailsValues,
+} from '@/components/agent/property-strata-details-section';
 import type { CreateAgentPropertyInput, UpdateAgentPropertyInput } from '@/lib/crossub-api/agent-client';
 import { composeStreetAddress } from '@/lib/google-places';
-import { emptyPartyContact } from '@/lib/property-parties';
+import { emptyPartyContact, ensureExactlyOnePrimary, splitParties } from '@/lib/property-parties';
 import { bondFromWeekly, weeklyRentFromAmount } from '@/lib/rent-calculations';
 import { syncManagementFeesToScalars } from '@/components/agent/property-management-details-section';
 import type { Property, PropertyPartyContact } from '@/lib/types';
@@ -48,6 +53,7 @@ export type PropertyRegistryDraftPayload = {
   bathrooms: string;
   parking: string;
   routineInspectionFrequency?: 2 | 3;
+  routineInspectionDue?: string;
   landlords: PropertyPartyContact[];
   tenants: PropertyPartyContact[];
   rentPeriod: string;
@@ -74,6 +80,53 @@ const WIZARD_STEPS: PropertyRegistryWizardStep[] = [
   'strata',
   'documents',
 ];
+
+function extraStrataRegistryDraft(
+  strata: StrataDetailsValues,
+): { strata: StrataDetailsValues } | null {
+  const filled = (list: string[]) => list.map((value) => value.trim()).filter(Boolean);
+  const hasExtra =
+    filled(strata.strataEmails).length > 1 ||
+    filled(strata.strataContactNumbers).length > 1 ||
+    filled(strata.buildingManagerEmails).length > 1 ||
+    filled(strata.buildingManagerContactNumbers).length > 1;
+  if (!hasExtra) return null;
+  return { strata };
+}
+
+function coercePartyContacts(raw: unknown): PropertyPartyContact[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return [emptyPartyContact({ isPrimary: true })];
+  }
+  const mapped = raw.map((row): PropertyPartyContact => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      return emptyPartyContact();
+    }
+    const party = row as Record<string, unknown>;
+    return {
+      name: typeof party.name === 'string' ? party.name : '',
+      email: typeof party.email === 'string' ? party.email : '',
+      phone: typeof party.phone === 'string' ? party.phone : '',
+      isPrimary: party.isPrimary === true,
+    };
+  });
+  return ensureExactlyOnePrimary(mapped);
+}
+
+function partiesToApiContacts(
+  role: 'TENANT' | 'LANDLORD',
+  entries: PropertyPartyContact[],
+): NonNullable<CreateAgentPropertyInput['contacts']> {
+  const { primary, additional } = splitParties(entries);
+  const all = primary ? [primary, ...additional] : additional;
+  return all.map((party) => ({
+    role,
+    name: party.name || undefined,
+    email: party.email,
+    phone: party.phone,
+    isPrimary: party.isPrimary === true,
+  }));
+}
 
 function isWizardStep(value: string): value is PropertyRegistryWizardStep {
   return (WIZARD_STEPS as string[]).includes(value);
@@ -127,6 +180,7 @@ export function buildRegistryDraftPayload(
     bathrooms: form.bathrooms,
     parking: form.parking,
     routineInspectionFrequency: form.routineInspectionFrequency,
+    routineInspectionDue: form.routineInspectionDue,
     landlords: form.landlords,
     tenants: form.tenants,
     rentPeriod: form.leasing.rentPeriod,
@@ -161,17 +215,16 @@ function parseDraftPayload(raw: unknown): PropertyRegistryDraftPayload | null {
     bedrooms: draft.bedrooms ?? '',
     bathrooms: draft.bathrooms ?? '',
     parking: draft.parking ?? '',
-    landlords: Array.isArray(draft.landlords) && draft.landlords.length > 0
-      ? draft.landlords
-      : [emptyPartyContact()],
-    tenants: Array.isArray(draft.tenants) && draft.tenants.length > 0
-      ? draft.tenants
-      : [emptyPartyContact()],
+    routineInspectionFrequency: draft.routineInspectionFrequency === 3 ? 3 : 2,
+    routineInspectionDue:
+      typeof draft.routineInspectionDue === 'string' ? draft.routineInspectionDue : '',
+    landlords: coercePartyContacts(draft.landlords),
+    tenants: coercePartyContacts(draft.tenants),
     rentPeriod: draft.rentPeriod ?? '',
     rentAmount: draft.rentAmount ?? '',
     agreementStart: draft.agreementStart ?? '',
     agreementEnd: draft.agreementEnd ?? '',
-    strata: { ...EMPTY_STRATA_DETAILS, ...(draft.strata ?? {}) },
+    strata: coerceStrataDetails(draft.strata),
     managementFees: Array.isArray(draft.managementFees) ? draft.managementFees : EMPTY_MANAGEMENT_DETAILS.fees,
     managementExtraDocuments: Array.isArray(draft.managementExtraDocuments)
       ? draft.managementExtraDocuments
@@ -214,11 +267,13 @@ export function hydrateRegistryFormFromProperty(
     furnished: draft?.furnished ?? furnishedChoice(property.furnished),
     routineInspectionFrequency:
       draft?.routineInspectionFrequency === 3 ? 3 : 2,
+    routineInspectionDue: draft?.routineInspectionDue || todayIsoDate(),
     landlords: draft?.landlords ?? [
       {
         name: property.homeOwnerName === '—' ? '' : property.homeOwnerName,
         email: property.homeOwnerContact.email ?? '',
         phone: property.homeOwnerContact.phone ?? '',
+        isPrimary: true,
       },
     ],
     tenants: draft?.tenants ?? [
@@ -226,18 +281,21 @@ export function hydrateRegistryFormFromProperty(
         name: property.tenantName === '—' || property.tenantName === 'Vacant' ? '' : property.tenantName,
         email: property.tenantContact.email ?? '',
         phone: property.tenantContact.phone ?? '',
+        isPrimary: true,
       },
     ],
-    strata: draft?.strata ?? {
-      buildingName: property.buildingName ?? '',
-      strataPlanNumber: property.strataPlanNumber ?? '',
-      strataName: '',
-      strataEmail: '',
-      strataContactNumber: '',
-      buildingManagerName: '',
-      buildingManagerEmail: '',
-      buildingManagerContactNumber: '',
-    },
+    strata: coerceStrataDetails(
+      draft?.strata ?? {
+        buildingName: property.buildingName ?? '',
+        strataPlanNumber: property.strataPlanNumber ?? '',
+        strataName: property.strataContactName ?? '',
+        strataEmail: property.strataContactEmail ?? '',
+        strataContactNumber: property.strataContactPhone ?? '',
+        buildingManagerName: property.buildingManagerName ?? '',
+        buildingManagerEmail: property.buildingManagerEmail ?? '',
+        buildingManagerContactNumber: property.buildingManagerPhone ?? '',
+      },
+    ),
     management: {
       ...EMPTY_MANAGEMENT_DETAILS,
       landlordInsuranceExpiry: property.landlordInsuranceExpiry?.slice(0, 10) ?? '',
@@ -280,10 +338,16 @@ export function buildRegistryApiBody(
   const { leasing, strata, management } = values;
   const managementSynced = syncManagementFeesToScalars(management);
   const weeklyRent = weeklyRentFromAmount(Number(leasing.rentAmount), leasing.rentPeriod);
-  const landlords = values.landlords;
-  const tenants = values.tenants;
-  const primaryLandlord = landlords[0];
-  const primaryTenant = tenants[0];
+  const landlords = splitParties(values.landlords);
+  const tenants = splitParties(values.tenants);
+  const primaryLandlord = landlords.primary;
+  const primaryTenant = tenants.primary;
+  const contacts = options.complete
+    ? [
+        ...partiesToApiContacts('LANDLORD', values.landlords),
+        ...partiesToApiContacts('TENANT', values.tenants),
+      ]
+    : undefined;
 
   return {
     address,
@@ -304,8 +368,10 @@ export function buildRegistryApiBody(
     tenantName: primaryTenant?.name?.trim() || undefined,
     tenantEmail: primaryTenant?.email?.trim() || undefined,
     tenantPhone: primaryTenant?.phone?.trim() || undefined,
+    contacts: contacts?.length ? contacts : undefined,
     latitude: values.latitude,
     longitude: values.longitude,
+    nextInspectionAt: values.routineInspectionDue.trim() || undefined,
     leaseStartDate: leasing.agreementStart || undefined,
     leaseEndDate: leasing.agreementEnd || undefined,
     rentWeekly: weeklyRent || undefined,
@@ -313,11 +379,11 @@ export function buildRegistryApiBody(
     buildingName: strata.buildingName.trim() || undefined,
     strataPlanNumber: strata.strataPlanNumber.trim() || undefined,
     buildingManagerName: strata.buildingManagerName.trim() || undefined,
-    buildingManagerEmail: strata.buildingManagerEmail.trim() || undefined,
-    buildingManagerPhone: strata.buildingManagerContactNumber.trim() || undefined,
+    buildingManagerEmail: firstFilled(strata.buildingManagerEmails) || undefined,
+    buildingManagerPhone: firstFilled(strata.buildingManagerContactNumbers) || undefined,
     strataContactName: strata.strataName.trim() || undefined,
-    strataContactEmail: strata.strataEmail.trim() || undefined,
-    strataContactPhone: strata.strataContactNumber.trim() || undefined,
+    strataContactEmail: firstFilled(strata.strataEmails) || undefined,
+    strataContactPhone: firstFilled(strata.strataContactNumbers) || undefined,
     landlordInsuranceExpiry: management.landlordInsuranceExpiry || undefined,
     administrationFee: parseMoney(managementSynced.administrationFee),
     documentationFee: parseMoney(managementSynced.documentationFee),
@@ -335,7 +401,7 @@ export function buildRegistryApiBody(
         : undefined,
     registryIntakeComplete: options.complete ? true : undefined,
     registryDraft: options.complete
-      ? null
+      ? extraStrataRegistryDraft(values.strata)
       : (buildRegistryDraftPayload({
           form: values,
           step: options.step,

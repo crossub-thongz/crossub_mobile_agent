@@ -1,13 +1,6 @@
 import { fromTasks } from '@/lib/detail-navigation';
-import {
-  inspectionDetail,
-  leasingDetail,
-  maintenanceDetail,
-  rentReviewDetail,
-  ROUTES,
-  tribunalDetail,
-  vacatingDetail,
-} from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
+import { propertyJobKindHref } from '@/lib/property-job-href';
 import { buildPropertyProfileTasks, type PropertyProfileTask } from '@/lib/property-profile-tasks';
 import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { RentReviewDecision } from '@/lib/rent-review';
@@ -152,23 +145,12 @@ export function resolveTaskListV2Href(task: PropertyProfileTask, propertyId: str
   const job = task.jobRow;
   if (!job) return task.needAction?.href ?? ROUTES.TASKS;
 
-  const ctx = fromTasks();
-  switch (job.kind) {
-    case 'maintenance':
-      return maintenanceDetail(job.id, ctx);
-    case 'inspection':
-      return inspectionDetail(job.id, ctx);
-    case 'rent_review':
-      return rentReviewDetail(job.id, ctx);
-    case 'leasing':
-      return leasingDetail(job.id, ctx);
-    case 'end_leasing':
-      return vacatingDetail(job.id, ctx);
-    case 'tribunal':
-      return tribunalDetail(job.id, ctx);
-    default:
-      return task.needAction?.href ?? ROUTES.TASKS;
-  }
+  return propertyJobKindHref(
+    job.kind,
+    job.id,
+    fromTasks(),
+    task.needAction?.href ?? ROUTES.TASKS,
+  );
 }
 
 export function buildPortfolioTaskList(input: {

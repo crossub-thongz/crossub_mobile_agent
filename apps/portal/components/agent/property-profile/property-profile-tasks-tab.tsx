@@ -13,8 +13,7 @@ import {
 
 import { PropertyOverviewJobDialog } from '@/components/agent/property-overview-job-dialog';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import { leasingDetail } from '@/constants/routes';
-import { fromProperty } from '@/lib/detail-navigation';
+import { hasDedicatedV2TaskPage, relatedPropertyJobHref } from '@/lib/property-job-href';
 import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflow-cases';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { isPropertyVacant } from '@/lib/property-leasing';
@@ -314,11 +313,9 @@ export function PropertyProfileTasksTab({
   const visibleTasks = showAll ? filteredTasks : filteredTasks.slice(0, VISIBLE_LIMIT);
   const hasMore = filteredTasks.length > VISIBLE_LIMIT && !showAll;
 
-  const navContext = useMemo(() => fromProperty(propertyId, 'Tasks'), [propertyId]);
-
   const openTask = (task: PropertyProfileTask) => {
-    if (isV2 && task.jobRow?.kind === 'leasing') {
-      router.push(leasingDetail(task.jobRow.id, navContext));
+    if (isV2 && task.jobRow && hasDedicatedV2TaskPage(task.jobRow.kind)) {
+      router.push(relatedPropertyJobHref(task.jobRow, propertyId));
       return;
     }
     if (task.jobRow) {
