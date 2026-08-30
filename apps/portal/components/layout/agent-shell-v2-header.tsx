@@ -8,8 +8,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
+import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useShellDockStore } from '@/lib/shell-dock-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ROUTES } from '@/constants/routes';
 import { cn, displayName } from '@/lib/utils';
@@ -35,13 +38,19 @@ function userRoleLabel(user: { jobTitle?: string | null; role?: string }): strin
 export function AgentShellV2Header({
   unreadNotificationCount,
   onLogout,
+  showCrosLauncher = false,
 }: {
   unreadNotificationCount: number;
   onLogout: () => void;
+  /** Desktop header CROS when the Ask CROS rail is not on screen. */
+  showCrosLauncher?: boolean;
 }) {
   const router = useRouter();
   const { user } = useAuth();
   const { messages } = useAgentData();
+  const openGii = useShellDockStore((s) => s.openGii);
+  const activePanel = useShellDockStore((s) => s.activePanel);
+  const giiExpanded = useShellDockStore((s) => s.giiExpanded);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const messageUnread = useMemo(
@@ -82,6 +91,17 @@ export function AgentShellV2Header({
       </Link>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        {showCrosLauncher ? (
+          <button
+            type="button"
+            onClick={() => openGii()}
+            aria-label={`Ask ${CROS_ASSISTANT_NAME}`}
+            aria-pressed={activePanel === 'gii' && giiExpanded}
+            className="hover:bg-card/70 flex size-10 items-center justify-center rounded-xl transition-colors"
+          >
+            <CrosAssistantLogoBadge size="sm" />
+          </button>
+        ) : null}
         <AgentSidebarStatus variant="header" />
         <ThemeToggle className="size-10 rounded-xl hover:bg-card/70" />
 

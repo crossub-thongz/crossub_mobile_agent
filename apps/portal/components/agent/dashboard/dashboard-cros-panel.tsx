@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { useMemo, type FormEvent, type ReactNode, type RefObject } from 'react';
-import { Minus, Send, X } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 
 import {
   crosNoteForAttentionItem,
   DashboardAttentionCard,
 } from '@/components/agent/dashboard/dashboard-attention-card';
-import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
+import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
@@ -79,7 +79,6 @@ export function DashboardAskCrosPanel({
   hasMessages,
   chatScrollRef,
   chatEndRef,
-  onMinimize,
   onClose,
   children,
 }: {
@@ -91,7 +90,6 @@ export function DashboardAskCrosPanel({
   hasMessages?: boolean;
   chatScrollRef?: RefObject<HTMLDivElement | null>;
   chatEndRef?: RefObject<HTMLDivElement | null>;
-  onMinimize?: () => void;
   onClose?: () => void;
   children?: ReactNode;
 }) {
@@ -100,29 +98,21 @@ export function DashboardAskCrosPanel({
 
   return (
     <section className="normal-case flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <CrosAssistantLogo size="sm" />
-          <p className="text-sm font-semibold">Ask {CROS_ASSISTANT_NAME}</p>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2.5 sm:px-4 sm:py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <CrosAssistantLogoBadge size="md" />
+          <p className="truncate text-sm font-semibold">Ask {CROS_ASSISTANT_NAME}</p>
         </div>
-        <div className="text-muted-foreground flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onMinimize}
-            className="flex size-7 items-center justify-center rounded-md hover:bg-muted"
-            aria-label="Minimize"
-          >
-            <Minus className="size-3.5" />
-          </button>
+        {onClose ? (
           <button
             type="button"
             onClick={onClose}
-            className="flex size-7 items-center justify-center rounded-md hover:bg-muted"
-            aria-label="Close"
+            className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+            aria-label={`Close ${CROS_ASSISTANT_NAME}`}
           >
-            <X className="size-3.5" />
+            <X className="size-4" />
           </button>
-        </div>
+        ) : null}
       </div>
 
       <div

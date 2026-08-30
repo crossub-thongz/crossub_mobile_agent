@@ -13,9 +13,6 @@ import {
   X,
 } from 'lucide-react';
 
-import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
-import { GiiAssistant } from '@/components/agent/gii-assistant';
-import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { PhonePanel } from '@/components/agent/phone-panel';
 import { PropertyNewMessageRecipients } from '@/components/agent/property-new-message-recipients';
 import { TalkToStaffSupportButton } from '@/components/agent/talk-to-staff-button';
@@ -37,11 +34,6 @@ import { useAgentStore } from '@/lib/store';
 import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
 import { isEmailVerificationBlockedHref } from '@/lib/email-verification';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
-
-const SHELL_GII_BUTTON = {
-  id: 'gii' as const,
-  label: CROS_ASSISTANT_NAME,
-} as const;
 
 const SHELL_MESSAGE_BUTTON = {
   id: 'message-menu' as const,
@@ -83,16 +75,14 @@ function useShellQuickActions(pathname: string) {
   const { hasFullManagementAccess } = useAgentData();
   const activePanel = useShellDockStore((s) => s.activePanel);
   const togglePanel = useShellDockStore((s) => s.togglePanel);
-  const openGii = useShellDockStore((s) => s.openGii);
 
   const visibleButtons = [
-    SHELL_GII_BUTTON,
     ...(hideCommunication || !hasFullManagementAccess
       ? []
       : [SHELL_MESSAGE_BUTTON, SHELL_PHONE_BUTTON]),
   ];
 
-  return { activePanel, togglePanel, openGii, visibleButtons };
+  return { activePanel, togglePanel, visibleButtons };
 }
 
 /** Quick actions for the shell header — Gii, + Message, and Phone. */
@@ -105,7 +95,7 @@ export function ShellHeaderQuickActions({
   inline?: boolean;
 }) {
   const propertyId = propertyIdFromPath(pathname);
-  const { activePanel, togglePanel, openGii, visibleButtons } = useShellQuickActions(pathname);
+  const { activePanel, togglePanel, visibleButtons } = useShellQuickActions(pathname);
   const { messages, properties } = useAgentData();
 
   const property = propertyId ? properties.find((p) => p.id === propertyId) : undefined;
@@ -122,17 +112,7 @@ export function ShellHeaderQuickActions({
 
   if (visibleButtons.length === 0) return null;
 
-  const hasDesktopQuickActions = visibleButtons.some((btn) => btn.id !== 'gii');
-
   const handleClick = (btnId: (typeof visibleButtons)[number]['id']) => {
-    if (btnId === 'gii') {
-      if (propertyId && property) {
-        openGii({ propertyId, propertyAddress: formatPropertyFullAddress(property) });
-      } else {
-        openGii();
-      }
-      return;
-    }
     if (btnId === 'phone') {
       togglePanel('phone');
       return;
@@ -145,45 +125,27 @@ export function ShellHeaderQuickActions({
       className={cn(
         'bg-primary flex shrink-0 items-center',
         inline ? 'gap-0.5 rounded-lg p-0.5' : 'gap-0.5 px-2 py-1',
-        !hasDesktopQuickActions && 'lg:hidden',
       )}
     >
       {visibleButtons.map((btn) => {
-        const Icon = 'icon' in btn ? btn.icon : null;
-        const hideOnDesktop = btn.id === 'gii';
+        const Icon = btn.icon;
         const isActive =
-          btn.id === 'gii'
-            ? activePanel === 'gii'
-            : btn.id === 'phone'
-              ? activePanel === 'phone'
-              : activePanel === 'message-menu';
+          btn.id === 'phone' ? activePanel === 'phone' : activePanel === 'message-menu';
         return (
           <button
             key={btn.id}
             type="button"
             title={
-              btn.id === 'message-menu'
-                ? 'Message'
-                : btn.id === 'phone'
-                  ? 'Contacts & Account Manager'
-                  : btn.label
+              btn.id === 'message-menu' ? 'Message' : 'Contacts & Account Manager'
             }
             aria-label={
-              btn.id === 'message-menu'
-                ? 'Message'
-                : btn.id === 'phone'
-                  ? 'Contacts and Account Manager'
-                  : btn.label
+              btn.id === 'message-menu' ? 'Message' : 'Contacts and Account Manager'
             }
             aria-pressed={isActive}
             onClick={() => handleClick(btn.id)}
-            className={cn(headerQuickActionClass(isActive, inline), hideOnDesktop && 'lg:hidden')}
+            className={headerQuickActionClass(isActive, inline)}
           >
-            {btn.id === 'gii' ? (
-              <CrosAssistantLogo size={inline ? 'md' : 'lg'} />
-            ) : Icon ? (
-              <Icon className={inline ? 'size-4' : 'size-5'} />
-            ) : null}
+            <Icon className={inline ? 'size-4' : 'size-5'} />
             {!inline ? (
               <span className="max-w-full truncate">
                 {btn.id === 'message-menu' ? 'Message' : btn.label}
@@ -395,9 +357,7 @@ function MessageActionSheet({
 export function GlobalShellFabs({ pathname }: { pathname: string }) {
   const propertyId = propertyIdFromPath(pathname);
   const activePanel = useShellDockStore((s) => s.activePanel);
-  const giiExpanded = useShellDockStore((s) => s.giiExpanded);
   const closePanel = useShellDockStore((s) => s.closePanel);
-  const mobileGiiActive = activePanel === 'gii';
 
   return (
     <>
@@ -411,11 +371,6 @@ export function GlobalShellFabs({ pathname }: { pathname: string }) {
         onClose={closePanel}
         propertyId={propertyId}
       />
-      {mobileGiiActive && !propertyId && !isActiveChatPath(pathname) ? (
-        <div className="lg:hidden">
-          <GiiAssistant open expanded={giiExpanded} variant="modal" onClose={closePanel} />
-        </div>
-      ) : null}
     </>
   );
 }

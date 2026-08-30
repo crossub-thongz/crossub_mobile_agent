@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Mic, Minus, Send, X } from 'lucide-react';
+import { Building2, Mic, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CrosAssistantLogo, CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
@@ -248,7 +248,6 @@ export function GiiAssistant({
   const { user } = useAuth();
   const giiLaunch = useShellDockStore((s) => s.giiLaunch);
   const clearGiiLaunch = useShellDockStore((s) => s.clearGiiLaunch);
-  const minimizeGii = useShellDockStore((s) => s.minimizeGii);
 
   const effectiveLaunch = useMemo(
     () => ({
@@ -1170,26 +1169,14 @@ export function GiiAssistant({
           </div>
         </div>
         {!isInline && onClose ? (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {isModal ? (
-              <button
-                type="button"
-                onClick={minimizeGii}
-                className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
-                aria-label={`Minimize ${CROS_ASSISTANT_NAME}`}
-              >
-                <Minus className="size-4" />
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
-              aria-label={`Close ${CROS_ASSISTANT_NAME}`}
-            >
-              <X className="size-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-secondary"
+            aria-label={`Close ${CROS_ASSISTANT_NAME}`}
+          >
+            <X className="size-5" />
+          </button>
         ) : null}
       </div>
 
@@ -1211,7 +1198,6 @@ export function GiiAssistant({
               hasMessages={hasUserMessages}
               chatScrollRef={scrollContainerRef}
               chatEndRef={endRef}
-              onMinimize={minimizeGii}
               onClose={onClose}
             >
               {lines.length > 0 ? (
@@ -1519,7 +1505,7 @@ export function GiiAssistant({
           'max-lg:bg-black/40 max-lg:animate-in max-lg:fade-in-0 max-lg:duration-300',
           'lg:flex lg:items-end lg:justify-center lg:bg-black/55 lg:backdrop-blur-sm lg:overflow-hidden lg:p-4',
         )}
-        onClick={isModal ? minimizeGii : undefined}
+        onClick={isModal ? onClose : undefined}
         role={isModal ? 'presentation' : undefined}
       >
         <div

@@ -18,6 +18,7 @@ import { AgentPaymentReminderBanner } from '@/components/agent/agent-payment-rem
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
 import { PropertyListShellPreview } from '@/components/agent/properties/property-list-shell-preview';
+import { CrosFloatingLauncher } from '@/components/agent/cros-floating-launcher';
 import { GiiAssistant } from '@/components/agent/gii-assistant';
 import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/global-shell-fabs';
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
@@ -161,6 +162,7 @@ export function AgentShell({
           <AgentShellV2Header
             unreadNotificationCount={unreadNotificationCount}
             onLogout={() => void logout()}
+            showCrosLauncher={hideCrosRail || showPropertyShellPreview}
           />
         ) : null}
 
@@ -521,6 +523,12 @@ export function AgentShell({
         </nav>
 
         {!hideGlobalFabs && <GlobalShellFabs pathname={pathname} />}
+        {!immersive ? (
+          <CrosFloatingLauncher
+            pathname={pathname}
+            crosRailOnDesktop={!hideCrosRail && !showPropertyShellPreview}
+          />
+        ) : null}
         </div>
 
         <aside
