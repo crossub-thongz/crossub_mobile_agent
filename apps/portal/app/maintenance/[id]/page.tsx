@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -31,7 +31,7 @@ export default function MaintenanceDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const isV2 = useIsAgentUiV2();
-  const { properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote, requoteMaintenanceQuote } =
+  const { properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote, requoteMaintenanceQuote, refresh } =
     useAgentData();
   const { item, resolveState } = useResolvedMaintenance(id);
   const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
@@ -41,7 +41,7 @@ export default function MaintenanceDetailPage() {
     [properties, item?.propertyId],
   );
 
-  const { workspaceCase, liveMapped, remindersSent, nextReminderDueAt, syncing } =
+  const { workspaceCase, liveMapped, remindersSent, nextReminderDueAt, syncing, attachments, refresh: refreshCase } =
     useMaintenanceCaseLiveSync(item, property, apiConnected);
 
   useRecordRecentCaseVisit({
@@ -54,6 +54,11 @@ export default function MaintenanceDetailPage() {
 
   const displayItem = liveMapped ?? item;
   const reminderEta = formatReminderEta(nextReminderDueAt);
+
+  const handleCaseUpdated = useCallback(async () => {
+    await refreshCase();
+    await refresh();
+  }, [refresh, refreshCase]);
 
   const handleApprove = async () => {
     if (!item) return;
@@ -134,6 +139,9 @@ export default function MaintenanceDetailPage() {
           recommendation={displayItem.recommendation}
           quoteDocumentUrl={displayItem.quoteDocumentUrl}
           requiresApproval={AGENT_CASE_INTERACTIONS_ENABLED && displayItem.requiresApproval}
+          attachments={attachments}
+          apiConnected={apiConnected}
+          onCaseUpdated={AGENT_CASE_INTERACTIONS_ENABLED ? handleCaseUpdated : undefined}
         />
       ) : (
         <MaintenanceWorkspace
@@ -154,6 +162,10 @@ export default function MaintenanceDetailPage() {
           recommendation={displayItem.recommendation}
           quoteDocumentUrl={displayItem.quoteDocumentUrl}
           requiresApproval={AGENT_CASE_INTERACTIONS_ENABLED && displayItem.requiresApproval}
+          item={displayItem}
+          attachments={attachments}
+          apiConnected={apiConnected}
+          onCaseUpdated={AGENT_CASE_INTERACTIONS_ENABLED ? handleCaseUpdated : undefined}
         />
       )}
     </AgentShell>

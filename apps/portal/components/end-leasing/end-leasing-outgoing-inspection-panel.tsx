@@ -1,15 +1,17 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ClipboardCheck, ExternalLink, Loader2, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { InspectionDetailDialog } from '@/components/agent/inspection-detail-dialog';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TerminationCompleteInspectionDialog } from '@/components/end-leasing/termination-complete-inspection-dialog';
 import { OUTGOING_INSPECTION_DAYS_AFTER_VACATE } from '@/constants/end-leasing';
-import { fromLeasingWorkflow } from '@/lib/detail-navigation';
+import { inspectionDetail } from '@/constants/routes';
+import { fromTasks } from '@/lib/detail-navigation';
 import {
   endLeasingKeyReturnDate,
   endLeasingVacateDate,
@@ -42,24 +44,22 @@ export function EndLeasingOutgoingInspectionPanel({
   caseData: TerminationCaseDetail;
 }) {
   const applyCase = useEndLeasingStore((s) => s.applyCase);
-  const { refresh, registerInspection, inspections } = useAgentData();
+  const { refresh, registerInspection } = useAgentData();
+  const router = useRouter();
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
-  const [inspectionDialogId, setInspectionDialogId] = useState<string | null>(null);
 
   const inspection = caseData.inspection;
   const inspectionDone = inspection.status === DONE;
   const tenantAttendance = inspection.tenantAttendance ?? 'pending';
   const keysReturned = caseData.vacate.keysReturned === true;
-  const navContext = caseData.propertyId ? fromLeasingWorkflow(caseData.propertyId) : undefined;
-  const dialogInspection = useMemo(
-    () => inspections.find((item) => item.id === inspectionDialogId) ?? null,
-    [inspectionDialogId, inspections],
-  );
+  const inspectionHref = inspection.inspectionId
+    ? inspectionDetail(inspection.inspectionId, fromTasks())
+    : null;
 
   const openInspection = (inspectionId: string) => {
-    setInspectionDialogId(inspectionId);
+    router.push(inspectionDetail(inspectionId, fromTasks()));
   };
 
   const createOutgoingInspection = async () => {
@@ -232,16 +232,14 @@ export function EndLeasingOutgoingInspectionPanel({
               </div>
             ) : null}
             <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 text-xs"
-              onClick={() => openInspection(inspection.inspectionId!)}
-            >
-              <ExternalLink className="size-3.5" />
-              Outgoing inspection job case
-            </Button>
+            {inspectionHref ? (
+              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+                <Link href={inspectionHref}>
+                  <ExternalLink className="size-3.5" />
+                  Outgoing inspection job case
+                </Link>
+              </Button>
+            ) : null}
             {!inspectionDone ? (
               <Button
                 type="button"
@@ -263,13 +261,6 @@ export function EndLeasingOutgoingInspectionPanel({
         onOpenChange={setCompleteDialogOpen}
         caseData={caseData}
         onCompleted={(updated) => applyCase(updated)}
-      />
-
-      <InspectionDetailDialog
-        open={inspectionDialogId !== null}
-        onClose={() => setInspectionDialogId(null)}
-        inspection={dialogInspection}
-        navContext={navContext}
       />
     </>
   );

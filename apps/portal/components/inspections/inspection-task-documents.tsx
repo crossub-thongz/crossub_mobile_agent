@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
 import { inspectionsApi } from '@/lib/inspections-api';
+import { isInspectionDone } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { Inspection } from '@/lib/types';
 
@@ -48,7 +49,8 @@ export function InspectionTaskDocuments({ inspection }: { inspection: Inspection
     Boolean(inspection.reportUrl) ||
     inspection.reportStatus === 'sent' ||
     inspection.reportStatus === 'uploaded' ||
-    inspection.reportStatus === 'approved';
+    inspection.reportStatus === 'approved' ||
+    (inspection.type === 'ROUTINE' && isInspectionDone(inspection));
 
   if (inspection.type === 'OPEN' && openReportReady) {
     return (

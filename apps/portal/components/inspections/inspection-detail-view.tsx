@@ -117,7 +117,10 @@ import {
 } from '@/lib/routine-inspection-api';
 import { mapInspectionRecordToView, mapOpenSessionToInspection, caseAuditToTimeline, findInspectionInList, pickFresherInspection } from '@/lib/inspection-mappers';
 import type { InspectionRecord } from '@/lib/inspections-types';
-import type { RoutineFlow } from '@/lib/routine/routine-case-status';
+import {
+  resolveRoutineReportStatus,
+  type RoutineFlow,
+} from '@/lib/routine/routine-case-status';
 import type { Inspection } from '@/lib/types';
 import { cn, formatDateTime } from '@/lib/utils';
 
@@ -475,6 +478,16 @@ export function InspectionDetailView({
     (insp.apiStatus === 'CANCELLED' ||
       insp.status === 'Cancelled' ||
       routineInspectionRecord?.status === 'CANCELLED');
+  const routineReportStatus = resolveRoutineReportStatus({
+    flow: routineFlow ?? 'in_person',
+    selfStatus: routineSchedule?.selfStatus,
+    inPersonStatus: routineSchedule?.inPersonStatus,
+    hasReport,
+    inspectionStatus: insp.apiStatus ?? insp.status,
+    completedAt: routineCompletedAt,
+  });
+  const showRoutineReport =
+    insp.type === 'ROUTINE' && !isCancelledRoutine && routineReportStatus.complete;
   const routineInPersonInProgress =
     isRoutinePlatformPaymentActive({
       inspection: insp,
@@ -999,7 +1012,7 @@ export function InspectionDetailView({
           flow={routineFlow}
           schedule={routineSchedule}
           hasReport={hasReport}
-          inspectionStatus={insp.status}
+          inspectionStatus={insp.apiStatus ?? insp.status}
           apiConnected={apiConnected}
           onChangeFlow={() => setFlowChangeOpen(true)}
           completedAt={routineCompletedAt}
@@ -1126,13 +1139,19 @@ export function InspectionDetailView({
         />
       ) : null}
 
-      {hasReport && insp.type !== 'OPEN' && (
+      {(showRoutineReport || (hasReport && insp.type !== 'OPEN' && insp.type !== 'ROUTINE')) && (
         <section className="space-y-3">
           <InspectionReportDownloadActions
             inspectionId={routineReportInspectionId}
             reportUrl={routineReportUrl}
             propertyLabel={insp.propertyAddress}
-            inspectionType="routine"
+            inspectionType={
+              insp.type === 'INGOING'
+                ? 'ingoing'
+                : insp.type === 'OUTGOING'
+                  ? 'outgoing'
+                  : 'routine'
+            }
             variant="card"
           />
         </section>

@@ -5,6 +5,17 @@ import type { ReportComparisonRepairItem } from './types';
 export const OUTGOING_TENANT_RESPONSIBILITY_TAG = 'Tenant Responsible';
 export const OUTGOING_LANDLORD_RESPONSIBILITY_TAG = 'Landlord Responsible';
 
+const SPECIAL_REPORTING_AREA = /^(nsw\s+)?special reporting$/i;
+
+function stripInspectionSideSuffix(name: string): string {
+  return name.replace(/\s*\(ingoing\)\s*$/i, '').replace(/\s*\(outgoing\)\s*$/i, '').trim();
+}
+
+/** NSW Schedule 2 answers — not room issues for the responsibility table. */
+function isSpecialReportingArea(name: string | null | undefined): boolean {
+  return SPECIAL_REPORTING_AREA.test(stripInspectionSideSuffix(name?.trim() || ''));
+}
+
 function normalizeAreaName(name: string | null | undefined): string {
   return (name ?? 'General').replace(/ \(Outgoing\)$/, '').trim() || 'General';
 }
@@ -23,6 +34,7 @@ function responsibilityRowsFromOutgoing(
 ): ReportComparisonRepairItem[] {
   const rows: ReportComparisonRepairItem[] = [];
   for (const area of detail.areas) {
+    if (isSpecialReportingArea(area.name)) continue;
     const areaName = normalizeAreaName(area.name);
     for (const item of area.items) {
       const tags = item.conditionTags ?? [];
@@ -46,6 +58,7 @@ function responsibilityRowsFromOutgoing(
 function flaggedFallbackRows(detail: InspectionDetail): ReportComparisonRepairItem[] {
   const rows: ReportComparisonRepairItem[] = [];
   for (const area of detail.areas) {
+    if (isSpecialReportingArea(area.name)) continue;
     const areaName = normalizeAreaName(area.name);
     for (const item of area.items) {
       if (!item.flagged && item.conditionTags.length === 0 && !item.comment) continue;

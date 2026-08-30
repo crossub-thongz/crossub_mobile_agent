@@ -14,7 +14,9 @@ import {
 import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
+import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
 import { Button } from '@/components/ui/button';
+import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import { generateWorkspaceAdvice } from '@/lib/maintenance-workspace/advice';
 import {
   getQuickJumpCurrentRank,
@@ -27,6 +29,7 @@ import {
 import { SOURCE_LABELS, STATUS_LABELS } from '@/lib/maintenance-workspace/status-labels';
 import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceStatus, WorkspaceResponsibility } from '@/lib/maintenance-workspace/types';
 import { getWorkflowSteps } from '@/lib/maintenance-workspace/workflow-model';
+import type { MaintenanceRequest } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
 
 import { WorkspaceBottomNav } from './bottom-nav';
@@ -56,6 +59,10 @@ export function MaintenanceWorkspace({
   reminderEta,
   assignedToName,
   embedded = false,
+  item,
+  attachments = [],
+  apiConnected = false,
+  onCaseUpdated,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   backHref: string;
@@ -75,6 +82,10 @@ export function MaintenanceWorkspace({
   remindersSent?: number;
   reminderEta?: string | null;
   embedded?: boolean;
+  item?: MaintenanceRequest;
+  attachments?: ApiMaintenanceAttachment[];
+  apiConnected?: boolean;
+  onCaseUpdated?: () => Promise<void>;
 }) {
   const [bottomNavTab, setBottomNavTab] = useState<'details' | 'chat'>('details');
   const [caseFlagged, setCaseFlagged] = useState(false);
@@ -576,7 +587,16 @@ export function MaintenanceWorkspace({
                       </div>
                     )}
 
-                    {uiStatusForUI === 'in_progress' && (
+                    {uiStatusForUI === 'in_progress' &&
+                    item &&
+                    workspaceCase.responsibility === 'landlord' ? (
+                      <MaintenanceCompletionGatesPanel
+                        ctx={{ item, workspaceCase }}
+                        attachments={attachments}
+                        apiConnected={apiConnected}
+                        onUpdated={onCaseUpdated}
+                      />
+                    ) : uiStatusForUI === 'in_progress' ? (
                       <dl className="grid grid-cols-2 gap-2 text-xs">
                         <div>
                           <dt className="text-muted-foreground">Completion evidence</dt>
@@ -591,7 +611,7 @@ export function MaintenanceWorkspace({
                           </dd>
                         </div>
                       </dl>
-                    )}
+                    ) : null}
 
                     {uiStatusForUI === 'closed' && (
                       <p className="text-muted-foreground text-sm">This maintenance case is closed.</p>

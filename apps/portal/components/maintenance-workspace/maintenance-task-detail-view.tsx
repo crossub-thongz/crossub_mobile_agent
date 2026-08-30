@@ -12,6 +12,7 @@ import {
 
 import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
+import { MaintenanceTaskDocuments } from '@/components/maintenance/maintenance-task-documents';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import {
   TaskWorkflowRailSlot,
@@ -25,12 +26,14 @@ import {
   buildMaintenanceJobDetailRows,
   buildMaintenanceQuoteCards,
   maintenanceTaskReference,
+  maintenanceDocumentCount,
   quotationCount,
   resolveMaintenanceStatusBanner,
   type MaintenanceTaskTab,
 } from '@/lib/maintenance-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import {
@@ -114,6 +117,9 @@ export function MaintenanceTaskDetailView({
   remindersSent,
   reminderEta,
   assignedToName,
+  attachments,
+  apiConnected,
+  onCaseUpdated,
 }: {
   item: MaintenanceRequest;
   property?: Property | null;
@@ -134,6 +140,9 @@ export function MaintenanceTaskDetailView({
   remindersSent?: number;
   reminderEta?: string | null;
   assignedToName?: string | null;
+  attachments?: ApiMaintenanceAttachment[];
+  apiConnected?: boolean;
+  onCaseUpdated?: () => Promise<void>;
 }) {
   const {
     properties,
@@ -198,6 +207,7 @@ export function MaintenanceTaskDetailView({
       ? formatDate(item.createdAt)
       : '—';
   const quotesCount = quotationCount(workspaceCase);
+  const documentsCount = maintenanceDocumentCount(attachments, item.id);
 
   const relatedTasks = useMemo(() => {
     if (!propertyId) return [];
@@ -322,6 +332,7 @@ export function MaintenanceTaskDetailView({
                 >
                   {tab.label}
                   {tab.id === 'quotes' && quotesCount > 0 ? ` (${quotesCount})` : ''}
+                  {tab.id === 'documents' && documentsCount > 0 ? ` (${documentsCount})` : ''}
                 </button>
               ))}
             </div>
@@ -347,6 +358,10 @@ export function MaintenanceTaskDetailView({
               recommendation={recommendation}
               quoteDocumentUrl={quoteDocumentUrl}
               requiresApproval={requiresApproval}
+              item={item}
+              attachments={attachments}
+              apiConnected={apiConnected}
+              onCaseUpdated={onCaseUpdated}
             />
           </div>
 
@@ -440,23 +455,7 @@ export function MaintenanceTaskDetailView({
           {activeTab === 'activity' ? <ActivityTimeline entries={activityEntries} /> : null}
 
           {activeTab === 'documents' ? (
-            <section className="space-y-3">
-              {quoteDocumentUrl ? (
-                <article className="rounded-2xl border v2-frosted-surface p-4">
-                  <p className="text-sm font-semibold">Quote document</p>
-                  <a
-                    href={quoteDocumentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary mt-2 inline-block text-xs font-semibold hover:underline"
-                  >
-                    View document
-                  </a>
-                </article>
-              ) : (
-                <p className="text-muted-foreground text-sm">No documents uploaded yet.</p>
-              )}
-            </section>
+            <MaintenanceTaskDocuments requestId={item.id} attachments={attachments} />
           ) : null}
 
           {activeTab === 'notes' ? (

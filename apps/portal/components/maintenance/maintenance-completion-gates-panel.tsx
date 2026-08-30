@@ -1,17 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileText, ImagePlus, Loader2, Play, X } from 'lucide-react';
+import { CheckCircle2, FileText, ImagePlus, Loader2, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   deleteMaintenanceAttachment,
   setMaintenanceAgentApproval,
@@ -23,12 +16,12 @@ import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflo
 import { completionReviewAttachments } from '@/lib/maintenance/merge-intake-photo-attachments';
 import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { cn } from '@/lib/utils';
+import {
+  MaintenanceAttachmentPreviewDialog,
+  maintenanceAttachmentPreviewUrl,
+} from '@/components/maintenance/maintenance-attachment-preview-dialog';
 
 const MAX_COMPLETION_EVIDENCE = 8;
-
-function attachmentPreviewUrl(att: ApiMaintenanceAttachment): string {
-  return att.previewUrl ?? `/api/maintenance/attachments/${att.id}/preview`;
-}
 
 function GateStatusBadge({ checked }: { checked: boolean }) {
   return (
@@ -202,6 +195,7 @@ export function MaintenanceCompletionGatesPanel({
             attachments={evidenceAttachments}
             canDelete={false}
             onDelete={onUpdated}
+            onPreview={setPreviewAttachment}
           />
         </div>
       </section>
@@ -392,7 +386,7 @@ export function MaintenanceCompletionGatesPanel({
         </div>
       ) : null}
 
-      <AttachmentPreviewDialog
+      <MaintenanceAttachmentPreviewDialog
         attachment={previewAttachment}
         onClose={() => setPreviewAttachment(null)}
       />
@@ -410,7 +404,7 @@ function InvoiceAttachmentGallery({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {attachments.map((att) => {
-        const preview = attachmentPreviewUrl(att);
+        const preview = maintenanceAttachmentPreviewUrl(att);
         const isImage = att.mimeType.startsWith('image/');
         const isPdf = att.mimeType === 'application/pdf';
 
@@ -457,12 +451,16 @@ function EvidenceGallery({
   attachments,
   canDelete,
   onDelete,
+  onPreview,
 }: {
   attachments: ApiMaintenanceAttachment[];
   canDelete: boolean;
   onDelete?: () => Promise<void>;
+  onPreview?: (att: ApiMaintenanceAttachment) => void;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [localPreview, setLocalPreview] = useState<ApiMaintenanceAttachment | null>(null);
+  const openPreview = onPreview ?? setLocalPreview;
 
   if (attachments.length === 0) {
     return (
@@ -484,19 +482,19 @@ function EvidenceGallery({
   };
 
   return (
+    <>
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
       {attachments.map((att) => {
-        const preview = attachmentPreviewUrl(att);
+        const preview = maintenanceAttachmentPreviewUrl(att);
         const isImage = att.mimeType.startsWith('image/');
         const isVideo = att.mimeType.startsWith('video/');
 
         return (
           <div key={att.id} className="group relative">
-            <a
-              href={preview}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
               title={att.fileName}
+              onClick={() => openPreview(att)}
               className="relative flex aspect-square w-full overflow-hidden rounded-md border bg-muted hover:bg-secondary/20"
             >
               {isImage ? (
@@ -517,7 +515,7 @@ function EvidenceGallery({
                   </span>
                 </div>
               )}
-            </a>
+            </button>
             {canDelete ? (
               <Button
                 type="button"
@@ -539,66 +537,12 @@ function EvidenceGallery({
         );
       })}
     </div>
-  );
-}
-
-function AttachmentPreviewDialog({
-  attachment,
-  onClose,
-}: {
-  attachment: ApiMaintenanceAttachment | null;
-  onClose: () => void;
-}) {
-  if (!attachment) return null;
-
-  const preview = attachmentPreviewUrl(attachment);
-  const isImage = attachment.mimeType.startsWith('image/');
-  const isVideo = attachment.mimeType.startsWith('video/');
-  const isPdf = attachment.mimeType === 'application/pdf';
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg" elevated>
-        <DialogHeader>
-          <DialogTitle className="truncate pr-6 text-base">{attachment.fileName}</DialogTitle>
-        </DialogHeader>
-
-        <div className="max-h-[60vh] overflow-hidden rounded-lg border bg-muted">
-          {isImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={preview}
-              alt={attachment.fileName}
-              className="max-h-[60vh] w-full object-contain"
-            />
-          ) : isVideo ? (
-            <video src={preview} controls className="max-h-[60vh] w-full bg-black" />
-          ) : isPdf ? (
-            <iframe
-              src={preview}
-              title={attachment.fileName}
-              className="h-[min(60vh,480px)] w-full bg-background"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 px-4 py-12 text-center">
-              <FileText className="text-muted-foreground size-10" />
-              <p className="text-muted-foreground text-sm">Preview not available for this file type.</p>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Close
-          </Button>
-          <Button type="button" asChild>
-            <a href={preview} download={attachment.fileName}>
-              <Download className="mr-2 size-4" />
-              Download
-            </a>
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    {onPreview ? null : (
+      <MaintenanceAttachmentPreviewDialog
+        attachment={localPreview}
+        onClose={() => setLocalPreview(null)}
+      />
+    )}
+  </>
   );
 }

@@ -38,6 +38,7 @@ export function RoutineCaseStatusSection({
     inPersonStatus: schedule?.inPersonStatus,
     hasReport,
     inspectionStatus,
+    completedAt,
   });
   const conductLabel = flow ? routineConductModeLabel(flow) : 'Not recorded';
   const canChangeFlow =

@@ -1,4 +1,4 @@
-import type { ApiQuotation } from '@/lib/crossub-api/types';
+import type { ApiMaintenanceAttachment, ApiQuotation } from '@/lib/crossub-api/types';
 import {
   buildMaintenanceAgentWorkflow,
   type MaintenanceWorkflowContext,
@@ -281,3 +281,103 @@ export function buildMaintenanceWorkflowModel(ctx: MaintenanceWorkflowContext) {
 export function quotationCount(workspaceCase: MaintenanceWorkspaceCase): number {
   return Math.max(workspaceCase.quotations.length, workspaceCase.quotationIds.length);
 }
+
+export const MAINTENANCE_DOCUMENT_TABS = [
+  'Completion evidence',
+  'Invoice',
+  'Quote',
+] as const;
+
+export type MaintenanceDocumentTab = (typeof MAINTENANCE_DOCUMENT_TABS)[number];
+
+export type MaintenanceDocumentRow = {
+  id: string;
+  fileName: string;
+  attachment: ApiMaintenanceAttachment;
+};
+
+export type MaintenanceDocumentPersonGroup = {
+  id: string;
+  from: string;
+  documents: MaintenanceDocumentRow[];
+};
+
+export type MaintenanceDocumentTabGroup = {
+  tab: MaintenanceDocumentTab;
+  people: MaintenanceDocumentPersonGroup[];
+};
+
+function uploadedByLabel(role: ApiMaintenanceAttachment['uploadedByRole']): string {
+  switch (role) {
+    case 'contractor':
+      return 'Contractor';
+    case 'agent':
+      return 'Agent';
+    case 'tenant':
+      return 'Tenant';
+    case 'strata':
+      return 'Strata';
+    default:
+      return 'CROS System';
+  }
+}
+
+function groupAttachmentsByUploader(
+  attachments: ApiMaintenanceAttachment[],
+): MaintenanceDocumentPersonGroup[] {
+  const byUploader = new Map<string, MaintenanceDocumentRow[]>();
+  const sorted = [...attachments].sort(
+    (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+  );
+  for (const attachment of sorted) {
+    const from = uploadedByLabel(attachment.uploadedByRole);
+    const rows = byUploader.get(from) ?? [];
+    rows.push({
+      id: attachment.id,
+      fileName: attachment.fileName,
+      attachment,
+    });
+    byUploader.set(from, rows);
+  }
+  return [...byUploader.entries()].map(([from, documents]) => ({
+    id: from,
+    from,
+    documents,
+  }));
+}
+
+/** Documents tab: completion evidence, invoice, then quote files. */
+export function buildMaintenanceDocumentGroups(
+  attachments: ApiMaintenanceAttachment[] | undefined,
+  requestId: string,
+): MaintenanceDocumentTabGroup[] {
+  const forRequest = (attachments ?? []).filter((row) => row.maintenanceRequestId === requestId);
+  const groups: MaintenanceDocumentTabGroup[] = [];
+
+  const evidence = forRequest.filter((row) => row.kind === 'evidence');
+  const invoices = forRequest.filter((row) => row.kind === 'invoice');
+  const quotes = forRequest.filter((row) => row.kind === 'quote');
+
+  if (evidence.length > 0) {
+    groups.push({ tab: 'Completion evidence', people: groupAttachmentsByUploader(evidence) });
+  }
+  if (invoices.length > 0) {
+    groups.push({ tab: 'Invoice', people: groupAttachmentsByUploader(invoices) });
+  }
+  if (quotes.length > 0) {
+    groups.push({ tab: 'Quote', people: groupAttachmentsByUploader(quotes) });
+  }
+
+  return groups;
+}
+
+export function maintenanceDocumentCount(
+  attachments: ApiMaintenanceAttachment[] | undefined,
+  requestId: string,
+): number {
+  return buildMaintenanceDocumentGroups(attachments, requestId).reduce(
+    (sum, group) => sum + group.people.reduce((n, person) => n + person.documents.length, 0),
+    0,
+  );
+}
+

@@ -129,6 +129,8 @@ export function deriveAgentAckState(
   options?: {
     agentAcknowledged?: boolean;
     agentAcknowledgedAt?: string | null;
+    reportReady?: boolean;
+    approvedAt?: string | null;
   },
 ): { state: AgentTenantAckState; label: string } {
   if (!record) {
@@ -146,7 +148,12 @@ export function deriveAgentAckState(
     return { state: 'awaiting_report', label: 'Available after report is submitted' };
   }
 
-  return { state: 'pending', label: 'Report submitted — agent review pending' };
+  const reportApproved = options?.reportReady ?? Boolean(options?.approvedAt);
+  if (!reportApproved) {
+    return { state: 'awaiting_report', label: 'Available after the report is approved' };
+  }
+
+  return { state: 'pending', label: 'Report approved — agent review pending' };
 }
 
 /** Agent can decline an ingoing/outgoing inspector report awaiting review. */

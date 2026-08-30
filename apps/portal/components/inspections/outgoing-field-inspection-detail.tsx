@@ -294,6 +294,8 @@ export function OutgoingFieldInspectionDetail({
   const agentAck = deriveAgentAckState(record, {
     agentAcknowledged,
     agentAcknowledgedAt,
+    reportReady,
+    approvedAt: detail?.approvedAt ?? record?.approvedAt,
   });
   const agentAcked = agentAck.state === 'confirmed';
   const accepted = inspectorHasAcceptedJob(record, inspection);
@@ -376,7 +378,7 @@ export function OutgoingFieldInspectionDetail({
   });
 
   const confirmAgentAcknowledgement = async () => {
-    if (!terminationCaseId || agentAcked) return;
+    if (!terminationCaseId || agentAcked || !reportReady) return;
     setAckBusy(true);
     try {
       const updated = await terminationApi.updateReportComparison(terminationCaseId, {
@@ -808,12 +810,15 @@ export function OutgoingFieldInspectionDetail({
                 ? LEASING_ITEM_STATUS.DONE
                 : agentAck.state === 'pending'
                   ? LEASING_ITEM_STATUS.WAITING
-                  : keyReturned
-                    ? LEASING_ITEM_STATUS.IN_PROGRESS
-                    : LEASING_ITEM_STATUS.NOT_STARTED
+                  : LEASING_ITEM_STATUS.NOT_STARTED
             }
           >
-            <div className="space-y-2">
+            <div
+              className={cn(
+                'space-y-2',
+                !agentAcked && !reportReady && 'pointer-events-none opacity-60',
+              )}
+            >
               <div className="flex items-start gap-2 text-xs">
                 <User
                   className={cn(
@@ -831,27 +836,34 @@ export function OutgoingFieldInspectionDetail({
                 </div>
               </div>
               {!agentAcked && reportSubmitted && terminationCaseId ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  disabled={ackBusy}
-                  onClick={() => void confirmAgentAcknowledgement()}
-                >
-                  {ackBusy ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin" />
-                      Confirming…
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="size-3.5" />
-                      Confirm report
-                    </>
-                  )}
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                    disabled={ackBusy || !reportReady}
+                    onClick={() => void confirmAgentAcknowledgement()}
+                  >
+                    {ackBusy ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        Confirming…
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="size-3.5" />
+                        Confirm report
+                      </>
+                    )}
+                  </Button>
+                  {!reportReady ? (
+                    <p className="text-muted-foreground text-[11px]">
+                      Available after CROSSUB approves the report.
+                    </p>
+                  ) : null}
+                </>
               ) : null}
-              {!agentAcked && reportSubmitted && !terminationCaseId ? (
+              {!agentAcked && reportReady && !terminationCaseId ? (
                 <p className="text-muted-foreground text-[11px]">
                   Link an end-leasing case to record agent acknowledgement.
                 </p>

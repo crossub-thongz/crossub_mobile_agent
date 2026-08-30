@@ -29,6 +29,7 @@ import {
 } from '@/lib/end-leasing-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
 import { resolvePropertyDisplayAddress } from '@/lib/property-address';
 import {
@@ -149,6 +150,8 @@ export function EndLeasingTaskDetailView({
       suburb: caseData.property.suburb,
     }),
   );
+  const tenantName = caseData.tenant.name?.trim() || property?.tenantName?.trim() || '';
+  const vacateDate = endLeasingVacateDate(caseData);
 
   const relatedTasks = useMemo(() => {
     if (!propertyId) return [];
@@ -208,6 +211,13 @@ export function EndLeasingTaskDetailView({
                 End of lease – {caseData.property.address}
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">{displayAddress}</p>
+              {tenantName || vacateDate ? (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {tenantName}
+                  {tenantName && vacateDate ? ' · ' : ''}
+                  {vacateDate ? `Vacate ${formatDate(vacateDate)}` : ''}
+                </p>
+              ) : null}
               <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 <span>Task ID {taskRef}</span>
                 <span>Created {createdLabel}</span>
