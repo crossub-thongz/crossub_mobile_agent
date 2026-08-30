@@ -102,6 +102,7 @@ export function MaintenanceTaskDetailView({
   backLabel,
   onApproveQuote,
   onDeclineQuote,
+  onRequoteQuote,
   quoteAmount,
   contractorName,
   quoteExpiry,
@@ -121,6 +122,7 @@ export function MaintenanceTaskDetailView({
   backLabel: string;
   onApproveQuote?: () => void | Promise<void>;
   onDeclineQuote?: (reason: string) => void | Promise<void>;
+  onRequoteQuote?: (counterPrice: number, message: string) => void | Promise<void>;
   quoteAmount?: number;
   contractorName?: string;
   quoteExpiry?: string;
@@ -338,6 +340,7 @@ export function MaintenanceTaskDetailView({
               reminderEta={reminderEta}
               onApproveQuote={onApproveQuote}
               onDeclineQuote={onDeclineQuote}
+              onRequoteQuote={onRequoteQuote}
               quoteAmount={quoteAmount}
               contractorName={contractorName}
               quoteExpiry={quoteExpiry}

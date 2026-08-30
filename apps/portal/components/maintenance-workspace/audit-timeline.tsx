@@ -3,6 +3,10 @@
 import { History } from 'lucide-react';
 
 import type { ApiMaintenanceAuditLogEntry } from '@/lib/crossub-api/types';
+import {
+  formatMaintenanceAuditMessage,
+  isMaintenanceEmailSnapshotAudit,
+} from '@/lib/maintenance/format-audit-message';
 import { formatDateTime } from '@/lib/utils';
 
 import { SectionShell } from './section-shell';
@@ -34,9 +38,11 @@ export function WorkspaceAuditTimeline({
     );
   }
 
-  const sorted = [...entries].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
+  const sorted = [...entries]
+    .filter((entry) => !isMaintenanceEmailSnapshotAudit(entry.action, entry.message))
+    .sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
 
   return (
     <ol className="space-y-0">
@@ -53,7 +59,7 @@ export function WorkspaceAuditTimeline({
             <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {EVENT_LABEL[entry.action] ?? entry.action}
             </p>
-            <p className="text-sm font-medium">{entry.message}</p>
+            <p className="text-sm font-medium">{formatMaintenanceAuditMessage(entry.message)}</p>
             <p className="text-muted-foreground text-[11px]">
               {formatDateTime(entry.timestamp)} · {entry.actor}
             </p>

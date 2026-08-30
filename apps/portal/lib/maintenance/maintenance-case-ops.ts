@@ -15,6 +15,7 @@ import {
   transitionMaintenanceCase,
   type MaintenanceWorkflowResponsibility,
 } from '@/lib/crossub-api/maintenance-client';
+import type { ApiQuotation } from '@/lib/crossub-api/types';
 
 /** Row id for `assign-contractor` when the selection key is agency-scoped. */
 function preferredRowIdForAssign(selectionKey: string): string | null {
@@ -112,6 +113,22 @@ export async function markMaintenanceWorkComplete(requestId: string) {
   await transitionMaintenanceCase(requestId, 'completed', {
     completionEvidenceUploaded: true,
   });
+}
+
+/** Payload the review-decision endpoint needs when the in-memory board was reset. */
+export function quotationSnapshotFromApi(quote: ApiQuotation) {
+  return {
+    maintenanceRequestId: quote.maintenanceRequestId,
+    contractorId: quote.contractorId,
+    price: quote.price,
+    currency: quote.currency,
+    scope: quote.scope,
+    availableSchedule: quote.availableSchedule,
+    submittedAt: quote.submittedAt,
+    status: quote.status,
+    lineItems: quote.lineItems,
+    comments: quote.comments,
+  };
 }
 
 /** Approve via `/maintenance/quotations/*` — same workflow board as the admin portal. */

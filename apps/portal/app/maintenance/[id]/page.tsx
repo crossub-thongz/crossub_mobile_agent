@@ -31,7 +31,7 @@ export default function MaintenanceDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const isV2 = useIsAgentUiV2();
-  const { properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote } =
+  const { properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote, requoteMaintenanceQuote } =
     useAgentData();
   const { item, resolveState } = useResolvedMaintenance(id);
   const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
@@ -63,9 +63,9 @@ export default function MaintenanceDetailPage() {
     }
     try {
       await approveMaintenanceQuote(item.id);
-      toast.success('Quote approved');
-    } catch {
-      toast.error('Approval failed — check API connection');
+      toast.success('Quote approved — contractor asked to schedule the visit');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Approval failed — check API connection');
     }
   };
 
@@ -77,9 +77,23 @@ export default function MaintenanceDetailPage() {
     }
     try {
       await declineMaintenanceQuote(item.id, reason);
-      toast.success('Quote declined — requote workflow started');
-    } catch {
-      toast.error('Decline failed');
+      toast.success('Quote declined — contractor notified');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Decline failed');
+    }
+  };
+
+  const handleRequote = async (counterPrice: number, message: string) => {
+    if (!item) return;
+    if (!apiConnected) {
+      toast.error('Connect to the API to send a counter offer.');
+      return;
+    }
+    try {
+      await requoteMaintenanceQuote(item.id, counterPrice, message);
+      toast.success('Counter offer sent to contractor');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Counter offer failed');
     }
   };
 
@@ -113,6 +127,7 @@ export default function MaintenanceDetailPage() {
           reminderEta={reminderEta}
           onApproveQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleApprove : undefined}
           onDeclineQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleDecline : undefined}
+          onRequoteQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleRequote : undefined}
           quoteAmount={displayItem.quoteAmount}
           contractorName={displayItem.contractorName}
           quoteExpiry={displayItem.quoteExpiry}
@@ -132,6 +147,7 @@ export default function MaintenanceDetailPage() {
           reminderEta={reminderEta}
           onApproveQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleApprove : undefined}
           onDeclineQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleDecline : undefined}
+          onRequoteQuote={AGENT_CASE_INTERACTIONS_ENABLED ? handleRequote : undefined}
           quoteAmount={displayItem.quoteAmount}
           contractorName={displayItem.contractorName}
           quoteExpiry={displayItem.quoteExpiry}

@@ -43,6 +43,7 @@ export function MaintenanceWorkspace({
   backLabel,
   onApproveQuote,
   onDeclineQuote,
+  onRequoteQuote,
   quoteAmount,
   contractorName,
   quoteExpiry,
@@ -61,6 +62,7 @@ export function MaintenanceWorkspace({
   backLabel: string;
   onApproveQuote?: () => void | Promise<void>;
   onDeclineQuote?: (reason: string) => void | Promise<void>;
+  onRequoteQuote?: (counterPrice: number, message: string) => void | Promise<void>;
   assignedToName?: string | null;
   quoteAmount?: number;
   contractorName?: string;
@@ -144,7 +146,9 @@ export function MaintenanceWorkspace({
         (workspaceCase.status === 'under_review' || workspaceCase.status === 'pending_evidence')) ||
       (target === 'quotation' && workspaceCase.status === 'pending_quotation') ||
       (target === 'approval' && workspaceCase.status === 'pending_approval') ||
-      (target === 'in_progress' && workspaceCase.status === 'in_progress') ||
+      (target === 'in_progress' &&
+        (workspaceCase.status === 'in_progress' ||
+          workspaceCase.status === 'pending_schedule')) ||
       (target === 'completion' && workspaceCase.status === 'completed') ||
       (target === 'closed' && workspaceCase.status === 'closed');
 
@@ -216,6 +220,7 @@ export function MaintenanceWorkspace({
           return 'quotation';
         case 'pending_approval':
           return 'approval';
+        case 'pending_schedule':
         case 'in_progress':
           return 'in_progress';
         case 'completed':
@@ -523,10 +528,21 @@ export function MaintenanceWorkspace({
                         recommendation={recommendation}
                         quoteDocumentUrl={quoteDocumentUrl}
                         disabled={!requiresApproval}
+                        requoteRequiresPrice
                         onApprove={() => void onApproveQuote?.()}
                         onDecline={(r) => void onDeclineQuote?.(r)}
-                        onRequote={(r) => void onDeclineQuote?.(`Requote requested: ${r}`)}
+                        onRequote={(reason, counterPrice) => {
+                          if (counterPrice == null) return;
+                          void onRequoteQuote?.(counterPrice, reason);
+                        }}
                       />
+                    )}
+
+                    {uiStatusForUI === 'pending_schedule' && (
+                      <p className="text-muted-foreground text-xs">
+                        Quote approved. The contractor has been asked to arrange a visit time
+                        with the tenant.
+                      </p>
                     )}
 
                     {uiStatusForUI === 'pending_quotation' && (

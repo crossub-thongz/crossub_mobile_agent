@@ -19,6 +19,7 @@ export function ApprovalPanel({
   onDecline,
   onRequote,
   disabled,
+  requoteRequiresPrice = false,
 }: {
   title: string;
   amount?: number;
@@ -28,21 +29,36 @@ export function ApprovalPanel({
   quoteDocumentUrl?: string;
   onApprove: () => void;
   onDecline: (reason: string) => void;
-  onRequote: (reason: string) => void;
+  onRequote: (reason: string, counterPrice?: number) => void;
   disabled?: boolean;
+  /** Maintenance requote is a counter-offer and needs a price. */
+  requoteRequiresPrice?: boolean;
 }) {
   const [mode, setMode] = useState<'idle' | 'decline' | 'requote'>('idle');
   const [reason, setReason] = useState('');
+  const [counterPrice, setCounterPrice] = useState('');
 
   const submitReason = () => {
     if (!reason.trim()) {
       toast.error('Please provide a reason');
       return;
     }
-    if (mode === 'decline') onDecline(reason);
-    else onRequote(reason);
+    if (mode === 'decline') {
+      onDecline(reason);
+    } else {
+      let price: number | undefined;
+      if (requoteRequiresPrice) {
+        price = Number(counterPrice);
+        if (!Number.isFinite(price) || price <= 0) {
+          toast.error('Enter a counter-offer price');
+          return;
+        }
+      }
+      onRequote(reason, price);
+    }
     setMode('idle');
     setReason('');
+    setCounterPrice('');
   };
 
   if (disabled) {
@@ -126,8 +142,22 @@ export function ApprovalPanel({
         </div>
       ) : (
         <div className="space-y-3">
+          {mode === 'requote' && requoteRequiresPrice ? (
+            <>
+              <Label htmlFor="counter-price">Counter-offer price (AUD inc GST)</Label>
+              <Input
+                id="counter-price"
+                type="number"
+                min={0}
+                step="0.01"
+                value={counterPrice}
+                onChange={(e) => setCounterPrice(e.target.value)}
+                placeholder={amount != null ? `Quoted ${formatCurrency(amount)}` : 'Required'}
+              />
+            </>
+          ) : null}
           <Label htmlFor="reason">
-            Reason for {mode === 'decline' ? 'decline' : 'requote'}
+            {mode === 'decline' ? 'Reason for decline' : 'Message to contractor'}
           </Label>
           <Input
             id="reason"
@@ -136,7 +166,15 @@ export function ApprovalPanel({
             placeholder="Required for audit trail"
           />
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setMode('idle')}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setMode('idle');
+                setReason('');
+                setCounterPrice('');
+              }}
+            >
               Cancel
             </Button>
             <Button className="flex-1" onClick={submitReason}>

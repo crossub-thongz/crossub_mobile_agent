@@ -54,7 +54,7 @@ export function getQuickJumpCurrentRank(status: MaintenanceWorkspaceStatus): num
   if (status === 'under_review' || status === 'pending_evidence') return 1;
   if (status === 'pending_quotation') return 2;
   if (status === 'pending_approval') return 3;
-  if (status === 'in_progress') return 4;
+  if (status === 'pending_schedule' || status === 'in_progress') return 4;
   if (status === 'completed') return 5;
   if (status === 'closed') return 6;
   return 0;

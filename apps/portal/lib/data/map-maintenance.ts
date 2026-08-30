@@ -7,6 +7,10 @@ import type {
 } from '@/lib/crossub-api/types';
 import { inferInvitedContractorIdsFromAudit, resolveResponsibilityFromSources } from '@/lib/maintenance/infer-responsibility';
 import { contractorIdsMatch } from '@/lib/maintenance/resolve-contractor-display';
+import {
+  formatMaintenanceAuditMessage,
+  isMaintenanceEmailSnapshotAudit,
+} from '@/lib/maintenance/format-audit-message';
 import type { MaintenanceRequest, Priority, TimelineEntry } from '@/lib/types';
 import { maintenanceDetail } from '@/constants/routes';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
@@ -42,25 +46,66 @@ function dedupeAuditEntries(
   });
 }
 
+/** Newest live submitted quote — prefer the assigned contractor when several are on the board. */
+export function pickLatestSubmittedQuote(
+  quotations: ApiQuotation[],
+  req: Pick<ApiMaintenanceRequest, 'id' | 'quotationIds' | 'assignedContractorId'>,
+): ApiQuotation | undefined {
+  const ids = req.quotationIds ?? [];
+  const submitted = quotations
+    .filter(
+      (q) =>
+        q.maintenanceRequestId === req.id &&
+        q.status === 'submitted' &&
+        (ids.length === 0 || ids.includes(q.id)),
+    )
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  if (req.assignedContractorId) {
+    const forAssigned = submitted.find((q) =>
+      contractorIdsMatch(q.contractorId, req.assignedContractorId!),
+    );
+    if (forAssigned) return forAssigned;
+  }
+  return submitted[0];
+}
+
+function pickLatestQuote(
+  quotations: ApiQuotation[],
+  req: Pick<ApiMaintenanceRequest, 'id' | 'quotationIds'>,
+  status: ApiQuotation['status'],
+): ApiQuotation | undefined {
+  const ids = req.quotationIds ?? [];
+  return quotations
+    .filter(
+      (q) =>
+        q.maintenanceRequestId === req.id &&
+        q.status === status &&
+        (ids.length === 0 || ids.includes(q.id)),
+    )
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+}
+
 function auditToTimeline(entries: ApiMaintenanceAuditLogEntry[]): TimelineEntry[] {
-  return entries.map((e) => ({
-    id: e.id,
-    at: e.timestamp,
-    actor: e.actor === 'agent' ? 'Agent' : e.actor === 'admin' ? 'CROSSUB' : e.actor,
-    actorRole:
-      e.actor === 'agent'
-        ? 'agent'
-        : e.actor === 'contractor'
-          ? 'contractor'
-          : 'crossub',
-    title: e.message,
-    source: e.actor === 'system' ? 'system' : 'app',
-    staffAssisted:
-      e.actor === 'admin' &&
-      (e.message.toLowerCase().includes('on behalf') ||
-        e.message.toLowerCase().includes('staff assisted') ||
-        e.action.includes('assisted')),
-  }));
+  return entries
+    .filter((e) => !isMaintenanceEmailSnapshotAudit(e.action, e.message))
+    .map((e) => ({
+      id: e.id,
+      at: e.timestamp,
+      actor: e.actor === 'agent' ? 'Agent' : e.actor === 'admin' ? 'CROSSUB' : e.actor,
+      actorRole:
+        e.actor === 'agent'
+          ? 'agent'
+          : e.actor === 'contractor'
+            ? 'contractor'
+            : 'crossub',
+      title: formatMaintenanceAuditMessage(e.message),
+      source: e.actor === 'system' ? 'system' : 'app',
+      staffAssisted:
+        e.actor === 'admin' &&
+        (e.message.toLowerCase().includes('on behalf') ||
+          e.message.toLowerCase().includes('staff assisted') ||
+          e.action.includes('assisted')),
+    }));
 }
 
 export interface MappedMaintenance extends MaintenanceRequest {
@@ -85,23 +130,18 @@ export function mapApiMaintenanceRequest(
   auditLog: ApiMaintenanceAuditLogEntry[],
   notifications: ApiMaintenanceNotification[],
 ): MappedMaintenance {
-  const submittedQuote = quotations.find(
-    (q) =>
-      q.maintenanceRequestId === req.id &&
-      q.status === 'submitted' &&
-      (req.quotationIds ?? []).includes(q.id),
-  );
-  const approvedQuote = quotations.find(
-    (q) =>
-      q.maintenanceRequestId === req.id &&
-      q.status === 'approved' &&
-      (req.quotationIds ?? []).includes(q.id),
-  );
-  const latestQuote = quotations.find(
-    (q) =>
-      q.maintenanceRequestId === req.id &&
-      (req.quotationIds ?? []).includes(q.id),
-  );
+  const submittedQuote = pickLatestSubmittedQuote(quotations, req);
+  const approvedQuote = pickLatestQuote(quotations, req, 'approved');
+  const latestQuote =
+    submittedQuote ??
+    approvedQuote ??
+    quotations
+      .filter(
+        (q) =>
+          q.maintenanceRequestId === req.id &&
+          (req.quotationIds ?? []).includes(q.id),
+      )
+      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
   const contractorId =
     req.assignedContractorId ??
     approvedQuote?.contractorId ??

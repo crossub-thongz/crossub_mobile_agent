@@ -1,6 +1,10 @@
 'use client';
 
 import {
+  formatMaintenanceAuditMessage,
+  isMaintenanceEmailSnapshotAudit,
+} from '@/lib/maintenance/format-audit-message';
+import {
   filterAuditForTarget,
   previewSummaryForTarget,
   previewTitleForTarget,
@@ -18,9 +22,11 @@ export function WorkflowStepPreview({
   workspaceCase: MaintenanceWorkspaceCase;
   aiAdvice: string;
 }) {
-  const entries = filterAuditForTarget(workspaceCase.auditEntries, target).sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
+  const entries = filterAuditForTarget(workspaceCase.auditEntries, target)
+    .filter((entry) => !isMaintenanceEmailSnapshotAudit(entry.action, entry.message))
+    .sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
 
   const why =
     target === 'review' && aiAdvice.trim()
@@ -79,7 +85,7 @@ export function WorkflowStepPreview({
           <ol className="space-y-2">
             {entries.map((entry) => (
               <li key={entry.id} className="text-xs">
-                <p className="font-medium">{entry.message}</p>
+                <p className="font-medium">{formatMaintenanceAuditMessage(entry.message)}</p>
                 <p className="text-muted-foreground mt-0.5">
                   {formatDateTime(entry.timestamp)} · {entry.actor}
                 </p>

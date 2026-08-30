@@ -124,9 +124,12 @@ import { notificationMatchesPrefs } from '@/lib/notification-prefs';
 import { useAgentStore } from '@/lib/store';
 import { displayName, formatCurrency, formatPropertyFullAddress } from '@/lib/utils';
 import { fetchMaintenanceCase } from '@/lib/maintenance/fetch-maintenance-case';
+import { pickLatestSubmittedQuote } from '@/lib/data/map-maintenance';
 import {
-  approveMaintenanceQuotationCase,
-  declineMaintenanceQuotationCase,
+  quotationSnapshotFromApi,
+  reviewMaintenanceQuotationDecisionCase,
+  sendMaintenanceContractorFeedbackCase,
+  sendMaintenanceQuotationCounterOfferCase,
 } from '@/lib/maintenance/maintenance-case-ops';
 import {
   hasFullManagementAccess as computeFullManagementAccess,
@@ -296,6 +299,11 @@ interface AgentDataContextValue {
   registerInspection: (inspection: Inspection) => void;
   approveMaintenanceQuote: (requestId: string) => Promise<void>;
   declineMaintenanceQuote: (requestId: string, reason: string) => Promise<void>;
+  requoteMaintenanceQuote: (
+    requestId: string,
+    counterPrice: number,
+    message?: string,
+  ) => Promise<void>;
 }
 
 const AgentDataContext = createContext<AgentDataContextValue | null>(null);
@@ -1579,30 +1587,61 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [needActionItems],
   );
 
+  const resolveLiveSubmittedQuote = useCallback(async (requestId: string) => {
+    const snapshot = await fetchMaintenanceCase(requestId);
+    if (!snapshot) {
+      throw new Error('No submitted quotation on this maintenance case');
+    }
+    const quote =
+      pickLatestSubmittedQuote(snapshot.quotations, {
+        id: requestId,
+        assignedContractorId:
+          snapshot.mapped.apiRequest.assignedContractorId ??
+          snapshot.workflowRequest?.assignedContractorId,
+      }) ??
+      snapshot.quotations.find((q) => q.id === snapshot.mapped.submittedQuotationId);
+    if (!quote || quote.status !== 'submitted') {
+      throw new Error('No submitted quotation on this maintenance case');
+    }
+    return quote;
+  }, []);
+
   const approveMaintenanceQuote = useCallback(
     async (requestId: string) => {
-      const snapshot = await fetchMaintenanceCase(requestId);
-      const quotationId = snapshot?.mapped.submittedQuotationId;
-      if (!quotationId) {
-        throw new Error('No submitted quotation on this maintenance case');
-      }
-      await approveMaintenanceQuotationCase(quotationId);
+      const quote = await resolveLiveSubmittedQuote(requestId);
+      await reviewMaintenanceQuotationDecisionCase(
+        quote.id,
+        'approved',
+        undefined,
+        quotationSnapshotFromApi(quote),
+      );
       await refresh();
     },
-    [refresh],
+    [refresh, resolveLiveSubmittedQuote],
   );
 
   const declineMaintenanceQuote = useCallback(
     async (requestId: string, reason: string) => {
-      const snapshot = await fetchMaintenanceCase(requestId);
-      const quotationId = snapshot?.mapped.submittedQuotationId;
-      if (!quotationId) {
-        throw new Error('No submitted quotation on this maintenance case');
+      const quote = await resolveLiveSubmittedQuote(requestId);
+      const snapshot = quotationSnapshotFromApi(quote);
+      await reviewMaintenanceQuotationDecisionCase(quote.id, 'declined', reason, snapshot);
+      try {
+        await sendMaintenanceContractorFeedbackCase(quote.id, reason);
+      } catch {
+        // Decision is recorded even if the contractor email cannot be sent.
       }
-      await declineMaintenanceQuotationCase(quotationId, reason);
       await refresh();
     },
-    [refresh],
+    [refresh, resolveLiveSubmittedQuote],
+  );
+
+  const requoteMaintenanceQuote = useCallback(
+    async (requestId: string, counterPrice: number, message?: string) => {
+      const quote = await resolveLiveSubmittedQuote(requestId);
+      await sendMaintenanceQuotationCounterOfferCase(quote.id, counterPrice, message);
+      await refresh();
+    },
+    [refresh, resolveLiveSubmittedQuote],
   );
 
   const value: AgentDataContextValue = {
@@ -1661,6 +1700,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     deleteDocument,
     approveMaintenanceQuote,
     declineMaintenanceQuote,
+    requoteMaintenanceQuote,
   };
 
   return (

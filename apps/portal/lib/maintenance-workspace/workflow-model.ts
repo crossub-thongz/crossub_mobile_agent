@@ -60,7 +60,13 @@ export function getWorkflowSteps(
             status:
               request.status === 'pending_quotation'
                 ? 'active'
-                : ['pending_approval', 'in_progress', 'completed', 'closed'].includes(request.status)
+                : [
+                    'pending_approval',
+                    'pending_schedule',
+                    'in_progress',
+                    'completed',
+                    'closed',
+                  ].includes(request.status)
                   ? 'done'
                   : 'upcoming',
           },
@@ -71,7 +77,9 @@ export function getWorkflowSteps(
             status:
               request.status === 'pending_approval'
                 ? 'active'
-                : ['in_progress', 'completed', 'closed'].includes(request.status)
+                : ['pending_schedule', 'in_progress', 'completed', 'closed'].includes(
+                    request.status,
+                  )
                   ? 'done'
                   : 'upcoming',
           },
@@ -84,7 +92,9 @@ export function getWorkflowSteps(
             label: 'In Progress',
             sublabel: 'Contractor on site',
             status:
-              request.status === 'in_progress' || request.status === 'completed'
+              request.status === 'pending_schedule' ||
+              request.status === 'in_progress' ||
+              request.status === 'completed'
                 ? 'active'
                 : request.status === 'closed'
                   ? 'done'

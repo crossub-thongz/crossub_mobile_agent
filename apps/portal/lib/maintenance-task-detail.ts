@@ -3,6 +3,10 @@ import {
   buildMaintenanceAgentWorkflow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import {
+  formatMaintenanceAuditMessage,
+  isMaintenanceEmailSnapshotAudit,
+} from '@/lib/maintenance/format-audit-message';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import { SOURCE_LABELS } from '@/lib/maintenance-workspace/status-labels';
 import type { MaintenanceRequest, Property } from '@/lib/types';
@@ -252,13 +256,15 @@ export function buildMaintenanceActivityEntries(workspaceCase: MaintenanceWorksp
   actor: string;
 }[] {
   return [...workspaceCase.auditEntries]
+    .filter((entry) => !isMaintenanceEmailSnapshotAudit(entry.action, entry.message))
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .map((entry) => ({
       id: entry.id,
       at: entry.timestamp,
-      title: entry.message,
+      title: formatMaintenanceAuditMessage(entry.message),
       actor: entry.actor || 'CROS System',
-    }));
+    }))
+    .filter((entry) => entry.title.length > 0);
 }
 
 export function buildMaintenanceWorkflowContext(
