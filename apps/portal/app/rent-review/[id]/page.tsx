@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { notFound, useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import { RentReviewDetailView } from '@/components/rent-review/rent-review-detail-view';
+import { TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAgentNotificationDialog } from '@/components/providers/agent-notification-dialog-provider';
@@ -43,7 +44,21 @@ export default function RentReviewDetailPage() {
   }
 
   if (!loading && !review && !apiConnected) {
-    notFound();
+    return (
+      <AgentShell
+        title="Rent review"
+        backHref={back.href}
+        backLabel={back.label}
+        hideGlobalFabs
+        wide
+        hideNeedAction
+      >
+        <TaskJobUnavailable
+          title="Rent review not found"
+          description="This review may still be saving. Open it from Tasks in a moment."
+        />
+      </AgentShell>
+    );
   }
 
   return (

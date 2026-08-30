@@ -1,11 +1,12 @@
 'use client';
 
 import { useMemo } from 'react';
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { MaintenanceTaskDetailView } from '@/components/maintenance-workspace/maintenance-task-detail-view';
 import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
+import { TaskJobLoading, TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
@@ -14,6 +15,7 @@ import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import { useMaintenanceCaseLiveSync } from '@/lib/use-maintenance-case-live-sync';
+import { useResolvedMaintenance } from '@/lib/use-resolved-maintenance';
 
 function formatReminderEta(iso: string | null): string | null {
   if (!iso) return null;
@@ -29,10 +31,9 @@ export default function MaintenanceDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const isV2 = useIsAgentUiV2();
-  const { maintenanceAll, properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote } =
+  const { properties, apiConnected, approveMaintenanceQuote, declineMaintenanceQuote } =
     useAgentData();
-
-  const item = maintenanceAll.find((m) => m.id === id);
+  const { item, resolveState } = useResolvedMaintenance(id);
   const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
 
   const property = useMemo(
@@ -51,12 +52,11 @@ export default function MaintenanceDetailPage() {
     module: 'maintenance',
   });
 
-  if (!item || !workspaceCase) notFound();
-
   const displayItem = liveMapped ?? item;
   const reminderEta = formatReminderEta(nextReminderDueAt);
 
   const handleApprove = async () => {
+    if (!item) return;
     if (!apiConnected) {
       toast.error('Connect to the API to approve this quote.');
       return;
@@ -70,6 +70,7 @@ export default function MaintenanceDetailPage() {
   };
 
   const handleDecline = async (reason: string) => {
+    if (!item) return;
     if (!apiConnected) {
       toast.error('Connect to the API to decline this quote.');
       return;
@@ -91,7 +92,14 @@ export default function MaintenanceDetailPage() {
       hideGlobalFabs
       hideNeedAction
     >
-      {isV2 ? (
+      {resolveState === 'pending' || (item && !workspaceCase) ? (
+        <TaskJobLoading label="Loading maintenance…" />
+      ) : !item || !workspaceCase || !displayItem ? (
+        <TaskJobUnavailable
+          title="Maintenance job not found"
+          description="This job may still be saving. Open it from Tasks in a moment."
+        />
+      ) : isV2 ? (
         <MaintenanceTaskDetailView
           item={displayItem}
           property={property}

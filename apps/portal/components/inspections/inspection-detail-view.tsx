@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { notFound, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -119,7 +119,7 @@ import {
   routineInspectionApi,
   type ServerRoutineScheduleView,
 } from '@/lib/routine-inspection-api';
-import { mapInspectionRecordToView, mapOpenSessionToInspection, caseAuditToTimeline, pickFresherInspection } from '@/lib/inspection-mappers';
+import { mapInspectionRecordToView, mapOpenSessionToInspection, caseAuditToTimeline, findInspectionInList, pickFresherInspection } from '@/lib/inspection-mappers';
 import type { InspectionRecord } from '@/lib/inspections-types';
 import type { RoutineFlow } from '@/lib/routine/routine-case-status';
 import type { Inspection } from '@/lib/types';
@@ -139,7 +139,7 @@ export function InspectionDetailView({
   const router = useRouter();
   const { inspections, leasingCycles, apiConnected, registerInspection, refresh, properties } =
     useAgentData();
-  const baseFromList = inspections.find((i) => i.id === inspectionId);
+  const baseFromList = findInspectionInList(inspections, inspectionId);
   const baseFromListRef = useRef(baseFromList);
   baseFromListRef.current = baseFromList;
   const [fetchedBase, setFetchedBase] = useState<Inspection | null>(null);
@@ -403,14 +403,11 @@ export function InspectionDetailView({
   }
 
   if (resolveState === 'missing' || !insp) {
-    if (embedded) {
-      return (
-        <p className="text-muted-foreground py-8 text-center text-sm">
-          Could not load this inspection job case.
-        </p>
-      );
-    }
-    notFound();
+    return (
+      <p className="text-muted-foreground py-8 text-center text-sm">
+        Could not load this inspection job case.
+      </p>
+    );
   }
 
   if (insp.type === 'INGOING' || insp.type === 'OUTGOING') {
@@ -812,11 +809,13 @@ export function InspectionDetailView({
         </div>
       ) : null}
 
+      {/* Empty shell: rail portals to TaskWorkflowRailSlot and leaves this box blank.
       {showSessionRail && openSession && !isStandaloneOpenViewing ? (
         <section className={panelClassCompact}>
           <OpenInspectionSessionRail session={openSession} />
         </section>
       ) : null}
+      */}
 
       {needsScheduleRequest && !isOpenResultsStep && linkedLeasingCycleId ? (
         <OpenInspectionScheduleRequestPanel

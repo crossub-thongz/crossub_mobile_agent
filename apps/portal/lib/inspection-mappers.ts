@@ -168,6 +168,17 @@ function inspectionFreshnessRank(row: Inspection): number {
   return rank;
 }
 
+/** Match a list row by viewing-session id or the linked OPEN pool job id. */
+export function findInspectionInList(
+  inspections: Inspection[],
+  id: string,
+): Inspection | undefined {
+  return (
+    inspections.find((row) => row.id === id) ??
+    inspections.find((row) => row.inspectionRecordId === id)
+  );
+}
+
 /** Stable key so poll/store updates can skip React setState when nothing material changed. */
 export function inspectionIdentityKey(row: Inspection): string {
   return [

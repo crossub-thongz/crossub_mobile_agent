@@ -13,6 +13,7 @@ import {
   User,
 } from 'lucide-react';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import { TaskJobLoading, TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
@@ -142,6 +143,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
     accounting,
     apiConnected,
     refresh,
+    loading,
   } = useAgentData();
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const detail = useLeasingWorkflowStore((s) => s.getDetail);
@@ -229,15 +231,18 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   ]);
 
   if (!cycle || !property) {
+    if (loading) {
+      return <TaskJobLoading label="Loading leasing task…" />;
+    }
     return (
-      <div className="rounded-2xl border v2-frosted-surface px-4 py-10 text-center">
-        <p className="text-sm font-medium">Loading leasing task…</p>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {apiConnected
-            ? 'This leasing case could not be found.'
-            : 'Connect to the API to load leasing task details.'}
-        </p>
-      </div>
+      <TaskJobUnavailable
+        title="Leasing job not found"
+        description={
+          apiConnected
+            ? 'This leasing case could not be found. Open it from Tasks in a moment.'
+            : 'Connect to the API to load leasing task details.'
+        }
+      />
     );
   }
 

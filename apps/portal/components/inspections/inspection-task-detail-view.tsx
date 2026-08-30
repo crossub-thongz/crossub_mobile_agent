@@ -4,10 +4,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, ClipboardList, Sparkles } from 'lucide-react';
-import { notFound } from 'next/navigation';
 
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import { TaskJobLoading, TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
@@ -25,7 +25,7 @@ import {
 } from '@/lib/inspection-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
-import type { Inspection } from '@/lib/types';
+import { useResolvedInspection } from '@/lib/use-resolved-inspection';
 import {
   cn,
   formatCurrency,
@@ -99,20 +99,24 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
 
   const [activeTab, setActiveTab] = useState<InspectionTaskTab>('workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
-  const inspection = inspections.find((row) => row.id === inspectionId) as Inspection | undefined;
+  const { inspection, resolveState } = useResolvedInspection(inspectionId);
 
-  if (!inspection) notFound();
-
-  const propertyId = inspection.propertyId;
+  const propertyId = inspection?.propertyId;
   const property = properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
 
-  const banner = useMemo(() => resolveInspectionStatusBanner(inspection), [inspection]);
-  const detailRows = useMemo(() => buildInspectionDetailRows(inspection), [inspection]);
+  const banner = useMemo(
+    () => (inspection ? resolveInspectionStatusBanner(inspection) : null),
+    [inspection],
+  );
+  const detailRows = useMemo(
+    () => (inspection ? buildInspectionDetailRows(inspection) : []),
+    [inspection],
+  );
   const activityEntries = useMemo(
-    () => buildInspectionActivityEntries(inspection),
+    () => (inspection ? buildInspectionActivityEntries(inspection) : []),
     [inspection],
   );
 
@@ -137,11 +141,13 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
       vacatingCases: vacating.filter((row) => row.propertyId === propertyId),
       accounting: accounting.find((row) => row.propertyId === propertyId) ?? null,
     });
-    return rows.filter((row) => !(row.kind === 'inspection' && row.id === inspection.id)).slice(0, 4);
+    return rows
+      .filter((row) => !(row.kind === 'inspection' && row.id === inspection?.id))
+      .slice(0, 4);
   }, [
     accounting,
     currentLease,
-    inspection.id,
+    inspection?.id,
     inspections,
     leasingCycles,
     maintenanceAll,
@@ -151,6 +157,19 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
     tribunalCases,
     vacating,
   ]);
+
+  if (resolveState === 'missing' || (resolveState !== 'pending' && !inspection)) {
+    return (
+      <TaskJobUnavailable
+        title="Inspection job not found"
+        description="The open inspection may still be saving. Open it from Tasks in a moment."
+      />
+    );
+  }
+
+  if (!inspection || !banner) {
+    return <TaskJobLoading label="Loading inspection…" />;
+  }
 
   const address = property ? formatPropertyFullAddress(property) : inspection.propertyAddress;
   const taskRef = inspectionTaskReference(inspection);
@@ -239,7 +258,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
         </div>
       </section>
 
-      <TaskWorkflowRailSlot />
+      {/* <TaskWorkflowRailSlot /> */}
 
           <div className="border-b">
             <div className="flex gap-1 overflow-x-auto">
@@ -262,7 +281,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
           </div>
 
           <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
-            <InspectionDetailView inspectionId={inspectionId} embedded />
+            <InspectionDetailView inspectionId={inspection.id} embedded />
           </div>
 
           {activeTab === 'details' ? (

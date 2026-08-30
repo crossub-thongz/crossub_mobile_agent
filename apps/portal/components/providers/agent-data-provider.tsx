@@ -756,7 +756,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         row.type === 'OPEN' &&
         row.source === 'open_viewing'
       ) {
-        continue;
+        if (byId.has(row.id)) {
+          byId.set(row.id, pickFresherInspection(byId.get(row.id)!, row));
+          continue;
+        }
+        const createdMs = row.createdAt ? Date.parse(row.createdAt) : NaN;
+        const isFresh =
+          !Number.isFinite(createdMs) || Date.now() - createdMs < 10 * 60 * 1000;
+        if (!isFresh) continue;
       }
       byId.set(row.id, row);
     }

@@ -1,11 +1,12 @@
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { FileText, Gavel } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { ModuleCommunications } from '@/components/agent/module-communications';
+import { TaskJobLoading, TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { TribunalTaskDetailView } from '@/components/agent/tribunal-task-detail-view';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -23,7 +24,7 @@ export default function TribunalDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const isV2 = useIsAgentUiV2();
-  const { tribunalCases } = useAgentData();
+  const { tribunalCases, loading } = useAgentData();
   const c = tribunalCases.find((x) => x.id === id);
   const back = useBackNavigation(isV2 ? ROUTES.TASKS : ROUTES.TRIBUNAL, isV2 ? 'Tasks' : 'Tribunal');
 
@@ -35,7 +36,38 @@ export default function TribunalDetailPage() {
     module: 'tribunal',
   });
 
-  if (!c) notFound();
+  if (loading && !c) {
+    return (
+      <AgentShell
+        wide={isV2}
+        title={isV2 ? undefined : 'Tribunal case'}
+        backHref={back.href}
+        backLabel={back.label}
+        hideGlobalFabs={isV2}
+        hideNeedAction={isV2}
+      >
+        <TaskJobLoading label="Loading tribunal…" />
+      </AgentShell>
+    );
+  }
+
+  if (!c) {
+    return (
+      <AgentShell
+        wide={isV2}
+        title={isV2 ? undefined : 'Tribunal case'}
+        backHref={back.href}
+        backLabel={back.label}
+        hideGlobalFabs={isV2}
+        hideNeedAction={isV2}
+      >
+        <TaskJobUnavailable
+          title="Tribunal case not found"
+          description="This case may still be saving. Open it from Tasks in a moment."
+        />
+      </AgentShell>
+    );
+  }
 
   const rentChasing = isRentChasingTribunalCase(c.matter, c.tribunalType);
 

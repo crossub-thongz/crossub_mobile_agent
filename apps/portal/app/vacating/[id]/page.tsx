@@ -1,8 +1,9 @@
 'use client';
 
-import { notFound, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 import { TerminationDetailView } from '@/components/end-leasing/termination-detail-view';
+import { TaskJobUnavailable } from '@/components/agent/tasks/task-job-status';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
@@ -15,7 +16,7 @@ export default function VacatingDetailPage() {
   const caseId = String(params.id);
   const isV2 = useIsAgentUiV2();
   const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
-  const { vacating, apiConnected } = useAgentData();
+  const { vacating, apiConnected, loading } = useAgentData();
   const item = vacating.find((v) => v.id === caseId);
 
   useRecordRecentCaseVisit({
@@ -26,8 +27,6 @@ export default function VacatingDetailPage() {
     module: 'end_leasing',
   });
 
-  if (!item && !apiConnected) notFound();
-
   return (
     <AgentShell
       title="End of lease"
@@ -37,7 +36,14 @@ export default function VacatingDetailPage() {
       wide={isV2}
       hideNeedAction={isV2}
     >
-      <TerminationDetailView caseId={caseId} apiConnected={apiConnected} />
+      {!item && !apiConnected && !loading ? (
+        <TaskJobUnavailable
+          title="End of lease job not found"
+          description="This job may still be saving. Open it from Tasks in a moment."
+        />
+      ) : (
+        <TerminationDetailView caseId={caseId} apiConnected={apiConnected} />
+      )}
     </AgentShell>
   );
 }
