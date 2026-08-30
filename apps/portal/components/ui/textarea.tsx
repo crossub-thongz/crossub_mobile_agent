@@ -1,12 +1,21 @@
 import * as React from 'react';
 
+import { bindTextValueWithoutEmojis, propAllowsEmoji, stripEmojis } from '@/lib/strip-emojis';
 import { cn } from '@/lib/utils';
 
 function Textarea({
   className,
   ref,
+  onChange,
+  value,
+  defaultValue,
   ...props
 }: React.ComponentProps<'textarea'>) {
+  const allowEmoji = propAllowsEmoji(props['data-allow-emoji']);
+  const textValue = typeof value === 'string' && !allowEmoji ? stripEmojis(value) : value;
+  const textDefault =
+    typeof defaultValue === 'string' && !allowEmoji ? stripEmojis(defaultValue) : defaultValue;
+
   return (
     <textarea
       ref={ref}
@@ -18,6 +27,9 @@ function Textarea({
         className,
       )}
       {...props}
+      value={textValue}
+      defaultValue={textDefault}
+      onChange={allowEmoji ? onChange : bindTextValueWithoutEmojis(onChange)}
     />
   );
 }

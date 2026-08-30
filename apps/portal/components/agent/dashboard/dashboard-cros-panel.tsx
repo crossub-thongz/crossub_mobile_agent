@@ -9,6 +9,7 @@ import {
   DashboardAttentionCard,
 } from '@/components/agent/dashboard/dashboard-attention-card';
 import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
+import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useAuth } from '@/components/providers/auth-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
@@ -147,12 +148,12 @@ export function DashboardAskCrosPanel({
 
       <div className="shrink-0 border-t px-4 py-3">
         <form onSubmit={onSubmit} className="flex gap-2">
-          <input
+          <Input
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Ask Anything…"
             disabled={sending}
-            className="border-input v2-frosted-surface h-10 min-w-0 flex-1 rounded-xl border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-60"
+            className="border-input v2-frosted-surface h-10 min-w-0 flex-1 rounded-xl border px-3 text-sm shadow-none outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-60"
           />
           <button
             type="submit"

@@ -15,6 +15,7 @@ import { AgentNotificationLiveAlert } from '@/components/agent/agent-notificatio
 import { AgentNotificationDialogProvider } from '@/components/providers/agent-notification-dialog-provider';
 import { ProviderErrorBoundary } from '@/components/providers/provider-error-boundary';
 import { ChunkReloadGuard } from '@/components/providers/chunk-reload-guard';
+import { StripEmojisGuard } from '@/components/providers/strip-emojis-guard';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AddToHomeScreenPrompt } from '@/components/agent/add-to-home-screen-prompt';
 import { EnvironmentBanner } from '@/components/agent/environment-banner';
@@ -89,6 +90,7 @@ export default function RootLayout({
         */}
         <EnvironmentBanner />
         <ChunkReloadGuard />
+        <StripEmojisGuard />
         <ThemeProvider>
           <AuthProvider>
             <ProviderErrorBoundary>

@@ -1,11 +1,16 @@
 import * as React from 'react';
 
 import { INPUT_TYPE, NUMBER_INPUT_WHEEL_EVENT } from '@/constants/form-input';
+import { bindTextValueWithoutEmojis, propAllowsEmoji, stripEmojis } from '@/lib/strip-emojis';
 import { cn } from '@/lib/utils';
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onChange, value, defaultValue, ...props }, ref) => {
     const innerRef = React.useRef<HTMLInputElement | null>(null);
+    const allowEmoji = propAllowsEmoji(props['data-allow-emoji']);
+    const textValue = typeof value === 'string' && !allowEmoji ? stripEmojis(value) : value;
+    const textDefault =
+      typeof defaultValue === 'string' && !allowEmoji ? stripEmojis(defaultValue) : defaultValue;
 
     const setRefs = React.useCallback(
       (node: HTMLInputElement | null) => {
@@ -40,6 +45,9 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
           className,
         )}
         {...props}
+        value={textValue}
+        defaultValue={textDefault}
+        onChange={allowEmoji ? onChange : bindTextValueWithoutEmojis(onChange)}
       />
     );
   },

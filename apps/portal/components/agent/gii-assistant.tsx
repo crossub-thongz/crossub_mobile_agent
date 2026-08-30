@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Building2, Mic, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,6 +28,7 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { stripEmojis } from '@/lib/strip-emojis';
 import { ROUTES } from '@/constants/routes';
 import {
   VOICE_BUTTON_ARIA_LABEL,
@@ -296,7 +297,10 @@ export function GiiAssistant({
     },
     [openJob, refreshPortfolio, resolveJobCaseLink],
   );
-  const [query, setQuery] = useState('');
+  const [query, setQueryState] = useState('');
+  const setQuery = useCallback<Dispatch<SetStateAction<string>>>((value) => {
+    setQueryState((prev) => stripEmojis(typeof value === 'function' ? value(prev) : value));
+  }, []);
   const [dockTab, setDockTab] = useState<'gii' | 'reply'>('gii');
   const [pendingAttachments, setPendingAttachments] = useState<GiiPendingAttachment[]>([]);
   const [composerDragActive, setComposerDragActive] = useState(false);
