@@ -11,7 +11,7 @@ import { ROUTES } from '@/constants/routes';
 import {
   inspectionDetail,
   maintenanceDetail,
-  propertyDetail,
+  propertyHref,
   rentReviewDetail,
   tenantSelectionDetail,
   vacatingDetail,
@@ -38,7 +38,7 @@ export default function SearchPage() {
           kind: 'Property',
           label: p.address,
           sub: p.tenantName,
-          href: propertyDetail(p.id),
+          href: propertyHref(p),
         });
       }
     }

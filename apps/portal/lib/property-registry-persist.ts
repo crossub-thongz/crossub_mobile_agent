@@ -162,6 +162,13 @@ export function canAutoSaveRegistry(
   return draftRegistryAddress(form) != null;
 }
 
+/** True while the create-property wizard is still in progress. */
+export function isPropertyRegistryDraft(
+  property: { registryIntakeComplete?: boolean } | null | undefined,
+): boolean {
+  return property?.registryIntakeComplete === false;
+}
+
 export function buildRegistryDraftPayload(
   state: PropertyRegistryAutosaveState,
 ): PropertyRegistryDraftPayload {

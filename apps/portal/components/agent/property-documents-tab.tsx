@@ -360,6 +360,7 @@ export function PropertyDocumentsTab({
   const [filesRowGroup, setFilesRowGroup] = useState<CreatePropertyDocumentGroup | null>(null);
   const [preview, setPreview] = useState<{
     title: string;
+    fileName?: string;
     uploadedAt?: string;
     href: string;
   } | null>(null);
@@ -600,6 +601,7 @@ export function PropertyDocumentsTab({
     if (!file.href) return;
     setPreview({
       title: file.fileName || typeTitle,
+      fileName: file.fileName || typeTitle,
       uploadedAt: file.uploadedAt,
       href: file.href,
     });

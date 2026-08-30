@@ -11,13 +11,17 @@ import { PropertyListV2Map } from '@/components/agent/properties/property-list-v
 import { PropertyListV2Table } from '@/components/agent/properties/property-list-v2-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { propertyDetail, propertyNew } from '@/constants/routes';
+import { propertyDetail, propertyNew, propertyRegistryResume } from '@/constants/routes';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   filterPropertiesForListV2,
   PROPERTY_LIST_V2_FILTERS,
+  PROPERTY_LIST_V2_SORTS,
+  sortPropertiesForListV2,
   type PropertyListV2Filter,
+  type PropertyListV2Sort,
 } from '@/lib/property-list-v2';
+import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
 import { useShellAsideStore } from '@/lib/shell-aside-store';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +37,7 @@ export function V2PropertiesPage() {
   const setSelectedId = useShellAsideStore((s) => s.setPropertyPreviewId);
 
   const [filter, setFilter] = useState<PropertyListV2Filter>('all');
+  const [sort, setSort] = useState<PropertyListV2Sort>('newest');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
@@ -50,13 +55,23 @@ export function V2PropertiesPage() {
 
   const handlePropertyOpen = useCallback(
     (propertyId: string) => {
+      const property = properties.find((row) => row.id === propertyId);
+      if (property && isPropertyRegistryDraft(property)) {
+        router.push(propertyRegistryResume(propertyId));
+        return;
+      }
       router.push(propertyDetail(propertyId));
     },
-    [router],
+    [properties, router],
   );
 
   const handlePropertySelect = useCallback(
     (propertyId: string) => {
+      const property = properties.find((row) => row.id === propertyId);
+      if (property && isPropertyRegistryDraft(property)) {
+        router.push(propertyRegistryResume(propertyId));
+        return;
+      }
       if (!desktopViewport) {
         router.push(propertyDetail(propertyId));
         return;
@@ -64,7 +79,7 @@ export function V2PropertiesPage() {
       setSelectedId(propertyId);
       initialSelectDone.current = true;
     },
-    [desktopViewport, router, setSelectedId],
+    [desktopViewport, properties, router, setSelectedId],
   );
 
   useEffect(() => {
@@ -96,10 +111,8 @@ export function V2PropertiesPage() {
           (property.propertyManager?.toLowerCase().includes(query) ?? false),
       );
     }
-    return rows.sort((a, b) =>
-      a.address.localeCompare(b.address, undefined, { sensitivity: 'base' }),
-    );
-  }, [accounting, filter, needActionCountFor, properties, search]);
+    return sortPropertiesForListV2(rows, sort);
+  }, [accounting, filter, needActionCountFor, properties, search, sort]);
 
   const filterCounts = useMemo(() => {
     const counts: Record<PropertyListV2Filter, number> = {
@@ -129,23 +142,24 @@ export function V2PropertiesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filter, search, pageSize]);
+  }, [filter, search, sort, pageSize]);
 
   useEffect(() => {
     if (!desktopViewport) {
       if (selectedId !== null) setSelectedId(null);
       return;
     }
-    if (filtered.length === 0) {
+    const previewable = filtered.filter((property) => !isPropertyRegistryDraft(property));
+    if (previewable.length === 0) {
       if (selectedId !== null) setSelectedId(null);
       return;
     }
-    if (selectedId && !filtered.some((property) => property.id === selectedId)) {
-      setSelectedId(filtered[0]!.id);
+    if (selectedId && !previewable.some((property) => property.id === selectedId)) {
+      setSelectedId(previewable[0]!.id);
       return;
     }
     if (!selectedId && !initialSelectDone.current) {
-      setSelectedId(filtered[0]!.id);
+      setSelectedId(previewable[0]!.id);
       initialSelectDone.current = true;
     }
   }, [desktopViewport, filtered, selectedId, setSelectedId]);
@@ -187,33 +201,49 @@ export function V2PropertiesPage() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1 rounded-xl border bg-card p-1">
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
-              viewMode === 'list'
-                ? 'bg-primary/12 text-primary'
-                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-            )}
-          >
-            <List className="size-3.5" />
-            List
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('map')}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
-              viewMode === 'map'
-                ? 'bg-primary/12 text-primary'
-                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-            )}
-          >
-            <MapIcon className="size-3.5" />
-            Map
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-muted-foreground flex items-center gap-2 text-xs">
+            Sort
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as PropertyListV2Sort)}
+              className="border-input bg-background rounded-lg border px-2 py-1.5 text-xs font-semibold"
+            >
+              {PROPERTY_LIST_V2_SORTS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex items-center gap-1 rounded-xl border bg-card p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
+                viewMode === 'list'
+                  ? 'bg-primary/12 text-primary'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+              )}
+            >
+              <List className="size-3.5" />
+              List
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('map')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
+                viewMode === 'map'
+                  ? 'bg-primary/12 text-primary'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+              )}
+            >
+              <MapIcon className="size-3.5" />
+              Map
+            </button>
+          </div>
         </div>
       </div>
 

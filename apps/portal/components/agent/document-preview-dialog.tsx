@@ -63,6 +63,55 @@ function PreviewErrorState() {
   );
 }
 
+function ImagePreviewPanel({ href, title }: { href: string; title: string }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [directUrl, setDirectUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setLoading(true);
+    setError(false);
+    setBlobUrl(null);
+    setDirectUrl(null);
+
+    void (async () => {
+      try {
+        const blob = await fetchDocumentBlob(href);
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      } catch {
+        if (!cancelled && (href.startsWith('https://') || href.startsWith('http://'))) {
+          setDirectUrl(href);
+        } else if (!cancelled) {
+          setError(true);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [href]);
+
+  if (loading) return <PreviewLoadingState />;
+  const src = blobUrl ?? directUrl;
+  if (error || !src) return <PreviewErrorState />;
+
+  return (
+    <div className="flex h-full items-start justify-center overflow-auto bg-black/5 p-3">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={title} className="h-auto w-full max-w-full object-contain" />
+    </div>
+  );
+}
+
 /** Fetch PDF as a blob so the browser previews inline instead of downloading. */
 function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -204,7 +253,9 @@ export function DocumentPreviewDialog({
   onClose: () => void;
 }) {
   const url = doc && isViewableDocumentUrl(doc.href) ? doc.href : undefined;
-  const previewKind = url ? documentPreviewKind(url, doc?.fileName) : 'none';
+  const previewKind = url
+    ? documentPreviewKind(url, doc?.fileName ?? doc?.title)
+    : 'none';
   const downloadName = doc?.downloadFileName ?? doc?.fileName ?? doc?.title ?? 'document';
   const [downloadBusy, setDownloadBusy] = useState(false);
 
@@ -253,14 +304,7 @@ export function DocumentPreviewDialog({
               <p className="text-muted-foreground text-sm">No preview available</p>
             </div>
           ) : previewKind === 'image' ? (
-            <div className="flex h-full items-start justify-center overflow-auto bg-black/5 p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt={doc?.title ?? 'Document'}
-                className="h-auto w-full max-w-full object-contain"
-              />
-            </div>
+            open ? <ImagePreviewPanel href={url} title={doc?.title ?? 'Document'} /> : null
           ) : previewKind === 'pdf' ? (
             open ? <PdfPreviewPanel href={url} title={doc?.title ?? 'Document'} /> : null
           ) : previewKind === 'docx' ? (

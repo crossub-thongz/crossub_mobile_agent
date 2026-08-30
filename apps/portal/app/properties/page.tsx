@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Input } from '@/components/ui/input';
-import { propertyDetail, propertyNew, propertyRegistryResume } from '@/constants/routes';
+import { propertyDetail, propertyHref, propertyNew } from '@/constants/routes';
 import { unreadMessagesForProperty } from '@/lib/communications-log';
 import type { Property } from '@/lib/types';
 import { formatPropertyFullAddress } from '@/lib/utils';
@@ -207,11 +207,7 @@ export default function PropertiesPage() {
             messageUnreadFor={messageUnreadFor}
             needActionCountFor={needActionCountFor}
             rowHref={(property) =>
-              isArchivedView
-                ? propertyDetail(property.id)
-                : property.registryIntakeComplete === false
-                  ? propertyRegistryResume(property.id)
-                  : propertyDetail(property.id)
+              isArchivedView ? propertyDetail(property.id) : propertyHref(property)
             }
             onDelete={setPendingDelete}
             canManage={apiConnected && !isArchivedView}

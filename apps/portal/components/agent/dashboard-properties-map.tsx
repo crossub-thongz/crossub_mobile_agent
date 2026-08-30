@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin } from 'lucide-react';
 
-import { propertyDetail } from '@/constants/routes';
+import { propertyHref } from '@/constants/routes';
 import { getGoogleMapsApiKey, loadGoogleMaps } from '@/lib/google-places';
 import type { Property } from '@/lib/types';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
@@ -153,7 +153,7 @@ export function DashboardPropertiesMap({
 
         marker.addListener('click', () => {
           onPropertySelect?.(property.id);
-          const href = propertyDetail(property.id);
+          const href = propertyHref(property);
           const address = formatPropertyFullAddress(property);
           const content = `
             <div style="font-family:system-ui,sans-serif;max-width:220px;padding:2px 0">

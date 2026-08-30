@@ -10,7 +10,9 @@ import {
   buildPropertyListV2RowTasks,
   formatPropertyListV2Rent,
   propertyListV2TenancyLabel,
+  type PropertyListV2StatusTone,
 } from '@/lib/property-list-v2';
+import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
 import { useAgentStore } from '@/lib/store';
 import type { LeasingRecord, Property, PropertyAccounting } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -22,7 +24,7 @@ function StatusBadge({
 }: {
   label: string;
   sublabel?: string;
-  tone: 'good' | 'warn' | 'muted';
+  tone: PropertyListV2StatusTone;
 }) {
   return (
     <div className="min-w-0">
@@ -31,6 +33,8 @@ function StatusBadge({
           'inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
           tone === 'good' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
           tone === 'warn' && 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
+          tone === 'new' && 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200',
+          tone === 'draft' && 'bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200',
           tone === 'muted' && 'bg-muted text-muted-foreground',
         )}
       >
@@ -128,7 +132,7 @@ export function PropertyListV2Table({
   leasingRecords: LeasingRecord[];
   needActionCountFor: (propertyId: string) => number;
   onSelect: (propertyId: string) => void;
-  /** Desktop: double-click row to open full property profile. */
+  /** Desktop: second click (or double-click) on a selected row opens the property profile. */
   onOpenProfile?: (propertyId: string) => void;
 }) {
   const {
@@ -227,16 +231,30 @@ export function PropertyListV2Table({
               const meta = rowMeta.get(property.id);
               if (!meta) return null;
               const selected = selectedId === property.id;
+              const isDraft = isPropertyRegistryDraft(property);
+              const canOpenProfile = Boolean(onOpenProfile) && !isDraft;
 
               return (
                 <tr
                   key={property.id}
-                  onClick={() => onSelect(property.id)}
-                  onDoubleClick={() => onOpenProfile?.(property.id)}
+                  onClick={() => {
+                    if (canOpenProfile && selected) {
+                      onOpenProfile?.(property.id);
+                      return;
+                    }
+                    onSelect(property.id);
+                  }}
+                  onDoubleClick={() => {
+                    if (canOpenProfile) onOpenProfile?.(property.id);
+                  }}
                   title={
-                    onOpenProfile
-                      ? 'Click to preview · Double-click to open property'
-                      : undefined
+                    isDraft
+                      ? 'Continue registration'
+                      : canOpenProfile
+                        ? selected
+                          ? 'Click again to enter profile'
+                          : 'Click to preview · Click again to enter profile'
+                        : undefined
                   }
                   className={cn(
                     'cursor-pointer transition-colors hover:bg-muted/20',
@@ -249,6 +267,15 @@ export function PropertyListV2Table({
                       {property.suburb}
                       {property.postcode ? ` ${property.postcode}` : ''}
                     </p>
+                    {isDraft ? (
+                      <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                        Draft
+                      </span>
+                    ) : selected && canOpenProfile ? (
+                      <p className="text-primary mt-1 text-[11px] font-medium">
+                        Click again to enter profile
+                      </p>
+                    ) : null}
                   </td>
                   <td className="px-3 py-3 align-top">
                     <p className="truncate font-medium">{meta.tenancy.primary}</p>

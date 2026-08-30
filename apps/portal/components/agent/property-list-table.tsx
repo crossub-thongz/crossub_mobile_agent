@@ -300,13 +300,13 @@ export function PropertyListTable({
                       </ModuleTableTruncateText>
                     </Link>
                     {isDraft ? (
-                      <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-900 dark:bg-red-950/50 dark:text-red-200">
+                      <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                         <AlertCircle className="size-3 shrink-0" aria-hidden />
-                        <span className="truncate">Incomplete</span>
+                        <span className="truncate">Draft</span>
                       </span>
                     ) : null}
                     {/* Only for a property CROSSUB has not accepted — an "Approved" chip on
-                        every row would say nothing. A draft already reads "Incomplete"; it
+                        every row would say nothing. A draft already reads "Draft"; it
                         has not been submitted for approval yet, so it gets no second chip. */}
                     {!isDraft && !isPropertyServiceApproved(property.approvalStatus) ? (
                       <span

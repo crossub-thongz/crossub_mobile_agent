@@ -11,7 +11,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { Agency } from '@/lib/types';
-import { propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyHref, ROUTES } from '@/constants/routes';
 import { unreadMessagesForProperty } from '@/lib/communications-log';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -138,7 +138,7 @@ export default function AgencyDetailPage() {
                   messages,
                   formatPropertyFullAddress(p),
                 )}
-                href={propertyDetail(p.id)}
+                href={propertyHref(p)}
               />
             ))
           )}

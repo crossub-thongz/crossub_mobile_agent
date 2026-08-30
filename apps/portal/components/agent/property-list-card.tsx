@@ -9,6 +9,7 @@ import {
   propertyPhoneBookInitials,
   propertyPhoneBookSubtitle,
 } from '@/lib/property-phone-book';
+import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ export function PropertyListCard({
   const subtitle = propertyPhoneBookSubtitle(property);
   const initials = propertyPhoneBookInitials(property);
   const hasNeedAction = needActionCount > 0;
+  const isDraft = isPropertyRegistryDraft(property);
 
   return (
     <div
@@ -90,11 +92,13 @@ export function PropertyListCard({
           <div className="flex flex-wrap items-center gap-1.5 pr-6">
             <span
               className={cn(
-                'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize',
-                STATUS_STYLES[property.leaseStatus],
+                'inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                isDraft
+                  ? 'bg-amber-100 uppercase tracking-wide text-amber-900 dark:bg-amber-950/50 dark:text-amber-200'
+                  : cn('capitalize', STATUS_STYLES[property.leaseStatus]),
               )}
             >
-              {property.leaseStatus}
+              {isDraft ? 'Draft' : property.leaseStatus}
             </span>
           </div>
           <p

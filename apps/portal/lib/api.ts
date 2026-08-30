@@ -98,10 +98,16 @@ const clearSessionAndRedirectToLogin = async (): Promise<never> => {
   throw new ApiError(401, 'Session expired');
 };
 
-const buildHeaders = (init?: RequestInit): HeadersInit => ({
-  'Content-Type': 'application/json',
-  ...(init?.headers ?? {}),
-});
+const buildHeaders = (init?: RequestInit): HeadersInit => {
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  const method = (init?.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD' && !headers['Content-Type'] && !headers['content-type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+  return headers;
+};
 
 const doFetch = (path: string, init?: RequestInit): Promise<Response> =>
   fetch(`${API_URL}${path}`, {

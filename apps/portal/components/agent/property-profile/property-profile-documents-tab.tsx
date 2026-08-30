@@ -181,6 +181,7 @@ export function PropertyProfileDocumentsTab({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [preview, setPreview] = useState<{
     title: string;
+    fileName?: string;
     uploadedAt?: string;
     href: string;
   } | null>(null);
@@ -244,6 +245,7 @@ export function PropertyProfileDocumentsTab({
     }
     setPreview({
       title: row.title,
+      fileName: row.title,
       uploadedAt: row.uploadedAt,
       href,
     });

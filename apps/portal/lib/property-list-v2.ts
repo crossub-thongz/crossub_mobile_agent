@@ -2,6 +2,8 @@ import { filterNeedAttentionActions } from '@/lib/property-profile-v2-data';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { isPropertyVacant } from '@/lib/property-leasing';
+import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
+import { propertyCreatedAtIso } from '@/lib/record-created-at';
 import { resolveLeaseDates } from '@/lib/property-overview';
 import type {
   Inspection,
@@ -17,7 +19,9 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import type { RentReviewDecision } from '@/lib/rent-review';
-import { daysUntilDate, formatCurrency, formatDate } from '@/lib/utils';
+import { daysSinceDate, daysUntilDate, formatCurrency, formatDate } from '@/lib/utils';
+
+const NEW_PROPERTY_DAYS = 14;
 
 export type PropertyListV2Filter = 'all' | 'occupied' | 'vacant' | 'needs_attention';
 
@@ -31,7 +35,53 @@ export const PROPERTY_LIST_V2_FILTERS: {
   { id: 'needs_attention', label: 'Needs attention' },
 ];
 
-export type PropertyListV2StatusTone = 'good' | 'warn' | 'muted';
+export type PropertyListV2Sort = 'newest' | 'oldest' | 'az' | 'za';
+
+export const PROPERTY_LIST_V2_SORTS: {
+  id: PropertyListV2Sort;
+  label: string;
+}[] = [
+  { id: 'newest', label: 'Newest to oldest' },
+  { id: 'oldest', label: 'Oldest to newest' },
+  { id: 'az', label: 'A–Z' },
+  { id: 'za', label: 'Z–A' },
+];
+
+function propertyListV2AddressKey(property: Property): string {
+  return [property.address, property.suburb, property.postcode].filter(Boolean).join(' ');
+}
+
+function propertyListV2CreatedMs(property: Property): number {
+  const iso = propertyCreatedAtIso(property) ?? property.leaseStart;
+  const ms = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+export function sortPropertiesForListV2(
+  properties: Property[],
+  sort: PropertyListV2Sort,
+): Property[] {
+  const rows = [...properties];
+  rows.sort((a, b) => {
+    if (sort === 'newest' || sort === 'oldest') {
+      const byCreated =
+        sort === 'newest'
+          ? propertyListV2CreatedMs(b) - propertyListV2CreatedMs(a)
+          : propertyListV2CreatedMs(a) - propertyListV2CreatedMs(b);
+      if (byCreated !== 0) return byCreated;
+    }
+    const byAddress = propertyListV2AddressKey(a).localeCompare(
+      propertyListV2AddressKey(b),
+      undefined,
+      { sensitivity: 'base', numeric: true },
+    );
+    if (byAddress !== 0) return sort === 'za' ? -byAddress : byAddress;
+    return a.id.localeCompare(b.id);
+  });
+  return rows;
+}
+
+export type PropertyListV2StatusTone = 'good' | 'warn' | 'muted' | 'draft' | 'new';
 
 export type PropertyListV2RowStatus = {
   label: string;
@@ -72,6 +122,10 @@ export function buildPropertyListV2RowStatus(
   property: Property,
   accounting?: PropertyAccounting | null,
 ): PropertyListV2RowStatus {
+  if (isPropertyRegistryDraft(property)) {
+    return { label: 'Draft', sublabel: 'Finish registration', tone: 'draft' };
+  }
+
   if (property.leaseStatus === 'vacant') {
     return { label: 'Vacant', sublabel: 'Available', tone: 'muted' };
   }
@@ -86,18 +140,35 @@ export function buildPropertyListV2RowStatus(
     };
   }
 
+  const addedDaysAgo =
+    daysSinceDate(propertyCreatedAtIso(property)) ?? daysSinceDate(property.leaseStart);
+  if (addedDaysAgo != null && addedDaysAgo <= NEW_PROPERTY_DAYS) {
+    return {
+      label: 'New',
+      sublabel: addedDaysAgo === 0 ? 'Just added' : `Added ${addedDaysAgo} days ago`,
+      tone: 'new',
+    };
+  }
+
   const paidTo = property.rentPaidUntil;
-  return {
-    label: 'Rent paid',
-    sublabel: paidTo ? `Up to ${formatDate(paidTo)}` : undefined,
-    tone: 'good',
-  };
+  if (paidTo) {
+    return {
+      label: 'Rent paid',
+      sublabel: `Up to ${formatDate(paidTo)}`,
+      tone: 'good',
+    };
+  }
+
+  return { label: 'Occupied', tone: 'muted' };
 }
 
 export function buildPropertyListV2LeaseExpiry(
   property: Property,
   currentLease?: LeasingRecord,
 ): { label: string; sublabel?: string } {
+  if (isPropertyRegistryDraft(property)) {
+    return { label: '—' };
+  }
   const { end } = resolveLeaseDates(property, currentLease);
   const leaseEnd = end ?? property.leaseEnd;
   if (!leaseEnd) return { label: '—' };
@@ -155,6 +226,16 @@ export function buildPropertyListV2RowTasks(input: {
   const inspectionCount = jobs.filter((job) => job.kind === 'inspection').length;
   const attention = filterNeedAttentionActions(input.needActions);
 
+  if (isPropertyRegistryDraft(input.property)) {
+    return {
+      maintenanceCount: 0,
+      leasingCount: 0,
+      inspectionCount: 0,
+      summary: 'Continue registration',
+      subsummary: 'Pick up where you left off',
+    };
+  }
+
   if (attention.length > 0) {
     return {
       maintenanceCount,
@@ -193,6 +274,9 @@ export function propertyListV2TenancyLabel(
   property: Property,
   currentLease?: LeasingRecord,
 ): { primary: string; secondary?: string } {
+  if (isPropertyRegistryDraft(property)) {
+    return { primary: 'Draft', secondary: 'Registration incomplete' };
+  }
   const tenant = property.tenantName?.trim() || currentLease?.approvedTenant?.trim();
   const { start } = resolveLeaseDates(property, currentLease);
   const leaseStart = start ?? property.leaseStart ?? currentLease?.leaseStart;

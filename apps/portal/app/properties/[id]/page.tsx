@@ -19,7 +19,6 @@ import { PropertyApprovalBanner } from '@/components/agent/property-approval-ban
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyProfileV2 } from '@/components/agent/property-profile/property-profile-v2';
 import { PropertyProfileActivitiesTab } from '@/components/agent/property-profile/property-profile-activities-tab';
-import { PropertyProfileDocumentsTab } from '@/components/agent/property-profile/property-profile-documents-tab';
 import { PropertyProfileFinancialsTab } from '@/components/agent/property-profile/property-profile-financials-tab';
 import { PropertyProfileTasksTab } from '@/components/agent/property-profile/property-profile-tasks-tab';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
@@ -181,7 +180,15 @@ export default function PropertyDetailPage() {
     };
   }, [agentPortfolioId, id, listProperty?.id]);
 
-  useRecordRecentPropertyVisit(property);
+  useEffect(() => {
+    if (property?.registryIntakeComplete === false) {
+      router.replace(propertyRegistryResume(property.id));
+    }
+  }, [property, router]);
+
+  useRecordRecentPropertyVisit(
+    property?.registryIntakeComplete === false ? undefined : property,
+  );
   const propertyTabs = useMemo(
     () =>
       property
@@ -332,6 +339,16 @@ export default function PropertyDetailPage() {
     return (
       <AgentShell>
         <p className="text-muted-foreground py-16 text-center text-sm">Loading property…</p>
+      </AgentShell>
+    );
+  }
+
+  if (property.registryIntakeComplete === false) {
+    return (
+      <AgentShell>
+        <p className="text-muted-foreground py-16 text-center text-sm">
+          Opening registration…
+        </p>
       </AgentShell>
     );
   }
@@ -581,7 +598,7 @@ export default function PropertyDetailPage() {
             )
           }
           documentsPanel={
-            <PropertyProfileDocumentsTab
+            <PropertyDocumentsTab
               property={property}
               propertyId={id}
               fallbackDocuments={propertyDocs}
