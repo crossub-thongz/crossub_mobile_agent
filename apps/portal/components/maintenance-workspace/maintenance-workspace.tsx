@@ -276,7 +276,7 @@ export function MaintenanceWorkspace({
     <>
       {bottomNavTab === 'details' ? (
         <div className={cn(embedded ? 'space-y-5' : 'space-y-5 px-4 py-5 sm:px-5 sm:py-6')}>
-          {renderStageTags()}
+          {embedded ? null : renderStageTags()}
 
           <div>
             {!embedded ? (

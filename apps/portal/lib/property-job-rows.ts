@@ -9,7 +9,10 @@ import type { PropertyLeasingWorkflowCase } from '@/lib/property-leasing-workflo
 import { isInspectionDone } from '@/lib/inspections/presentation';
 import { resolveIngoingInspectionDateDisplay } from '@/lib/ingoing-inspection-display';
 import { isDeletedInspection } from '@/lib/property-inspection-history';
-import { isDeletedMaintenance } from '@/lib/property-maintenance-history';
+import {
+  isDeletedMaintenance,
+  isEndLeasingSpawnedMaintenance,
+} from '@/lib/property-maintenance-history';
 import { isDeletedRentReview } from '@/lib/property-rent-review-history';
 import { isRentReviewDecided } from '@/lib/rent-review';
 import type { RentReviewDecision } from '@/lib/rent-review';
@@ -309,7 +312,7 @@ function formatRentReviewJobDescription(
 }
 
 export function maintenanceJobRows(requests: MaintenanceRequest[]): PropertyJobRow[] {
-  return requests.map((request) => {
+  return requests.filter((request) => !isEndLeasingSpawnedMaintenance(request)).map((request) => {
     const progress = maintenanceWorkflowProgress(request);
     const createdIso = maintenanceCreatedAtIso(request);
     const { createdAt, createdAtMs } = rowCreatedAt(createdIso);

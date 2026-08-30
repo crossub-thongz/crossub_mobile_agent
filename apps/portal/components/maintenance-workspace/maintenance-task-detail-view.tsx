@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronRight,
   Sparkles,
@@ -19,7 +20,8 @@ import {
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyDetail, ROUTES, vacatingDetail } from '@/constants/routes';
+import { fromTasks } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   buildMaintenanceActivityEntries,
@@ -32,6 +34,7 @@ import {
   type MaintenanceTaskTab,
 } from '@/lib/maintenance-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
+import { isEndLeasingSpawnedMaintenance } from '@/lib/property-maintenance-history';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
@@ -144,6 +147,7 @@ export function MaintenanceTaskDetailView({
   apiConnected?: boolean;
   onCaseUpdated?: () => Promise<void>;
 }) {
+  const router = useRouter();
   const {
     properties,
     leasingRecords,
@@ -161,6 +165,27 @@ export function MaintenanceTaskDetailView({
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
   const propertyId = item.propertyId;
+  const parentEndLeasing = useMemo(() => {
+    if (!isEndLeasingSpawnedMaintenance(item)) return null;
+    const forProperty = vacating.filter((row) => row.propertyId === propertyId);
+    if (forProperty.length === 0) return null;
+    const open = forProperty.filter((row) => {
+      const status = (row.apiStatus ?? '').toLowerCase();
+      return status !== 'completed' && status !== 'cancelled';
+    });
+    const pool = open.length > 0 ? open : forProperty;
+    return (
+      [...pool].sort(
+        (a, b) => Date.parse(b.createdAt ?? '') - Date.parse(a.createdAt ?? ''),
+      )[0] ?? null
+    );
+  }, [item, propertyId, vacating]);
+
+  useEffect(() => {
+    if (!parentEndLeasing) return;
+    router.replace(vacatingDetail(parentEndLeasing.id, fromTasks()));
+  }, [parentEndLeasing, router]);
+
   const resolvedProperty =
     property ?? properties.find((row) => row.id === propertyId) ?? null;
   const currentLease = leasingRecords.find(

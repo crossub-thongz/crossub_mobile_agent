@@ -35,6 +35,7 @@ export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
 export type AgentMaintenance = components['schemas']['AgentMaintenanceDto'] & {
   closureReason?: string | null;
   updatedAt?: string | null;
+  endLeasingMaintenance?: boolean;
 };
 export type AgentRentReview = components['schemas']['AgentRentReviewDto'] & {
   leaseStart?: string | null;

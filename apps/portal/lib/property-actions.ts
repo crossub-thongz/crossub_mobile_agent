@@ -9,6 +9,7 @@ import {
 import { fromProperty } from '@/lib/detail-navigation';
 import { formatPropertyFullAddress } from '@/lib/utils';
 import { isPropertyVacant } from '@/lib/property-leasing';
+import { isEndLeasingSpawnedMaintenance } from '@/lib/property-maintenance-history';
 import { isRentReviewPendingApproval } from '@/lib/rent-review';
 import { isTenantSelectionPending } from '@/lib/tenant-selection';
 import { PRIORITY_RANK } from '@/constants/gii-briefing';
@@ -78,7 +79,7 @@ export function getPropertyNeedActions(
       (!m.propertyId &&
         Boolean(property.address) &&
         m.propertyAddress.trim().toLowerCase() === property.address.trim().toLowerCase());
-    if (!matchesProperty || !m.requiresApproval) continue;
+    if (!matchesProperty || isEndLeasingSpawnedMaintenance(m) || !m.requiresApproval) continue;
     actions.push({
       id: `mnt-${m.id}`,
       propertyId: property.id,

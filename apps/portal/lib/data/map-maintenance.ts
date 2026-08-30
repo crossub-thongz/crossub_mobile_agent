@@ -233,25 +233,30 @@ export function maintenanceNotificationsToAgent(
   notifications: ApiMaintenanceNotification[],
   requests: ApiMaintenanceRequest[],
 ) {
-  return (notifications ?? []).map((n) => {
+  return (notifications ?? []).flatMap((n) => {
     const req = requests.find((r) => r.id === n.maintenanceRequestId);
-    return {
-      id: n.id,
-      type: n.title.toLowerCase().includes('declin')
-        ? ('update' as const)
-        : n.title.toLowerCase().includes('quotation')
-          ? ('approval' as const)
-          : ('update' as const),
-      title: n.title,
-      body: n.message,
-      propertyAddress: req?.address ?? n.maintenanceRequestId,
-      taskType: 'Maintenance',
-      status: 'Active',
-      at: n.createdAt,
-      read: n.read,
-      href: maintenanceDetail(n.maintenanceRequestId),
-      actionRequired: n.title.includes('Quotation') ? 'Review quote' : undefined,
-      source: 'api' as const,
-    };
+    if (req?.endLeasingMaintenance || req?.issueType?.trim().toLowerCase() === 'end of lease') {
+      return [];
+    }
+    return [
+      {
+        id: n.id,
+        type: n.title.toLowerCase().includes('declin')
+          ? ('update' as const)
+          : n.title.toLowerCase().includes('quotation')
+            ? ('approval' as const)
+            : ('update' as const),
+        title: n.title,
+        body: n.message,
+        propertyAddress: req?.address ?? n.maintenanceRequestId,
+        taskType: 'Maintenance',
+        status: 'Active',
+        at: n.createdAt,
+        read: n.read,
+        href: maintenanceDetail(n.maintenanceRequestId),
+        actionRequired: n.title.includes('Quotation') ? 'Review quote' : undefined,
+        source: 'api' as const,
+      },
+    ];
   });
 }

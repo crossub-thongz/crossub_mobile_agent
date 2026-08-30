@@ -514,6 +514,10 @@ export function mapAgentMaintenance(
         m.status === MAINTENANCE_STATUS.CANCELLED ? m.updatedAt ?? m.createdAt : undefined,
       timeline: [],
       source: 'api',
+      endLeasingMaintenance:
+        m.endLeasingMaintenance === true ||
+        m.categoryName?.trim().toLowerCase() === 'end of lease' ||
+        /^end-of-lease make-good/i.test(m.description ?? ''),
     };
   });
 }
