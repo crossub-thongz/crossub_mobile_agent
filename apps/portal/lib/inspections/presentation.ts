@@ -52,10 +52,12 @@ export function isInspectionDone(inspection: Inspection): boolean {
     }
     return true;
   }
-  // Open report generated ⇒ case is done even if session status lagging.
+  // Open report generated / review finished ⇒ case is done even if session status lagging.
   if (
     (inspection.type === 'OPEN' || inspection.source === 'open_viewing') &&
-    (inspection.reportStatus === 'sent' || Boolean(inspection.reportUrl))
+    (inspection.reportStatus === 'sent' ||
+      inspection.reportStatus === 'approved' ||
+      Boolean(inspection.reportUrl))
   ) {
     return true;
   }

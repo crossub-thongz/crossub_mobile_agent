@@ -22,6 +22,7 @@ import {
   AGENT_OUTGOING_GATE_LABEL,
   deriveAgentOutgoingGateStatus,
 } from '@/lib/outgoing-inspection-display';
+import { isInspectionDone } from '@/lib/inspections/presentation';
 import type { Inspection } from '@/lib/types';
 import type { TimelineEntry } from '@/lib/types';
 import { resolveOpenConductedByFromSession } from '@/lib/open-inspection/open-conducted-by';
@@ -206,6 +207,58 @@ export function isOpenPoolTwinOfViewingSession(
   return false;
 }
 
+export function openPoolMatchesViewingSession(
+  pool: Inspection,
+  session: Inspection,
+): boolean {
+  return isOpenPoolTwinOfViewingSession(pool, new Set(openViewingTwinKeys(session)));
+}
+
+/**
+ * Keep the viewing session as the agent case, but copy completion from the
+ * inspector pool so a finished OPEN is not listed as still in progress.
+ */
+export function foldOpenPoolTwinIntoSession(
+  session: Inspection,
+  pool: Inspection,
+): Inspection {
+  if (isDeletedInspection(pool)) return session;
+  const sessionDone = isInspectionDone(session);
+  const poolDone = isInspectionDone(pool);
+  return {
+    ...session,
+    inspector: session.inspector ?? pool.inspector,
+    reportUrl: session.reportUrl ?? pool.reportUrl,
+    completedAt: session.completedAt ?? pool.completedAt,
+    approvedAt: session.approvedAt ?? pool.approvedAt,
+    reportStatus:
+      session.reportStatus !== 'pending'
+        ? session.reportStatus
+        : pool.reportStatus !== 'pending'
+          ? pool.reportStatus
+          : session.reportStatus,
+    ...(poolDone && !sessionDone
+      ? {
+          status: 'Completed',
+          apiStatus: SessionStatusEnum.CLOSED,
+        }
+      : {}),
+  };
+}
+
+/** Drop OPEN pool twins and stamp their completion onto the matching viewing session. */
+export function collapseOpenInspectionTwins(inspections: Inspection[]): Inspection[] {
+  const twinKeys = collectOpenViewingTwinKeys(inspections);
+  const pools = inspections.filter((row) => isOpenPoolTwinOfViewingSession(row, twinKeys));
+  return inspections
+    .filter((row) => !isOpenPoolTwinOfViewingSession(row, twinKeys))
+    .map((row) => {
+      if (row.type !== 'OPEN' || row.source !== 'open_viewing') return row;
+      const pool = pools.find((item) => openPoolMatchesViewingSession(item, row));
+      return pool ? foldOpenPoolTwinIntoSession(row, pool) : row;
+    });
+}
+
 /** Match a list row by viewing-session id or the linked OPEN pool job id. */
 export function findInspectionInList(
   inspections: Inspection[],
@@ -295,6 +348,7 @@ export function mapOpenSessionToInspection(
       session.sessionStatus === SessionStatusEnum.CANCELLED
         ? OPEN_DELETED_LABEL
         : session.openReportGenerated ||
+            Boolean(session.reviewCompletedAt) ||
             session.sessionStatus === SessionStatusEnum.CLOSED
           ? 'Completed'
           : awaitingPayment
@@ -304,10 +358,12 @@ export function mapOpenSessionToInspection(
       session.sessionStatus === SessionStatusEnum.CANCELLED
         ? SessionStatusEnum.CANCELLED
         : session.openReportGenerated ||
+            Boolean(session.reviewCompletedAt) ||
             session.sessionStatus === SessionStatusEnum.CLOSED
           ? SessionStatusEnum.CLOSED
           : session.sessionStatus,
-    reportStatus: session.openReportGenerated ? 'sent' : 'pending',
+    reportStatus:
+      session.openReportGenerated || Boolean(session.reviewCompletedAt) ? 'sent' : 'pending',
     openConductedBy: resolveOpenConductedByFromSession(session),
     openListingContext,
     tenantMovedOut: session.tenantMovedOut,
@@ -378,7 +434,11 @@ export function mergeInspectionRows(
   const fromSessions = sessions.map((s) => {
       const propertyId =
         s.propertyId ?? propertyIdByAddress.get(s.address.toLowerCase().trim());
-      return mapOpenSessionToInspection(s, propertyId);
+      const session = mapOpenSessionToInspection(s, propertyId);
+      const pool =
+        fromOpenRecords.find((record) => openPoolMatchesViewingSession(record, session)) ??
+        null;
+      return pool ? foldOpenPoolTwinIntoSession(session, pool) : session;
     });
 
   const merged = [

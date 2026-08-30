@@ -5,8 +5,10 @@ import {
 import { inspectionsApi } from '@/lib/inspections-api';
 import {
   collectOpenViewingTwinKeys,
+  foldOpenPoolTwinIntoSession,
   isOpenPoolTwinOfViewingSession,
   mergeInspectionRows,
+  openPoolMatchesViewingSession,
 } from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import type { InspectionDetail } from '@/lib/inspections-types';
@@ -94,13 +96,20 @@ export function mergeOpenSessionsIntoInspections(
   const addressMap = propertyIdByAddress(properties);
   const openRows = mergeInspectionRows([], sessions, addressMap);
   const sessionTwinKeys = collectOpenViewingTwinKeys(openRows);
+  const previousPools = (previous ?? []).filter((row) =>
+    isOpenPoolTwinOfViewingSession(row, sessionTwinKeys),
+  );
   const kept = (previous ?? []).filter(
     (row) =>
       row.source !== 'open_viewing' && !isOpenPoolTwinOfViewingSession(row, sessionTwinKeys),
   );
+  const foldedSessions = openRows.map((session) => {
+    const pool = previousPools.find((item) => openPoolMatchesViewingSession(item, session));
+    return pool ? foldOpenPoolTwinIntoSession(session, pool) : session;
+  });
   const byId = new Map<string, Inspection>();
   for (const row of kept) byId.set(row.id, row);
-  for (const row of openRows) byId.set(row.id, row);
+  for (const row of foldedSessions) byId.set(row.id, row);
   return [...byId.values()];
 }
 

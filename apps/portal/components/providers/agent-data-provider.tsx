@@ -112,7 +112,9 @@ import { isDeletedInspection } from '@/lib/open-inspection-delete';
 import { isInspectionDone } from '@/lib/inspections/presentation';
 import {
   collectOpenViewingTwinKeys,
+  foldOpenPoolTwinIntoSession,
   isOpenPoolTwinOfViewingSession,
+  openPoolMatchesViewingSession,
   pickFresherInspection,
 } from '@/lib/inspection-mappers';
 import { openViewingsApi } from '@/lib/open-viewings-api';
@@ -740,12 +742,19 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         propertiesWithLiveOpenSessions.has(row.propertyId));
 
     const byId = new Map<string, Inspection>();
+    const hiddenPools: Inspection[] = [];
     for (const row of portfolioRows) {
-      if (isHiddenOpenPoolTwin(row)) continue;
+      if (isHiddenOpenPoolTwin(row)) {
+        hiddenPools.push(row);
+        continue;
+      }
       byId.set(row.id, row);
     }
     for (const row of liveRows) {
-      if (isHiddenOpenPoolTwin(row)) continue;
+      if (isHiddenOpenPoolTwin(row)) {
+        hiddenPools.push(row);
+        continue;
+      }
       const existing = byId.get(row.id);
       byId.set(row.id, existing ? pickFresherInspection(existing, row) : row);
     }
@@ -757,7 +766,10 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     // Keep fetched OPEN *pool* rows (bill deep-link / get-by-id) so they appear on
     // the Inspection tab even when the viewing-session list omitted them.
     for (const row of added) {
-      if (isHiddenOpenPoolTwin(row)) continue;
+      if (isHiddenOpenPoolTwin(row)) {
+        hiddenPools.push(row);
+        continue;
+      }
       const existing = byId.get(row.id);
       if (existing) {
         byId.set(row.id, pickFresherInspection(existing, row));
@@ -779,6 +791,13 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         if (!isFresh) continue;
       }
       byId.set(row.id, row);
+    }
+    for (const pool of hiddenPools) {
+      for (const [id, session] of byId) {
+        if (!openPoolMatchesViewingSession(pool, session)) continue;
+        byId.set(id, foldOpenPoolTwinIntoSession(session, pool));
+        break;
+      }
     }
     return [...byId.values()].sort((a, b) => {
       const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : 0;
