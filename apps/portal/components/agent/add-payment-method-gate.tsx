@@ -15,7 +15,6 @@ import {
   fetchAgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { fetchPortalWelcomeStatus } from '@/lib/crossub-api/agent-client';
-import { isPlatformBillingDisabled } from '@/lib/platform-billing-ui';
 import { getStripePublishableKey } from '@/lib/stripe-client';
 
 const EXEMPT_ROUTES = [
@@ -72,10 +71,8 @@ export function AddPaymentMethodGate() {
 
   const refreshNeed = useCallback(async () => {
     const summary = await fetchAgentBillingSummary();
-    if (isPlatformBillingDisabled(summary)) {
-      setNeedsPaymentMethod(false);
-      return;
-    }
+    // Still prompt when L2/L3 billing flags hide pay-now UI — those flags
+    // only skip charges, not collecting a card on file.
     setNeedsPaymentMethod(!summary.hasDefaultPaymentMethod);
   }, []);
 
@@ -159,8 +156,8 @@ export function AddPaymentMethodGate() {
   };
 
   const handleSaved = async () => {
-    await refreshNeed();
     setSetupDialog(null);
+    setNeedsPaymentMethod(false);
   };
 
   if (!showGate) {
