@@ -101,13 +101,24 @@ export function resolveMaintenanceStatusBanner(input: {
   crosSummary: string[];
 } {
   const { workspaceCase, item, quoteAmount, contractorName, recommendation } = input;
-  const needsAction = item.requiresApproval || workspaceCase.status === 'pending_approval';
+  const needsAction =
+    item.requiresApproval ||
+    workspaceCase.status === 'pending_approval' ||
+    (workspaceCase.status === 'pending_quotation' && quoteAmount != null);
 
   let title = 'Maintenance in progress';
   let subtitle = workspaceCase.description;
 
   if (workspaceCase.status === 'pending_approval' && quoteAmount != null) {
     title = 'Quote received';
+    subtitle = [
+      contractorName,
+      `${formatCurrency(quoteAmount)} incl. GST`,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  } else if (workspaceCase.status === 'pending_quotation' && quoteAmount != null) {
+    title = 'Quote received — awaiting your approval';
     subtitle = [
       contractorName,
       `${formatCurrency(quoteAmount)} incl. GST`,

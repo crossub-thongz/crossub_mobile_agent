@@ -17,7 +17,7 @@ import type { PortalNavAccess } from '@/lib/portal-service-level';
 import { ROUTES } from '@/constants/routes';
 import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 
-type NavItem = {
+export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
@@ -77,6 +77,14 @@ export function moreNavForUi(isV2: boolean): NavItem[] {
 
 export function moreNavFooterForUi(isV2: boolean): NavItem[] {
   return isV2 ? V2_MORE_NAV_FOOTER : V1_MORE_NAV_FOOTER;
+}
+
+/**
+ * Desktop sidebar destinations that are not on the mobile bottom tab bar.
+ * Mobile surfaces these on the More tab (`/more`) when the sidebar hides.
+ */
+export function sidebarOverflowNavForUi(isV2: boolean): NavItem[] {
+  return [...moreNavForUi(isV2), ...moreNavFooterForUi(isV2)];
 }
 
 export function menuNavForUi(isV2: boolean): NavItem[] {

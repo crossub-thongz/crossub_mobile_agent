@@ -22,10 +22,24 @@ import {
 import { ROUTES } from '@/constants/routes';
 import type { PortalNavAccess } from '@/lib/portal-service-level';
 
+/** Short copy for desktop-sidebar links when they appear on the mobile More tab. */
+export const MORE_MENU_ITEM_DESCRIPTION: Partial<Record<string, string>> = {
+  [ROUTES.LEASING]: 'Lettings, applicants and lease workflows.',
+  [ROUTES.MAINTENANCE]: 'Repair jobs, quotes and contractors.',
+  [ROUTES.INSPECTIONS]: 'Open, routine, ingoing and outgoing inspections.',
+  [ROUTES.ACCOUNTING]: 'Rent, invoices and owner statements.',
+  [ROUTES.TRIBUNAL]: 'Tribunal cases and rent chasing.',
+  [ROUTES.ARCHIVE]: 'Closed and cancelled cases kept for reference.',
+  [ROUTES.BILL]: 'Platform invoices and payments.',
+  [ROUTES.SETTINGS]: 'Preferences and account settings.',
+  [ROUTES.FAQ]: 'Guides, tutorials and FAQs.',
+  [ROUTES.PRICING]: 'Plans, fees and service inclusions.',
+};
+
 export type MorePageItem = {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   href?: string;
   icon: LucideIcon;
   portalAccess?: PortalNavAccess;

@@ -2,19 +2,21 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, LayoutGrid } from 'lucide-react';
 
 import {
   MORE_PAGE_SECTIONS,
   MORE_PAGE_SECTION_TONE,
+  MORE_MENU_ITEM_DESCRIPTION,
   type MorePageItem,
   type MorePageSection,
 } from '@/constants/more-page';
+import { sidebarOverflowNavForUi } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import { filterNavByAccess } from '@/lib/portal-service-level';
+import { agencyBillingNavLabel, filterNavByAccess } from '@/lib/portal-service-level';
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
 import { cn } from '@/lib/utils';
 
@@ -62,9 +64,11 @@ function MoreRow({
         >
           {item.title}
         </span>
-        <span className="text-muted-foreground mt-0.5 block text-xs leading-snug">
-          {item.description}
-        </span>
+        {item.description ? (
+          <span className="text-muted-foreground mt-0.5 block text-xs leading-snug">
+            {item.description}
+          </span>
+        ) : null}
       </span>
       {!isSignOut ? (
         <ChevronRight className="text-muted-foreground size-4 shrink-0 opacity-60" aria-hidden />
@@ -109,57 +113,81 @@ function MoreSectionCard({
   onSignOut,
   expanded,
   onToggle,
+  className,
+  collapsible = true,
 }: {
   section: MorePageSection;
   agencyId?: string | null;
   onSignOut: () => void;
   expanded: boolean;
   onToggle: () => void;
+  className?: string;
+  collapsible?: boolean;
 }) {
   const tone = MORE_PAGE_SECTION_TONE[section.tone];
   const SectionIcon = section.icon;
   const panelId = `more-section-${section.id}`;
+  const open = !collapsible || expanded;
 
   return (
-    <section className="more-hub__card v2-dashboard__card overflow-hidden">
-      <button
-        type="button"
-        id={`${panelId}-header`}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        onClick={onToggle}
-        className={cn(
-          'more-hub__card-header flex w-full items-center gap-2.5 px-4 py-3.5 text-left transition-colors lg:pointer-events-none',
-          expanded ? 'border-b' : 'lg:border-b',
-        )}
-      >
-        <span
+    <section className={cn('more-hub__card v2-dashboard__card overflow-hidden', className)}>
+      {collapsible ? (
+        <button
+          type="button"
+          id={`${panelId}-header`}
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={onToggle}
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-lg',
-            tone.icon,
+            'more-hub__card-header flex w-full items-center gap-2.5 px-4 py-3.5 text-left transition-colors lg:pointer-events-none',
+            open ? 'border-b' : 'lg:border-b',
           )}
         >
-          <SectionIcon className="size-4 stroke-[1.75]" />
-        </span>
-        <h2 className={cn('min-w-0 flex-1 text-sm font-semibold tracking-tight', tone.header)}>
-          {section.title}
-        </h2>
-        <ChevronDown
-          className={cn(
-            'text-muted-foreground size-4 shrink-0 transition-transform lg:hidden',
-            expanded && 'rotate-180',
-          )}
-          aria-hidden
-        />
-      </button>
+          <span
+            className={cn(
+              'flex size-8 shrink-0 items-center justify-center rounded-lg',
+              tone.icon,
+            )}
+          >
+            <SectionIcon className="size-4 stroke-[1.75]" />
+          </span>
+          <h2 className={cn('min-w-0 flex-1 text-sm font-semibold tracking-tight', tone.header)}>
+            {section.title}
+          </h2>
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-4 shrink-0 transition-transform lg:hidden',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </button>
+      ) : (
+        <div
+          id={`${panelId}-header`}
+          className="more-hub__card-header flex w-full items-center gap-2.5 border-b px-4 py-3.5 text-left"
+        >
+          <span
+            className={cn(
+              'flex size-8 shrink-0 items-center justify-center rounded-lg',
+              tone.icon,
+            )}
+          >
+            <SectionIcon className="size-4 stroke-[1.75]" />
+          </span>
+          <h2 className={cn('min-w-0 flex-1 text-sm font-semibold tracking-tight', tone.header)}>
+            {section.title}
+          </h2>
+        </div>
+      )}
       <div
         id={panelId}
         role="region"
         aria-labelledby={`${panelId}-header`}
         className={cn(
           'divide-y divide-border/40',
-          expanded ? 'block' : 'hidden',
-          'lg:block',
+          open ? 'block' : 'hidden',
+          collapsible && 'lg:block',
         )}
       >
         {section.items.map((item) => (
@@ -180,15 +208,37 @@ export function MoreHub() {
   const isV2 = useIsAgentUiV2();
   const { logout } = useAuth();
   const { hasFullManagementAccess, primaryAgency, platformBillingDisabled } = useAgentData();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(['menu']));
+  const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
 
-  const sections = MORE_PAGE_SECTIONS.map((section) => ({
-    ...section,
+  const menuSection: MorePageSection = {
+    id: 'menu',
+    title: 'Menu',
+    icon: LayoutGrid,
+    tone: 'slate',
     items: filterHiddenBillingNav(
-      filterNavByAccess(section.items, hasFullManagementAccess),
+      filterNavByAccess(sidebarOverflowNavForUi(isV2), hasFullManagementAccess).map((item) => ({
+        id: `menu-${item.href}`,
+        title: item.href === ROUTES.BILL ? billingLabel : item.label,
+        description: MORE_MENU_ITEM_DESCRIPTION[item.href],
+        href: item.href,
+        icon: item.icon,
+        portalAccess: item.portalAccess,
+      })),
       platformBillingDisabled,
     ),
-  })).filter((section) => section.items.length > 0);
+  };
+
+  const sections = [
+    menuSection,
+    ...MORE_PAGE_SECTIONS.map((section) => ({
+      ...section,
+      items: filterHiddenBillingNav(
+        filterNavByAccess(section.items, hasFullManagementAccess),
+        platformBillingDisabled,
+      ),
+    })),
+  ].filter((section) => section.items.length > 0);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => {
@@ -222,6 +272,8 @@ export function MoreHub() {
             onSignOut={() => void logout()}
             expanded={expandedSections.has(section.id)}
             onToggle={() => toggleSection(section.id)}
+            className={section.id === 'menu' ? 'lg:hidden' : undefined}
+            collapsible={section.id !== 'menu'}
           />
         ))}
       </div>

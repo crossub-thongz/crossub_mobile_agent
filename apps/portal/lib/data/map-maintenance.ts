@@ -200,9 +200,9 @@ export function mapApiMaintenanceRequest(
       : undefined,
     quoteDocumentUrl: submittedQuote ? `#quote-${submittedQuote.id}` : undefined,
     requiresApproval:
-      req.status === 'pending_approval' &&
       resolvedResponsibility === 'landlord' &&
-      !!submittedQuote,
+      !!submittedQuote &&
+      (req.status === 'pending_approval' || req.status === 'pending_quotation'),
     timeline: auditToTimeline(reqAudit),
     source: 'api',
     submittedQuotationId: submittedQuote?.id,

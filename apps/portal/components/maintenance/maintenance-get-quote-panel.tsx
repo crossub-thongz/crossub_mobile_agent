@@ -179,12 +179,13 @@ function ContractorQuoteCollapsible({
 
   return (
     <div className="overflow-hidden rounded-lg border bg-background">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
-      >
-        <span className="min-w-0">
+      <div className="flex w-full items-center justify-between gap-3 px-3 py-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          className="min-w-0 flex-1 text-left"
+        >
           <p className="truncate text-sm font-semibold">{contractorName}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">{statusLabel}</p>
           {!submitted && workflowRequest ? (
@@ -196,7 +197,7 @@ function ContractorQuoteCollapsible({
               className="mt-1"
             />
           ) : null}
-        </span>
+        </button>
         <span className="flex shrink-0 items-center gap-2">
           {requotedAwaitingAgent ? (
             <RequotedQuotationBadge
@@ -214,14 +215,22 @@ function ContractorQuoteCollapsible({
               {statusBadgeLabel}
             </span>
           )}
-          <ChevronDown
-            className={cn(
-              'text-muted-foreground size-4 transition-transform',
-              expanded && 'rotate-180',
-            )}
-          />
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-label={expanded ? `Collapse ${contractorName}` : `Expand ${contractorName}`}
+            className="text-muted-foreground hover:bg-muted/60 flex size-8 items-center justify-center rounded-md"
+          >
+            <ChevronDown
+              className={cn(
+                'size-4 transition-transform',
+                expanded && 'rotate-180',
+              )}
+            />
+          </button>
         </span>
-      </button>
+      </div>
 
       {expanded ? (
         <div className="border-t px-3 py-3">
@@ -348,6 +357,24 @@ export function MaintenanceGetQuotePanel({
   const canReview = apiConnected;
 
   useEffect(() => {
+    const withQuotes = invitedIds.filter((id) =>
+      Boolean(latestSubmittedQuoteForContractor(quotes, ctx.workspaceCase.id, id)),
+    );
+    if (withQuotes.length === 0) return;
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const id of withQuotes) {
+        if (!next.has(id)) {
+          next.add(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [ctx.workspaceCase.id, invitedIds, quotes]);
+
+  useEffect(() => {
     if (!landlordFlow) return;
     let cancelled = false;
     void fetchMaintenanceContractorSuggestions(ctx.item.id)
@@ -420,7 +447,7 @@ export function MaintenanceGetQuotePanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Repair quotations</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Quotations are entered in the admin portal. Expand a contractor to approve, requote, decline, or send emails.
+          Expand a contractor to approve, requote, decline, or send the quotation to the landlord.
           Reminders are sent every 4 hours (up to 3 per contractor) until they respond; if none reply, the system auto-reselects 3 new contractors.
         </p>
         {workflowRequest?.status === 'pending_approval' ? (

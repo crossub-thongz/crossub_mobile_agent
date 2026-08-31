@@ -36,7 +36,12 @@ import {
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { isEndLeasingSpawnedMaintenance } from '@/lib/property-maintenance-history';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
-import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
+import type {
+  ApiMaintenanceAttachment,
+  ApiMaintenanceRequest,
+  ApiMaintenanceState,
+  ApiQuotation,
+} from '@/lib/crossub-api/types';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import {
@@ -123,6 +128,10 @@ export function MaintenanceTaskDetailView({
   attachments,
   apiConnected,
   onCaseUpdated,
+  contractors = [],
+  quotations = [],
+  workflowRequest = null,
+  maintenanceReminders = [],
 }: {
   item: MaintenanceRequest;
   property?: Property | null;
@@ -146,6 +155,10 @@ export function MaintenanceTaskDetailView({
   attachments?: ApiMaintenanceAttachment[];
   apiConnected?: boolean;
   onCaseUpdated?: () => Promise<void>;
+  contractors?: Array<{ id: string; name: string }>;
+  quotations?: ApiQuotation[];
+  workflowRequest?: ApiMaintenanceRequest | null;
+  maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
 }) {
   const router = useRouter();
   const {
@@ -387,6 +400,10 @@ export function MaintenanceTaskDetailView({
               attachments={attachments}
               apiConnected={apiConnected}
               onCaseUpdated={onCaseUpdated}
+              contractors={contractors}
+              quotations={quotations}
+              workflowRequest={workflowRequest}
+              maintenanceReminders={maintenanceReminders}
             />
           </div>
 

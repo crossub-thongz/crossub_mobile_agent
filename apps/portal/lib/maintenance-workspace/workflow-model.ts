@@ -28,6 +28,10 @@ export function getWorkflowSteps(
     .filter((q) => q.maintenanceRequestId === request.id)
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
 
+  const hasSubmittedQuote = allQuotations.some(
+    (q) => q.maintenanceRequestId === request.id && q.status === 'submitted',
+  );
+
   const contractorQuoteDeclined =
     latestQuotationForRequest?.status === 'declined' &&
     (request.status === 'pending_quotation' || request.status === 'pending_approval');
@@ -55,7 +59,11 @@ export function getWorkflowSteps(
           {
             id: 'contractor_quote',
             label: 'Contractor Quote',
-            sublabel: contractorQuoteDeclined ? 'Agent Declined' : 'Awaiting contractor quote submission',
+            sublabel: contractorQuoteDeclined
+              ? 'Agent Declined'
+              : hasSubmittedQuote
+                ? 'Quote received — review and approve'
+                : 'Awaiting contractor quote submission',
             tone: contractorQuoteDeclined ? 'declined' : 'normal',
             status:
               request.status === 'pending_quotation'

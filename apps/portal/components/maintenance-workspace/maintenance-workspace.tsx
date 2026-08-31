@@ -15,8 +15,14 @@ import { toast } from 'sonner';
 
 import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
+import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
 import { Button } from '@/components/ui/button';
-import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
+import type {
+  ApiMaintenanceAttachment,
+  ApiMaintenanceRequest,
+  ApiMaintenanceState,
+  ApiQuotation,
+} from '@/lib/crossub-api/types';
 import { generateWorkspaceAdvice } from '@/lib/maintenance-workspace/advice';
 import {
   getQuickJumpCurrentRank,
@@ -63,6 +69,10 @@ export function MaintenanceWorkspace({
   attachments = [],
   apiConnected = false,
   onCaseUpdated,
+  contractors = [],
+  quotations = [],
+  workflowRequest = null,
+  maintenanceReminders = [],
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   backHref: string;
@@ -86,6 +96,10 @@ export function MaintenanceWorkspace({
   attachments?: ApiMaintenanceAttachment[];
   apiConnected?: boolean;
   onCaseUpdated?: () => Promise<void>;
+  contractors?: Array<{ id: string; name: string }>;
+  quotations?: ApiQuotation[];
+  workflowRequest?: ApiMaintenanceRequest | null;
+  maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
 }) {
   const [bottomNavTab, setBottomNavTab] = useState<'details' | 'chat'>('details');
   const [caseFlagged, setCaseFlagged] = useState(false);
@@ -135,6 +149,10 @@ export function MaintenanceWorkspace({
   const statusLabel = STATUS_LABELS[workspaceCase.status] ?? workspaceCase.status;
   const isReviewStep =
     uiStatusForUI === 'under_review' || uiStatusForUI === 'pending_evidence';
+  const showLandlordQuoteReview =
+    Boolean(item && onCaseUpdated) &&
+    workspaceCase.responsibility === 'landlord' &&
+    (uiStatusForUI === 'pending_quotation' || uiStatusForUI === 'pending_approval');
 
   const displayActionLabel =
     quickJumpReadOnlyMode && quickJumpTargetKey
@@ -530,7 +548,21 @@ export function MaintenanceWorkspace({
                       </>
                     )}
 
-                    {uiStatusForUI === 'pending_approval' && requiresApproval && (
+                    {showLandlordQuoteReview && item ? (
+                      <MaintenanceGetQuotePanel
+                        ctx={{ item, workspaceCase }}
+                        contractors={contractors}
+                        onCaseUpdated={onCaseUpdated}
+                        apiConnected={apiConnected}
+                        maintenanceReminders={maintenanceReminders}
+                        workflowRequest={workflowRequest}
+                        quotations={quotations.length > 0 ? quotations : workspaceCase.quotations}
+                      />
+                    ) : null}
+
+                    {!showLandlordQuoteReview &&
+                    uiStatusForUI === 'pending_approval' &&
+                    requiresApproval && (
                       <ApprovalPanel
                         title={workspaceCase.issueType}
                         amount={quoteAmount}
@@ -556,7 +588,7 @@ export function MaintenanceWorkspace({
                       </p>
                     )}
 
-                    {uiStatusForUI === 'pending_quotation' && (
+                    {!showLandlordQuoteReview && uiStatusForUI === 'pending_quotation' && (
                       <div className="space-y-3">
                         <div>
                           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">

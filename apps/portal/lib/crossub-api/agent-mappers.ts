@@ -494,7 +494,10 @@ export function mapAgentMaintenance(
         const n = typeof amount === 'number' ? amount : Number(amount);
         return Number.isFinite(n) ? n : undefined;
       })(),
-      requiresApproval: m.status === MAINTENANCE_STATUS.QUOTING,
+      requiresApproval:
+        m.status === MAINTENANCE_STATUS.QUOTING ||
+        (m.status === MAINTENANCE_STATUS.APPROVED &&
+          (m.quoteTotal != null || m.ourPrice != null)),
       ...(m.tenantResponsibilityResponse
         ? {
             tenantResponsibilityResponse: {
