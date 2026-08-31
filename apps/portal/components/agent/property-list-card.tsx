@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Bell, ChevronRight, UserRound } from 'lucide-react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
+import { Button } from '@/components/ui/button';
 import { messagesForProperty } from '@/constants/routes';
 import {
   propertyPhoneBookInitials,
@@ -25,11 +26,15 @@ export function PropertyListCard({
   messageUnread = 0,
   needActionCount = 0,
   href,
+  onRestore,
+  restoring,
 }: {
   property: Property;
   messageUnread?: number;
   needActionCount?: number;
   href: string;
+  onRestore?: () => void;
+  restoring?: boolean;
 }) {
   const subtitle = propertyPhoneBookSubtitle(property);
   const initials = propertyPhoneBookInitials(property);
@@ -126,6 +131,24 @@ export function PropertyListCard({
 
         <ChevronRight className="text-muted-foreground size-4 shrink-0 transition group-hover:translate-x-0.5 group-hover:text-primary" />
       </Link>
+      {onRestore ? (
+        <div className="border-border border-t px-3 py-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full"
+            disabled={restoring}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRestore();
+            }}
+          >
+            {restoring ? 'Restoring…' : 'Restore property'}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, type ReactNode } from 'react';
-import { AlertCircle, AlertTriangle, Bell, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArchiveRestore, Bell, Pencil, Trash2 } from 'lucide-react';
 
 import {
   MODULE_TABLE_COLUMN_WIDTHS,
@@ -120,6 +120,8 @@ export function PropertyListTable({
   needActionCountFor,
   rowHref,
   onDelete,
+  onRestore,
+  restoringId,
   canManage,
 }: {
   properties: Property[];
@@ -129,6 +131,8 @@ export function PropertyListTable({
   needActionCountFor?: (propertyId: string) => number;
   rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
+  onRestore?: (property: Property) => void;
+  restoringId?: string | null;
   canManage?: boolean;
 }) {
   const isArchived = variant === 'archived';
@@ -417,6 +421,21 @@ export function PropertyListTable({
                           <Pencil className="size-3.5" />
                         </Link>
                       </Button>
+                      {onRestore ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1 px-2"
+                          disabled={restoringId === property.id}
+                          onClick={() => onRestore(property)}
+                          aria-label={`Restore ${property.address}`}
+                          title="Restore property"
+                        >
+                          <ArchiveRestore className="size-3.5" />
+                          {restoringId === property.id ? 'Restoring…' : 'Restore'}
+                        </Button>
+                      ) : null}
                       {canManage ? (
                         <Button
                           type="button"

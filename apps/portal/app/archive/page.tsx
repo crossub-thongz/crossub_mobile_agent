@@ -2,6 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { FolderArchive } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { EmptyState } from '@/components/agent/empty-state';
+import { FilterChips } from '@/components/agent/filter-chips';
+import { PageIntro } from '@/components/agent/page-intro';
+import {
+  ArchivedEndLeasingTable,
+  ArchivedLeasingCyclesTable,
+  ArchivedRentReviewsTable,
+} from '@/components/agent/archive-module-tables';
+import { PropertyListView } from '@/components/agent/property-list-view';
+import { AgentShell } from '@/components/layout/agent-shell';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { propertyDetail, ROUTES } from '@/constants/routes';
+import { buildEndLeasingArchiveRows } from '@/lib/archive-case-display';
+import type { Property } from '@/lib/types';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
@@ -36,7 +52,9 @@ export default function ArchivePage() {
     agencies,
     apiConnected,
     refreshArchivedProperties,
+    restoreProperty,
   } = useAgentData();
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const endLeasingArchiveRows = useMemo(
     () => buildEndLeasingArchiveRows(archive.cancelledEndLeasing, vacating),
@@ -60,10 +78,26 @@ export default function ArchivePage() {
     }
   }, [apiConnected, refreshArchivedProperties]);
 
+  const handleRestore = async (property: Property) => {
+    if (!apiConnected) {
+      toast.error('Connect to the API to restore this property');
+      return;
+    }
+    setRestoringId(property.id);
+    try {
+      await restoreProperty(property.id);
+      toast.success('Property restored to your live list');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not restore property');
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
   return (
     <AgentShell title="Archive" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
-        <PageIntro description="Archived properties and closed workflow jobs — deleted cases and completed end-of-tenancy outcomes." />
+        <PageIntro description="Archived properties and closed workflow jobs — restore a property to return it to the live list. Closed jobs stay closed." />
 
         <FilterChips
           options={TABS.map((t) => ({
@@ -88,6 +122,8 @@ export default function ArchivePage() {
               variant="archived"
               rowHref={(property) => propertyDetail(property.id)}
               onDelete={() => undefined}
+              onRestore={(property) => void handleRestore(property)}
+              restoringId={restoringId}
               canManage={false}
             />
           )

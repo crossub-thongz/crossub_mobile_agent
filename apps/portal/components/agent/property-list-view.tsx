@@ -15,6 +15,8 @@ export function PropertyListView({
   needActionCountFor,
   rowHref,
   onDelete,
+  onRestore,
+  restoringId,
   canManage,
 }: {
   properties: Property[];
@@ -24,6 +26,8 @@ export function PropertyListView({
   needActionCountFor?: (property: Property) => number;
   rowHref: (property: Property) => string;
   onDelete: (property: Property) => void;
+  onRestore?: (property: Property) => void;
+  restoringId?: string | null;
   canManage: boolean;
 }) {
   const mobileSorted = useMemo(() => {
@@ -58,6 +62,8 @@ export function PropertyListView({
             messageUnread={messageUnreadFor?.(property) ?? 0}
             needActionCount={needActionCountFor?.(property) ?? 0}
             href={rowHref(property)}
+            onRestore={onRestore ? () => onRestore(property) : undefined}
+            restoring={restoringId === property.id}
           />
         ))}
       </div>
@@ -85,6 +91,8 @@ export function PropertyListView({
           }
           rowHref={rowHref}
           onDelete={onDelete}
+          onRestore={onRestore}
+          restoringId={restoringId}
           canManage={canManage}
         />
       </div>

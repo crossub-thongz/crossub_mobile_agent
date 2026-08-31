@@ -15,6 +15,7 @@ import {
   createProperty as apiCreateProperty,
   endPropertyManagement as apiEndPropertyManagement,
   archiveProperty as apiArchiveProperty,
+  restoreProperty as apiRestoreProperty,
   deleteDraftProperty as apiDeleteDraftProperty,
   updateProperty as apiUpdateProperty,
   createAgency as apiCreateAgency,
@@ -296,6 +297,7 @@ interface AgentDataContextValue {
     options?: { archiveOnBondRelease?: boolean },
   ) => Promise<void>;
   archiveProperty: (propertyId: string) => Promise<void>;
+  restoreProperty: (propertyId: string) => Promise<void>;
   deleteDraftProperty: (propertyId: string) => Promise<void>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   registerInspection: (inspection: Inspection) => void;
@@ -1278,6 +1280,19 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [apiConnected, refresh, refreshArchivedProperties],
   );
 
+  const restoreProperty = useCallback(
+    async (propertyId: string) => {
+      if (!apiConnected) {
+        throw new Error('Connect to the API to restore this property');
+      }
+      await apiRestoreProperty(propertyId);
+      setApiArchivedProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
+      await refresh();
+      await refreshArchivedProperties();
+    },
+    [apiConnected, refresh, refreshArchivedProperties],
+  );
+
   const deleteDraftProperty = useCallback(
     async (propertyId: string) => {
       if (!apiConnected) {
@@ -1707,6 +1722,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     savePropertyRegistryDraft,
     endPropertyManagement,
     archiveProperty,
+    restoreProperty,
     deleteDraftProperty,
     addOpenInspection,
     registerInspection,
