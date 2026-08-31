@@ -1,4 +1,5 @@
 import { TERMINATION_UI } from '@/constants/end-leasing';
+import { overlayAgentArchivedLabel } from '@/constants/agent-archived-case';
 import { isHistoryEndLeasingCase } from '@/lib/property-leasing-history';
 import type { ArchivedEndLeasingCase, VacatingCase } from '@/lib/types';
 
@@ -25,9 +26,11 @@ export interface ArchiveEndLeasingRow {
   outcome: ArchiveOutcome;
 }
 
-export function archiveOutcomeBadge(outcome: ArchiveOutcome) {
+export function archiveOutcomeBadge(outcome: ArchiveOutcome, reason?: string | null) {
   return (
-    <span className={ARCHIVE_OUTCOME_BADGE[outcome]}>{ARCHIVE_OUTCOME_LABEL[outcome]}</span>
+    <span className={ARCHIVE_OUTCOME_BADGE[outcome]}>
+      {overlayAgentArchivedLabel(ARCHIVE_OUTCOME_LABEL[outcome], reason)}
+    </span>
   );
 }
 

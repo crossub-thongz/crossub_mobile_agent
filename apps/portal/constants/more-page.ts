@@ -29,7 +29,7 @@ export const MORE_MENU_ITEM_DESCRIPTION: Partial<Record<string, string>> = {
   [ROUTES.INSPECTIONS]: 'Open, routine, ingoing and outgoing inspections.',
   [ROUTES.ACCOUNTING]: 'Rent, invoices and owner statements.',
   [ROUTES.TRIBUNAL]: 'Tribunal cases and rent chasing.',
-  [ROUTES.ARCHIVE]: 'Closed and cancelled cases kept for reference.',
+  [ROUTES.ARCHIVE]: 'Archived properties and closed workflow jobs.',
   [ROUTES.BILL]: 'Platform invoices and payments.',
   [ROUTES.SETTINGS]: 'Preferences and account settings.',
   [ROUTES.FAQ]: 'Guides, tutorials and FAQs.',

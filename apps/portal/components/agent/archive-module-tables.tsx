@@ -14,15 +14,20 @@ import {
   archiveOutcomeBadge,
   type ArchiveEndLeasingRow,
 } from '@/lib/archive-case-display';
+import {
+  overlayAgentArchivedLabel,
+} from '@/constants/agent-archived-case';
 import type { ArchivedLeasingCycle, ArchivedRentReview } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 
 export const WORKFLOW_CASE_DELETED_STATUS = 'DELETED';
 
-function deletedStatusBadge() {
+function deletedStatusBadge(reason?: string | null) {
   return (
-    <span className={TERMINATION_UI.deletedBadge}>{WORKFLOW_CASE_DELETED_STATUS}</span>
+    <span className={TERMINATION_UI.deletedBadge}>
+      {overlayAgentArchivedLabel(WORKFLOW_CASE_DELETED_STATUS, reason)}
+    </span>
   );
 }
 
@@ -44,7 +49,7 @@ export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCy
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                {deletedStatusBadge()}
+                {deletedStatusBadge(item.cancelReason)}
                 <span className="font-medium tabular-nums">
                   {item.rentPerWeek != null ? `${formatCurrency(item.rentPerWeek)}/wk` : '—'}
                 </span>
@@ -70,7 +75,7 @@ export function ArchivedLeasingCyclesTable({ items }: { items: ArchivedLeasingCy
                   <ModuleTableLinkCell href={href} className="max-w-[14rem]">
                     <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                   </ModuleTableLinkCell>
-                  <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
+                  <td className="px-3 py-3 text-xs">{deletedStatusBadge(item.cancelReason)}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                     {item.rentPerWeek != null ? `${formatCurrency(item.rentPerWeek)}/wk` : '—'}
                   </td>
@@ -109,7 +114,7 @@ export function ArchivedEndLeasingTable({ items }: { items: ArchiveEndLeasingRow
                 ) : null}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                {archiveOutcomeBadge(item.outcome)}
+                {archiveOutcomeBadge(item.outcome, item.note)}
                 <span className="text-muted-foreground">
                   Vacate {item.vacateDate ? formatDate(item.vacateDate) : '—'}
                 </span>
@@ -151,7 +156,7 @@ export function ArchivedEndLeasingTable({ items }: { items: ArchiveEndLeasingRow
                       <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   )}
-                  <td className="px-3 py-3 text-xs">{archiveOutcomeBadge(item.outcome)}</td>
+                  <td className="px-3 py-3 text-xs">{archiveOutcomeBadge(item.outcome, item.note)}</td>
                   <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
                     {item.vacateDate ? formatDate(item.vacateDate) : '—'}
                   </td>
@@ -192,7 +197,7 @@ export function ArchivedRentReviewsTable({ items }: { items: ArchivedRentReview[
                 ) : null}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                {deletedStatusBadge()}
+                {deletedStatusBadge(item.cancelReason)}
                 <span className="font-medium tabular-nums">
                   {item.currentRent != null ? `${formatCurrency(item.currentRent)}/wk` : '—'}
                 </span>
@@ -239,7 +244,7 @@ export function ArchivedRentReviewsTable({ items }: { items: ArchivedRentReview[
                       <ModuleTableTruncateText lines={2}>{item.propertyAddress}</ModuleTableTruncateText>
                     </td>
                   )}
-                  <td className="px-3 py-3 text-xs">{deletedStatusBadge()}</td>
+                  <td className="px-3 py-3 text-xs">{deletedStatusBadge(item.cancelReason)}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums">
                     {item.currentRent != null ? `${formatCurrency(item.currentRent)}/wk` : '—'}
                   </td>

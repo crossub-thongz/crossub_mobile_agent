@@ -875,15 +875,16 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const archive = useMemo(() => {
     const mapped = mapAgentArchive(portfolio?.archive);
+    const addressSource = [...properties, ...archivedProperties];
     return {
       cancelledLeasingCycles: enrichPropertyAddresses(
         mapped.cancelledLeasingCycles,
-        properties,
+        addressSource,
       ),
-      cancelledEndLeasing: enrichPropertyAddresses(mapped.cancelledEndLeasing, properties),
-      cancelledRentReviews: enrichPropertyAddresses(mapped.cancelledRentReviews, properties),
+      cancelledEndLeasing: enrichPropertyAddresses(mapped.cancelledEndLeasing, addressSource),
+      cancelledRentReviews: enrichPropertyAddresses(mapped.cancelledRentReviews, addressSource),
     };
-  }, [portfolio, properties]);
+  }, [archivedProperties, portfolio, properties]);
 
   const accounting = useMemo(
     () =>

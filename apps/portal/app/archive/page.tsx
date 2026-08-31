@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FolderArchive } from 'lucide-react';
 
 import { EmptyState } from '@/components/agent/empty-state';
@@ -11,12 +11,14 @@ import {
   ArchivedLeasingCyclesTable,
   ArchivedRentReviewsTable,
 } from '@/components/agent/archive-module-tables';
+import { PropertyListView } from '@/components/agent/property-list-view';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { ROUTES } from '@/constants/routes';
+import { propertyDetail, ROUTES } from '@/constants/routes';
 import { buildEndLeasingArchiveRows } from '@/lib/archive-case-display';
 
 const TABS = [
+  { id: 'properties', label: 'Properties' },
   { id: 'new-letting', label: 'New letting' },
   { id: 'end-leasing', label: 'End leasing' },
   { id: 'rent-review', label: 'Rent review' },
@@ -26,8 +28,15 @@ const TABS = [
 type ArchiveTab = (typeof TABS)[number]['id'];
 
 export default function ArchivePage() {
-  const [tab, setTab] = useState<ArchiveTab>('new-letting');
-  const { archive, vacating } = useAgentData();
+  const [tab, setTab] = useState<ArchiveTab>('properties');
+  const {
+    archive,
+    vacating,
+    archivedProperties,
+    agencies,
+    apiConnected,
+    refreshArchivedProperties,
+  } = useAgentData();
 
   const endLeasingArchiveRows = useMemo(
     () => buildEndLeasingArchiveRows(archive.cancelledEndLeasing, vacating),
@@ -36,18 +45,25 @@ export default function ArchivePage() {
 
   const tabCounts = useMemo(
     () => ({
+      properties: archivedProperties.length,
       'new-letting': archive.cancelledLeasingCycles.length,
       'end-leasing': endLeasingArchiveRows.length,
       'rent-review': archive.cancelledRentReviews.length,
       maintenance: 0,
     }),
-    [archive, endLeasingArchiveRows.length],
+    [archive, archivedProperties.length, endLeasingArchiveRows.length],
   );
+
+  useEffect(() => {
+    if (apiConnected) {
+      void refreshArchivedProperties();
+    }
+  }, [apiConnected, refreshArchivedProperties]);
 
   return (
     <AgentShell title="Archive" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
-        <PageIntro description="Closed workflow jobs — deleted cases and completed end-of-tenancy outcomes." />
+        <PageIntro description="Archived properties and closed workflow jobs — deleted cases and completed end-of-tenancy outcomes." />
 
         <FilterChips
           options={TABS.map((t) => ({
@@ -57,6 +73,25 @@ export default function ArchivePage() {
           value={tab}
           onChange={(id) => setTab(id as ArchiveTab)}
         />
+
+        {tab === 'properties' ? (
+          archivedProperties.length === 0 ? (
+            <EmptyState
+              icon={FolderArchive}
+              title="No archived properties"
+              description="Properties you archive leave the live list and appear here with their history."
+            />
+          ) : (
+            <PropertyListView
+              properties={archivedProperties}
+              agencies={agencies}
+              variant="archived"
+              rowHref={(property) => propertyDetail(property.id)}
+              onDelete={() => undefined}
+              canManage={false}
+            />
+          )
+        ) : null}
 
         {tab === 'new-letting' ? (
           archive.cancelledLeasingCycles.length === 0 ? (

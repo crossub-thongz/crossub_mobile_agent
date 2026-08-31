@@ -729,7 +729,8 @@ export async function preparePlatformCharge(
 }
 
 /**
- * Quote and pay a platform charge upfront — inspections and tribunal pay at create.
+ * Quote and pay a platform charge upfront — inspections pay at create.
+ * Tribunal on Level 2 / 3 accrues to the monthly invoice instead.
  * Returns null when billing is disabled or the service is included in Full Service allowance.
  * @throws when Stripe payment is required but cannot be completed inline (use preparePlatformCharge).
  */

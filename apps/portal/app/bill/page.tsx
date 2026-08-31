@@ -995,7 +995,7 @@ export default function BillPage() {
                 title="No monthly invoices yet"
                 description={
                   usesMonthlyInvoice
-                    ? 'Management fee and letting fee appear here by property once Accounting sends the invoice. Inspections are prepaid on Bills.'
+                    ? 'Management fee, tribunal, and letting fee appear here by property once Accounting sends the invoice. Inspections are prepaid on Bills.'
                     : 'Monthly service invoices will appear here when they are issued.'
                 }
               />
