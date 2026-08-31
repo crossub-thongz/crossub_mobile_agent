@@ -1,15 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { X } from 'lucide-react';
 
 import { WelcomeVideoPlayer } from '@/components/agent/welcome-video-player';
 import { useAuth } from '@/components/providers/auth-provider';
-import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
-import { ROUTES, propertyNew } from '@/constants/routes';
 import {
   dismissPortalWelcome,
   fetchPortalWelcomeStatus,
@@ -19,14 +15,15 @@ import { notifyPortalWelcomeDismissed } from '@/lib/agent-page-guide-events';
 
 export function WelcomeOnboarding() {
   const { user, status } = useAuth();
-  const { hasFullManagementAccess } = useAgentData();
   const [welcomeStatus, setWelcomeStatus] = useState<AgentPortalWelcomeStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [dismissing, setDismissing] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
 
   useEffect(() => {
     if (status !== 'authed' || !user) {
       setWelcomeStatus(null);
+      setVideoEnded(false);
       return;
     }
 
@@ -48,7 +45,28 @@ export function WelcomeOnboarding() {
     };
   }, [status, user?.id]);
 
+  useEffect(() => {
+    if (!welcomeStatus?.eligible || welcomeStatus.dismissed) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const blockKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener('keydown', blockKeys, true);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', blockKeys, true);
+    };
+  }, [welcomeStatus?.eligible, welcomeStatus?.dismissed]);
+
   const dismiss = useCallback(async () => {
+    if (!videoEnded || dismissing) return;
     setDismissing(true);
     try {
       const result = await dismissPortalWelcome();
@@ -62,7 +80,7 @@ export function WelcomeOnboarding() {
     } finally {
       setDismissing(false);
     }
-  }, []);
+  }, [dismissing, videoEnded]);
 
   if (
     status !== 'authed' ||
@@ -75,47 +93,39 @@ export function WelcomeOnboarding() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-4 sm:items-center">
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-4 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="agent-welcome-title"
+    >
       <div className="relative w-full max-w-2xl rounded-xl border bg-card p-5 shadow-xl">
-        <button
-          type="button"
-          onClick={() => void dismiss()}
-          disabled={dismissing}
-          className="text-muted-foreground absolute top-3 right-3 z-10 rounded-lg p-1 hover:bg-secondary"
-          aria-label="Dismiss"
-        >
-          <X className="size-4" />
-        </button>
-        <div className="pr-8">
+        <div>
           <p className="text-primary text-xs font-semibold uppercase tracking-wide">
             {CROS_ASSISTANT_NAME} · Welcome
           </p>
-          <h2 className="mt-1 text-lg font-semibold">Welcome to your agent portal</h2>
+          <h2 id="agent-welcome-title" className="mt-1 text-lg font-semibold">
+            Welcome to your agent portal
+          </h2>
           <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-            Watch this short intro to get started. You can replay it anytime from More → Support → Intro video.
+            {videoEnded
+              ? 'You can replay this anytime from More → Support → Intro video.'
+              : 'Please watch this short intro before continuing.'}
           </p>
         </div>
-        <WelcomeVideoPlayer autoPlay className="mt-4" />
-        <div className="mt-5 flex flex-col gap-2">
-          <Button asChild disabled={dismissing} onClick={() => void dismiss()}>
-            <Link href={propertyNew()}>
-              {hasFullManagementAccess
-                ? 'Add your first property'
-                : 'Add a property for inspection'}
-            </Link>
-          </Button>
-          <Button variant="outline" asChild disabled={dismissing} onClick={() => void dismiss()}>
-            <Link href={ROUTES.TASKS}>View need-action queue</Link>
-          </Button>
-          <Button
-            variant="ghost"
-            className="text-muted-foreground"
-            disabled={dismissing}
-            onClick={() => void dismiss()}
-          >
-            Got it — explore the app
-          </Button>
-        </div>
+        <WelcomeVideoPlayer
+          autoPlay
+          lockUntilEnded
+          className="mt-4"
+          onEnded={() => setVideoEnded(true)}
+        />
+        {videoEnded ? (
+          <div className="mt-5">
+            <Button className="w-full" disabled={dismissing} onClick={() => void dismiss()}>
+              Close
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

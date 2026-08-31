@@ -9,13 +9,19 @@ import { cn } from '@/lib/utils';
 export function WelcomeVideoPlayer({
   autoPlay = false,
   className,
+  lockUntilEnded = false,
+  onEnded,
 }: {
   autoPlay?: boolean;
   className?: string;
+  /** Hide skip/seek controls until the video finishes (first-login modal). */
+  lockUntilEnded?: boolean;
+  onEnded?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [needsGesture, setNeedsGesture] = useState(false);
   const [mutedFallback, setMutedFallback] = useState(false);
+  const [finished, setFinished] = useState(false);
 
   useEffect(() => {
     if (!autoPlay) return;
@@ -57,6 +63,15 @@ export function WelcomeVideoPlayer({
     void el.play();
   }, []);
 
+  const handleEnded = useCallback(() => {
+    setFinished(true);
+    setNeedsGesture(false);
+    setMutedFallback(false);
+    onEnded?.();
+  }, [onEnded]);
+
+  const showControls = !lockUntilEnded || finished;
+
   return (
     <div className={cn('relative overflow-hidden rounded-xl bg-black', className)}>
       <video
@@ -64,12 +79,17 @@ export function WelcomeVideoPlayer({
         src={AGENT_WELCOME_VIDEO_SRC}
         className="aspect-video w-full"
         playsInline
-        controls
+        controls={showControls}
+        controlsList={lockUntilEnded ? 'nodownload noplaybackrate noremoteplayback' : undefined}
+        disablePictureInPicture
         preload="auto"
         autoPlay={autoPlay}
         onPlay={() => setNeedsGesture(false)}
+        onEnded={handleEnded}
+        onError={lockUntilEnded ? handleEnded : undefined}
+        onContextMenu={lockUntilEnded ? (event) => event.preventDefault() : undefined}
       />
-      {(needsGesture || mutedFallback) && (
+      {(needsGesture || mutedFallback) && !finished && (
         <button
           type="button"
           onClick={unlock}
