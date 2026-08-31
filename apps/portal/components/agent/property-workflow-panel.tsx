@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
 import {
   createAgentLeasingCycle,
@@ -296,6 +297,7 @@ export function PropertyWorkflowCreateDialog({
   onSuccess: (result?: PropertyWorkflowCreatedResult) => void;
 }) {
   const { refresh, apiConnected, endPropertyManagement } = useAgentData();
+  const isV2 = useIsAgentUiV2();
   const inspectionOnly = isInspectionOnlyLevel(
     resolvePortalServiceLevel(agency?.portalServiceLevel),
   );
@@ -541,7 +543,7 @@ export function PropertyWorkflowCreateDialog({
     start_leasing: 'New Leasing / Re-Letting',
     start_rent_review: 'Rent Review',
     start_end_leasing: 'Vacating',
-    start_maintenance: 'Lodge Maintenance',
+    start_maintenance: isV2 ? 'Lodge Maintenance' : 'Add new repair job',
     schedule_open_inspection: 'Schedule open inspection',
     schedule_ingoing_inspection: 'Schedule ingoing inspection',
     schedule_outgoing_inspection: 'Schedule outgoing inspection',
@@ -799,7 +801,7 @@ export function PropertyWorkflowCreateDialog({
         if (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther)) {
           throw new Error('Issue type is required');
         }
-        if (description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS) {
+        if (isV2 && description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS) {
           throw new Error(
             `Description must be at least ${MAINTENANCE_DESCRIPTION_MIN_CHARS} characters`,
           );
@@ -1584,7 +1586,7 @@ export function PropertyWorkflowCreateDialog({
                 (actionId === 'start_rent_review' && prefillLoading) ||
                 (actionId === 'start_maintenance' &&
                   (                    !isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
-                    description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS ||
+                    (isV2 && description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS) ||
                     maintMediaUrls.length < 1 ||
                     (maintPriority === 'urgent' &&
                       !isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection) &&

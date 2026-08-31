@@ -10,7 +10,7 @@ import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { MOBILE_MENU_NAV } from '@/constants/nav';
+import { menuNavForUi } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -265,7 +265,7 @@ export function AgentSidebar({
   const propertyNeedActionCount = needActionItems.length;
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
   const menuNav = filterHiddenBillingNav(
-    filterNavByAccess(MOBILE_MENU_NAV, hasFullManagementAccess).map((item) =>
+    filterNavByAccess(menuNavForUi(isV2), hasFullManagementAccess).map((item) =>
       item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item,
     ),
     platformBillingDisabled,

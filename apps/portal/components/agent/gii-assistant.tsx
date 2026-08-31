@@ -298,9 +298,15 @@ export function GiiAssistant({
     [openJob, refreshPortfolio, resolveJobCaseLink],
   );
   const [query, setQueryState] = useState('');
-  const setQuery = useCallback<Dispatch<SetStateAction<string>>>((value) => {
-    setQueryState((prev) => stripEmojis(typeof value === 'function' ? value(prev) : value));
-  }, []);
+  const setQuery = useCallback<Dispatch<SetStateAction<string>>>(
+    (value) => {
+      setQueryState((prev) => {
+        const next = typeof value === 'function' ? value(prev) : value;
+        return isV2 ? stripEmojis(next) : next;
+      });
+    },
+    [isV2],
+  );
   const [dockTab, setDockTab] = useState<'gii' | 'reply'>('gii');
   const [pendingAttachments, setPendingAttachments] = useState<GiiPendingAttachment[]>([]);
   const [composerDragActive, setComposerDragActive] = useState(false);

@@ -180,8 +180,8 @@ export function AddPaymentMethodGate() {
             Add a payment method
           </h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            Save a card to keep using the Agent app. CROSSUB uses it for inspections, tribunal,
-            and monthly invoices. This stays on screen until a payment method is saved.
+            Save a card so checkout is faster when you pay. We never charge it automatically —
+            only when you tap Pay. This stays on screen until a payment method is saved.
           </p>
           {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
           <Button className="mt-5 w-full" disabled={starting} onClick={() => void startSetup()}>

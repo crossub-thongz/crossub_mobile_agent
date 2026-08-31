@@ -109,8 +109,11 @@ export const INSPECTION_GROUP_LABEL: Record<InspectionListGroup, string> = {
   done: 'Completed',
 };
 
-export function inspectionNextAction(inspection: Inspection): InspectionNextAction | null {
-  if (isInspectionCancelled(inspection)) {
+export function inspectionNextAction(
+  inspection: Inspection,
+  options?: { distinguishCancelled?: boolean },
+): InspectionNextAction | null {
+  if (options?.distinguishCancelled && isInspectionCancelled(inspection)) {
     return {
       title: 'Cancelled',
       description:

@@ -339,7 +339,9 @@ function SavedCardPaymentForm({
 
         <div className="text-muted-foreground mt-4 flex items-start gap-2 text-xs leading-relaxed">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-          <span>Your saved card will be charged securely through Stripe.</span>
+          <span>
+            This card is charged only when you tap Pay. CROSSUB does not auto-debit saved cards.
+          </span>
         </div>
 
         {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}

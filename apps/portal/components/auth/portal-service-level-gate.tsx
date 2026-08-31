@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 import { ROUTES, isPublicRoute } from '@/constants/routes';
 import { isFullManagementRoute } from '@/lib/portal-service-level';
@@ -14,6 +15,7 @@ function isAccountingRoute(pathname: string): boolean {
 
 export function PortalServiceLevelGate({ children }: { children: React.ReactNode }) {
   const { isInspectionOnlyAgent, loading, portalAccessReady } = useAgentData();
+  const isV2 = useIsAgentUiV2();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -21,7 +23,7 @@ export function PortalServiceLevelGate({ children }: { children: React.ReactNode
     !loading &&
     portalAccessReady &&
     ((isInspectionOnlyAgent && isFullManagementRoute(pathname)) ||
-      (!ACCOUNTING_MODULE_LAUNCHED && isAccountingRoute(pathname))) &&
+      (isV2 && !ACCOUNTING_MODULE_LAUNCHED && isAccountingRoute(pathname))) &&
     !isPublicRoute(pathname);
 
   useEffect(() => {

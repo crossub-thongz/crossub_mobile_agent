@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Home } from 'lucide-react';
+import { ChevronDown, ChevronUp, Home } from 'lucide-react';
 
 import { PropertyBuildingContactsDialog } from '@/components/agent/property-building-contacts-dialog';
 import {
@@ -13,6 +13,7 @@ import { PropertyProfileInfoCard } from '@/components/agent/property-profile/pro
 import { PropertyTenancyManagementSections } from '@/components/agent/property-tenancy-management-sections';
 import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import {
   formatProfileLeaseStatus,
@@ -32,7 +33,7 @@ import type {
   TenantSelectionCase,
   VacatingCase,
 } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 function StatCell({
   label,
@@ -134,6 +135,7 @@ export function PropertyProfileDetails({
   onRefresh?: () => void;
 }) {
   const { apiConnected } = useAgentData();
+  const isV2 = useIsAgentUiV2();
   const activeCycle = leasingCycles?.[0];
   const sync = usePropertyOverviewSync(
     property,
@@ -143,6 +145,7 @@ export function PropertyProfileDetails({
     currentLease,
   );
 
+  const [open, setOpen] = useState(false);
   const [buildingDialogOpen, setBuildingDialogOpen] = useState(false);
 
   const furnished =
@@ -209,91 +212,130 @@ export function PropertyProfileDetails({
     onRefresh?.();
   };
 
+  const propertyFacts = (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <StatCell
+          label="Furnished"
+          value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
+        />
+        <StatCell label="Property type" value={registry.propertyType ?? '—'} />
+        <StatCell label="Key fob" value={formatKeyFobCount(sync.keyFobCount)} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <StatCell
+          label="Weekly rent"
+          value={weeklyRentLabel}
+          hint={upcomingRentHint}
+          labelAccessory={
+            displayRent != null && displayRent > 0 ? (
+              <RentEquivalentsHint weekly={displayRent} />
+            ) : undefined
+          }
+        />
+        <StatCell label="Lease status" value={profileLeaseStatus} />
+      </div>
+      {property.paymentReference ? (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+            Rent payment reference
+          </p>
+          <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-wide text-amber-950 dark:text-amber-50">
+            {property.paymentReference}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug">
+            Quote this reference when paying rent by bank transfer.
+          </p>
+        </div>
+      ) : null}
+      {hasContact(buildingManager) ? (
+        <ContactTile
+          title="Building manager"
+          layout="row"
+          name={buildingManager?.name}
+          email={buildingManager?.email}
+          phone={buildingManager?.mobile}
+          onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+        />
+      ) : (
+        <ContactTile
+          title="Building manager"
+          variant="add"
+          onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+        />
+      )}
+      {showStrataTile ? (
+        <ContactTile
+          title="Strata"
+          layout="row"
+          name={strataContact?.name}
+          email={strataContact?.email}
+          phone={strataContact?.mobile}
+          meta={strataMeta || undefined}
+          onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+        />
+      ) : (
+        <ContactTile
+          title="Strata"
+          variant="add"
+          onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
+        />
+      )}
+    </div>
+  );
+
+  const tenancySections = (
+    <PropertyTenancyManagementSections
+      property={property}
+      propertyId={propertyId}
+      currentLease={currentLease}
+      propertyDocs={propertyDocs}
+      leasingCycles={leasingCycles}
+      tenantSelections={tenantSelections}
+      vacatingCases={vacatingCases}
+      onRefresh={onRefresh}
+    />
+  );
+
+  if (!isV2) {
+    return (
+      <div className="mt-3 border-t border-border/50 pt-3">
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          className="flex w-full items-center gap-2 text-left lg:pointer-events-none"
+          aria-expanded={open}
+        >
+          <h3 className="text-sm font-semibold">Property details</h3>
+          {open ? (
+            <ChevronUp className="text-muted-foreground size-4 shrink-0 lg:hidden" aria-hidden />
+          ) : (
+            <ChevronDown className="text-muted-foreground size-4 shrink-0 lg:hidden" aria-hidden />
+          )}
+        </button>
+
+        <div className={cn('mt-3 space-y-3', !open && 'hidden lg:block')}>
+          {propertyFacts}
+          {tenancySections}
+        </div>
+
+        <PropertyBuildingContactsDialog
+          open={buildingDialogOpen}
+          onOpenChange={setBuildingDialogOpen}
+          propertyId={propertyId}
+          onSaved={handleSaved}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-2">
         <PropertyProfileInfoCard title="Property details" icon={Home}>
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <StatCell
-              label="Furnished"
-              value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
-            />
-            <StatCell label="Property type" value={registry.propertyType ?? '—'} />
-            <StatCell label="Key fob" value={formatKeyFobCount(sync.keyFobCount)} />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <StatCell
-              label="Weekly rent"
-              value={weeklyRentLabel}
-              hint={upcomingRentHint}
-              labelAccessory={
-                displayRent != null && displayRent > 0 ? (
-                  <RentEquivalentsHint weekly={displayRent} />
-                ) : undefined
-              }
-            />
-            <StatCell label="Lease status" value={profileLeaseStatus} />
-          </div>
-          {property.paymentReference ? (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
-                Rent payment reference
-              </p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-wide text-amber-950 dark:text-amber-50">
-                {property.paymentReference}
-              </p>
-              <p className="text-muted-foreground mt-0.5 text-[10px] leading-snug">
-                Quote this reference when paying rent by bank transfer.
-              </p>
-            </div>
-          ) : null}
-          {hasContact(buildingManager) ? (
-            <ContactTile
-              title="Building manager"
-              layout="row"
-              name={buildingManager?.name}
-              email={buildingManager?.email}
-              phone={buildingManager?.mobile}
-              onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          ) : (
-            <ContactTile
-              title="Building manager"
-              variant="add"
-              onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          )}
-          {showStrataTile ? (
-            <ContactTile
-              title="Strata"
-              layout="row"
-              name={strataContact?.name}
-              email={strataContact?.email}
-              phone={strataContact?.mobile}
-              meta={strataMeta || undefined}
-              onEdit={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          ) : (
-            <ContactTile
-              title="Strata"
-              variant="add"
-              onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
-            />
-          )}
-        </div>
-      </PropertyProfileInfoCard>
-
-      <PropertyTenancyManagementSections
-        property={property}
-        propertyId={propertyId}
-        currentLease={currentLease}
-        propertyDocs={propertyDocs}
-        leasingCycles={leasingCycles}
-        tenantSelections={tenantSelections}
-        vacatingCases={vacatingCases}
-        onRefresh={onRefresh}
-      />
+          {propertyFacts}
+        </PropertyProfileInfoCard>
+        {tenancySections}
       </div>
 
       <PropertyBuildingContactsDialog

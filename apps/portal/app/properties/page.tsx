@@ -7,7 +7,6 @@ import { Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
-import { DashboardPortfolioMapSection } from '@/components/agent/dashboard/dashboard-portfolio-map-section';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { PropertyRemoveDialog } from '@/components/agent/property-remove-dialog';
 import { PropertyListView } from '@/components/agent/property-list-view';
@@ -159,10 +158,6 @@ export default function PropertiesPage() {
           />
         </div>
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
-
-        {!isArchivedView && properties.length > 0 ? (
-          <DashboardPortfolioMapSection properties={properties} />
-        ) : null}
 
         {!isArchivedView && (
           <Button className="w-full rounded-xl sm:w-auto" size="lg" asChild>

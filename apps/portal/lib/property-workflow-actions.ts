@@ -140,7 +140,7 @@ export function tabActionsFor(
       return [
         {
           id: 'start_maintenance',
-          label: 'Lodge Maintenance',
+          label: 'Add new repair job',
           description: 'Create a repair request for this property',
           primary: true,
         },
@@ -222,7 +222,11 @@ export function workflowMenuGroupsFor(
       const actions =
         group.tab === 'leasing'
           ? [...tabActionsFor('leasing', ctx), ...tabActionsFor('rent_review', ctx)]
-          : tabActionsFor(group.tab, ctx);
+          : tabActionsFor(group.tab, ctx).map((action) =>
+              action.id === 'start_maintenance'
+                ? { ...action, label: 'Lodge Maintenance' }
+                : action,
+            );
       return { ...group, actions };
     })
     .filter((group) => group.actions.length > 0);

@@ -756,11 +756,12 @@ export default function BillPage() {
                         summary.defaultPaymentMethod.expMonth,
                         summary.defaultPaymentMethod.expYear,
                       )}
+                      . Charged only when you tap Pay.
                     </p>
                   </>
                 ) : (
                   <p className="text-muted-foreground mt-1 text-sm">
-                    Save a card for faster checkout on platform bills.
+                    Save a card for faster checkout. We never charge it automatically.
                   </p>
                 )}
               </div>

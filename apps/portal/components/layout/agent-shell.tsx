@@ -28,7 +28,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { MORE_NAV, MORE_NAV_FOOTER, PRIMARY_NAV } from '@/constants/nav';
+import { moreNavFooterForUi, moreNavForUi, primaryNavForUi } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { filterNavByAccess, agencyBillingNavLabel } from '@/lib/portal-service-level';
 import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
@@ -102,11 +102,11 @@ export function AgentShell({
   const hideCrosRail =
     Boolean(hideNeedAction) || (isV2 && propertiesPageActive && !propertyPreviewId);
   const billingLabel = agencyBillingNavLabel(hasFullManagementAccess);
-  const primaryNav = filterNavByAccess(PRIMARY_NAV, hasFullManagementAccess);
+  const primaryNav = filterNavByAccess(primaryNavForUi(isV2), hasFullManagementAccess);
   const moreNav = filterHiddenBillingNav(
     [
-      ...filterNavByAccess(MORE_NAV, hasFullManagementAccess),
-      ...filterNavByAccess(MORE_NAV_FOOTER, hasFullManagementAccess),
+      ...filterNavByAccess(moreNavForUi(isV2), hasFullManagementAccess),
+      ...filterNavByAccess(moreNavFooterForUi(isV2), hasFullManagementAccess),
     ].map((item) => (item.href === ROUTES.BILL ? { ...item, label: billingLabel } : item)),
     platformBillingDisabled,
   );

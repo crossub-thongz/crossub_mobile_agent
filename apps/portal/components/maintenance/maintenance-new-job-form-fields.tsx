@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { MaintenanceIssueTypeField } from '@/components/maintenance/maintenance-issue-type-field';
 import { MaintenanceMediaUploadField } from '@/components/maintenance/maintenance-media-upload-field';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { isTenantUrgentEligibleMaintenanceIssueType } from '@/constants/maintenance-issue-types';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +62,7 @@ export function MaintenanceNewJobFormFields({
   onMediaUrlsChange: (urls: string[]) => void;
   disabled?: boolean;
 }) {
+  const isV2 = useIsAgentUiV2();
   const tenantIncomplete =
     !(tenantName.trim() && tenantEmail.trim() && tenantPhone.trim());
   const urgentEligible = isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection);
@@ -101,18 +103,18 @@ export function MaintenanceNewJobFormFields({
           rows={4}
           placeholder="What's happening? Any constraints or notes?"
           disabled={disabled}
-          minLength={MAINTENANCE_DESCRIPTION_MIN_CHARS}
+          minLength={isV2 ? MAINTENANCE_DESCRIPTION_MIN_CHARS : undefined}
         />
-        {description.trim().length > 0 &&
+        {isV2 && description.trim().length > 0 &&
         description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS ? (
           <p className="text-destructive text-[11px]">
             Description must be at least {MAINTENANCE_DESCRIPTION_MIN_CHARS} characters
           </p>
-        ) : (
+        ) : isV2 ? (
           <p className="text-muted-foreground text-[11px]">
             At least {MAINTENANCE_DESCRIPTION_MIN_CHARS} characters
           </p>
-        )}
+        ) : null}
       </div>
 
       <MaintenanceMediaUploadField

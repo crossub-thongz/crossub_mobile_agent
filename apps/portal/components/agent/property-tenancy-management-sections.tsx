@@ -15,6 +15,7 @@ import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-e
 import { PropertyProfileInfoCard } from '@/components/agent/property-profile/property-profile-info-card';
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import {
   agentDocumentPreviewHref,
   isViewableDocumentUrl,
@@ -54,6 +55,36 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
+
+function DetailsSubsection({
+  title,
+  onEdit,
+  children,
+}: {
+  title: string;
+  onEdit?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="border-border/60 border-t pt-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h4 className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+          {title}
+        </h4>
+        {onEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="text-primary text-[10px] font-medium"
+          >
+            Edit
+          </button>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 function StatCell({
   label,
@@ -228,6 +259,7 @@ export function PropertyTenancyManagementSections({
   onRefresh?: () => void;
 }) {
   const { apiConnected, agencies } = useAgentData();
+  const isV2 = useIsAgentUiV2();
   const { detail } = usePropertyPortalDetail(propertyId, apiConnected);
   const activeCycle = leasingCycles?.[0];
   const sync = usePropertyOverviewSync(
@@ -511,148 +543,194 @@ export function PropertyTenancyManagementSections({
     });
   };
 
+  const tenancyBody = (
+    <>
+      {archiveBanner ? (
+        <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
+          <Archive className="size-3.5 shrink-0" />
+          {archiveBanner}
+        </p>
+      ) : null}
+      <ContactTile
+        title="Tenant"
+        layout="row"
+        name={tenant.name}
+        email={tenant.email}
+        phone={tenant.phone}
+        meta={tenantVacatingHint?.label}
+        metaOnClick={tenantVacatingHint ? openCompletedEndLeasingCase : undefined}
+        updatedHint={tenant.hint}
+      />
+      {tenancyArchives.length > 0 ? (
+        <div className="mt-2">
+          <label className="text-muted-foreground mb-1 block text-[10px] font-semibold uppercase tracking-wide">
+            Tenant history
+          </label>
+          <select
+            className="border-input bg-background h-8 w-full max-w-md rounded-lg border px-2 text-xs"
+            value={tenantHistoryIndex == null ? 'current' : String(tenantHistoryIndex)}
+            onChange={(event) => {
+              const value = event.target.value;
+              setTenantHistoryIndex(value === 'current' ? null : Number(value));
+            }}
+          >
+            <option value="current">
+              {sync.tenantContact?.name || property.tenantName
+                ? `Current — ${sync.tenantContact?.name ?? property.tenantName}`
+                : 'Current — Vacant'}
+            </option>
+            {tenancyArchives.map((archived, index) => (
+              <option key={`${archived.archivedAt}-${index}`} value={String(index)}>
+                Previous — {archived.tenantName ?? 'Tenant'}
+                {archived.vacateDate ? ` · vacated ${formatDate(archived.vacateDate)}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+      <div
+        className={
+          isV2 ? 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3' : 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4'
+        }
+      >
+        {!isV2 ? <StatCell label="Rent paid to" value={rentPaidTo ? formatDate(rentPaidTo) : '—'} /> : null}
+        <StatCell label="Payment cycle" value={paymentCycle} />
+        <StatCell
+          label="Bond"
+          value={
+            <BondStatValue
+              amountLabel={bondOverview.amountLabel}
+              bondIdLabel={bondOverview.bondIdLabel}
+            />
+          }
+          onPreview={
+            canEditTenancy || bondOverview.bondIdLinked
+              ? () => setBondDialogOpen(true)
+              : undefined
+          }
+          onEdit={canEditTenancy ? () => setBondDialogOpen(true) : undefined}
+        />
+        <StatCell
+          label="Next rent review"
+          value={tenancyDates.nextRentReview ? formatDate(tenancyDates.nextRentReview) : '—'}
+        />
+        <StatCell
+          label="Lease start"
+          value={tenancyDates.leaseStart ? formatDate(tenancyDates.leaseStart) : '—'}
+        />
+        <StatCell
+          label="Lease end"
+          value={tenancyDates.leaseEnd ? formatDate(tenancyDates.leaseEnd) : '—'}
+        />
+        <StatCell
+          label="Vacate date"
+          value={tenancyDates.vacateDate ? formatDate(tenancyDates.vacateDate) : '—'}
+        />
+        <StatCell
+          label="Next routine"
+          value={
+            <NextRoutineStatValue
+              date={tenancyDates.nextRoutine || undefined}
+              frequency={tenancyDates.routineAnnualVisits}
+              frequencyMonths={tenancyDates.routineCycleMonths}
+            />
+          }
+        />
+      </div>
+    </>
+  );
+
+  const managementAgreementCell = (
+    <StatCell
+      label="Management agreement"
+      value={
+        managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
+          ? 'View agreement'
+          : 'Not uploaded'
+      }
+      onPreview={
+        managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
+          ? () => openDocPreview(managementAgreementDoc, MANAGEMENT_AGREEMENT_DOC_SLOT.label)
+          : undefined
+      }
+    />
+  );
+
+  const endOfManagementCell =
+    overview?.endOfManagementDate || property.endOfManagementDate ? (
+      <StatCell
+        label="End of management"
+        value={formatDate(overview?.endOfManagementDate ?? property.endOfManagementDate ?? '')}
+      />
+    ) : null;
+
   return (
     <>
-      <PropertyProfileInfoCard
-        title="Tenancy details"
-        icon={User}
-        onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
-      >
-        {archiveBanner ? (
-          <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
-            <Archive className="size-3.5 shrink-0" />
-            {archiveBanner}
-          </p>
-        ) : null}
-        <ContactTile
-          title="Tenant"
-          layout="row"
-          name={tenant.name}
-          email={tenant.email}
-          phone={tenant.phone}
-          meta={tenantVacatingHint?.label}
-          metaOnClick={tenantVacatingHint ? openCompletedEndLeasingCase : undefined}
-          updatedHint={tenant.hint}
-        />
-        {tenancyArchives.length > 0 ? (
-          <div className="mt-2">
-            <label className="text-muted-foreground mb-1 block text-[10px] font-semibold uppercase tracking-wide">
-              Tenant history
-            </label>
-            <select
-              className="border-input bg-background h-8 w-full max-w-md rounded-lg border px-2 text-xs"
-              value={tenantHistoryIndex == null ? 'current' : String(tenantHistoryIndex)}
-              onChange={(event) => {
-                const value = event.target.value;
-                setTenantHistoryIndex(value === 'current' ? null : Number(value));
-              }}
-            >
-              <option value="current">
-                {sync.tenantContact?.name || property.tenantName
-                  ? `Current — ${sync.tenantContact?.name ?? property.tenantName}`
-                  : 'Current — Vacant'}
-              </option>
-              {tenancyArchives.map((archived, index) => (
-                <option key={`${archived.archivedAt}-${index}`} value={String(index)}>
-                  Previous — {archived.tenantName ?? 'Tenant'}
-                  {archived.vacateDate ? ` · vacated ${formatDate(archived.vacateDate)}` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <StatCell label="Payment cycle" value={paymentCycle} />
-          <StatCell
-            label="Bond"
-            value={
-              <BondStatValue
-                amountLabel={bondOverview.amountLabel}
-                bondIdLabel={bondOverview.bondIdLabel}
-              />
-            }
-            onPreview={
-              canEditTenancy || bondOverview.bondIdLinked
-                ? () => setBondDialogOpen(true)
-                : undefined
-            }
-            onEdit={canEditTenancy ? () => setBondDialogOpen(true) : undefined}
-          />
-          <StatCell
-            label="Next rent review"
-            value={tenancyDates.nextRentReview ? formatDate(tenancyDates.nextRentReview) : '—'}
-          />
-          <StatCell
-            label="Lease start"
-            value={tenancyDates.leaseStart ? formatDate(tenancyDates.leaseStart) : '—'}
-          />
-          <StatCell
-            label="Lease end"
-            value={tenancyDates.leaseEnd ? formatDate(tenancyDates.leaseEnd) : '—'}
-          />
-          <StatCell
-            label="Vacate date"
-            value={tenancyDates.vacateDate ? formatDate(tenancyDates.vacateDate) : '—'}
-          />
-          <StatCell
-            label="Next routine"
-            value={
-              <NextRoutineStatValue
-                date={tenancyDates.nextRoutine || undefined}
-                frequency={tenancyDates.routineAnnualVisits}
-                frequencyMonths={tenancyDates.routineCycleMonths}
-              />
-            }
-          />
-        </div>
-      </PropertyProfileInfoCard>
-
-      <PropertyProfileInfoCard
-        title="Owner / Landlord"
-        icon={User}
-        onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
-      >
-        <ContactTile
-          title="Landlord"
-          layout="row"
-          name={landlord.name}
-          email={landlord.email}
-          phone={landlord.phone}
-          updatedHint={landlordUpdatedHint}
-        />
-      </PropertyProfileInfoCard>
-
-      <PropertyProfileInfoCard
-        title="Management / Agency"
-        icon={Building2}
-        onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
-      >
-        <ContactTile title="Agency" layout="row" name={agencyName} />
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <StatCell label="Service type" value={serviceTypeLabel} />
-          <StatCell label="Management rate" value={managementRateDisplay} />
-          <StatCell
-            label="Management agreement"
-            value={
-              managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
-                ? 'View agreement'
-                : 'Not uploaded'
-            }
-            onPreview={
-              managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
-                ? () =>
-                    openDocPreview(managementAgreementDoc, MANAGEMENT_AGREEMENT_DOC_SLOT.label)
-                : undefined
-            }
-          />
-          {overview?.endOfManagementDate || property.endOfManagementDate ? (
-            <StatCell
-              label="End of management"
-              value={formatDate(overview?.endOfManagementDate ?? property.endOfManagementDate ?? '')}
+      {isV2 ? (
+        <>
+          <PropertyProfileInfoCard
+            title="Tenancy details"
+            icon={User}
+            onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
+          >
+            {tenancyBody}
+          </PropertyProfileInfoCard>
+          <PropertyProfileInfoCard
+            title="Owner / Landlord"
+            icon={User}
+            onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
+          >
+            <ContactTile
+              title="Landlord"
+              layout="row"
+              name={landlord.name}
+              email={landlord.email}
+              phone={landlord.phone}
+              updatedHint={landlordUpdatedHint}
             />
-          ) : null}
-        </div>
-      </PropertyProfileInfoCard>
+          </PropertyProfileInfoCard>
+          <PropertyProfileInfoCard
+            title="Management / Agency"
+            icon={Building2}
+            onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
+          >
+            <ContactTile title="Agency" layout="row" name={agencyName} />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <StatCell label="Service type" value={serviceTypeLabel} />
+              <StatCell label="Management rate" value={managementRateDisplay} />
+              {managementAgreementCell}
+              {endOfManagementCell}
+            </div>
+          </PropertyProfileInfoCard>
+        </>
+      ) : (
+        <>
+          <DetailsSubsection
+            title="Tenancy details"
+            onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
+          >
+            {tenancyBody}
+          </DetailsSubsection>
+          <DetailsSubsection
+            title="Management details"
+            onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
+          >
+            <ContactTile
+              title="Landlord"
+              layout="row"
+              name={landlord.name}
+              email={landlord.email}
+              phone={landlord.phone}
+              updatedHint={landlordUpdatedHint}
+            />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <StatCell label="Management rate" value={managementRateDisplay} />
+              {managementAgreementCell}
+              {endOfManagementCell}
+            </div>
+          </DetailsSubsection>
+        </>
+      )}
 
       <PropertyTenancyEditDialog
         open={tenancyDialogOpen}

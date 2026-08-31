@@ -172,8 +172,8 @@ export function StripeSetupDialog({
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             {state?.mode === 'update'
-              ? 'Replace your default card for CROSSUB platform bills — inspections, tribunal, and monthly invoices.'
-              : 'Save a default card for CROSSUB platform bills — inspections, tribunal, and monthly invoices.'}
+              ? 'Replace the card we pre-fill at checkout. We never charge it automatically — only when you tap Pay.'
+              : 'Save a card so checkout is faster. We never charge it automatically — only when you tap Pay.'}
           </DialogDescription>
         </DialogHeader>
 

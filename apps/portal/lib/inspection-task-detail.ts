@@ -76,7 +76,7 @@ export function resolveInspectionStatusBanner(inspection: Inspection): {
   needsAction: boolean;
   statusLabel: string;
 } {
-  const next = inspectionNextAction(inspection);
+  const next = inspectionNextAction(inspection, { distinguishCancelled: true });
   const needsAction = next?.tone === 'warning';
   const cancelled = isInspectionCancelled(inspection);
   const done = isInspectionDone(inspection);

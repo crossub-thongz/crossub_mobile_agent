@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
 import {
   buildPropertyWorkflowContext,
@@ -42,7 +43,7 @@ const ACTION_TAB: Record<PropertyWorkflowActionId, PropertyWorkflowTab> = {
 const ACTION_LABEL: Partial<Record<PropertyWorkflowActionId, string>> = {
   start_leasing: 'New Leasing / Re-Letting',
   start_end_leasing: 'Vacating',
-  start_maintenance: 'Lodge Maintenance',
+  start_maintenance: 'Add new repair job',
   start_rent_review: 'Rent Review',
   schedule_open_inspection: 'Open inspection',
   schedule_ingoing_inspection: 'Ingoing inspection',
@@ -84,6 +85,7 @@ export function QuickCreateWorkflowDialog({
     tenantSelections,
     refresh,
   } = useAgentData();
+  const isV2 = useIsAgentUiV2();
   const { blockIfUnverified } = useEmailVerificationGuard();
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -233,7 +235,10 @@ export function QuickCreateWorkflowDialog({
 
   if (!open || !actionId) return null;
 
-  const label = ACTION_LABEL[actionId] ?? 'Quick create';
+  const label =
+    actionId === 'start_maintenance' && isV2
+      ? 'Lodge Maintenance'
+      : ACTION_LABEL[actionId] ?? 'Quick create';
 
   return (
     <>

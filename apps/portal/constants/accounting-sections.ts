@@ -7,8 +7,8 @@ export const ACCOUNTING_SECTIONS = [
 ] as const;
 
 /**
- * Flip when the accounting module ships. Until then: no Financial Summary on
- * the dashboard, and Accounting stays off the left nav.
+ * Flip when the accounting module ships. Until then v2 hides Financial Summary
+ * and the Accounting nav item. Production v1 always shows Accounting.
  */
 export const ACCOUNTING_MODULE_LAUNCHED = false;
 
