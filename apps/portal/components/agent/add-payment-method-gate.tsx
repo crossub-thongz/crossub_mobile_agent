@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { StripeSetupDialog, type StripeSetupDialogState } from '@/components/billing/stripe-setup-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentPageGuides } from '@/components/providers/agent-page-guide-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { isPublicRoute, ROUTES } from '@/constants/routes';
 import { PORTAL_WELCOME_DISMISSED_EVENT } from '@/lib/agent-page-guide-events';
@@ -26,11 +27,13 @@ const EXEMPT_ROUTES = [
 ];
 
 /**
- * Blocking prompt until the agency saves a default card. Waits for the welcome
- * video and any first-visit page guide, then stays until Stripe setup succeeds.
+ * Blocking prompt until the agency saves a default card. v2 Agent UI only.
+ * Waits for the welcome video and any first-visit page guide, then stays until
+ * Stripe setup succeeds.
  */
 export function AddPaymentMethodGate() {
   const pathname = usePathname();
+  const isV2 = useIsAgentUiV2();
   const { user, status } = useAuth();
   const { ready: guidesReady, pageGuideBlocking } = useAgentPageGuides();
   const [welcomeBlocking, setWelcomeBlocking] = useState(true);
@@ -47,7 +50,7 @@ export function AddPaymentMethodGate() {
     EXEMPT_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
   useEffect(() => {
-    if (status !== 'authed' || !user || onExemptPage) {
+    if (!isV2 || status !== 'authed' || !user || onExemptPage) {
       setWelcomeBlocking(false);
       return;
     }
@@ -67,7 +70,7 @@ export function AddPaymentMethodGate() {
       cancelled = true;
       window.removeEventListener(PORTAL_WELCOME_DISMISSED_EVENT, onWelcomeDismissed);
     };
-  }, [status, user?.id, onExemptPage]);
+  }, [isV2, status, user?.id, onExemptPage]);
 
   const refreshNeed = useCallback(async () => {
     const summary = await fetchAgentBillingSummary();
@@ -77,7 +80,7 @@ export function AddPaymentMethodGate() {
   }, []);
 
   useEffect(() => {
-    if (status !== 'authed' || !user || onExemptPage) {
+    if (!isV2 || status !== 'authed' || !user || onExemptPage) {
       setNeedsPaymentMethod(false);
       setChecked(true);
       return;
@@ -96,7 +99,7 @@ export function AddPaymentMethodGate() {
     return () => {
       cancelled = true;
     };
-  }, [status, user?.id, onExemptPage, refreshNeed]);
+  }, [isV2, status, user?.id, onExemptPage, refreshNeed]);
 
   useEffect(() => {
     if (welcomeBlocking || !guidesReady || pageGuideBlocking) {
@@ -111,6 +114,7 @@ export function AddPaymentMethodGate() {
     !guidesReady || welcomeBlocking || pageGuideBlocking || sequenceHold;
 
   const showGate =
+    isV2 &&
     status === 'authed' &&
     Boolean(user) &&
     !onExemptPage &&

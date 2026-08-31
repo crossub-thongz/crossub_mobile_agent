@@ -25,6 +25,7 @@ import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
 import { AgentUiProvider } from '@/components/providers/agent-ui-provider';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
+import { AGENT_UI } from '@/constants/agent-ui';
 import { resolveAgentUi } from '@/lib/agent-ui';
 import './globals.css';
 
@@ -111,9 +112,11 @@ export default function RootLayout({
                           <Suspense fallback={null}>
                             <AgentPageGuideHost />
                           </Suspense>
-                          <Suspense fallback={null}>
-                            <AddPaymentMethodGate />
-                          </Suspense>
+                          {agentUi === AGENT_UI.V2 ? (
+                            <Suspense fallback={null}>
+                              <AddPaymentMethodGate />
+                            </Suspense>
+                          ) : null}
                         </AgentPageGuideProvider>
                       </AgentNotificationDialogProvider>
                     </PortalServiceLevelGate>
