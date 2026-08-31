@@ -448,7 +448,7 @@ export function PropertyTenancyManagementSections({
   const serviceTypeLabel = agency?.portalServiceLevel
     ? PORTAL_SERVICE_LEVEL_LABEL[agency.portalServiceLevel]
     : '—';
-  const agencyName = agency?.name ?? property.agencyName || '—';
+  const agencyName = (agency?.name ?? property.agencyName) || '—';
 
   const displayDocs = useMemo(
     () =>

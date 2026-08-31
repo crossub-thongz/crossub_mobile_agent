@@ -5,9 +5,11 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useShellAsideStore } from '@/lib/shell-aside-store';
 
 export function PropertyListShellPreview({ propertyId }: { propertyId: string }) {
-  const { properties } = useAgentData();
+  const { properties, archivedProperties } = useAgentData();
   const setPropertyPreviewId = useShellAsideStore((s) => s.setPropertyPreviewId);
-  const property = properties.find((row) => row.id === propertyId);
+  const property =
+    properties.find((row) => row.id === propertyId) ??
+    archivedProperties.find((row) => row.id === propertyId);
 
   if (!property) {
     return (

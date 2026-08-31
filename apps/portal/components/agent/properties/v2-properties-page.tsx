@@ -34,8 +34,17 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 export function V2PropertiesPage() {
   const router = useRouter();
-  const { properties, accounting, leasingRecords, getPropertyActions, apiConnected, deleteDraftProperty } =
-    useAgentData();
+  const {
+    properties,
+    archivedProperties,
+    accounting,
+    leasingRecords,
+    getPropertyActions,
+    apiConnected,
+    deleteDraftProperty,
+    endPropertyManagement,
+    refreshArchivedProperties,
+  } = useAgentData();
   const setPropertiesPageActive = useShellAsideStore((s) => s.setPropertiesPageActive);
   const selectedId = useShellAsideStore((s) => s.propertyPreviewId);
   const setSelectedId = useShellAsideStore((s) => s.setPropertyPreviewId);
@@ -61,19 +70,23 @@ export function V2PropertiesPage() {
 
   const handlePropertyOpen = useCallback(
     (propertyId: string) => {
-      const property = properties.find((row) => row.id === propertyId);
+      const property =
+        properties.find((row) => row.id === propertyId) ??
+        archivedProperties.find((row) => row.id === propertyId);
       if (property && isPropertyRegistryDraft(property)) {
         router.push(propertyRegistryResume(propertyId));
         return;
       }
       router.push(propertyDetail(propertyId));
     },
-    [properties, router],
+    [archivedProperties, properties, router],
   );
 
   const handlePropertySelect = useCallback(
     (propertyId: string) => {
-      const property = properties.find((row) => row.id === propertyId);
+      const property =
+        properties.find((row) => row.id === propertyId) ??
+        archivedProperties.find((row) => row.id === propertyId);
       if (property && isPropertyRegistryDraft(property)) {
         router.push(propertyRegistryResume(propertyId));
         return;
@@ -85,7 +98,7 @@ export function V2PropertiesPage() {
       setSelectedId(propertyId);
       initialSelectDone.current = true;
     },
-    [desktopViewport, properties, router, setSelectedId],
+    [archivedProperties, desktopViewport, properties, router, setSelectedId],
   );
 
   const confirmDeletePermanently = useCallback(async () => {
@@ -103,6 +116,30 @@ export function V2PropertiesPage() {
     }
   }, [deleteDraftProperty, pendingDelete, selectedId, setSelectedId]);
 
+  const confirmEndManagement = useCallback(
+    async (endOfManagementDate: string) => {
+      if (!pendingDelete) return;
+      setRemoving(true);
+      try {
+        await endPropertyManagement(pendingDelete.id, endOfManagementDate);
+        toast.success('Property archived — open the Archived filter to view it');
+        setPendingDelete(null);
+        setFilter('archived');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not end property management');
+      } finally {
+        setRemoving(false);
+      }
+    },
+    [endPropertyManagement, pendingDelete],
+  );
+
+  useEffect(() => {
+    if (apiConnected) {
+      void refreshArchivedProperties();
+    }
+  }, [apiConnected, refreshArchivedProperties]);
+
   useEffect(() => {
     setPropertiesPageActive(true);
     return () => setPropertiesPageActive(false);
@@ -113,13 +150,18 @@ export function V2PropertiesPage() {
     [getPropertyActions],
   );
 
+  const isArchivedView = filter === 'archived';
+
   const filtered = useMemo(() => {
-    let rows = filterPropertiesForListV2(
-      properties,
-      filter,
-      accounting,
-      needActionCountFor,
-    );
+    let rows =
+      filter === 'archived'
+        ? [...archivedProperties]
+        : filterPropertiesForListV2(
+            properties,
+            filter,
+            accounting,
+            needActionCountFor,
+          );
     if (search.trim()) {
       const query = search.toLowerCase();
       rows = rows.filter(
@@ -133,7 +175,15 @@ export function V2PropertiesPage() {
       );
     }
     return sortPropertiesForListV2(rows, sort);
-  }, [accounting, filter, needActionCountFor, properties, search, sort]);
+  }, [
+    accounting,
+    archivedProperties,
+    filter,
+    needActionCountFor,
+    properties,
+    search,
+    sort,
+  ]);
 
   const filterCounts = useMemo(() => {
     const counts: Record<PropertyListV2Filter, number> = {
@@ -152,9 +202,10 @@ export function V2PropertiesPage() {
         accounting,
         needActionCountFor,
       ).length,
+      archived: archivedProperties.length,
     };
     return counts;
-  }, [accounting, needActionCountFor, properties]);
+  }, [accounting, archivedProperties.length, needActionCountFor, properties]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -270,14 +321,24 @@ export function V2PropertiesPage() {
 
       {filtered.length === 0 ? (
         <EmptyState
-          title={search || filter !== 'all' ? 'No matching properties' : 'No properties yet'}
+          title={
+            search || filter !== 'all'
+              ? isArchivedView
+                ? 'No matching archived properties'
+                : 'No matching properties'
+              : isArchivedView
+                ? 'No archived properties'
+                : 'No properties yet'
+          }
           description={
             search || filter !== 'all'
               ? 'Try a different search or filter.'
-              : 'Add a property to start managing landlords and tenants.'
+              : isArchivedView
+                ? 'Properties appear here after you end management on them. Permanently deleted properties are removed entirely and will not show here.'
+                : 'Add a property to start managing landlords and tenants.'
           }
           action={
-            !search && filter === 'all' ? (
+            !search && filter === 'all' && !isArchivedView ? (
               <Button size="sm" asChild>
                 <Link href={propertyNew()}>Add property</Link>
               </Button>
@@ -300,7 +361,8 @@ export function V2PropertiesPage() {
             needActionCountFor={needActionCountFor}
             onSelect={handlePropertySelect}
             onOpenProfile={handlePropertyOpen}
-            onDeleteDraft={apiConnected ? setPendingDelete : undefined}
+            onDeleteDraft={apiConnected && !isArchivedView ? setPendingDelete : undefined}
+            onArchive={apiConnected && !isArchivedView ? setPendingDelete : undefined}
           />
 
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
@@ -371,7 +433,7 @@ export function V2PropertiesPage() {
         onOpenChange={(open) => {
           if (!open) setPendingDelete(null);
         }}
-        onEndManagement={async () => undefined}
+        onEndManagement={confirmEndManagement}
         onDeletePermanently={confirmDeletePermanently}
         saving={removing}
       />

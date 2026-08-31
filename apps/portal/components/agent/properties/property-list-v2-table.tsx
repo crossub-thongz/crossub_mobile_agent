@@ -67,16 +67,18 @@ function PropertyRowActions({
   onContinue,
   onOpenProfile,
   onDeleteDraft,
+  onArchive,
 }: {
   isDraft: boolean;
   onContinue?: () => void;
   onOpenProfile?: () => void;
   onDeleteDraft?: () => void;
+  onArchive?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const hasActions = isDraft
     ? Boolean(onContinue || onDeleteDraft)
-    : Boolean(onOpenProfile);
+    : Boolean(onOpenProfile || onArchive);
   if (!hasActions) return null;
 
   return (
@@ -127,18 +129,34 @@ function PropertyRowActions({
               </button>
             ) : null}
           </>
-        ) : onOpenProfile ? (
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onOpenProfile();
-            }}
-            className="hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
-          >
-            Open profile
-          </button>
-        ) : null}
+        ) : (
+          <>
+            {onOpenProfile ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenProfile();
+                }}
+                className="hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+              >
+                Open profile
+              </button>
+            ) : null}
+            {onArchive ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onArchive();
+                }}
+                className="hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+              >
+                Archive
+              </button>
+            ) : null}
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );
@@ -210,6 +228,7 @@ export function PropertyListV2Table({
   onSelect,
   onOpenProfile,
   onDeleteDraft,
+  onArchive,
 }: {
   properties: Property[];
   selectedId: string | null;
@@ -220,6 +239,7 @@ export function PropertyListV2Table({
   /** Desktop: second click (or double-click) on a selected row opens the property profile. */
   onOpenProfile?: (propertyId: string) => void;
   onDeleteDraft?: (property: Property) => void;
+  onArchive?: (property: Property) => void;
 }) {
   const {
     maintenanceAll,
@@ -407,6 +427,11 @@ export function PropertyListV2Table({
                         onDeleteDraft={
                           isDraft && onDeleteDraft
                             ? () => onDeleteDraft(property)
+                            : undefined
+                        }
+                        onArchive={
+                          !isDraft && onArchive
+                            ? () => onArchive(property)
                             : undefined
                         }
                       />

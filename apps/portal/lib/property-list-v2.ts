@@ -23,7 +23,12 @@ import { daysSinceDate, daysUntilDate, formatCurrency, formatDate } from '@/lib/
 
 const NEW_PROPERTY_DAYS = 14;
 
-export type PropertyListV2Filter = 'all' | 'occupied' | 'vacant' | 'needs_attention';
+export type PropertyListV2Filter =
+  | 'all'
+  | 'occupied'
+  | 'vacant'
+  | 'needs_attention'
+  | 'archived';
 
 export const PROPERTY_LIST_V2_FILTERS: {
   id: PropertyListV2Filter;
@@ -33,6 +38,7 @@ export const PROPERTY_LIST_V2_FILTERS: {
   { id: 'occupied', label: 'Occupied' },
   { id: 'vacant', label: 'Vacant' },
   { id: 'needs_attention', label: 'Needs attention' },
+  { id: 'archived', label: 'Archived' },
 ];
 
 export type PropertyListV2Sort = 'newest' | 'oldest' | 'az' | 'za';
