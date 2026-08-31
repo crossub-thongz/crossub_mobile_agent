@@ -8,6 +8,7 @@ export function PropertyProfileInfoCard({
   subtitle,
   icon: Icon,
   onEdit,
+  headerExtra,
   children,
   footer,
   className,
@@ -16,6 +17,7 @@ export function PropertyProfileInfoCard({
   subtitle?: string;
   icon: LucideIcon;
   onEdit?: () => void;
+  headerExtra?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
@@ -39,14 +41,19 @@ export function PropertyProfileInfoCard({
             ) : null}
           </div>
         </div>
-        {onEdit ? (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="text-primary shrink-0 text-xs font-semibold"
-          >
-            Edit
-          </button>
+        {headerExtra || onEdit ? (
+          <div className="flex shrink-0 items-center gap-1">
+            {headerExtra}
+            {onEdit ? (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="text-primary shrink-0 text-xs font-semibold"
+              >
+                Edit
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </header>
       <div className="flex-1 p-4">{children}</div>

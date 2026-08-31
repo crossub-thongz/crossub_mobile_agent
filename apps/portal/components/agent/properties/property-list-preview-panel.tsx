@@ -19,7 +19,6 @@ import {
   buildPropertyProfileMetrics,
   buildPropertyUpcomingItems,
   filterNeedAttentionActions,
-  formatCurrentTenancyHeading,
   leaseOccupancyLabel,
   type PropertyProfileSection,
 } from '@/lib/property-profile-v2-data';
@@ -35,6 +34,11 @@ import {
   resolveLeaseDates,
 } from '@/lib/property-overview';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
+import { householdTenantsFromOverview } from '@/lib/property-parties';
+import { parseTenancyArchiveSnapshots } from '@/lib/property-archive';
+import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
+import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
+import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import { useAgentStore } from '@/lib/store';
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
@@ -204,6 +208,7 @@ export function PropertyListPreviewPanel({
   const taskCount = crosJobs.length + attention.length;
   const [activeTab, setActiveTab] = useState<PropertyProfileSection>('overview');
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [tenancyPageIndex, setTenancyPageIndex] = useState(0);
 
   useEffect(() => {
     setActiveTab('overview');
@@ -246,13 +251,42 @@ export function PropertyListPreviewPanel({
     sync.overview?.leaseEndDate ?? sync.record?.leaseEndDate ?? leaseEnd ?? property.leaseEnd,
   );
   const tenantName = sync.tenantContact?.name ?? sync.record?.tenantName ?? property.tenantName;
-  const tenancyHeading = formatCurrentTenancyHeading({
+  const household = householdTenantsFromOverview({
     isVacant,
-    tenantName,
-    additionalTenants: property.additionalTenants,
-    leaseId: currentLease?.id,
-    propertyId,
+    record: sync.record,
+    tenantContact: sync.tenantContact,
+    property,
+    contacts: sync.tenantContacts,
   });
+  const tenancyPages = buildTenancyViewPages({
+    household,
+    archives: parseTenancyArchiveSnapshots(property.registryDraft),
+    fallback: tenantName ? { name: tenantName } : undefined,
+  });
+  useEffect(() => {
+    setTenancyPageIndex(0);
+  }, [propertyId]);
+  useEffect(() => {
+    if (tenancyPageIndex >= tenancyPages.length) setTenancyPageIndex(0);
+  }, [tenancyPageIndex, tenancyPages.length]);
+  const activeTenancyPage = tenancyPages[tenancyPageIndex];
+  const viewingPrevious = activeTenancyPage?.kind === 'previous';
+  const archive = activeTenancyPage?.archive;
+  const currentTenantCount = tenancyPages.filter((page) => page.kind === 'current').length;
+  const tenancyRef = tenancyReferenceLabel(currentLease?.id?.trim() || propertyId);
+  const tenancyHeading = isVacant
+    ? 'Vacant'
+    : viewingPrevious
+      ? `${activeTenancyPage?.name ?? 'Previous tenant'}${
+          archive?.vacateDate ? ` · vacated ${formatDate(archive.vacateDate)}` : ''
+        }`
+      : `${activeTenancyPage?.name ?? tenantName ?? '—'} (${tenancyRef})`;
+  const tenantRowLabel = viewingPrevious
+    ? 'Previous tenant'
+    : currentTenantCount > 1
+      ? `Tenant ${tenancyPageIndex + 1} of ${currentTenantCount}`
+      : 'Tenant';
+  const tenantRowValue = isVacant ? 'Vacant' : activeTenancyPage?.name || tenantName || '—';
   const profileHref = (section?: PropertyProfileSection) =>
     section && section !== 'overview'
       ? `${propertyDetail(propertyId)}?section=${section}`
@@ -386,46 +420,80 @@ export function PropertyListPreviewPanel({
           {(shell ? activeTab === 'overview' : true) ? (
             <>
               <div>
-                <h3 className="mb-0.5 text-sm font-semibold">Current tenancy</h3>
-                <p className="text-muted-foreground mb-2 text-xs">{tenancyHeading}</p>
-                <div className={cn('rounded-xl border p-3', nestedSurface)}>
-                  <DetailRow label="Tenant" value={isVacant ? 'Vacant' : tenantName || '—'} />
+                <div className="mb-0.5 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold">
+                      {viewingPrevious ? 'Previous tenancy' : 'Current tenancy'}
+                    </h3>
+                    <p className="text-muted-foreground text-xs">{tenancyHeading}</p>
+                  </div>
+                  <TenancyPagerControls
+                    index={tenancyPageIndex}
+                    count={tenancyPages.length}
+                    onPrev={() =>
+                      setTenancyPageIndex((index) =>
+                        wrapTenancyPageIndex(index, tenancyPages.length, -1),
+                      )
+                    }
+                    onNext={() =>
+                      setTenancyPageIndex((index) =>
+                        wrapTenancyPageIndex(index, tenancyPages.length, 1),
+                      )
+                    }
+                  />
+                </div>
+                <div className={cn('mt-2 rounded-xl border p-3', nestedSurface)}>
+                  <DetailRow label={tenantRowLabel} value={tenantRowValue} />
                   <DetailRow
                     label="Lease period"
                     value={
-                      leaseStart && leaseEnd
-                        ? `${formatDate(leaseStart)} – ${formatDate(leaseEnd)}`
-                        : leaseStatus
+                      viewingPrevious
+                        ? archive?.leaseStartDate && archive?.leaseEndDate
+                          ? `${formatDate(archive.leaseStartDate)} – ${formatDate(archive.leaseEndDate)}`
+                          : archive?.leaseStartDate || archive?.leaseEndDate
+                            ? formatDate(archive?.leaseStartDate || archive?.leaseEndDate || '')
+                            : '—'
+                        : leaseStart && leaseEnd
+                          ? `${formatDate(leaseStart)} – ${formatDate(leaseEnd)}`
+                          : leaseStatus
                     }
                   />
                   <DetailRow
                     label="Rent"
                     value={
-                      displayRent != null && displayRent > 0
-                        ? `${formatCurrency(displayRent)} / week`
-                        : '—'
+                      viewingPrevious
+                        ? '—'
+                        : displayRent != null && displayRent > 0
+                          ? `${formatCurrency(displayRent)} / week`
+                          : '—'
                     }
                   />
                   <DetailRow
                     label="Rent review"
                     value={
-                      sync.overview?.nextRentReviewDate ??
-                      sync.record?.nextRentReviewAt ??
-                      property.nextRentReview
-                        ? formatDate(
-                            sync.overview?.nextRentReviewDate ??
-                              sync.record?.nextRentReviewAt ??
-                              property.nextRentReview!,
-                          )
-                        : '—'
+                      viewingPrevious
+                        ? '—'
+                        : sync.overview?.nextRentReviewDate ??
+                            sync.record?.nextRentReviewAt ??
+                            property.nextRentReview
+                          ? formatDate(
+                              sync.overview?.nextRentReviewDate ??
+                                sync.record?.nextRentReviewAt ??
+                                property.nextRentReview!,
+                            )
+                          : '—'
                     }
                   />
                   <DetailRow
                     label="Bond"
                     value={
-                      bond.amountLabel !== '—'
-                        ? `${bond.amountLabel}${bond.bondIdLabel !== '—' ? ' (Held)' : ''}`
-                        : '—'
+                      viewingPrevious
+                        ? archive?.bondAmount != null
+                          ? formatCurrency(archive.bondAmount)
+                          : '—'
+                        : bond.amountLabel !== '—'
+                          ? `${bond.amountLabel}${bond.bondIdLabel !== '—' ? ' (Held)' : ''}`
+                          : '—'
                     }
                   />
                 </div>

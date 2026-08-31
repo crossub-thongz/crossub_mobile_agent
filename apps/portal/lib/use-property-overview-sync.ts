@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { fetchLeasingCycleView } from '@/lib/leasing/fetch-leasing-cycle';
 import type { ServerLeasingCycleView } from '@/lib/leasing-cycle-types';
+import {
+  listPropertyContacts,
+  type AgentPropertyContact,
+} from '@/lib/crossub-api/agent-client';
 import { resolvePropertyTenantContact, type PropertyTenantContact } from '@/lib/property-form-prefill';
 import type { LeasingCycle, LeasingRecord, Property, TenantSelectionCase } from '@/lib/types';
 import {
@@ -33,6 +37,7 @@ export interface PropertyOverviewSync {
   bond: PropertyBondSnapshot | null;
   keyFobCount: number | null;
   tenantContact: PropertyTenantContact | null;
+  tenantContacts: AgentPropertyContact[];
   loading: boolean;
 }
 
@@ -44,6 +49,7 @@ const EMPTY: PropertyOverviewSync = {
   bond: null,
   keyFobCount: null,
   tenantContact: null,
+  tenantContacts: [],
   loading: false,
 };
 
@@ -101,9 +107,10 @@ export function usePropertyOverviewSync(
     }
     setState((prev) => ({ ...prev, loading: prev.record == null }));
     try {
-      const [record, portal] = await Promise.all([
+      const [record, portal, contacts] = await Promise.all([
         propertyRegistryApi.get(propertyId).catch(() => null),
         propertyRegistryApi.getPortal(propertyId).catch(() => null),
+        listPropertyContacts(propertyId).catch(() => [] as AgentPropertyContact[]),
       ]);
 
       const tenantContact = resolvePropertyTenantContact({
@@ -139,6 +146,7 @@ export function usePropertyOverviewSync(
             : null,
         keyFobCount: cycleView?.onboarding?.keyCollection?.tenantReport?.fobsCount ?? null,
         tenantContact: tenantContact.name ? tenantContact : null,
+        tenantContacts: contacts.filter((c) => c.role === 'TENANT'),
         loading: false,
       });
     } catch {

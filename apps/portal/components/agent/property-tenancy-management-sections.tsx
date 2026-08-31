@@ -13,6 +13,7 @@ import {
 import { PropertyLandlordOverviewEditDialog } from '@/components/agent/property-landlord-overview-edit-dialog';
 import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-edit-dialog';
 import { PropertyProfileInfoCard } from '@/components/agent/property-profile/property-profile-info-card';
+import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
@@ -36,6 +37,11 @@ import {
 } from '@/lib/property-archive';
 import { resolvePropertyManagementFees } from '@/lib/management-fees';
 import { PORTAL_SERVICE_LEVEL_LABEL } from '@/lib/portal-service-level';
+import {
+  formatHouseholdTenantNames,
+  householdTenantsFromOverview,
+} from '@/lib/property-parties';
+import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
 import {
   derivePaymentCycle,
   resolveBondOverviewDisplay,
@@ -346,6 +352,65 @@ export function PropertyTenancyManagementSections({
     };
   }, [sync.tenantContact, sync.record, property, isVacant, tenantHistoryIndex, tenancyArchives]);
 
+  const household = useMemo(
+    () =>
+      householdTenantsFromOverview({
+        isVacant,
+        record: sync.record,
+        tenantContact: sync.tenantContact,
+        property,
+        contacts: sync.tenantContacts,
+      }),
+    [isVacant, sync.record, sync.tenantContact, sync.tenantContacts, property],
+  );
+
+  const tenantPeople =
+    tenantHistoryIndex != null
+      ? [
+          {
+            name: tenant.name,
+            email: tenant.email || undefined,
+            phone: tenant.phone || undefined,
+            isPrimary: true as const,
+          },
+        ]
+      : household.length > 0
+        ? household
+        : [
+            {
+              name: tenant.name,
+              email: tenant.email || undefined,
+              phone: tenant.phone || undefined,
+              isPrimary: true as const,
+            },
+          ];
+
+  const householdLabel = formatHouseholdTenantNames(household);
+
+  const tenancyPages = useMemo(
+    () =>
+      buildTenancyViewPages({
+        household,
+        archives: tenancyArchives,
+        fallback: {
+          name: tenant.name,
+          email: tenant.email,
+          phone: tenant.phone,
+        },
+      }),
+    [household, tenancyArchives, tenant],
+  );
+  const [tenancyPageIndex, setTenancyPageIndex] = useState(0);
+  useEffect(() => {
+    setTenancyPageIndex(0);
+  }, [propertyId]);
+  useEffect(() => {
+    if (tenancyPageIndex >= tenancyPages.length) setTenancyPageIndex(0);
+  }, [tenancyPageIndex, tenancyPages.length]);
+  const activeTenancyPage = tenancyPages[tenancyPageIndex];
+  const viewingPreviousPage = isV2 && activeTenancyPage?.kind === 'previous';
+  const currentTenantCount = tenancyPages.filter((page) => page.kind === 'current').length;
+
   const landlordUpdatedHint =
     sync.record?.updatedAt && apiConnected
       ? `Updated ${formatDateTime(sync.record.updatedAt)}`
@@ -391,7 +456,7 @@ export function PropertyTenancyManagementSections({
   }, [overview, sync.record, property, leaseStart, vacatingCases, openEndLeasingCase]);
 
   const tenantVacatingHint = useMemo(() => {
-    if (tenantHistoryIndex != null) return null;
+    if (tenantHistoryIndex != null || viewingPreviousPage) return null;
     return resolveTenantVacatingOnHint({
       vacatingCases,
       vacateDate: tenancyDates.vacateDate,
@@ -400,7 +465,7 @@ export function PropertyTenancyManagementSections({
       viewingArchivedTenant: tenantHistoryIndex != null,
       formatDate,
     });
-  }, [vacatingCases, tenancyDates.vacateDate, tenant.name, isVacant, tenantHistoryIndex]);
+  }, [vacatingCases, tenancyDates.vacateDate, tenant.name, isVacant, tenantHistoryIndex, viewingPreviousPage]);
 
   const openCompletedEndLeasingCase = () => {
     if (!tenantVacatingHint) return;
@@ -436,6 +501,21 @@ export function PropertyTenancyManagementSections({
     sync.bond,
     Boolean(activeCycle?.id),
   );
+
+  const pagedTenancyDates = viewingPreviousPage
+    ? {
+        leaseStart: firstDate(activeTenancyPage.archive?.leaseStartDate),
+        leaseEnd: firstDate(activeTenancyPage.archive?.leaseEndDate),
+        nextRentReview: '',
+        vacateDate: firstDate(activeTenancyPage.archive?.vacateDate),
+        nextRoutine: '',
+        routineAnnualVisits: null as number | null,
+        routineCycleMonths: null as number | null,
+      }
+    : tenancyDates;
+  const pagedBondOverview = viewingPreviousPage
+    ? resolveBondOverviewDisplay(activeTenancyPage.archive?.bondAmount ?? null, null, false)
+    : bondOverview;
 
   const registry = useMemo(() => {
     const record = sync.record;
@@ -551,88 +631,150 @@ export function PropertyTenancyManagementSections({
           {archiveBanner}
         </p>
       ) : null}
-      <ContactTile
-        title="Tenant"
-        layout="row"
-        name={tenant.name}
-        email={tenant.email}
-        phone={tenant.phone}
-        meta={tenantVacatingHint?.label}
-        metaOnClick={tenantVacatingHint ? openCompletedEndLeasingCase : undefined}
-        updatedHint={tenant.hint}
-      />
-      {tenancyArchives.length > 0 ? (
-        <div className="mt-2">
-          <label className="text-muted-foreground mb-1 block text-[10px] font-semibold uppercase tracking-wide">
-            Tenant history
-          </label>
-          <select
-            className="border-input bg-background h-8 w-full max-w-md rounded-lg border px-2 text-xs"
-            value={tenantHistoryIndex == null ? 'current' : String(tenantHistoryIndex)}
-            onChange={(event) => {
-              const value = event.target.value;
-              setTenantHistoryIndex(value === 'current' ? null : Number(value));
-            }}
-          >
-            <option value="current">
-              {sync.tenantContact?.name || property.tenantName
-                ? `Current — ${sync.tenantContact?.name ?? property.tenantName}`
-                : 'Current — Vacant'}
-            </option>
-            {tenancyArchives.map((archived, index) => (
-              <option key={`${archived.archivedAt}-${index}`} value={String(index)}>
-                Previous — {archived.tenantName ?? 'Tenant'}
-                {archived.vacateDate ? ` · vacated ${formatDate(archived.vacateDate)}` : ''}
-              </option>
+      {isV2 ? (
+        activeTenancyPage ? (
+          <ContactTile
+            key={activeTenancyPage.id}
+            title={
+              viewingPreviousPage
+                ? 'Previous tenant'
+                : currentTenantCount > 1
+                  ? `Tenant ${tenancyPageIndex + 1} of ${currentTenantCount}`
+                  : 'Tenant'
+            }
+            layout="row"
+            name={activeTenancyPage.name}
+            email={activeTenancyPage.email}
+            phone={activeTenancyPage.phone}
+            meta={
+              viewingPreviousPage
+                ? activeTenancyPage.archive?.vacateDate
+                  ? `Vacated ${formatDate(activeTenancyPage.archive.vacateDate)}`
+                  : undefined
+                : activeTenancyPage.isPrimary
+                  ? tenantVacatingHint?.label
+                  : undefined
+            }
+            metaOnClick={
+              !viewingPreviousPage && activeTenancyPage.isPrimary && tenantVacatingHint
+                ? openCompletedEndLeasingCase
+                : undefined
+            }
+            updatedHint={!viewingPreviousPage && activeTenancyPage.isPrimary ? tenant.hint : undefined}
+          />
+        ) : (
+          <ContactTile
+            title="Tenant"
+            layout="row"
+            name={tenant.name}
+            email={tenant.email}
+            phone={tenant.phone}
+          />
+        )
+      ) : (
+        <>
+          <div className="space-y-2">
+            {tenantPeople.map((person, index) => (
+              <ContactTile
+                key={`${person.name}-${person.email ?? index}`}
+                title={
+                  index === 0
+                    ? tenantPeople.length > 1
+                      ? `Tenants (${tenantPeople.length})`
+                      : 'Tenant'
+                    : 'Co-tenant'
+                }
+                layout="row"
+                name={person.name}
+                email={person.email}
+                phone={person.phone}
+                meta={index === 0 ? tenantVacatingHint?.label : undefined}
+                metaOnClick={
+                  index === 0 && tenantVacatingHint ? openCompletedEndLeasingCase : undefined
+                }
+                updatedHint={index === 0 ? tenant.hint : undefined}
+              />
             ))}
-          </select>
-        </div>
-      ) : null}
+          </div>
+          {tenancyArchives.length > 0 ? (
+            <div className="mt-2">
+              <label className="text-muted-foreground mb-1 block text-[10px] font-semibold uppercase tracking-wide">
+                Tenant history
+              </label>
+              <select
+                className="border-input bg-background h-8 w-full max-w-md rounded-lg border px-2 text-xs"
+                value={tenantHistoryIndex == null ? 'current' : String(tenantHistoryIndex)}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setTenantHistoryIndex(value === 'current' ? null : Number(value));
+                }}
+              >
+                <option value="current">
+                  {householdLabel !== '—'
+                    ? `Current — ${householdLabel}`
+                    : sync.tenantContact?.name || property.tenantName
+                      ? `Current — ${sync.tenantContact?.name ?? property.tenantName}`
+                      : 'Current — Vacant'}
+                </option>
+                {tenancyArchives.map((archived, index) => (
+                  <option key={`${archived.archivedAt}-${index}`} value={String(index)}>
+                    Previous — {archived.tenantName ?? 'Tenant'}
+                    {archived.vacateDate ? ` · vacated ${formatDate(archived.vacateDate)}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+        </>
+      )}
       <div
         className={
           isV2 ? 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3' : 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4'
         }
       >
         {!isV2 ? <StatCell label="Rent paid to" value={rentPaidTo ? formatDate(rentPaidTo) : '—'} /> : null}
-        <StatCell label="Payment cycle" value={paymentCycle} />
+        <StatCell
+          label="Payment cycle"
+          value={viewingPreviousPage ? '—' : paymentCycle}
+        />
         <StatCell
           label="Bond"
           value={
             <BondStatValue
-              amountLabel={bondOverview.amountLabel}
-              bondIdLabel={bondOverview.bondIdLabel}
+              amountLabel={pagedBondOverview.amountLabel}
+              bondIdLabel={viewingPreviousPage ? '—' : pagedBondOverview.bondIdLabel}
             />
           }
           onPreview={
-            canEditTenancy || bondOverview.bondIdLinked
+            !viewingPreviousPage && (canEditTenancy || bondOverview.bondIdLinked)
               ? () => setBondDialogOpen(true)
               : undefined
           }
-          onEdit={canEditTenancy ? () => setBondDialogOpen(true) : undefined}
+          onEdit={!viewingPreviousPage && canEditTenancy ? () => setBondDialogOpen(true) : undefined}
         />
         <StatCell
           label="Next rent review"
-          value={tenancyDates.nextRentReview ? formatDate(tenancyDates.nextRentReview) : '—'}
+          value={pagedTenancyDates.nextRentReview ? formatDate(pagedTenancyDates.nextRentReview) : '—'}
         />
         <StatCell
           label="Lease start"
-          value={tenancyDates.leaseStart ? formatDate(tenancyDates.leaseStart) : '—'}
+          value={pagedTenancyDates.leaseStart ? formatDate(pagedTenancyDates.leaseStart) : '—'}
         />
         <StatCell
           label="Lease end"
-          value={tenancyDates.leaseEnd ? formatDate(tenancyDates.leaseEnd) : '—'}
+          value={pagedTenancyDates.leaseEnd ? formatDate(pagedTenancyDates.leaseEnd) : '—'}
         />
         <StatCell
           label="Vacate date"
-          value={tenancyDates.vacateDate ? formatDate(tenancyDates.vacateDate) : '—'}
+          value={pagedTenancyDates.vacateDate ? formatDate(pagedTenancyDates.vacateDate) : '—'}
         />
         <StatCell
           label="Next routine"
           value={
             <NextRoutineStatValue
-              date={tenancyDates.nextRoutine || undefined}
-              frequency={tenancyDates.routineAnnualVisits}
-              frequencyMonths={tenancyDates.routineCycleMonths}
+              date={pagedTenancyDates.nextRoutine || undefined}
+              frequency={pagedTenancyDates.routineAnnualVisits}
+              frequencyMonths={pagedTenancyDates.routineCycleMonths}
             />
           }
         />
@@ -669,9 +811,29 @@ export function PropertyTenancyManagementSections({
       {isV2 ? (
         <>
           <PropertyProfileInfoCard
-            title="Tenancy details"
+            title={viewingPreviousPage ? 'Previous tenancy' : 'Tenancy details'}
             icon={User}
-            onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
+            headerExtra={
+              <TenancyPagerControls
+                index={tenancyPageIndex}
+                count={tenancyPages.length}
+                onPrev={() =>
+                  setTenancyPageIndex((index) =>
+                    wrapTenancyPageIndex(index, tenancyPages.length, -1),
+                  )
+                }
+                onNext={() =>
+                  setTenancyPageIndex((index) =>
+                    wrapTenancyPageIndex(index, tenancyPages.length, 1),
+                  )
+                }
+              />
+            }
+            onEdit={
+              canEditTenancy && !viewingPreviousPage
+                ? () => setTenancyDialogOpen(true)
+                : undefined
+            }
           >
             {tenancyBody}
           </PropertyProfileInfoCard>

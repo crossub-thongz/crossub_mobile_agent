@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   AlertCircle,
   Briefcase,
@@ -17,7 +17,6 @@ import {
   buildCrosHandlingJobs,
   buildPropertyProfileMetrics,
   filterNeedAttentionActions,
-  formatCurrentTenancyHeading,
   leaseOccupancyLabel,
   PROPERTY_PROFILE_SECTIONS,
   type PropertyProfileSection,
@@ -38,6 +37,11 @@ import {
   resolveCurrentRent,
   resolveLeaseDates,
 } from '@/lib/property-overview';
+import { householdTenantsFromOverview } from '@/lib/property-parties';
+import { parseTenancyArchiveSnapshots } from '@/lib/property-archive';
+import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
+import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
+import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import type {
   AgentDocument,
   Inspection,
@@ -63,6 +67,7 @@ function ProfileCard({
   subtitle,
   icon: Icon,
   count,
+  headerExtra,
   children,
   footer,
   className,
@@ -71,6 +76,7 @@ function ProfileCard({
   subtitle?: string;
   icon: React.ComponentType<{ className?: string }>;
   count?: number;
+  headerExtra?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
@@ -82,19 +88,22 @@ function ProfileCard({
         className,
       )}
     >
-      <header className="flex items-start gap-2 border-b px-4 py-3">
-        <span className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
-          <Icon className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold">
-            {title}
-            {count != null ? ` (${count})` : ''}
-          </h3>
-          {subtitle ? (
-            <p className="text-muted-foreground mt-0.5 truncate text-xs">{subtitle}</p>
-          ) : null}
+      <header className="flex items-start justify-between gap-2 border-b px-4 py-3">
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <Icon className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold">
+              {title}
+              {count != null ? ` (${count})` : ''}
+            </h3>
+            {subtitle ? (
+              <p className="text-muted-foreground mt-0.5 truncate text-xs">{subtitle}</p>
+            ) : null}
+          </div>
         </div>
+        {headerExtra}
       </header>
       <div className="flex-1 p-4">{children}</div>
       {footer ? <footer className="border-t px-4 py-3">{footer}</footer> : null}
@@ -169,6 +178,46 @@ function OverviewGrid({
     sync.overview?.leaseEndDate ?? sync.record?.leaseEndDate ?? leaseEnd ?? property.leaseEnd,
   );
   const tenantName = sync.tenantContact?.name ?? sync.record?.tenantName ?? property.tenantName;
+  const household = householdTenantsFromOverview({
+    isVacant,
+    record: sync.record,
+    tenantContact: sync.tenantContact,
+    property,
+    contacts: sync.tenantContacts,
+  });
+  const archives = parseTenancyArchiveSnapshots(property.registryDraft);
+  const tenancyPages = buildTenancyViewPages({
+    household,
+    archives,
+    fallback: tenantName ? { name: tenantName } : undefined,
+  });
+  const [tenancyPageIndex, setTenancyPageIndex] = useState(0);
+  useEffect(() => {
+    setTenancyPageIndex(0);
+  }, [propertyId]);
+  useEffect(() => {
+    if (tenancyPageIndex >= tenancyPages.length) setTenancyPageIndex(0);
+  }, [tenancyPageIndex, tenancyPages.length]);
+  const activeTenancyPage = tenancyPages[tenancyPageIndex];
+  const viewingPrevious = activeTenancyPage?.kind === 'previous';
+  const archive = activeTenancyPage?.archive;
+  const currentTenantCount = tenancyPages.filter((page) => page.kind === 'current').length;
+  const tenancyRef = tenancyReferenceLabel(currentLease?.id?.trim() || propertyId);
+  const tenancyHeading = isVacant
+    ? 'Vacant'
+    : viewingPrevious
+      ? `${activeTenancyPage?.name ?? 'Previous tenant'}${
+          archive?.vacateDate ? ` · vacated ${formatDate(archive.vacateDate)}` : ''
+        }`
+      : `${activeTenancyPage?.name ?? tenantName ?? '—'} (${tenancyRef})`;
+  const tenantRowLabel = viewingPrevious
+    ? 'Previous tenant'
+    : currentTenantCount > 1
+      ? `Tenant ${tenancyPageIndex + 1} of ${currentTenantCount}`
+      : 'Tenant';
+  const tenantRowValue = isVacant ? 'Vacant' : activeTenancyPage?.name || tenantName || '—';
+  const previousLeaseStart = archive?.leaseStartDate;
+  const previousLeaseEnd = archive?.leaseEndDate;
   const crosJobs = buildCrosHandlingJobs({
     propertyId,
     property,
@@ -184,53 +233,82 @@ function OverviewGrid({
     currentLease,
   });
   const attention = filterNeedAttentionActions(needActions);
-  const tenancyHeading = formatCurrentTenancyHeading({
-    isVacant,
-    tenantName,
-    additionalTenants: property.additionalTenants,
-    leaseId: currentLease?.id,
-    propertyId,
-  });
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ProfileCard title="Current tenancy" subtitle={tenancyHeading} icon={User}>
+      <ProfileCard
+        title={viewingPrevious ? 'Previous tenancy' : 'Current tenancy'}
+        subtitle={tenancyHeading}
+        icon={User}
+        headerExtra={
+          <TenancyPagerControls
+            index={tenancyPageIndex}
+            count={tenancyPages.length}
+            onPrev={() =>
+              setTenancyPageIndex((index) =>
+                wrapTenancyPageIndex(index, tenancyPages.length, -1),
+              )
+            }
+            onNext={() =>
+              setTenancyPageIndex((index) =>
+                wrapTenancyPageIndex(index, tenancyPages.length, 1),
+              )
+            }
+          />
+        }
+      >
         <div className="divide-y">
-          <DetailRow label="Tenant" value={isVacant ? 'Vacant' : tenantName || '—'} />
+          <DetailRow label={tenantRowLabel} value={tenantRowValue} />
           <DetailRow
             label="Lease period"
             value={
-              leaseStart && leaseEnd
-                ? `${formatDate(leaseStart)} – ${formatDate(leaseEnd)}`
-                : leaseStatus
+              viewingPrevious
+                ? previousLeaseStart && previousLeaseEnd
+                  ? `${formatDate(previousLeaseStart)} – ${formatDate(previousLeaseEnd)}`
+                  : previousLeaseStart || previousLeaseEnd
+                    ? formatDate(previousLeaseStart || previousLeaseEnd || '')
+                    : '—'
+                : leaseStart && leaseEnd
+                  ? `${formatDate(leaseStart)} – ${formatDate(leaseEnd)}`
+                  : leaseStatus
             }
           />
           <DetailRow
             label="Rent"
             value={
-              displayRent != null && displayRent > 0 ? `${formatCurrency(displayRent)} / week` : '—'
+              viewingPrevious
+                ? '—'
+                : displayRent != null && displayRent > 0
+                  ? `${formatCurrency(displayRent)} / week`
+                  : '—'
             }
           />
           <DetailRow
             label="Rent review"
             value={
-              sync.overview?.nextRentReviewDate ??
-              sync.record?.nextRentReviewAt ??
-              property.nextRentReview
-                ? formatDate(
-                    sync.overview?.nextRentReviewDate ??
-                      sync.record?.nextRentReviewAt ??
-                      property.nextRentReview!,
-                  )
-                : '—'
+              viewingPrevious
+                ? '—'
+                : sync.overview?.nextRentReviewDate ??
+                    sync.record?.nextRentReviewAt ??
+                    property.nextRentReview
+                  ? formatDate(
+                      sync.overview?.nextRentReviewDate ??
+                        sync.record?.nextRentReviewAt ??
+                        property.nextRentReview!,
+                    )
+                  : '—'
             }
           />
           <DetailRow
             label="Bond"
             value={
-              bond.amountLabel !== '—'
-                ? `${bond.amountLabel}${bond.bondIdLabel !== '—' ? ' (Held)' : ''}`
-                : '—'
+              viewingPrevious
+                ? archive?.bondAmount != null
+                  ? formatCurrency(archive.bondAmount)
+                  : '—'
+                : bond.amountLabel !== '—'
+                  ? `${bond.amountLabel}${bond.bondIdLabel !== '—' ? ' (Held)' : ''}`
+                  : '—'
             }
           />
         </div>

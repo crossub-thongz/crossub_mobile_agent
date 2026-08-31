@@ -409,6 +409,30 @@ export async function addPropertyContact(
   }
 }
 
+/** Correct an existing property contact (`PATCH /api/v1/agent/properties/{propertyId}/contacts/{contactId}`). */
+export async function updatePropertyContact(
+  propertyId: string,
+  contactId: string,
+  body: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  },
+): Promise<AgentPropertyContact[]> {
+  try {
+    const data = await apiV1.patch<{ contacts: AgentPropertyContact[] }>(
+      `/agent/properties/${propertyId}/contacts/${contactId}`,
+      body,
+    );
+    return data.contacts;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw new Error(formatApiErrorMessage(err));
+    }
+    throw err;
+  }
+}
+
 export type TenantPortalInviteResult =
   | {
       status: 'sent';
