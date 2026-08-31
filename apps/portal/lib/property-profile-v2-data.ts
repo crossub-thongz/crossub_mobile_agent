@@ -28,6 +28,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import type { RentReviewDecision } from '@/lib/rent-review';
+import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 export type PropertyProfileSection =
@@ -43,10 +44,42 @@ export const PROPERTY_PROFILE_SECTIONS: {
 }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'tasks', label: 'Tasks' },
-  { id: 'financials', label: 'Financials' },
   { id: 'documents', label: 'Documents' },
   { id: 'activities', label: 'Activities' },
 ];
+
+function firstNamesFromLabel(name: string): string[] {
+  return name
+    .split(/\s*&\s*|\s+and\s+/i)
+    .map((part) => part.trim().split(/\s+/)[0])
+    .filter(Boolean);
+}
+
+/** e.g. "Daniel & Tony (TEN0012)" or "Daniel (TEN0012)". */
+export function formatCurrentTenancyHeading(input: {
+  isVacant: boolean;
+  tenantName?: string | null;
+  additionalTenants?: Array<{ name?: string | null }>;
+  leaseId?: string | null;
+  propertyId: string;
+}): string {
+  if (input.isVacant) return 'Vacant';
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const part of [
+    ...firstNamesFromLabel(input.tenantName ?? ''),
+    ...(input.additionalTenants ?? []).flatMap((tenant) =>
+      firstNamesFromLabel(tenant.name ?? ''),
+    ),
+  ]) {
+    const key = part.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(part);
+  }
+  const label = names.join(' & ') || '—';
+  return `${label} (${tenancyReferenceLabel(input.leaseId?.trim() || input.propertyId)})`;
+}
 
 export type PropertyUpcomingItem = {
   id: string;
@@ -120,7 +153,7 @@ function pushCalendarEvent(
 export function normalizePropertyProfileSection(
   raw: string | null,
 ): PropertyProfileSection {
-  if (raw === 'tasks' || raw === 'financials' || raw === 'documents' || raw === 'activities') {
+  if (raw === 'tasks' || raw === 'documents' || raw === 'activities') {
     return raw;
   }
   return 'overview';

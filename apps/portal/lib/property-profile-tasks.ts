@@ -149,16 +149,18 @@ function taskFromJobRow(
     needAction?.label ??
     (job.kind === 'maintenance'
       ? maintenanceTitle(maintenance, job)
-      : job.jobType === 'Rent review'
-        ? 'Rent review'
-        : job.jobType === 'End leasing'
-          ? 'End leasing'
-          : job.name);
+      : job.kind === 'inspection'
+        ? job.jobType
+        : job.jobType === 'Rent review'
+          ? 'Rent review'
+          : job.jobType === 'End leasing'
+            ? 'End leasing'
+            : job.name);
 
   const reportedLabel = job.createdAt !== '—' ? job.createdAt : job.date;
   const subtext =
-    category === 'inspection' && job.date !== '—'
-      ? `${CATEGORY_LABEL[category]} • ${job.date}`
+    category === 'inspection'
+      ? [job.name, job.date !== '—' ? job.date : null].filter(Boolean).join(' • ')
       : `${CATEGORY_LABEL[category]} • Reported ${reportedLabel}`;
 
   const description =

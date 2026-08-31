@@ -14,8 +14,7 @@ import { fromProperty } from '@/lib/detail-navigation';
 import { createdWorkflowCaseHref } from '@/lib/property-job-href';
 import {
   buildPropertyWorkflowContext,
-  PROPERTY_WORKFLOW_ACTION_GROUPS,
-  tabActionsFor,
+  workflowMenuGroupsFor,
   type PropertyWorkflowAction,
   type PropertyWorkflowActionId,
 } from '@/lib/property-workflow-actions';
@@ -57,19 +56,12 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
       tribunalCases: propertyId ? tribunalCases : [],
       currentLease,
     });
-    const groups = hasFullManagementAccess
-      ? PROPERTY_WORKFLOW_ACTION_GROUPS
-      : PROPERTY_WORKFLOW_ACTION_GROUPS.filter(
-          (group) => group.tab === 'inspection' || group.tab === 'tribunal',
-        );
-    return groups
-      .map((group) => ({
-        ...group,
-        actions: tabActionsFor(group.tab, ctx).map((action) =>
-          propertyId ? action : { ...action, disabled: false },
-        ),
-      }))
-      .filter((group) => group.actions.length > 0);
+    return workflowMenuGroupsFor(ctx, { hasFullAccess: hasFullManagementAccess }).map((group) => ({
+      ...group,
+      actions: propertyId
+        ? group.actions
+        : group.actions.map((action) => ({ ...action, disabled: false })),
+    }));
   }, [
     hasFullManagementAccess,
     inspections,

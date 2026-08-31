@@ -1,5 +1,6 @@
 import type { BuiltinQuickActionId } from '@/lib/quick-actions';
 import type { Agency } from '@/lib/types';
+import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 import { ROUTES } from '@/constants/routes';
 
 export type AgentPortalServiceLevel =
@@ -131,6 +132,7 @@ export function isDashboardChartAllowedForAgent(
   chartKey: DashboardChartKey,
   hasFullAccess: boolean,
 ): boolean {
+  if (chartKey === 'accounting' && !ACCOUNTING_MODULE_LAUNCHED) return false;
   if (hasFullAccess) return true;
   return (INSPECTION_ONLY_DASHBOARD_CHART_KEYS as readonly string[]).includes(chartKey);
 }

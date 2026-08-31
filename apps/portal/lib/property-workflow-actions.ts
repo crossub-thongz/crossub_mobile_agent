@@ -1,3 +1,4 @@
+import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 import type {
   Inspection,
   LeasingCycle,
@@ -111,13 +112,13 @@ export function tabActionsFor(
       return [
         {
           id: 'start_leasing',
-          label: 'Add New Leasing/Open',
+          label: 'New Leasing / Re-Letting',
           description: 'Open another new leasing cycle for this property',
           primary: true,
         },
         {
           id: 'start_end_leasing',
-          label: 'End Leasing',
+          label: 'Vacating',
           description: 'Open another end leasing / vacating case for this property',
         },
       ];
@@ -126,7 +127,7 @@ export function tabActionsFor(
       return [
         {
           id: 'start_rent_review',
-          label: 'Add rent review',
+          label: 'Rent Review',
           description: activeReview
             ? 'Complete the current rent review before starting another'
             : 'Open a rent review for this property',
@@ -139,7 +140,7 @@ export function tabActionsFor(
       return [
         {
           id: 'start_maintenance',
-          label: 'Add new repair job',
+          label: 'Lodge Maintenance',
           description: 'Create a repair request for this property',
           primary: true,
         },
@@ -200,6 +201,31 @@ export function tabActionsFor(
     default:
       return [];
   }
+}
+
+export function workflowMenuGroupsFor(
+  ctx: PropertyWorkflowContext,
+  options?: { hasFullAccess?: boolean },
+): Array<{ title: string; tab: PropertyWorkflowTab; actions: PropertyWorkflowAction[] }> {
+  const hasFullAccess = options?.hasFullAccess ?? true;
+  const groups = PROPERTY_WORKFLOW_ACTION_GROUPS.filter((group) => {
+    if (group.tab === 'rent_review') return false;
+    if (group.tab === 'accounting' && !ACCOUNTING_MODULE_LAUNCHED) return false;
+    if (!hasFullAccess && group.tab !== 'inspection' && group.tab !== 'tribunal') {
+      return false;
+    }
+    return true;
+  });
+
+  return groups
+    .map((group) => {
+      const actions =
+        group.tab === 'leasing'
+          ? [...tabActionsFor('leasing', ctx), ...tabActionsFor('rent_review', ctx)]
+          : tabActionsFor(group.tab, ctx);
+      return { ...group, actions };
+    })
+    .filter((group) => group.actions.length > 0);
 }
 
 export function buildPropertyWorkflowContext(input: {

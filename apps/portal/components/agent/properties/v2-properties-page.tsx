@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/agent/empty-state';
 import { PropertiesPageHeaderActions } from '@/components/agent/properties/properties-page-header-actions';
 import { PropertyListV2Map } from '@/components/agent/properties/property-list-v2-map';
 import { PropertyListV2Table } from '@/components/agent/properties/property-list-v2-table';
+import { PropertyRemoveDialog } from '@/components/agent/property-remove-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { propertyDetail, propertyNew, propertyRegistryResume } from '@/constants/routes';
@@ -23,7 +24,9 @@ import {
 } from '@/lib/property-list-v2';
 import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
 import { useShellAsideStore } from '@/lib/shell-aside-store';
+import type { Property } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 import '@/components/agent/properties/property-list-v2.css';
 
@@ -31,7 +34,8 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 export function V2PropertiesPage() {
   const router = useRouter();
-  const { properties, accounting, leasingRecords, getPropertyActions } = useAgentData();
+  const { properties, accounting, leasingRecords, getPropertyActions, apiConnected, deleteDraftProperty } =
+    useAgentData();
   const setPropertiesPageActive = useShellAsideStore((s) => s.setPropertiesPageActive);
   const selectedId = useShellAsideStore((s) => s.propertyPreviewId);
   const setSelectedId = useShellAsideStore((s) => s.setPropertyPreviewId);
@@ -43,6 +47,8 @@ export function V2PropertiesPage() {
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [desktopViewport, setDesktopViewport] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Property | null>(null);
+  const [removing, setRemoving] = useState(false);
   const initialSelectDone = useRef(false);
 
   useEffect(() => {
@@ -81,6 +87,21 @@ export function V2PropertiesPage() {
     },
     [desktopViewport, properties, router, setSelectedId],
   );
+
+  const confirmDeletePermanently = useCallback(async () => {
+    if (!pendingDelete) return;
+    setRemoving(true);
+    try {
+      await deleteDraftProperty(pendingDelete.id);
+      if (selectedId === pendingDelete.id) setSelectedId(null);
+      toast.success('Property deleted permanently');
+      setPendingDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete property');
+    } finally {
+      setRemoving(false);
+    }
+  }, [deleteDraftProperty, pendingDelete, selectedId, setSelectedId]);
 
   useEffect(() => {
     setPropertiesPageActive(true);
@@ -278,7 +299,8 @@ export function V2PropertiesPage() {
             leasingRecords={leasingRecords}
             needActionCountFor={needActionCountFor}
             onSelect={handlePropertySelect}
-            onOpenProfile={desktopViewport ? handlePropertyOpen : undefined}
+            onOpenProfile={handlePropertyOpen}
+            onDeleteDraft={apiConnected ? setPendingDelete : undefined}
           />
 
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
@@ -342,6 +364,17 @@ export function V2PropertiesPage() {
           </div>
         </>
       )}
+
+      <PropertyRemoveDialog
+        property={pendingDelete}
+        open={pendingDelete != null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        onEndManagement={async () => undefined}
+        onDeletePermanently={confirmDeletePermanently}
+        saving={removing}
+      />
     </div>
   );
 }

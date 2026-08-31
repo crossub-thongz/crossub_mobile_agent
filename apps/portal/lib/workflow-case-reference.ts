@@ -37,6 +37,11 @@ const WORKFLOW_CASE_REF_PREFIX: Record<WorkflowCaseRefKind, string> = {
   tribunal: 'T-',
 };
 
+/** Compact tenancy ref shown on the property profile, e.g. TEN0012. */
+export function tenancyReferenceLabel(id: string): string {
+  return formatPrefixedReference(id.trim(), 'TEN');
+}
+
 /** Compact workflow case ref (10 chars max): prefix + digits from id. */
 export function workflowCaseReferenceLabel(
   id: string,

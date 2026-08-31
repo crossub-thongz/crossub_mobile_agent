@@ -255,10 +255,10 @@ function isCompletedInspection(inspection: Inspection): boolean {
 }
 
 const INSPECTION_JOB_TYPE: Record<Inspection['type'], string> = {
-  OPEN: 'Open inspection',
-  INGOING: 'Ingoing inspection',
-  OUTGOING: 'Outgoing inspection',
-  ROUTINE: 'Routine inspection',
+  OPEN: 'Open Inspection',
+  INGOING: 'Ingoing Inspection',
+  OUTGOING: 'Outgoing Inspection',
+  ROUTINE: 'Routine Inspection',
 };
 
 function responsibilityLabelForRow(

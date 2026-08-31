@@ -1216,9 +1216,25 @@ export function InspectionDetailView({
           onOpenChange={setFlowChangeOpen}
           onUpdated={(updated) => {
             setRoutineSchedule(updated);
-            if (insp) {
-              registerInspection({ ...insp, routineMode: updated.flow });
+            void refresh();
+            if (
+              updated.currentInspectionId &&
+              updated.currentInspectionId !== inspectionId
+            ) {
+              router.replace(inspectionDetail(updated.currentInspectionId, navContext));
+              return;
             }
+            if (!apiConnected) {
+              if (insp) {
+                registerInspection({ ...insp, routineMode: updated.flow });
+              }
+              return;
+            }
+            void inspectionsApi.get(inspectionId).then((record) => {
+              const mapped = mapInspectionRecordToView(record);
+              registerInspection(mapped);
+              setFetchedBase(mapped);
+            });
           }}
         />
       ) : null}

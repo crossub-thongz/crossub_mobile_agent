@@ -4,8 +4,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 import { ROUTES, isPublicRoute } from '@/constants/routes';
 import { isFullManagementRoute } from '@/lib/portal-service-level';
+
+function isAccountingRoute(pathname: string): boolean {
+  return pathname === ROUTES.ACCOUNTING || pathname.startsWith(`${ROUTES.ACCOUNTING}/`);
+}
 
 export function PortalServiceLevelGate({ children }: { children: React.ReactNode }) {
   const { isInspectionOnlyAgent, loading, portalAccessReady } = useAgentData();
@@ -15,8 +20,8 @@ export function PortalServiceLevelGate({ children }: { children: React.ReactNode
   const blocked =
     !loading &&
     portalAccessReady &&
-    isInspectionOnlyAgent &&
-    isFullManagementRoute(pathname) &&
+    ((isInspectionOnlyAgent && isFullManagementRoute(pathname)) ||
+      (!ACCOUNTING_MODULE_LAUNCHED && isAccountingRoute(pathname))) &&
     !isPublicRoute(pathname);
 
   useEffect(() => {

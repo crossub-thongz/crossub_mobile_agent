@@ -344,10 +344,11 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
   }
 
-  /* Thin scrollbar — hidden until hover, focus, or active scroll. */
+  /* Thin overlay scrollbar — hidden until hover, focus, or active scroll. */
   .scrollbar-subtle {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
+    scrollbar-gutter: auto;
   }
 
   .scrollbar-subtle:hover,
@@ -357,8 +358,18 @@
   }
 
   .scrollbar-subtle::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   .scrollbar-subtle::-webkit-scrollbar-track {

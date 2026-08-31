@@ -249,7 +249,6 @@ export default function PropertyDetailPage() {
     }
     if (next === 'Documents') setProfileSection('documents');
     else if (next === 'Archive') setProfileSection('activities');
-    else if ((FINANCIAL_TABS as readonly string[]).includes(next)) setProfileSection('financials');
     else if ((TASK_WORKFLOW_TABS as readonly string[]).includes(next)) setProfileSection('tasks');
   }, [searchParams, propertyTabs]);
 

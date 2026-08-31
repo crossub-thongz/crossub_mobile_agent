@@ -6,6 +6,12 @@ export const ACCOUNTING_SECTIONS = [
   { id: 'settings', label: 'Settings' },
 ] as const;
 
+/**
+ * Flip when the accounting module ships. Until then: no Financial Summary on
+ * the dashboard, and Accounting stays off the left nav.
+ */
+export const ACCOUNTING_MODULE_LAUNCHED = false;
+
 export type AccountingSectionId = (typeof ACCOUNTING_SECTIONS)[number]['id'];
 
 export function parseAccountingSection(

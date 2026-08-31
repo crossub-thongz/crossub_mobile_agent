@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import {
   AlertCircle,
   Briefcase,
-  Building2,
   Calendar,
   ChevronRight,
   User,
@@ -12,15 +11,13 @@ import {
 } from 'lucide-react';
 
 import { PropertyProfileActionsMenu } from '@/components/agent/property-profile/property-profile-actions-menu';
-import { PropertyProfileCalendarDialog } from '@/components/agent/property-profile/property-profile-calendar-dialog';
 import { PropertyProfilePhoto } from '@/components/agent/property-profile/property-profile-photo';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import {
   buildCrosHandlingJobs,
-  buildPropertyCalendarEvents,
   buildPropertyProfileMetrics,
-  buildPropertyUpcomingItems,
   filterNeedAttentionActions,
+  formatCurrentTenancyHeading,
   leaseOccupancyLabel,
   PROPERTY_PROFILE_SECTIONS,
   type PropertyProfileSection,
@@ -36,7 +33,6 @@ import {
   resolveBondOverviewDisplay,
   resolveCurrentRent,
   resolveLeaseDates,
-  resolveRentPaidTo,
 } from '@/lib/property-overview';
 import type {
   AgentDocument,
@@ -60,6 +56,7 @@ import '@/components/agent/property-profile/property-profile-v2.css';
 
 function ProfileCard({
   title,
+  subtitle,
   icon: Icon,
   count,
   children,
@@ -67,6 +64,7 @@ function ProfileCard({
   className,
 }: {
   title: string;
+  subtitle?: string;
   icon: React.ComponentType<{ className?: string }>;
   count?: number;
   children: ReactNode;
@@ -80,14 +78,19 @@ function ProfileCard({
         className,
       )}
     >
-      <header className="flex items-center gap-2 border-b px-4 py-3">
-        <span className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-lg">
+      <header className="flex items-start gap-2 border-b px-4 py-3">
+        <span className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
           <Icon className="size-4" />
         </span>
-        <h3 className="text-sm font-semibold">
-          {title}
-          {count != null ? ` (${count})` : ''}
-        </h3>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold">
+            {title}
+            {count != null ? ` (${count})` : ''}
+          </h3>
+          {subtitle ? (
+            <p className="text-muted-foreground mt-0.5 truncate text-xs">{subtitle}</p>
+          ) : null}
+        </div>
       </header>
       <div className="flex-1 p-4">{children}</div>
       {footer ? <footer className="border-t px-4 py-3">{footer}</footer> : null}
@@ -97,9 +100,9 @@ function ProfileCard({
 
 function DetailRow({ label, value, valueClassName }: { label: string; value: ReactNode; valueClassName?: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5 text-sm">
+    <div className="flex flex-col gap-0.5 py-1.5 text-sm sm:flex-row sm:items-baseline sm:gap-3">
       <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className={cn('min-w-0 text-right font-medium', valueClassName)}>{value}</span>
+      <span className={cn('min-w-0 font-medium', valueClassName)}>{value}</span>
     </div>
   );
 }
@@ -120,7 +123,6 @@ function OverviewGrid({
   vacatingCases,
   tribunalCases,
   onViewTasks,
-  onViewCalendar,
   onNeedActionClick,
 }: {
   property: Property;
@@ -138,7 +140,6 @@ function OverviewGrid({
   vacatingCases: VacatingCase[];
   tribunalCases: TribunalCase[];
   onViewTasks: () => void;
-  onViewCalendar: () => void;
   onNeedActionClick: (href: string) => void;
 }) {
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
@@ -152,10 +153,6 @@ function OverviewGrid({
       : registryRent != null && registryRent > 0
         ? registryRent
         : currentRent;
-  const rentPaidTo = resolveRentPaidTo(
-    sync.record?.rentPaidUntil ?? sync.overview?.rentPaidUntilDate,
-    sync.accounting,
-  );
   const bondAmount =
     sync.financial?.bondAmount ??
     sync.record?.bondAmount ??
@@ -183,17 +180,17 @@ function OverviewGrid({
     currentLease,
   });
   const attention = filterNeedAttentionActions(needActions);
-  const upcoming = buildPropertyUpcomingItems({
-    sync,
-    property,
-    currentLease,
-    inspections,
+  const tenancyHeading = formatCurrentTenancyHeading({
+    isVacant,
+    tenantName,
+    additionalTenants: property.additionalTenants,
+    leaseId: currentLease?.id,
     propertyId,
   });
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ProfileCard title="Tenancy" icon={User}>
+      <ProfileCard title="Current tenancy" subtitle={tenancyHeading} icon={User}>
         <div className="divide-y">
           <DetailRow label="Tenant" value={isVacant ? 'Vacant' : tenantName || '—'} />
           <DetailRow
@@ -231,11 +228,6 @@ function OverviewGrid({
                 ? `${bond.amountLabel}${bond.bondIdLabel !== '—' ? ' (Held)' : ''}`
                 : '—'
             }
-          />
-          <DetailRow
-            label="Rent status"
-            value={rentPaidTo ? `Paid up to ${formatDate(rentPaidTo)}` : '—'}
-            valueClassName="text-primary"
           />
         </div>
       </ProfileCard>
@@ -275,12 +267,20 @@ function OverviewGrid({
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold">{job.name}</p>
+                      <p className="text-sm font-semibold">
+                        {job.kind === 'inspection' ? job.jobType : job.name}
+                      </p>
                       <span className="bg-primary/12 text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold">
                         {job.status}
                       </span>
                     </div>
-                    <p className="text-muted-foreground mt-0.5 text-xs">{job.description}</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {job.kind === 'inspection'
+                        ? [job.name, job.description !== '—' ? job.description : null]
+                            .filter(Boolean)
+                            .join(' • ')
+                        : job.description}
+                    </p>
                     <p className="text-muted-foreground mt-1 text-[10px]">No action required</p>
                   </div>
                 </div>
@@ -323,39 +323,6 @@ function OverviewGrid({
           </ul>
         )}
       </ProfileCard>
-
-      <ProfileCard
-        title="Upcoming"
-        icon={Calendar}
-        footer={
-          <button
-            type="button"
-            onClick={onViewCalendar}
-            className="text-primary flex w-full items-center justify-center gap-1 text-sm font-semibold"
-          >
-            View calendar
-            <ChevronRight className="size-4" />
-          </button>
-        }
-      >
-        {upcoming.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No upcoming dates on file.</p>
-        ) : (
-          <ul className="space-y-2.5">
-            {upcoming.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2">
-                  <Calendar className="text-muted-foreground size-4 shrink-0" />
-                  <span className="truncate font-medium">{item.label}</span>
-                </span>
-                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                  {item.dateLabel}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ProfileCard>
     </div>
   );
 }
@@ -383,7 +350,7 @@ export function PropertyProfileV2({
   onCustomWorkflowAction,
   onPhotoUpdated,
   tasksPanel,
-  financialsPanel,
+  financialsPanel: _financialsPanel,
   documentsPanel,
   activitiesPanel,
   banners,
@@ -466,32 +433,6 @@ export function PropertyProfileV2({
       vacatingCases,
     ],
   );
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const calendarEvents = useMemo(
-    () =>
-      buildPropertyCalendarEvents({
-        property,
-        propertyId,
-        currentLease,
-        sync,
-        inspections,
-        rentReviews,
-        rentReviewDecisions,
-        vacatingCases,
-        tribunalCases,
-      }),
-    [
-      property,
-      propertyId,
-      currentLease,
-      sync,
-      inspections,
-      rentReviews,
-      rentReviewDecisions,
-      vacatingCases,
-      tribunalCases,
-    ],
-  );
 
   const streetLine = property.address;
   const suburbLine = [property.suburb, property.state, property.postcode].filter(Boolean).join(' ');
@@ -551,17 +492,11 @@ export function PropertyProfileV2({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {[
             { label: 'Rent', value: metrics.rentLabel },
             { label: 'Lease expiry', value: metrics.leaseExpiryLabel },
-            { label: 'Arrears', value: metrics.arrearsLabel },
             { label: 'Bond', value: metrics.bondLabel },
-            {
-              label: 'Rent status',
-              value: metrics.rentStatusLabel,
-              tone: metrics.rentStatusTone,
-            },
           ].map((metric) => (
             <div
               key={metric.label}
@@ -570,13 +505,7 @@ export function PropertyProfileV2({
               <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
                 {metric.label}
               </p>
-              <p
-                className={cn(
-                  'mt-1 text-sm font-semibold leading-snug tabular-nums',
-                  metric.tone === 'good' && 'text-primary',
-                  metric.tone === 'warn' && 'text-amber-700 dark:text-amber-300',
-                )}
-              >
+              <p className="mt-1 text-sm font-semibold leading-snug tabular-nums">
                 {metric.value}
               </p>
             </div>
@@ -618,43 +547,28 @@ export function PropertyProfileV2({
             vacatingCases={vacatingCases}
             tribunalCases={tribunalCases}
             onViewTasks={() => onSectionChange('tasks')}
-            onViewCalendar={() => setCalendarOpen(true)}
             onNeedActionClick={onNeedActionNavigate}
           />
 
-          <div className="v2-dashboard__card rounded-2xl border p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Building2 className="text-primary size-4" />
-              <h2 className="text-sm font-semibold">Full property details</h2>
-            </div>
-            <PropertyProfileDetails
-              property={property}
-              propertyId={propertyId}
-              currentLease={currentLease}
-              inspections={inspections}
-              propertyDocs={propertyDocs}
-              leasingCycles={leasingCycles}
-              tenantSelections={tenantSelections}
-              vacatingCases={vacatingCases}
-              rentReviews={rentReviews}
-              onViewBondLodgement={onViewBondLodgement}
-              onRefresh={onRefresh}
-            />
-          </div>
+          <PropertyProfileDetails
+            property={property}
+            propertyId={propertyId}
+            currentLease={currentLease}
+            inspections={inspections}
+            propertyDocs={propertyDocs}
+            leasingCycles={leasingCycles}
+            tenantSelections={tenantSelections}
+            vacatingCases={vacatingCases}
+            rentReviews={rentReviews}
+            onViewBondLodgement={onViewBondLodgement}
+            onRefresh={onRefresh}
+          />
         </div>
       ) : null}
 
       {section === 'tasks' ? <div className="space-y-4">{tasksPanel}</div> : null}
-      {section === 'financials' ? <div className="space-y-4">{financialsPanel}</div> : null}
       {section === 'documents' ? <div className="space-y-4">{documentsPanel}</div> : null}
       {section === 'activities' ? <div className="space-y-4">{activitiesPanel}</div> : null}
-
-      <PropertyProfileCalendarDialog
-        open={calendarOpen}
-        onOpenChange={setCalendarOpen}
-        propertyAddress={[streetLine, suburbLine].filter(Boolean).join(', ')}
-        events={calendarEvents}
-      />
     </div>
   );
 }

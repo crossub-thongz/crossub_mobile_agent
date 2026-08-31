@@ -1,9 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Briefcase, Building2, Wrench } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Briefcase, Building2, MoreHorizontal, Wrench } from 'lucide-react';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   buildPropertyListV2LeaseExpiry,
   buildPropertyListV2RowStatus,
@@ -58,6 +60,88 @@ function taskCountLabel(
   };
   const [singular, plural] = labels[kind];
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function PropertyRowActions({
+  isDraft,
+  onContinue,
+  onOpenProfile,
+  onDeleteDraft,
+}: {
+  isDraft: boolean;
+  onContinue?: () => void;
+  onOpenProfile?: () => void;
+  onDeleteDraft?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasActions = isDraft
+    ? Boolean(onContinue || onDeleteDraft)
+    : Boolean(onOpenProfile);
+  if (!hasActions) return null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground size-8"
+          aria-label="Property actions"
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-48 p-1"
+        onClick={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => event.stopPropagation()}
+      >
+        {isDraft ? (
+          <>
+            {onContinue ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onContinue();
+                }}
+                className="hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+              >
+                Continue registration
+              </button>
+            ) : null}
+            {onDeleteDraft ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onDeleteDraft();
+                }}
+                className="text-destructive hover:bg-destructive/10 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+              >
+                Delete draft
+              </button>
+            ) : null}
+          </>
+        ) : onOpenProfile ? (
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onOpenProfile();
+            }}
+            className="hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+          >
+            Open profile
+          </button>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function TaskSummary({
@@ -125,6 +209,7 @@ export function PropertyListV2Table({
   needActionCountFor,
   onSelect,
   onOpenProfile,
+  onDeleteDraft,
 }: {
   properties: Property[];
   selectedId: string | null;
@@ -134,6 +219,7 @@ export function PropertyListV2Table({
   onSelect: (propertyId: string) => void;
   /** Desktop: second click (or double-click) on a selected row opens the property profile. */
   onOpenProfile?: (propertyId: string) => void;
+  onDeleteDraft?: (property: Property) => void;
 }) {
   const {
     maintenanceAll,
@@ -209,12 +295,13 @@ export function PropertyListV2Table({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[48rem] table-fixed border-collapse text-left text-sm">
           <colgroup>
-            <col style={{ width: '20%' }} />
-            <col style={{ width: '17%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '15%' }} />
+            <col style={{ width: '19%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '11%' }} />
             <col style={{ width: '14%' }} />
-            <col style={{ width: '22%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '21%' }} />
+            <col style={{ width: '2.75rem' }} />
           </colgroup>
           <thead>
             <tr className="border-b bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -224,6 +311,9 @@ export function PropertyListV2Table({
               <th className="px-3 py-3">Lease expiry</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Tasks</th>
+              <th className="px-1 py-3">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -299,6 +389,28 @@ export function PropertyListV2Table({
                   </td>
                   <td className="px-3 py-3 align-top">
                     <TaskSummary {...meta} />
+                  </td>
+                  <td
+                    className="px-1 py-3 align-top"
+                    onClick={(event) => event.stopPropagation()}
+                    onDoubleClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex justify-end">
+                      <PropertyRowActions
+                        isDraft={isDraft}
+                        onContinue={
+                          isDraft ? () => onSelect(property.id) : undefined
+                        }
+                        onOpenProfile={
+                          canOpenProfile ? () => onOpenProfile?.(property.id) : undefined
+                        }
+                        onDeleteDraft={
+                          isDraft && onDeleteDraft
+                            ? () => onDeleteDraft(property)
+                            : undefined
+                        }
+                      />
+                    </div>
                   </td>
                 </tr>
               );

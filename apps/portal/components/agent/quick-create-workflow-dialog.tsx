@@ -1,8 +1,28 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { MapPin, Search } from 'lucide-react';
 import { toast } from 'sonner';
+
+import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
+import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
+import {
+  buildPropertyWorkflowContext,
+  tabActionsFor,
+  type PropertyWorkflowActionId,
+  type PropertyWorkflowTab,
+} from '@/lib/property-workflow-actions';
+import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 
 import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
@@ -40,10 +60,10 @@ const ACTION_TAB: Record<PropertyWorkflowActionId, PropertyWorkflowTab> = {
 };
 
 const ACTION_LABEL: Partial<Record<PropertyWorkflowActionId, string>> = {
-  start_leasing: 'Add New Leasing/Open',
-  start_end_leasing: 'End Leasing',
-  start_maintenance: 'Add new repair job',
-  start_rent_review: 'Add rent review',
+  start_leasing: 'New Leasing / Re-Letting',
+  start_end_leasing: 'Vacating',
+  start_maintenance: 'Lodge Maintenance',
+  start_rent_review: 'Rent Review',
   schedule_open_inspection: 'Open inspection',
   schedule_ingoing_inspection: 'Ingoing inspection',
   schedule_outgoing_inspection: 'Outgoing inspection',
@@ -90,6 +110,8 @@ export function QuickCreateWorkflowDialog({
   const [search, setSearch] = useState('');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | undefined>(initialPropertyId);
   const [formOpen, setFormOpen] = useState(false);
+  const openSessionRef = useRef<string | null>(null);
+  const handingOffToFormRef = useRef(false);
 
   const filteredProperties = useMemo(() => {
     if (!search.trim()) return properties;
@@ -151,10 +173,12 @@ export function QuickCreateWorkflowDialog({
     setSelectedPropertyId(initialPropertyId);
     setPickerOpen(false);
     setFormOpen(false);
+    handingOffToFormRef.current = false;
   };
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !actionId) {
+      openSessionRef.current = null;
       reset();
       return;
     }
@@ -162,6 +186,11 @@ export function QuickCreateWorkflowDialog({
       onOpenChange(false);
       return;
     }
+    // Portfolio live-poll re-renders this dialog with a new `onOpenChange` every 5s.
+    // Re-seeding the picker would throw the user back to "Select a property".
+    const session = `${actionId}:${initialPropertyId ?? ''}`;
+    if (openSessionRef.current === session) return;
+    openSessionRef.current = session;
     setSelectedPropertyId(initialPropertyId);
     if (initialPropertyId) {
       setFormOpen(true);
@@ -210,6 +239,7 @@ export function QuickCreateWorkflowDialog({
   };
 
   const confirmProperty = (id: string) => {
+    handingOffToFormRef.current = true;
     setSelectedPropertyId(id);
     setPickerOpen(false);
     setFormOpen(true);
@@ -230,7 +260,12 @@ export function QuickCreateWorkflowDialog({
       <Dialog
         open={pickerOpen}
         onOpenChange={(next) => {
-          if (!next) closeAll();
+          if (next) return;
+          if (handingOffToFormRef.current || formOpen) {
+            handingOffToFormRef.current = false;
+            return;
+          }
+          closeAll();
         }}
       >
         <DialogContent className="max-w-md">

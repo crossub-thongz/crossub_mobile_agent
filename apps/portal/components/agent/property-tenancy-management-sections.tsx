@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Archive } from 'lucide-react';
+import { Archive, Building2, User } from 'lucide-react';
 
 import { PropertyLeasingCaseWorkflowDialog } from '@/components/agent/property-leasing-case-workflow-dialog';
 import { ContactTile } from '@/components/agent/property-contact-tile';
@@ -12,6 +12,7 @@ import {
 } from '@/components/agent/property-document-preview-dialog';
 import { PropertyLandlordOverviewEditDialog } from '@/components/agent/property-landlord-overview-edit-dialog';
 import { PropertyTenancyEditDialog } from '@/components/agent/property-tenancy-edit-dialog';
+import { PropertyProfileInfoCard } from '@/components/agent/property-profile/property-profile-info-card';
 import { MANAGEMENT_AGREEMENT_DOC_SLOT } from '@/components/agent/property-management-details-section';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
@@ -33,6 +34,7 @@ import {
   tenancyArchiveBanner,
 } from '@/lib/property-archive';
 import { resolvePropertyManagementFees } from '@/lib/management-fees';
+import { PORTAL_SERVICE_LEVEL_LABEL } from '@/lib/portal-service-level';
 import {
   derivePaymentCycle,
   resolveBondOverviewDisplay,
@@ -52,36 +54,6 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
-
-function DetailsSubsection({
-  title,
-  onEdit,
-  children,
-}: {
-  title: string;
-  onEdit?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="border-border/60 border-t pt-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
-          {title}
-        </h4>
-        {onEdit ? (
-          <button
-            type="button"
-            onClick={onEdit}
-            className="text-primary text-[10px] font-medium"
-          >
-            Edit
-          </button>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 function StatCell({
   label,
@@ -255,7 +227,7 @@ export function PropertyTenancyManagementSections({
   vacatingCases?: VacatingCase[];
   onRefresh?: () => void;
 }) {
-  const { apiConnected } = useAgentData();
+  const { apiConnected, agencies } = useAgentData();
   const { detail } = usePropertyPortalDetail(propertyId, apiConnected);
   const activeCycle = leasingCycles?.[0];
   const sync = usePropertyOverviewSync(
@@ -472,6 +444,12 @@ export function PropertyTenancyManagementSections({
       ? `${registry.managementRatePercent}%${managementGstLabel ? ` · ${managementGstLabel}` : ''}`
       : '—';
 
+  const agency = agencies.find((row) => row.id === property.agencyId);
+  const serviceTypeLabel = agency?.portalServiceLevel
+    ? PORTAL_SERVICE_LEVEL_LABEL[agency.portalServiceLevel]
+    : '—';
+  const agencyName = agency?.name ?? property.agencyName || '—';
+
   const displayDocs = useMemo(
     () =>
       propertyDocs.map((doc) => ({
@@ -535,8 +513,9 @@ export function PropertyTenancyManagementSections({
 
   return (
     <>
-      <DetailsSubsection
+      <PropertyProfileInfoCard
         title="Tenancy details"
+        icon={User}
         onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
       >
         {archiveBanner ? (
@@ -582,8 +561,7 @@ export function PropertyTenancyManagementSections({
             </select>
           </div>
         ) : null}
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <StatCell label="Rent paid to" value={rentPaidTo ? formatDate(rentPaidTo) : '—'} />
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <StatCell label="Payment cycle" value={paymentCycle} />
           <StatCell
             label="Bond"
@@ -627,10 +605,11 @@ export function PropertyTenancyManagementSections({
             }
           />
         </div>
-      </DetailsSubsection>
+      </PropertyProfileInfoCard>
 
-      <DetailsSubsection
-        title="Management details"
+      <PropertyProfileInfoCard
+        title="Owner / Landlord"
+        icon={User}
         onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
       >
         <ContactTile
@@ -641,7 +620,16 @@ export function PropertyTenancyManagementSections({
           phone={landlord.phone}
           updatedHint={landlordUpdatedHint}
         />
+      </PropertyProfileInfoCard>
+
+      <PropertyProfileInfoCard
+        title="Management / Agency"
+        icon={Building2}
+        onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
+      >
+        <ContactTile title="Agency" layout="row" name={agencyName} />
         <div className="mt-2 grid grid-cols-2 gap-2">
+          <StatCell label="Service type" value={serviceTypeLabel} />
           <StatCell label="Management rate" value={managementRateDisplay} />
           <StatCell
             label="Management agreement"
@@ -664,7 +652,7 @@ export function PropertyTenancyManagementSections({
             />
           ) : null}
         </div>
-      </DetailsSubsection>
+      </PropertyProfileInfoCard>
 
       <PropertyTenancyEditDialog
         open={tenancyDialogOpen}

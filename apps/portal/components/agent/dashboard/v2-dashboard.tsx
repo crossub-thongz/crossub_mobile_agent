@@ -30,6 +30,7 @@ import { CrosAssistantLogo } from '@/components/brand/cros-assistant-logo';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 import {
   inspectionDetail,
   maintenanceDetail,
@@ -343,7 +344,7 @@ export function V2Dashboard() {
           </section>
 
           <section className="flex flex-col p-5">
-            {hasFullManagementAccess ? (
+            {ACCOUNTING_MODULE_LAUNCHED && hasFullManagementAccess ? (
               <>
                 <p className="text-muted-foreground mb-3 text-xs font-medium">Financial Summary</p>
                 <p className="text-2xl font-semibold tracking-tight tabular-nums">

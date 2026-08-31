@@ -13,6 +13,7 @@ import {
 
 import type { PortalNavAccess } from '@/lib/portal-service-level';
 import { ROUTES } from '@/constants/routes';
+import { ACCOUNTING_MODULE_LAUNCHED } from '@/constants/accounting-sections';
 
 type NavItem = {
   href: string;
@@ -35,7 +36,9 @@ export const MORE_NAV: NavItem[] = [
   // { href: ROUTES.LEASING, label: 'Leasing', icon: FileText, portalAccess: 'full' },
   // { href: ROUTES.MAINTENANCE, label: 'Maintenance', icon: Wrench, portalAccess: 'full' },
   // { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },
-  { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText },
+  ...(ACCOUNTING_MODULE_LAUNCHED
+    ? [{ href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText } satisfies NavItem]
+    : []),
   { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
   // { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
   { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive },

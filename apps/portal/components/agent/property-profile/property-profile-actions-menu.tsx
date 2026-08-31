@@ -16,8 +16,7 @@ import { fromProperty } from '@/lib/detail-navigation';
 import { createdWorkflowCaseHref } from '@/lib/property-job-href';
 import {
   buildPropertyWorkflowContext,
-  PROPERTY_WORKFLOW_ACTION_GROUPS,
-  tabActionsFor,
+  workflowMenuGroupsFor,
   type PropertyWorkflowAction,
   type PropertyWorkflowActionId,
 } from '@/lib/property-workflow-actions';
@@ -64,7 +63,7 @@ export function PropertyProfileActionsMenu({
 }) {
   const router = useRouter();
   const isV2 = useIsAgentUiV2();
-  const { primaryAgency, properties } = useAgentData();
+  const { primaryAgency, properties, hasFullManagementAccess } = useAgentData();
   const { blockIfUnverified } = useEmailVerificationGuard();
   const [open, setOpen] = useState(false);
   const [workflowAction, setWorkflowAction] = useState<PropertyWorkflowActionId | null>(null);
@@ -81,10 +80,7 @@ export function PropertyProfileActionsMenu({
       tribunalCases,
       currentLease,
     });
-    return PROPERTY_WORKFLOW_ACTION_GROUPS.map((group) => ({
-      ...group,
-      actions: tabActionsFor(group.tab, ctx),
-    })).filter((group) => group.actions.length > 0);
+    return workflowMenuGroupsFor(ctx, { hasFullAccess: isV2 ? hasFullManagementAccess : true });
   }, [
     propertyId,
     leasingCycles,
@@ -94,6 +90,8 @@ export function PropertyProfileActionsMenu({
     inspections,
     tribunalCases,
     currentLease,
+    hasFullManagementAccess,
+    isV2,
   ]);
 
   const openAction = (action: PropertyWorkflowAction) => {
