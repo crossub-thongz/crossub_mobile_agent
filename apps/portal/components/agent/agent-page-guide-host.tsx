@@ -24,7 +24,7 @@ export function AgentPageGuideHost() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { status } = useAuth();
-  const { ready, isSeen, markSeen } = useAgentPageGuides();
+  const { ready, isSeen, markSeen, setPageGuideBlocking } = useAgentPageGuides();
   const [welcomeBlocking, setWelcomeBlocking] = useState(false);
   const [contextGuideId, setContextGuideId] = useState<AgentPageGuideId | null>(null);
   const [activeGuideId, setActiveGuideId] = useState<AgentPageGuideId | null>(null);
@@ -70,6 +70,7 @@ export function AgentPageGuideHost() {
       !pathname ||
       isPublicRoute(pathname)
     ) {
+      setPageGuideBlocking(false);
       setActiveGuideId(null);
       return;
     }
@@ -78,13 +79,15 @@ export function AgentPageGuideHost() {
     const guideId = contextGuideId ?? pathnameGuideId;
 
     if (!guideId || isSeen(guideId)) {
+      setPageGuideBlocking(false);
       setActiveGuideId(null);
       return;
     }
 
+    setPageGuideBlocking(true);
     const timer = window.setTimeout(() => setActiveGuideId(guideId), 450);
     return () => window.clearTimeout(timer);
-  }, [pathname, searchParams, contextGuideId, status, welcomeBlocking, ready, isSeen]);
+  }, [pathname, searchParams, contextGuideId, status, welcomeBlocking, ready, isSeen, setPageGuideBlocking]);
 
   if (!activeGuideId) return null;
 
@@ -93,6 +96,7 @@ export function AgentPageGuideHost() {
 
   const closeGuide = (status: 'completed' | 'skipped') => {
     setActiveGuideId(null);
+    setPageGuideBlocking(false);
     void markSeen(guideId, status);
   };
 

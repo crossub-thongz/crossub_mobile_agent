@@ -28,6 +28,8 @@ import {
 
 type AgentPageGuideContextValue = {
   ready: boolean;
+  pageGuideBlocking: boolean;
+  setPageGuideBlocking: (blocking: boolean) => void;
   isSeen: (guideId: AgentPageGuideId) => boolean;
   markSeen: (guideId: AgentPageGuideId, status: AgentPageGuideStatus) => Promise<void>;
   resetGuides: () => Promise<void>;
@@ -40,11 +42,13 @@ export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
   const userId = user?.id ?? null;
   const [seen, setSeen] = useState<Record<string, AgentPageGuideStatus>>({});
   const [ready, setReady] = useState(false);
+  const [pageGuideBlocking, setPageGuideBlocking] = useState(false);
 
   useEffect(() => {
     if (status !== 'authed' || !userId) {
       setSeen({});
       setReady(false);
+      setPageGuideBlocking(false);
       return;
     }
 
@@ -119,8 +123,8 @@ export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
   }, [userId]);
 
   const value = useMemo(
-    () => ({ ready, isSeen, markSeen, resetGuides }),
-    [ready, isSeen, markSeen, resetGuides],
+    () => ({ ready, pageGuideBlocking, setPageGuideBlocking, isSeen, markSeen, resetGuides }),
+    [ready, pageGuideBlocking, isSeen, markSeen, resetGuides],
   );
 
   return (

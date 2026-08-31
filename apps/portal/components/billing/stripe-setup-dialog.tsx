@@ -135,16 +135,32 @@ type StripeSetupDialogProps = {
   state: StripeSetupDialogState | null;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void | Promise<void>;
+  /** When false, overlay click / Escape / X cannot dismiss — only Cancel or a saved card. */
+  dismissible?: boolean;
 };
 
-export function StripeSetupDialog({ state, onOpenChange, onSuccess }: StripeSetupDialogProps) {
+export function StripeSetupDialog({
+  state,
+  onOpenChange,
+  onSuccess,
+  dismissible = true,
+}: StripeSetupDialogProps) {
   const publishableKey = getStripePublishableKey();
   const open = state != null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !dismissible) return;
+        onOpenChange(next);
+      }}
+    >
       <DialogContent
         stacked
+        showCloseButton={dismissible}
+        onPointerDownOutside={dismissible ? undefined : (event) => event.preventDefault()}
+        onEscapeKeyDown={dismissible ? undefined : (event) => event.preventDefault()}
         className={cn(
           'flex max-h-[min(92vh,820px)] flex-col gap-0 overflow-hidden p-0',
           'w-[calc(100%-1.5rem)] sm:max-w-xl',
