@@ -9,6 +9,7 @@ import {
   History,
   LogOut,
   MessageSquare,
+  PlayCircle,
   Receipt,
   Settings,
   Shield,
@@ -127,6 +128,13 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
     icon: HelpCircle,
     tone: 'amber',
     items: [
+      {
+        id: 'intro-video',
+        title: 'Intro video',
+        description: 'Watch the agent portal welcome video again.',
+        href: ROUTES.SUPPORT_GETTING_STARTED,
+        icon: PlayCircle,
+      },
       {
         id: 'ask-cros',
         title: 'Ask CROS',

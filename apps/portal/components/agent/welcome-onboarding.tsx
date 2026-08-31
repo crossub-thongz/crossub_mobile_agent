@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Building2, LayoutDashboard, ListTodo, MessageSquare, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
-import { CrosAssistantLogoBadge } from '@/components/brand/cros-assistant-logo';
+import { WelcomeVideoPlayer } from '@/components/agent/welcome-video-player';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
@@ -76,53 +76,26 @@ export function WelcomeOnboarding() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-4 sm:items-center">
-      <div className="relative w-full max-w-md rounded-xl border bg-card p-5 shadow-xl">
+      <div className="relative w-full max-w-2xl rounded-xl border bg-card p-5 shadow-xl">
         <button
           type="button"
           onClick={() => void dismiss()}
           disabled={dismissing}
-          className="text-muted-foreground absolute top-3 right-3 rounded-lg p-1 hover:bg-secondary"
+          className="text-muted-foreground absolute top-3 right-3 z-10 rounded-lg p-1 hover:bg-secondary"
           aria-label="Dismiss"
         >
           <X className="size-4" />
         </button>
-        <div className="flex flex-col items-center text-center">
-          <CrosAssistantLogoBadge size="2xl" className="mb-3" />
+        <div className="pr-8">
           <p className="text-primary text-xs font-semibold uppercase tracking-wide">
-            {CROS_ASSISTANT_NAME} · Quick tour
+            {CROS_ASSISTANT_NAME} · Welcome
           </p>
           <h2 className="mt-1 text-lg font-semibold">Welcome to your agent portal</h2>
-          <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            I&apos;ll help you get started. Approve quotes, track jobs by status, message landlords
-            and tenants, and manage your portfolio — all from your phone.
+          <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+            Watch this short intro to get started. You can replay it anytime from More → Support → Intro video.
           </p>
         </div>
-        <ul className="mt-4 space-y-2 text-sm">
-          <li className="flex items-center gap-2">
-            <LayoutDashboard className="text-primary size-4 shrink-0" />
-            <span>
-              <strong>Dashboard</strong> — portfolio KPIs at a glance
-            </span>
-          </li>
-          <li className="flex items-center gap-2">
-            <ListTodo className="text-primary size-4 shrink-0" />
-            <span>
-              <strong>Tasks</strong> — your need-action queue
-            </span>
-          </li>
-          <li className="flex items-center gap-2">
-            <MessageSquare className="text-primary size-4 shrink-0" />
-            <span>
-              <strong>Messages</strong> — chat per property
-            </span>
-          </li>
-          <li className="flex items-center gap-2">
-            <Building2 className="text-primary size-4 shrink-0" />
-            <span>
-              <strong>Properties</strong> — add listings to your portfolio
-            </span>
-          </li>
-        </ul>
+        <WelcomeVideoPlayer autoPlay className="mt-4" />
         <div className="mt-5 flex flex-col gap-2">
           <Button asChild disabled={dismissing} onClick={() => void dismiss()}>
             <Link href={propertyNew()}>

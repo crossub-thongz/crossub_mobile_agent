@@ -38,6 +38,7 @@ export const ROUTES = {
   MORE: '/more',
   TEAM: '/team',
   SUPPORT_CONTACT: '/support/contact',
+  SUPPORT_GETTING_STARTED: '/support/getting-started',
   AGREEMENTS: '/agreements',
 } as const;
 
