@@ -4,6 +4,8 @@ import {
   archivedLeasingCycleJobRows,
   archivedRentReviewJobRows,
   buildPropertyOverviewJobRows,
+  propertyJobDisplaySubtext,
+  propertyJobDisplayTitle,
   type PropertyJobPhase,
   type PropertyJobRow,
 } from '@/lib/property-job-rows';
@@ -115,13 +117,6 @@ function linkedJobId(needAction: PropertyNeedAction): string | null {
   return null;
 }
 
-function maintenanceTitle(request: MaintenanceRequest | undefined, job: PropertyJobRow): string {
-  const title = request?.title?.trim();
-  if (title) return title;
-  if (job.issueType && job.issueType !== '—') return job.issueType;
-  return job.name;
-}
-
 function maintenanceDetail(request: MaintenanceRequest | undefined): string | undefined {
   if (!request) return undefined;
   const parts: string[] = [];
@@ -145,23 +140,8 @@ function taskFromJobRow(
     maintenance?.requiresApproval === true ||
     /approv|quot|review|sign|confirm/i.test(job.status);
 
-  const title =
-    needAction?.label ??
-    (job.kind === 'maintenance'
-      ? maintenanceTitle(maintenance, job)
-      : job.kind === 'inspection'
-        ? job.jobType
-        : job.jobType === 'Rent review'
-          ? 'Rent review'
-          : job.jobType === 'End leasing'
-            ? 'End leasing'
-            : job.name);
-
-  const reportedLabel = job.createdAt !== '—' ? job.createdAt : job.date;
-  const subtext =
-    category === 'inspection'
-      ? [job.name, job.date !== '—' ? job.date : null].filter(Boolean).join(' • ')
-      : `${CATEGORY_LABEL[category]} • Reported ${reportedLabel}`;
+  const title = propertyJobDisplayTitle(job);
+  const subtext = propertyJobDisplaySubtext(job);
 
   const description =
     maintenance?.description?.trim() ||

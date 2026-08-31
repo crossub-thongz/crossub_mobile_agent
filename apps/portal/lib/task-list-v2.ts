@@ -290,6 +290,7 @@ export function filterTaskListV2Rows(
     filtered = filtered.filter(
       (row) =>
         row.task.title.toLowerCase().includes(query) ||
+        row.task.subtext.toLowerCase().includes(query) ||
         row.propertyAddress.toLowerCase().includes(query) ||
         row.typeLabel.toLowerCase().includes(query) ||
         row.statusLabel.toLowerCase().includes(query) ||

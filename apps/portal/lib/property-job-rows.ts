@@ -30,6 +30,7 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
+import { formatTitleCase } from '@/lib/display-text';
 import { formatDate, formatDateTime, formatCurrency, formatScheduledAt } from '@/lib/utils';
 import {
   inspectionReferenceLabel,
@@ -75,6 +76,21 @@ export interface PropertyJobRow {
   issueType?: string;
   /** Rent review T−90 / T−60 schedule badges (rent review only). */
   rentReviewSchedule?: RentReviewScheduleIndicators;
+}
+
+/** Type name first (Routine Inspection, New Leasing), matching the tasks list. */
+export function propertyJobDisplayTitle(job: PropertyJobRow): string {
+  if (job.kind === 'maintenance' && job.issueType && job.issueType !== '—') {
+    return job.issueType;
+  }
+  return formatTitleCase(job.jobType);
+}
+
+/** Case ID on the line below the type, then date when present. */
+export function propertyJobDisplaySubtext(job: PropertyJobRow): string {
+  const id = job.name !== '—' ? job.name : null;
+  const date = job.date !== '—' ? job.date : job.createdAt !== '—' ? job.createdAt : null;
+  return [id, date].filter(Boolean).join(' • ');
 }
 
 /** Stable filter keys for the jobs table dropdown (overview, etc.). */
@@ -155,14 +171,14 @@ export function propertyJobRowFilterId(row: PropertyJobRow): PropertyJobTypeFilt
     case 'leasing':
       return 'new_leasing';
     case 'inspection':
-      switch (row.jobType) {
-        case 'Routine inspection':
+      switch (row.jobType.toLowerCase()) {
+        case 'routine inspection':
           return 'routine_inspection';
-        case 'Ingoing inspection':
+        case 'ingoing inspection':
           return 'ingoing_inspection';
-        case 'Outgoing inspection':
+        case 'outgoing inspection':
           return 'outgoing_inspection';
-        case 'Open inspection':
+        case 'open inspection':
         default:
           return 'open_inspection';
       }

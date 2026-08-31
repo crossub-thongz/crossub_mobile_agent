@@ -27,18 +27,20 @@ export type InspectionNextAction = {
 
 function isDoneStatus(status: string): boolean {
   const s = status.toLowerCase();
-  return (
-    s.includes('complete') ||
-    s.includes('published') ||
-    s.includes('closed') ||
-    s.includes('cancelled')
-  );
+  return s.includes('complete') || s.includes('published') || s.includes('closed');
+}
+
+export function isInspectionCancelled(inspection: Inspection): boolean {
+  const api = (inspection.apiStatus ?? '').toLowerCase();
+  if (api === SessionStatusEnum.CANCELLED) return true;
+  if (api === INSPECTION_STATUS.CANCELLED.toLowerCase()) return true;
+  return inspection.status.toLowerCase().includes('cancelled');
 }
 
 export function isInspectionDone(inspection: Inspection): boolean {
   const api = (inspection.apiStatus ?? '').toLowerCase();
   if (api === SessionStatusEnum.CLOSED) return true;
-  if (api === SessionStatusEnum.CANCELLED) return true;
+  if (isInspectionCancelled(inspection)) return true;
   if (api === INSPECTION_STATUS.PUBLISHED.toLowerCase()) return true;
   if (
     api === INSPECTION_STATUS.COMPLETED.toLowerCase() ||
@@ -108,6 +110,15 @@ export const INSPECTION_GROUP_LABEL: Record<InspectionListGroup, string> = {
 };
 
 export function inspectionNextAction(inspection: Inspection): InspectionNextAction | null {
+  if (isInspectionCancelled(inspection)) {
+    return {
+      title: 'Cancelled',
+      description:
+        inspection.cancelReason?.trim() || 'This inspection was cancelled.',
+      tone: 'info',
+    };
+  }
+
   if (isInspectionDone(inspection)) {
     return {
       title: 'Completed',

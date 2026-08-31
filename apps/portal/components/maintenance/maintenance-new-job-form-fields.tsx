@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils';
 
 export type MaintenanceJobPriority = 'urgent' | 'normal';
 
+/** Matches API `CreateStaffMaintenanceRequestDto` description `@MinLength(5)`. */
+export const MAINTENANCE_DESCRIPTION_MIN_CHARS = 5;
+
 export function MaintenanceNewJobFormFields({
   address,
   propertyId,
@@ -98,7 +101,18 @@ export function MaintenanceNewJobFormFields({
           rows={4}
           placeholder="What's happening? Any constraints or notes?"
           disabled={disabled}
+          minLength={MAINTENANCE_DESCRIPTION_MIN_CHARS}
         />
+        {description.trim().length > 0 &&
+        description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS ? (
+          <p className="text-destructive text-[11px]">
+            Description must be at least {MAINTENANCE_DESCRIPTION_MIN_CHARS} characters
+          </p>
+        ) : (
+          <p className="text-muted-foreground text-[11px]">
+            At least {MAINTENANCE_DESCRIPTION_MIN_CHARS} characters
+          </p>
+        )}
       </div>
 
       <MaintenanceMediaUploadField

@@ -25,6 +25,10 @@ import {
 } from '@/lib/property-profile-v2-data';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import {
+  propertyJobDisplaySubtext,
+  propertyJobDisplayTitle,
+} from '@/lib/property-job-rows';
+import {
   formatProfileLeaseStatus,
   resolveBondOverviewDisplay,
   resolveCurrentRent,
@@ -463,14 +467,10 @@ export function PropertyListPreviewPanel({
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold">
-                              {job.kind === 'inspection' ? job.jobType : job.name}
+                              {propertyJobDisplayTitle(job)}
                             </p>
                             <p className="text-muted-foreground mt-0.5 text-xs">
-                              {job.kind === 'inspection'
-                                ? [job.name, job.description !== '—' ? job.description : null]
-                                    .filter(Boolean)
-                                    .join(' • ')
-                                : job.description}
+                              {propertyJobDisplaySubtext(job)}
                             </p>
                             <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                               No action required
@@ -571,14 +571,10 @@ export function PropertyListPreviewPanel({
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold">
-                              {job.kind === 'inspection' ? job.jobType : job.name}
+                              {propertyJobDisplayTitle(job)}
                             </p>
                             <p className="text-muted-foreground mt-0.5 text-xs">
-                              {job.kind === 'inspection'
-                                ? [job.name, job.description !== '—' ? job.description : null]
-                                    .filter(Boolean)
-                                    .join(' • ')
-                                : job.description}
+                              {propertyJobDisplaySubtext(job)}
                             </p>
                             <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                               No action required

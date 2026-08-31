@@ -23,6 +23,10 @@ import {
   type PropertyProfileSection,
 } from '@/lib/property-profile-v2-data';
 import {
+  propertyJobDisplaySubtext,
+  propertyJobDisplayTitle,
+} from '@/lib/property-job-rows';
+import {
   buildPropertyProfileTasks,
   countPropertyProfileTabTasks,
 } from '@/lib/property-profile-tasks';
@@ -268,18 +272,14 @@ function OverviewGrid({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold">
-                        {job.kind === 'inspection' ? job.jobType : job.name}
+                        {propertyJobDisplayTitle(job)}
                       </p>
                       <span className="bg-primary/12 text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold">
                         {job.status}
                       </span>
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {job.kind === 'inspection'
-                        ? [job.name, job.description !== '—' ? job.description : null]
-                            .filter(Boolean)
-                            .join(' • ')
-                        : job.description}
+                      {propertyJobDisplaySubtext(job)}
                     </p>
                     <p className="text-muted-foreground mt-1 text-[10px]">No action required</p>
                   </div>

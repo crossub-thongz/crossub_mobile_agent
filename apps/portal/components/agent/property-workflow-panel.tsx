@@ -78,7 +78,7 @@ import {
   isMaintenanceIssueTypeValid,
   isTenantUrgentEligibleMaintenanceIssueType,
 } from '@/constants/maintenance-issue-types';
-import { MaintenanceNewJobFormFields, type MaintenanceJobPriority } from '@/components/maintenance/maintenance-new-job-form-fields';
+import { MaintenanceNewJobFormFields, MAINTENANCE_DESCRIPTION_MIN_CHARS, type MaintenanceJobPriority } from '@/components/maintenance/maintenance-new-job-form-fields';
 import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 import { RENT_PERIOD_OPTIONS } from '@/lib/rent-calculations';
 import type { RentPeriod } from '@/lib/store';
@@ -799,7 +799,11 @@ export function PropertyWorkflowCreateDialog({
         if (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther)) {
           throw new Error('Issue type is required');
         }
-        if (description.trim().length < 5) throw new Error('Description is required');
+        if (description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS) {
+          throw new Error(
+            `Description must be at least ${MAINTENANCE_DESCRIPTION_MIN_CHARS} characters`,
+          );
+        }
         const urgentEligible = isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection);
         const wantsUrgent = maintPriority === 'urgent';
         if (wantsUrgent && !urgentEligible && maintUrgentReason.trim().length < 5) {
@@ -1579,8 +1583,8 @@ export function PropertyWorkflowCreateDialog({
                 submitting ||
                 (actionId === 'start_rent_review' && prefillLoading) ||
                 (actionId === 'start_maintenance' &&
-                  (!isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
-                    !description.trim() ||
+                  (                    !isMaintenanceIssueTypeValid(issueTypeSelection, issueTypeOther) ||
+                    description.trim().length < MAINTENANCE_DESCRIPTION_MIN_CHARS ||
                     maintMediaUrls.length < 1 ||
                     (maintPriority === 'urgent' &&
                       !isTenantUrgentEligibleMaintenanceIssueType(issueTypeSelection) &&

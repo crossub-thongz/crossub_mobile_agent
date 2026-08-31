@@ -1,6 +1,7 @@
 import {
   INSPECTION_TYPE_LABEL,
   inspectionNextAction,
+  isInspectionCancelled,
   isInspectionDone,
 } from '@/lib/inspections/presentation';
 import type { Inspection } from '@/lib/types';
@@ -77,6 +78,7 @@ export function resolveInspectionStatusBanner(inspection: Inspection): {
 } {
   const next = inspectionNextAction(inspection);
   const needsAction = next?.tone === 'warning';
+  const cancelled = isInspectionCancelled(inspection);
   const done = isInspectionDone(inspection);
 
   return {
@@ -86,7 +88,13 @@ export function resolveInspectionStatusBanner(inspection: Inspection): {
       next?.description ||
       'CROSSUB is tracking this inspection and will surface anything that needs your review.',
     needsAction,
-    statusLabel: needsAction ? 'Need your action' : done ? 'Completed' : 'CROS handling',
+    statusLabel: needsAction
+      ? 'Need your action'
+      : cancelled
+        ? 'Cancelled'
+        : done
+          ? 'Completed'
+          : 'CROS handling',
   };
 }
 
