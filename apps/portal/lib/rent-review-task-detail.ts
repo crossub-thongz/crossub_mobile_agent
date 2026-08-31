@@ -251,6 +251,8 @@ export function tenantResponseSummary(detail: RentReviewWorkflowDetail): {
   at?: string;
   reason?: string;
   comments?: string;
+  counterWeekly?: number | null;
+  moveOutDate?: string | null;
 } | null {
   if (isTenantDeclined(detail)) {
     return {
@@ -258,13 +260,25 @@ export function tenantResponseSummary(detail: RentReviewWorkflowDetail): {
       at: auditAt(detail, 'tenant_rejected_response') ?? undefined,
       reason: detail.decisionReason ?? undefined,
       comments: detail.negotiationNote ?? undefined,
+      moveOutDate: detail.tenantMoveOutDate,
     };
   }
   if (isTenantAccepted(detail)) {
     return {
       status: 'Accepted',
-      at: auditAt(detail, 'tenant_accepted_response') ?? undefined,
+      at:
+        auditAt(detail, 'tenant_accepted_response') ??
+        auditAt(detail, 'agent_accepted_tenant_counter') ??
+        undefined,
       comments: detail.negotiationNote ?? undefined,
+    };
+  }
+  if (detail.tenantCounterWeekly != null || auditAt(detail, 'tenant_counter_submitted')) {
+    return {
+      status: 'Counter-offer',
+      at: auditAt(detail, 'tenant_counter_submitted') ?? undefined,
+      comments: detail.negotiationNote ?? undefined,
+      counterWeekly: detail.tenantCounterWeekly,
     };
   }
   return null;

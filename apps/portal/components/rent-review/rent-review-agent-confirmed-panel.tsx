@@ -53,7 +53,7 @@ function ChoiceButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+        'flex h-9 flex-1 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors',
         active
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-border bg-background text-foreground hover:bg-muted/60',
@@ -265,123 +265,119 @@ export function RentReviewAgentConfirmedPanel({
       {editable ? (
         <section className="rounded-xl border bg-card p-4">
           <p className="mb-4 text-sm font-semibold">Agent decision</p>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="preferred-rent">Preferred rent value</Label>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto px-0 text-xs"
-                    disabled={busy}
-                    onClick={() =>
-                      setPreferredRent(
-                        String(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent),
-                      )
-                    }
-                  >
-                    Use recommended
-                  </Button>
-                </div>
-                <div className="relative">
-                  <span className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
-                    $
-                  </span>
-                  <Input
-                    id="preferred-rent"
-                    type="number"
-                    className="pl-7 tabular-nums"
-                    value={preferredRent}
-                    onChange={(e) => setPreferredRent(e.target.value)}
-                  />
-                </div>
-                <p className="text-muted-foreground text-[11px]">Per week</p>
+          <div className="grid items-start gap-x-6 gap-y-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <div className="flex h-5 items-center justify-between gap-2">
+                <Label htmlFor="preferred-rent">Preferred rent value</Label>
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0 text-xs"
+                  disabled={busy}
+                  onClick={() =>
+                    setPreferredRent(
+                      String(detail.ai.suggestedWeekly ?? detail.currentWeeklyRent),
+                    )
+                  }
+                >
+                  Use recommended
+                </Button>
               </div>
+              <div className="relative">
+                <span className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+                  $
+                </span>
+                <Input
+                  id="preferred-rent"
+                  type="number"
+                  className="pl-7 tabular-nums"
+                  value={preferredRent}
+                  onChange={(e) => setPreferredRent(e.target.value)}
+                />
+              </div>
+              <p className="text-muted-foreground text-[11px]">Per week</p>
+            </div>
 
-              <div className="space-y-2">
-                <Label>Preferred lease term</Label>
-                {preferredLeaseType === 'fixed' ? (
-                  newLeaseStart ? (
-                    <>
-                      <select
-                        className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
-                        value={fixedTermWeeks}
-                        disabled={busy}
-                        onChange={(e) =>
-                          setFixedTermWeeks(Number(e.target.value) as FixedTermWeeks)
-                        }
-                      >
-                        <option value={26}>26 weeks (6 months)</option>
-                        <option value={52}>52 weeks (12 months)</option>
-                      </select>
-                      <p className="text-muted-foreground text-[11px]">
-                        New agreement ends{' '}
-                        <span className="font-medium tabular-nums">
-                          {formatDateOnly(computedFixedEnd) ?? '—'}
-                        </span>
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <Input
-                        type="date"
-                        value={fixedTermEndDate}
-                        onChange={(e) => setFixedTermEndDate(e.target.value)}
-                      />
-                      <p className="text-muted-foreground text-[11px]">
-                        End date for the new fixed-term agreement.
-                      </p>
-                    </>
-                  )
-                ) : (
-                  <p className="text-muted-foreground rounded-lg border border-dashed px-3 py-2 text-sm">
-                    Not applicable — periodic tenancy
-                  </p>
-                )}
+            <div className="space-y-2">
+              <Label className="flex h-5 items-center">Preferred lease type</Label>
+              <div className="flex gap-2">
+                <ChoiceButton
+                  active={preferredLeaseType === 'fixed'}
+                  disabled={busy}
+                  onClick={() => setPreferredLeaseType('fixed')}
+                >
+                  Fixed
+                </ChoiceButton>
+                <ChoiceButton
+                  active={preferredLeaseType === 'periodic'}
+                  disabled={busy}
+                  onClick={() => setPreferredLeaseType('periodic')}
+                >
+                  Periodic
+                </ChoiceButton>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Preferred lease type</Label>
-                <div className="flex gap-2">
-                  <ChoiceButton
-                    active={preferredLeaseType === 'fixed'}
-                    disabled={busy}
-                    onClick={() => setPreferredLeaseType('fixed')}
-                  >
-                    Fixed
-                  </ChoiceButton>
-                  <ChoiceButton
-                    active={preferredLeaseType === 'periodic'}
-                    disabled={busy}
-                    onClick={() => setPreferredLeaseType('periodic')}
-                  >
-                    Periodic
-                  </ChoiceButton>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label className="flex h-5 items-center">Preferred lease term</Label>
+              {preferredLeaseType === 'fixed' ? (
+                newLeaseStart ? (
+                  <>
+                    <select
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      value={fixedTermWeeks}
+                      disabled={busy}
+                      onChange={(e) =>
+                        setFixedTermWeeks(Number(e.target.value) as FixedTermWeeks)
+                      }
+                    >
+                      <option value={26}>26 weeks (6 months)</option>
+                      <option value={52}>52 weeks (12 months)</option>
+                    </select>
+                    <p className="text-muted-foreground text-[11px]">
+                      New agreement ends{' '}
+                      <span className="font-medium tabular-nums">
+                        {formatDateOnly(computedFixedEnd) ?? '—'}
+                      </span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      type="date"
+                      value={fixedTermEndDate}
+                      onChange={(e) => setFixedTermEndDate(e.target.value)}
+                    />
+                    <p className="text-muted-foreground text-[11px]">
+                      End date for the new fixed-term agreement.
+                    </p>
+                  </>
+                )
+              ) : (
+                <p className="text-muted-foreground flex h-9 items-center rounded-md border border-dashed px-3 text-sm">
+                  Not applicable — periodic tenancy
+                </p>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <Label>Negotiable</Label>
-                <div className="flex gap-2">
-                  <ChoiceButton
-                    active={rentNegotiable === true}
-                    disabled={busy}
-                    onClick={() => setRentNegotiable(true)}
-                  >
-                    Yes
-                  </ChoiceButton>
-                  <ChoiceButton
-                    active={rentNegotiable === false}
-                    disabled={busy}
-                    onClick={() => setRentNegotiable(false)}
-                  >
-                    No
-                  </ChoiceButton>
-                </div>
+            <div className="space-y-2">
+              <Label className="flex h-5 items-center">Negotiable</Label>
+              <div className="flex gap-2">
+                <ChoiceButton
+                  active={rentNegotiable === true}
+                  disabled={busy}
+                  onClick={() => setRentNegotiable(true)}
+                >
+                  Yes
+                </ChoiceButton>
+                <ChoiceButton
+                  active={rentNegotiable === false}
+                  disabled={busy}
+                  onClick={() => setRentNegotiable(false)}
+                >
+                  No
+                </ChoiceButton>
               </div>
             </div>
           </div>

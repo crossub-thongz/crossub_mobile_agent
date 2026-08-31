@@ -11,6 +11,10 @@ import { useRentReviewStore } from '@/lib/rent-review/store';
 import type { RentReviewWorkflowDetail } from '@/lib/rent-review/types';
 import { apiErrorMessage } from '@/lib/utils/api-error-message';
 
+/**
+ * Disabled: agents no longer record tenant accept / reject / counter on behalf of the tenant.
+ * The tenant submits via the tenant portal; see `RentReviewTenantPortalResponseCard`.
+ */
 export function RentReviewTenantResponseOnBehalfPanel({
   detail,
   onUpdated,

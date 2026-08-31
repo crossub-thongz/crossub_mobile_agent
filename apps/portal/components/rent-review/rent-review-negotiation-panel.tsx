@@ -9,11 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RentReviewNegotiationAuditBadge } from '@/components/rent-review/rent-review-negotiation-audit-badge';
 import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
-import { RentReviewTenantResponseOnBehalfPanel } from '@/components/rent-review/rent-review-tenant-response-on-behalf-panel';
+import { RentReviewTenantPortalResponseCard } from '@/components/rent-review/rent-review-tenant-portal-response-card';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
-  canRecordTenantResponseOnBehalf,
   canResolveNegotiation,
 } from '@/lib/rent-review/agent-workflow-model';
 import { deriveRentIncreaseOnDate } from '@/lib/rent-review/agent-decision-scheduling';
@@ -145,7 +144,6 @@ export function RentReviewNegotiationPanel({
   };
 
   const noticeAudit = [...detail.auditLog].reverse().find((e) => e.kind === 'tenant_notices_dispatched');
-  const showRecordResponse = canRecordTenantResponseOnBehalf(detail);
 
   const downloadNotice = async () => {
     setBusy(true);
@@ -186,9 +184,12 @@ export function RentReviewNegotiationPanel({
         <p className="text-muted-foreground text-xs">
           The system sends an automated reminder every 2 days until the tenant responds.
         </p>
+        <RentReviewTenantPortalResponseCard detail={detail} />
+        {/* Agent recording a tenant response is disabled — the tenant submits via the tenant portal.
         {showRecordResponse && !readOnly ? (
           <RentReviewTenantResponseOnBehalfPanel detail={detail} onUpdated={onUpdated} />
         ) : null}
+        */}
       </div>
     );
   }

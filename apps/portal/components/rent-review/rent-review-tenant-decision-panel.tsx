@@ -6,6 +6,7 @@ import { RentReviewLeaseAgreementContractPanel } from '@/components/rent-review/
 import { RentReviewEndLeasingPanel } from '@/components/rent-review/rent-review-end-leasing-panel';
 import { RentReviewSignedLeaseAgreementCard } from '@/components/rent-review/rent-review-signed-lease-agreement-card';
 import { RentReviewTenantAcceptanceSummary } from '@/components/rent-review/rent-review-tenant-acceptance-summary';
+import { RentReviewTenantPortalResponseCard } from '@/components/rent-review/rent-review-tenant-portal-response-card';
 import {
   buildTenantAcceptanceSummary,
   isPreferredRenewalFixed,
@@ -58,9 +59,7 @@ export function RentReviewTenantDecisionPanel({
         ) : null}
 
         {awaiting ? (
-          <p className="text-muted-foreground text-xs">
-            Awaiting tenant accept or decline via the tenant portal.
-          </p>
+          <RentReviewTenantPortalResponseCard detail={detail} embedded />
         ) : null}
       </section>
 

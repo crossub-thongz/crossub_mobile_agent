@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { RentReviewTenantReminderCountdownBadge } from '@/components/rent-review/rent-review-tenant-reminder-countdown-badge';
 import { RentReviewTenantRemindersDialog } from '@/components/rent-review/rent-review-tenant-reminders-dialog';
 import { RentReviewTenantNoticeTermsSummary } from '@/components/rent-review/rent-review-tenant-notice-terms-summary';
+import { RentReviewTenantPortalResponseCard } from '@/components/rent-review/rent-review-tenant-portal-response-card';
 import {
   RENT_REVIEW_AGENT_STEP,
   auditEntriesForStep,
@@ -220,6 +221,8 @@ export function RentReviewTenantNotifiedPanel({
           ) : null}
         </section>
       ) : null}
+
+      {noticeSent ? <RentReviewTenantPortalResponseCard detail={detail} /> : null}
 
       {/* Record tenant response — tenants respond via the tenant portal instead.
       {showRecordResponse && !readOnly ? (

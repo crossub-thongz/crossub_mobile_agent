@@ -303,6 +303,16 @@ export function RentReviewTaskDetailView({
                           {formatDate(tenantResponse.at)}
                         </p>
                       ) : null}
+                      {tenantResponse.counterWeekly != null ? (
+                        <p className="mt-2 text-sm font-medium tabular-nums">
+                          Counter-offer {formatCurrency(tenantResponse.counterWeekly)}/wk
+                        </p>
+                      ) : null}
+                      {tenantResponse.moveOutDate ? (
+                        <p className="text-muted-foreground mt-1 text-sm tabular-nums">
+                          Move-out {formatDate(tenantResponse.moveOutDate)}
+                        </p>
+                      ) : null}
                       {tenantResponse.reason ? (
                         <p className="text-muted-foreground mt-2 text-sm">
                           {tenantResponse.reason}
@@ -395,6 +405,21 @@ export function RentReviewTaskDetailView({
                   <p className="mt-2 text-sm font-semibold text-violet-700">
                     {tenantResponse.status}
                   </p>
+                  {tenantResponse.at ? (
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {formatDate(tenantResponse.at)}
+                    </p>
+                  ) : null}
+                  {tenantResponse.counterWeekly != null ? (
+                    <p className="mt-3 text-sm font-medium tabular-nums">
+                      Counter-offer {formatCurrency(tenantResponse.counterWeekly)}/wk
+                    </p>
+                  ) : null}
+                  {tenantResponse.moveOutDate ? (
+                    <p className="text-muted-foreground mt-2 text-sm tabular-nums">
+                      Move-out {formatDate(tenantResponse.moveOutDate)}
+                    </p>
+                  ) : null}
                   {tenantResponse.reason ? (
                     <p className="text-muted-foreground mt-3 text-sm">{tenantResponse.reason}</p>
                   ) : null}
