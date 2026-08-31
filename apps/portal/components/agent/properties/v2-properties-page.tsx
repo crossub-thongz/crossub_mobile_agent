@@ -44,6 +44,7 @@ export function V2PropertiesPage() {
     deleteDraftProperty,
     endPropertyManagement,
     archiveProperty,
+    restoreProperty,
     refreshArchivedProperties,
   } = useAgentData();
   const setPropertiesPageActive = useShellAsideStore((s) => s.setPropertiesPageActive);
@@ -59,6 +60,7 @@ export function V2PropertiesPage() {
   const [desktopViewport, setDesktopViewport] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Property | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const initialSelectDone = useRef(false);
 
   useEffect(() => {
@@ -149,6 +151,26 @@ export function V2PropertiesPage() {
       setRemoving(false);
     }
   }, [archiveProperty, pendingDelete, selectedId, setSelectedId]);
+
+  const handleRestore = useCallback(
+    async (property: Property) => {
+      if (!apiConnected) {
+        toast.error('Connect to the API to restore this property');
+        return;
+      }
+      setRestoringId(property.id);
+      try {
+        await restoreProperty(property.id);
+        toast.success('Property restored to your live list');
+        setFilter('all');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not restore property');
+      } finally {
+        setRestoringId(null);
+      }
+    },
+    [apiConnected, restoreProperty],
+  );
 
   useEffect(() => {
     if (apiConnected) {
@@ -379,6 +401,12 @@ export function V2PropertiesPage() {
             onOpenProfile={handlePropertyOpen}
             onDeleteDraft={apiConnected && !isArchivedView ? setPendingDelete : undefined}
             onArchive={apiConnected && !isArchivedView ? setPendingDelete : undefined}
+            onRestore={
+              apiConnected && isArchivedView
+                ? (property) => void handleRestore(property)
+                : undefined
+            }
+            restoringId={restoringId}
           />
 
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">

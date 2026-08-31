@@ -19,20 +19,6 @@ import { propertyDetail, ROUTES } from '@/constants/routes';
 import { buildEndLeasingArchiveRows } from '@/lib/archive-case-display';
 import type { Property } from '@/lib/types';
 
-import { EmptyState } from '@/components/agent/empty-state';
-import { FilterChips } from '@/components/agent/filter-chips';
-import { PageIntro } from '@/components/agent/page-intro';
-import {
-  ArchivedEndLeasingTable,
-  ArchivedLeasingCyclesTable,
-  ArchivedRentReviewsTable,
-} from '@/components/agent/archive-module-tables';
-import { PropertyListView } from '@/components/agent/property-list-view';
-import { AgentShell } from '@/components/layout/agent-shell';
-import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
-import { buildEndLeasingArchiveRows } from '@/lib/archive-case-display';
-
 const TABS = [
   { id: 'properties', label: 'Properties' },
   { id: 'new-letting', label: 'New letting' },

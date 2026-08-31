@@ -68,17 +68,21 @@ function PropertyRowActions({
   onOpenProfile,
   onDeleteDraft,
   onArchive,
+  onRestore,
+  restoring,
 }: {
   isDraft: boolean;
   onContinue?: () => void;
   onOpenProfile?: () => void;
   onDeleteDraft?: () => void;
   onArchive?: () => void;
+  onRestore?: () => void;
+  restoring?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const hasActions = isDraft
     ? Boolean(onContinue || onDeleteDraft)
-    : Boolean(onOpenProfile || onArchive);
+    : Boolean(onOpenProfile || onArchive || onRestore);
   if (!hasActions) return null;
 
   return (
@@ -155,6 +159,19 @@ function PropertyRowActions({
                 Archive
               </button>
             ) : null}
+            {onRestore ? (
+              <button
+                type="button"
+                disabled={restoring}
+                onClick={() => {
+                  setOpen(false);
+                  onRestore();
+                }}
+                className="hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {restoring ? 'Restoring…' : 'Restore'}
+              </button>
+            ) : null}
           </>
         )}
       </PopoverContent>
@@ -229,6 +246,8 @@ export function PropertyListV2Table({
   onOpenProfile,
   onDeleteDraft,
   onArchive,
+  onRestore,
+  restoringId,
 }: {
   properties: Property[];
   selectedId: string | null;
@@ -240,6 +259,8 @@ export function PropertyListV2Table({
   onOpenProfile?: (propertyId: string) => void;
   onDeleteDraft?: (property: Property) => void;
   onArchive?: (property: Property) => void;
+  onRestore?: (property: Property) => void;
+  restoringId?: string | null;
 }) {
   const {
     maintenanceAll,
@@ -434,6 +455,12 @@ export function PropertyListV2Table({
                             ? () => onArchive(property)
                             : undefined
                         }
+                        onRestore={
+                          !isDraft && onRestore
+                            ? () => onRestore(property)
+                            : undefined
+                        }
+                        restoring={restoringId === property.id}
                       />
                     </div>
                   </td>

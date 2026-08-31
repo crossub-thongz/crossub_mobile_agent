@@ -43,6 +43,7 @@ export default function PropertiesPage() {
     apiConnected,
     endPropertyManagement,
     archiveProperty,
+    restoreProperty,
     deleteDraftProperty,
     refreshArchivedProperties,
     messages,
@@ -54,6 +55,7 @@ export default function PropertiesPage() {
   const [search, setSearch] = useState('');
   const [pendingDelete, setPendingDelete] = useState<Property | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const isArchivedView = filter === 'archived';
 
@@ -148,6 +150,23 @@ export default function PropertiesPage() {
     }
   };
 
+  const handleRestore = async (property: Property) => {
+    if (!apiConnected) {
+      toast.error('Connect to the API to restore this property');
+      return;
+    }
+    setRestoringId(property.id);
+    try {
+      await restoreProperty(property.id);
+      toast.success('Property restored to your live list');
+      setFilter('all');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not restore property');
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
   if (isV2) {
     return (
       <AgentShell
@@ -220,6 +239,10 @@ export default function PropertiesPage() {
               isArchivedView ? propertyDetail(property.id) : propertyHref(property)
             }
             onDelete={setPendingDelete}
+            onRestore={
+              isArchivedView ? (property) => void handleRestore(property) : undefined
+            }
+            restoringId={restoringId}
             canManage={apiConnected && !isArchivedView}
           />
         )}

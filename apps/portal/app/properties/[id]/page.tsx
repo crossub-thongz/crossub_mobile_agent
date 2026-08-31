@@ -40,6 +40,7 @@ import { PropertyHistoryTab } from '@/components/agent/property-history-tab';
 import { PropertyRentReviewTab } from '@/components/agent/property-rent-review-tab';
 import { RentReviewDetailDialog } from '@/components/agent/rent-review-detail-dialog';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyRegistryResume, ROUTES } from '@/constants/routes';
 import { fetchProperty } from '@/lib/crossub-api/agent-client';
@@ -68,6 +69,7 @@ import { readPropertyTribunalFocusId } from '@/lib/billing/job-case-focus';
 import { useAgentStore } from '@/lib/store';
 import type { Property } from '@/lib/types';
 import { formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
+import { toast } from 'sonner';
 import { useRecordRecentPropertyVisit } from '@/hooks/use-record-recent-visit';
 import { formatCarSpaces } from '@/lib/property-overview';
 import {
@@ -134,6 +136,8 @@ export default function PropertyDetailPage() {
     getPropertyActions,
     refresh,
     agentPortfolioId,
+    apiConnected,
+    restoreProperty,
   } = useAgentData();
   const decisions = useAgentStore((s) => s.rentReviewDecisions);
   const listProperty =
@@ -143,14 +147,15 @@ export default function PropertyDetailPage() {
     listProperty ? 'ready' : 'loading',
   );
   const [localImageUrl, setLocalImageUrl] = useState<string | null | undefined>(undefined);
+  const [restoring, setRestoring] = useState(false);
   const property = listProperty ?? fetchedProperty;
   const displayProperty =
     property && localImageUrl !== undefined
       ? { ...property, imageUrl: localImageUrl }
       : property;
+  const isOnArchivedList = archivedProperties.some((p) => p.id === id);
   const isArchivedProperty = Boolean(
-    property?.endOfManagementDate ||
-      archivedProperties.some((p) => p.id === id),
+    property?.endOfManagementDate || isOnArchivedList,
   );
 
   // Properties archived after end-leasing or end-of-management drop out of the active
@@ -478,15 +483,43 @@ export default function PropertyDetailPage() {
   const profileBanners = (
     <>
       {isArchivedProperty ? (
-        <div className="rounded-xl border border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm">
-          <p className="font-medium text-foreground">Archived property</p>
-          <p className="text-muted-foreground mt-1">
-            Management ended
-            {property.endOfManagementDate
-              ? ` on ${formatDate(property.endOfManagementDate)}`
-              : ''}
-            . This record is read-only for reference.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm">
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">
+              {isOnArchivedList ? 'Archived property' : 'Management ended'}
+            </p>
+            <p className="text-muted-foreground mt-1">
+              {isOnArchivedList
+                ? 'This property is in Archive. Restore it to return it to the live list. Closed jobs stay closed.'
+                : `Management ended${
+                    property.endOfManagementDate
+                      ? ` on ${formatDate(property.endOfManagementDate)}`
+                      : ''
+                  }.`}
+            </p>
+          </div>
+          {isOnArchivedList ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={restoring || !apiConnected}
+              onClick={() => {
+                setRestoring(true);
+                void restoreProperty(id)
+                  .then(() => {
+                    toast.success('Property restored to your live list');
+                  })
+                  .catch((err) => {
+                    toast.error(
+                      err instanceof Error ? err.message : 'Could not restore property',
+                    );
+                  })
+                  .finally(() => setRestoring(false));
+              }}
+            >
+              {restoring ? 'Restoring…' : 'Restore property'}
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {property.registryIntakeComplete === false ? (
@@ -657,15 +690,43 @@ export default function PropertyDetailPage() {
     <AgentShell backHref={ROUTES.PROPERTIES} backLabel="Properties">
       <div className="space-y-4 pb-8">
         {isArchivedProperty ? (
-          <div className="rounded-xl border border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm">
-            <p className="font-medium text-foreground">Archived property</p>
-            <p className="text-muted-foreground mt-1">
-              Management ended
-              {property.endOfManagementDate
-                ? ` on ${formatDate(property.endOfManagementDate)}`
-                : ''}
-              . This record is read-only for reference.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm">
+            <div className="min-w-0">
+              <p className="font-medium text-foreground">
+                {isOnArchivedList ? 'Archived property' : 'Management ended'}
+              </p>
+              <p className="text-muted-foreground mt-1">
+                {isOnArchivedList
+                  ? 'This property is in Archive. Restore it to return it to the live list. Closed jobs stay closed.'
+                  : `Management ended${
+                      property.endOfManagementDate
+                        ? ` on ${formatDate(property.endOfManagementDate)}`
+                        : ''
+                    }.`}
+              </p>
+            </div>
+            {isOnArchivedList ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={restoring || !apiConnected}
+                onClick={() => {
+                  setRestoring(true);
+                  void restoreProperty(id)
+                    .then(() => {
+                      toast.success('Property restored to your live list');
+                    })
+                    .catch((err) => {
+                      toast.error(
+                        err instanceof Error ? err.message : 'Could not restore property',
+                      );
+                    })
+                    .finally(() => setRestoring(false));
+                }}
+              >
+                {restoring ? 'Restoring…' : 'Restore property'}
+              </Button>
+            ) : null}
           </div>
         ) : null}
         {property.registryIntakeComplete === false ? (
