@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { AtSign } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { AgentInputFeedbackAnchor } from '@/components/ui/agent-input-feedback';
 import {
   buildThreadMentionCandidates,
   detectMentionQuery,
@@ -174,30 +175,32 @@ export function MessageCompose({
         </div>
       )}
 
-      <textarea
-        ref={textareaRef}
-        data-input-kind="message"
-        data-allow-emoji
-        maxLength={5000}
-        placeholder={placeholder}
-        value={value}
-        rows={rows}
-        disabled={disabled}
-        onChange={(e) => handleChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onClick={() => {
-          const el = textareaRef.current;
-          if (!el) return;
-          const query = detectMentionQuery(value, el.selectionStart ?? value.length);
-          setMentionOpen(query != null);
-        }}
-        className={cn(
-          'placeholder:text-muted-foreground w-full resize-none border px-3 py-2 text-sm outline-none',
-          variant === 'v2'
-            ? 'border-border/50 rounded-xl border bg-transparent focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-ring/30'
-            : 'border-input rounded-md bg-transparent focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:bg-input/30',
-        )}
-      />
+      <AgentInputFeedbackAnchor kind="message" value={value}>
+        <textarea
+          ref={textareaRef}
+          data-input-kind="message"
+          data-allow-emoji
+          maxLength={5000}
+          placeholder={placeholder}
+          value={value}
+          rows={rows}
+          disabled={disabled}
+          onChange={(e) => handleChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onClick={() => {
+            const el = textareaRef.current;
+            if (!el) return;
+            const query = detectMentionQuery(value, el.selectionStart ?? value.length);
+            setMentionOpen(query != null);
+          }}
+          className={cn(
+            'placeholder:text-muted-foreground w-full resize-none border px-3 py-2 text-sm outline-none',
+            variant === 'v2'
+              ? 'border-border/50 rounded-xl border bg-transparent focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-ring/30'
+              : 'border-input rounded-md bg-transparent focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:bg-input/30',
+          )}
+        />
+      </AgentInputFeedbackAnchor>
     </div>
   );
 }

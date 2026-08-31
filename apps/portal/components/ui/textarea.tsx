@@ -1,17 +1,16 @@
+'use client';
+
 import * as React from 'react';
 
+import { AgentInputHint } from '@/components/ui/agent-input-feedback';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import {
   AGENT_INPUT_RULES,
   type AgentInputKind,
+  agentInputViolationMessages,
   sanitizeAgentInput,
 } from '@/lib/agent-input-rules';
-import {
-  bindSanitizedTextValue,
-  propAllowsEmoji,
-  propAllowsHtml,
-  stripEmojis,
-} from '@/lib/strip-emojis';
+import { propAllowsEmoji, propAllowsHtml, stripEmojis } from '@/lib/strip-emojis';
 import { cn } from '@/lib/utils';
 
 export type TextareaProps = React.ComponentProps<'textarea'> & {
@@ -25,6 +24,8 @@ function Textarea({
   ref,
   onChange,
   onKeyDown,
+  onFocus,
+  onBlur,
   value,
   defaultValue,
   inputKind,
@@ -32,6 +33,8 @@ function Textarea({
   ...props
 }: TextareaProps) {
   const isV2 = useIsAgentUiV2();
+  const [focused, setFocused] = React.useState(false);
+  const [notices, setNotices] = React.useState<string[]>([]);
   const rule = inputKind ? AGENT_INPUT_RULES[inputKind] : undefined;
   const dataAllowEmoji = props['data-allow-emoji'];
   const dataAllowHtml = props['data-allow-html'];
@@ -43,8 +46,9 @@ function Textarea({
   const textValue = typeof value === 'string' ? sanitize(value) : value;
   const textDefault =
     typeof defaultValue === 'string' ? sanitize(defaultValue) : defaultValue;
+  const showHint = isV2 && !!inputKind && (focused || notices.length > 0);
 
-  return (
+  const field = (
     <textarea
       ref={ref}
       data-slot="textarea"
@@ -59,15 +63,63 @@ function Textarea({
       data-allow-emoji={allowEmoji ? true : dataAllowEmoji}
       maxLength={resolvedMaxLength}
       value={textValue}
-      defaultValue={textDefault}
-      onChange={bindSanitizedTextValue({ kind: inputKind, allowEmoji, allowHtml, onChange })}
+      defaultValue={value === undefined ? textDefault : undefined}
+      onFocus={(event) => {
+        setFocused(true);
+        onFocus?.(event);
+      }}
+      onBlur={(event) => {
+        setFocused(false);
+        onBlur?.(event);
+      }}
+      onChange={(event) => {
+        const raw = event.target.value;
+        const next = sanitize(raw);
+        const nextNotices =
+          raw === next
+            ? []
+            : agentInputViolationMessages(raw, {
+                kind: inputKind,
+                allowHtml,
+                allowEmoji,
+                stripEmojis,
+              });
+        setNotices((prev) =>
+          prev.length === nextNotices.length && prev.every((item, i) => item === nextNotices[i])
+            ? prev
+            : nextNotices,
+        );
+        onChange?.(event);
+      }}
       onKeyDown={(event) => {
         if (rule && !rule.allowLineBreaks && event.key === 'Enter') {
           event.preventDefault();
+          setNotices(['Line breaks are not allowed — use one line']);
         }
         onKeyDown?.(event);
       }}
     />
+  );
+
+  if (!isV2 || !inputKind) return field;
+
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-col gap-1',
+        className?.includes('flex-1') ? 'flex-1' : 'w-full',
+      )}
+    >
+      {field}
+      {showHint ? (
+        <AgentInputHint
+          kind={inputKind}
+          notices={notices}
+          focused={focused}
+          value={typeof textValue === 'string' ? textValue : ''}
+        />
+      ) : null}
+    </div>
   );
 }
 

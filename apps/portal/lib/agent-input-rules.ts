@@ -48,11 +48,17 @@ export function parseAgentInputKind(value: string | undefined): AgentInputKind |
   return KIND_VALUES.has(value) ? (value as AgentInputKind) : undefined;
 }
 
-const HTML_TAG_OR_COMMENT = /<!--[\s\S]*?-->|<\/?[a-zA-Z][^>]*>/g;
+function htmlTagOrCommentPattern(): RegExp {
+  return /<!--[\s\S]*?-->|<\/?[a-zA-Z][^>]*>/g;
+}
 
 export function stripHtmlTags(value: string): string {
   if (!value) return value;
-  return value.replace(HTML_TAG_OR_COMMENT, '');
+  return value.replace(htmlTagOrCommentPattern(), '');
+}
+
+export function containsHtmlTags(value: string): boolean {
+  return htmlTagOrCommentPattern().test(value);
 }
 
 function codePointLength(value: string): number {
@@ -62,6 +68,44 @@ function codePointLength(value: string): number {
 function truncateCodePoints(value: string, maxLength: number): string {
   if (codePointLength(value) <= maxLength) return value;
   return [...value].slice(0, maxLength).join('');
+}
+
+export function agentInputRequirementText(kind: AgentInputKind): string {
+  const rule = AGENT_INPUT_RULES[kind];
+  const parts = [`Max ${rule.maxLength.toLocaleString()} characters`, 'no HTML'];
+  if (!rule.allowLineBreaks) parts.push('one line');
+  if (!rule.allowEmoji) parts.push('no emoji');
+  return parts.join(' · ');
+}
+
+export function agentInputViolationMessages(
+  raw: string,
+  options: {
+    kind?: AgentInputKind | null;
+    allowHtml?: boolean;
+    allowEmoji?: boolean;
+    stripEmojis?: (value: string) => string;
+  } = {},
+): string[] {
+  const messages: string[] = [];
+  const rule = options.kind ? AGENT_INPUT_RULES[options.kind] : undefined;
+  if (!options.allowHtml && containsHtmlTags(raw)) {
+    messages.push('HTML is not allowed');
+  }
+  if (rule && !rule.allowLineBreaks && /[\r\n]/.test(raw)) {
+    messages.push('Line breaks are not allowed — use one line');
+  }
+  if (options.allowEmoji === false && options.stripEmojis && options.stripEmojis(raw) !== raw) {
+    messages.push('Emoji is not allowed');
+  }
+  if (rule && codePointLength(raw) > rule.maxLength) {
+    messages.push(`Maximum ${rule.maxLength.toLocaleString()} characters`);
+  }
+  return messages;
+}
+
+export function agentInputValueLength(value: string): number {
+  return codePointLength(value);
 }
 
 export function sanitizeAgentInput(

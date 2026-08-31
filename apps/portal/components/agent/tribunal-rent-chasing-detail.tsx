@@ -17,8 +17,10 @@ import { toast } from 'sonner';
 
 import { EvictionRequiredDialog } from '@/components/agent/eviction-required-dialog';
 import { Button } from '@/components/ui/button';
+import { AgentInputFeedbackAnchor } from '@/components/ui/agent-input-feedback';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { bindSanitizedTextValue } from '@/lib/strip-emojis';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { TRIBUNAL_CASE_STATUS } from '@/constants/api-enums';
 import {
@@ -833,20 +835,26 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
         <Label className="sr-only" htmlFor="tribunal-agent-notes">
           Notes
         </Label>
-        <textarea
-          id="tribunal-agent-notes"
-          data-input-kind="internal_note"
-          data-allow-emoji
-          maxLength={10000}
-          value={notes}
-          onChange={(e) => {
-            setNotes(e.target.value);
-            setNotesDirty(true);
-          }}
-          rows={4}
-          className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex w-full rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
-          placeholder="Add notes for this tribunal case…"
-        />
+        <AgentInputFeedbackAnchor kind="internal_note" value={notes}>
+          <textarea
+            id="tribunal-agent-notes"
+            data-input-kind="internal_note"
+            data-allow-emoji
+            maxLength={10000}
+            value={notes}
+            onChange={bindSanitizedTextValue({
+              kind: 'internal_note',
+              allowEmoji: true,
+              onChange: (e) => {
+                setNotes(e.target.value);
+                setNotesDirty(true);
+              },
+            })}
+            rows={4}
+            className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 flex w-full rounded-md border px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+            placeholder="Add notes for this tribunal case…"
+          />
+        </AgentInputFeedbackAnchor>
       </section>
     </div>
   );

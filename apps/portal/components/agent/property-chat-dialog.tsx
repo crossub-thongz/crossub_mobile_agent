@@ -9,7 +9,9 @@ import { MessageCompose } from '@/components/agent/message-compose';
 import { MessageThreadBubble } from '@/components/agent/message-thread-bubble';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
+import { AgentInputFeedbackAnchor } from '@/components/ui/agent-input-feedback';
 import type { MessageCategory, ThreadMessage } from '@/lib/types';
+import { bindSanitizedTextValue } from '@/lib/strip-emojis';
 import { cn, formatDateTime } from '@/lib/utils';
 
 function parseEmailMessage(
@@ -283,26 +285,32 @@ export function PropertyChatDialog({
 
             <div className="border-border border-t p-3 sm:p-4">
               <div className="flex items-end gap-2">
-                <textarea
-                  value={draft}
-                  data-input-kind="message"
-                  data-allow-emoji
-                  maxLength={5000}
-                  onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
+                <AgentInputFeedbackAnchor kind="message" value={draft} className="flex-1">
+                  <textarea
+                    value={draft}
+                    data-input-kind="message"
+                    data-allow-emoji
+                    maxLength={5000}
+                    onChange={bindSanitizedTextValue({
+                      kind: 'message',
+                      allowEmoji: true,
+                      onChange: (e) => setDraft(e.target.value),
+                    })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    rows={chatTab === 'email' ? 3 : 2}
+                    placeholder={
+                      chatTab === 'app'
+                        ? 'Write an in-app message…'
+                        : 'Write an email message…'
                     }
-                  }}
-                  rows={chatTab === 'email' ? 3 : 2}
-                  placeholder={
-                    chatTab === 'app'
-                      ? 'Write an in-app message…'
-                      : 'Write an email message…'
-                  }
-                  className="border-border focus:ring-primary/20 min-h-[44px] flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2"
-                />
+                    className="border-border focus:ring-primary/20 min-h-[44px] w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2"
+                  />
+                </AgentInputFeedbackAnchor>
                 <Button
                   type="button"
                   size="sm"

@@ -1,18 +1,17 @@
+'use client';
+
 import * as React from 'react';
 
 import { INPUT_TYPE, NUMBER_INPUT_WHEEL_EVENT } from '@/constants/form-input';
+import { AgentInputHint } from '@/components/ui/agent-input-feedback';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import {
   AGENT_INPUT_RULES,
   type AgentInputKind,
+  agentInputViolationMessages,
   sanitizeAgentInput,
 } from '@/lib/agent-input-rules';
-import {
-  bindSanitizedTextValue,
-  propAllowsEmoji,
-  propAllowsHtml,
-  stripEmojis,
-} from '@/lib/strip-emojis';
+import { propAllowsEmoji, propAllowsHtml, stripEmojis } from '@/lib/strip-emojis';
 import { cn } from '@/lib/utils';
 
 export type InputProps = React.ComponentProps<'input'> & {
@@ -28,6 +27,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       type,
       onChange,
       onKeyDown,
+      onFocus,
+      onBlur,
       value,
       defaultValue,
       inputKind,
@@ -38,6 +39,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ) => {
     const isV2 = useIsAgentUiV2();
     const innerRef = React.useRef<HTMLInputElement | null>(null);
+    const [focused, setFocused] = React.useState(false);
+    const [notices, setNotices] = React.useState<string[]>([]);
     const rule = inputKind ? AGENT_INPUT_RULES[inputKind] : undefined;
     const dataAllowEmoji = props['data-allow-emoji'];
     const dataAllowHtml = props['data-allow-html'];
@@ -49,6 +52,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const textValue = typeof value === 'string' ? sanitize(value) : value;
     const textDefault =
       typeof defaultValue === 'string' ? sanitize(defaultValue) : defaultValue;
+    const showHint = isV2 && !!inputKind && (focused || notices.length > 0);
 
     const setRefs = React.useCallback(
       (node: HTMLInputElement | null) => {
@@ -73,7 +77,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       return () => el.removeEventListener(NUMBER_INPUT_WHEEL_EVENT, swallowWheel);
     }, [type]);
 
-    return (
+    const field = (
       <input
         ref={setRefs}
         type={type}
@@ -87,10 +91,57 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         data-allow-emoji={allowEmoji ? true : dataAllowEmoji}
         maxLength={resolvedMaxLength}
         value={textValue}
-        defaultValue={textDefault}
-        onChange={bindSanitizedTextValue({ kind: inputKind, allowEmoji, allowHtml, onChange })}
+        defaultValue={value === undefined ? textDefault : undefined}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
+        onChange={(event) => {
+          const raw = event.target.value;
+          const next = sanitize(raw);
+          const nextNotices =
+            raw === next
+              ? []
+              : agentInputViolationMessages(raw, {
+                  kind: inputKind,
+                  allowHtml,
+                  allowEmoji,
+                  stripEmojis,
+                });
+          setNotices((prev) =>
+            prev.length === nextNotices.length && prev.every((item, i) => item === nextNotices[i])
+              ? prev
+              : nextNotices,
+          );
+          onChange?.(event);
+        }}
         onKeyDown={onKeyDown}
       />
+    );
+
+    if (!isV2 || !inputKind) return field;
+
+    return (
+      <div
+        className={cn(
+          'flex min-w-0 flex-col gap-1',
+          className?.includes('flex-1') ? 'flex-1' : 'w-full',
+        )}
+      >
+        {field}
+        {showHint ? (
+          <AgentInputHint
+            kind={inputKind}
+            notices={notices}
+            focused={focused}
+            value={typeof textValue === 'string' ? textValue : ''}
+          />
+        ) : null}
+      </div>
     );
   },
 );

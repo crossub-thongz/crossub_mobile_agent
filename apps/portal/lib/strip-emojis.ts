@@ -1,9 +1,10 @@
 /**
  * Strip emoji (and leftover joiners / variation selectors) from user-typed text.
  *
- * `stripEmojis` is the helper to call on any string. Input / Textarea and
- * `installGlobalAgentInputFilter` apply Agent App rules (no HTML, length,
- * line breaks, emoji policy) to every field automatically.
+ * `stripEmojis` is the helper to call on any string. Input / Textarea apply
+ * Agent App rules (no HTML, length, line breaks, emoji policy) in React
+ * onChange. A document-level filter must not rewrite field values — that
+ * desyncs controlled inputs and they stop accepting keystrokes.
  *
  * Opt a single unclassified field into emoji with `data-allow-emoji`.
  * Prefer `inputKind` / `data-input-kind` for listed field types.
@@ -12,8 +13,10 @@
  * still works after bundling and for the OS emoji picker (composition events).
  */
 
+import { dispatchAgentInputFeedback } from '@/lib/agent-input-feedback-event';
 import {
   AGENT_INPUT_RULES,
+  agentInputViolationMessages,
   parseAgentInputKind,
   sanitizeAgentInput,
 } from '@/lib/agent-input-rules';
@@ -108,59 +111,6 @@ export function resolveAllowEmoji(
   return !stripEmojiByDefault;
 }
 
-function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, next: string) {
-  if (typeof window === 'undefined') {
-    el.value = next;
-    return;
-  }
-  const proto =
-    el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-  if (setter) setter.call(el, next);
-  else el.value = next;
-}
-
-function sanitizeFieldValue(
-  el: HTMLInputElement | HTMLTextAreaElement,
-  value: string,
-  stripEmojiByDefault: boolean,
-): string {
-  const kind = parseAgentInputKind(el.dataset.inputKind);
-  return sanitizeAgentInput(value, {
-    kind,
-    allowEmoji: resolveAllowEmoji(el, stripEmojiByDefault),
-    allowHtml: allowsHtml(el.dataset),
-    stripEmojis,
-  });
-}
-
-function restoreCaret(
-  el: HTMLInputElement | HTMLTextAreaElement,
-  previous: string,
-  caret: number,
-  stripEmojiByDefault: boolean,
-) {
-  const nextCaret = sanitizeFieldValue(el, previous.slice(0, caret), stripEmojiByDefault).length;
-  try {
-    el.setSelectionRange(nextCaret, nextCaret);
-  } catch {
-    // Some input types reject setSelectionRange.
-  }
-}
-
-function applySanitizedValue(
-  el: HTMLInputElement | HTMLTextAreaElement,
-  stripEmojiByDefault: boolean,
-): boolean {
-  const previous = el.value;
-  const next = sanitizeFieldValue(el, previous, stripEmojiByDefault);
-  if (next === previous) return false;
-  const caret = el.selectionStart ?? next.length;
-  setNativeValue(el, next);
-  restoreCaret(el, previous, caret, stripEmojiByDefault);
-  return true;
-}
-
 /** Wrap an input/textarea onChange so the handler receives the sanitized value. */
 export function bindSanitizedTextValue<E extends { target: { value: string } }>(options: {
   kind?: ReturnType<typeof parseAgentInputKind>;
@@ -169,14 +119,25 @@ export function bindSanitizedTextValue<E extends { target: { value: string } }>(
   onChange?: (event: E) => void;
 }): (event: E) => void {
   return (event) => {
-    const next = sanitizeAgentInput(event.target.value, {
+    const raw = event.target.value;
+    const next = sanitizeAgentInput(raw, {
       kind: options.kind,
       allowEmoji: options.allowEmoji,
       allowHtml: options.allowHtml,
       stripEmojis,
     });
-    if (next !== event.target.value) {
-      setNativeValue(event.target as HTMLInputElement | HTMLTextAreaElement, next);
+    dispatchAgentInputFeedback(
+      event.target,
+      agentInputViolationMessages(raw, {
+        kind: options.kind,
+        allowHtml: options.allowHtml,
+        allowEmoji: options.allowEmoji,
+        stripEmojis,
+      }),
+    );
+    if (next !== raw) {
+      // Use the instance setter so React's value tracker stays in sync.
+      event.target.value = next;
     }
     options.onChange?.(event);
   };
@@ -189,63 +150,34 @@ export function bindTextValueWithoutEmojis<E extends { target: { value: string }
   return bindSanitizedTextValue({ allowEmoji: false, onChange: handler });
 }
 
-function insertCleanText(el: HTMLInputElement | HTMLTextAreaElement, text: string) {
-  const start = el.selectionStart ?? el.value.length;
-  const end = el.selectionEnd ?? start;
-  el.setRangeText(text, start, end, 'end');
-  el.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, data: text }));
-}
+/**
+ * Bump when the filter's event strategy changes so HMR re-installs listeners.
+ */
+export const AGENT_INPUT_FILTER_REVISION = 5;
 
-/** Document-level capture so native <input> / <textarea> are covered too. */
-export function installGlobalAgentInputFilter(options?: {
+type AgentInputFilterHost = Window & {
+  __crossubAgentInputFilterCleanup?: () => void;
+};
+
+/**
+ * Detach any previous document-level filter. Do not rewrite field values here:
+ * mutating the DOM during `input` desyncs React controlled fields and they
+ * stop accepting keystrokes.
+ */
+export function installGlobalAgentInputFilter(_options?: {
   stripEmojiByDefault?: boolean;
 }): () => void {
   if (typeof window === 'undefined') return () => undefined;
-  const stripEmojiByDefault = options?.stripEmojiByDefault ?? true;
+  const host = window as AgentInputFilterHost;
+  host.__crossubAgentInputFilterCleanup?.();
 
-  const onBeforeInput = (event: Event) => {
-    const ie = event as InputEvent;
-    if (ie.isComposing || !ie.cancelable) return;
-    if (!ie.inputType?.startsWith('insert')) return;
-    const el = event.target;
-    if (!isTextEntryField(el)) return;
-    const data = ie.data;
-    if (data == null) return;
-    const cleaned = sanitizeFieldValue(el, data, stripEmojiByDefault);
-    if (cleaned === data) return;
-    event.preventDefault();
-    if (cleaned) insertCleanText(el, cleaned);
+  const cleanup = () => {
+    if (host.__crossubAgentInputFilterCleanup === cleanup) {
+      delete host.__crossubAgentInputFilterCleanup;
+    }
   };
-
-  const onPaste = (event: Event) => {
-    const pe = event as ClipboardEvent;
-    const el = event.target;
-    if (!isTextEntryField(el)) return;
-    const text = pe.clipboardData?.getData('text/plain');
-    if (text == null) return;
-    const cleaned = sanitizeFieldValue(el, text, stripEmojiByDefault);
-    if (cleaned === text) return;
-    event.preventDefault();
-    insertCleanText(el, cleaned);
-  };
-
-  const onInputOrCompositionEnd = (event: Event) => {
-    const el = event.target;
-    if (!isTextEntryField(el)) return;
-    applySanitizedValue(el, stripEmojiByDefault);
-  };
-
-  window.addEventListener('beforeinput', onBeforeInput, true);
-  window.addEventListener('paste', onPaste, true);
-  window.addEventListener('input', onInputOrCompositionEnd, true);
-  window.addEventListener('compositionend', onInputOrCompositionEnd, true);
-
-  return () => {
-    window.removeEventListener('beforeinput', onBeforeInput, true);
-    window.removeEventListener('paste', onPaste, true);
-    window.removeEventListener('input', onInputOrCompositionEnd, true);
-    window.removeEventListener('compositionend', onInputOrCompositionEnd, true);
-  };
+  host.__crossubAgentInputFilterCleanup = cleanup;
+  return cleanup;
 }
 
 /** @deprecated Use installGlobalAgentInputFilter */

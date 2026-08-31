@@ -5,6 +5,8 @@ import { Mail, MessageSquareText, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { AgentInputFeedbackAnchor } from '@/components/ui/agent-input-feedback';
+import { bindSanitizedTextValue } from '@/lib/strip-emojis';
 import type { ApiMaintenanceAuditLogEntry } from '@/lib/crossub-api/types';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import { cn, formatDateTime } from '@/lib/utils';
@@ -273,26 +275,32 @@ export function WorkspaceChatPanel({
 
         <div className="border-border border-t p-3 pt-3">
           <div className="flex items-end gap-2">
-            <textarea
-              value={draft}
-              data-input-kind="message"
-              data-allow-emoji
-              maxLength={5000}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
+            <AgentInputFeedbackAnchor kind="message" value={draft} className="flex-1">
+              <textarea
+                value={draft}
+                data-input-kind="message"
+                data-allow-emoji
+                maxLength={5000}
+                onChange={bindSanitizedTextValue({
+                  kind: 'message',
+                  allowEmoji: true,
+                  onChange: (e) => setDraft(e.target.value),
+                })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                rows={2}
+                placeholder={
+                  chatTab === 'app'
+                    ? 'Write an in-app message…'
+                    : 'Write an email message…'
                 }
-              }}
-              rows={2}
-              placeholder={
-                chatTab === 'app'
-                  ? 'Write an in-app message…'
-                  : 'Write an email message…'
-              }
-              className="border-border focus:ring-primary/20 min-h-[44px] flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2"
-            />
+                className="border-border focus:ring-primary/20 min-h-[44px] w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-2"
+              />
+            </AgentInputFeedbackAnchor>
             <Button
               type="button"
               size="sm"
