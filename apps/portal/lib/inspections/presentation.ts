@@ -123,10 +123,40 @@ export function inspectionNextAction(
   }
 
   if (isInspectionDone(inspection)) {
+    const typeLabel =
+      inspection.type === 'OPEN'
+        ? 'open inspection'
+        : inspection.type === 'INGOING'
+          ? 'ingoing inspection'
+          : inspection.type === 'OUTGOING'
+            ? 'outgoing inspection'
+            : 'routine inspection';
     return {
       title: 'Completed',
-      description: 'This routine inspection cycle is complete.',
+      description: `This ${typeLabel} is complete.`,
       tone: 'success',
+    };
+  }
+
+  if (inspection.awaitingAgentPayment) {
+    return {
+      title: 'Payment required',
+      description:
+        inspection.type === 'OPEN'
+          ? 'Pay the open-inspection fee before this viewing can enter the inspector pool.'
+          : inspection.type === 'ROUTINE'
+            ? 'Pay the routine inspection fee before this job can enter the inspector pool.'
+            : 'Pay the inspection fee before this job can enter the inspector pool.',
+      tone: 'warning',
+    };
+  }
+
+  if (inspection.type === 'ROUTINE' && inspection.apiStatus === INSPECTION_STATUS.FIRST_REVIEW) {
+    return {
+      title: 'Review tenant self-inspection',
+      description:
+        'The tenant submitted a self-inspection. Review it and accept or ask them to re-upload.',
+      tone: 'warning',
     };
   }
 

@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronRight, ClipboardList, Sparkles } from 'lucide-react';
+import { ChevronRight, ClipboardList, DoorOpen, Home, Sparkles } from 'lucide-react';
 
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
 import { InspectionTaskDocuments } from '@/components/inspections/inspection-task-documents';
@@ -16,7 +16,7 @@ import {
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
-import { INSPECTION_TYPE_LABEL } from '@/lib/inspections/presentation';
+import { INSPECTION_TYPE_LABEL, INSPECTION_TYPE_SHORT } from '@/lib/inspections/presentation';
 import {
   buildInspectionActivityEntries,
   buildInspectionDetailRows,
@@ -163,7 +163,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
     return (
       <TaskJobUnavailable
         title="Inspection job not found"
-        description="The open inspection may still be saving. Open it from Tasks in a moment."
+        description="This inspection may still be saving. Open it from Tasks in a moment."
       />
     );
   }
@@ -175,6 +175,8 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
   const address = property ? formatPropertyFullAddress(property) : inspection.propertyAddress;
   const taskRef = inspectionTaskReference(inspection);
   const createdLabel = inspection.createdAt ? formatDate(inspection.createdAt) : '—';
+  const TypeIcon =
+    inspection.type === 'OPEN' ? DoorOpen : inspection.type === 'ROUTINE' ? ClipboardList : Home;
 
   return (
     <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
@@ -185,7 +187,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/12 text-sky-700">
-              <ClipboardList className="size-5" />
+              <TypeIcon className="size-5" />
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -209,7 +211,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
               </div>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>
               <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                <span>Task type Inspection</span>
+                <span>Task type {INSPECTION_TYPE_SHORT[inspection.type]}</span>
                 <span>Created {createdLabel}</span>
                 <span>Reference {taskRef}</span>
               </div>
@@ -282,7 +284,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
           </div>
 
           <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
-            <InspectionDetailView inspectionId={inspection.id} embedded />
+            <InspectionDetailView inspectionId={inspection.id} />
           </div>
 
           {activeTab === 'details' ? (

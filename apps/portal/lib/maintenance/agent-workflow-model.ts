@@ -574,7 +574,7 @@ function inProgressSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSubP
   const awaitingDecision = ctx.item.requiresApproval;
 
   if (!landlordFlow) {
-    if (ctx.workspaceCase.responsibility === 'tenant') {
+    if (resolveMaintenanceResponsibility(ctx) === 'tenant') {
       return [
         {
           id: 'tenant_acknowledgement',
@@ -680,7 +680,7 @@ function jobCompletedSubProgress(ctx: MaintenanceWorkflowContext): MaintenanceSu
 
   const landlordFlow = requiresContractorFlow(ctx);
   if (!landlordFlow) {
-    if (ctx.workspaceCase.responsibility === 'tenant') {
+    if (resolveMaintenanceResponsibility(ctx) === 'tenant') {
       return [
         {
           id: 'tenant_acknowledgement',

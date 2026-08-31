@@ -11,8 +11,9 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import { MaintenanceWorkspace } from '@/components/maintenance-workspace/maintenance-workspace';
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
+import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
+import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
 import { MaintenanceTaskDocuments } from '@/components/maintenance/maintenance-task-documents';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import {
@@ -27,6 +28,7 @@ import {
   buildMaintenanceActivityEntries,
   buildMaintenanceJobDetailRows,
   buildMaintenanceQuoteCards,
+  buildMaintenanceWorkflowContext,
   maintenanceTaskReference,
   maintenanceDocumentCount,
   quotationCount,
@@ -35,6 +37,13 @@ import {
 } from '@/lib/maintenance-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { isEndLeasingSpawnedMaintenance } from '@/lib/property-maintenance-history';
+import { requiresContractorFlow } from '@/lib/maintenance/agent-workflow-model';
+import {
+  isTenantRejectedMaintenance,
+  TENANT_REJECTED_BADGE_CLASS,
+  TENANT_REJECTED_LABEL,
+  tenantRejectionTitle,
+} from '@/lib/maintenance/tenant-rejected';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import type {
   ApiMaintenanceAttachment,
@@ -48,7 +57,6 @@ import {
   cn,
   formatCurrency,
   formatDate,
-  formatDateTime,
   formatPropertyFullAddress,
   formatTime,
 } from '@/lib/utils';
@@ -109,24 +117,14 @@ export function MaintenanceTaskDetailView({
   item,
   property,
   workspaceCase,
-  backHref,
-  backLabel,
-  onApproveQuote,
-  onDeclineQuote,
-  onRequoteQuote,
   quoteAmount,
   contractorName,
   quoteExpiry,
   recommendation,
-  quoteDocumentUrl,
-  requiresApproval,
-  liveSyncing,
   syncing,
-  remindersSent,
-  reminderEta,
   assignedToName,
-  attachments,
-  apiConnected,
+  attachments = [],
+  apiConnected = true,
   onCaseUpdated,
   contractors = [],
   quotations = [],
@@ -136,21 +134,11 @@ export function MaintenanceTaskDetailView({
   item: MaintenanceRequest;
   property?: Property | null;
   workspaceCase: MaintenanceWorkspaceCase;
-  backHref: string;
-  backLabel: string;
-  onApproveQuote?: () => void | Promise<void>;
-  onDeclineQuote?: (reason: string) => void | Promise<void>;
-  onRequoteQuote?: (counterPrice: number, message: string) => void | Promise<void>;
   quoteAmount?: number;
   contractorName?: string;
   quoteExpiry?: string;
   recommendation?: string;
-  quoteDocumentUrl?: string;
-  requiresApproval?: boolean;
-  liveSyncing?: boolean;
   syncing?: boolean;
-  remindersSent?: number;
-  reminderEta?: string | null;
   assignedToName?: string | null;
   attachments?: ApiMaintenanceAttachment[];
   apiConnected?: boolean;
@@ -201,6 +189,28 @@ export function MaintenanceTaskDetailView({
 
   const resolvedProperty =
     property ?? properties.find((row) => row.id === propertyId) ?? null;
+  const evidenceAttachmentCount = useMemo(
+    () =>
+      attachments.filter(
+        (a) => a.maintenanceRequestId === item.id && a.kind === 'initial_evidence',
+      ).length,
+    [attachments, item.id],
+  );
+  const workflowCtx = useMemo(
+    () => buildMaintenanceWorkflowContext(item, workspaceCase, evidenceAttachmentCount),
+    [evidenceAttachmentCount, item, workspaceCase],
+  );
+  const contractorFlow = requiresContractorFlow(workflowCtx);
+  const tenantRejected = isTenantRejectedMaintenance(item);
+  const visibleTabs = useMemo(
+    () => TABS.filter((tab) => tab.id !== 'quotes' || contractorFlow),
+    [contractorFlow],
+  );
+
+  useEffect(() => {
+    if (!contractorFlow && activeTab === 'quotes') setActiveTab('workflow');
+  }, [activeTab, contractorFlow]);
+
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
@@ -302,18 +312,23 @@ export function MaintenanceTaskDetailView({
                 <span
                   className={cn(
                     'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                    workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
-                      ? 'bg-muted text-muted-foreground'
-                      : banner.needsAction
-                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+                    tenantRejected
+                      ? TENANT_REJECTED_BADGE_CLASS
+                      : workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
+                        ? 'bg-muted text-muted-foreground'
+                        : banner.needsAction
+                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
                   )}
+                  title={tenantRejected ? tenantRejectionTitle(item) : undefined}
                 >
-                  {workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
-                    ? 'Completed'
-                    : banner.needsAction
-                      ? 'Need your action'
-                      : 'CROS handling'}
+                  {tenantRejected
+                    ? TENANT_REJECTED_LABEL
+                    : workspaceCase.status === 'completed' || workspaceCase.status === 'closed'
+                      ? 'Completed'
+                      : banner.needsAction
+                        ? 'Need your action'
+                        : 'CROS handling'}
                 </span>
               </div>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>
@@ -356,7 +371,7 @@ export function MaintenanceTaskDetailView({
 
           <div className="border-b">
             <div className="flex gap-1 overflow-x-auto">
-              {TABS.map((tab) => (
+              {visibleTabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
@@ -377,33 +392,18 @@ export function MaintenanceTaskDetailView({
           </div>
 
           <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
-            <MaintenanceWorkspace
-              embedded
-              workspaceCase={workspaceCase}
-              backHref={backHref}
-              backLabel={backLabel}
-              assignedToName={assignedToName}
-              liveSyncing={liveSyncing}
-              syncing={syncing}
-              remindersSent={remindersSent}
-              reminderEta={reminderEta}
-              onApproveQuote={onApproveQuote}
-              onDeclineQuote={onDeclineQuote}
-              onRequoteQuote={onRequoteQuote}
-              quoteAmount={quoteAmount}
-              contractorName={contractorName}
-              quoteExpiry={quoteExpiry}
-              recommendation={recommendation}
-              quoteDocumentUrl={quoteDocumentUrl}
-              requiresApproval={requiresApproval}
+            <MaintenanceAgentWorkflowPanel
+              ctx={workflowCtx}
               item={item}
+              property={resolvedProperty ?? undefined}
               attachments={attachments}
-              apiConnected={apiConnected}
-              onCaseUpdated={onCaseUpdated}
               contractors={contractors}
-              quotations={quotations}
-              workflowRequest={workflowRequest}
+              onCaseUpdated={onCaseUpdated}
+              apiConnected={apiConnected}
+              syncing={syncing}
               maintenanceReminders={maintenanceReminders}
+              workflowRequest={workflowRequest}
+              quotations={quotations}
             />
           </div>
 
@@ -421,7 +421,7 @@ export function MaintenanceTaskDetailView({
                 </dl>
               </section>
 
-              {quoteCards.length > 0 ? (
+              {contractorFlow && quoteCards.length > 0 ? (
                 <section>
                   <h3 className="text-sm font-semibold">Quotes received</h3>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -476,22 +476,17 @@ export function MaintenanceTaskDetailView({
             </div>
           ) : null}
 
-          {activeTab === 'quotes' ? (
-            <section className="space-y-3">
-              {quoteCards.length > 0 ? (
-                quoteCards.map((quote) => (
-                  <article key={quote.id} className="rounded-2xl border v2-frosted-surface p-4">
-                    <p className="text-sm font-semibold">{quote.contractorName}</p>
-                    <p className="mt-1 text-lg font-semibold tabular-nums">
-                      {quote.amount != null ? formatCurrency(quote.amount) : '—'}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs capitalize">{quote.status}</p>
-                  </article>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-sm">No quotes received yet.</p>
-              )}
-            </section>
+          {activeTab === 'quotes' && contractorFlow ? (
+            <MaintenanceGetQuotePanel
+              ctx={workflowCtx}
+              property={resolvedProperty ?? undefined}
+              contractors={contractors}
+              onCaseUpdated={onCaseUpdated}
+              apiConnected={apiConnected}
+              maintenanceReminders={maintenanceReminders}
+              workflowRequest={workflowRequest}
+              quotations={quotations}
+            />
           ) : null}
 
           {activeTab === 'activity' ? <ActivityTimeline entries={activityEntries} /> : null}
@@ -584,7 +579,7 @@ export function MaintenanceTaskDetailView({
             </div>
           </section>
 
-          {contractorName ? (
+          {contractorFlow && contractorName ? (
             <section className="rounded-2xl border v2-frosted-surface p-4">
               <h3 className="text-sm font-semibold">Contractor</h3>
               <div className="mt-3">

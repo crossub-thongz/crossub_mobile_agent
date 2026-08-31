@@ -8,6 +8,7 @@ import {
   requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import { resolveMaintenanceStrataContacts } from '@/lib/maintenance/resolve-strata-contacts';
 import type { Property } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -30,7 +31,7 @@ export function MaintenanceInProgressPanel({
     ctx.workspaceCase.status,
   );
 
-  if (ctx.workspaceCase.responsibility === 'tenant') {
+  if (resolveMaintenanceResponsibility(ctx) === 'tenant') {
     return (
       <MaintenanceTenantAcknowledgementPanel
         ctx={ctx}

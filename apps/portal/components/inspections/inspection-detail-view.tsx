@@ -55,7 +55,6 @@ import { Timeline } from '@/components/agent/timeline';
 import { WorkflowCaseDeleteDialog } from '@/components/agent/workflow-case-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { propertyDetail, ROUTES, inspectionDetail } from '@/constants/routes';
 import type { DetailNavContext } from '@/lib/detail-navigation';
 import {
@@ -137,7 +136,6 @@ export function InspectionDetailView({
   onClose?: () => void;
 }) {
   const router = useRouter();
-  const isV2 = useIsAgentUiV2();
   const { inspections, leasingCycles, apiConnected, registerInspection, refresh, properties } =
     useAgentData();
   const baseFromList = findInspectionInList(inspections, inspectionId);
@@ -420,7 +418,7 @@ export function InspectionDetailView({
     );
   }
 
-  const nextAction = inspectionNextAction(insp, { distinguishCancelled: isV2 });
+  const nextAction = inspectionNextAction(insp);
   const isOpenLeasingCase =
     insp.type === 'OPEN' && Boolean(leasingDetail) && !isStandaloneOpenViewing;
   const openConductedBy = resolveOpenConductedBy({

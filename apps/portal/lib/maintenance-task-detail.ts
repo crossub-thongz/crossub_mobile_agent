@@ -1,12 +1,20 @@
 import type { ApiMaintenanceAttachment, ApiQuotation } from '@/lib/crossub-api/types';
 import {
   buildMaintenanceAgentWorkflow,
+  MAINTENANCE_AGENT_STEP_TITLE,
+  requiresContractorFlow,
   type MaintenanceWorkflowContext,
 } from '@/lib/maintenance/agent-workflow-model';
+import { resolveMaintenanceResponsibility } from '@/lib/maintenance/infer-responsibility';
 import {
   formatMaintenanceAuditMessage,
   isMaintenanceEmailSnapshotAudit,
 } from '@/lib/maintenance/format-audit-message';
+import {
+  isTenantRejectedMaintenance,
+  tenantRejectionReason,
+  TENANT_REJECTED_LABEL,
+} from '@/lib/maintenance/tenant-rejected';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
 import { SOURCE_LABELS } from '@/lib/maintenance-workspace/status-labels';
 import type { MaintenanceRequest, Property } from '@/lib/types';
@@ -101,28 +109,78 @@ export function resolveMaintenanceStatusBanner(input: {
   crosSummary: string[];
 } {
   const { workspaceCase, item, quoteAmount, contractorName, recommendation } = input;
-  const needsAction =
-    item.requiresApproval ||
-    workspaceCase.status === 'pending_approval' ||
-    (workspaceCase.status === 'pending_quotation' && quoteAmount != null);
+  const ctx = { item, workspaceCase };
+  const responsibility = resolveMaintenanceResponsibility(ctx);
+  const contractorFlow = requiresContractorFlow(ctx);
+  const workflow = buildMaintenanceAgentWorkflow(ctx);
+  const closed =
+    workspaceCase.status === 'closed' ||
+    workspaceCase.status === 'completed' ||
+    workspaceCase.status === 'deleted';
+  const tenantRejected = isTenantRejectedMaintenance(item);
+  const quoteReady =
+    contractorFlow &&
+    quoteAmount != null &&
+    (workspaceCase.status === 'pending_quotation' ||
+      workspaceCase.status === 'pending_approval');
 
-  let title = 'Maintenance in progress';
+  const needsAction =
+    tenantRejected && !closed
+      ? true
+      : !responsibility &&
+          (workspaceCase.status === 'under_review' ||
+            workspaceCase.status === 'pending_evidence')
+        ? true
+        : workspaceCase.status === 'pending_evidence'
+          ? true
+          : responsibility === 'tenant' &&
+              workspaceCase.status === 'in_progress' &&
+              !workspaceCase.tenantApprovalReceived
+            ? true
+            : Boolean(quoteReady || item.requiresApproval);
+
+  let title = MAINTENANCE_AGENT_STEP_TITLE[workflow.liveStepId];
   let subtitle = workspaceCase.description;
 
-  if (workspaceCase.status === 'pending_approval' && quoteAmount != null) {
+  if (tenantRejected) {
+    title = TENANT_REJECTED_LABEL;
+    subtitle =
+      tenantRejectionReason(item) ||
+      'Tenant disagrees with tenant-responsibility — job stays open until an officer decides';
+  } else if (closed) {
+    title = workspaceCase.status === 'closed' ? 'Job closed' : 'Job completed';
+    subtitle =
+      responsibility === 'tenant'
+        ? 'Tenant-responsible repair closed'
+        : responsibility === 'strata'
+          ? 'Strata-responsible repair closed'
+          : workspaceCase.description;
+  } else if (!responsibility) {
+    if (workspaceCase.status === 'pending_evidence') {
+      title = 'Requesting more evidence';
+      subtitle = 'Waiting for tenant photos or video before assigning responsibility';
+    } else {
+      title = 'Review required';
+      subtitle = 'Confirm whether this is tenant, landlord, or strata responsibility';
+    }
+  } else if (responsibility === 'tenant') {
+    if (workspaceCase.status === 'in_progress') {
+      title = 'Tenant acknowledgement';
+      subtitle = 'Tenant arranges their own repair — record acknowledgement to close';
+    }
+  } else if (responsibility === 'strata') {
+    if (workspaceCase.status === 'in_progress') {
+      title = 'Strata coordinating';
+      subtitle = 'CROSSUB is coordinating with the strata body';
+    }
+  } else if (workspaceCase.status === 'pending_approval' && quoteAmount != null) {
     title = 'Quote received';
-    subtitle = [
-      contractorName,
-      `${formatCurrency(quoteAmount)} incl. GST`,
-    ]
+    subtitle = [contractorName, `${formatCurrency(quoteAmount)} incl. GST`]
       .filter(Boolean)
       .join(' · ');
   } else if (workspaceCase.status === 'pending_quotation' && quoteAmount != null) {
     title = 'Quote received — awaiting your approval';
-    subtitle = [
-      contractorName,
-      `${formatCurrency(quoteAmount)} incl. GST`,
-    ]
+    subtitle = [contractorName, `${formatCurrency(quoteAmount)} incl. GST`]
       .filter(Boolean)
       .join(' · ');
   } else if (workspaceCase.status === 'pending_quotation') {
@@ -130,14 +188,28 @@ export function resolveMaintenanceStatusBanner(input: {
     subtitle = contractorName
       ? `Waiting on ${contractorName}`
       : 'Contractors invited to quote';
-  } else if (workspaceCase.status === 'under_review') {
-    title = 'Review required';
-    subtitle = 'Confirm responsibility and next steps';
+  } else if (workspaceCase.status === 'pending_schedule') {
+    title = 'Schedule visit';
+    subtitle = contractorName
+      ? `Confirm a visit time with ${contractorName}`
+      : 'Contractor to propose visit times';
   }
 
   const crosSummary = [
     recommendation?.trim() || null,
-    needsAction && quoteAmount != null
+    tenantRejected && !closed
+      ? 'Re-open Review if the tenant should not pay, or keep the job parked until the dispute is settled'
+      : null,
+    !responsibility && !closed
+      ? 'Assign tenant, landlord, or strata before the job can advance'
+      : null,
+    responsibility === 'tenant' && !closed
+      ? 'No contractor quote, completion evidence, or invoice — tenant acknowledgement only'
+      : null,
+    responsibility === 'strata' && !closed
+      ? 'Strata handles the repair — confirm contacts and completion with the body'
+      : null,
+    quoteReady
       ? `Quote of ${formatCurrency(quoteAmount)} is within expected range — approval recommended`
       : null,
     workspaceCase.priority === 'critical' || workspaceCase.priority === 'high'
@@ -281,8 +353,9 @@ export function buildMaintenanceActivityEntries(workspaceCase: MaintenanceWorksp
 export function buildMaintenanceWorkflowContext(
   item: MaintenanceRequest,
   workspaceCase: MaintenanceWorkspaceCase,
+  evidenceAttachmentCount?: number,
 ): MaintenanceWorkflowContext {
-  return { item, workspaceCase };
+  return { item, workspaceCase, evidenceAttachmentCount };
 }
 
 export function buildMaintenanceWorkflowModel(ctx: MaintenanceWorkflowContext) {
