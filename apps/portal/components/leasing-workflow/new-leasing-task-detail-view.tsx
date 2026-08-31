@@ -27,6 +27,7 @@ import {
   ROUTES,
   tenantSelectionDetail,
 } from '@/constants/routes';
+import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
@@ -273,6 +274,12 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                     New lease – {property.suburb ? `${property.address}` : property.address}
                   </h1>
                   <p className="text-muted-foreground mt-1 text-sm">{address}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {CASE_ASSIGNED_TO_LABEL}{' '}
+                    <span className="text-foreground font-medium">
+                      {resolveCaseAssignedToFromProperty(property.propertyManager)}
+                    </span>
+                  </p>
                   <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                     <span>Task ID {taskRef}</span>
                     <span>Created {createdLabel}</span>
@@ -328,7 +335,6 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                   propertyAddress={address}
                   rentWeekly={rentWeekly}
                   hideSectionLabel
-                  unifiedRail
                   onCaseClosed={() => {
                     void refresh().then(() => {
                       router.push(ROUTES.TASKS);

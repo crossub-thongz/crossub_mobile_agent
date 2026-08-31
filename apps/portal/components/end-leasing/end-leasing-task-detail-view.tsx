@@ -15,6 +15,7 @@ import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasi
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, ROUTES } from '@/constants/routes';
+import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
@@ -218,6 +219,14 @@ export function EndLeasingTaskDetailView({
                   {vacateDate ? `Vacate ${formatDate(vacateDate)}` : ''}
                 </p>
               ) : null}
+              <p className="text-muted-foreground mt-1 text-xs">
+                {CASE_ASSIGNED_TO_LABEL}{' '}
+                <span className="text-foreground font-medium">
+                  {resolveCaseAssignedToFromProperty(
+                    property?.propertyManager ?? caseData.agentName,
+                  )}
+                </span>
+              </p>
               <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 <span>Task ID {taskRef}</span>
                 <span>Created {createdLabel}</span>
@@ -233,6 +242,9 @@ export function EndLeasingTaskDetailView({
                   <p className="font-medium tabular-nums">{formatCurrency(caseData.refundAmount)}</p>
                 </div>
               </div>
+              {caseData.nextAction ? (
+                <p className="text-muted-foreground mt-3 text-xs">{caseData.nextAction}</p>
+              ) : null}
             </div>
           </div>
           <TaskPageActions propertyId={propertyId || null} reference={taskRef} />
@@ -277,7 +289,12 @@ export function EndLeasingTaskDetailView({
           </div>
 
           <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
-            <EndLeasingAgentWorkflowPanel caseData={caseData} />
+            <div className="space-y-4">
+              {propertyId ? (
+                <CaseContactActions propertyId={propertyId} caseLabel="End leasing" />
+              ) : null}
+              <EndLeasingAgentWorkflowPanel caseData={caseData} />
+            </div>
           </div>
 
           {activeTab === 'details' ? (
@@ -431,11 +448,6 @@ export function EndLeasingTaskDetailView({
             </section>
           ) : null}
 
-          {propertyId ? (
-            <div className={activeTab === 'workflow' ? 'hidden' : undefined}>
-              <CaseContactActions propertyId={propertyId} caseLabel="End leasing" />
-            </div>
-          ) : null}
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-6rem)] xl:self-start xl:overflow-y-auto">

@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ChevronRight, DollarSign } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
+import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import {
   TaskWorkflowRailSlot,
@@ -15,6 +16,7 @@ import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-revi
 import { RentReviewTaskDocuments } from '@/components/rent-review/rent-review-task-documents';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
+import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
   buildRentReviewActivityEntries,
@@ -195,6 +197,32 @@ export function RentReviewTaskDetailView({
                 Rent review – {property?.address ?? detail.propertyAddress.split(',')[0]}
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>
+              {detail.tenantName ? (
+                <p className="text-muted-foreground mt-1 text-xs">{detail.tenantName}</p>
+              ) : null}
+              <p className="text-muted-foreground mt-1 text-xs">
+                {CASE_ASSIGNED_TO_LABEL}{' '}
+                <span className="text-foreground font-medium">
+                  {resolveCaseAssignedToFromProperty(property?.propertyManager)}
+                </span>
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:max-w-xs">
+                <div>
+                  <p className="text-muted-foreground flex items-center gap-1">
+                    Current rent
+                    <RentEquivalentsHint weekly={detail.currentWeeklyRent} />
+                  </p>
+                  <p className="font-medium tabular-nums">
+                    {formatCurrency(detail.currentWeeklyRent)}/wk
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Review due</p>
+                  <p className="font-medium">
+                    {detail.rentReviewDate ? formatDate(detail.rentReviewDate) : '—'}
+                  </p>
+                </div>
+              </div>
               <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 <span>Task ID {taskRef}</span>
                 <span>Created {createdLabel}</span>
@@ -240,7 +268,12 @@ export function RentReviewTaskDetailView({
           </div>
 
           <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
-            <RentReviewAgentWorkflowPanel detail={detail} onUpdated={onUpdated} />
+            <div className="space-y-4">
+              {propertyId ? (
+                <CaseContactActions propertyId={propertyId} caseLabel="Rent review" />
+              ) : null}
+              <RentReviewAgentWorkflowPanel detail={detail} onUpdated={onUpdated} />
+            </div>
           </div>
 
           {activeTab === 'details' ? (
@@ -390,11 +423,6 @@ export function RentReviewTaskDetailView({
             </section>
           ) : null}
 
-          {propertyId ? (
-            <div className={activeTab === 'workflow' ? 'hidden' : undefined}>
-              <CaseContactActions propertyId={propertyId} caseLabel="Rent review" />
-            </div>
-          ) : null}
         </div>
         </div>
 
