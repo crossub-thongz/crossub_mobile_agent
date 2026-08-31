@@ -310,7 +310,6 @@ export function PropertyListPreviewPanel({
                   View tasks
                 </Link>
               </PopoverContent>
-              </PopoverContent>
             </Popover>
             <button
               type="button"

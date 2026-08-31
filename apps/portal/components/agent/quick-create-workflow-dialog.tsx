@@ -24,26 +24,6 @@ import {
 } from '@/lib/property-workflow-actions';
 import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
 
-import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
-import { PropertyWorkflowCreateDialog } from '@/components/agent/property-workflow-panel';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { useAgentData } from '@/components/providers/agent-data-provider';
-import { useEmailVerificationGuard } from '@/hooks/use-email-verification-guard';
-import {
-  buildPropertyWorkflowContext,
-  tabActionsFor,
-  type PropertyWorkflowActionId,
-  type PropertyWorkflowTab,
-} from '@/lib/property-workflow-actions';
-import type { PropertyWorkflowCreatedResult } from '@/lib/property-workflow-created';
-
 const ACTION_TAB: Record<PropertyWorkflowActionId, PropertyWorkflowTab> = {
   start_leasing: 'leasing',
   start_end_leasing: 'leasing',
