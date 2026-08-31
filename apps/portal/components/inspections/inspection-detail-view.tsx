@@ -1212,6 +1212,7 @@ export function InspectionDetailView({
       {routineSchedule ? (
         <ChangeRoutineFlowDialog
           schedule={routineSchedule}
+          inspectionId={inspectionId}
           open={flowChangeOpen}
           onOpenChange={setFlowChangeOpen}
           onUpdated={(updated) => {

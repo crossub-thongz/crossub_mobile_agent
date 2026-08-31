@@ -30,11 +30,13 @@ const FLOW_REASONS = [
 
 export function ChangeRoutineFlowDialog({
   schedule,
+  inspectionId,
   open,
   onOpenChange,
   onUpdated,
 }: {
   schedule: ServerRoutineScheduleView;
+  inspectionId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdated: (schedule: ServerRoutineScheduleView) => void;
@@ -66,6 +68,7 @@ export function ChangeRoutineFlowDialog({
         flow: nextFlow,
         reason,
         reasonNote: note.trim(),
+        ...(inspectionId ? { inspectionId } : {}),
       });
       onUpdated(updated);
       toast.success('Inspection flow updated');

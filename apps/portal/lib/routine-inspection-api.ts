@@ -16,6 +16,7 @@ export type ChangeRoutineFlowInput = {
   flow: 'self' | 'in_person';
   reason: string;
   reasonNote: string;
+  inspectionId?: string;
 };
 
 export type OverrideRoutineScheduleInput = {
