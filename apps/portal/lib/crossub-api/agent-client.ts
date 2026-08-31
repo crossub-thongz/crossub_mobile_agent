@@ -458,6 +458,14 @@ export async function endPropertyManagement(
   });
 }
 
+/** Archive a property (`POST /agent/properties/{propertyId}/archive`). */
+export async function archiveProperty(propertyId: string): Promise<void> {
+  await agentFetch<void>(`/agent/properties/${propertyId}/archive`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 /** Permanently remove a property (`DELETE /agent/properties/{propertyId}`). */
 export async function deleteDraftProperty(propertyId: string): Promise<void> {
   await agentFetch<void>(`/agent/properties/${propertyId}`, {

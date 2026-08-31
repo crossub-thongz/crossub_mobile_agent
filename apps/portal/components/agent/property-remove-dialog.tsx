@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Archive, Loader2, Trash2 } from 'lucide-react';
+import { Archive, CalendarMinus, Loader2, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import type { Property } from '@/lib/types';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
-type RemoveMode = 'end-management' | 'delete';
+type RemoveMode = 'end-management' | 'archive' | 'delete';
 
 function OptionCard({
   selected,
@@ -74,6 +74,7 @@ export function PropertyRemoveDialog({
   open,
   onOpenChange,
   onEndManagement,
+  onArchive,
   onDeletePermanently,
   saving,
 }: {
@@ -81,6 +82,7 @@ export function PropertyRemoveDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEndManagement: (endOfManagementDate: string) => Promise<void>;
+  onArchive: () => Promise<void>;
   onDeletePermanently: () => Promise<void>;
   saving?: boolean;
 }) {
@@ -100,11 +102,18 @@ export function PropertyRemoveDialog({
       await onEndManagement(endDate);
       return;
     }
+    if (mode === 'archive') {
+      await onArchive();
+      return;
+    }
     await onDeletePermanently();
   };
 
   const canSubmit =
-    mode === 'delete' ? true : endDate.trim().length > 0;
+    mode === 'end-management' ? endDate.trim().length > 0 : true;
+
+  const submitLabel =
+    mode === 'delete' ? 'Delete permanently' : mode === 'archive' ? 'Archive' : 'End management';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,9 +134,9 @@ export function PropertyRemoveDialog({
             description={
               isDraft
                 ? 'Available after the property registration is completed.'
-                : 'Keeps the property in Archived for history, reporting, and reference. Enter the end date.'
+                : 'Records the end date on Overview. The property stays on your active portfolio until you archive it.'
             }
-            icon={Archive}
+            icon={CalendarMinus}
             tone="neutral"
             disabled={isDraft}
             onSelect={() => setMode('end-management')}
@@ -145,6 +154,20 @@ export function PropertyRemoveDialog({
               />
             </div>
           ) : null}
+
+          <OptionCard
+            selected={mode === 'archive'}
+            title="Archive"
+            description={
+              isDraft
+                ? 'Available after the property registration is completed.'
+                : 'Moves the property to Archived for history, reporting, and reference. It leaves the active list.'
+            }
+            icon={Archive}
+            tone="neutral"
+            disabled={isDraft}
+            onSelect={() => setMode('archive')}
+          />
 
           <OptionCard
             selected={mode === 'delete'}
@@ -171,7 +194,7 @@ export function PropertyRemoveDialog({
             onClick={() => void submit()}
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-            {mode === 'delete' ? 'Delete permanently' : 'End management'}
+            {submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

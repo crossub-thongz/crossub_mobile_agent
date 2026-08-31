@@ -43,6 +43,7 @@ export function V2PropertiesPage() {
     apiConnected,
     deleteDraftProperty,
     endPropertyManagement,
+    archiveProperty,
     refreshArchivedProperties,
   } = useAgentData();
   const setPropertiesPageActive = useShellAsideStore((s) => s.setPropertiesPageActive);
@@ -122,9 +123,8 @@ export function V2PropertiesPage() {
       setRemoving(true);
       try {
         await endPropertyManagement(pendingDelete.id, endOfManagementDate);
-        toast.success('Property archived — open the Archived filter to view it');
+        toast.success('End of management date recorded — property stays on your portfolio');
         setPendingDelete(null);
-        setFilter('archived');
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Could not end property management');
       } finally {
@@ -133,6 +133,22 @@ export function V2PropertiesPage() {
     },
     [endPropertyManagement, pendingDelete],
   );
+
+  const confirmArchive = useCallback(async () => {
+    if (!pendingDelete) return;
+    setRemoving(true);
+    try {
+      await archiveProperty(pendingDelete.id);
+      if (selectedId === pendingDelete.id) setSelectedId(null);
+      toast.success('Property archived — open the Archived filter to view it');
+      setPendingDelete(null);
+      setFilter('archived');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not archive property');
+    } finally {
+      setRemoving(false);
+    }
+  }, [archiveProperty, pendingDelete, selectedId, setSelectedId]);
 
   useEffect(() => {
     if (apiConnected) {
@@ -334,7 +350,7 @@ export function V2PropertiesPage() {
             search || filter !== 'all'
               ? 'Try a different search or filter.'
               : isArchivedView
-                ? 'Properties appear here after you end management on them. Permanently deleted properties are removed entirely and will not show here.'
+                ? 'Properties appear here after you archive them. Permanently deleted properties are removed entirely and will not show here.'
                 : 'Add a property to start managing landlords and tenants.'
           }
           action={
@@ -434,6 +450,7 @@ export function V2PropertiesPage() {
           if (!open) setPendingDelete(null);
         }}
         onEndManagement={confirmEndManagement}
+        onArchive={confirmArchive}
         onDeletePermanently={confirmDeletePermanently}
         saving={removing}
       />

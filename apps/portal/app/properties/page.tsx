@@ -42,6 +42,7 @@ export default function PropertiesPage() {
     accounting,
     apiConnected,
     endPropertyManagement,
+    archiveProperty,
     deleteDraftProperty,
     refreshArchivedProperties,
     messages,
@@ -123,11 +124,25 @@ export default function PropertiesPage() {
     setRemoving(true);
     try {
       await endPropertyManagement(pendingDelete.id, endOfManagementDate);
+      toast.success('End of management date recorded — property stays on your portfolio');
+      setPendingDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not end property management');
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const confirmArchive = async () => {
+    if (!pendingDelete) return;
+    setRemoving(true);
+    try {
+      await archiveProperty(pendingDelete.id);
       toast.success('Property archived — open the Archived filter to view it');
       setPendingDelete(null);
       setFilter('archived');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not end property management');
+      toast.error(err instanceof Error ? err.message : 'Could not archive property');
     } finally {
       setRemoving(false);
     }
@@ -183,7 +198,7 @@ export default function PropertiesPage() {
               search || filter !== 'all'
                 ? 'Try a different search or filter.'
                 : isArchivedView
-                  ? 'Properties appear here after you end management on them. Permanently deleted properties are removed entirely and will not show here.'
+                  ? 'Properties appear here after you archive them. Permanently deleted properties are removed entirely and will not show here.'
                   : 'Add a property to start managing landlords and tenants.'
             }
             action={
@@ -217,6 +232,7 @@ export default function PropertiesPage() {
           if (!open) setPendingDelete(null);
         }}
         onEndManagement={confirmEndManagement}
+        onArchive={confirmArchive}
         onDeletePermanently={confirmDeletePermanently}
         saving={removing}
       />

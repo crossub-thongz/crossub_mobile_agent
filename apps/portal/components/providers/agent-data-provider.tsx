@@ -14,6 +14,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import {
   createProperty as apiCreateProperty,
   endPropertyManagement as apiEndPropertyManagement,
+  archiveProperty as apiArchiveProperty,
   deleteDraftProperty as apiDeleteDraftProperty,
   updateProperty as apiUpdateProperty,
   createAgency as apiCreateAgency,
@@ -294,6 +295,7 @@ interface AgentDataContextValue {
     endOfManagementDate: string,
     options?: { archiveOnBondRelease?: boolean },
   ) => Promise<void>;
+  archiveProperty: (propertyId: string) => Promise<void>;
   deleteDraftProperty: (propertyId: string) => Promise<void>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   registerInspection: (inspection: Inspection) => void;
@@ -1256,8 +1258,18 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       if (!apiConnected) {
         throw new Error('Connect to the API to end property management');
       }
-      // Record end-of-management and archive — property leaves the active list on refresh.
       await apiEndPropertyManagement(propertyId, { endOfManagementDate });
+      await refresh();
+    },
+    [apiConnected, refresh],
+  );
+
+  const archiveProperty = useCallback(
+    async (propertyId: string) => {
+      if (!apiConnected) {
+        throw new Error('Connect to the API to archive this property');
+      }
+      await apiArchiveProperty(propertyId);
       setApiProperties((prev) => prev?.filter((p) => p.id !== propertyId) ?? null);
       await refreshArchivedProperties();
       await refresh();
@@ -1693,6 +1705,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     addProperty,
     savePropertyRegistryDraft,
     endPropertyManagement,
+    archiveProperty,
     deleteDraftProperty,
     addOpenInspection,
     registerInspection,
