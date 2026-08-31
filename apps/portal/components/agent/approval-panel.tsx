@@ -161,6 +161,7 @@ export function ApprovalPanel({
           </Label>
           <Input
             id="reason"
+            inputKind="contractor_quote_note"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Required for audit trail"

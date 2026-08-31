@@ -98,6 +98,7 @@ export function MaintenanceNewJobFormFields({
         </Label>
         <Textarea
           id="property-mj-desc"
+          inputKind="maintenance_description"
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           rows={4}
@@ -172,6 +173,7 @@ export function MaintenanceNewJobFormFields({
             </Label>
             <Textarea
               id="property-mj-urgent-reason"
+              inputKind="internal_note"
               value={urgentReason}
               onChange={(e) => onUrgentReasonChange(e.target.value)}
               rows={3}
@@ -190,6 +192,7 @@ export function MaintenanceNewJobFormFields({
         <div className="mt-2 space-y-2">
           <Input
             value={tenantName}
+            inputKind="person_name"
             onChange={(e) => onTenantNameChange(e.target.value)}
             placeholder="Full name"
             disabled={disabled}

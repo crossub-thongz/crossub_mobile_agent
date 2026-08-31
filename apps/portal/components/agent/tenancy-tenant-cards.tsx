@@ -98,6 +98,7 @@ export function TenancyTenantCards({
             </Label>
             <Input
               id={`tenant-name-${index}`}
+              inputKind="person_name"
               value={party.name}
               onChange={(e) => updateParty(index, 'name', e.target.value)}
               placeholder="Tenant name"

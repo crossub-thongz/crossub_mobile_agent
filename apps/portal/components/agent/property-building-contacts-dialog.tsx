@@ -117,6 +117,7 @@ export function PropertyBuildingContactsDialog({
                 <div className="space-y-1">
                   <Label className="text-xs">Name</Label>
                   <Input
+                    inputKind="person_name"
                     value={form.buildingManagerName}
                     onChange={(e) => set('buildingManagerName', e.target.value)}
                   />
@@ -144,6 +145,7 @@ export function PropertyBuildingContactsDialog({
                 <div className="space-y-1">
                   <Label className="text-xs">Name</Label>
                   <Input
+                    inputKind="person_name"
                     value={form.strataContactName}
                     onChange={(e) => set('strataContactName', e.target.value)}
                   />

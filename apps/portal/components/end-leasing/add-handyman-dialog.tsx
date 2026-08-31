@@ -97,6 +97,7 @@ export function AddHandymanDialog({
             <Label htmlFor="handyman-name">Name</Label>
             <Input
               id="handyman-name"
+              inputKind="person_name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Contractor / company name"

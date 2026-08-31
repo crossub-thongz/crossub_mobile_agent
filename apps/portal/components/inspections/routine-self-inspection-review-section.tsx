@@ -126,6 +126,7 @@ export function RoutineSelfInspectionReviewSection({
         <div className="space-y-2">
           <Textarea
             value={declineReason}
+            inputKind="inspection_comment"
             onChange={(e) => setDeclineReason(e.target.value)}
             placeholder="Explain what the tenant needs to fix or resubmit…"
             rows={3}

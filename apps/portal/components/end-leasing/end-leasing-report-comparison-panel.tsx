@@ -610,6 +610,7 @@ function AgentLandlordQuoteReviewPanel({
             </DialogDescription>
           </DialogHeader>
           <Textarea
+            inputKind="contractor_quote_note"
             value={declineDraft}
             onChange={(event) => setDeclineDraft(event.target.value)}
             placeholder="Reason for declining…"
@@ -758,6 +759,7 @@ function AgentTenantBondSendDialog({
                     </td>
                     <td className="px-3 py-2">
                       <Textarea
+                        inputKind="inspection_comment"
                         value={row.bondDeductionAgentComment ?? ''}
                         onChange={(event) => {
                           const value = event.target.value;
@@ -1348,6 +1350,7 @@ function CommentField({
   actionBusy,
   placeholder,
   tone = 'default',
+  inputKind = 'inspection_comment',
 }: {
   label: string;
   savedComment: string;
@@ -1357,6 +1360,7 @@ function CommentField({
   actionBusy?: boolean;
   placeholder?: string;
   tone?: 'staff' | 'agent' | 'default';
+  inputKind?: 'internal_note' | 'inspection_comment';
 }) {
   const [draft, setDraft] = useState('');
 
@@ -1388,6 +1392,7 @@ function CommentField({
         <div className="mt-2.5 flex gap-2 border-t border-border/40 pt-2.5">
           <Input
             className="h-9 flex-1 border-border/60 bg-background text-xs shadow-sm"
+            inputKind={inputKind}
             value={draft}
             placeholder={placeholder}
             disabled={actionBusy}
@@ -1548,6 +1553,7 @@ function ResponsibilityCommentsBlock({
         actionBusy={actionBusy}
         placeholder="Add a staff note…"
         tone="staff"
+        inputKind="internal_note"
       />
       <CommentField
         label={agentCommentLabel}
@@ -1558,6 +1564,7 @@ function ResponsibilityCommentsBlock({
         actionBusy={actionBusy}
         placeholder="Add a comment…"
         tone="agent"
+        inputKind="inspection_comment"
       />
     </div>
   );
@@ -1676,6 +1683,7 @@ function CompareResponsibilitySection({
                     <td className="px-3 py-2">
                       <Textarea
                         className="min-h-[4.5rem] text-xs leading-relaxed"
+                        inputKind="contractor_quote_note"
                         value={row.description}
                         placeholder="Description"
                         onChange={(e) => updateRow(index, { description: e.target.value })}
@@ -2202,6 +2210,7 @@ function RepairItemsTable({
                       <td className="px-3 py-2">
                         <Textarea
                           className="min-h-[4.5rem] text-xs leading-relaxed"
+                          inputKind="contractor_quote_note"
                           value={row.description}
                           placeholder="Description"
                           disabled={busy}

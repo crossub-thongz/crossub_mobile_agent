@@ -258,6 +258,7 @@ function AgentScheduleDecision({
           </Label>
           <Textarea
             id={`schedule-decline-${requestId}`}
+            inputKind="internal_note"
             value={declineReason}
             onChange={(e) => setDeclineReason(e.target.value)}
             rows={3}

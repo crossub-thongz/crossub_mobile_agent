@@ -28,6 +28,7 @@ import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { AGENT_INPUT_KIND, sanitizeAgentInput } from '@/lib/agent-input-rules';
 import { stripEmojis } from '@/lib/strip-emojis';
 import { ROUTES } from '@/constants/routes';
 import {
@@ -302,10 +303,14 @@ export function GiiAssistant({
     (value) => {
       setQueryState((prev) => {
         const next = typeof value === 'function' ? value(prev) : value;
-        return isV2 ? stripEmojis(next) : next;
+        return sanitizeAgentInput(next, {
+          kind: AGENT_INPUT_KIND.AI_INSTRUCTION,
+          allowEmoji: true,
+          stripEmojis,
+        });
       });
     },
-    [isV2],
+    [],
   );
   const [dockTab, setDockTab] = useState<'gii' | 'reply'>('gii');
   const [pendingAttachments, setPendingAttachments] = useState<GiiPendingAttachment[]>([]);
@@ -1005,6 +1010,7 @@ export function GiiAssistant({
                 <div className="flex items-end gap-2">
                   <Textarea
                     ref={composerRef}
+                    inputKind="ai_instruction"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -1422,6 +1428,7 @@ export function GiiAssistant({
           <div className="flex items-end gap-2">
             <Textarea
               ref={composerRef}
+              inputKind="ai_instruction"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {

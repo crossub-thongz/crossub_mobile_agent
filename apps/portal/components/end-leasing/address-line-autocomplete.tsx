@@ -142,6 +142,7 @@ export function AddressLineAutocomplete({
         <Input
           id={id}
           ref={inputRef}
+          inputKind="property_address"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}

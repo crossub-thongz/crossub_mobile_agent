@@ -150,6 +150,7 @@ export function DashboardAskCrosPanel({
         <form onSubmit={onSubmit} className="flex gap-2">
           <Input
             value={query}
+            inputKind="ai_instruction"
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Ask Anything…"
             disabled={sending}

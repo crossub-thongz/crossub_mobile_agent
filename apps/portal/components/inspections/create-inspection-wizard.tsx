@@ -1480,6 +1480,7 @@ function OpenInspectionForm({
           <Field label="Notes (optional)">
             <Textarea
               value={preferredNotes}
+              inputKind="internal_note"
               onChange={(e) => onPreferredNotesChange(e.target.value)}
               rows={3}
               placeholder="e.g. Tenant needs 24h notice…"
@@ -1535,6 +1536,7 @@ function IngoingInspectionForm({
       </div>
       <Field label="Tenant name *">
         <Input
+          inputKind="person_name"
           value={ingoing.tenantName}
           onChange={(e) => onChange({ ...ingoing, tenantName: e.target.value })}
         />
@@ -1574,6 +1576,7 @@ function IngoingInspectionForm({
       <Field label="Access instructions">
         <Textarea
           value={ingoing.accessInstructions}
+          inputKind="internal_note"
           onChange={(e) => onChange({ ...ingoing, accessInstructions: e.target.value })}
           rows={2}
         />
@@ -1581,6 +1584,7 @@ function IngoingInspectionForm({
       <Field label="Notes">
         <Textarea
           value={ingoing.notes ?? ''}
+          inputKind="internal_note"
           onChange={(e) => onChange({ ...ingoing, notes: e.target.value })}
           rows={2}
         />
@@ -1629,6 +1633,7 @@ function RoutineInspectionForm({
       <Field label={INSPECTION_TIME_REQUEST_NOTE_LABEL}>
         <Textarea
           value={routine.note}
+          inputKind="internal_note"
           onChange={(e) => onChange({ ...routine, note: e.target.value })}
           rows={3}
           placeholder={INSPECTION_TIME_REQUEST_NOTE_PLACEHOLDER}
@@ -1636,6 +1641,7 @@ function RoutineInspectionForm({
       </Field>
       <Field label="Tenant name">
         <Input
+          inputKind="person_name"
           value={routine.tenantName}
           onChange={(e) => onChange({ ...routine, tenantName: e.target.value })}
         />

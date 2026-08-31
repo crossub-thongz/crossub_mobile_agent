@@ -403,6 +403,7 @@ export function JobCaseEmailDetailDialog({
               <Label htmlFor="comm-subject">Subject</Label>
               <Input
                 id="comm-subject"
+                inputKind="email_subject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
               />
@@ -411,6 +412,7 @@ export function JobCaseEmailDetailDialog({
               <Label htmlFor="comm-body">Message</Label>
               <Textarea
                 id="comm-body"
+                inputKind="message"
                 rows={10}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}

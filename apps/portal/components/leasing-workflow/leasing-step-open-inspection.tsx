@@ -500,6 +500,7 @@ export function LeasingStepOpenInspection({
             <Label htmlFor="cancel-letting-reason">Reason for cancelling</Label>
             <Textarea
               id="cancel-letting-reason"
+              inputKind="internal_note"
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
               placeholder="e.g. Landlord decided not to lease anymore"

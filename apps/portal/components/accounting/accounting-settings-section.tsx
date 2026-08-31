@@ -68,6 +68,7 @@ export function AccountingSettingsSection() {
           <Label htmlFor="receipt-template">Payment receipt template</Label>
           <Textarea
             id="receipt-template"
+            data-allow-html
             className="min-h-36 font-mono text-xs"
             value={receiptTemplate}
             onChange={(e) => setReceiptTemplate(e.target.value)}
@@ -126,6 +127,7 @@ export function AccountingSettingsSection() {
             <Label htmlFor="email-reminder">Email reminder content</Label>
             <Textarea
               id="email-reminder"
+              data-allow-html
               className="min-h-24 text-xs"
               value={emailReminder}
               onChange={(e) => setEmailReminder(e.target.value)}
@@ -135,6 +137,7 @@ export function AccountingSettingsSection() {
             <Label htmlFor="sms-reminder">SMS reminder content</Label>
             <Textarea
               id="sms-reminder"
+              inputKind="message"
               className="min-h-16 text-xs"
               value={smsReminder}
               onChange={(e) => setSmsReminder(e.target.value)}

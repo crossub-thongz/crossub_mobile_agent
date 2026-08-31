@@ -285,6 +285,9 @@ export function PropertyChatDialog({
               <div className="flex items-end gap-2">
                 <textarea
                   value={draft}
+                  data-input-kind="message"
+                  data-allow-emoji
+                  maxLength={5000}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {

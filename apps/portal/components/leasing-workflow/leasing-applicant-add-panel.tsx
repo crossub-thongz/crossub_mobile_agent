@@ -117,6 +117,7 @@ export function LeasingApplicantAddPanel({
 
       <div className="grid gap-2 sm:grid-cols-3">
         <Input
+          inputKind="person_name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Full name"

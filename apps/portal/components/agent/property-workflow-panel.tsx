@@ -965,10 +965,10 @@ export function PropertyWorkflowCreateDialog({
             <Field label="Notes">
               <Textarea
                 rows={3}
+                inputKind="internal_note"
                 placeholder="Access instructions, landlord requests, or other context for this letting…"
                 value={lettingNotes}
                 onChange={(e) => setLettingNotes(e.target.value)}
-                maxLength={2000}
               />
             </Field>
             <div className="space-y-1.5">
@@ -1315,6 +1315,7 @@ export function PropertyWorkflowCreateDialog({
                     </Field>
                     <Field label="Breach conduct">
                       <Textarea
+                        inputKind="internal_note"
                         value={breachConduct}
                         onChange={(e) => setBreachConduct(e.target.value)}
                         rows={2}
@@ -1347,6 +1348,7 @@ export function PropertyWorkflowCreateDialog({
             </Field>
             <Field label="Notes">
               <Textarea
+                inputKind="internal_note"
                 value={terminationNotes}
                 onChange={(e) => setTerminationNotes(e.target.value)}
                 rows={3}
@@ -1474,10 +1476,10 @@ export function PropertyWorkflowCreateDialog({
                 <Field label="New leasing notes">
                   <Textarea
                     rows={2}
+                    inputKind="internal_note"
                     placeholder="Landlord relist requests, access notes, or other context for the new letting…"
                     value={lettingNotes}
                     onChange={(e) => setLettingNotes(e.target.value)}
-                    maxLength={2000}
                   />
                 </Field>
                 <div className="space-y-1.5">

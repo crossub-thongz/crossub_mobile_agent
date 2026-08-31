@@ -144,6 +144,7 @@ export function LandlordPartyCards({
               </Label>
               <Input
                 id={`landlord-name-${index}`}
+                inputKind="person_name"
                 value={party.name}
                 onChange={(e) => updateParty(index, 'name', e.target.value)}
                 placeholder="Enter landlord name"

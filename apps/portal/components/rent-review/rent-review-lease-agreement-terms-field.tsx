@@ -81,6 +81,7 @@ export function RentReviewLeaseAgreementTermsField({
         </Label>
         <Textarea
           id={`lease-additional-terms-${detail.id}`}
+          inputKind="internal_note"
           value={additionalTerms}
           disabled={disabled || saving}
           rows={4}
@@ -96,6 +97,7 @@ export function RentReviewLeaseAgreementTermsField({
         </Label>
         <Textarea
           id={`lease-pets-terms-${detail.id}`}
+          inputKind="internal_note"
           value={additionalTermsPets}
           disabled={disabled || saving}
           rows={3}

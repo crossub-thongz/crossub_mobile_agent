@@ -203,6 +203,7 @@ export function PropertyLandlordOverviewEditDialog({
                 <Label htmlFor="landlord-name">Name</Label>
                 <Input
                   id="landlord-name"
+                  inputKind="person_name"
                   value={form.landlordName}
                   onChange={(e) => set('landlordName', e.target.value)}
                 />

@@ -280,7 +280,7 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First name</Label>
-                <Input id="firstName" {...agentForm.register('firstName')} />
+                <Input id="firstName" inputKind="person_name" {...agentForm.register('firstName')} />
                 {agentForm.formState.errors.firstName ? (
                   <p className="text-xs text-destructive">
                     {agentForm.formState.errors.firstName.message}
@@ -289,7 +289,7 @@ export default function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last name</Label>
-                <Input id="lastName" {...agentForm.register('lastName')} />
+                <Input id="lastName" inputKind="person_name" {...agentForm.register('lastName')} />
                 {agentForm.formState.errors.lastName ? (
                   <p className="text-xs text-destructive">
                     {agentForm.formState.errors.lastName.message}

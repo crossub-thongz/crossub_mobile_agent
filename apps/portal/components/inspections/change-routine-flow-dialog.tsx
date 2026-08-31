@@ -128,6 +128,7 @@ export function ChangeRoutineFlowDialog({
             <Label htmlFor="agent-flow-note">Reason details *</Label>
             <Textarea
               id="agent-flow-note"
+              inputKind="internal_note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={4}

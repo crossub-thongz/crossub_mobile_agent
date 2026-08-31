@@ -1,22 +1,48 @@
 import * as React from 'react';
 
-import { bindTextValueWithoutEmojis, propAllowsEmoji, stripEmojis } from '@/lib/strip-emojis';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import {
+  AGENT_INPUT_RULES,
+  type AgentInputKind,
+  sanitizeAgentInput,
+} from '@/lib/agent-input-rules';
+import {
+  bindSanitizedTextValue,
+  propAllowsEmoji,
+  propAllowsHtml,
+  stripEmojis,
+} from '@/lib/strip-emojis';
 import { cn } from '@/lib/utils';
+
+export type TextareaProps = React.ComponentProps<'textarea'> & {
+  inputKind?: AgentInputKind;
+  'data-allow-emoji'?: boolean | '';
+  'data-allow-html'?: boolean | '';
+};
 
 function Textarea({
   className,
   ref,
   onChange,
+  onKeyDown,
   value,
   defaultValue,
+  inputKind,
+  maxLength,
   ...props
-}: React.ComponentProps<'textarea'>) {
+}: TextareaProps) {
   const isV2 = useIsAgentUiV2();
-  const allowEmoji = !isV2 || propAllowsEmoji(props['data-allow-emoji']);
-  const textValue = typeof value === 'string' && !allowEmoji ? stripEmojis(value) : value;
+  const rule = inputKind ? AGENT_INPUT_RULES[inputKind] : undefined;
+  const dataAllowEmoji = props['data-allow-emoji'];
+  const dataAllowHtml = props['data-allow-html'];
+  const allowEmoji = rule ? rule.allowEmoji : !isV2 || propAllowsEmoji(dataAllowEmoji);
+  const allowHtml = propAllowsHtml(dataAllowHtml);
+  const resolvedMaxLength = maxLength ?? rule?.maxLength;
+  const sanitize = (raw: string) =>
+    sanitizeAgentInput(raw, { kind: inputKind, allowEmoji, allowHtml, stripEmojis });
+  const textValue = typeof value === 'string' ? sanitize(value) : value;
   const textDefault =
-    typeof defaultValue === 'string' && !allowEmoji ? stripEmojis(defaultValue) : defaultValue;
+    typeof defaultValue === 'string' ? sanitize(defaultValue) : defaultValue;
 
   return (
     <textarea
@@ -29,9 +55,18 @@ function Textarea({
         className,
       )}
       {...props}
+      data-input-kind={inputKind}
+      data-allow-emoji={allowEmoji ? true : dataAllowEmoji}
+      maxLength={resolvedMaxLength}
       value={textValue}
       defaultValue={textDefault}
-      onChange={allowEmoji ? onChange : bindTextValueWithoutEmojis(onChange)}
+      onChange={bindSanitizedTextValue({ kind: inputKind, allowEmoji, allowHtml, onChange })}
+      onKeyDown={(event) => {
+        if (rule && !rule.allowLineBreaks && event.key === 'Enter') {
+          event.preventDefault();
+        }
+        onKeyDown?.(event);
+      }}
     />
   );
 }

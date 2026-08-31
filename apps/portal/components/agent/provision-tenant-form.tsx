@@ -136,14 +136,14 @@ export function ProvisionTenantForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="firstName">First name</Label>
-          <Input id="firstName" {...form.register('firstName')} />
+          <Input id="firstName" inputKind="person_name" {...form.register('firstName')} />
           {form.formState.errors.firstName ? (
             <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
           ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="lastName">Last name</Label>
-          <Input id="lastName" {...form.register('lastName')} />
+          <Input id="lastName" inputKind="person_name" {...form.register('lastName')} />
           {form.formState.errors.lastName ? (
             <p className="text-xs text-destructive">{form.formState.errors.lastName.message}</p>
           ) : null}

@@ -11,6 +11,8 @@ import {
   insertMention,
   type MentionCandidate,
 } from '@/lib/message-mentions';
+import { AGENT_INPUT_KIND, sanitizeAgentInput } from '@/lib/agent-input-rules';
+import { stripEmojis } from '@/lib/strip-emojis';
 import { cn } from '@/lib/utils';
 
 export function MessageCompose({
@@ -74,7 +76,13 @@ export function MessageCompose({
   };
 
   const handleChange = (next: string) => {
-    onChange(next);
+    onChange(
+      sanitizeAgentInput(next, {
+        kind: AGENT_INPUT_KIND.MESSAGE,
+        allowEmoji: true,
+        stripEmojis,
+      }),
+    );
     const el = textareaRef.current;
     const cursor = el?.selectionStart ?? next.length;
     const query = detectMentionQuery(next, cursor);
@@ -168,6 +176,9 @@ export function MessageCompose({
 
       <textarea
         ref={textareaRef}
+        data-input-kind="message"
+        data-allow-emoji
+        maxLength={5000}
         placeholder={placeholder}
         value={value}
         rows={rows}

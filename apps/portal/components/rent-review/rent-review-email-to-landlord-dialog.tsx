@@ -208,6 +208,7 @@ export function RentReviewEmailToLandlordDialog({
             <Label htmlFor="landlord-subject">Subject</Label>
             <Input
               id="landlord-subject"
+              inputKind="email_subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
             />
@@ -222,6 +223,7 @@ export function RentReviewEmailToLandlordDialog({
             </div>
             <Textarea
               id="landlord-body"
+              inputKind="message"
               rows={12}
               value={body}
               onChange={(e) => setBody(e.target.value)}

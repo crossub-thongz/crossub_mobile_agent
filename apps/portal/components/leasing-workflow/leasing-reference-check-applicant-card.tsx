@@ -243,6 +243,7 @@ export function LeasingReferenceCheckApplicantCard({
           <div>
             <Label className="text-xs">Reference check notes</Label>
             <Textarea
+              inputKind="internal_note"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Landlord reference, employment checks, observations…"
@@ -436,6 +437,7 @@ export function LeasingReferenceCheckApplicantCard({
       >
         <Input
           value={rejectReason}
+          inputKind="internal_note"
           onChange={(e) => setRejectReason(e.target.value)}
           placeholder="Optional reason (included in email)"
           className="text-sm"

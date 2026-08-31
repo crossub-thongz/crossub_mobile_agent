@@ -72,6 +72,7 @@ export function WorkflowCaseDeleteDialog({
           <Label htmlFor="workflow-delete-reason">Reason</Label>
           <Textarea
             id="workflow-delete-reason"
+            inputKind="internal_note"
             rows={4}
             placeholder="Why is this case being removed?"
             value={reason}

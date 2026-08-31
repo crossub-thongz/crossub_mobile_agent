@@ -604,6 +604,7 @@ export function RentReconciliationDialog({
             </div>
             {addNote ? (
               <Textarea
+                inputKind="internal_note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Optional note for this reconciliation…"

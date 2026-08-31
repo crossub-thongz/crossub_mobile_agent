@@ -74,7 +74,7 @@ export function PropertyLandlordEditDialog({
         <div className="space-y-3 py-1">
           <div className="space-y-1.5">
             <Label htmlFor="landlord-name">Name</Label>
-            <Input id="landlord-name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input id="landlord-name" inputKind="person_name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="landlord-email">Email</Label>

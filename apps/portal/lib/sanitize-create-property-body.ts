@@ -1,4 +1,6 @@
 import type { CreateAgentPropertyInput } from '@/lib/crossub-api/agent-client';
+import { AGENT_INPUT_KIND, sanitizeAgentInput } from '@/lib/agent-input-rules';
+import { stripEmojis } from '@/lib/strip-emojis';
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -18,6 +20,26 @@ function optionalTrimmed(value: string | undefined): string | undefined {
   return trimmed || undefined;
 }
 
+function sanitizeName(value: string | undefined): string | undefined {
+  const next = optionalTrimmed(value);
+  if (!next) return undefined;
+  return sanitizeAgentInput(next, {
+    kind: AGENT_INPUT_KIND.PERSON_NAME,
+    allowEmoji: true,
+    stripEmojis,
+  });
+}
+
+function sanitizeAddress(value: string | undefined): string | undefined {
+  const next = optionalTrimmed(value);
+  if (!next) return undefined;
+  return sanitizeAgentInput(next, {
+    kind: AGENT_INPUT_KIND.PROPERTY_ADDRESS,
+    allowEmoji: false,
+    stripEmojis,
+  });
+}
+
 function optionalInt(value: number | undefined): number | undefined {
   if (value == null || !Number.isFinite(value)) return undefined;
   return Math.trunc(value);
@@ -33,8 +55,8 @@ export function sanitizeCreatePropertyBody(
   body: CreateAgentPropertyInput,
 ): CreateAgentPropertyInput {
   const sanitized: CreateAgentPropertyInput = {
-    address: body.address.trim(),
-    suburb: optionalTrimmed(body.suburb),
+    address: sanitizeAddress(body.address) ?? body.address.trim(),
+    suburb: sanitizeAddress(body.suburb),
     state: body.state,
     postcode: optionalTrimmed(body.postcode),
     propertyType: body.propertyType,
@@ -43,17 +65,17 @@ export function sanitizeCreatePropertyBody(
     bathrooms: optionalInt(body.bathrooms),
     parking: optionalInt(body.parking),
     furnished: body.furnished,
-    landlordName: optionalTrimmed(body.landlordName),
+    landlordName: sanitizeName(body.landlordName),
     landlordEmail: optionalEmail(body.landlordEmail, 'Landlord email'),
     landlordPhone: optionalTrimmed(body.landlordPhone),
-    tenantName: optionalTrimmed(body.tenantName),
+    tenantName: sanitizeName(body.tenantName),
     tenantEmail: optionalEmail(body.tenantEmail, 'Tenant email'),
     tenantPhone: optionalTrimmed(body.tenantPhone),
     contacts: Array.isArray(body.contacts)
       ? body.contacts
           .map((contact) => ({
             role: contact.role,
-            name: optionalTrimmed(contact.name),
+            name: sanitizeName(contact.name),
             email: contact.email?.trim()
               ? optionalEmail(contact.email, 'Contact email')
               : undefined,
@@ -71,12 +93,12 @@ export function sanitizeCreatePropertyBody(
     rentWeekly: body.rentWeekly,
     bondAmount: body.bondAmount,
     depositAmount: body.depositAmount,
-    buildingName: optionalTrimmed(body.buildingName),
+    buildingName: sanitizeAddress(body.buildingName),
     strataPlanNumber: optionalTrimmed(body.strataPlanNumber),
-    buildingManagerName: optionalTrimmed(body.buildingManagerName),
+    buildingManagerName: sanitizeName(body.buildingManagerName),
     buildingManagerEmail: optionalEmail(body.buildingManagerEmail, 'Building manager email'),
     buildingManagerPhone: optionalTrimmed(body.buildingManagerPhone),
-    strataContactName: optionalTrimmed(body.strataContactName),
+    strataContactName: sanitizeName(body.strataContactName),
     strataContactEmail: optionalEmail(body.strataContactEmail, 'Strata email'),
     strataContactPhone: optionalTrimmed(body.strataContactPhone),
     landlordInsuranceExpiry: optionalTrimmed(body.landlordInsuranceExpiry),

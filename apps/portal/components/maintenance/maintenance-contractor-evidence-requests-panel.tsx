@@ -72,6 +72,7 @@ export function MaintenanceContractorEvidenceRequestsPanel({
           <p className="text-sm font-medium">{label(row.contractorId)}</p>
           <p className="text-muted-foreground text-xs whitespace-pre-wrap">{row.message}</p>
           <Textarea
+            inputKind="contractor_quote_note"
             placeholder="Note for the contractor (optional)"
             value={notes[row.id] ?? ''}
             onChange={(e) => setNotes((prev) => ({ ...prev, [row.id]: e.target.value }))}

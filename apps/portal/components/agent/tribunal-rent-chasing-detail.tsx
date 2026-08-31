@@ -835,6 +835,9 @@ export function TribunalRentChasingDetail({ caseId }: { caseId: string }) {
         </Label>
         <textarea
           id="tribunal-agent-notes"
+          data-input-kind="internal_note"
+          data-allow-emoji
+          maxLength={10000}
           value={notes}
           onChange={(e) => {
             setNotes(e.target.value);

@@ -221,6 +221,7 @@ export default function ProfilePage() {
               </BillingField>
               <BillingField label="Account name">
                 <Input
+                  inputKind="person_name"
                   value={bankAccountName}
                   onChange={(e) => setBankAccountName(e.target.value)}
                   disabled={billingSaving}

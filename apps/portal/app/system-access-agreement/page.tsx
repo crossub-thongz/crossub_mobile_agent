@@ -160,6 +160,7 @@ export default function SystemAccessAgreementPage() {
             <Label htmlFor="signerName">Full legal name</Label>
             <Input
               id="signerName"
+              inputKind="person_name"
               value={signerName}
               onChange={(e) => setSignerName(e.target.value)}
               placeholder="As it appears on your agency registration"

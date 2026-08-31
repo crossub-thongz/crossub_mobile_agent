@@ -890,6 +890,9 @@ export function CreateTribunalRentChasingDialog({
                   <Field label="Notes" className="sm:col-span-2">
                     <textarea
                       value={bondNotes}
+                      data-input-kind="internal_note"
+                      data-allow-emoji
+                      maxLength={10000}
                       onChange={(e) => setBondNotes(e.target.value)}
                       rows={3}
                       disabled={saving || !propertyId}

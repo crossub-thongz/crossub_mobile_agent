@@ -206,6 +206,7 @@ export function PropertyAddressAutocomplete({
         />
         <Input
           ref={searchInputRef}
+          inputKind="property_address"
           defaultValue=""
           placeholder="Search Google Maps — pick a result to auto-fill"
           disabled={disabled || mapsFailed}

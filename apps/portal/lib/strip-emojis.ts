@@ -2,13 +2,21 @@
  * Strip emoji (and leftover joiners / variation selectors) from user-typed text.
  *
  * `stripEmojis` is the helper to call on any string. Input / Textarea and
- * `installGlobalEmojiFilter` apply it to every field automatically.
+ * `installGlobalAgentInputFilter` apply Agent App rules (no HTML, length,
+ * line breaks, emoji policy) to every field automatically.
  *
- * Opt out of a single field with `data-allow-emoji`.
+ * Opt a single unclassified field into emoji with `data-allow-emoji`.
+ * Prefer `inputKind` / `data-input-kind` for listed field types.
  *
  * Uses code-point ranges instead of `\p{Extended_Pictographic}` so the strip
  * still works after bundling and for the OS emoji picker (composition events).
  */
+
+import {
+  AGENT_INPUT_RULES,
+  parseAgentInputKind,
+  sanitizeAgentInput,
+} from '@/lib/agent-input-rules';
 
 const SKIP_INPUT_TYPES = new Set([
   'file',
@@ -61,18 +69,43 @@ export function allowsEmoji(dataset: DOMStringMap | undefined): boolean {
   return flag === '' || flag === 'true';
 }
 
+export function allowsHtml(dataset: DOMStringMap | undefined): boolean {
+  const flag = dataset?.allowHtml;
+  return flag === '' || flag === 'true';
+}
+
 export function propAllowsEmoji(value: unknown): boolean {
+  return value === '' || value === true || value === 'true';
+}
+
+export function propAllowsHtml(value: unknown): boolean {
   return value === '' || value === true || value === 'true';
 }
 
 export function isEmojiFilteredField(
   el: EventTarget | null,
 ): el is HTMLInputElement | HTMLTextAreaElement {
+  if (!isTextEntryField(el)) return false;
+  return !resolveAllowEmoji(el, true);
+}
+
+export function isTextEntryField(
+  el: EventTarget | null,
+): el is HTMLInputElement | HTMLTextAreaElement {
   if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return false;
-  if (allowsEmoji(el.dataset)) return false;
   if (el instanceof HTMLInputElement && SKIP_INPUT_TYPES.has(el.type)) return false;
   if (el.readOnly || el.disabled) return false;
   return true;
+}
+
+export function resolveAllowEmoji(
+  el: HTMLInputElement | HTMLTextAreaElement,
+  stripEmojiByDefault: boolean,
+): boolean {
+  const kind = parseAgentInputKind(el.dataset.inputKind);
+  if (kind) return AGENT_INPUT_RULES[kind].allowEmoji;
+  if (allowsEmoji(el.dataset)) return true;
+  return !stripEmojiByDefault;
 }
 
 function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, next: string) {
@@ -87,8 +120,27 @@ function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, next: string
   else el.value = next;
 }
 
-function restoreCaret(el: HTMLInputElement | HTMLTextAreaElement, previous: string, caret: number) {
-  const nextCaret = stripEmojis(previous.slice(0, caret)).length;
+function sanitizeFieldValue(
+  el: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+  stripEmojiByDefault: boolean,
+): string {
+  const kind = parseAgentInputKind(el.dataset.inputKind);
+  return sanitizeAgentInput(value, {
+    kind,
+    allowEmoji: resolveAllowEmoji(el, stripEmojiByDefault),
+    allowHtml: allowsHtml(el.dataset),
+    stripEmojis,
+  });
+}
+
+function restoreCaret(
+  el: HTMLInputElement | HTMLTextAreaElement,
+  previous: string,
+  caret: number,
+  stripEmojiByDefault: boolean,
+) {
+  const nextCaret = sanitizeFieldValue(el, previous.slice(0, caret), stripEmojiByDefault).length;
   try {
     el.setSelectionRange(nextCaret, nextCaret);
   } catch {
@@ -96,27 +148,45 @@ function restoreCaret(el: HTMLInputElement | HTMLTextAreaElement, previous: stri
   }
 }
 
-function applyStrippedValue(el: HTMLInputElement | HTMLTextAreaElement): boolean {
+function applySanitizedValue(
+  el: HTMLInputElement | HTMLTextAreaElement,
+  stripEmojiByDefault: boolean,
+): boolean {
   const previous = el.value;
-  const next = stripEmojis(previous);
+  const next = sanitizeFieldValue(el, previous, stripEmojiByDefault);
   if (next === previous) return false;
   const caret = el.selectionStart ?? next.length;
   setNativeValue(el, next);
-  restoreCaret(el, previous, caret);
+  restoreCaret(el, previous, caret, stripEmojiByDefault);
   return true;
+}
+
+/** Wrap an input/textarea onChange so the handler receives the sanitized value. */
+export function bindSanitizedTextValue<E extends { target: { value: string } }>(options: {
+  kind?: ReturnType<typeof parseAgentInputKind>;
+  allowEmoji: boolean;
+  allowHtml?: boolean;
+  onChange?: (event: E) => void;
+}): (event: E) => void {
+  return (event) => {
+    const next = sanitizeAgentInput(event.target.value, {
+      kind: options.kind,
+      allowEmoji: options.allowEmoji,
+      allowHtml: options.allowHtml,
+      stripEmojis,
+    });
+    if (next !== event.target.value) {
+      setNativeValue(event.target as HTMLInputElement | HTMLTextAreaElement, next);
+    }
+    options.onChange?.(event);
+  };
 }
 
 /** Wrap an input/textarea onChange so the handler never sees emoji. */
 export function bindTextValueWithoutEmojis<E extends { target: { value: string } }>(
   handler?: (event: E) => void,
 ): (event: E) => void {
-  return (event) => {
-    const next = stripEmojis(event.target.value);
-    if (next !== event.target.value) {
-      setNativeValue(event.target as HTMLInputElement | HTMLTextAreaElement, next);
-    }
-    handler?.(event);
-  };
+  return bindSanitizedTextValue({ allowEmoji: false, onChange: handler });
 }
 
 function insertCleanText(el: HTMLInputElement | HTMLTextAreaElement, text: string) {
@@ -127,18 +197,21 @@ function insertCleanText(el: HTMLInputElement | HTMLTextAreaElement, text: strin
 }
 
 /** Document-level capture so native <input> / <textarea> are covered too. */
-export function installGlobalEmojiFilter(): () => void {
+export function installGlobalAgentInputFilter(options?: {
+  stripEmojiByDefault?: boolean;
+}): () => void {
   if (typeof window === 'undefined') return () => undefined;
+  const stripEmojiByDefault = options?.stripEmojiByDefault ?? true;
 
   const onBeforeInput = (event: Event) => {
     const ie = event as InputEvent;
     if (ie.isComposing || !ie.cancelable) return;
     if (!ie.inputType?.startsWith('insert')) return;
     const el = event.target;
-    if (!isEmojiFilteredField(el)) return;
+    if (!isTextEntryField(el)) return;
     const data = ie.data;
     if (data == null) return;
-    const cleaned = stripEmojis(data);
+    const cleaned = sanitizeFieldValue(el, data, stripEmojiByDefault);
     if (cleaned === data) return;
     event.preventDefault();
     if (cleaned) insertCleanText(el, cleaned);
@@ -147,10 +220,10 @@ export function installGlobalEmojiFilter(): () => void {
   const onPaste = (event: Event) => {
     const pe = event as ClipboardEvent;
     const el = event.target;
-    if (!isEmojiFilteredField(el)) return;
+    if (!isTextEntryField(el)) return;
     const text = pe.clipboardData?.getData('text/plain');
     if (text == null) return;
-    const cleaned = stripEmojis(text);
+    const cleaned = sanitizeFieldValue(el, text, stripEmojiByDefault);
     if (cleaned === text) return;
     event.preventDefault();
     insertCleanText(el, cleaned);
@@ -158,8 +231,8 @@ export function installGlobalEmojiFilter(): () => void {
 
   const onInputOrCompositionEnd = (event: Event) => {
     const el = event.target;
-    if (!isEmojiFilteredField(el)) return;
-    applyStrippedValue(el);
+    if (!isTextEntryField(el)) return;
+    applySanitizedValue(el, stripEmojiByDefault);
   };
 
   window.addEventListener('beforeinput', onBeforeInput, true);
@@ -173,4 +246,9 @@ export function installGlobalEmojiFilter(): () => void {
     window.removeEventListener('input', onInputOrCompositionEnd, true);
     window.removeEventListener('compositionend', onInputOrCompositionEnd, true);
   };
+}
+
+/** @deprecated Use installGlobalAgentInputFilter */
+export function installGlobalEmojiFilter(): () => void {
+  return installGlobalAgentInputFilter({ stripEmojiByDefault: true });
 }

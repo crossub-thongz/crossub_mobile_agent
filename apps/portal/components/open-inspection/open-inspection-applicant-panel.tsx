@@ -202,6 +202,7 @@ export function OpenInspectionApplicantPanel({
         }
       >
         <Textarea
+          inputKind="message"
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
           placeholder="Optional feedback for the approved applicant…"
@@ -230,6 +231,7 @@ export function OpenInspectionApplicantPanel({
       >
         <Input
           value={rejectReason}
+          inputKind="internal_note"
           onChange={(e) => setRejectReason(e.target.value)}
           placeholder="Optional reason (included in email)"
           className="text-sm"

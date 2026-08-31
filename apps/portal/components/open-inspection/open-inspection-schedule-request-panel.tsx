@@ -278,6 +278,7 @@ export function OpenInspectionScheduleRequestPanel({
         <Label htmlFor="open-schedule-notes">Notes (optional)</Label>
         <Textarea
           id="open-schedule-notes"
+          inputKind="internal_note"
           value={preferredNotes}
           onChange={(e) => setPreferredNotes(e.target.value)}
           rows={3}

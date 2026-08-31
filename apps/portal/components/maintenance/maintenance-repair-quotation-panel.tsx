@@ -116,6 +116,7 @@ export function MaintenanceRepairQuotationPanel({
           <p className="mb-2 text-sm font-semibold text-[#5f9f6b]">Comments</p>
           <Textarea
             value={comments}
+            inputKind="contractor_quote_note"
             onChange={(e) => setComments(e.target.value)}
             readOnly={!showActions}
             placeholder={showActions ? 'Optional notes or decline reason' : 'No comments'}

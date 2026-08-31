@@ -41,6 +41,7 @@ export function PropertyVacateDateField({
           <Label htmlFor={`${idPrefix}-reason`}>Reason for vacate date change</Label>
           <Textarea
             id={`${idPrefix}-reason`}
+            inputKind="internal_note"
             rows={3}
             placeholder="Explain why the vacate date is changing"
             value={reason}

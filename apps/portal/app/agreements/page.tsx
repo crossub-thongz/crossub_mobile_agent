@@ -440,6 +440,7 @@ export default function AgreementsPage() {
                   <Label htmlFor="return-notes">Note to salesperson (optional)</Label>
                   <Textarea
                     id="return-notes"
+                    inputKind="internal_note"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={3}

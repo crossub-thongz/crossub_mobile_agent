@@ -79,6 +79,7 @@ export function MaintenanceContractorRfqEmailEditor({
             </Label>
             <Input
               id="agent-contractor-rfq-subject"
+              inputKind="email_subject"
               value={value.subject}
               onChange={(e) => onChange({ ...value, subject: e.target.value })}
               disabled={disabled}
@@ -91,6 +92,7 @@ export function MaintenanceContractorRfqEmailEditor({
             </Label>
             <Textarea
               id="agent-contractor-rfq-body"
+              inputKind="message"
               value={value.bodyText}
               onChange={(e) => onChange({ ...value, bodyText: e.target.value })}
               disabled={disabled}

@@ -160,6 +160,7 @@ export function AgencyTeamPanel({
             <Label htmlFor="team-invite-name">Name (optional)</Label>
             <Input
               id="team-invite-name"
+              inputKind="person_name"
               value={inviteName}
               onChange={(e) => setInviteName(e.target.value)}
               placeholder="Jordan Lee"

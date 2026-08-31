@@ -80,6 +80,7 @@ export function ContactPartyList({
               </Label>
               <Input
                 id={`${title}-name-${index}`}
+                inputKind="person_name"
                 value={party.name}
                 onChange={(e) => updateParty(index, 'name', e.target.value)}
                 placeholder={namePlaceholder}

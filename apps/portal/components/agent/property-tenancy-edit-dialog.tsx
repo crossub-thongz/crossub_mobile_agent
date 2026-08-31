@@ -587,6 +587,7 @@ export function PropertyTenancyEditDialog({
                   <Label htmlFor="tenant-name">Name</Label>
                   <Input
                     id="tenant-name"
+                    inputKind="person_name"
                     value={
                       activeIsPrimary ? form.tenantName : (activeDraft?.name ?? '')
                     }
@@ -704,6 +705,7 @@ export function PropertyTenancyEditDialog({
                 <Label htmlFor="agent-add-tenant-name">Name</Label>
                 <Input
                   id="agent-add-tenant-name"
+                  inputKind="person_name"
                   value={tenantDraft.name}
                   onChange={(e) => setTenantDraft({ ...tenantDraft, name: e.target.value })}
                   autoFocus

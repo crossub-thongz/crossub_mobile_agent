@@ -893,6 +893,7 @@ export function NewPropertyRegistryForm({
                   <div className="grid grid-cols-2 gap-3">
                     <FormField label="Unit">
                       <Input
+                        inputKind="property_address"
                         value={form.unit}
                         onChange={(e) => setAddressPart('unit', e.target.value)}
                         placeholder="e.g. 12 — optional"
@@ -900,6 +901,7 @@ export function NewPropertyRegistryForm({
                     </FormField>
                     <FormField label="Street number" required>
                       <Input
+                        inputKind="property_address"
                         value={form.streetNumber}
                         onChange={(e) => setAddressPart('streetNumber', e.target.value)}
                         placeholder="e.g. 66"
@@ -914,6 +916,7 @@ export function NewPropertyRegistryForm({
                   <div className="grid grid-cols-2 gap-3">
                     <FormField label="Street name" required>
                       <Input
+                        inputKind="property_address"
                         value={form.streetName}
                         onChange={(e) => setAddressPart('streetName', e.target.value)}
                         placeholder="e.g. Berry Street"
@@ -925,6 +928,7 @@ export function NewPropertyRegistryForm({
                     </FormField>
                     <FormField label="City / suburb" required>
                       <Input
+                        inputKind="property_address"
                         value={form.suburb}
                         onChange={(e) => setAddressPart('suburb', e.target.value)}
                         placeholder="e.g. Bondi Beach"

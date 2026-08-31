@@ -62,6 +62,7 @@ export function MaintenanceIssueTypeField({
           </Label>
           <Input
             id={`${id}-other`}
+            inputKind="internal_note"
             value={otherDetail}
             onChange={(e) => onOtherDetailChange(e.target.value)}
             placeholder="Enter issue type"

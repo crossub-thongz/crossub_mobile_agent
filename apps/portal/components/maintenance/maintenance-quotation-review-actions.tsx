@@ -111,6 +111,7 @@ export function MaintenanceQuotationReviewActions({
             <p className="text-muted-foreground mb-1.5 text-xs font-medium">Decline reason</p>
             <Textarea
               value={declineReason}
+              inputKind="contractor_quote_note"
               onChange={(e) => setDeclineReason(e.target.value)}
               placeholder="Required if declining — contractor comments are shown above"
               className="min-h-[80px] resize-none text-xs"
@@ -180,6 +181,7 @@ export function MaintenanceQuotationReviewActions({
           />
           <Textarea
             value={counterMessage}
+            inputKind="message"
             onChange={(e) => setCounterMessage(e.target.value)}
             placeholder="Optional message to contractor"
             className="min-h-[72px] resize-none text-xs"
@@ -252,6 +254,7 @@ export function MaintenanceQuotationReviewActions({
             <p className="text-muted-foreground mb-1.5 text-xs font-medium">Feedback to contractor</p>
             <Textarea
               value={declineReason}
+              inputKind="message"
               onChange={(e) => setDeclineReason(e.target.value)}
               placeholder="Optional — uses decline reason if empty"
               className="min-h-[72px] resize-none text-xs"
