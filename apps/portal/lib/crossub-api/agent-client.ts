@@ -14,10 +14,19 @@ type AgentAccountManagerFields = {
   accountManagerExtension?: string | null;
 };
 
+type AgentPrimaryContactFields = {
+  primaryContactUserId?: string | null;
+};
+
 export type AgentAgency = components['schemas']['AgentAgencyResponseDto'] &
-  AgentAccountManagerFields;
+  AgentAccountManagerFields &
+  AgentPrimaryContactFields;
 export type AgentProperty = components['schemas']['AgentPropertyResponseDto'] &
-  AgentAccountManagerFields;
+  AgentAccountManagerFields & {
+    assignedAgentUserId?: string | null;
+    assignedAgentName?: string | null;
+    createdById?: string | null;
+  };
 
 export type AgentInspection = components['schemas']['AgentInspectionDto'] & {
   createdAt?: string | null;
@@ -512,6 +521,17 @@ export async function updateAgencyBilling(
   return agentFetch<AgentAgency>(`/agent/agencies/${agencyId}/billing`, {
     method: 'PATCH',
     body: JSON.stringify(body),
+  });
+}
+
+/** Principal-only: set primary contact, or null to keep the agency as default. */
+export async function updateAgencyPrimaryContact(
+  agencyId: string,
+  primaryContactUserId: string | null,
+): Promise<AgentAgency> {
+  return agentFetch<AgentAgency>(`/agent/agencies/${agencyId}/primary-contact`, {
+    method: 'PATCH',
+    body: JSON.stringify({ primaryContactUserId }),
   });
 }
 

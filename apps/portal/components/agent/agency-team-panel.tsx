@@ -27,11 +27,17 @@ export function AgencyTeamPanel({
   canManage,
   title = 'Agency team',
   currentUserId,
+  selectedMemberId,
+  onSelectMember,
+  showPropertyCounts = true,
 }: {
   agencyId: string;
   canManage: boolean;
   title?: string;
   currentUserId?: string;
+  selectedMemberId?: string | null;
+  onSelectMember?: (userId: string | null) => void;
+  showPropertyCounts?: boolean;
 }) {
   const [team, setTeam] = useState<AgencyTeamResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +99,11 @@ export function AgencyTeamPanel({
 
   return (
     <InfoPanel title={title} icon={Users}>
+      {onSelectMember ? (
+        <p className="text-muted-foreground mb-3 text-xs">
+          Tap an agent to sort their properties below.
+        </p>
+      ) : null}
       {loading ? (
         <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
           <Loader2 className="size-4 animate-spin" />
@@ -102,27 +113,48 @@ export function AgencyTeamPanel({
         <ul className="divide-y rounded-xl border">
           {team.members.map((member) => {
             const isSelf = currentUserId != null && member.userId === currentUserId;
+            const selected = selectedMemberId === member.userId;
+            const canRemove = canManage && member.tier !== 'PRINCIPAL';
+            const identity = (
+              <div className="min-w-0">
+                <p className="font-medium leading-tight">
+                  {memberName(member)}
+                  {isSelf ? (
+                    <span className="text-muted-foreground ml-1.5 text-xs font-normal">(You)</span>
+                  ) : null}
+                </p>
+                <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs break-all">
+                  <Mail className="size-3 shrink-0" />
+                  {member.email}
+                </p>
+                <p className="text-muted-foreground mt-1 text-[10px]">
+                  {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
+                  {showPropertyCounts
+                    ? ` · ${member.assignedPropertyCount} propert${member.assignedPropertyCount === 1 ? 'y' : 'ies'}`
+                    : ''}
+                </p>
+              </div>
+            );
             return (
-              <li key={member.userId} className="flex items-start justify-between gap-3 p-3">
-                <div className="min-w-0">
-                  <p className="font-medium leading-tight">
-                    {memberName(member)}
-                    {isSelf ? (
-                      <span className="text-muted-foreground ml-1.5 text-xs font-normal">(You)</span>
-                    ) : null}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs break-all">
-                    <Mail className="size-3 shrink-0" />
-                    {member.email}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-[10px]">
-                    {member.tier === 'PRINCIPAL' ? 'Principal' : 'Agent'}
-                    {' · '}
-                    {member.assignedPropertyCount} propert
-                    {member.assignedPropertyCount === 1 ? 'y' : 'ies'}
-                  </p>
-                </div>
-                {canManage && member.tier !== 'PRINCIPAL' ? (
+              <li
+                key={member.userId}
+                className={cn(
+                  'flex items-start justify-between gap-3 p-3',
+                  selected && 'bg-primary/10',
+                )}
+              >
+                {onSelectMember ? (
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => onSelectMember(selected ? null : member.userId)}
+                  >
+                    {identity}
+                  </button>
+                ) : (
+                  identity
+                )}
+                {canRemove ? (
                   <Button
                     type="button"
                     variant="ghost"

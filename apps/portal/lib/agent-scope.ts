@@ -37,6 +37,23 @@ export function isOwnedByAgent(
   return assignedAgentId === portfolioId;
 }
 
+/**
+ * Field-agent book: properties they registered, or that are assigned to them.
+ * Principals see the full agency book from the API and should not use this.
+ */
+export function isFieldAgentOwnProperty(
+  property: {
+    assignedPortalAgentUserId?: string | null;
+    createdById?: string | null;
+  },
+  userId: string,
+): boolean {
+  return (
+    property.assignedPortalAgentUserId === userId ||
+    property.createdById === userId
+  );
+}
+
 export function filterByPropertyIds<T extends { propertyId: string }>(
   items: T[] | undefined | null,
   propertyIds: Set<string>,

@@ -84,6 +84,7 @@ import {
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
 import {
   filterByPropertyIds,
+  isFieldAgentOwnProperty,
   isOwnedByAgent,
   resolveAgentPortfolioId,
   type AgentPortfolioId,
@@ -591,26 +592,48 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, [postAuthReady, apiConnected, refresh]);
 
   const properties = useMemo(() => {
-    const scoped = (list: Property[]) =>
-      list.filter((p) => isOwnedByAgent(p.assignedAgentId, agentPortfolioId));
+    const scoped = (list: Property[]) => {
+      const tierByAgency = new Map(
+        (apiAgencies ?? []).map((agency) => [agency.id, agency.membershipTier]),
+      );
+      return list.filter((p) => {
+        if (!isOwnedByAgent(p.assignedAgentId, agentPortfolioId)) return false;
+        if (!p.agencyId || tierByAgency.get(p.agencyId) !== 'AGENT') return true;
+        const hasPortalOwner =
+          Boolean(p.assignedPortalAgentUserId) || Boolean(p.createdById);
+        if (!hasPortalOwner) return true;
+        return user?.id ? isFieldAgentOwnProperty(p, user.id) : false;
+      });
+    };
 
     if (apiConnected) {
       return scoped(apiProperties ?? []);
     }
 
     return scoped(addedProperties);
-  }, [apiConnected, apiProperties, agentPortfolioId, addedProperties]);
+  }, [apiConnected, apiProperties, agentPortfolioId, addedProperties, apiAgencies, user?.id]);
 
   const archivedProperties = useMemo(() => {
-    const scoped = (list: Property[]) =>
-      list.filter((p) => isOwnedByAgent(p.assignedAgentId, agentPortfolioId));
+    const scoped = (list: Property[]) => {
+      const tierByAgency = new Map(
+        (apiAgencies ?? []).map((agency) => [agency.id, agency.membershipTier]),
+      );
+      return list.filter((p) => {
+        if (!isOwnedByAgent(p.assignedAgentId, agentPortfolioId)) return false;
+        if (!p.agencyId || tierByAgency.get(p.agencyId) !== 'AGENT') return true;
+        const hasPortalOwner =
+          Boolean(p.assignedPortalAgentUserId) || Boolean(p.createdById);
+        if (!hasPortalOwner) return true;
+        return user?.id ? isFieldAgentOwnProperty(p, user.id) : false;
+      });
+    };
 
     if (apiConnected) {
       return scoped(apiArchivedProperties ?? []);
     }
 
     return [];
-  }, [apiConnected, apiArchivedProperties, agentPortfolioId]);
+  }, [apiConnected, apiArchivedProperties, agentPortfolioId, apiAgencies, user?.id]);
 
   const propertyIds = useMemo(
     () => new Set(properties.map((p) => p.id)),

@@ -21,6 +21,10 @@ import {
 import { postAuthDestination } from '@/lib/system-access-agreement';
 import { ApiError } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
+import {
+  PORTAL_SERVICE_LEVEL_LABEL,
+  PORTAL_SERVICE_LEVEL_TAG,
+} from '@/lib/portal-service-level';
 
 function EmailCopyRow({ email }: { email: string }) {
   const [copied, setCopied] = useState(false);
@@ -183,6 +187,16 @@ export default function AgencyTeamInviteRegisterPage() {
           Accept the terms below to create your agent account. You&apos;ll see properties assigned
           to you by your agency principal.
         </p>
+        {invite.portalServiceLevel ? (
+          <p className="mt-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm">
+            Account level:{' '}
+            <strong>
+              {PORTAL_SERVICE_LEVEL_TAG[invite.portalServiceLevel]} ·{' '}
+              {PORTAL_SERVICE_LEVEL_LABEL[invite.portalServiceLevel]}
+            </strong>
+            . Same as the agency primary — you do not choose a service plan.
+          </p>
+        ) : null}
 
         <div className="mt-6 rounded-lg border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">
           <p className="font-medium text-foreground">Terms &amp; system access agreement</p>

@@ -1,19 +1,23 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { notFound, useParams } from 'next/navigation';
 import { Building2, Mail, Phone } from 'lucide-react';
 
+import { AgencyAgentProperties } from '@/components/agent/agency-agent-properties';
 import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { AgencyTeamPanel } from '@/components/agent/agency-team-panel';
 import { PortalServiceLevelBadge } from '@/components/agent/portal-service-level-badge';
-import { PropertyListCard } from '@/components/agent/property-list-card';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import type { Agency } from '@/lib/types';
-import { propertyHref, ROUTES } from '@/constants/routes';
-import { unreadMessagesForProperty } from '@/lib/communications-log';
-import { cn, formatPropertyFullAddress } from '@/lib/utils';
+import { ROUTES } from '@/constants/routes';
+import { cn } from '@/lib/utils';
+import {
+  fetchAgencyTeam,
+  type AgencyTeamMember,
+} from '@/lib/crossub-api/agent-client';
 
 const STATUS_STYLES: Record<Agency['status'], string> = {
   ACTIVE: 'bg-primary/15 text-primary',
@@ -33,6 +37,23 @@ export default function AgencyDetailPage() {
   const { user } = useAuth();
   const { agencies, properties, messages } = useAgentData();
   const agency = agencies.find((a) => a.id === id);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [members, setMembers] = useState<AgencyTeamMember[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    void fetchAgencyTeam(id)
+      .then((team) => {
+        if (!cancelled) setMembers(team.members);
+      })
+      .catch(() => {
+        if (!cancelled) setMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   if (!agency) notFound();
 
@@ -72,7 +93,9 @@ export default function AgencyDetailPage() {
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-xl border bg-card/60 p-2">
               <p className="text-lg font-semibold tabular-nums">{agencyProperties.length}</p>
-              <p className="text-muted-foreground text-[10px]">Properties</p>
+              <p className="text-muted-foreground text-[10px]">
+                {isPrincipal ? 'Properties' : 'Your properties'}
+              </p>
             </div>
             <div className="rounded-xl border bg-card/60 p-2">
               <p className="text-lg font-semibold tabular-nums">{occupied}</p>
@@ -120,36 +143,24 @@ export default function AgencyDetailPage() {
           )}
         </InfoPanel>
 
-        <AgencyTeamPanel agencyId={id} canManage={isPrincipal} currentUserId={user?.id} />
+        <AgencyTeamPanel
+          agencyId={id}
+          canManage={isPrincipal}
+          currentUserId={user?.id}
+          selectedMemberId={isPrincipal ? selectedAgentId : null}
+          onSelectMember={isPrincipal ? setSelectedAgentId : undefined}
+          showPropertyCounts={isPrincipal}
+          title={isPrincipal ? 'Agents' : 'Your team'}
+        />
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Properties ({agencyProperties.length})</h2>
-            {agencyProperties.length > 0 && (
-              <p className="text-muted-foreground text-xs tabular-nums">
-                {occupied} occupied · {vacant} vacant
-              </p>
-            )}
-          </div>
-          {agencyProperties.length === 0 ? (
-            <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
-              No properties under this agency yet.
-            </p>
-          ) : (
-            agencyProperties.map((p) => (
-              <PropertyListCard
-                key={p.id}
-                property={p}
-                messageUnread={unreadMessagesForProperty(
-                  p.id,
-                  messages,
-                  formatPropertyFullAddress(p),
-                )}
-                href={propertyHref(p)}
-              />
-            ))
-          )}
-        </section>
+        <AgencyAgentProperties
+          properties={agencyProperties}
+          messages={messages}
+          members={members}
+          isPrincipal={isPrincipal}
+          selectedAgentId={isPrincipal ? selectedAgentId : null}
+          onSelectAgent={setSelectedAgentId}
+        />
       </div>
     </AgentShell>
   );

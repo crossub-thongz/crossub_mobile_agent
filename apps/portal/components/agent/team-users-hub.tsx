@@ -83,6 +83,7 @@ function AgencyTeamSection({
           canManage={isPrincipal}
           currentUserId={currentUserId}
           title={isPrincipal ? 'Agency team' : 'Colleagues on your team'}
+          showPropertyCounts={isPrincipal}
         />
       )}
     </section>

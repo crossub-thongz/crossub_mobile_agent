@@ -141,6 +141,9 @@ type AgentPropertyListFields = {
   agencyName?: string | null;
   propertyManager?: string | null;
   propertyManagerId?: string | null;
+  assignedAgentUserId?: string | null;
+  assignedAgentName?: string | null;
+  createdById?: string | null;
   endOfManagementDate?: string | null;
   registryIntakeComplete?: boolean | null;
   approvalStatus?: PropertyApprovalStatus | null;
@@ -177,6 +180,9 @@ export function mapAgentProperty(
       phone: dto.landlordPhone ?? undefined,
     },
     assignedAgentId: agentId,
+    assignedPortalAgentUserId: list.assignedAgentUserId ?? dto.assignedAgentUserId ?? null,
+    assignedPortalAgentName: list.assignedAgentName ?? dto.assignedAgentName ?? null,
+    createdById: list.createdById ?? dto.createdById ?? null,
     tenantName: dto.tenantName ?? '—',
     tenantContact: {
       email: dto.tenantEmail ?? undefined,
@@ -302,6 +308,10 @@ export function mapAgentAgencies(dtos: AgentAgency[]): Agency[] {
     contactName: asString(a.contactName),
     contactEmail: asString(a.contactEmail),
     contactPhone: asString(a.contactPhone),
+    primaryContactUserId:
+      typeof a.primaryContactUserId === 'string' && a.primaryContactUserId
+        ? a.primaryContactUserId
+        : null,
     portalServiceLevel:
       typeof a.portalServiceLevel === 'string'
         ? (a.portalServiceLevel as Agency['portalServiceLevel'])

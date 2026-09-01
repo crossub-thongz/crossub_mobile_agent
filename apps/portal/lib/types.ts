@@ -71,6 +71,11 @@ export interface Property {
   homeOwnerAddress?: string;
   /** Which agent's book this row belongs to — see {@link AgentPortfolioId}. */
   assignedAgentId: AgentPortfolioId;
+  /** Portal agent assigned to this property within the agency. */
+  assignedPortalAgentUserId?: string | null;
+  assignedPortalAgentName?: string | null;
+  /** Portal user who registered this property. */
+  createdById?: string | null;
   tenantName: string;
   tenantContact: PropertyContact;
   additionalLandlords?: PropertyPartyContact[];
@@ -175,6 +180,11 @@ export interface Agency {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  /**
+   * Portal agent designated as the primary contact. Null keeps the agency
+   * (registry contact) as the default primary.
+   */
+  primaryContactUserId?: string | null;
   /** Agent portal service tier — Level 1 is inspection and tribunal; Level 2 is full management. */
   portalServiceLevel?: AgentPortalServiceLevel;
   /** Principal can manage team; agent sees assigned properties only. */

@@ -12,7 +12,7 @@ import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { updateAgencyBilling } from '@/lib/crossub-api/agent-client';
+import { updateAgencyBilling, fetchAgencyTeam, updateAgencyPrimaryContact, type AgencyTeamMember } from '@/lib/crossub-api/agent-client';
 import { buildProfileHistory } from '@/lib/profile-history';
 import { buildPhonebook } from '@/lib/phonebook';
 import { ROUTES } from '@/constants/routes';
@@ -42,6 +42,8 @@ export default function ProfilePage() {
   const [bankAccountName, setBankAccountName] = useState('');
   const [bankBsb, setBankBsb] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [teamMembers, setTeamMembers] = useState<AgencyTeamMember[]>([]);
+  const [primaryContactSaving, setPrimaryContactSaving] = useState(false);
 
   useEffect(() => {
     setAbn(primaryAgency?.abn ?? '');
@@ -51,6 +53,24 @@ export default function ProfilePage() {
     setBankBsb(primaryAgency?.bankBsb ?? '');
     setBankAccountNumber(primaryAgency?.bankAccountNumber ?? '');
   }, [primaryAgency]);
+
+  useEffect(() => {
+    if (!primaryAgency?.id || primaryAgency.id.startsWith('local-')) {
+      setTeamMembers([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchAgencyTeam(primaryAgency.id)
+      .then((team) => {
+        if (!cancelled) setTeamMembers(team.members);
+      })
+      .catch(() => {
+        if (!cancelled) setTeamMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [primaryAgency?.id]);
 
   const phonebook = buildPhonebook(properties);
   const history = buildProfileHistory({
@@ -65,6 +85,31 @@ export default function ProfilePage() {
   const agencyName = primaryAgency?.name ?? localAccount?.agencyName ?? '—';
   const agencyCompany =
     primaryAgency?.company ?? localAccount?.agencyCompany ?? '—';
+  const isAgencyPrincipal = primaryAgency?.membershipTier === 'PRINCIPAL';
+  const selectedPrimaryMember = teamMembers.find(
+    (member) => member.userId === primaryAgency?.primaryContactUserId,
+  );
+  const primaryContactLabel = selectedPrimaryMember
+    ? teamMemberName(selectedPrimaryMember)
+    : primaryAgency?.contactName
+      ? `Agency (${primaryAgency.contactName})`
+      : 'Agency';
+
+  async function savePrimaryContact(userId: string | null) {
+    if (!primaryAgency) return;
+    setPrimaryContactSaving(true);
+    try {
+      await updateAgencyPrimaryContact(primaryAgency.id, userId);
+      await refresh({ force: true });
+      toast.success(
+        userId ? 'Primary contact updated' : 'Primary contact reset to the agency',
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update primary contact');
+    } finally {
+      setPrimaryContactSaving(false);
+    }
+  }
 
   return (
     <AgentShell title="Profile">
@@ -198,14 +243,51 @@ export default function ProfilePage() {
                 </dd>
               </div>
             ) : null}
+            {primaryAgency && portalAccessReady ? (
+              <div className="space-y-1.5">
+                <dt className="text-muted-foreground text-xs">Primary contact</dt>
+                <dd>
+                  {isAgencyPrincipal ? (
+                    <select
+                      className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                      value={primaryAgency.primaryContactUserId ?? ''}
+                      disabled={primaryContactSaving}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        void savePrimaryContact(next === '' ? null : next);
+                      }}
+                    >
+                      <option value="">
+                        {primaryAgency.contactName
+                          ? `Agency (${primaryAgency.contactName})`
+                          : 'Agency'}
+                      </option>
+                      {teamMembers.map((member) => (
+                        <option key={member.userId} value={member.userId}>
+                          {teamMemberName(member)}
+                          {member.email ? ` · ${member.email}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-medium break-words">{primaryContactLabel}</span>
+                  )}
+                </dd>
+                {isAgencyPrincipal ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    Defaults to the agency. Choosing an agent does not change the agency login.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             {primaryAgency?.contactName && (
-              <ProfileRow label="Contact name" value={primaryAgency.contactName} />
+              <ProfileRow label="Agency contact name" value={primaryAgency.contactName} />
             )}
             {primaryAgency?.contactEmail && (
-              <ProfileRow label="Contact email" value={primaryAgency.contactEmail} />
+              <ProfileRow label="Agency contact email" value={primaryAgency.contactEmail} />
             )}
             {primaryAgency?.contactPhone && (
-              <ProfileRow label="Contact phone" value={primaryAgency.contactPhone} />
+              <ProfileRow label="Agency contact phone" value={primaryAgency.contactPhone} />
             )}
           </dl>
         </section>
@@ -387,6 +469,11 @@ function ProfileSectionTabs({
       </div>
     </div>
   );
+}
+
+function teamMemberName(member: AgencyTeamMember): string {
+  const parts = [member.firstName, member.lastName].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : member.email;
 }
 
 function BillingField({
