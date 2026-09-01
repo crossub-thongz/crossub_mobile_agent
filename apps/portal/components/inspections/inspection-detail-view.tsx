@@ -1213,6 +1213,7 @@ export function InspectionDetailView({
         <ChangeRoutineFlowDialog
           schedule={routineSchedule}
           inspectionId={inspectionId}
+          propertyId={insp.propertyId}
           open={flowChangeOpen}
           onOpenChange={setFlowChangeOpen}
           onUpdated={(updated) => {

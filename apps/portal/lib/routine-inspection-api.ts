@@ -17,6 +17,7 @@ export type ChangeRoutineFlowInput = {
   reason: string;
   reasonNote: string;
   inspectionId?: string;
+  platformChargeId?: string;
 };
 
 export type OverrideRoutineScheduleInput = {
