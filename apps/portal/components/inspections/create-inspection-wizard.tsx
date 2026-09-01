@@ -916,13 +916,18 @@ export function CreateInspectionWizard({
           await submitRoutine();
           return;
         }
-        await requestAgentRoutineInspection(property.id, {
+        const created = await requestAgentRoutineInspection(property.id, {
           flow: routine.flow,
           note: routine.note?.trim() || undefined,
         });
         toast.success(INSPECTION_TIME_REQUEST_SUBMITTED);
-        void refresh();
-        if (navigateOnSuccess) router.push(`${ROUTES.TASKS}?filter=Inspection`);
+        try {
+          const record = await inspectionsApi.get(created.id);
+          finalizeInspectionCreate(mapInspectionRecordToView(record));
+        } catch {
+          void refresh();
+          if (navigateOnSuccess) router.push(`${ROUTES.TASKS}?filter=Inspection`);
+        }
         return;
       }
 
