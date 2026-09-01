@@ -27,7 +27,10 @@ import {
   updatePropertyContact,
   type AgentPropertyContact,
 } from '@/lib/crossub-api/agent-client';
-import { MAX_TENANCY_TENANTS, mergeHouseholdTenants } from '@/lib/property-parties';
+import {
+  isSameHouseholdPerson,
+  MAX_TENANCY_TENANTS,
+} from '@/lib/property-parties';
 import { wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
 import { propertyRegistryApi, type PropertyRegistryPatch } from '@/lib/property-registry-api';
 
@@ -45,18 +48,6 @@ type TenancyForm = {
 };
 
 type CoTenantDraft = { name: string; email: string; phone: string };
-
-function contactMatchesPrimary(
-  contact: AgentPropertyContact,
-  primary: { name: string; email: string },
-): boolean {
-  const email = contact.email?.trim().toLowerCase() ?? '';
-  const primaryEmail = primary.email.trim().toLowerCase();
-  if (email.includes('@') && primaryEmail.includes('@') && email === primaryEmail) return true;
-  const name = contact.name?.trim().toLowerCase().replace(/\s+/g, ' ') ?? '';
-  const primaryName = primary.name.trim().toLowerCase().replace(/\s+/g, ' ');
-  return Boolean(name && primaryName && name === primaryName);
-}
 
 type TenantDraft = {
   name: string;
@@ -254,30 +245,23 @@ export function PropertyTenancyEditDialog({
 
   const extraContacts = useMemo(
     () =>
-      tenantContacts.filter(
-        (contact) =>
-          !contact.isPrimary &&
-          !contactMatchesPrimary(contact, {
-            name: baseline.tenantName,
-            email: baseline.tenantEmail,
-          }),
-      ),
-    [tenantContacts, baseline.tenantName, baseline.tenantEmail],
+      tenantContacts
+        .filter(
+          (contact) =>
+            (!contact.role || contact.role === 'TENANT') &&
+            !isSameHouseholdPerson(contact, {
+              name: form.tenantName,
+              email: form.tenantEmail,
+            }),
+        )
+        .sort((a, b) => {
+          if (Boolean(a.isPrimary) !== Boolean(b.isPrimary)) return a.isPrimary ? -1 : 1;
+          return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        }),
+    [tenantContacts, form.tenantName, form.tenantEmail],
   );
 
-  const household = useMemo(
-    () =>
-      mergeHouseholdTenants({
-        primary: {
-          name: form.tenantName,
-          email: form.tenantEmail,
-          phone: form.tenantPhone,
-        },
-        additional: tenantContacts,
-      }),
-    [form.tenantName, form.tenantEmail, form.tenantPhone, tenantContacts],
-  );
-
+  // One list drives the "Tenants (n/5)" label, the pager, and the add cap.
   const pageCount = Math.max(1, 1 + extraContacts.length);
   const activeIsPrimary = editIndex === 0;
   const activeContact = activeIsPrimary ? null : extraContacts[editIndex - 1];
@@ -370,7 +354,7 @@ export function PropertyTenancyEditDialog({
       toast.error('Enter a name, email, or phone');
       return;
     }
-    if (household.length >= MAX_TENANCY_TENANTS) {
+    if (pageCount >= MAX_TENANCY_TENANTS) {
       toast.error(`A property can have at most ${MAX_TENANCY_TENANTS} tenants`);
       return;
     }
@@ -411,8 +395,7 @@ export function PropertyTenancyEditDialog({
       const extrasAfterAdd = result.contacts.filter(
         (contact) =>
           contact.role === 'TENANT' &&
-          !contact.isPrimary &&
-          !contactMatchesPrimary(contact, {
+          !isSameHouseholdPerson(contact, {
             name: form.tenantName,
             email: form.tenantEmail,
           }),
@@ -536,7 +519,7 @@ export function PropertyTenancyEditDialog({
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold">
-                  Tenants ({household.length}/{MAX_TENANCY_TENANTS})
+                  Tenants ({pageCount}/{MAX_TENANCY_TENANTS})
                 </p>
                 <div className="flex items-center gap-1">
                   <TenancyPagerControls
@@ -557,7 +540,7 @@ export function PropertyTenancyEditDialog({
                     disabled={
                       contactsLoading ||
                       addingTenant ||
-                      household.length >= MAX_TENANCY_TENANTS
+                      pageCount >= MAX_TENANCY_TENANTS
                     }
                     onClick={() => {
                       setTenantDraft(draftFromTenancyForm(form));
