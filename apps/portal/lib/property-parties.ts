@@ -234,3 +234,11 @@ export function householdTenantsFromOverview(input: {
     additional: extras,
   });
 }
+
+export function primaryTenantDisplayName(
+  input: Parameters<typeof householdTenantsFromOverview>[0],
+  fallback = '—',
+): string {
+  if (input.isVacant) return 'Vacant';
+  return householdTenantsFromOverview(input)[0]?.name?.trim() || fallback;
+}

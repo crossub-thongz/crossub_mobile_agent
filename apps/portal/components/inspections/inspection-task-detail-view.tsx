@@ -26,6 +26,7 @@ import {
 } from '@/lib/inspection-task-detail';
 import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
+import { usePrimaryTenantName } from '@/lib/use-primary-tenant-name';
 import { useResolvedInspection } from '@/lib/use-resolved-inspection';
 import {
   cn,
@@ -107,6 +108,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
+  const tenantName = usePrimaryTenantName(property);
 
   const banner = useMemo(
     () => (inspection ? resolveInspectionStatusBanner(inspection) : null),
@@ -334,7 +336,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                 <dl className="mt-3 space-y-2 text-xs">
                   <div className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">Tenant</dt>
-                    <dd className="font-medium">{property?.tenantName || currentLease?.approvedTenant || '—'}</dd>
+                    <dd className="font-medium">{tenantName}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">Lease</dt>
