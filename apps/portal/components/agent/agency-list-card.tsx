@@ -46,7 +46,11 @@ export function AgencyListCard({
             >
               {STATUS_LABEL[agency.status]}
             </span>
-            <PortalServiceLevelBadge level={agency.portalServiceLevel} size="xs" />
+            <PortalServiceLevelBadge
+              level={agency.portalServiceLevel}
+              variant="level"
+              size="xs"
+            />
           </div>
           <p className="mt-1.5 font-semibold leading-snug">{agency.name}</p>
           {agency.company && agency.company !== agency.name && (

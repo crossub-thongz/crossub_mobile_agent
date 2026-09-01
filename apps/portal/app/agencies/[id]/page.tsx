@@ -62,7 +62,11 @@ export default function AgencyDetailPage() {
               >
                 {STATUS_LABEL[agency.status]}
               </span>
-              <PortalServiceLevelBadge level={agency.portalServiceLevel} size="xs" />
+              <PortalServiceLevelBadge
+                level={agency.portalServiceLevel}
+                variant="level"
+                size="xs"
+              />
             </div>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -86,7 +90,10 @@ export default function AgencyDetailPage() {
           {agency.company && <InfoRow label="Company" value={agency.company} />}
           <InfoRow label="Status" value={STATUS_LABEL[agency.status] ?? agency.status} />
           <InfoRow label="Portal access">
-            <PortalServiceLevelBadge level={agency.portalServiceLevel} />
+            <PortalServiceLevelBadge
+              level={agency.portalServiceLevel}
+              variant="both"
+            />
           </InfoRow>
           {agency.contactName && <InfoRow label="Contact" value={agency.contactName} />}
           {agency.contactEmail && (

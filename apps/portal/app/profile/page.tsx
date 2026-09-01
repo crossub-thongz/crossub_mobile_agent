@@ -177,12 +177,27 @@ export default function ProfilePage() {
               </p>
             </div>
             {primaryAgency && portalAccessReady && (
-              <PortalServiceLevelBadge level={primaryAgency.portalServiceLevel} size="xs" />
+              <PortalServiceLevelBadge
+                level={primaryAgency.portalServiceLevel}
+                variant="level"
+                size="xs"
+              />
             )}
           </div>
           <dl className="mt-3 space-y-2.5 text-sm">
             <ProfileRow label="Agency name" value={agencyName} />
             <ProfileRow label="Company" value={agencyCompany} />
+            {primaryAgency && portalAccessReady ? (
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-muted-foreground shrink-0 text-xs">Portal access</dt>
+                <dd className="min-w-0 text-right">
+                  <PortalServiceLevelBadge
+                    level={primaryAgency.portalServiceLevel}
+                    variant="both"
+                  />
+                </dd>
+              </div>
+            ) : null}
             {primaryAgency?.contactName && (
               <ProfileRow label="Contact name" value={primaryAgency.contactName} />
             )}

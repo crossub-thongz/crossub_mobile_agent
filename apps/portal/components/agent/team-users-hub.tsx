@@ -53,7 +53,11 @@ function AgencyTeamSection({
                 >
                   Your role: {membershipLabel(agency.membershipTier)}
                 </span>
-                <PortalServiceLevelBadge level={agency.portalServiceLevel} size="xs" />
+                <PortalServiceLevelBadge
+                  level={agency.portalServiceLevel}
+                  variant="level"
+                  size="xs"
+                />
               </div>
             </div>
           </div>
