@@ -47,13 +47,20 @@ export function leaseRenewalStages(review: RentReviewCase, decision?: RentReview
   }));
 }
 
-const TERMINAL_RENT_REVIEW_WORKFLOW_STATES = new Set([
+const CLOSED_RENT_REVIEW_WORKFLOW_STATES = new Set([
   'COMPLETED',
   'CANCELLED',
   'POSTPONED',
-  /** Vacate path — tenant declined with move-out; no accounting sync. */
   'TENANT_REJECTED',
 ]);
+
+export function isLiveRentReview(review: RentReviewCase): boolean {
+  const state = review.workflowState;
+  if (state === 'COMPLETED' || state === 'CANCELLED') return false;
+  if (state) return true;
+  const status = review.status.toLowerCase();
+  return !status.includes('completed') && !status.includes('cancelled');
+}
 
 export function isRentReviewDecided(
   review: RentReviewCase,
@@ -61,7 +68,7 @@ export function isRentReviewDecided(
 ): boolean {
   if (decision != null) return true;
   if (review.completedDate) return true;
-  if (review.workflowState && TERMINAL_RENT_REVIEW_WORKFLOW_STATES.has(review.workflowState)) {
+  if (review.workflowState && CLOSED_RENT_REVIEW_WORKFLOW_STATES.has(review.workflowState)) {
     return true;
   }
   if (review.tenantResponse === 'rejected') return true;

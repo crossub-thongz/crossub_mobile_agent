@@ -9,7 +9,7 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { isRentReviewDecided } from '@/lib/rent-review';
+import { isLiveRentReview } from '@/lib/rent-review';
 
 export type PropertyWorkflowTab =
   | 'leasing'
@@ -97,9 +97,7 @@ export interface PropertyWorkflowContext {
 }
 
 function hasActiveRentReview(ctx: PropertyWorkflowContext): boolean {
-  return ctx.rentReviews.some(
-    (r) => r.propertyId === ctx.propertyId && !isRentReviewDecided(r),
-  );
+  return ctx.rentReviews.some((r) => isLiveRentReview(r));
 }
 
 /** Mirror crossub_web Property 360° `tabActionsFor` for the agent property hub. */
@@ -129,7 +127,7 @@ export function tabActionsFor(
           id: 'start_rent_review',
           label: 'Rent Review',
           description: activeReview
-            ? 'Complete the current rent review before starting another'
+            ? 'This property already has an open rent review. Complete that case before creating a new one.'
             : 'Open a rent review for this property',
           primary: true,
           disabled: activeReview,

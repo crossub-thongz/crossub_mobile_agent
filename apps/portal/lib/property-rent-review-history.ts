@@ -1,5 +1,5 @@
 import { formatRentReviewTermLabel } from '@/lib/rent-review-lease-helpers';
-import { isRentReviewDecided, type RentReviewDecision } from '@/lib/rent-review';
+import { isLiveRentReview, type RentReviewDecision } from '@/lib/rent-review';
 import { isWithinLeasePeriod } from '@/lib/lease-package-data';
 import type { ArchivedRentReview, LeasingRecord, Property, RentReviewCase } from '@/lib/types';
 import { formatCurrency, formatDate, formatLeasePeriodMonthYear } from '@/lib/utils';
@@ -83,19 +83,10 @@ function resolveCurrentRentAmount(
 
 export function isActiveRentReview(
   review: RentReviewCase,
-  decision?: RentReviewDecision | null,
+  _decision?: RentReviewDecision | null,
 ): boolean {
   if (isDeletedRentReview(review)) return false;
-  if (isRentReviewDecided(review, decision)) return false;
-  if (
-    review.workflowState === 'COMPLETED' ||
-    review.workflowState === 'CANCELLED' ||
-    review.workflowState === 'POSTPONED'
-  ) {
-    return false;
-  }
-  const status = review.status.toLowerCase();
-  return !status.includes('completed') && !status.includes('cancelled');
+  return isLiveRentReview(review);
 }
 
 export function isDeletedRentReview(review: RentReviewCase): boolean {

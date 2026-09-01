@@ -135,9 +135,6 @@ export function PropertyRentReviewTab({
     (action) => action.id === 'start_rent_review',
   );
   const canAddRentReview = Boolean(rentReviewAction && !rentReviewAction.disabled);
-  const hasActiveReview = rentReviews.some((review) =>
-    isActiveRentReview(review, rentReviewDecisions[review.id]),
-  );
 
   const activeReviews = useMemo(
     () =>
@@ -247,7 +244,7 @@ export function PropertyRentReviewTab({
     <div className="space-y-4">
       <div className="space-y-2">
         <PropertyWorkflowPanel {...workflowPanelProps} actionsOnly />
-        {!canAddRentReview && hasActiveReview ? (
+        {!canAddRentReview ? (
           <p className="text-muted-foreground text-xs">
             A rent review is already in progress for this property. Complete it before starting
             another.
