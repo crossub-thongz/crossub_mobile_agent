@@ -69,6 +69,8 @@ type HouseholdPersonInput = {
   email?: string | null;
   phone?: string | null;
   role?: string;
+  isPrimary?: boolean;
+  sortOrder?: number;
 };
 
 function householdPersonKey(name?: string | null, email?: string | null): string {
@@ -76,6 +78,19 @@ function householdPersonKey(name?: string | null, email?: string | null): string
   if (emailKey.includes('@')) return `e:${emailKey}`;
   const nameKey = name?.trim().toLowerCase().replace(/\s+/g, ' ') ?? '';
   return nameKey ? `n:${nameKey}` : '';
+}
+
+/** Same person if emails match, or if names match when an email cannot decide. */
+export function isSameHouseholdPerson(
+  a: { name?: string | null; email?: string | null },
+  b: { name?: string | null; email?: string | null },
+): boolean {
+  const aEmail = householdPersonKey(null, a.email);
+  const bEmail = householdPersonKey(null, b.email);
+  if (aEmail && bEmail && aEmail === bEmail) return true;
+  const aName = householdPersonKey(a.name, null);
+  const bName = householdPersonKey(b.name, null);
+  return Boolean(aName) && aName === bName;
 }
 
 /**
@@ -97,9 +112,14 @@ export function mergeHouseholdTenants(input: {
     const phone = row.phone?.trim() ?? '';
     if (!name && !email && !phone) return;
     if (name.toLowerCase() === 'vacant') return;
-    const key = householdPersonKey(name, email);
-    if (!key || seen.has(key)) return;
-    seen.add(key);
+    const emailKey = householdPersonKey(null, email);
+    const nameKey = householdPersonKey(name, null);
+    if ((emailKey && seen.has(emailKey)) || (nameKey && seen.has(nameKey))) {
+      return;
+    }
+    if (!emailKey && !nameKey) return;
+    if (emailKey) seen.add(emailKey);
+    if (nameKey) seen.add(nameKey);
     out.push({
       name: name || email || 'Unnamed tenant',
       email: email || undefined,
@@ -119,6 +139,28 @@ export function formatHouseholdTenantNames(tenants: HouseholdTenant[]): string {
   const names = tenants.map((t) => t.name.trim()).filter(Boolean);
   if (names.length === 0) return '—';
   return names.join(' & ');
+}
+
+function sortHouseholdContacts(contacts: HouseholdPersonInput[]): HouseholdPersonInput[] {
+  return [...contacts].sort((a, b) => {
+    if (Boolean(a.isPrimary) !== Boolean(b.isPrimary)) return a.isPrimary ? -1 : 1;
+    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  });
+}
+
+function matchingHouseholdContact(
+  contacts: HouseholdPersonInput[],
+  name?: string | null,
+  email?: string | null,
+): HouseholdPersonInput | undefined {
+  const emailKey = householdPersonKey(null, email);
+  const nameKey = householdPersonKey(name, null);
+  return contacts.find((row) => {
+    const rowEmail = householdPersonKey(null, row.email);
+    if (emailKey && rowEmail && emailKey === rowEmail) return true;
+    const rowName = householdPersonKey(row.name, null);
+    return Boolean(nameKey) && nameKey === rowName;
+  });
 }
 
 export function householdTenantsFromOverview(input: {
@@ -141,18 +183,54 @@ export function householdTenantsFromOverview(input: {
   contacts?: HouseholdPersonInput[];
 }): HouseholdTenant[] {
   if (input.isVacant) return [];
+  void input.tenantContact;
+
+  const contacts = sortHouseholdContacts(
+    (input.contacts ?? []).filter((row) => !row.role || row.role === 'TENANT'),
+  );
+  const extras = input.property.additionalTenants ?? [];
+  const flaggedPrimary = contacts.find((row) => row.isPrimary === true);
+  if (flaggedPrimary) {
+    return mergeHouseholdTenants({
+      primary: flaggedPrimary,
+      additional: [...contacts.filter((row) => row !== flaggedPrimary), ...extras],
+    });
+  }
+
+  // Registry occupant stays Tenant 1. `tenantContact` prefers the newest lease/applicant
+  // and will mix that person's email onto the original name after each "Add tenant".
+  const registryName = input.record?.tenantName ?? input.property.tenantName;
+  const registryEmail =
+    input.record?.tenantEmail ?? input.property.tenantContact?.email;
+  const registryPhone =
+    input.record?.tenantPhone ?? input.property.tenantContact?.phone;
+
+  if (registryName?.trim()) {
+    const match = matchingHouseholdContact(contacts, registryName, registryEmail);
+    return mergeHouseholdTenants({
+      primary: {
+        name: registryName,
+        email: match?.email ?? registryEmail,
+        phone: match?.phone ?? registryPhone,
+      },
+      additional: [...contacts.filter((row) => row !== match), ...extras],
+    });
+  }
+
+  if (contacts.length > 0) {
+    const [first, ...rest] = contacts;
+    return mergeHouseholdTenants({
+      primary: first,
+      additional: [...rest, ...extras],
+    });
+  }
+
   return mergeHouseholdTenants({
     primary: {
-      name: input.record?.tenantName ?? input.tenantContact?.name ?? input.property.tenantName,
-      email:
-        input.record?.tenantEmail ??
-        input.tenantContact?.email ??
-        input.property.tenantContact?.email,
-      phone:
-        input.record?.tenantPhone ??
-        input.tenantContact?.phone ??
-        input.property.tenantContact?.phone,
+      name: registryName,
+      email: registryEmail,
+      phone: registryPhone,
     },
-    additional: [...(input.contacts ?? []), ...(input.property.additionalTenants ?? [])],
+    additional: extras,
   });
 }
