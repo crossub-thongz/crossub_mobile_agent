@@ -163,6 +163,14 @@ export function isRentResearchStepComplete(detail: RentReviewWorkflowDetail): bo
   return hasResearchComplete(detail) && hasLandlordResearchEmailed(detail);
 }
 
+/**
+ * Staff-opened reviews stay in `pending_confirmation` until the pathway is confirmed.
+ * Sending the owner pack does not change that state, so Agent decision stays locked.
+ */
+export function needsRentReviewPathwayConfirm(detail: RentReviewWorkflowDetail): boolean {
+  return detail.workflowState === 'pending_confirmation' && hasLandlordResearchEmailed(detail);
+}
+
 /** Agent has finalised proposed rent (approve AI, custom amount, or counter resolution). */
 function hasAgentPricingFinalized(detail: RentReviewWorkflowDetail): boolean {
   return (

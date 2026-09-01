@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bell, Clock, Loader2 } from 'lucide-react';
+import { ArrowRight, Bell, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -21,6 +21,7 @@ import {
   hasLandlordPackFallenBehindRecommendation,
   hasMarketResearchComplete,
   hasResearchRequested,
+  needsRentReviewPathwayConfirm,
 } from '@/lib/rent-review/agent-workflow-model';
 import { rentReviewApi } from '@/lib/rent-review-api';
 import { useRentReviewStore } from '@/lib/rent-review/store';
@@ -38,6 +39,7 @@ export function RentReviewResearchPanel({
   const runMutation = useRentReviewStore((s) => s.runMutation);
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const [confirmingPathway, setConfirmingPathway] = useState(false);
 
   const property = properties.find((p) => p.id === detail.propertyId);
   const recipientContacts = buildPropertyWorkflowEmailContacts(property, {
@@ -61,6 +63,7 @@ export function RentReviewResearchPanel({
   // button; it must never re-open the automatic send above, which stays keyed on
   // `landlordEmailed` so an adjustment can't mail the owner by itself.
   const packBehindRecommendation = hasLandlordPackFallenBehindRecommendation(detail);
+  const needsPathwayConfirm = needsRentReviewPathwayConfirm(detail);
 
   /**
    * An effect here used to write to the owner the moment this card could be seen.
@@ -76,6 +79,22 @@ export function RentReviewResearchPanel({
    * only path, and it shows the recipient, the body and the attachments first.
    */
 
+
+  const confirmPathway = async () => {
+    setConfirmingPathway(true);
+    try {
+      const updated = await runMutation(
+        detail.id,
+        rentReviewApi.confirmPathwayIfPending(detail),
+      );
+      onUpdated?.(updated);
+      toast.success('Rent-review pathway confirmed — continue to agent decision');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setConfirmingPathway(false);
+    }
+  };
 
   const requestResearch = async () => {
     if (!detail.propertyId) {
@@ -202,11 +221,40 @@ export function RentReviewResearchPanel({
             helperText={
               packBehindRecommendation
                 ? 'The rate has changed since you emailed the landlord — send them the updated pack.'
-                : landlordEmailed
-                  ? 'You have sent the landlord the research pack.'
-                  : 'Review the recommended rate, then send the research pack to the landlord.'
+                : needsPathwayConfirm
+                  ? 'You have sent the landlord the research pack. Confirm the rent-review pathway to set the new rent and notify the tenant.'
+                  : landlordEmailed
+                    ? 'You have sent the landlord the research pack.'
+                    : 'Review the recommended rate, then send the research pack to the landlord.'
             }
           />
+
+          {needsPathwayConfirm ? (
+            <section className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Continue to agent decision</p>
+                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                    This review was opened from admin. Sending the research pack does not unlock
+                    the next step until the rent-review pathway is confirmed.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  className="gap-2 shrink-0"
+                  disabled={confirmingPathway}
+                  onClick={() => void confirmPathway()}
+                >
+                  {confirmingPathway ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="size-4" />
+                  )}
+                  Continue to agent decision
+                </Button>
+              </div>
+            </section>
+          ) : null}
         </>
       ) : null}
 

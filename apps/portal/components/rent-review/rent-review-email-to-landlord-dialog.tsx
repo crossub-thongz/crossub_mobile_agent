@@ -138,7 +138,7 @@ export function RentReviewEmailToLandlordDialog({
     }
     setSending(true);
     try {
-      const updated = await runMutation(
+      let updated = await runMutation(
         detail.id,
         rentReviewApi.sendEmail(
           detail.id,
@@ -154,6 +154,14 @@ export function RentReviewEmailToLandlordDialog({
           detail.leaseEndDate,
         ),
       );
+      try {
+        updated = await runMutation(
+          detail.id,
+          rentReviewApi.confirmPathwayIfPending(updated),
+        );
+      } catch {
+        // The pack is already on the case. The research panel offers Continue if confirm failed.
+      }
       onUpdated?.(updated);
       toast.success('Email sent to landlord');
       onOpenChange(false);

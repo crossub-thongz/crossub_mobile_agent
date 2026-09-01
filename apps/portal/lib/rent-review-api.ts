@@ -146,6 +146,16 @@ export const rentReviewApi = {
   confirm: (id: string, input: ConfirmReviewInput, leaseEndDate?: string | null): Promise<RentReviewWorkflowDetail> =>
     map(unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/confirm`, input)), leaseEndDate),
 
+  /** Staff-opened reviews stay pending until this runs; sending the owner pack does not. */
+  confirmPathwayIfPending: (
+    detail: RentReviewWorkflowDetail,
+  ): Promise<RentReviewWorkflowDetail> => {
+    if (detail.workflowState !== 'pending_confirmation') {
+      return Promise.resolve(detail);
+    }
+    return rentReviewApi.confirm(detail.id, { type: 'rent_review' }, detail.leaseEndDate);
+  },
+
   cancel: (id: string, input: CancelReviewInput, leaseEndDate?: string | null): Promise<RentReviewWorkflowDetail> =>
     map(unwrap(api.patch<{ review: ServerRentReviewWorkflowView }>(`${BASE}/${id}/cancel`, input)), leaseEndDate),
 
