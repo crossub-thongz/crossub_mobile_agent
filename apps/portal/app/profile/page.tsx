@@ -91,9 +91,7 @@ export default function ProfilePage() {
   );
   const primaryContactLabel = selectedPrimaryMember
     ? teamMemberName(selectedPrimaryMember)
-    : primaryAgency?.contactName
-      ? `Agency (${primaryAgency.contactName})`
-      : 'Agency';
+    : 'Agency';
 
   async function savePrimaryContact(userId: string | null) {
     if (!primaryAgency) return;
@@ -257,12 +255,18 @@ export default function ProfilePage() {
                         void savePrimaryContact(next === '' ? null : next);
                       }}
                     >
-                      <option value="">
-                        {primaryAgency.contactName
-                          ? `Agency (${primaryAgency.contactName})`
-                          : 'Agency'}
-                      </option>
-                      {teamMembers.map((member) => (
+                      <option value="">Agency</option>
+                      {teamMembers
+                        .filter((member) => {
+                          if (member.userId === primaryAgency.primaryContactUserId) {
+                            return true
+                          }
+                          if (member.tier === 'AGENT') return true
+                          const agencyEmail = primaryAgency.contactEmail?.trim().toLowerCase()
+                          if (!agencyEmail) return member.tier !== 'PRINCIPAL'
+                          return member.email.trim().toLowerCase() !== agencyEmail
+                        })
+                        .map((member) => (
                         <option key={member.userId} value={member.userId}>
                           {teamMemberName(member)}
                           {member.email ? ` · ${member.email}` : ''}
