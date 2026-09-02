@@ -195,7 +195,7 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
       {
         id: 'security',
         title: 'Security',
-        description: 'Password, two-factor authentication and security.',
+        description: 'Change Password.',
         href: ROUTES.CHANGE_PASSWORD,
         icon: Shield,
       },
