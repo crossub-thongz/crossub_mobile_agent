@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { MaintenanceApproveLandlordEmailDialog } from '@/components/maintenance/maintenance-approve-landlord-email-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
@@ -73,7 +74,7 @@ export function MaintenanceQuotationReviewActions({
   const [counterPrice, setCounterPrice] = useState('');
   const [counterMessage, setCounterMessage] = useState('');
   const [acting, setActing] = useState(false);
-  const [skipLandlordEmail, setSkipLandlordEmail] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
   const isBusy = busy || acting;
   const canAct = canReview && quote.status === 'submitted';
@@ -126,16 +127,6 @@ export function MaintenanceQuotationReviewActions({
               disabled={isBusy}
             />
           </div>
-          <label className="flex items-start gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              className="mt-0.5 size-3.5 shrink-0 accent-primary"
-              checked={skipLandlordEmail}
-              disabled={isBusy}
-              onChange={(e) => setSkipLandlordEmail(e.target.checked)}
-            />
-            <span>Don&apos;t send email to landlord — approve and continue the job anyway</span>
-          </label>
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
@@ -171,22 +162,29 @@ export function MaintenanceQuotationReviewActions({
               size="sm"
               className="bg-[#5f9f6b] text-white hover:bg-[#4f8d5b]"
               disabled={isBusy}
-              onClick={() =>
-                void run(async () => {
-                  await onReviewDecision('approved', undefined, {
-                    skipRecipientEmail: skipLandlordEmail,
-                  });
-                  toast.success(
-                    skipLandlordEmail
-                      ? 'Quote approved — proceeded without sending landlord email'
-                      : 'Quote approved — quotation sent to landlord',
-                  );
-                })
-              }
+              onClick={() => setApproveDialogOpen(true)}
             >
               Approve
             </Button>
           </div>
+          <MaintenanceApproveLandlordEmailDialog
+            open={approveDialogOpen}
+            onOpenChange={setApproveDialogOpen}
+            busy={isBusy}
+            onProceed={(skipRecipientEmail) =>
+              void run(async () => {
+                await onReviewDecision('approved', undefined, {
+                  skipRecipientEmail,
+                });
+                setApproveDialogOpen(false);
+                toast.success(
+                  skipRecipientEmail
+                    ? 'Quote approved — proceeded without sending landlord email'
+                    : 'Quote approved — quotation sent to landlord',
+                );
+              })
+            }
+          />
         </>
       ) : null}
 

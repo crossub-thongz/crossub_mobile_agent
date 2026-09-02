@@ -60,7 +60,10 @@ function ArchivedLandlordList({
 
   if (archived.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">No previous landlords archived yet.</p>
+      <p className="text-muted-foreground text-sm">
+        No previous landlords archived yet. Use New landlord on Owner / Landlord to replace
+        the current owner; editing their details stays on the property tabs.
+      </p>
     );
   }
 
@@ -161,8 +164,6 @@ export function PropertyHistoryTab({
   propertyId: string;
   leasing: LeasingRecord[];
 }) {
-  const [subTab, setSubTab] = useState<ArchiveSubTab>('tenant');
-
   const archivedLandlords = useMemo(
     () => parseArchivedLandlords(property.registryDraft),
     [property.registryDraft],
@@ -170,6 +171,9 @@ export function PropertyHistoryTab({
   const tenancySnapshots = useMemo(
     () => parseTenancyArchiveSnapshots(property.registryDraft),
     [property.registryDraft],
+  );
+  const [subTab, setSubTab] = useState<ArchiveSubTab>(
+    archivedLandlords.length > 0 && tenancySnapshots.length === 0 ? 'landlord' : 'tenant',
   );
 
   return (

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MaintenanceApproveLandlordEmailDialog } from '@/components/maintenance/maintenance-approve-landlord-email-dialog';
 import { formatCurrency } from '@/lib/utils';
 
 export function ApprovalPanel({
@@ -40,7 +41,7 @@ export function ApprovalPanel({
   const [mode, setMode] = useState<'idle' | 'decline' | 'requote'>('idle');
   const [reason, setReason] = useState('');
   const [counterPrice, setCounterPrice] = useState('');
-  const [skipLandlordEmail, setSkipLandlordEmail] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
   const submitReason = () => {
     if (!reason.trim()) {
@@ -126,19 +127,15 @@ export function ApprovalPanel({
 
       {mode === 'idle' ? (
         <div className="space-y-2">
-          {showSkipLandlordEmail ? (
-            <label className="flex items-start gap-2 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                className="mt-0.5 size-3.5 shrink-0 accent-primary"
-                checked={skipLandlordEmail}
-                onChange={(e) => setSkipLandlordEmail(e.target.checked)}
-              />
-              <span>Don&apos;t send email to landlord — approve and continue the job anyway</span>
-            </label>
-          ) : null}
           <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="flex-1" onClick={() => onApprove({ skipRecipientEmail: skipLandlordEmail })}>
+          <Button
+            className="flex-1"
+            onClick={() =>
+              showSkipLandlordEmail
+                ? setApproveDialogOpen(true)
+                : onApprove()
+            }
+          >
             Approve
           </Button>
           <Button
@@ -156,6 +153,16 @@ export function ApprovalPanel({
             Requote
           </Button>
           </div>
+          {showSkipLandlordEmail ? (
+            <MaintenanceApproveLandlordEmailDialog
+              open={approveDialogOpen}
+              onOpenChange={setApproveDialogOpen}
+              onProceed={(skipRecipientEmail) => {
+                setApproveDialogOpen(false);
+                onApprove({ skipRecipientEmail });
+              }}
+            />
+          ) : null}
         </div>
       ) : (
         <div className="space-y-3">

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { MaintenanceApproveLandlordEmailDialog } from '@/components/maintenance/maintenance-approve-landlord-email-dialog';
 import type { MaintenanceRequest } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -12,27 +13,32 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
   const { maintenanceFromApi, approveMaintenanceQuote, declineMaintenanceQuote, refresh } =
     useAgentData();
   const apiItem = maintenanceFromApi.find((m) => m.id === item.id);
-  const [skipLandlordEmail, setSkipLandlordEmail] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   if (!item.requiresApproval) return null;
 
-  const handleApprove = async () => {
+  const handleApprove = async (skipRecipientEmail: boolean) => {
     if (!apiItem) {
       toast.error('Connect to the API to approve this quote.');
       return;
     }
+    setApproving(true);
     try {
       await approveMaintenanceQuote(item.id, {
-        skipRecipientEmail: skipLandlordEmail,
+        skipRecipientEmail,
       });
+      setApproveDialogOpen(false);
       toast.success(
-        skipLandlordEmail
+        skipRecipientEmail
           ? 'Quote approved — proceeded without sending landlord email'
           : 'Quote approved',
       );
       await refresh();
     } catch {
       toast.error('Approval failed');
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -52,17 +58,12 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
 
   return (
     <div className="mt-3 space-y-2 border-t border-border/80 pt-3">
-      <label className="flex items-start gap-2 text-[11px] text-muted-foreground">
-        <input
-          type="checkbox"
-          className="mt-0.5 size-3.5 shrink-0 accent-primary"
-          checked={skipLandlordEmail}
-          onChange={(e) => setSkipLandlordEmail(e.target.checked)}
-        />
-        <span>Don&apos;t send email to landlord</span>
-      </label>
       <div className="flex gap-2">
-        <Button size="sm" className="flex-1" onClick={() => void handleApprove()}>
+        <Button
+          size="sm"
+          className="flex-1"
+          onClick={() => setApproveDialogOpen(true)}
+        >
           Approve
         </Button>
         <Button size="sm" variant="outline" className="flex-1" onClick={() => void handleDecline()}>
@@ -74,6 +75,12 @@ export function MaintenanceInlineActions({ item }: { item: MaintenanceRequest })
           </span>
         )}
       </div>
+      <MaintenanceApproveLandlordEmailDialog
+        open={approveDialogOpen}
+        onOpenChange={setApproveDialogOpen}
+        busy={approving}
+        onProceed={(skipRecipientEmail) => void handleApprove(skipRecipientEmail)}
+      />
     </div>
   );
 }
