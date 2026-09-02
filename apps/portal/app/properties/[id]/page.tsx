@@ -470,8 +470,7 @@ export default function PropertyDetailPage() {
   const handleProfileWorkflowAction = (actionId: PropertyWorkflowActionId) => {
     if (
       actionId === 'create_rent_reconciliation' ||
-      actionId === 'open_invoice_management' ||
-      actionId === 'open_rent_chasing'
+      actionId === 'open_invoice_management'
     ) {
       updateProfileSection('financials');
       setPendingAccountingAction(actionId);

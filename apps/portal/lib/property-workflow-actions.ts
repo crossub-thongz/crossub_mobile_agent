@@ -85,6 +85,19 @@ export interface PropertyWorkflowAction {
   disabled?: boolean;
 }
 
+const ADD_TRIBUNAL_ACTION: PropertyWorkflowAction = {
+  id: 'open_tribunal',
+  label: 'Add tribunal',
+  description: 'Open an NCAT tribunal case from rent, bill, or bond arrears on this property',
+  primary: true,
+};
+
+const RENT_CHASING_ACTION: PropertyWorkflowAction = {
+  id: 'open_rent_chasing',
+  label: 'Rent chasing',
+  description: 'Record rent, bill, or bond arrears. Add tribunal can then open a case from those arrears.',
+};
+
 export interface PropertyWorkflowContext {
   propertyId: string;
   leasingCycles: LeasingCycle[];
@@ -169,14 +182,7 @@ export function tabActionsFor(
       ];
     case 'tribunal':
       if (ctx.tribunalCases.length > 0) return [];
-      return [
-        {
-          id: 'open_tribunal',
-          label: 'Add tribunal',
-          description: 'Open an NCAT tribunal case from accounting arrears on this property',
-          primary: true,
-        },
-      ];
+      return [ADD_TRIBUNAL_ACTION];
     case 'accounting':
       return [
         {
@@ -190,11 +196,7 @@ export function tabActionsFor(
           label: 'Invoice management',
           description: 'Create or manage Crossub management fee tax invoices',
         },
-        {
-          id: 'open_rent_chasing',
-          label: 'Rent chasing',
-          description: 'Add rent, bill, or bond arrears for this property',
-        },
+        RENT_CHASING_ACTION,
       ];
     default:
       return [];
@@ -217,7 +219,7 @@ export function workflowMenuGroupsFor(
 
   return groups
     .map((group) => {
-      const actions =
+      let actions =
         group.tab === 'leasing'
           ? [...tabActionsFor('leasing', ctx), ...tabActionsFor('rent_review', ctx)]
           : tabActionsFor(group.tab, ctx).map((action) =>
@@ -225,6 +227,23 @@ export function workflowMenuGroupsFor(
                 ? { ...action, label: 'Lodge Maintenance' }
                 : action,
             );
+
+      // Actions menu (v2) is the only surface while Financials is gated off.
+      // Keep tribunal create available after a case already exists, and surface
+      // rent chasing here so arrears can still be recorded before opening NCAT.
+      if (group.tab === 'tribunal') {
+        if (!actions.some((action) => action.id === 'open_tribunal')) {
+          actions = [ADD_TRIBUNAL_ACTION, ...actions];
+        }
+        if (
+          hasFullAccess &&
+          !ACCOUNTING_MODULE_LAUNCHED &&
+          !actions.some((action) => action.id === 'open_rent_chasing')
+        ) {
+          actions = [...actions, RENT_CHASING_ACTION];
+        }
+      }
+
       return { ...group, actions };
     })
     .filter((group) => group.actions.length > 0);
