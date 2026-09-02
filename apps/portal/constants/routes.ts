@@ -58,6 +58,17 @@ export const PUBLIC_ROUTE_PATTERNS = [
 export const isPublicRoute = (pathname: string): boolean =>
   PUBLIC_ROUTE_PATTERNS.some((rx) => rx.test(pathname));
 
+/** First-login / invite screens — the welcome video waits until the portal itself. */
+export function isPortalWelcomeDeferredRoute(pathname: string): boolean {
+  if (!pathname || isPublicRoute(pathname)) return true;
+  return (
+    pathname === ROUTES.CHANGE_PASSWORD ||
+    pathname.startsWith(`${ROUTES.CHANGE_PASSWORD}/`) ||
+    pathname === ROUTES.SYSTEM_ACCESS_AGREEMENT ||
+    pathname.startsWith(`${ROUTES.SYSTEM_ACCESS_AGREEMENT}/`)
+  );
+}
+
 import {
   appendDetailNavContext,
   type DetailNavContext,

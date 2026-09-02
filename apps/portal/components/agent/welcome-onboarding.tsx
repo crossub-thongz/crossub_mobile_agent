@@ -1,27 +1,35 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 import { WelcomeVideoPlayer } from '@/components/agent/welcome-video-player';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
+import { isPortalWelcomeDeferredRoute } from '@/constants/routes';
 import {
   dismissPortalWelcome,
   fetchPortalWelcomeStatus,
   type AgentPortalWelcomeStatus,
 } from '@/lib/crossub-api/agent-client';
 import { notifyPortalWelcomeDismissed } from '@/lib/agent-page-guide-events';
+import { needsPasswordChange, needsSystemAccessAgreement } from '@/lib/system-access-agreement';
 
 export function WelcomeOnboarding() {
   const { user, status } = useAuth();
+  const pathname = usePathname();
   const [welcomeStatus, setWelcomeStatus] = useState<AgentPortalWelcomeStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [dismissing, setDismissing] = useState(false);
   const [videoEnded, setVideoEnded] = useState(false);
 
+  const deferredRoute = isPortalWelcomeDeferredRoute(pathname ?? '');
+  const stillRegistering =
+    !!user && (needsPasswordChange(user) || needsSystemAccessAgreement(user));
+
   useEffect(() => {
-    if (status !== 'authed' || !user) {
+    if (status !== 'authed' || !user || deferredRoute || stillRegistering) {
       setWelcomeStatus(null);
       setVideoEnded(false);
       return;
@@ -43,7 +51,7 @@ export function WelcomeOnboarding() {
     return () => {
       cancelled = true;
     };
-  }, [status, user?.id]);
+  }, [status, user?.id, deferredRoute, stillRegistering]);
 
   useEffect(() => {
     if (!welcomeStatus?.eligible || welcomeStatus.dismissed) return;
@@ -83,6 +91,8 @@ export function WelcomeOnboarding() {
   }, [dismissing, videoEnded]);
 
   if (
+    deferredRoute ||
+    stillRegistering ||
     status !== 'authed' ||
     !user ||
     loading ||
