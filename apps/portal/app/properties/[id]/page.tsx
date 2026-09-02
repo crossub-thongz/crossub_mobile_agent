@@ -253,7 +253,7 @@ export default function PropertyDetailPage() {
       return;
     }
     if (next === 'Documents') setProfileSection('documents');
-    else if (next === 'Archive') setProfileSection('activities');
+    else if (next === 'Archive') setProfileSection('archive');
     else if ((TASK_WORKFLOW_TABS as readonly string[]).includes(next)) setProfileSection('tasks');
     else if ((FINANCIAL_TABS as readonly string[]).includes(next)) {
       setProfileSection('financials');
@@ -452,9 +452,11 @@ export default function PropertyDetailPage() {
     } else if (section === 'documents') {
       setTab('Documents');
       next.set('tab', 'Documents');
-    } else if (section === 'activities') {
+    } else if (section === 'archive') {
       setTab('Archive');
       next.set('tab', 'Archive');
+    } else if (section === 'activities') {
+      next.delete('tab');
     }
     router.replace(`/properties/${id}?${next.toString()}`);
   };
@@ -644,6 +646,9 @@ export default function PropertyDetailPage() {
                   : undefined
               }
             />
+          }
+          archivePanel={
+            <PropertyHistoryTab property={property} propertyId={id} leasing={leasing} />
           }
           activitiesPanel={
             <PropertyProfileActivitiesTab

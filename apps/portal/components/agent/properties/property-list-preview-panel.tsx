@@ -735,6 +735,21 @@ export function PropertyListPreviewPanel({
             </div>
           ) : null}
 
+          {shell && activeTab === 'archive' ? (
+            <div className={cn('rounded-xl border p-4 text-sm', nestedSurface)}>
+              <p className="text-muted-foreground">
+                Previous landlords and tenancies for this property are kept on Archive.
+              </p>
+              <Link
+                href={profileHref('archive')}
+                className="text-primary mt-3 inline-flex items-center gap-1 font-semibold transition-colors hover:underline"
+              >
+                View archive
+                <ChevronRight className="size-4" />
+              </Link>
+            </div>
+          ) : null}
+
           {shell && activeTab === 'activities' ? (
             <div>
               <h3 className="mb-2 text-sm font-semibold">Upcoming</h3>

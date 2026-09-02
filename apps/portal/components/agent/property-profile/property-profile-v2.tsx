@@ -433,6 +433,7 @@ export function PropertyProfileV2({
   tasksPanel,
   financialsPanel,
   documentsPanel,
+  archivePanel,
   activitiesPanel,
   banners,
 }: {
@@ -460,6 +461,7 @@ export function PropertyProfileV2({
   tasksPanel: ReactNode;
   financialsPanel: ReactNode;
   documentsPanel: ReactNode;
+  archivePanel: ReactNode;
   activitiesPanel: ReactNode;
   banners?: ReactNode;
 }) {
@@ -695,6 +697,7 @@ export function PropertyProfileV2({
         <div className="space-y-4">{financialsPanel}</div>
       ) : null}
       {section === 'documents' ? <div className="space-y-4">{documentsPanel}</div> : null}
+      {section === 'archive' ? <div className="space-y-4">{archivePanel}</div> : null}
       {section === 'activities' ? <div className="space-y-4">{activitiesPanel}</div> : null}
     </div>
   );

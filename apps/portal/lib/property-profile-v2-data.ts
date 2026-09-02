@@ -36,6 +36,7 @@ export type PropertyProfileSection =
   | 'tasks'
   | 'financials'
   | 'documents'
+  | 'archive'
   | 'activities';
 
 export const PROPERTY_PROFILE_SECTIONS: {
@@ -46,6 +47,7 @@ export const PROPERTY_PROFILE_SECTIONS: {
   { id: 'tasks', label: 'Tasks' },
   { id: 'financials', label: 'Financials' },
   { id: 'documents', label: 'Documents' },
+  { id: 'archive', label: 'Archive' },
   { id: 'activities', label: 'Activities' },
 ];
 
@@ -164,6 +166,7 @@ export function normalizePropertyProfileSection(
     raw === 'tasks' ||
     raw === 'financials' ||
     raw === 'documents' ||
+    raw === 'archive' ||
     raw === 'activities'
   ) {
     return raw;
