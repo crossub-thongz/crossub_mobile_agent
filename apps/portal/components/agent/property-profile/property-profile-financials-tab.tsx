@@ -360,6 +360,10 @@ export function PropertyProfileFinancialsTab({
         onOpenChange={setArrearsDialogOpen}
         propertyId={propertyId}
         subtitle={snapshot.arrearsDaysLabel}
+        onPaid={() => {
+          void refreshPortalDetail();
+          void onRefresh?.();
+        }}
       />
     </div>
   );

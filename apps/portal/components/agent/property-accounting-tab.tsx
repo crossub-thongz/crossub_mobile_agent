@@ -324,6 +324,10 @@ export function PropertyAccountingTab({
         }}
         propertyId={propertyId}
         subtitle={selectedAccountingCase?.status}
+        onPaid={() => {
+          void refreshPortalDetail();
+          void onRefresh?.();
+        }}
       />
 
       <section ref={ledgerSectionRef} id="rent-reconciliation" className="space-y-3 scroll-mt-24">

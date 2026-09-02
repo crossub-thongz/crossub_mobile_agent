@@ -610,7 +610,7 @@ export function CreateTribunalRentChasingDialog({
     try {
       if (isAddingArrears) {
         await createAgentPropertyArrears(propertyId, body);
-        toast.success('Arrears recorded');
+        toast.success('Arrears recorded. The tenant has been asked to pay.');
         onOpenChange(false);
         onCreated?.('');
         return;

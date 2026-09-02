@@ -1,16 +1,36 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { CaseDetailDialog } from '@/components/agent/case-detail-dialog';
+import { useAgentData } from '@/components/providers/agent-data-provider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   fetchAgentTribunalRentChasingPrefill,
+  markAgentPropertyArrearsPaid,
   type AgentTribunalRentChasingPrefill,
 } from '@/lib/crossub-api/agent-workflow-client';
 import { JOB_CASE_DIALOG_SIZE } from '@/lib/job-case-dialog';
 import { formatCurrency, formatDate } from '@/lib/utils';
+
+type ArrearsKind = 'rent' | 'bill' | 'bond';
+
+const KIND_LABEL: Record<ArrearsKind, string> = {
+  rent: 'Rent',
+  bill: 'Bills',
+  bond: 'Bond',
+};
+
+function localDateInputValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 function ArrearsDetailGrid({
   items,
@@ -73,23 +93,41 @@ export function RentChasingArrearsDialog({
   onOpenChange,
   propertyId,
   subtitle,
+  onPaid,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   propertyId: string;
   subtitle?: string;
+  onPaid?: () => void;
 }) {
+  const { refresh } = useAgentData();
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [prefill, setPrefill] = useState<AgentTribunalRentChasingPrefill | null>(null);
+  const [paidDate, setPaidDate] = useState(localDateInputValue);
+  const [selectedKinds, setSelectedKinds] = useState<ArrearsKind[]>([]);
+
+  const outstandingKinds = useMemo(
+    () =>
+      [...new Set((prefill?.arrears ?? []).map((row) => row.kind))] as ArrearsKind[],
+    [prefill],
+  );
 
   useEffect(() => {
     if (!open || !propertyId) return;
     let cancelled = false;
     setLoading(true);
     setPrefill(null);
+    setPaidDate(localDateInputValue());
+    setSelectedKinds([]);
     void fetchAgentTribunalRentChasingPrefill(propertyId)
       .then((next) => {
-        if (!cancelled) setPrefill(next);
+        if (cancelled) return;
+        setPrefill(next);
+        setSelectedKinds([
+          ...new Set(next.arrears.map((row) => row.kind)),
+        ] as ArrearsKind[]);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -103,6 +141,44 @@ export function RentChasingArrearsDialog({
       cancelled = true;
     };
   }, [open, propertyId]);
+
+  const toggleKind = (kind: ArrearsKind) => {
+    setSelectedKinds((prev) =>
+      prev.includes(kind) ? prev.filter((item) => item !== kind) : [...prev, kind],
+    );
+  };
+
+  const markPaid = async () => {
+    if (!propertyId) return;
+    if (!paidDate) {
+      toast.error('Choose the paid date');
+      return;
+    }
+    if (selectedKinds.length === 0) {
+      toast.error('Select at least one arrears type to mark paid');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await markAgentPropertyArrearsPaid(propertyId, {
+        paidDate,
+        kinds: selectedKinds,
+      });
+      toast.success('Arrears marked as paid');
+      const next = await fetchAgentTribunalRentChasingPrefill(propertyId);
+      setPrefill(next);
+      setSelectedKinds([
+        ...new Set(next.arrears.map((row) => row.kind)),
+      ] as ArrearsKind[]);
+      await refresh();
+      onPaid?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not mark arrears paid');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <CaseDetailDialog
@@ -128,6 +204,58 @@ export function RentChasingArrearsDialog({
             <h3 className="text-sm font-semibold">Arrears</h3>
             <ArrearsTable rows={prefill.arrears} />
           </section>
+
+          {outstandingKinds.length > 0 ? (
+            <section className="space-y-3 rounded-xl border bg-card p-4">
+              <div>
+                <h3 className="text-sm font-semibold">Mark as paid</h3>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Choose the date the tenant paid, then tick the arrears to clear.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Paid date</Label>
+                <Input
+                  type="date"
+                  value={paidDate}
+                  onChange={(event) => setPaidDate(event.target.value)}
+                  disabled={saving}
+                />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {outstandingKinds.map((kind) => (
+                  <label
+                    key={kind}
+                    className="inline-flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border"
+                      checked={selectedKinds.includes(kind)}
+                      onChange={() => toggleKind(kind)}
+                      disabled={saving}
+                    />
+                    {KIND_LABEL[kind]}
+                  </label>
+                ))}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={saving || selectedKinds.length === 0 || !paidDate}
+                onClick={() => void markPaid()}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-1.5 size-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  'Mark as paid'
+                )}
+              </Button>
+            </section>
+          ) : null}
 
           {prefill.rentArrears ? (
             <section className="space-y-2">

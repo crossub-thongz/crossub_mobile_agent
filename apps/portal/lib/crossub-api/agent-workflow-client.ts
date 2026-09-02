@@ -379,6 +379,21 @@ export async function createAgentPropertyArrears(
   });
 }
 
+export type AgentMarkArrearsPaidInput = {
+  paidDate: string;
+  kinds?: Array<'rent' | 'bill' | 'bond'>;
+};
+
+export async function markAgentPropertyArrearsPaid(
+  propertyId: string,
+  body: AgentMarkArrearsPaidInput,
+): Promise<AgentWorkflowCreateResult> {
+  return agentFetch(`${base(propertyId)}/accounting/arrears/paid`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 export async function createAgentRentReconciliation(
   propertyId: string,
   body: AgentRecordRentReconciliationInput,
