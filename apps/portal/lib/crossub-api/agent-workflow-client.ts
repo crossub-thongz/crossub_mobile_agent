@@ -430,6 +430,8 @@ export type AgentTribunalRentChasingPrefill = {
   }>;
   rentArrears: CreateAgentTribunalRentChasingInput['rentArrears'] | null;
   billArrears: NonNullable<CreateAgentTribunalRentChasingInput['billArrears']>;
+  agreementEndDate?: string | null;
+  leaseStartDate?: string | null;
   bondArrears: CreateAgentTribunalRentChasingInput['bondArrears'] | null;
 };
 

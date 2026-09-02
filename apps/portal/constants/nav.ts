@@ -10,7 +10,6 @@ import {
   Receipt,
   Settings,
   Tags,
-  TrendingDown,
   Wrench,
 } from 'lucide-react';
 
@@ -55,14 +54,16 @@ export const V2_PRIMARY_NAV: NavItem[] = [
 ];
 
 export const V2_MORE_NAV: NavItem[] = [
-  ACCOUNTING_MODULE_LAUNCHED
-    ? { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' }
-    : {
-        href: ROUTES.ACCOUNTING,
-        label: 'Arrears',
-        icon: TrendingDown,
-        portalAccess: 'full',
-      },
+  ...(ACCOUNTING_MODULE_LAUNCHED
+    ? [
+        {
+          href: ROUTES.ACCOUNTING,
+          label: 'Accounting',
+          icon: FileText,
+          portalAccess: 'full' as const,
+        },
+      ]
+    : []),
   { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
   { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive },
 ];

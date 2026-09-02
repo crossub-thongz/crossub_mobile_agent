@@ -4,20 +4,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Gavel } from 'lucide-react';
-import { toast } from 'sonner';
 
-import { InfoPanel, InfoRow } from '@/components/agent/info-panel';
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
 import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
+import { TribunalAwaitingAccountManagerPanel } from '@/components/agent/tribunal-awaiting-account-manager';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { Button } from '@/components/ui/button';
 import { propertyDetail, ROUTES } from '@/constants/routes';
-import { AGENT_CASE_INTERACTIONS_ENABLED } from '@/lib/agent-case-mode';
 import { fetchAgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import type { AgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -38,7 +35,6 @@ import {
   cn,
   formatCurrency,
   formatDate,
-  formatDateTime,
   formatPropertyFullAddress,
   formatTime,
 } from '@/lib/utils';
@@ -103,62 +99,8 @@ function initials(name: string): string {
     .join('');
 }
 
-function TribunalGeneralCaseWorkflow({ tribunalCase }: { tribunalCase: TribunalCase }) {
-  return (
-    <>
-      {AGENT_CASE_INTERACTIONS_ENABLED && tribunalCase.requiresAction && tribunalCase.status === 'active' && (
-        <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-          <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-            CROSSUB recommends a tribunal matter — your review required
-          </p>
-          <div className="flex gap-2">
-            <Button
-              className="flex-1"
-              onClick={() => toast.success('Tribunal case approved')}
-            >
-              Approve case
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => toast.info('Case returned to CROSSUB for review')}
-            >
-              Request changes
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <InfoPanel title="Case summary" icon={Gavel}>
-        {tribunalCase.caseNumber ? (
-          <InfoRow label="Case number" value={tribunalCase.caseNumber} />
-        ) : null}
-        <InfoRow label="Property" value={tribunalCase.propertyAddress} />
-        <InfoRow label="Tenant" value={tribunalCase.tenantName} />
-        <InfoRow label="Matter" value={tribunalCase.matter} />
-        <InfoRow label="Status" value={tribunalCase.status} />
-        {tribunalCase.hearingDate ? (
-          <InfoRow label="Hearing date" value={formatDateTime(tribunalCase.hearingDate)} />
-        ) : null}
-        {tribunalCase.inspector ? (
-          <InfoRow label="Member / inspector" value={tribunalCase.inspector} />
-        ) : null}
-        {tribunalCase.orders ? <InfoRow label="Orders" value={tribunalCase.orders} /> : null}
-      </InfoPanel>
-
-      {tribunalCase.evidence && tribunalCase.evidence.length > 0 ? (
-        <InfoPanel title="Evidence" icon={Gavel}>
-          <ul className="space-y-2 text-sm">
-            {tribunalCase.evidence.map((doc) => (
-              <li key={doc} className="rounded-lg border bg-secondary/30 px-3 py-2">
-                {doc}
-              </li>
-            ))}
-          </ul>
-        </InfoPanel>
-      ) : null}
-    </>
-  );
+function TribunalGeneralCaseWorkflow() {
+  return <TribunalAwaitingAccountManagerPanel kind="tribunal" />;
 }
 
 export function TribunalTaskDetailView({
@@ -344,7 +286,7 @@ export function TribunalTaskDetailView({
             {rentChasing ? (
               <TribunalRentChasingDetail caseId={tribunalCase.id} />
             ) : (
-              <TribunalGeneralCaseWorkflow tribunalCase={tribunalCase} />
+              <TribunalGeneralCaseWorkflow />
             )}
             <div className="mt-4">
               <ModuleCommunications

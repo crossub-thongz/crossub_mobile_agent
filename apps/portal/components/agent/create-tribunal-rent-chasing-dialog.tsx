@@ -133,6 +133,14 @@ function billRowsFromPrefill(
   );
 }
 
+function propertyAgreementEnd(prefill: AgentTribunalRentChasingPrefill | null): string {
+  return (
+    prefill?.bondArrears?.agreementEndDate?.slice(0, 10) ||
+    prefill?.agreementEndDate?.slice(0, 10) ||
+    ''
+  );
+}
+
 function applyKindPrefill(
   kind: ArrearsKind,
   prefill: AgentTribunalRentChasingPrefill,
@@ -164,12 +172,14 @@ function applyKindPrefill(
     return;
   }
 
-  if (kind === 'bond' && prefill.bondArrears) {
-    setters.setAgreementEndDate(prefill.bondArrears.agreementEndDate ?? '');
-    setters.setBondAmount(
-      prefill.bondArrears.bondAmount != null ? String(prefill.bondArrears.bondAmount) : '',
-    );
-    setters.setBondNotes(prefill.bondArrears.notes ?? '');
+  if (kind === 'bond') {
+    setters.setAgreementEndDate(propertyAgreementEnd(prefill));
+    if (prefill.bondArrears) {
+      setters.setBondAmount(
+        prefill.bondArrears.bondAmount != null ? String(prefill.bondArrears.bondAmount) : '',
+      );
+      setters.setBondNotes(prefill.bondArrears.notes ?? '');
+    }
   }
 }
 
@@ -231,10 +241,13 @@ function stashPrefillFields(
 
   setters.setBills(billRowsFromPrefill(prefill.billArrears));
 
+  setters.setAgreementEndDate(propertyAgreementEnd(prefill));
   if (prefill.bondArrears) {
-    applyKindPrefill('bond', prefill, setters);
+    setters.setBondAmount(
+      prefill.bondArrears.bondAmount != null ? String(prefill.bondArrears.bondAmount) : '',
+    );
+    setters.setBondNotes(prefill.bondArrears.notes ?? '');
   } else {
-    setters.setAgreementEndDate('');
     setters.setBondAmount('');
     setters.setBondNotes('');
   }
@@ -387,6 +400,19 @@ export function CreateTribunalRentChasingDialog({
 
   const applyPropertyDefaults = (kind: ArrearsKind) => {
     const property = properties.find((item) => item.id === propertyId);
+
+    if (kind === 'bond') {
+      const agreementEnd =
+        propertyAgreementEnd(prefill) || property?.leaseEnd?.slice(0, 10) || '';
+      if (agreementEnd) {
+        setAgreementEndDate((prev) => prev.trim() || agreementEnd);
+      }
+      if (property?.bondAmount) {
+        setBondAmount((prev) => prev.trim() || String(property.bondAmount));
+      }
+      return;
+    }
+
     if (!property) return;
 
     if (kind === 'rent') {
@@ -395,16 +421,6 @@ export function CreateTribunalRentChasingDialog({
       }
       if (property.rentPaidUntil) {
         setRentPaidTo((prev) => prev.trim() || property.rentPaidUntil!.slice(0, 10));
-      }
-      return;
-    }
-
-    if (kind === 'bond') {
-      if (property.bondAmount) {
-        setBondAmount((prev) => prev.trim() || String(property.bondAmount));
-      }
-      if (property.leaseEnd) {
-        setAgreementEndDate((prev) => prev.trim() || property.leaseEnd!.slice(0, 10));
       }
     }
   };
@@ -600,7 +616,8 @@ export function CreateTribunalRentChasingDialog({
     if (selectedKinds.includes('bill') && hasBills) body.billArrears = billRows;
     if (selectedKinds.includes('bond') && hasBond) {
       body.bondArrears = {
-        agreementEndDate: agreementEndDate.trim() || undefined,
+        agreementEndDate:
+          agreementEndDate.trim() || propertyAgreementEnd(prefill) || undefined,
         bondAmount: bondValue,
         notes: bondNotes.trim() || undefined,
       };
@@ -610,7 +627,9 @@ export function CreateTribunalRentChasingDialog({
     try {
       if (isAddingArrears) {
         await createAgentPropertyArrears(propertyId, body);
-        toast.success('Arrears recorded. The tenant has been asked to pay.');
+        toast.success(
+          'Case created. The Account Manager has been notified — wait for their response.',
+        );
         onOpenChange(false);
         onCreated?.('');
         return;
@@ -669,7 +688,9 @@ export function CreateTribunalRentChasingDialog({
       ...body,
       ...(platformChargeId ? { platformChargeId } : {}),
     });
-    toast.success('Tribunal case created');
+    toast.success(
+      'Case created. The Account Manager has been notified — wait for their response.',
+    );
     setPendingTribunalCreate(null);
     onOpenChange(false);
     onCreated?.(result.id);
@@ -1070,7 +1091,7 @@ export function CreateTribunalRentChasingDialog({
               {selectedKinds.includes('bond') ? (
               <Section
                 title="Bond Arrears"
-                description="Agreement end drives days overdue once the tenant has vacated. Bond syncs to the property profile."
+                description="Agreement end is filled from this property’s lease. It drives days overdue once the tenant has vacated."
               >
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Agreement end date">

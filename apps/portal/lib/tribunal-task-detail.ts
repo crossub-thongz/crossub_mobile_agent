@@ -115,9 +115,10 @@ export function resolveTribunalStatusBanner(
 
   switch (status) {
     case TRIBUNAL_CASE_STATUS.DRAFT:
-      title = 'Draft application — Review required';
-      subtitle = 'Confirm arrears and eviction details before lodgement';
-      nextStep = 'Complete application and lodge with tribunal';
+      title = 'Waiting for Account Manager';
+      subtitle =
+        'Your case has been lodged. The Account Manager has been notified — wait for their response.';
+      nextStep = 'Wait for the Account Manager to respond';
       break;
     case TRIBUNAL_CASE_STATUS.SUBMITTED:
       title = 'Application submitted — Awaiting processing';

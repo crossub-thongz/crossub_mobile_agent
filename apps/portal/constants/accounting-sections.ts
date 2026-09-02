@@ -7,9 +7,9 @@ export const ACCOUNTING_SECTIONS = [
 ] as const;
 
 /**
- * Flip when the full accounting module ships. Until then v2 still shows
- * arrears / rent chasing on the property hub and an Arrears sidebar item,
- * and hides rent reconciliation, invoices, and statements.
+ * Flip when the full accounting module ships. Until then v2 keeps arrears /
+ * rent chasing on the property hub, hides the Arrears sidebar item for every
+ * agent, and hides rent reconciliation, invoices, and statements.
  */
 export const ACCOUNTING_MODULE_LAUNCHED = false;
 
