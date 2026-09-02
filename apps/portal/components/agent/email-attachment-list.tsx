@@ -51,6 +51,10 @@ function canUseDirectAttachmentUrl(url: string): boolean {
   return false;
 }
 
+function attachmentRowKey(attachment: JobCaseEmailAttachment, index: number): string {
+  return `${index}:${attachment.url ?? ''}:${attachment.name}`;
+}
+
 export function EmailAttachmentList({
   attachments,
   title = 'Attachments',
@@ -63,7 +67,7 @@ export function EmailAttachmentList({
   /** panel = detail dialog; inline = compact row beside email list items */
   variant?: 'panel' | 'inline';
 }) {
-  const [loadingName, setLoadingName] = useState<string | null>(null);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
@@ -92,10 +96,11 @@ export function EmailAttachmentList({
 
   const loadAttachmentBlob = async (
     attachment: JobCaseEmailAttachment,
+    rowKey: string,
     download = false,
   ): Promise<Blob | null> => {
     if (!attachment.url) return null;
-    setLoadingName(attachment.name);
+    setLoadingKey(rowKey);
     try {
       const url = download ? withDownloadQuery(attachment.url) : attachment.url;
       if (canUseDirectAttachmentUrl(url)) {
@@ -110,11 +115,11 @@ export function EmailAttachmentList({
       toast.error(apiErrorMessage(error));
       return null;
     } finally {
-      setLoadingName(null);
+      setLoadingKey(null);
     }
   };
 
-  const openPreview = async (attachment: JobCaseEmailAttachment) => {
+  const openPreview = async (attachment: JobCaseEmailAttachment, rowKey: string) => {
     if (!attachment.url) return;
 
     if (canUseDirectAttachmentUrl(attachment.url)) {
@@ -131,7 +136,7 @@ export function EmailAttachmentList({
       return;
     }
 
-    const blob = await loadAttachmentBlob(attachment);
+    const blob = await loadAttachmentBlob(attachment, rowKey);
     if (!blob) return;
 
     if (previewUrl?.startsWith('blob:')) {
@@ -146,7 +151,7 @@ export function EmailAttachmentList({
     setPreviewOpen(true);
   };
 
-  const downloadAttachment = async (attachment: JobCaseEmailAttachment) => {
+  const downloadAttachment = async (attachment: JobCaseEmailAttachment, rowKey: string) => {
     if (!attachment.url) return;
     if (canUseDirectAttachmentUrl(attachment.url)) {
       const anchor = document.createElement('a');
@@ -159,7 +164,7 @@ export function EmailAttachmentList({
       anchor.remove();
       return;
     }
-    const blob = await loadAttachmentBlob(attachment, true);
+    const blob = await loadAttachmentBlob(attachment, rowKey, true);
     if (!blob) return;
     downloadBlob(blob, attachment.name);
   };
@@ -170,11 +175,12 @@ export function EmailAttachmentList({
 
   const attachmentRows = (
     <ul className={variant === 'panel' ? 'space-y-2' : 'mt-2 space-y-1.5'}>
-      {attachments.map((attachment) => {
-        const loading = loadingName === attachment.name;
+      {attachments.map((attachment, index) => {
+        const rowKey = attachmentRowKey(attachment, index);
+        const loading = loadingKey === rowKey;
         return (
           <li
-            key={attachment.name}
+            key={rowKey}
             onClick={stopRowClick}
             className={cn(
               'flex items-center gap-2 rounded-lg border bg-background px-2.5 py-2',
@@ -198,7 +204,7 @@ export function EmailAttachmentList({
                   disabled={loading}
                   onClick={(event) => {
                     event.stopPropagation();
-                    void openPreview(attachment);
+                    void openPreview(attachment, rowKey);
                   }}
                 >
                   {loading ? (
@@ -216,7 +222,7 @@ export function EmailAttachmentList({
                   disabled={loading}
                   onClick={(event) => {
                     event.stopPropagation();
-                    void downloadAttachment(attachment);
+                    void downloadAttachment(attachment, rowKey);
                   }}
                 >
                   <Download className="size-3" />
