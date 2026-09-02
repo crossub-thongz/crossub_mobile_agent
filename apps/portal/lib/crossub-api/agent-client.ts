@@ -237,6 +237,26 @@ export async function fetchProperties(): Promise<AgentProperty[]> {
   return fetchAllPages<AgentProperty>('/agent/properties');
 }
 
+export type PropertyDuplicateMatch = {
+  id: string;
+  address: string;
+  suburb: string | null;
+  registryIntakeComplete: boolean;
+};
+
+/** Same-agency live address match for the add-property wizard (`GET /api/v1/agent/properties/duplicate`). */
+export async function checkPropertyDuplicate(params: {
+  address: string;
+  suburb?: string;
+  excludePropertyId?: string | null;
+}): Promise<{ duplicate: PropertyDuplicateMatch | null }> {
+  const query = new URLSearchParams();
+  query.set('address', params.address);
+  if (params.suburb) query.set('suburb', params.suburb);
+  if (params.excludePropertyId) query.set('excludePropertyId', params.excludePropertyId);
+  return apiV1.get(`/agent/properties/duplicate?${query.toString()}`);
+}
+
 /** Archived properties whose management has ended (`GET /api/v1/agent/properties?archived=true`). */
 export async function fetchArchivedProperties(): Promise<AgentProperty[]> {
   return fetchAllPages<AgentProperty>('/agent/properties', { archived: 'true' });

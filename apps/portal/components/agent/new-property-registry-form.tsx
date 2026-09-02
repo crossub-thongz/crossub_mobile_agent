@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,6 +39,8 @@ import {
   WorkflowProgressRail,
 } from '@/components/agent/workflow-progress-rail';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { propertyHref } from '@/constants/routes';
+import { checkPropertyDuplicate } from '@/lib/crossub-api/agent-client';
 import {
   AUSTRALIAN_STATE_LABEL,
   AUSTRALIAN_STATE_ORDER,
@@ -76,6 +79,9 @@ import {
   type PropertyRegistryWizardStep,
 } from '@/lib/property-registry-persist';
 import { weeklyRentFromAmount } from '@/lib/rent-calculations';
+
+const EXISTING_PROPERTY_ADDRESS_ERROR =
+  'This address is already registered for this agency. Open the existing property instead of adding a duplicate.';
 
 const selectClass =
   'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none dark:bg-input/30';
@@ -292,21 +298,37 @@ function runStepValidation(
   }
 }
 
-function StepErrorsBanner({ errors }: { errors: string[] }) {
+function StepErrorsBanner({
+  errors,
+  existingHref,
+}: {
+  errors: string[];
+  existingHref?: string | null;
+}) {
   if (errors.length === 0) return null;
+  const duplicate = errors.includes(EXISTING_PROPERTY_ADDRESS_ERROR);
   return (
     <div
       className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 dark:border-rose-900/50 dark:bg-rose-950/30"
       role="alert"
     >
       <p className="text-sm font-medium text-rose-800 dark:text-rose-300">
-        Complete the required fields before continuing
+        {duplicate
+          ? 'This property is already registered'
+          : 'Complete the required fields before continuing'}
       </p>
       <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-xs text-rose-700 dark:text-rose-400">
         {errors.map((error) => (
           <li key={error}>{error}</li>
         ))}
       </ul>
+      {duplicate && existingHref ? (
+        <p className="mt-2 text-xs">
+          <Link href={existingHref} className="font-medium text-rose-800 underline dark:text-rose-300">
+            Open existing property
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -378,6 +400,9 @@ export function NewPropertyRegistryForm({
   const [furthestStepIndex, setFurthestStepIndex] = useState(initialState?.furthestStepIndex ?? 0);
   const [stepErrors, setStepErrors] = useState<Partial<Record<WizardStep, string[]>>>({});
   const [addressFieldsLocked, setAddressFieldsLocked] = useState(true);
+  const [duplicateBlocked, setDuplicateBlocked] = useState(false);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [existingPropertyHref, setExistingPropertyHref] = useState<string | null>(null);
   const [previewDoc, setPreviewDoc] = useState<DocumentPreviewItem | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const [completing, setCompleting] = useState(false);
@@ -409,8 +434,11 @@ export function NewPropertyRegistryForm({
   });
   const skipAutosaveRef = useRef(true);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const duplicateCheckSeq = useRef(0);
+  const duplicateBlockedRef = useRef(false);
   const formRef = useRef(form);
   formRef.current = form;
+  duplicateBlockedRef.current = duplicateBlocked;
 
   const set = <K extends keyof NewPropertyRegistryValues>(key: K, value: NewPropertyRegistryValues[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -424,7 +452,12 @@ export function NewPropertyRegistryForm({
       if (!currentErrors?.length) return prev;
       const result = runStepValidation(step, form);
       if (result.valid) {
-        return { ...prev, [step]: undefined };
+        const keepDuplicate =
+          step === 'property' && currentErrors.includes(EXISTING_PROPERTY_ADDRESS_ERROR);
+        return {
+          ...prev,
+          [step]: keepDuplicate ? [EXISTING_PROPERTY_ADDRESS_ERROR] : undefined,
+        };
       }
       return prev;
     });
@@ -440,7 +473,7 @@ export function NewPropertyRegistryForm({
   }, [primaryAgency, initialState]);
 
   useEffect(() => {
-    if (!onAutosave || !apiConnected || submitting || completing) return;
+    if (!onAutosave || !apiConnected || submitting || completing || duplicateBlocked) return;
     if (!canAutoSaveRegistry(form)) return;
 
     if (skipAutosaveRef.current) {
@@ -460,7 +493,7 @@ export function NewPropertyRegistryForm({
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [form, step, furthestStepIndex, onAutosave, apiConnected, submitting, completing]);
+  }, [form, step, furthestStepIndex, onAutosave, apiConnected, submitting, completing, duplicateBlocked]);
 
   useEffect(() => {
     return () => {
@@ -653,6 +686,92 @@ export function NewPropertyRegistryForm({
     setForm((f) => ({ ...f, management: { ...f.management, ...patch } }));
   };
 
+  const setDuplicateError = useCallback((blocked: boolean, href: string | null = null) => {
+    setDuplicateBlocked(blocked);
+    setExistingPropertyHref(blocked ? href : null);
+    setStepErrors((prev) => {
+      const current = prev.property ?? [];
+      const without = current.filter((error) => error !== EXISTING_PROPERTY_ADDRESS_ERROR);
+      if (!blocked) {
+        return { ...prev, property: without.length > 0 ? without : undefined };
+      }
+      return { ...prev, property: [...without, EXISTING_PROPERTY_ADDRESS_ERROR] };
+    });
+  }, []);
+
+  const checkAddressDuplicate = useCallback(async (): Promise<boolean> => {
+    const address = composeStreetAddress(
+      form.unit,
+      form.streetNumber,
+      form.streetName,
+    ).trim() || form.address.trim();
+    const suburb = form.suburb.trim();
+    if (!apiConnected || !address || !suburb) {
+      setDuplicateError(false);
+      return false;
+    }
+
+    const seq = ++duplicateCheckSeq.current;
+    setCheckingDuplicate(true);
+    try {
+      const result = await checkPropertyDuplicate({
+        address,
+        suburb,
+        excludePropertyId: draftPropertyId,
+      });
+      if (seq !== duplicateCheckSeq.current) return duplicateBlockedRef.current;
+      const match = result.duplicate;
+      const blocked = match != null;
+      setDuplicateError(
+        blocked,
+        match
+          ? propertyHref({
+              id: match.id,
+              registryIntakeComplete: match.registryIntakeComplete,
+            })
+          : null,
+      );
+      return blocked;
+    } catch {
+      if (seq !== duplicateCheckSeq.current) return duplicateBlockedRef.current;
+      return false;
+    } finally {
+      if (seq === duplicateCheckSeq.current) setCheckingDuplicate(false);
+    }
+  }, [
+    apiConnected,
+    draftPropertyId,
+    form.address,
+    form.streetName,
+    form.streetNumber,
+    form.suburb,
+    form.unit,
+    setDuplicateError,
+  ]);
+
+  useEffect(() => {
+    const address =
+      composeStreetAddress(form.unit, form.streetNumber, form.streetName).trim() ||
+      form.address.trim();
+    if (!apiConnected || !address || !form.suburb.trim()) {
+      setDuplicateError(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void checkAddressDuplicate();
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [
+    apiConnected,
+    checkAddressDuplicate,
+    form.address,
+    form.streetName,
+    form.streetNumber,
+    form.suburb,
+    form.unit,
+    setDuplicateError,
+  ]);
+
   const validateAndRecordStep = useCallback(
     (targetStep: WizardStep): boolean => {
       const result = runStepValidation(targetStep, form);
@@ -677,7 +796,7 @@ export function NewPropertyRegistryForm({
   );
 
   const goToStep = useCallback(
-    (target: WizardStep) => {
+    async (target: WizardStep) => {
       const targetIdx = WIZARD_STEPS.indexOf(target);
       if (targetIdx < 0) return;
 
@@ -688,17 +807,22 @@ export function NewPropertyRegistryForm({
             setStep(wizardStep);
             return;
           }
+          if (wizardStep === 'property' && (await checkAddressDuplicate())) {
+            setStep('property');
+            return;
+          }
         }
         setFurthestStepIndex((f) => Math.max(f, targetIdx));
       }
 
       setStep(target);
     },
-    [stepIndex, validateAndRecordStep],
+    [checkAddressDuplicate, stepIndex, validateAndRecordStep],
   );
 
-  const goNext = () => {
+  const goNext = async () => {
     if (!validateAndRecordStep(step)) return;
+    if (step === 'property' && (await checkAddressDuplicate())) return;
     const nextIdx = stepIndex + 1;
     if (nextIdx < WIZARD_STEPS.length) {
       setFurthestStepIndex((f) => Math.max(f, nextIdx));
@@ -715,6 +839,10 @@ export function NewPropertyRegistryForm({
     const failingStep = validateStepsThrough(WIZARD_STEPS.indexOf('landlord'));
     if (failingStep) {
       setStep(failingStep);
+      return;
+    }
+    if (await checkAddressDuplicate()) {
+      setStep('property');
       return;
     }
 
@@ -775,7 +903,7 @@ export function NewPropertyRegistryForm({
     }
   };
 
-  const formBusy = submitting || completing;
+  const formBusy = submitting || completing || checkingDuplicate;
 
   if (apiConnected && loading && !primaryAgency) {
     return (
@@ -838,7 +966,10 @@ export function NewPropertyRegistryForm({
           return idx <= furthestStepIndex && s !== step;
         }}
         onStepClick={goToStep}
-        isStepEnabled={(s) => WIZARD_STEPS.indexOf(s) <= furthestStepIndex}
+        isStepEnabled={(s) =>
+          WIZARD_STEPS.indexOf(s) <= furthestStepIndex &&
+          !(duplicateBlocked && WIZARD_STEPS.indexOf(s) > 0)
+        }
         stepHasError={(s: WizardStep) => (stepErrors[s]?.length ?? 0) > 0}
       />
 
@@ -852,7 +983,10 @@ export function NewPropertyRegistryForm({
         ) : null}
       </p>
 
-      <StepErrorsBanner errors={stepErrors[step] ?? []} />
+      <StepErrorsBanner
+        errors={stepErrors[step] ?? []}
+        existingHref={existingPropertyHref}
+      />
 
       {step === 'property' ? (
         <div className="space-y-5 rounded-lg border border-border/60 bg-card p-4">
@@ -1219,7 +1353,12 @@ export function NewPropertyRegistryForm({
           </Button>
         ) : null}
         {step !== 'documents' ? (
-          <Button type="button" className="flex-1" onClick={goNext} disabled={formBusy}>
+          <Button
+            type="button"
+            className="flex-1"
+            onClick={() => void goNext()}
+            disabled={formBusy || duplicateBlocked}
+          >
             Next
           </Button>
         ) : (
