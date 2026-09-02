@@ -126,9 +126,36 @@ export function canAgentViewResearchResults(detail: RentReviewWorkflowDetail): b
   return hasAgentResearchPackSent(detail);
 }
 
-function hasLandlordResearchEmailed(detail: RentReviewWorkflowDetail): boolean {
-  return auditHas(detail, RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND);
+function landlordResearchPackEntries(detail: RentReviewWorkflowDetail): RentReviewAuditEntry[] {
+  return detail.auditLog.filter((e) => e.kind === RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND);
 }
+
+function landlordPackEntrySkipped(entry: RentReviewAuditEntry): boolean {
+  if (/without sending/i.test(entry.message ?? '')) return true;
+  const raw = entry.detail?.trim();
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { skipped?: boolean };
+    return parsed.skipped === true;
+  } catch {
+    return false;
+  }
+}
+
+function hasLandlordResearchPackSent(detail: RentReviewWorkflowDetail): boolean {
+  return landlordResearchPackEntries(detail).some((e) => !landlordPackEntrySkipped(e));
+}
+
+function hasLandlordResearchPackSkipped(detail: RentReviewWorkflowDetail): boolean {
+  return landlordResearchPackEntries(detail).some((e) => landlordPackEntrySkipped(e));
+}
+
+/** True when the landlord pack was sent or the agent skipped sending it. */
+export function hasLandlordResearchEmailed(detail: RentReviewWorkflowDetail): boolean {
+  return hasLandlordResearchPackSent(detail) || hasLandlordResearchPackSkipped(detail);
+}
+
+export { hasLandlordResearchPackSent, hasLandlordResearchPackSkipped };
 
 /** The agent may still put their own figure on the recommendation. */
 export function canAdjustRentRecommendation(detail: RentReviewWorkflowDetail): boolean {
@@ -152,13 +179,15 @@ export function canAdjustRentRecommendation(detail: RentReviewWorkflowDetail): b
 export function hasLandlordPackFallenBehindRecommendation(
   detail: RentReviewWorkflowDetail,
 ): boolean {
-  const sentAt = auditAt(detail, RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND);
-  if (!sentAt) return false;
+  const sent = [...landlordResearchPackEntries(detail)]
+    .reverse()
+    .find((e) => !landlordPackEntrySkipped(e));
+  if (!sent) return false;
   const adjustedAt = auditAt(detail, RENT_REVIEW_RECOMMENDATION_AUDIT_KIND);
-  return adjustedAt != null && adjustedAt > sentAt;
+  return adjustedAt != null && adjustedAt > sent.at;
 }
 
-/** Research step is done only after market research and landlord email pack are sent. */
+/** Research step is done after market research and the landlord pack is sent or skipped. */
 export function isRentResearchStepComplete(detail: RentReviewWorkflowDetail): boolean {
   return hasResearchComplete(detail) && hasLandlordResearchEmailed(detail);
 }
@@ -247,7 +276,9 @@ function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPro
   const requested = hasResearchRequested(detail);
   const researchDone = hasResearchComplete(detail);
   const agentPackSent = hasAgentResearchPackSent(detail);
-  const landlordEmailed = hasLandlordResearchEmailed(detail);
+  const packSent = hasLandlordResearchPackSent(detail);
+  const packSkipped = hasLandlordResearchPackSkipped(detail);
+  const landlordGateDone = packSent || packSkipped;
   return [
     {
       id: 'request',
@@ -266,8 +297,10 @@ function researchSubProgress(detail: RentReviewWorkflowDetail): RentReviewSubPro
     },
     {
       id: 'email-landlord',
-      label: 'Research emailed to landlord',
-      done: landlordEmailed,
+      label: packSkipped && !packSent
+        ? 'Proceeded without emailing landlord'
+        : 'Research emailed to landlord',
+      done: landlordGateDone,
     },
     {
       id: 'amounts',

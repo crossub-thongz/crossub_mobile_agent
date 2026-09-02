@@ -5,7 +5,6 @@ import { ArrowRight, Bell, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND } from '@/constants/rent-review-recommendation';
 import { Button } from '@/components/ui/button';
 import { RentReviewEmailToLandlordDialog } from '@/components/rent-review/rent-review-email-to-landlord-dialog';
 import { RentReviewNoticePayableFromField } from '@/components/rent-review/rent-review-notice-payable-from-field';
@@ -19,6 +18,8 @@ import {
   canAdjustRentRecommendation,
   canAgentViewResearchResults,
   hasLandlordPackFallenBehindRecommendation,
+  hasLandlordResearchPackSent,
+  hasLandlordResearchPackSkipped,
   hasMarketResearchComplete,
   hasResearchRequested,
   needsRentReviewPathwayConfirm,
@@ -40,6 +41,7 @@ export function RentReviewResearchPanel({
   const [landlordDialogOpen, setLandlordDialogOpen] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [confirmingPathway, setConfirmingPathway] = useState(false);
+  const [skippingLandlordEmail, setSkippingLandlordEmail] = useState(false);
 
   const property = properties.find((p) => p.id === detail.propertyId);
   const recipientContacts = buildPropertyWorkflowEmailContacts(property, {
@@ -56,9 +58,8 @@ export function RentReviewResearchPanel({
   const researchRequested = hasResearchRequested(detail);
   const researchComplete = hasMarketResearchComplete(detail);
   const canViewResults = canAgentViewResearchResults(detail);
-  const landlordEmailed = detail.auditLog.some(
-    (e) => e.kind === RENT_REVIEW_LANDLORD_PACK_AUDIT_KIND,
-  );
+  const landlordEmailed = hasLandlordResearchPackSent(detail);
+  const landlordSkipped = hasLandlordResearchPackSkipped(detail);
   // The pack has gone but quotes a rate the agent has since changed. This re-opens the send
   // button; it must never re-open the automatic send above, which stays keyed on
   // `landlordEmailed` so an adjustment can't mail the owner by itself.
@@ -79,6 +80,42 @@ export function RentReviewResearchPanel({
    * only path, and it shows the recipient, the body and the attachments first.
    */
 
+
+  const skipLandlordEmail = async () => {
+    if (!detail.propertyId) {
+      toast.error('No property linked to this rent review');
+      return;
+    }
+    setSkippingLandlordEmail(true);
+    try {
+      let updated = await runMutation(
+        detail.id,
+        rentReviewApi.sendEmail(
+          detail.id,
+          {
+            kind: 'landlord_research_email',
+            skipRecipientEmail: true,
+          },
+          detail.propertyId,
+          detail.leaseEndDate,
+        ),
+      );
+      try {
+        updated = await runMutation(
+          detail.id,
+          rentReviewApi.confirmPathwayIfPending(updated),
+        );
+      } catch {
+        // Skip already stamped the pack step. Continue is offered if confirm failed.
+      }
+      onUpdated?.(updated);
+      toast.success('Proceeded without sending landlord email');
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setSkippingLandlordEmail(false);
+    }
+  };
 
   const confirmPathway = async () => {
     setConfirmingPathway(true);
@@ -195,7 +232,10 @@ export function RentReviewResearchPanel({
             detail={detail}
             researchComplete={researchComplete}
             landlordEmailed={landlordEmailed}
+            landlordSkipped={landlordSkipped}
+            skipBusy={skippingLandlordEmail}
             onEmail={() => setLandlordDialogOpen(true)}
+            onSkip={() => void skipLandlordEmail()}
             canAdjustRecommendation={canAdjustRentRecommendation(detail)}
             onAdjustRecommendation={async (weekly) => {
               const updated = await runMutation(
@@ -222,10 +262,14 @@ export function RentReviewResearchPanel({
               packBehindRecommendation
                 ? 'The rate has changed since you emailed the landlord — send them the updated pack.'
                 : needsPathwayConfirm
-                  ? 'You have sent the landlord the research pack. Confirm the rent-review pathway to set the new rent and notify the tenant.'
+                  ? landlordSkipped && !landlordEmailed
+                    ? 'You skipped the landlord email. Confirm the rent-review pathway to set the new rent and notify the tenant.'
+                    : 'You have sent the landlord the research pack. Confirm the rent-review pathway to set the new rent and notify the tenant.'
                   : landlordEmailed
                     ? 'You have sent the landlord the research pack.'
-                    : 'Review the recommended rate, then send the research pack to the landlord.'
+                    : landlordSkipped
+                      ? 'You proceeded without sending the landlord email. You can still send the pack later if needed.'
+                      : 'Review the recommended rate, then send the research pack to the landlord — or proceed without sending.'
             }
           />
 

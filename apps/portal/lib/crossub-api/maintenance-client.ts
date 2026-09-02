@@ -285,12 +285,14 @@ export async function reviewMaintenanceQuotationDecision(
     lineItems?: ApiQuotation['lineItems'];
     comments?: string;
   },
+  opts?: { skipRecipientEmail?: boolean },
 ): Promise<ApiMaintenanceState> {
   return api.post<ApiMaintenanceState>('/maintenance/quotations/review-decision', {
     quotationId,
     decision,
     declineReason,
     actorRole,
+    ...(opts?.skipRecipientEmail ? { skipRecipientEmail: true } : {}),
     ...(quotationSnapshot ? { quotationSnapshot } : {}),
   });
 }
@@ -298,10 +300,12 @@ export async function reviewMaintenanceQuotationDecision(
 export async function sendMaintenanceQuotationToLandlord(
   quotationId: string,
   actorRole: ApiMaintenanceUserRole = AGENT_ROLE,
+  opts?: { skipRecipientEmail?: boolean },
 ): Promise<ApiMaintenanceState> {
   return api.post<ApiMaintenanceState>('/maintenance/quotations/send-to-landlord', {
     quotationId,
     actorRole,
+    ...(opts?.skipRecipientEmail ? { skipRecipientEmail: true } : {}),
   });
 }
 

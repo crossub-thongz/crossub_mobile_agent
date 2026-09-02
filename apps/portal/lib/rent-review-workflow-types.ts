@@ -194,11 +194,12 @@ export interface ResolveNegotiationInput {
 }
 
 export interface SendRentReviewEmailInput {
-  toEmail: string;
+  toEmail?: string;
   toName?: string;
-  subject: string;
-  body: string;
+  subject?: string;
+  body?: string;
   kind: 'landlord_research_email' | 'comm_reply' | 'comm_forward';
   inReplyToAuditId?: string;
   channel?: 'email' | 'message';
+  skipRecipientEmail?: boolean;
 }

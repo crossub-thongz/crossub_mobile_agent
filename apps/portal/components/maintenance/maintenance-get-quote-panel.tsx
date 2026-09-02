@@ -141,9 +141,11 @@ function ContractorQuoteCollapsible({
     ? 'Contractor requoted — review revised quotation'
     : review?.decision
     ? review.decision === 'approved'
-        ? review.landlordEmailSentAt
-        ? 'Sent to landlord'
-        : 'Approved — sending to landlord'
+        ? review.agentApprovalEmailSkipped
+          ? 'Approved — proceeded without landlord email'
+          : review.agentApprovalEmailSentAt || review.landlordEmailSentAt
+            ? 'Sent to landlord'
+            : 'Approved — sending to landlord'
       : review.contractorFeedbackSentAt
         ? 'Feedback sent'
         : 'Declined — send feedback'
@@ -254,7 +256,7 @@ function ContractorQuoteCollapsible({
                 quote={submitted}
                 review={review}
                 canReview={canReview}
-                onReviewDecision={async (decision, declineReason) => {
+                onReviewDecision={async (decision, declineReason, opts) => {
                   await reviewMaintenanceQuotationDecisionCase(
                     submitted.id,
                     decision,
@@ -271,11 +273,12 @@ function ContractorQuoteCollapsible({
                       lineItems: submitted.lineItems,
                       comments: submitted.comments,
                     },
+                    opts,
                   );
                   await onCaseUpdated?.();
                 }}
-                onSendToLandlord={async () => {
-                  await sendMaintenanceQuotationToLandlordCase(submitted.id);
+                onSendToLandlord={async (opts) => {
+                  await sendMaintenanceQuotationToLandlordCase(submitted.id, opts);
                   await onCaseUpdated?.();
                 }}
                 onSendFeedback={async (message) => {

@@ -123,6 +123,48 @@ export function RentReviewEmailToLandlordDialog({
     };
   }, [open, detail]);
 
+  const skipSend = async () => {
+    if (!detail.propertyId) {
+      toast.error('Property is required to continue');
+      return;
+    }
+    setSending(true);
+    try {
+      let updated = await runMutation(
+        detail.id,
+        rentReviewApi.sendEmail(
+          detail.id,
+          {
+            kind: 'landlord_research_email',
+            skipRecipientEmail: true,
+            toEmail: toEmail.trim() || undefined,
+            toName: contact.name,
+            subject: subject.trim() || undefined,
+            body: body.trim() || undefined,
+          },
+          detail.propertyId,
+          detail.leaseEndDate,
+        ),
+      );
+      try {
+        updated = await runMutation(
+          detail.id,
+          rentReviewApi.confirmPathwayIfPending(updated),
+        );
+      } catch {
+        // Skip already stamped the pack step.
+      }
+      onUpdated?.(updated);
+      toast.success('Proceeded without sending landlord email');
+      onOpenChange(false);
+      onSent?.();
+    } catch (err) {
+      toast.error(apiErrorMessage(err));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const send = async () => {
     if (!detail.propertyId) {
       toast.error('Property is required to send email');
@@ -255,9 +297,16 @@ export function RentReviewEmailToLandlordDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => void skipSend()}
+            disabled={sending || loadingAttachments}
+          >
+            Proceed without sending
           </Button>
           <Button className="gap-2" onClick={send} disabled={sending || loadingAttachments}>
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}

@@ -77,7 +77,7 @@ export function MaintenanceWorkspace({
   workspaceCase: MaintenanceWorkspaceCase;
   backHref: string;
   backLabel: string;
-  onApproveQuote?: () => void | Promise<void>;
+  onApproveQuote?: (opts?: { skipRecipientEmail?: boolean }) => void | Promise<void>;
   onDeclineQuote?: (reason: string) => void | Promise<void>;
   onRequoteQuote?: (counterPrice: number, message: string) => void | Promise<void>;
   assignedToName?: string | null;
@@ -572,7 +572,8 @@ export function MaintenanceWorkspace({
                         quoteDocumentUrl={quoteDocumentUrl}
                         disabled={!requiresApproval}
                         requoteRequiresPrice
-                        onApprove={() => void onApproveQuote?.()}
+                        showSkipLandlordEmail
+                        onApprove={(opts) => void onApproveQuote?.(opts)}
                         onDecline={(r) => void onDeclineQuote?.(r)}
                         onRequote={(reason, counterPrice) => {
                           if (counterPrice == null) return;

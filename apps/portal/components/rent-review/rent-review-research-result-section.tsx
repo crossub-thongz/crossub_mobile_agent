@@ -127,8 +127,11 @@ export function RentReviewResearchResultSection({
   detail,
   researchComplete,
   landlordEmailed,
+  landlordSkipped,
   emailBusy,
+  skipBusy,
   onEmail,
+  onSkip,
   helperText,
   canAdjustRecommendation,
   onAdjustRecommendation,
@@ -138,8 +141,11 @@ export function RentReviewResearchResultSection({
   detail: RentReviewWorkflowDetail;
   researchComplete: boolean;
   landlordEmailed: boolean;
+  landlordSkipped?: boolean;
   emailBusy?: boolean;
+  skipBusy?: boolean;
   onEmail: () => void;
+  onSkip?: () => void;
   helperText?: string;
   /** False past agent review, where the API refuses the write — the control is hidden, not disabled. */
   canAdjustRecommendation?: boolean;
@@ -224,10 +230,26 @@ export function RentReviewResearchResultSection({
       ) : null}
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-        {landlordEmailed ? (
+        {landlordSkipped ? (
+          <p className="text-muted-foreground text-xs sm:mr-auto">
+            Proceeded without sending landlord email.
+          </p>
+        ) : landlordEmailed ? (
           <p className="text-muted-foreground text-xs sm:mr-auto">
             Research results sent to the landlord.
           </p>
+        ) : null}
+        {onSkip && !landlordEmailed && !landlordSkipped ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2 sm:min-w-[8rem]"
+            disabled={!researchComplete || emailBusy || skipBusy}
+            onClick={onSkip}
+          >
+            {skipBusy ? <Loader2 className="size-4 animate-spin" /> : null}
+            Proceed without sending email
+          </Button>
         ) : null}
         <Button
           type="button"

@@ -59,8 +59,12 @@ export function MaintenanceQuotationReviewActions({
   review?: QuotationReviewRecord;
   canReview: boolean;
   busy?: boolean;
-  onReviewDecision: (decision: 'approved' | 'declined', declineReason?: string) => Promise<void>;
-  onSendToLandlord: () => Promise<void>;
+  onReviewDecision: (
+    decision: 'approved' | 'declined',
+    declineReason?: string,
+    opts?: { skipRecipientEmail?: boolean },
+  ) => Promise<void>;
+  onSendToLandlord: (opts?: { skipRecipientEmail?: boolean }) => Promise<void>;
   onSendFeedback: (message?: string) => Promise<void>;
   onCounterOffer: (counterPrice: number, message?: string) => Promise<void>;
 }) {
@@ -69,6 +73,7 @@ export function MaintenanceQuotationReviewActions({
   const [counterPrice, setCounterPrice] = useState('');
   const [counterMessage, setCounterMessage] = useState('');
   const [acting, setActing] = useState(false);
+  const [skipLandlordEmail, setSkipLandlordEmail] = useState(false);
 
   const isBusy = busy || acting;
   const canAct = canReview && quote.status === 'submitted';
@@ -76,7 +81,10 @@ export function MaintenanceQuotationReviewActions({
   // rehydrates — still treat that as approved so Send to landlord remains available.
   const decision =
     review?.decision ?? (quote.status === 'approved' ? 'approved' : undefined);
-  const landlordSent = Boolean(review?.landlordEmailSentAt);
+  const approvalSkipped = Boolean(review?.agentApprovalEmailSkipped);
+  const approvalSentAt =
+    review?.agentApprovalEmailSentAt ?? review?.landlordEmailSentAt;
+  const landlordSent = Boolean(approvalSentAt) && !approvalSkipped;
   const feedbackSent = Boolean(review?.contractorFeedbackSentAt);
   const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, quote);
 
@@ -118,6 +126,16 @@ export function MaintenanceQuotationReviewActions({
               disabled={isBusy}
             />
           </div>
+          <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-3.5 shrink-0 accent-primary"
+              checked={skipLandlordEmail}
+              disabled={isBusy}
+              onChange={(e) => setSkipLandlordEmail(e.target.checked)}
+            />
+            <span>Don&apos;t send email to landlord — approve and continue the job anyway</span>
+          </label>
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
@@ -155,8 +173,14 @@ export function MaintenanceQuotationReviewActions({
               disabled={isBusy}
               onClick={() =>
                 void run(async () => {
-                  await onReviewDecision('approved');
-                  toast.success('Quote approved — quotation sent to landlord');
+                  await onReviewDecision('approved', undefined, {
+                    skipRecipientEmail: skipLandlordEmail,
+                  });
+                  toast.success(
+                    skipLandlordEmail
+                      ? 'Quote approved — proceeded without sending landlord email'
+                      : 'Quote approved — quotation sent to landlord',
+                  );
                 })
               }
             >
@@ -222,8 +246,22 @@ export function MaintenanceQuotationReviewActions({
         </div>
       ) : null}
 
-      {canReview && decision === 'approved' && !landlordSent ? (
-        <div className="flex justify-end">
+      {canReview && decision === 'approved' && !landlordSent && !approvalSkipped ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isBusy}
+            onClick={() =>
+              void run(async () => {
+                await onSendToLandlord({ skipRecipientEmail: true });
+                toast.success('Proceeded without sending landlord email');
+              })
+            }
+          >
+            Proceed without sending email
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -241,10 +279,16 @@ export function MaintenanceQuotationReviewActions({
         </div>
       ) : null}
 
+      {canReview && decision === 'approved' && approvalSkipped ? (
+        <p className="text-muted-foreground text-xs">
+          Proceeded without sending landlord email
+          {approvalSentAt ? ` · ${new Date(approvalSentAt).toLocaleString('en-AU')}` : ''}
+        </p>
+      ) : null}
+
       {canReview && decision === 'approved' && landlordSent ? (
         <p className="text-muted-foreground text-xs">
-          Quotation sent to landlord ·{' '}
-          {new Date(review!.landlordEmailSentAt!).toLocaleString('en-AU')}
+          Quotation sent to landlord · {new Date(approvalSentAt!).toLocaleString('en-AU')}
         </p>
       ) : null}
 

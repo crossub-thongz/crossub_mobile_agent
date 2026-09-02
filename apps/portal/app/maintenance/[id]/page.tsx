@@ -60,15 +60,19 @@ export default function MaintenanceDetailPage() {
     await refresh();
   }, [refresh, refreshCase]);
 
-  const handleApprove = async () => {
+  const handleApprove = async (opts?: { skipRecipientEmail?: boolean }) => {
     if (!item) return;
     if (!apiConnected) {
       toast.error('Connect to the API to approve this quote.');
       return;
     }
     try {
-      await approveMaintenanceQuote(item.id);
-      toast.success('Quote approved — contractor asked to schedule the visit');
+      await approveMaintenanceQuote(item.id, opts);
+      toast.success(
+        opts?.skipRecipientEmail
+          ? 'Quote approved — proceeded without sending landlord email'
+          : 'Quote approved — contractor asked to schedule the visit',
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Approval failed — check API connection');
     }

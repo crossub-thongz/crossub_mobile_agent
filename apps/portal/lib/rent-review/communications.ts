@@ -35,6 +35,7 @@ interface RentReviewEmailSnapshot {
   channel?: 'email' | 'message';
   attachments?: JobCaseEmailRecord['attachments'];
   inReplyToId?: string;
+  skipped?: boolean;
 }
 
 function parseEmailSnapshot(detail: string | undefined): RentReviewEmailSnapshot | null {
@@ -169,7 +170,7 @@ export function commRecordsFromAuditLog(detail: RentReviewWorkflowDetail): JobCa
   for (const entry of detail.auditLog) {
     if (!COMM_AUDIT_KINDS.has(entry.kind)) continue;
     const snapshot = parseEmailSnapshot(entry.detail);
-    if (!snapshot) continue;
+    if (!snapshot || snapshot.skipped) continue;
     records.push({
       id: entry.id,
       subject: snapshot.subject,

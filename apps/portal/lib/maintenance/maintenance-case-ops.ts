@@ -145,6 +145,7 @@ export async function reviewMaintenanceQuotationDecisionCase(
   decision: 'approved' | 'declined',
   declineReason?: string,
   quotationSnapshot?: Parameters<typeof reviewMaintenanceQuotationDecision>[4],
+  opts?: { skipRecipientEmail?: boolean },
 ) {
   await reviewMaintenanceQuotationDecision(
     quotationId,
@@ -152,11 +153,15 @@ export async function reviewMaintenanceQuotationDecisionCase(
     declineReason,
     'agent',
     quotationSnapshot,
+    opts,
   );
 }
 
-export async function sendMaintenanceQuotationToLandlordCase(quotationId: string) {
-  await sendMaintenanceQuotationToLandlord(quotationId);
+export async function sendMaintenanceQuotationToLandlordCase(
+  quotationId: string,
+  opts?: { skipRecipientEmail?: boolean },
+) {
+  await sendMaintenanceQuotationToLandlord(quotationId, 'agent', opts);
 }
 
 export async function sendMaintenanceContractorFeedbackCase(

@@ -20,6 +20,7 @@ export function ApprovalPanel({
   onRequote,
   disabled,
   requoteRequiresPrice = false,
+  showSkipLandlordEmail = false,
 }: {
   title: string;
   amount?: number;
@@ -27,16 +28,19 @@ export function ApprovalPanel({
   expiry?: string;
   recommendation?: string;
   quoteDocumentUrl?: string;
-  onApprove: () => void;
+  onApprove: (opts?: { skipRecipientEmail?: boolean }) => void;
   onDecline: (reason: string) => void;
   onRequote: (reason: string, counterPrice?: number) => void;
   disabled?: boolean;
   /** Maintenance requote is a counter-offer and needs a price. */
   requoteRequiresPrice?: boolean;
+  /** Landlord-responsibility maintenance: approve without sending the landlord email. */
+  showSkipLandlordEmail?: boolean;
 }) {
   const [mode, setMode] = useState<'idle' | 'decline' | 'requote'>('idle');
   const [reason, setReason] = useState('');
   const [counterPrice, setCounterPrice] = useState('');
+  const [skipLandlordEmail, setSkipLandlordEmail] = useState(false);
 
   const submitReason = () => {
     if (!reason.trim()) {
@@ -121,8 +125,20 @@ export function ApprovalPanel({
       )}
 
       {mode === 'idle' ? (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="flex-1" onClick={onApprove}>
+        <div className="space-y-2">
+          {showSkipLandlordEmail ? (
+            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-3.5 shrink-0 accent-primary"
+                checked={skipLandlordEmail}
+                onChange={(e) => setSkipLandlordEmail(e.target.checked)}
+              />
+              <span>Don&apos;t send email to landlord — approve and continue the job anyway</span>
+            </label>
+          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row">
+          <Button className="flex-1" onClick={() => onApprove({ skipRecipientEmail: skipLandlordEmail })}>
             Approve
           </Button>
           <Button
@@ -139,6 +155,7 @@ export function ApprovalPanel({
           >
             Requote
           </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">

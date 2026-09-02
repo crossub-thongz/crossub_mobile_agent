@@ -302,7 +302,10 @@ interface AgentDataContextValue {
   deleteDraftProperty: (propertyId: string) => Promise<void>;
   addOpenInspection: (input: import('@/lib/store').NewOpenInspectionInput) => Promise<Inspection>;
   registerInspection: (inspection: Inspection) => void;
-  approveMaintenanceQuote: (requestId: string) => Promise<void>;
+  approveMaintenanceQuote: (
+    requestId: string,
+    opts?: { skipRecipientEmail?: boolean },
+  ) => Promise<void>;
   declineMaintenanceQuote: (requestId: string, reason: string) => Promise<void>;
   requoteMaintenanceQuote: (
     requestId: string,
@@ -1658,13 +1661,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const approveMaintenanceQuote = useCallback(
-    async (requestId: string) => {
+    async (requestId: string, opts?: { skipRecipientEmail?: boolean }) => {
       const quote = await resolveLiveSubmittedQuote(requestId);
       await reviewMaintenanceQuotationDecisionCase(
         quote.id,
         'approved',
         undefined,
         quotationSnapshotFromApi(quote),
+        opts,
       );
       await refresh();
     },

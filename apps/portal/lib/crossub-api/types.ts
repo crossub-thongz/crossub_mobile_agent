@@ -83,6 +83,8 @@ export interface QuotationReviewRecord {
   decidedAt?: string;
   decidedBy?: 'admin' | 'agent';
   landlordEmailSentAt?: string;
+  agentApprovalEmailSentAt?: string;
+  agentApprovalEmailSkipped?: boolean;
   contractorFeedbackSentAt?: string;
   counterOffers: QuotationCounterOffer[];
   contractorRequotedAt?: string;
