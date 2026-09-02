@@ -21,6 +21,7 @@ import {
   buildPropertyUpcomingItems,
   filterNeedAttentionActions,
   leaseOccupancyLabel,
+  propertyProfileSectionsForAccess,
   type PropertyProfileSection,
 } from '@/lib/property-profile-v2-data';
 import { isPropertyVacant } from '@/lib/property-leasing';
@@ -90,13 +91,6 @@ function DetailRow({ label, value, valueClassName }: { label: string; value: str
   );
 }
 
-const PREVIEW_TABS: { id: PropertyProfileSection; label: string }[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'tasks', label: 'Tasks' },
-  { id: 'documents', label: 'Documents' },
-  { id: 'activities', label: 'Activity' },
-];
-
 const PANEL_ICON_BUTTON =
   'text-muted-foreground hover:text-foreground hover:bg-muted/70 rounded-lg border p-1.5 transition-colors';
 
@@ -127,6 +121,7 @@ export function PropertyListPreviewPanel({
     leasingRecords,
     apiConnected,
     getPropertyActions,
+    hasFullManagementAccess,
   } = useAgentData();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
 
@@ -212,11 +207,19 @@ export function PropertyListPreviewPanel({
   const [activeTab, setActiveTab] = useState<PropertyProfileSection>('overview');
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [tenancyPageIndex, setTenancyPageIndex] = useState(0);
+  const previewTabs = useMemo(
+    () => propertyProfileSectionsForAccess(hasFullManagementAccess),
+    [hasFullManagementAccess],
+  );
 
   useEffect(() => {
     setActiveTab('overview');
     setOptionsOpen(false);
   }, [propertyId]);
+
+  useEffect(() => {
+    if (activeTab === 'financials' && !hasFullManagementAccess) setActiveTab('overview');
+  }, [activeTab, hasFullManagementAccess]);
   const upcoming = useMemo(() => {
     return buildPropertyUpcomingItems({
       sync,
@@ -371,7 +374,20 @@ export function PropertyListPreviewPanel({
             <PreviewMetric label="Rent" value={metrics.rentLabel} frosted={shell} />
             <PreviewMetric label="Lease expiry" value={metrics.leaseExpiryLabel} frosted={shell} />
             <PreviewMetric label="Bond" value={metrics.bondLabel} frosted={shell} />
-            {includedUsage ? (
+            {hasFullManagementAccess ? (
+              <PreviewMetric
+                label="Arrears"
+                value={metrics.arrearsLabel}
+                tone={metrics.rentStatusTone === 'warn' ? 'warn' : undefined}
+                frosted={shell}
+              />
+            ) : includedUsage ? (
+              <PropertyProfileIncludedUsage
+                usage={includedUsage}
+                className={shell ? 'v2-frosted-surface' : 'bg-background/60'}
+              />
+            ) : null}
+            {hasFullManagementAccess && includedUsage ? (
               <PropertyProfileIncludedUsage
                 usage={includedUsage}
                 className={shell ? 'v2-frosted-surface' : 'bg-background/60'}
@@ -383,7 +399,7 @@ export function PropertyListPreviewPanel({
 
       <div className="border-border/40 border-b px-2">
         <nav className="scrollbar-none flex gap-1 overflow-x-auto">
-          {PREVIEW_TABS.map((tab) => {
+          {previewTabs.map((tab) => {
             const count = tab.id === 'tasks' ? taskCount : undefined;
             const label = formatTabLabel(tab.label, count);
             const isActive = shell ? activeTab === tab.id : tab.id === 'overview';
@@ -685,6 +701,23 @@ export function PropertyListPreviewPanel({
                 )}
               </div>
             </>
+          ) : null}
+
+          {shell && activeTab === 'financials' ? (
+            <div className={cn('rounded-xl border p-4 text-sm', nestedSurface)}>
+              <p className="font-medium">Arrears and rent chasing</p>
+              <p className="text-muted-foreground mt-1">
+                Record rent, bill, or bond arrears, then open a tribunal case from the property
+                profile.
+              </p>
+              <Link
+                href={profileHref('financials')}
+                className="text-primary mt-3 inline-flex items-center gap-1 font-semibold transition-colors hover:underline"
+              >
+                View financials
+                <ChevronRight className="size-4" />
+              </Link>
+            </div>
           ) : null}
 
           {shell && activeTab === 'documents' ? (

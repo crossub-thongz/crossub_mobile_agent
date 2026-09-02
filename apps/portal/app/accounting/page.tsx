@@ -18,6 +18,7 @@ import { AccountingSettingsSection } from '@/components/accounting/accounting-se
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
 import { InvoiceListTable } from '@/components/accounting/invoice-list-table';
 import { InvoicePreviewDialog } from '@/components/accounting/invoice-preview-dialog';
+import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { ModuleCommunications } from '@/components/agent/module-communications';
@@ -25,8 +26,10 @@ import { PageIntro } from '@/components/agent/page-intro';
 import { PortfolioCaseDialogHost } from '@/components/agent/portfolio-case-dialog-host';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { Button } from '@/components/ui/button';
 import {
+  ACCOUNTING_MODULE_LAUNCHED,
   ACCOUNTING_SECTION_DESCRIPTION,
   ACCOUNTING_SECTIONS,
   parseAccountingSection,
@@ -44,14 +47,18 @@ import { formatCurrency } from '@/lib/utils';
 
 export default function AccountingPage() {
   const searchParams = useSearchParams();
-  const { accounting, properties, primaryAgency } = useAgentData();
+  const isV2 = useIsAgentUiV2();
+  const arrearsOnly = isV2 && !ACCOUNTING_MODULE_LAUNCHED;
+  const { accounting, properties, primaryAgency, refresh } = useAgentData();
   const { selectedJob, selectedId, openJob, closeJob } = usePortfolioCaseDialog();
 
   const [section, setSection] = useState<AccountingSectionId>(() =>
-    parseAccountingSection(searchParams.get('section'), {
-      tab: searchParams.get('tab'),
-      filter: searchParams.get('filter'),
-    }),
+    arrearsOnly
+      ? 'arrears'
+      : parseAccountingSection(searchParams.get('section'), {
+          tab: searchParams.get('tab'),
+          filter: searchParams.get('filter'),
+        }),
   );
 
   const [invoices, setInvoices] = useState<AgentInvoiceListItem[]>([]);
@@ -64,14 +71,19 @@ export default function AccountingPage() {
   const [reconPickerOpen, setReconPickerOpen] = useState(false);
   const [reconPropertyId, setReconPropertyId] = useState<string | null>(null);
   const [reconDialogOpen, setReconDialogOpen] = useState(false);
+  const [rentChasingOpen, setRentChasingOpen] = useState(false);
 
   useEffect(() => {
+    if (arrearsOnly) {
+      setSection('arrears');
+      return;
+    }
     const next = parseAccountingSection(searchParams.get('section'), {
       tab: searchParams.get('tab'),
       filter: searchParams.get('filter'),
     });
     setSection(next);
-  }, [searchParams]);
+  }, [arrearsOnly, searchParams]);
 
   const changeSection = useCallback(
     (next: AccountingSectionId) => {
@@ -163,15 +175,17 @@ export default function AccountingPage() {
   }
 
   return (
-    <AgentShell title="Accounting" backHref={ROUTES.DASHBOARD}>
+    <AgentShell title={arrearsOnly ? 'Arrears' : 'Accounting'} backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
         <PageIntro description={ACCOUNTING_SECTION_DESCRIPTION[section]} />
 
-        <FilterChips
-          options={[...ACCOUNTING_SECTIONS]}
-          value={section}
-          onChange={(id) => changeSection(id as AccountingSectionId)}
-        />
+        {arrearsOnly ? null : (
+          <FilterChips
+            options={[...ACCOUNTING_SECTIONS]}
+            value={section}
+            onChange={(id) => changeSection(id as AccountingSectionId)}
+          />
+        )}
 
         {section === 'rent_reconciliation' ? (
           <>
@@ -291,6 +305,21 @@ export default function AccountingPage() {
 
         {section === 'arrears' ? (
           <>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-muted-foreground text-sm">
+                Properties with outstanding rent, bills, or bond. Record arrears with Rent chasing,
+                then open a tribunal case from the property.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                disabled={properties.length === 0}
+                onClick={() => setRentChasingOpen(true)}
+              >
+                Rent chasing
+              </Button>
+            </div>
+
             {(totalRentArrears > 0 || totalBillArrears > 0) && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-destructive/25 bg-gradient-to-br from-destructive/10 to-card p-4">
@@ -395,6 +424,17 @@ export default function AccountingPage() {
           fallbackAccounting={reconFallbackAccounting}
         />
       ) : null}
+
+      <CreateTribunalRentChasingDialog
+        open={rentChasingOpen}
+        onOpenChange={setRentChasingOpen}
+        properties={properties}
+        mode="rent_chasing"
+        onCreated={() => {
+          setRentChasingOpen(false);
+          void refresh();
+        }}
+      />
     </AgentShell>
   );
 }

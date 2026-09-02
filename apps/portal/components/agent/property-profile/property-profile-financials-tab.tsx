@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -95,6 +96,7 @@ export function PropertyProfileFinancialsTab({
   const [rentChasingOpen, setRentChasingOpen] = useState(false);
   const [arrearsDialogOpen, setArrearsDialogOpen] = useState(false);
   const [showFullLedger, setShowFullLedger] = useState(false);
+  const searchParams = useSearchParams();
 
   const portalAccounting = detail?.accounting ?? sync.accounting ?? null;
   const portalFinancial = detail?.financial ?? sync.financial ?? null;
@@ -161,6 +163,11 @@ export function PropertyProfileFinancialsTab({
     }
   }, [initialWorkflowAction, onInitialWorkflowActionHandled, primaryAgency]);
 
+  useEffect(() => {
+    if (searchParams.get('focus') !== 'arrears') return;
+    setArrearsDialogOpen(true);
+  }, [searchParams]);
+
   return (
     <div className="space-y-5">
       <section className="space-y-3">
@@ -204,6 +211,24 @@ export function PropertyProfileFinancialsTab({
               value={snapshot.managementFeeLabel}
               subtext={snapshot.managementFeeSubLabel}
             />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          <button
+            type="button"
+            onClick={() => setRentChasingOpen(true)}
+            className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
+          >
+            Rent chasing
+            <ChevronRight className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setArrearsDialogOpen(true)}
+            className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
+          >
+            View arrears
+            <ChevronRight className="size-4" />
           </button>
         </div>
       </section>

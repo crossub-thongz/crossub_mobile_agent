@@ -10,6 +10,7 @@ import {
   Receipt,
   Settings,
   Tags,
+  TrendingDown,
   Wrench,
 } from 'lucide-react';
 
@@ -46,7 +47,7 @@ export const V1_MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
 ];
 
-/** Redesign — job hubs live on Tasks. Accounting stays off until launch. */
+/** Redesign — job hubs live on Tasks. Full Accounting stays off until launch. */
 export const V2_PRIMARY_NAV: NavItem[] = [
   { href: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
   { href: ROUTES.PROPERTIES, label: 'Properties', icon: Building2 },
@@ -54,9 +55,14 @@ export const V2_PRIMARY_NAV: NavItem[] = [
 ];
 
 export const V2_MORE_NAV: NavItem[] = [
-  ...(ACCOUNTING_MODULE_LAUNCHED
-    ? [{ href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText } satisfies NavItem]
-    : []),
+  ACCOUNTING_MODULE_LAUNCHED
+    ? { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' }
+    : {
+        href: ROUTES.ACCOUNTING,
+        label: 'Arrears',
+        icon: TrendingDown,
+        portalAccess: 'full',
+      },
   { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
   { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive },
 ];

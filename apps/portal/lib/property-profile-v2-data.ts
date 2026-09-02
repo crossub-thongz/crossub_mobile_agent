@@ -44,9 +44,16 @@ export const PROPERTY_PROFILE_SECTIONS: {
 }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'tasks', label: 'Tasks' },
+  { id: 'financials', label: 'Financials' },
   { id: 'documents', label: 'Documents' },
   { id: 'activities', label: 'Activities' },
 ];
+
+/** Level 1 (inspection-only) does not record arrears or rent chasing. */
+export function propertyProfileSectionsForAccess(hasFullAccess: boolean) {
+  if (hasFullAccess) return PROPERTY_PROFILE_SECTIONS;
+  return PROPERTY_PROFILE_SECTIONS.filter((tab) => tab.id !== 'financials');
+}
 
 function firstNamesFromLabel(name: string): string[] {
   return name
@@ -153,7 +160,12 @@ function pushCalendarEvent(
 export function normalizePropertyProfileSection(
   raw: string | null,
 ): PropertyProfileSection {
-  if (raw === 'tasks' || raw === 'documents' || raw === 'activities') {
+  if (
+    raw === 'tasks' ||
+    raw === 'financials' ||
+    raw === 'documents' ||
+    raw === 'activities'
+  ) {
     return raw;
   }
   return 'overview';

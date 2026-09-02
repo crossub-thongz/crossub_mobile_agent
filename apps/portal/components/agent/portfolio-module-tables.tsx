@@ -44,6 +44,7 @@ import {
   inspectionDetail,
   maintenanceDetail,
   propertyDetail,
+  propertyFinancialsHref,
   tenantSelectionDetail,
   tribunalDetail,
 } from '@/constants/routes';
@@ -1143,7 +1144,7 @@ export function AccountingListTable({
     <>
       <div className="space-y-2 md:hidden">
         {items.map((a) => {
-          const href = `${propertyDetail(a.propertyId)}?tab=Accounting`;
+          const href = propertyFinancialsHref(a.propertyId, { focusArrears: true });
           const arrearsLabel =
             a.arrearsAmount > 0
               ? `${formatCurrency(a.arrearsAmount)} (${a.daysInArrears}d)`
@@ -1203,7 +1204,7 @@ export function AccountingListTable({
       />
       <tbody className="divide-y">
         {items.map((a) => {
-          const href = `${propertyDetail(a.propertyId)}?tab=Accounting`;
+          const href = propertyFinancialsHref(a.propertyId, { focusArrears: true });
           const arrearsLabel =
             a.arrearsAmount > 0
               ? `${formatCurrency(a.arrearsAmount)} (${a.daysInArrears}d)`

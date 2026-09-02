@@ -110,6 +110,7 @@ export const FULL_MANAGEMENT_ROUTE_PREFIXES = [
   ROUTES.MESSAGES,
   ROUTES.COMMUNICATIONS,
   ROUTES.AGREEMENTS,
+  ROUTES.ACCOUNTING,
 ] as const;
 
 /** Dashboard portfolio charts visible on Level 1 (inspection + tribunal only). */

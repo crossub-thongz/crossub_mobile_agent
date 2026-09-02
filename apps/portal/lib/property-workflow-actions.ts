@@ -210,7 +210,6 @@ export function workflowMenuGroupsFor(
   const hasFullAccess = options?.hasFullAccess ?? true;
   const groups = PROPERTY_WORKFLOW_ACTION_GROUPS.filter((group) => {
     if (group.tab === 'rent_review') return false;
-    if (group.tab === 'accounting' && !ACCOUNTING_MODULE_LAUNCHED) return false;
     if (!hasFullAccess && group.tab !== 'inspection' && group.tab !== 'tribunal') {
       return false;
     }
@@ -228,23 +227,22 @@ export function workflowMenuGroupsFor(
                 : action,
             );
 
-      // Actions menu (v2) is the only surface while Financials is gated off.
-      // Keep tribunal create available after a case already exists, and surface
-      // rent chasing here so arrears can still be recorded before opening NCAT.
-      if (group.tab === 'tribunal') {
-        if (!actions.some((action) => action.id === 'open_tribunal')) {
-          actions = [ADD_TRIBUNAL_ACTION, ...actions];
-        }
-        if (
-          hasFullAccess &&
-          !ACCOUNTING_MODULE_LAUNCHED &&
-          !actions.some((action) => action.id === 'open_rent_chasing')
-        ) {
-          actions = [...actions, RENT_CHASING_ACTION];
-        }
+      if (group.tab === 'tribunal' && !actions.some((action) => action.id === 'open_tribunal')) {
+        actions = [ADD_TRIBUNAL_ACTION, ...actions];
       }
 
-      return { ...group, actions };
+      if (group.tab === 'accounting' && !ACCOUNTING_MODULE_LAUNCHED) {
+        actions = actions.filter((action) => action.id === 'open_rent_chasing');
+      }
+
+      return {
+        ...group,
+        title:
+          group.tab === 'accounting' && !ACCOUNTING_MODULE_LAUNCHED
+            ? 'Arrears'
+            : group.title,
+        actions,
+      };
     })
     .filter((group) => group.actions.length > 0);
 }

@@ -77,6 +77,19 @@ import {
 export type { DetailNavContext };
 
 export const propertyDetail = (id: string) => `/properties/${id}`;
+
+/** Property hub Financials tab (v2) / Accounting tab (v1). */
+export function propertyFinancialsHref(
+  id: string,
+  options?: { focusArrears?: boolean },
+): string {
+  const params = new URLSearchParams({
+    section: 'financials',
+    tab: 'Accounting',
+  });
+  if (options?.focusArrears) params.set('focus', 'arrears');
+  return `${propertyDetail(id)}?${params.toString()}`;
+}
 export const agencyDetail = (id: string) => `/agencies/${id}`;
 export const propertyLeasePackage = (propertyId: string, leaseId: string) =>
   `/properties/${propertyId}/lease/${leaseId}`;

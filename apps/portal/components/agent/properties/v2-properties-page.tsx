@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { List, Map as MapIcon, Search } from 'lucide-react';
 
@@ -34,6 +34,8 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 export function V2PropertiesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlFilter = searchParams.get('filter');
   const {
     properties,
     archivedProperties,
@@ -46,12 +48,17 @@ export function V2PropertiesPage() {
     archiveProperty,
     restoreProperty,
     refreshArchivedProperties,
+    hasFullManagementAccess,
   } = useAgentData();
   const setPropertiesPageActive = useShellAsideStore((s) => s.setPropertiesPageActive);
   const selectedId = useShellAsideStore((s) => s.propertyPreviewId);
   const setSelectedId = useShellAsideStore((s) => s.setPropertyPreviewId);
 
-  const [filter, setFilter] = useState<PropertyListV2Filter>('all');
+  const [filter, setFilter] = useState<PropertyListV2Filter>(() =>
+    urlFilter && PROPERTY_LIST_V2_FILTERS.some((option) => option.id === urlFilter)
+      ? (urlFilter as PropertyListV2Filter)
+      : 'all',
+  );
   const [sort, setSort] = useState<PropertyListV2Sort>('newest');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -234,6 +241,8 @@ export function V2PropertiesPage() {
       ).length,
       vacant: filterPropertiesForListV2(properties, 'vacant', accounting, needActionCountFor)
         .length,
+      arrears: filterPropertiesForListV2(properties, 'arrears', accounting, needActionCountFor)
+        .length,
       needs_attention: filterPropertiesForListV2(
         properties,
         'needs_attention',
@@ -253,6 +262,10 @@ export function V2PropertiesPage() {
   useEffect(() => {
     setPage(1);
   }, [filter, search, sort, pageSize]);
+
+  useEffect(() => {
+    if (!hasFullManagementAccess && filter === 'arrears') setFilter('all');
+  }, [filter, hasFullManagementAccess]);
 
   useEffect(() => {
     if (!desktopViewport) {
@@ -276,6 +289,14 @@ export function V2PropertiesPage() {
 
   const pageEnd = Math.min(pageStart + pageRows.length, filtered.length);
 
+  const listFilters = useMemo(
+    () =>
+      PROPERTY_LIST_V2_FILTERS.filter(
+        (option) => option.id !== 'arrears' || hasFullManagementAccess,
+      ),
+    [hasFullManagementAccess],
+  );
+
   return (
     <div className="property-list-v2 normal-case flex flex-col gap-4 px-4 py-4 lg:px-6 lg:py-5">
       <PropertiesPageHeaderActions className="flex flex-wrap gap-2 lg:hidden" />
@@ -295,7 +316,7 @@ export function V2PropertiesPage() {
         className="flex shrink-0 flex-wrap items-center justify-between gap-3"
       >
         <div className="flex flex-wrap gap-2">
-          {PROPERTY_LIST_V2_FILTERS.map((option) => (
+          {listFilters.map((option) => (
             <button
               key={option.id}
               type="button"

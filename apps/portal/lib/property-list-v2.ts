@@ -27,6 +27,7 @@ export type PropertyListV2Filter =
   | 'all'
   | 'occupied'
   | 'vacant'
+  | 'arrears'
   | 'needs_attention'
   | 'archived';
 
@@ -37,6 +38,7 @@ export const PROPERTY_LIST_V2_FILTERS: {
   { id: 'all', label: 'All' },
   { id: 'occupied', label: 'Occupied' },
   { id: 'vacant', label: 'Vacant' },
+  { id: 'arrears', label: 'Arrears' },
   { id: 'needs_attention', label: 'Needs attention' },
   { id: 'archived', label: 'Archived' },
 ];
@@ -117,6 +119,12 @@ export function filterPropertiesForListV2(
   }
   if (filter === 'vacant') {
     rows = rows.filter((property) => property.leaseStatus === 'vacant');
+  }
+  if (filter === 'arrears') {
+    rows = rows.filter((property) => {
+      const row = accounting.find((item) => item.propertyId === property.id);
+      return (row?.arrearsAmount ?? 0) > 0 || (row?.daysInArrears ?? 0) > 0;
+    });
   }
   if (filter === 'needs_attention') {
     rows = rows.filter((property) => needActionCountFor(property.id) > 0);

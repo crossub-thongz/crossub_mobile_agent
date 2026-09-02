@@ -2,6 +2,7 @@ import {
   inspectionDetail,
   maintenanceDetail,
   propertyDetail,
+  propertyFinancialsHref,
   rentReviewDetail,
   tenantSelectionDetail,
   tribunalDetail,
@@ -177,7 +178,7 @@ export function getPropertyNeedActions(
       propertyAddress: addr,
       label: `Rent arrears — $${data.accounting.arrearsAmount}`,
       category: 'Accounting',
-      href: `${propertyDetail(property.id)}?tab=Accounting&focus=arrears`,
+      href: propertyFinancialsHref(property.id, { focusArrears: true }),
       priority: data.accounting.daysInArrears > 14 ? 'urgent' : 'high',
       updatedAt: new Date().toISOString(),
     });

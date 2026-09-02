@@ -255,6 +255,9 @@ export default function PropertyDetailPage() {
     if (next === 'Documents') setProfileSection('documents');
     else if (next === 'Archive') setProfileSection('activities');
     else if ((TASK_WORKFLOW_TABS as readonly string[]).includes(next)) setProfileSection('tasks');
+    else if ((FINANCIAL_TABS as readonly string[]).includes(next)) {
+      setProfileSection('financials');
+    }
   }, [searchParams, propertyTabs]);
 
   /** Desktop uses the shell sidebar for Gii — never keep mobile-only tabs active. */
@@ -470,7 +473,8 @@ export default function PropertyDetailPage() {
   const handleProfileWorkflowAction = (actionId: PropertyWorkflowActionId) => {
     if (
       actionId === 'create_rent_reconciliation' ||
-      actionId === 'open_invoice_management'
+      actionId === 'open_invoice_management' ||
+      actionId === 'open_rent_chasing'
     ) {
       updateProfileSection('financials');
       setPendingAccountingAction(actionId);

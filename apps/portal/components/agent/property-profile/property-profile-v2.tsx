@@ -14,12 +14,13 @@ import { PropertyProfileActionsMenu } from '@/components/agent/property-profile/
 import { PropertyProfileIncludedUsage } from '@/components/agent/property-profile/property-profile-included-usage';
 import { PropertyProfilePhoto } from '@/components/agent/property-profile/property-profile-photo';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
+import { useAgentData } from '@/components/providers/agent-data-provider';
 import {
   buildCrosHandlingJobs,
   buildPropertyProfileMetrics,
   filterNeedAttentionActions,
   leaseOccupancyLabel,
-  PROPERTY_PROFILE_SECTIONS,
+  propertyProfileSectionsForAccess,
   type PropertyProfileSection,
 } from '@/lib/property-profile-v2-data';
 import {
@@ -430,7 +431,7 @@ export function PropertyProfileV2({
   onCustomWorkflowAction,
   onPhotoUpdated,
   tasksPanel,
-  financialsPanel: _financialsPanel,
+  financialsPanel,
   documentsPanel,
   activitiesPanel,
   banners,
@@ -462,7 +463,14 @@ export function PropertyProfileV2({
   activitiesPanel: ReactNode;
   banners?: ReactNode;
 }) {
+  const { hasFullManagementAccess } = useAgentData();
   const activeCycle = leasingCycles[0];
+
+  useEffect(() => {
+    if (section === 'financials' && !hasFullManagementAccess) {
+      onSectionChange('overview');
+    }
+  }, [hasFullManagementAccess, onSectionChange, section]);
   const sync = usePropertyOverviewSync(
     property,
     true,
@@ -520,12 +528,12 @@ export function PropertyProfileV2({
 
   const sectionTabs = useMemo(
     () =>
-      PROPERTY_PROFILE_SECTIONS.map((tab) => ({
+      propertyProfileSectionsForAccess(hasFullManagementAccess).map((tab) => ({
         ...tab,
         label:
           tab.id === 'tasks' && taskCount > 0 ? `${tab.label} (${taskCount})` : tab.label,
       })),
-    [taskCount],
+    [hasFullManagementAccess, taskCount],
   );
 
   return (
@@ -578,19 +586,53 @@ export function PropertyProfileV2({
             { label: 'Rent', value: metrics.rentLabel },
             { label: 'Lease expiry', value: metrics.leaseExpiryLabel },
             { label: 'Bond', value: metrics.bondLabel },
-          ].map((metric) => (
-            <div
-              key={metric.label}
-              className="property-profile-v2__metric rounded-xl border bg-background/40 px-3 py-2.5"
-            >
-              <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-                {metric.label}
-              </p>
-              <p className="mt-1 text-sm font-semibold leading-snug tabular-nums">
-                {metric.value}
-              </p>
-            </div>
-          ))}
+            ...(hasFullManagementAccess
+              ? [
+                  {
+                    label: 'Arrears',
+                    value: metrics.arrearsLabel,
+                    tone: metrics.rentStatusTone,
+                    onClick: () => onSectionChange('financials'),
+                  },
+                ]
+              : []),
+          ].map((metric) => {
+            const clickable = 'onClick' in metric && typeof metric.onClick === 'function';
+            const inner = (
+              <>
+                <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                  {metric.label}
+                </p>
+                <p
+                  className={cn(
+                    'mt-1 text-sm font-semibold leading-snug tabular-nums',
+                    'tone' in metric &&
+                      metric.tone === 'warn' &&
+                      'text-amber-700 dark:text-amber-300',
+                  )}
+                >
+                  {metric.value}
+                </p>
+              </>
+            );
+            return clickable ? (
+              <button
+                key={metric.label}
+                type="button"
+                onClick={metric.onClick}
+                className="property-profile-v2__metric rounded-xl border bg-background/40 px-3 py-2.5 text-left"
+              >
+                {inner}
+              </button>
+            ) : (
+              <div
+                key={metric.label}
+                className="property-profile-v2__metric rounded-xl border bg-background/40 px-3 py-2.5"
+              >
+                {inner}
+              </div>
+            );
+          })}
           {includedUsage ? <PropertyProfileIncludedUsage usage={includedUsage} /> : null}
         </div>
       </div>
@@ -649,6 +691,9 @@ export function PropertyProfileV2({
       ) : null}
 
       {section === 'tasks' ? <div className="space-y-4">{tasksPanel}</div> : null}
+      {section === 'financials' && hasFullManagementAccess ? (
+        <div className="space-y-4">{financialsPanel}</div>
+      ) : null}
       {section === 'documents' ? <div className="space-y-4">{documentsPanel}</div> : null}
       {section === 'activities' ? <div className="space-y-4">{activitiesPanel}</div> : null}
     </div>

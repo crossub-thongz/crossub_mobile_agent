@@ -8,7 +8,7 @@ import {
   ModuleTableLinkCell,
   ModuleTableTruncateText,
 } from '@/components/agent/module-list-table';
-import { propertyDetail } from '@/constants/routes';
+import { propertyFinancialsHref } from '@/constants/routes';
 import { accountingPortfolioJobId } from '@/lib/portfolio-case-dialog';
 import type { PropertyAccounting } from '@/lib/types';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -22,8 +22,7 @@ function outstandingBillTotal(item: PropertyAccounting): number {
 }
 
 function propertyAccountingHref(propertyId: string, hash?: string): string {
-  const base = `${propertyDetail(propertyId)}?tab=Accounting`;
-  return hash ? `${base}#${hash}` : base;
+  return propertyFinancialsHref(propertyId, { focusArrears: hash === 'rent-arrears' });
 }
 
 export function RentReconciliationListTable({

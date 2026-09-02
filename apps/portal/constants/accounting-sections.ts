@@ -7,8 +7,9 @@ export const ACCOUNTING_SECTIONS = [
 ] as const;
 
 /**
- * Flip when the accounting module ships. Until then v2 hides Financial Summary
- * and the Accounting nav item. Production v1 always shows Accounting.
+ * Flip when the full accounting module ships. Until then v2 still shows
+ * arrears / rent chasing on the property hub and an Arrears sidebar item,
+ * and hides rent reconciliation, invoices, and statements.
  */
 export const ACCOUNTING_MODULE_LAUNCHED = false;
 
