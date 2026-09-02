@@ -28,7 +28,8 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { formatCurrency, formatDateTime, resolveOutstandingArrearsDays } from '@/lib/utils';
+import { resolveRentPaidTo } from '@/lib/property-overview';
 
 function AccountingInfoGrid({
   items,
@@ -143,14 +144,18 @@ export function PropertyAccountingTab({
     fallback: fallbackAccounting ?? undefined,
   });
 
-  const outstandingDays =
-    portalAccounting?.outstandingRentDays ?? fallbackAccounting?.daysInArrears ?? 0;
   const outstandingAmount =
     portalAccounting?.outstandingRentAmount ??
     portalFinancial?.outstandingRent ??
     fallbackAccounting?.rentOutstanding ??
     fallbackAccounting?.arrearsAmount ??
     0;
+  const outstandingDays = resolveOutstandingArrearsDays({
+    rentPaidTo: resolveRentPaidTo(property.rentPaidUntil, portalAccounting),
+    outstandingAmount,
+    reportedDays:
+      portalAccounting?.outstandingRentDays ?? fallbackAccounting?.daysInArrears ?? null,
+  });
   const debtCollection =
     portalAccounting?.debtCollection ??
     fallbackAccounting?.collectionActivity.map((event) => ({

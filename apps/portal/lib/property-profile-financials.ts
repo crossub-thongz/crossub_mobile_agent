@@ -8,7 +8,7 @@ import type {
 } from '@/lib/property-registry-api';
 import { resolveRentPaidTo } from '@/lib/property-overview';
 import type { Property, PropertyAccounting, RentIncomeEntry } from '@/lib/types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, resolveOutstandingArrearsDays } from '@/lib/utils';
 
 export type PropertyFinancialSnapshot = {
   rentPaidUpToLabel: string;
@@ -159,14 +159,18 @@ export function buildPropertyFinancialSnapshot(input: {
     portalAccounting ?? undefined,
   );
 
-  const outstandingDays =
-    portalAccounting?.outstandingRentDays ?? fallbackAccounting?.daysInArrears ?? 0;
   const outstandingAmount =
     portalAccounting?.outstandingRentAmount ??
     portalFinancial?.outstandingRent ??
     fallbackAccounting?.rentOutstanding ??
     fallbackAccounting?.arrearsAmount ??
     0;
+  const outstandingDays = resolveOutstandingArrearsDays({
+    rentPaidTo,
+    outstandingAmount,
+    reportedDays:
+      portalAccounting?.outstandingRentDays ?? fallbackAccounting?.daysInArrears ?? null,
+  });
 
   const rentStatusTone: PropertyFinancialSnapshot['rentStatusTone'] =
     outstandingDays > 0 ? 'warn' : rentPaidTo ? 'good' : 'muted';

@@ -173,6 +173,42 @@ function applyKindPrefill(
   }
 }
 
+function recordedArrearsKey(
+  row: AgentTribunalRentChasingPrefill['arrears'][number],
+  index: number,
+): string {
+  return `${row.kind}:${index}`;
+}
+
+function billRowFromArrearsRow(
+  row: AgentTribunalRentChasingPrefill['arrears'][number],
+  index: number,
+  prefill: AgentTribunalRentChasingPrefill,
+): BillRow {
+  const billIndexes = prefill.arrears
+    .map((item, i) => (item.kind === 'bill' ? i : -1))
+    .filter((i) => i >= 0);
+  const ordinal = billIndexes.indexOf(index);
+  const qualifying = prefill.billArrears.filter(
+    (bill) => (bill.amount ?? 0) > 0 || Boolean(bill.dueDate),
+  );
+  const match =
+    (ordinal >= 0 ? qualifying[ordinal] : undefined) ??
+    prefill.billArrears.find(
+      (bill) =>
+        (bill.billName || bill.billType) === row.name &&
+        (bill.amount ?? null) === (row.amount ?? null) &&
+        (bill.dueDate ?? null) === (row.dueDate ?? null),
+    );
+  if (match) return billRowsFromPrefill([match])[0]!;
+  return newBillRow({
+    billType: row.name,
+    billName: row.name,
+    dueDate: row.dueDate ?? '',
+    amount: row.amount != null ? String(row.amount) : '',
+  });
+}
+
 function stashPrefillFields(
   prefill: AgentTribunalRentChasingPrefill,
   setters: {
@@ -233,6 +269,9 @@ export function CreateTribunalRentChasingDialog({
   const [bondAmount, setBondAmount] = useState('');
   const [bondNotes, setBondNotes] = useState('');
   const [selectedKinds, setSelectedKinds] = useState<ArrearsKind[]>([]);
+  const [selectedRecordedKeys, setSelectedRecordedKeys] = useState<string[]>(
+    [],
+  );
   const [prefill, setPrefill] = useState<AgentTribunalRentChasingPrefill | null>(null);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
   const [pendingTribunalCreate, setPendingTribunalCreate] = useState<{
@@ -267,15 +306,24 @@ export function CreateTribunalRentChasingDialog({
     [initialPropertyId, properties, propertyIdsWithArrears, isAddingArrears],
   );
 
-  const selectableKinds = useMemo(
-    () => ARREARS_KIND_OPTIONS.map((option) => option.id),
-    [],
-  );
+  const selectableKinds = useMemo(() => {
+    if (isAddingArrears || !prefill?.arrears.length) {
+      return ARREARS_KIND_OPTIONS.map((option) => option.id);
+    }
+    const recorded = new Set(prefill.arrears.map((row) => row.kind));
+    return ARREARS_KIND_OPTIONS.map((option) => option.id).filter(
+      (id) => !recorded.has(id),
+    );
+  }, [isAddingArrears, prefill]);
+
+  const canPickRecordedArrears =
+    !isAddingArrears && (prefill?.arrears.length ?? 0) > 0;
 
   useEffect(() => {
     if (!open) return;
     setPropertyId(initialPropertyId ?? '');
     setSelectedKinds([]);
+    setSelectedRecordedKeys([]);
     setPrefill(null);
   }, [open, initialPropertyId]);
 
@@ -290,6 +338,7 @@ export function CreateTribunalRentChasingDialog({
         setBondAmount('');
         setBondNotes('');
         setPrefill(null);
+        setSelectedRecordedKeys([]);
       }
       return;
     }
@@ -310,7 +359,11 @@ export function CreateTribunalRentChasingDialog({
           setBondAmount,
           setBondNotes,
         });
+        if (!isAddingArrears) {
+          setBills([]);
+        }
         setSelectedKinds([]);
+        setSelectedRecordedKeys([]);
       } catch (err) {
         if (!cancelled) {
           setPrefill(null);
@@ -356,34 +409,114 @@ export function CreateTribunalRentChasingDialog({
     }
   };
 
+  const prefillSetters = {
+    setRentAmount,
+    setPaymentCycle,
+    setRentPaidTo,
+    setBills,
+    setAgreementEndDate,
+    setBondAmount,
+    setBondNotes,
+  };
+
+  const syncRecordedArrearsSelection = (
+    nextKeys: string[],
+    nextPrefill: AgentTribunalRentChasingPrefill,
+    chipKinds: ArrearsKind[],
+  ) => {
+    setSelectedRecordedKeys(nextKeys);
+    const selectedRows = nextPrefill.arrears.filter((row, index) =>
+      nextKeys.includes(recordedArrearsKey(row, index)),
+    );
+    const recordedKinds = [
+      ...new Set(selectedRows.map((row) => row.kind)),
+    ] as ArrearsKind[];
+    const recordedOnFile = new Set(nextPrefill.arrears.map((row) => row.kind));
+    const chipOnly = chipKinds.filter((kind) => !recordedOnFile.has(kind));
+    setSelectedKinds([...new Set([...recordedKinds, ...chipOnly])]);
+
+    if (recordedKinds.includes('rent')) {
+      applyKindPrefill('rent', nextPrefill, prefillSetters);
+    }
+    if (recordedKinds.includes('bond')) {
+      applyKindPrefill('bond', nextPrefill, prefillSetters);
+    }
+    if (recordedOnFile.has('bill')) {
+      setBills(
+        nextPrefill.arrears.flatMap((row, index) =>
+          row.kind === 'bill' &&
+          nextKeys.includes(recordedArrearsKey(row, index))
+            ? [billRowFromArrearsRow(row, index, nextPrefill)]
+            : [],
+        ),
+      );
+    }
+  };
+
   const toggleArrearsKind = (kind: ArrearsKind) => {
     setSelectedKinds((prev) => {
       const selected = prev.includes(kind);
-      if (selected) return prev.filter((item) => item !== kind);
+      if (selected) {
+        if (prefill) {
+          const nextKeys = selectedRecordedKeys.filter(
+            (key) =>
+              !prefill.arrears.some(
+                (row, index) =>
+                  row.kind === kind && recordedArrearsKey(row, index) === key,
+              ),
+          );
+          setSelectedRecordedKeys(nextKeys);
+          if (kind === 'bill' && prefill.arrears.some((row) => row.kind === 'bill')) {
+            setBills([]);
+          }
+        }
+        return prev.filter((item) => item !== kind);
+      }
       if (prefill) {
-        applyKindPrefill(kind, prefill, {
-          setRentAmount,
-          setPaymentCycle,
-          setRentPaidTo,
-          setBills,
-          setAgreementEndDate,
-          setBondAmount,
-          setBondNotes,
-        });
+        applyKindPrefill(kind, prefill, prefillSetters);
+        if (
+          kind === 'rent' ||
+          kind === 'bond'
+        ) {
+          const recorded = prefill.arrears.some((row) => row.kind === kind);
+          if (!recorded) applyPropertyDefaults(kind);
+        }
       } else {
         applyPropertyDefaults(kind);
       }
       if (kind === 'bill') {
-        setBills((prev) => (prev.length > 0 ? prev : [newBillRow()]));
+        setBills((prevBills) => (prevBills.length > 0 ? prevBills : [newBillRow()]));
       }
       return [...prev, kind];
     });
   };
 
+  const toggleRecordedArrears = (
+    row: AgentTribunalRentChasingPrefill['arrears'][number],
+    index: number,
+  ) => {
+    if (!prefill) return;
+    const key = recordedArrearsKey(row, index);
+    const nextKeys = selectedRecordedKeys.includes(key)
+      ? selectedRecordedKeys.filter((item) => item !== key)
+      : [...selectedRecordedKeys, key];
+    syncRecordedArrearsSelection(nextKeys, prefill, selectedKinds);
+  };
+
+  const toggleAllRecordedArrears = () => {
+    if (!prefill?.arrears.length) return;
+    const allKeys = prefill.arrears.map((row, index) =>
+      recordedArrearsKey(row, index),
+    );
+    const nextKeys =
+      selectedRecordedKeys.length === allKeys.length ? [] : allKeys;
+    syncRecordedArrearsSelection(nextKeys, prefill, selectedKinds);
+  };
+
   const dialogTitle = isAddingArrears ? 'Add arrears' : 'Add tribunal case';
   const dialogDescription = isAddingArrears
     ? 'Choose which arrears to record for this property — rent, bills, or bond — then fill in the details.'
-    : 'Review accounting arrears for this property, then choose which to include in the tribunal case.';
+    : 'Tick the recorded arrears to include on this tribunal case. You can also add a type that is not yet on file.';
 
   const submit = async () => {
     if (!propertyId) {
@@ -417,7 +550,11 @@ export function CreateTribunalRentChasingDialog({
       Boolean(bondNotes.trim());
 
     if (selectedKinds.length === 0) {
-      toast.error('Select at least one arrears type');
+      toast.error(
+        canPickRecordedArrears
+          ? 'Select at least one arrears item for this tribunal case'
+          : 'Select at least one arrears type',
+      );
       return;
     }
 
@@ -620,20 +757,42 @@ export function CreateTribunalRentChasingDialog({
             </div>
           ) : !showArrearsForm ? (
             <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center">
-              <p className="text-sm font-medium">No accounting arrears on file</p>
+              <p className="text-sm font-medium">Select a property</p>
               <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-                Add rent, bill, or bond arrears in Accounting before opening a tribunal case.
+                Choose a property to load arrears and continue.
               </p>
             </div>
           ) : (
             <>
               {prefill?.arrears.length ? (
                 <section className="space-y-2 rounded-xl border bg-muted/20 p-4">
-                  <p className="text-sm font-semibold">Accounting arrears</p>
+                  <div>
+                    <p className="text-sm font-semibold">Accounting arrears</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {canPickRecordedArrears
+                        ? 'Tick the arrears to include on this tribunal case.'
+                        : 'Recorded arrears currently on file for this property.'}
+                    </p>
+                  </div>
                   <div className="overflow-hidden rounded-lg border bg-card">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wide">
                         <tr>
+                          {canPickRecordedArrears ? (
+                            <th className="w-10 px-3 py-2 font-medium">
+                              <input
+                                type="checkbox"
+                                className="size-4 rounded border"
+                                checked={
+                                  selectedRecordedKeys.length ===
+                                    prefill.arrears.length &&
+                                  prefill.arrears.length > 0
+                                }
+                                onChange={toggleAllRecordedArrears}
+                                aria-label="Select all arrears"
+                              />
+                            </th>
+                          ) : null}
                           <th className="px-3 py-2 font-medium">Type</th>
                           <th className="px-3 py-2 font-medium">Item</th>
                           <th className="px-3 py-2 font-medium">Amount</th>
@@ -641,24 +800,63 @@ export function CreateTribunalRentChasingDialog({
                         </tr>
                       </thead>
                       <tbody>
-                        {prefill.arrears.map((row, index) => (
-                          <tr key={`${row.kind}-${row.name}-${index}`} className="border-t">
-                            <td className="px-3 py-2 capitalize">{row.kind}</td>
-                            <td className="px-3 py-2">{row.name}</td>
-                            <td className="px-3 py-2 font-medium tabular-nums">
-                              {row.amount != null ? formatCurrency(row.amount) : '—'}
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground tabular-nums">
-                              {row.dueDate ? formatDate(row.dueDate) : '—'}
-                            </td>
-                          </tr>
-                        ))}
+                        {prefill.arrears.map((row, index) => {
+                          const key = recordedArrearsKey(row, index);
+                          const selected = selectedRecordedKeys.includes(key);
+                          return (
+                            <tr
+                              key={`${row.kind}-${row.name}-${index}`}
+                              className={cn(
+                                'border-t',
+                                canPickRecordedArrears &&
+                                  'cursor-pointer hover:bg-muted/30',
+                                selected && 'bg-primary/5',
+                              )}
+                              onClick={
+                                canPickRecordedArrears
+                                  ? () => toggleRecordedArrears(row, index)
+                                  : undefined
+                              }
+                            >
+                              {canPickRecordedArrears ? (
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="checkbox"
+                                    className="size-4 rounded border"
+                                    checked={selected}
+                                    onChange={() =>
+                                      toggleRecordedArrears(row, index)
+                                    }
+                                    onClick={(event) => event.stopPropagation()}
+                                    aria-label={`Include ${row.name} on tribunal case`}
+                                  />
+                                </td>
+                              ) : null}
+                              <td className="px-3 py-2 capitalize">{row.kind}</td>
+                              <td className="px-3 py-2">{row.name}</td>
+                              <td className="px-3 py-2 font-medium tabular-nums">
+                                {row.amount != null ? formatCurrency(row.amount) : '—'}
+                              </td>
+                              <td className="px-3 py-2 text-muted-foreground tabular-nums">
+                                {row.dueDate ? formatDate(row.dueDate) : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
+                  {canPickRecordedArrears &&
+                  selectedRecordedKeys.length === 0 &&
+                  selectableKinds.length === 0 ? (
+                    <p className="text-muted-foreground text-xs">
+                      Select at least one arrears item to continue.
+                    </p>
+                  ) : null}
                 </section>
               ) : null}
 
+              {selectableKinds.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">
                   {isAddingArrears ? 'Arrears to add' : 'Include in tribunal case'}
@@ -666,7 +864,9 @@ export function CreateTribunalRentChasingDialog({
                 <p className="text-muted-foreground text-xs">
                   {isAddingArrears
                     ? 'Select one or more arrears types, then complete the sections below.'
-                    : 'Select one or more arrears types for this tribunal case, then complete the sections below.'}
+                    : canPickRecordedArrears
+                      ? 'Add a type that is not already on file, or tick items above.'
+                      : 'Select one or more arrears types for this tribunal case, then complete the sections below.'}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {ARREARS_KIND_OPTIONS.filter((option) =>
@@ -684,12 +884,15 @@ export function CreateTribunalRentChasingDialog({
                     );
                   })}
                 </div>
-                {selectableKinds.length > 0 && selectedKinds.length === 0 ? (
+                {selectedKinds.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
-                    Select at least one arrears type to continue.
+                    {canPickRecordedArrears
+                      ? 'Select recorded arrears above, or an arrears type here.'
+                      : 'Select at least one arrears type to continue.'}
                   </p>
                 ) : null}
               </div>
+              ) : null}
 
               {selectedKinds.includes('rent') ? (
               <Section

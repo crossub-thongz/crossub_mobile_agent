@@ -65,6 +65,23 @@ export function daysSinceDate(isoDate: string | null | undefined): number | null
   return Math.max(0, Math.floor(diffMs / 86_400_000));
 }
 
+/**
+ * Days in arrears from rent paid-to (e.g. paid to 31 Aug, today 2 Sep → 2).
+ * Falls back to a reported case-age value only when paid-to is missing.
+ */
+export function resolveOutstandingArrearsDays(input: {
+  rentPaidTo?: string | null;
+  outstandingAmount?: number | null;
+  reportedDays?: number | null;
+}): number {
+  const fromPaidTo = daysSinceDate(input.rentPaidTo);
+  const reported = input.reportedDays ?? 0;
+  if ((input.outstandingAmount ?? 0) > 0 && fromPaidTo != null) {
+    return fromPaidTo;
+  }
+  return Math.max(0, reported);
+}
+
 /** Calendar days until `isoDate` (local). Today → 0; past → negative; unknown → null. */
 export function daysUntilDate(isoDate: string | null | undefined): number | null {
   if (!isoDate?.trim()) return null;

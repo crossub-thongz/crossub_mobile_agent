@@ -29,7 +29,7 @@ import type {
 } from '@/lib/types';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, resolveOutstandingArrearsDays } from '@/lib/utils';
 
 export type PropertyProfileSection =
   | 'overview'
@@ -203,8 +203,19 @@ export function buildPropertyProfileMetrics(args: {
     leaseEnd ??
     property.leaseEnd;
 
-  const daysInArrears =
-    portalAccounting?.outstandingRentDays ?? accounting?.daysInArrears ?? 0;
+  const rentPaidTo = resolveRentPaidTo(
+    sync.record?.rentPaidUntil ??
+      sync.overview?.rentPaidUntilDate ??
+      property.rentPaidUntil,
+    sync.accounting ?? portalAccounting ?? undefined,
+  );
+  const outstandingAmount =
+    portalAccounting?.outstandingRentAmount ?? accounting?.arrearsAmount ?? 0;
+  const daysInArrears = resolveOutstandingArrearsDays({
+    rentPaidTo,
+    outstandingAmount,
+    reportedDays: portalAccounting?.outstandingRentDays ?? accounting?.daysInArrears ?? null,
+  });
 
   const bondAmount =
     sync.financial?.bondAmount ??
@@ -216,11 +227,6 @@ export function buildPropertyProfileMetrics(args: {
     bondAmount,
     sync.bond,
     Boolean(sync.bond || property.bondAmount),
-  );
-
-  const rentPaidTo = resolveRentPaidTo(
-    sync.record?.rentPaidUntil ?? sync.overview?.rentPaidUntilDate,
-    sync.accounting ?? portalAccounting ?? undefined,
   );
 
   const rentStatusTone: 'good' | 'warn' | 'muted' =
