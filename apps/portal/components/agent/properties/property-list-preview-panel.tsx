@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 
+import { PropertyProfileIncludedUsage } from '@/components/agent/property-profile/property-profile-included-usage';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { propertyDetail } from '@/constants/routes';
@@ -41,6 +42,7 @@ import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-
 import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import { useAgentStore } from '@/lib/store';
 import type { Property } from '@/lib/types';
+import { usePropertyIncludedUsage } from '@/lib/use-property-included-usage';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 import '@/components/agent/property-profile/property-profile-v2.css';
@@ -131,6 +133,7 @@ export function PropertyListPreviewPanel({
   const currentLease = leasingRecords.find(
     (row) => row.propertyId === propertyId && row.status === 'current',
   );
+  const includedUsage = usePropertyIncludedUsage(propertyId, property.agencyId);
   const acct = accounting.find((row) => row.propertyId === propertyId) ?? null;
   const sync = usePropertyOverviewSync(property, apiConnected);
 
@@ -368,6 +371,12 @@ export function PropertyListPreviewPanel({
             <PreviewMetric label="Rent" value={metrics.rentLabel} frosted={shell} />
             <PreviewMetric label="Lease expiry" value={metrics.leaseExpiryLabel} frosted={shell} />
             <PreviewMetric label="Bond" value={metrics.bondLabel} frosted={shell} />
+            {includedUsage ? (
+              <PropertyProfileIncludedUsage
+                usage={includedUsage}
+                className={shell ? 'v2-frosted-surface' : 'bg-background/60'}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { PropertyProfileActionsMenu } from '@/components/agent/property-profile/property-profile-actions-menu';
+import { PropertyProfileIncludedUsage } from '@/components/agent/property-profile/property-profile-included-usage';
 import { PropertyProfilePhoto } from '@/components/agent/property-profile/property-profile-photo';
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import {
@@ -58,6 +59,7 @@ import type {
 } from '@/lib/types';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
+import { usePropertyIncludedUsage } from '@/lib/use-property-included-usage';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 import '@/components/agent/property-profile/property-profile-v2.css';
@@ -476,6 +478,7 @@ export function PropertyProfileV2({
     accounting,
     portalAccounting: sync.accounting,
   });
+  const includedUsage = usePropertyIncludedUsage(propertyId, property.agencyId);
   const taskCount = useMemo(
     () =>
       countPropertyProfileTabTasks(
@@ -588,6 +591,7 @@ export function PropertyProfileV2({
               </p>
             </div>
           ))}
+          {includedUsage ? <PropertyProfileIncludedUsage usage={includedUsage} /> : null}
         </div>
       </div>
 
