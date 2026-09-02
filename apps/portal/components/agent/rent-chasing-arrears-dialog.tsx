@@ -42,7 +42,7 @@ function localDateInputValue(date = new Date()): string {
 }
 
 function arrearsRowKey(row: ArrearsRow, index: number): string {
-  return `${row.kind}:${index}`;
+  return `${row.caseId ?? 'row'}:${row.kind}:${row.billIndex ?? index}`;
 }
 
 function ArrearsDetailGrid({
@@ -247,10 +247,24 @@ export function RentChasingArrearsDialog({
 
     setSaving(true);
     try {
-      await markAgentPropertyArrearsPaid(propertyId, {
-        paidDate,
-        kinds: selectedKinds,
+      const items = arrears.flatMap((row, index) => {
+        if (!selectedKeys.includes(arrearsRowKey(row, index)) || !row.caseId) {
+          return [];
+        }
+        return [
+          {
+            caseId: row.caseId,
+            kind: row.kind,
+            ...(row.billIndex != null ? { billIndex: row.billIndex } : {}),
+          },
+        ];
       });
+      await markAgentPropertyArrearsPaid(
+        propertyId,
+        items.length > 0
+          ? { paidDate, items }
+          : { paidDate, kinds: selectedKinds },
+      );
       toast.success('Arrears marked as paid');
       setPaidDateOpen(false);
       const next = await fetchAgentTribunalRentChasingPrefill(propertyId);

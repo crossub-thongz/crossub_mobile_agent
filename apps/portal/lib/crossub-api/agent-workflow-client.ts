@@ -382,6 +382,11 @@ export async function createAgentPropertyArrears(
 export type AgentMarkArrearsPaidInput = {
   paidDate: string;
   kinds?: Array<'rent' | 'bill' | 'bond'>;
+  items?: Array<{
+    caseId: string;
+    kind: 'rent' | 'bill' | 'bond';
+    billIndex?: number;
+  }>;
 };
 
 export async function markAgentPropertyArrearsPaid(
@@ -421,6 +426,8 @@ export type AgentTribunalRentChasingPrefill = {
   tenantName: string | null;
   hasAccountingArrears: boolean;
   arrears: Array<{
+    caseId?: string;
+    billIndex?: number;
     kind: 'rent' | 'bill' | 'bond';
     name: string;
     tenantName: string;

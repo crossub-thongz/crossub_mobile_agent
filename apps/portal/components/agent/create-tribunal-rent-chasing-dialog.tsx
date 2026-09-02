@@ -27,6 +27,7 @@ import {
   createAgentPropertyArrears,
   createAgentTribunalRentChasing,
   fetchAgentTribunalRentChasingPrefill,
+  markAgentPropertyArrearsPaid,
   type AgentTribunalRentChasingPrefill,
   type CreateAgentTribunalRentChasingInput,
 } from '@/lib/crossub-api/agent-workflow-client';
@@ -187,7 +188,30 @@ function recordedArrearsKey(
   row: AgentTribunalRentChasingPrefill['arrears'][number],
   index: number,
 ): string {
-  return `${row.kind}:${index}`;
+  return `${row.caseId ?? 'row'}:${row.kind}:${row.billIndex ?? index}`;
+}
+
+function localDateInputValue(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function paidItemsFromKeys(
+  rows: AgentTribunalRentChasingPrefill['arrears'],
+  keys: string[],
+) {
+  return rows.flatMap((row, index) => {
+    if (!keys.includes(recordedArrearsKey(row, index)) || !row.caseId) return [];
+    return [
+      {
+        caseId: row.caseId,
+        kind: row.kind,
+        ...(row.billIndex != null ? { billIndex: row.billIndex } : {}),
+      },
+    ];
+  });
 }
 
 function billRowFromArrearsRow(
@@ -285,6 +309,10 @@ export function CreateTribunalRentChasingDialog({
   const [selectedRecordedKeys, setSelectedRecordedKeys] = useState<string[]>(
     [],
   );
+  const [selectedPaidKeys, setSelectedPaidKeys] = useState<string[]>([]);
+  const [paidDate, setPaidDate] = useState(localDateInputValue);
+  const [paidDateOpen, setPaidDateOpen] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [prefill, setPrefill] = useState<AgentTribunalRentChasingPrefill | null>(null);
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
   const [pendingTribunalCreate, setPendingTribunalCreate] = useState<{
@@ -292,7 +320,7 @@ export function CreateTribunalRentChasingDialog({
     platformChargeId: string;
   } | null>(null);
 
-  const { accounting } = useAgentData();
+  const { accounting, refresh } = useAgentData();
   const propertyIdsWithArrears = useMemo(
     () =>
       new Set(
@@ -337,6 +365,8 @@ export function CreateTribunalRentChasingDialog({
     setPropertyId(initialPropertyId ?? '');
     setSelectedKinds([]);
     setSelectedRecordedKeys([]);
+    setSelectedPaidKeys([]);
+    setPaidDateOpen(false);
     setPrefill(null);
   }, [open, initialPropertyId]);
 
@@ -363,20 +393,29 @@ export function CreateTribunalRentChasingDialog({
         const nextPrefill = await fetchAgentTribunalRentChasingPrefill(propertyId);
         if (cancelled) return;
         setPrefill(nextPrefill);
-        stashPrefillFields(nextPrefill, {
-          setRentAmount,
-          setPaymentCycle,
-          setRentPaidTo,
-          setBills,
-          setAgreementEndDate,
-          setBondAmount,
-          setBondNotes,
-        });
-        if (!isAddingArrears) {
+        if (isAddingArrears) {
+          setRentAmount('');
+          setPaymentCycle('weekly');
+          setRentPaidTo('');
+          setBills([]);
+          setAgreementEndDate(propertyAgreementEnd(nextPrefill));
+          setBondAmount('');
+          setBondNotes('');
+        } else {
+          stashPrefillFields(nextPrefill, {
+            setRentAmount,
+            setPaymentCycle,
+            setRentPaidTo,
+            setBills,
+            setAgreementEndDate,
+            setBondAmount,
+            setBondNotes,
+          });
           setBills([]);
         }
         setSelectedKinds([]);
         setSelectedRecordedKeys([]);
+        setSelectedPaidKeys([]);
       } catch (err) {
         if (!cancelled) {
           setPrefill(null);
@@ -488,7 +527,7 @@ export function CreateTribunalRentChasingDialog({
         }
         return prev.filter((item) => item !== kind);
       }
-      if (prefill) {
+      if (prefill && !isAddingArrears) {
         applyKindPrefill(kind, prefill, prefillSetters);
         if (
           kind === 'rent' ||
@@ -527,6 +566,70 @@ export function CreateTribunalRentChasingDialog({
     const nextKeys =
       selectedRecordedKeys.length === allKeys.length ? [] : allKeys;
     syncRecordedArrearsSelection(nextKeys, prefill, selectedKinds);
+  };
+
+  const togglePaidArrears = (key: string) => {
+    setSelectedPaidKeys((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key],
+    );
+  };
+
+  const toggleAllPaidArrears = () => {
+    const rows = prefill?.arrears ?? [];
+    setSelectedPaidKeys((prev) =>
+      prev.length === rows.length
+        ? []
+        : rows.map((row, index) => recordedArrearsKey(row, index)),
+    );
+  };
+
+  const openPaidDateDialog = () => {
+    if (selectedPaidKeys.length === 0) {
+      toast.error('Select at least one arrears row to mark paid');
+      return;
+    }
+    setPaidDate(localDateInputValue());
+    setPaidDateOpen(true);
+  };
+
+  const markSelectedArrearsPaid = async () => {
+    if (!propertyId || !prefill) return;
+    if (!paidDate) {
+      toast.error('Choose the paid date');
+      return;
+    }
+    const items = paidItemsFromKeys(prefill.arrears, selectedPaidKeys);
+    const kinds = [
+      ...new Set(
+        prefill.arrears
+          .filter((row, index) =>
+            selectedPaidKeys.includes(recordedArrearsKey(row, index)),
+          )
+          .map((row) => row.kind),
+      ),
+    ];
+    if (items.length === 0 && kinds.length === 0) {
+      toast.error('Select at least one arrears row to mark paid');
+      return;
+    }
+
+    setMarkingPaid(true);
+    try {
+      await markAgentPropertyArrearsPaid(
+        propertyId,
+        items.length > 0 ? { paidDate, items } : { paidDate, kinds },
+      );
+      toast.success('Arrears marked as paid');
+      setPaidDateOpen(false);
+      const nextPrefill = await fetchAgentTribunalRentChasingPrefill(propertyId);
+      setPrefill(nextPrefill);
+      setSelectedPaidKeys([]);
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not mark arrears paid');
+    } finally {
+      setMarkingPaid(false);
+    }
   };
 
   const dialogTitle = isAddingArrears ? 'Add arrears' : 'Add tribunal case';
@@ -630,7 +733,18 @@ export function CreateTribunalRentChasingDialog({
         toast.success(
           'Case created. The Account Manager has been notified — wait for their response.',
         );
-        onOpenChange(false);
+        const nextPrefill = await fetchAgentTribunalRentChasingPrefill(propertyId);
+        setPrefill(nextPrefill);
+        setSelectedKinds([]);
+        setSelectedPaidKeys([]);
+        setRentAmount('');
+        setPaymentCycle('weekly');
+        setRentPaidTo('');
+        setBills([]);
+        setAgreementEndDate(propertyAgreementEnd(nextPrefill));
+        setBondAmount('');
+        setBondNotes('');
+        await refresh();
         onCreated?.('');
         return;
       }
@@ -720,6 +834,7 @@ export function CreateTribunalRentChasingDialog({
     Boolean(propertyId) &&
     selectedKinds.length > 0 &&
     !saving &&
+    !markingPaid &&
     !loading &&
     !paymentDialog;
 
@@ -792,24 +907,33 @@ export function CreateTribunalRentChasingDialog({
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {canPickRecordedArrears
                         ? 'Tick the arrears to include on this tribunal case.'
-                        : 'Recorded arrears currently on file for this property.'}
+                        : 'Tick outstanding items to mark as paid. New arrears you add below stack onto this table.'}
                     </p>
                   </div>
                   <div className="overflow-hidden rounded-lg border bg-card">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-muted/40 text-muted-foreground text-[11px] uppercase tracking-wide">
                         <tr>
-                          {canPickRecordedArrears ? (
+                          {canPickRecordedArrears || isAddingArrears ? (
                             <th className="w-10 px-3 py-2 font-medium">
                               <input
                                 type="checkbox"
                                 className="size-4 rounded border"
                                 checked={
-                                  selectedRecordedKeys.length ===
-                                    prefill.arrears.length &&
-                                  prefill.arrears.length > 0
+                                  isAddingArrears
+                                    ? selectedPaidKeys.length ===
+                                        prefill.arrears.length &&
+                                      prefill.arrears.length > 0
+                                    : selectedRecordedKeys.length ===
+                                        prefill.arrears.length &&
+                                      prefill.arrears.length > 0
                                 }
-                                onChange={toggleAllRecordedArrears}
+                                onChange={
+                                  isAddingArrears
+                                    ? toggleAllPaidArrears
+                                    : toggleAllRecordedArrears
+                                }
+                                disabled={saving || markingPaid}
                                 aria-label="Select all arrears"
                               />
                             </th>
@@ -823,33 +947,44 @@ export function CreateTribunalRentChasingDialog({
                       <tbody>
                         {prefill.arrears.map((row, index) => {
                           const key = recordedArrearsKey(row, index);
-                          const selected = selectedRecordedKeys.includes(key);
+                          const selected = isAddingArrears
+                            ? selectedPaidKeys.includes(key)
+                            : selectedRecordedKeys.includes(key);
                           return (
                             <tr
-                              key={`${row.kind}-${row.name}-${index}`}
+                              key={key}
                               className={cn(
                                 'border-t',
-                                canPickRecordedArrears &&
+                                (canPickRecordedArrears || isAddingArrears) &&
                                   'cursor-pointer hover:bg-muted/30',
                                 selected && 'bg-primary/5',
                               )}
                               onClick={
                                 canPickRecordedArrears
                                   ? () => toggleRecordedArrears(row, index)
-                                  : undefined
+                                  : isAddingArrears
+                                    ? () => togglePaidArrears(key)
+                                    : undefined
                               }
                             >
-                              {canPickRecordedArrears ? (
+                              {canPickRecordedArrears || isAddingArrears ? (
                                 <td className="px-3 py-2">
                                   <input
                                     type="checkbox"
                                     className="size-4 rounded border"
                                     checked={selected}
                                     onChange={() =>
-                                      toggleRecordedArrears(row, index)
+                                      canPickRecordedArrears
+                                        ? toggleRecordedArrears(row, index)
+                                        : togglePaidArrears(key)
                                     }
                                     onClick={(event) => event.stopPropagation()}
-                                    aria-label={`Include ${row.name} on tribunal case`}
+                                    disabled={saving || markingPaid}
+                                    aria-label={
+                                      isAddingArrears
+                                        ? `Mark ${row.name} as paid`
+                                        : `Include ${row.name} on tribunal case`
+                                    }
                                   />
                                 </td>
                               ) : null}
@@ -867,6 +1002,25 @@ export function CreateTribunalRentChasingDialog({
                       </tbody>
                     </table>
                   </div>
+                  {isAddingArrears ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={
+                        saving || markingPaid || selectedPaidKeys.length === 0
+                      }
+                      onClick={openPaidDateDialog}
+                    >
+                      {markingPaid ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          Saving…
+                        </>
+                      ) : (
+                        'Mark as paid'
+                      )}
+                    </Button>
+                  ) : null}
                   {canPickRecordedArrears &&
                   selectedRecordedKeys.length === 0 &&
                   selectableKinds.length === 0 ? (
@@ -884,7 +1038,7 @@ export function CreateTribunalRentChasingDialog({
                 </p>
                 <p className="text-muted-foreground text-xs">
                   {isAddingArrears
-                    ? 'Select one or more arrears types, then complete the sections below.'
+                    ? 'Select one or more types. Each save adds another row to the table above.'
                     : canPickRecordedArrears
                       ? 'Add a type that is not already on file, or tick items above.'
                       : 'Select one or more arrears types for this tribunal case, then complete the sections below.'}
@@ -1163,6 +1317,50 @@ export function CreateTribunalRentChasingDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      <Dialog open={paidDateOpen} onOpenChange={setPaidDateOpen}>
+        <DialogContent elevated className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark as paid</DialogTitle>
+            <DialogDescription>
+              Choose the date the tenant paid the selected arrears.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Paid date</Label>
+            <Input
+              type="date"
+              value={paidDate}
+              onChange={(event) => setPaidDate(event.target.value)}
+              disabled={markingPaid}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPaidDateOpen(false)}
+              disabled={markingPaid}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={markingPaid || !paidDate || selectedPaidKeys.length === 0}
+              onClick={() => void markSelectedArrearsPaid()}
+            >
+              {markingPaid ? (
+                <>
+                  <Loader2 className="mr-1.5 size-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Mark as paid'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <StripePaymentDialog
         state={paymentDialog}
