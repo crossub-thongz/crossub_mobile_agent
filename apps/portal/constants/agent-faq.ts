@@ -24,7 +24,7 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
       {
         question: 'What is the difference between inspection-only and full management access?',
         answer:
-          'Inspection-only agencies see Dashboard, Properties, and Inspections. Full management adds Leasing, Maintenance, Accounting, Archive, and related workflows. Your agency’s portal service level controls which modules appear in the sidebar.',
+          'Inspection-only agencies see Dashboard, Properties, and Inspections. Full management adds Leasing, Maintenance, Accounting, History, and related workflows. Your agency’s portal service level controls which modules appear in the sidebar.',
       },
       {
         question: 'Why is my account billing-blocked?',
@@ -152,9 +152,9 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
           'Tribunal tracks NCAT-style dispute cases — preparation, filing, hearing dates, and outcomes — when rent chasing or lease disputes escalate beyond standard messaging.',
       },
       {
-        question: 'What is in Archive?',
+        question: 'What is in History?',
         answer:
-          'Archive holds closed or cancelled leasing, maintenance, and inspection cases for reference without cluttering active lists.',
+          'History holds archived properties and their closed tasks. Use Properties for the archived list, and Properties Tasks for every job closed with a property — grouped under that address.',
       },
     ],
   },

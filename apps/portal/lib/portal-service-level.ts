@@ -94,9 +94,9 @@ export function propertyBillingTabLabel(isInspectionOnly: boolean): 'Bills' | 'I
   return isInspectionOnly ? 'Bills' : 'Invoice';
 }
 
-/** Sidebar / bill page: Level 1 Bills, Level 2 Invoice. */
-export function agencyBillingNavLabel(hasFullManagementAccess: boolean): 'Bills' | 'Invoice' {
-  return hasFullManagementAccess ? 'Invoice' : 'Bills';
+/** Sidebar / bill page module name. */
+export function agencyBillingNavLabel(_hasFullManagementAccess?: boolean): 'Billing' {
+  return 'Billing';
 }
 
 export const FULL_MANAGEMENT_ROUTE_PREFIXES = [

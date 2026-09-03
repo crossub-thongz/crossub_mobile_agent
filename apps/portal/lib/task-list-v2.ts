@@ -1,5 +1,6 @@
 import { fromTasks } from '@/lib/detail-navigation';
 import { ROUTES } from '@/constants/routes';
+import { isAgentArchivedReason } from '@/constants/agent-archived-case';
 import { propertyJobKindHref } from '@/lib/property-job-href';
 import {
   isInspectionOnlyAgent,
@@ -12,6 +13,7 @@ import type { PropertyJobRow } from '@/lib/property-job-rows';
 import type { RentReviewDecision } from '@/lib/rent-review';
 import type {
   Agency,
+  AgentArchiveView,
   Inspection,
   LeasingCycle,
   LeasingRecord,
@@ -24,7 +26,7 @@ import type {
   TribunalCase,
   VacatingCase,
 } from '@/lib/types';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime, formatPropertyFullAddress } from '@/lib/utils';
 
 export type TaskListV2Bucket = 'all' | 'need_action' | 'cros_handling' | 'waiting' | 'completed';
 
@@ -182,7 +184,13 @@ export function resolveTaskListV2Href(task: PropertyProfileTask, propertyId: str
   );
 }
 
-export function buildPortfolioTaskList(input: {
+export type ArchivedPropertyTaskGroup = {
+  property: Property;
+  propertyAddress: string;
+  rows: TaskListV2Row[];
+};
+
+type PortfolioTaskListInput = {
   properties: Property[];
   leasingRecords: LeasingRecord[];
   maintenanceAll: MaintenanceRequest[];
@@ -195,60 +203,130 @@ export function buildPortfolioTaskList(input: {
   tribunalCases: TribunalCase[];
   accounting: PropertyAccounting[];
   getPropertyActions: (propertyId: string) => PropertyNeedAction[];
-}): TaskListV2Row[] {
+};
+
+function closedStatusSublabel(task: PropertyProfileTask): string {
+  const reason =
+    task.jobRow?.description
+      ?.split(' · ')
+      .map((part) => part.trim())
+      .find((part) => isAgentArchivedReason(part)) ?? null;
+  if (reason) return reason;
+  return 'No further action required';
+}
+
+function toTaskListV2Row(
+  property: Property,
+  task: PropertyProfileTask,
+  options?: { presentAsClosed?: boolean },
+): TaskListV2Row {
+  const bucket = options?.presentAsClosed ? 'completed' : classifyBucket(task);
+  const category = taskCategory(task);
+  const status = options?.presentAsClosed
+    ? {
+        label: 'Closed',
+        sublabel: closedStatusSublabel(task),
+        tone: 'completed' as const,
+      }
+    : statusPresentation(task, bucket);
+  const propertyAddress = task.needAction?.propertyAddress ?? formatPropertyAddress(property);
+
+  return {
+    id: `${property.id}:${task.id}`,
+    propertyId: property.id,
+    propertyAddress,
+    property,
+    task,
+    href: resolveTaskListV2Href(task, property.id),
+    bucket,
+    category,
+    typeLabel: TYPE_LABEL[category],
+    statusLabel: status.label,
+    statusSublabel: status.sublabel,
+    statusTone: status.tone,
+    updatedAt: task.sortAt,
+    updatedLabel: task.sortAt > 0 ? formatDateTime(new Date(task.sortAt).toISOString()) : '—',
+    needsReview: options?.presentAsClosed ? false : task.status === 'approval_required',
+  };
+}
+
+function tasksForProperty(
+  property: Property,
+  input: Omit<PortfolioTaskListInput, 'properties' | 'getPropertyActions'> & {
+    getPropertyActions?: (propertyId: string) => PropertyNeedAction[];
+    archive?: AgentArchiveView;
+  },
+): PropertyProfileTask[] {
+  const propertyId = property.id;
+  const currentLease = input.leasingRecords.find(
+    (row) => row.propertyId === propertyId && row.status === 'current',
+  );
+
+  return buildPropertyProfileTasks({
+    property,
+    propertyId,
+    maintenance: input.maintenanceAll.filter((row) => row.propertyId === propertyId),
+    inspections: input.inspections.filter((row) => row.propertyId === propertyId),
+    rentReviews: input.rentReviews.filter((row) => row.propertyId === propertyId),
+    rentReviewDecisions: input.rentReviewDecisions,
+    leasingCycles: input.leasingCycles.filter((row) => row.propertyId === propertyId),
+    tenantSelections: input.tenantSelections.filter((row) => row.propertyId === propertyId),
+    vacatingCases: input.vacating.filter((row) => row.propertyId === propertyId),
+    tribunalCases: input.tribunalCases.filter((row) => row.propertyId === propertyId),
+    accounting: input.accounting.find((row) => row.propertyId === propertyId) ?? null,
+    currentLease,
+    needActions: input.getPropertyActions?.(propertyId) ?? [],
+    deletedLeasingCycles: input.archive?.cancelledLeasingCycles.filter(
+      (row) => row.propertyId === propertyId,
+    ),
+    deletedEndLeasingCases: input.archive?.cancelledEndLeasing.filter(
+      (row) => row.propertyId === propertyId,
+    ),
+    deletedRentReviews: input.archive?.cancelledRentReviews.filter(
+      (row) => row.propertyId === propertyId,
+    ),
+  });
+}
+
+export function buildPortfolioTaskList(input: PortfolioTaskListInput): TaskListV2Row[] {
   const rows: TaskListV2Row[] = [];
 
   for (const property of input.properties) {
-    const propertyId = property.id;
-    const currentLease = input.leasingRecords.find(
-      (row) => row.propertyId === propertyId && row.status === 'current',
-    );
-
-    const tasks = buildPropertyProfileTasks({
-      property,
-      propertyId,
-      maintenance: input.maintenanceAll.filter((row) => row.propertyId === propertyId),
-      inspections: input.inspections.filter((row) => row.propertyId === propertyId),
-      rentReviews: input.rentReviews.filter((row) => row.propertyId === propertyId),
-      rentReviewDecisions: input.rentReviewDecisions,
-      leasingCycles: input.leasingCycles.filter((row) => row.propertyId === propertyId),
-      tenantSelections: input.tenantSelections.filter((row) => row.propertyId === propertyId),
-      vacatingCases: input.vacating.filter((row) => row.propertyId === propertyId),
-      tribunalCases: input.tribunalCases.filter((row) => row.propertyId === propertyId),
-      accounting: input.accounting.find((row) => row.propertyId === propertyId) ?? null,
-      currentLease,
-      needActions: input.getPropertyActions(propertyId),
-    });
+    const tasks = tasksForProperty(property, input);
 
     for (const task of tasks) {
       if (task.lifecycle === 'deleted' || task.lifecycle === 'archived') continue;
-
-      const bucket = classifyBucket(task);
-      const category = taskCategory(task);
-      const status = statusPresentation(task, bucket);
-      const propertyAddress = task.needAction?.propertyAddress ?? formatPropertyAddress(property);
-
-      rows.push({
-        id: `${propertyId}:${task.id}`,
-        propertyId,
-        propertyAddress,
-        property,
-        task,
-        href: resolveTaskListV2Href(task, propertyId),
-        bucket,
-        category,
-        typeLabel: TYPE_LABEL[category],
-        statusLabel: status.label,
-        statusSublabel: status.sublabel,
-        statusTone: status.tone,
-        updatedAt: task.sortAt,
-        updatedLabel: task.sortAt > 0 ? formatDateTime(new Date(task.sortAt).toISOString()) : '—',
-        needsReview: task.status === 'approval_required',
-      });
+      rows.push(toTaskListV2Row(property, task));
     }
   }
 
   return rows.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** Closed tasks for archived properties, grouped under each address. */
+export function buildArchivedPropertyTaskGroups(
+  input: Omit<PortfolioTaskListInput, 'properties' | 'getPropertyActions'> & {
+    archivedProperties: Property[];
+    archive: AgentArchiveView;
+  },
+): ArchivedPropertyTaskGroup[] {
+  return [...input.archivedProperties]
+    .sort((a, b) =>
+      formatPropertyFullAddress(a).localeCompare(formatPropertyFullAddress(b), undefined, {
+        sensitivity: 'base',
+      }),
+    )
+    .map((property) => {
+      const tasks = tasksForProperty(property, input);
+      const rows = tasks
+        .map((task) => toTaskListV2Row(property, task, { presentAsClosed: true }))
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+      return {
+        property,
+        propertyAddress: formatPropertyFullAddress(property),
+        rows,
+      };
+    });
 }
 
 function formatPropertyAddress(property: Property): string {

@@ -6,56 +6,79 @@ import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
+import { HistoryPropertyTasksList } from '@/components/agent/history-property-tasks';
 import { PageIntro } from '@/components/agent/page-intro';
-import {
-  ArchivedEndLeasingTable,
-  ArchivedLeasingCyclesTable,
-  ArchivedRentReviewsTable,
-} from '@/components/agent/archive-module-tables';
 import { PropertyListView } from '@/components/agent/property-list-view';
 import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES } from '@/constants/routes';
-import { buildEndLeasingArchiveRows } from '@/lib/archive-case-display';
+import { useAgentStore } from '@/lib/store';
+import { buildArchivedPropertyTaskGroups } from '@/lib/task-list-v2';
 import type { Property } from '@/lib/types';
 
 const TABS = [
   { id: 'properties', label: 'Properties' },
-  { id: 'new-letting', label: 'New letting' },
-  { id: 'end-leasing', label: 'End leasing' },
-  { id: 'rent-review', label: 'Rent review' },
-  { id: 'maintenance', label: 'Maintenance' },
+  { id: 'property-tasks', label: 'Properties Tasks' },
 ] as const;
 
-type ArchiveTab = (typeof TABS)[number]['id'];
+type HistoryTab = (typeof TABS)[number]['id'];
 
 export default function ArchivePage() {
-  const [tab, setTab] = useState<ArchiveTab>('properties');
+  const [tab, setTab] = useState<HistoryTab>('properties');
   const {
-    archive,
-    vacating,
     archivedProperties,
     agencies,
     apiConnected,
     refreshArchivedProperties,
     restoreProperty,
+    leasingRecords,
+    maintenanceAll,
+    inspections,
+    rentReviews,
+    leasingCycles,
+    tenantSelections,
+    vacating,
+    tribunalCases,
+    accounting,
+    archive,
   } = useAgentData();
+  const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
-  const endLeasingArchiveRows = useMemo(
-    () => buildEndLeasingArchiveRows(archive.cancelledEndLeasing, vacating),
-    [archive.cancelledEndLeasing, vacating],
+  const propertyTaskGroups = useMemo(
+    () =>
+      buildArchivedPropertyTaskGroups({
+        archivedProperties,
+        leasingRecords,
+        maintenanceAll,
+        inspections,
+        rentReviews,
+        rentReviewDecisions,
+        leasingCycles,
+        tenantSelections,
+        vacating,
+        tribunalCases,
+        accounting,
+        archive,
+      }),
+    [
+      accounting,
+      archive,
+      archivedProperties,
+      inspections,
+      leasingCycles,
+      leasingRecords,
+      maintenanceAll,
+      rentReviewDecisions,
+      rentReviews,
+      tenantSelections,
+      tribunalCases,
+      vacating,
+    ],
   );
-
-  const tabCounts = useMemo(
-    () => ({
-      properties: archivedProperties.length,
-      'new-letting': archive.cancelledLeasingCycles.length,
-      'end-leasing': endLeasingArchiveRows.length,
-      'rent-review': archive.cancelledRentReviews.length,
-      maintenance: 0,
-    }),
-    [archive, archivedProperties.length, endLeasingArchiveRows.length],
+  const propertyTaskCount = useMemo(
+    () => propertyTaskGroups.reduce((sum, group) => sum + group.rows.length, 0),
+    [propertyTaskGroups],
   );
 
   useEffect(() => {
@@ -81,25 +104,32 @@ export default function ArchivePage() {
   };
 
   return (
-    <AgentShell title="Archive" backHref={ROUTES.DASHBOARD}>
+    <AgentShell title="History" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
-        <PageIntro description="Archived properties and closed workflow jobs — restore a property to return it to the live list. Closed jobs stay closed." />
+        <PageIntro description="Archived properties and their closed tasks." />
 
         <FilterChips
-          options={TABS.map((t) => ({
-            id: t.id,
-            label: `${t.label}${tabCounts[t.id] > 0 ? ` (${tabCounts[t.id]})` : ''}`,
+          options={TABS.map((item) => ({
+            id: item.id,
+            label:
+              item.id === 'properties'
+                ? archivedProperties.length > 0
+                  ? `${item.label} (${archivedProperties.length})`
+                  : item.label
+                : propertyTaskCount > 0
+                  ? `${item.label} (${propertyTaskCount})`
+                  : item.label,
           }))}
           value={tab}
-          onChange={(id) => setTab(id as ArchiveTab)}
+          onChange={setTab}
         />
 
         {tab === 'properties' ? (
           archivedProperties.length === 0 ? (
             <EmptyState
               icon={FolderArchive}
-              title="No archived properties"
-              description="Properties you archive leave the live list and appear here with their history."
+              title="No property history"
+              description="Properties you archive leave the live list and appear here."
             />
           ) : (
             <PropertyListView
@@ -113,51 +143,15 @@ export default function ArchivePage() {
               canManage={false}
             />
           )
-        ) : null}
-
-        {tab === 'new-letting' ? (
-          archive.cancelledLeasingCycles.length === 0 ? (
-            <EmptyState
-              icon={FolderArchive}
-              title="No cancelled new lettings"
-              description="When you cancel a new letting and provide a reason, it will appear here."
-            />
-          ) : (
-            <ArchivedLeasingCyclesTable items={archive.cancelledLeasingCycles} />
-          )
-        ) : null}
-
-        {tab === 'end-leasing' ? (
-          endLeasingArchiveRows.length === 0 ? (
-            <EmptyState
-              icon={FolderArchive}
-              title="No end-leasing archive"
-              description="Deleted end-leasing cases and completed tenancies will appear here."
-            />
-          ) : (
-            <ArchivedEndLeasingTable items={endLeasingArchiveRows} />
-          )
-        ) : null}
-
-        {tab === 'rent-review' ? (
-          archive.cancelledRentReviews.length === 0 ? (
-            <EmptyState
-              icon={FolderArchive}
-              title="No archived rent reviews"
-              description="When you delete a rent review and provide a reason, it will appear here."
-            />
-          ) : (
-            <ArchivedRentReviewsTable items={archive.cancelledRentReviews} />
-          )
-        ) : null}
-
-        {tab === 'maintenance' ? (
+        ) : propertyTaskGroups.length === 0 ? (
           <EmptyState
             icon={FolderArchive}
-            title="No archived maintenance jobs"
-            description="Cancelled maintenance jobs will appear here when that workflow is supported."
+            title="No property tasks"
+            description="When you archive a property, its tasks are closed and stored here under that address."
           />
-        ) : null}
+        ) : (
+          <HistoryPropertyTasksList groups={propertyTaskGroups} />
+        )}
       </div>
     </AgentShell>
   );

@@ -229,20 +229,24 @@ export function PropertyListTable({
               direction={sortDirection}
               onSort={onSort}
             />
-            <SortableTableHeader
-              label="Agency"
-              sortKey="agency"
-              activeKey={sortKey}
-              direction={sortDirection}
-              onSort={onSort}
-            />
-            <SortableTableHeader
-              label="PM"
-              sortKey="pm"
-              activeKey={sortKey}
-              direction={sortDirection}
-              onSort={onSort}
-            />
+            {isArchived ? null : (
+              <>
+                <SortableTableHeader
+                  label="Agency"
+                  sortKey="agency"
+                  activeKey={sortKey}
+                  direction={sortDirection}
+                  onSort={onSort}
+                />
+                <SortableTableHeader
+                  label="PM"
+                  sortKey="pm"
+                  activeKey={sortKey}
+                  direction={sortDirection}
+                  onSort={onSort}
+                />
+              </>
+            )}
             <SortableTableHeader
               label="Created"
               sortKey="createdAt"
@@ -339,25 +343,29 @@ export function PropertyListTable({
                   <td className={moduleTableCellClassName('text-xs font-medium tabular-nums')}>
                     <ModuleTableTruncateText lines={1}>{formatRent(property)}</ModuleTableTruncateText>
                   </td>
-                  <td className={moduleTableCellClassName('text-muted-foreground')}>
-                    <ModuleTableTruncateText lines={1}>
-                      {resolveAgencyName(property, agencies)}
-                    </ModuleTableTruncateText>
-                  </td>
-                  <td className={moduleTableCellClassName()}>
-                    {pmHref && pmName ? (
-                      <a
-                        href={pmHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary block min-w-0 text-xs font-medium hover:underline"
-                      >
-                        <ModuleTableTruncateText lines={1}>{pmName}</ModuleTableTruncateText>
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </td>
+                  {isArchived ? null : (
+                    <>
+                      <td className={moduleTableCellClassName('text-muted-foreground')}>
+                        <ModuleTableTruncateText lines={1}>
+                          {resolveAgencyName(property, agencies)}
+                        </ModuleTableTruncateText>
+                      </td>
+                      <td className={moduleTableCellClassName()}>
+                        {pmHref && pmName ? (
+                          <a
+                            href={pmHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary block min-w-0 text-xs font-medium hover:underline"
+                          >
+                            <ModuleTableTruncateText lines={1}>{pmName}</ModuleTableTruncateText>
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                    </>
+                  )}
                   <td className={moduleTableCellClassName('text-xs text-muted-foreground tabular-nums whitespace-nowrap')}>
                     {createdIso && !Number.isNaN(new Date(createdIso).getTime())
                       ? formatDate(createdIso)

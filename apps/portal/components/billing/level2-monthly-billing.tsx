@@ -1,6 +1,7 @@
 'use client';
 
-import { AlertTriangle, FileText, Loader2, Lock } from 'lucide-react';
+import { AlertTriangle, ChevronDown, FileText, Loader2, Lock } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
@@ -337,8 +338,10 @@ function includedChipTone(remaining: number): string {
 
 export function PropertyIncludedSummary({
   usage,
+  className,
 }: {
   usage: NonNullable<Level2PropertyChargeGroup['included']>;
+  className?: string;
 }) {
   const items = [
     { label: 'Routine', usage: usage.routine },
@@ -347,7 +350,10 @@ export function PropertyIncludedSummary({
   ] as const;
 
   return (
-    <div className="mt-2.5 rounded-xl border border-sky-500/30 bg-sky-500/[0.08] px-3 py-2.5 dark:border-sky-400/25 dark:bg-sky-500/10">
+    <div className={cn(
+      'rounded-xl border border-sky-500/30 bg-sky-500/[0.08] px-3 py-2.5 dark:border-sky-400/25 dark:bg-sky-500/10',
+      className ?? 'mt-2.5',
+    )}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-900 dark:text-sky-100">
         Yearly included remaining
       </p>
@@ -368,6 +374,71 @@ export function PropertyIncludedSummary({
         ))}
       </ul>
     </div>
+  );
+}
+
+export function PropertyChargeGroupCard({
+  property,
+  framed = true,
+  children,
+}: {
+  property: Level2PropertyChargeGroup;
+  framed?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <section
+      className={cn(
+        framed && 'overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm',
+      )}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="w-full border-l-[3px] border-l-sky-500/70 bg-muted/35 px-4 py-3.5 text-left transition hover:bg-muted/50 md:px-5"
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          {propertyGroupKindLabel(property)}
+        </p>
+        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold leading-snug">{property.propertyLabel}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {property.charges.length} service
+              {property.charges.length === 1 ? '' : 's'}
+              {property.propertyId
+                ? ` · ${formatAgreementPeriod(property.agreementStart, property.agreementEnd)}`
+                : null}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <p className="text-sm font-semibold tabular-nums">
+              {formatCurrency(property.billedTotal)}
+            </p>
+            <ChevronDown
+              className={cn(
+                'text-muted-foreground size-4 shrink-0 transition-transform',
+                open && 'rotate-180',
+              )}
+              aria-hidden
+            />
+          </div>
+        </div>
+      </button>
+      {open ? (
+        <div>
+          {property.included ? (
+            <div className="border-b px-4 py-3 md:px-5">
+              <PropertyIncludedSummary usage={property.included} className="mt-0" />
+            </div>
+          ) : null}
+          {children}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -545,35 +616,7 @@ export function Level2MonthlyBillingList({
             ) : (
               <div className="divide-y">
                 {groupChargesByProperty(group.charges, includedUsageByProperty).map((property) => (
-                  <section key={property.key}>
-                    <header className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-5 py-3.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                        {propertyGroupKindLabel(property)}
-                      </p>
-                      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold leading-snug">
-                            {property.propertyLabel}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 text-xs">
-                            {property.charges.length} service
-                            {property.charges.length === 1 ? '' : 's'}
-                            {property.propertyId
-                              ? ` · ${formatAgreementPeriod(
-                                  property.agreementStart,
-                                  property.agreementEnd,
-                                )}`
-                              : null}
-                          </p>
-                          {property.included ? (
-                            <PropertyIncludedSummary usage={property.included} />
-                          ) : null}
-                        </div>
-                        <p className="shrink-0 text-sm font-semibold tabular-nums">
-                          {formatCurrency(property.billedTotal)}
-                        </p>
-                      </div>
-                    </header>
+                  <PropertyChargeGroupCard key={property.key} property={property} framed={false}>
                     <ul className="divide-y">
                       {property.charges.map((row) => {
                         const struck = isNotCharged(row);
@@ -668,7 +711,7 @@ export function Level2MonthlyBillingList({
                         );
                       })}
                     </ul>
-                  </section>
+                  </PropertyChargeGroupCard>
                 ))}
               </div>
             )}

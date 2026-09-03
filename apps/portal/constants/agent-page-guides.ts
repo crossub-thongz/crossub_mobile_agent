@@ -408,21 +408,25 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
   },
   archive: {
     id: 'archive',
-    pageName: 'Archive',
-    eyebrow: 'Historical records',
+    pageName: 'History',
+    eyebrow: 'Archived properties and tasks',
     overview:
-      'Cancelled leasing cycles, ended management, and closed rent reviews kept for lookup without cluttering active lists.',
+      'Archived properties and the tasks closed with them, kept for lookup without cluttering live lists.',
     steps: [
       {
-        title: 'Search by property',
-        description: 'Find why a cycle was cancelled or when management ended.',
+        title: 'Find an archived property',
+        description: 'The Properties tag lists addresses that have left the live list, including when management ended.',
       },
       {
-        title: 'Read-only reference',
-        description: 'Archived rows cannot be re-opened — create a new workflow if work resumes.',
+        title: 'Review closed property tasks',
+        description: 'Properties Tasks groups every closed job under its archived address. Expand a property to view the list.',
+      },
+      {
+        title: 'Restore if needed',
+        description: 'Restore a property back to the live list when management resumes. Closed tasks stay closed.',
       },
     ],
-    tips: ['Use Archive when auditing a handover to another agency.'],
+    tips: ['Use History when auditing a handover to another agency.'],
   },
   settings: {
     id: 'settings',

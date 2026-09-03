@@ -122,7 +122,7 @@ export function MessageCompose({
     <div className="relative space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-[10px]">
-          Type <span className="font-medium">@</span> to tag landlord, tenant, or
+          Type <span className="font-medium">@</span> to tag tenant, or
           CROSSUB
         </p>
         <Button

@@ -36,14 +36,14 @@ export const V1_MORE_NAV: NavItem[] = [
   { href: ROUTES.INSPECTIONS, label: 'Inspections', icon: ClipboardList },
   { href: ROUTES.ACCOUNTING, label: 'Accounting', icon: FileText, portalAccess: 'full' },
   { href: ROUTES.TRIBUNAL, label: 'Tribunal', icon: FileText },
-  { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive, portalAccess: 'full' },
+  { href: ROUTES.ARCHIVE, label: 'History', icon: FolderArchive, portalAccess: 'full' },
 ];
 
 export const V1_MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
   { href: ROUTES.FAQ, label: 'FAQ', icon: HelpCircle },
   { href: ROUTES.PRICING, label: 'Pricing', icon: Tags },
-  { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
+  { href: ROUTES.BILL, label: 'Billing', icon: Receipt },
 ];
 
 /** Redesign — job hubs live on Tasks. Full Accounting stays off until launch. */
@@ -64,8 +64,8 @@ export const V2_MORE_NAV: NavItem[] = [
         },
       ]
     : []),
-  { href: ROUTES.BILL, label: 'Bills', icon: Receipt },
-  { href: ROUTES.ARCHIVE, label: 'Archive', icon: FolderArchive },
+  { href: ROUTES.BILL, label: 'Billing', icon: Receipt },
+  { href: ROUTES.ARCHIVE, label: 'History', icon: FolderArchive },
 ];
 
 export const V2_MORE_NAV_FOOTER: NavItem[] = [

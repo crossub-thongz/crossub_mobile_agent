@@ -149,7 +149,7 @@ export function V2PropertiesPage() {
     try {
       await archiveProperty(pendingDelete.id);
       if (selectedId === pendingDelete.id) setSelectedId(null);
-      toast.success('Property archived — open the Archived filter to view it');
+      toast.success('Property archived — check it in the History page');
       setPendingDelete(null);
       setFilter('archived');
     } catch (err) {

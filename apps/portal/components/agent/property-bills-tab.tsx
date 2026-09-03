@@ -11,8 +11,7 @@ import {
   groupChargesByProperty,
   monthKeyFromIso,
   monthLabel,
-  PropertyIncludedSummary,
-  propertyGroupKindLabel,
+  PropertyChargeGroupCard,
 } from '@/components/billing/level2-monthly-billing';
 import {
   PlatformChargeDetailDialog,
@@ -206,33 +205,7 @@ export function PropertyBillsTab({
                 <h3 className="text-base font-semibold tracking-tight">{month.label}</h3>
               </header>
               {month.properties.map((property) => (
-                <div key={property.key} className="border-b last:border-b-0">
-                  <div className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-5 py-3.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      {propertyGroupKindLabel(property)}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold leading-snug">
-                          {property.propertyLabel}
-                        </p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          {property.charges.length} service
-                          {property.charges.length === 1 ? '' : 's'}
-                          {` · ${formatAgreementPeriod(
-                            property.agreementStart,
-                            property.agreementEnd,
-                          )}`}
-                        </p>
-                        {property.included ? (
-                          <PropertyIncludedSummary usage={property.included} />
-                        ) : null}
-                      </div>
-                      <p className="shrink-0 text-sm font-semibold tabular-nums">
-                        {formatCurrency(property.billedTotal)}
-                      </p>
-                    </div>
-                  </div>
+                <PropertyChargeGroupCard key={property.key} property={property} framed={false}>
                   <ul className="divide-y">
                     {property.charges.map((row) => {
                       const paid = row.status === 'paid' || row.status === 'included';
@@ -383,7 +356,7 @@ export function PropertyBillsTab({
                       );
                     })}
                   </ul>
-                </div>
+                </PropertyChargeGroupCard>
               ))}
             </section>
           ))}

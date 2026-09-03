@@ -36,7 +36,7 @@ export const MODULE_TABLE_COLUMN_WIDTHS = {
   tenantSelection: ['22%', '16%', '10%', '10%', '12%', '12%', '5%'],
   leasingHistory: ['22%', '14%', '12%', '16%', '10%', '10%', '5%'],
   propertyList: ['24%', '10%', '12%', '9%', '11%', '9%', '9%', '8%', '8%'],
-  propertyListArchived: ['22%', '10%', '12%', '9%', '11%', '9%', '9%', '9%', '9%'],
+  propertyListArchived: ['28%', '14%', '16%', '12%', '10%', '10%', '10%'],
 } as const;
 
 /** Truncated cell text — full value shown via native hover `title`. */

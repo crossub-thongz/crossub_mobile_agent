@@ -143,16 +143,9 @@ function withTaskNumber(text: string, caseId: string, caseRef: string): string {
   return replaceRawCaseIdWithLabel(text, caseId, caseRef);
 }
 
-function scrollShellToTop(start: HTMLElement | null) {
-  let node: HTMLElement | null = start;
-  while (node) {
-    if (node.tagName === 'MAIN') {
-      node.scrollTop = 0;
-      break;
-    }
-    node = node.parentElement;
-  }
-  document.scrollingElement && (document.scrollingElement.scrollTop = 0);
+function scrollListToLatest(el: HTMLElement | null) {
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
 }
 
 export function WorkspaceChatPanel({
@@ -169,9 +162,7 @@ export function WorkspaceChatPanel({
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const rootRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const shouldScrollListToBottom = useRef(false);
   const caseRef = displayCaseRef(workspaceCase, reference);
 
   useEffect(() => {
@@ -198,24 +189,12 @@ export function WorkspaceChatPanel({
   }, [hydrated, messages, workspaceCase.id]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    scrollShellToTop(rootRef.current);
-    const el = listRef.current;
-    if (el && !shouldScrollListToBottom.current) el.scrollTop = 0;
-  }, [hydrated]);
-
-  useEffect(() => {
-    scrollShellToTop(rootRef.current);
-    const el = listRef.current;
-    if (el) el.scrollTop = 0;
-  }, [chatTab, workspaceCase.id]);
-
-  useEffect(() => {
-    if (!shouldScrollListToBottom.current) return;
-    shouldScrollListToBottom.current = false;
-    const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    const frame = requestAnimationFrame(() => {
+      scrollListToLatest(listRef.current);
+      requestAnimationFrame(() => scrollListToLatest(listRef.current));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [chatTab, hydrated, messages]);
 
   const appMessages = useMemo(
     () => messages.filter((m) => m.channel === 'in_app'),
@@ -240,17 +219,13 @@ export function WorkspaceChatPanel({
       direction: 'outbound',
     };
 
-    shouldScrollListToBottom.current = true;
     setMessages((prev) => [...prev, msg]);
     setDraft('');
     toast.success(chatTab === 'app' ? 'In-app message sent' : 'Email message sent');
   };
 
   return (
-    <div
-      ref={rootRef}
-      className="flex h-full min-h-0 flex-col px-4 py-4 sm:px-5 sm:py-5"
-    >
+    <div className="flex h-full min-h-0 flex-col px-4 py-4 sm:px-5 sm:py-5">
       <div className="mb-4 min-w-0">
         <h3 className="truncate text-sm font-semibold text-foreground">
           {caseRef} · {workspaceCase.issueType}

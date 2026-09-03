@@ -72,25 +72,43 @@ function StatusBadge({
   );
 }
 
-export function TaskListV2Table({ rows }: { rows: TaskListV2Row[] }) {
+export function TaskListV2Table({
+  rows,
+  hideProperty = false,
+  framed = true,
+}: {
+  rows: TaskListV2Row[];
+  hideProperty?: boolean;
+  framed?: boolean;
+}) {
   const router = useRouter();
 
   return (
-    <div className="v2-frosted-surface min-w-0 overflow-hidden rounded-2xl border">
+    <div
+      className={cn(
+        'min-w-0 overflow-hidden',
+        framed && 'v2-frosted-surface rounded-2xl border',
+      )}
+    >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[56rem] table-fixed border-collapse text-left text-sm">
+        <table
+          className={cn(
+            'w-full table-fixed border-collapse text-left text-sm',
+            hideProperty ? 'min-w-[44rem]' : 'min-w-[56rem]',
+          )}
+        >
           <colgroup>
-            <col style={{ width: '24%' }} />
-            <col style={{ width: '18%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ width: hideProperty ? '34%' : '24%' }} />
+            {hideProperty ? null : <col style={{ width: '18%' }} />}
+            <col style={{ width: hideProperty ? '14%' : '11%' }} />
+            <col style={{ width: hideProperty ? '20%' : '16%' }} />
+            <col style={{ width: hideProperty ? '16%' : '13%' }} />
+            <col style={{ width: hideProperty ? '16%' : '10%' }} />
           </colgroup>
           <thead>
             <tr className="border-b bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-3">Task</th>
-              <th className="px-3 py-3">Property</th>
+              {hideProperty ? null : <th className="px-3 py-3">Property</th>}
               <th className="px-3 py-3">Type</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Updated</th>
@@ -117,10 +135,12 @@ export function TaskListV2Table({ rows }: { rows: TaskListV2Row[] }) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3 align-top">
-                    <p className="truncate font-medium">{row.property.address}</p>
-                    <p className="text-muted-foreground truncate text-xs">{row.property.suburb}</p>
-                  </td>
+                  {hideProperty ? null : (
+                    <td className="px-3 py-3 align-top">
+                      <p className="truncate font-medium">{row.property.address}</p>
+                      <p className="text-muted-foreground truncate text-xs">{row.property.suburb}</p>
+                    </td>
+                  )}
                   <td className="px-3 py-3 align-top text-xs font-medium">{row.typeLabel}</td>
                   <td className="px-3 py-3 align-top">
                     <StatusBadge
@@ -151,14 +171,16 @@ export function TaskListV2Table({ rows }: { rows: TaskListV2Row[] }) {
                           View
                         </Link>
                       )}
-                      <button
-                        type="button"
-                        onClick={(event) => event.stopPropagation()}
-                        className="text-muted-foreground hover:text-foreground rounded-lg p-1.5"
-                        aria-label="Task options"
-                      >
-                        <MoreVertical className="size-4" />
-                      </button>
+                      {hideProperty ? null : (
+                        <button
+                          type="button"
+                          onClick={(event) => event.stopPropagation()}
+                          className="text-muted-foreground hover:text-foreground rounded-lg p-1.5"
+                          aria-label="Task options"
+                        >
+                          <MoreVertical className="size-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

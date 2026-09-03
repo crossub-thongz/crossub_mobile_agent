@@ -20,8 +20,7 @@ import {
   groupChargesByProperty,
   monthKeyFromIso,
   monthLabel,
-  PropertyIncludedSummary,
-  propertyGroupKindLabel,
+  PropertyChargeGroupCard,
 } from '@/components/billing/level2-monthly-billing';
 import {
   StripePaymentDialog,
@@ -61,7 +60,7 @@ import {
   type AgentBillingSummary,
 } from '@/lib/crossub-api/agent-billing-client';
 import { getStripePublishableKey } from '@/lib/stripe-client';
-import { cn, formatAgreementPeriod, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 
 type BillingTab = 'all' | 'invoice' | 'bills';
 
@@ -221,31 +220,7 @@ function PropertyGroupedChargeList({
   return (
     <div className="space-y-3">
       {groups.map((property) => (
-        <section
-          key={property.key}
-          className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm"
-        >
-          <header className="border-l-[3px] border-l-sky-500/70 bg-muted/35 px-4 py-3.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              {propertyGroupKindLabel(property)}
-            </p>
-            <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold leading-snug">{property.propertyLabel}</p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {property.charges.length} service
-                  {property.charges.length === 1 ? '' : 's'}
-                  {property.propertyId
-                    ? ` · ${formatAgreementPeriod(property.agreementStart, property.agreementEnd)}`
-                    : null}
-                </p>
-                {property.included ? <PropertyIncludedSummary usage={property.included} /> : null}
-              </div>
-              <p className="shrink-0 text-sm font-semibold tabular-nums">
-                {formatCurrency(property.billedTotal)}
-              </p>
-            </div>
-          </header>
+        <PropertyChargeGroupCard key={property.key} property={property}>
           <ul className="divide-y">
             {property.charges.map((row) => (
               <PrepaidChargeRow
@@ -258,7 +233,7 @@ function PropertyGroupedChargeList({
               />
             ))}
           </ul>
-        </section>
+        </PropertyChargeGroupCard>
       ))}
     </div>
   );
@@ -269,16 +244,23 @@ function billedBillAmount(row: AgentBillingCharge): number {
     row.status === 'void' ||
     row.status === 'refunded' ||
     row.status === 'paid' ||
-    row.status === 'included' ||
-    row.includedInAllowance
+    isIncludedUsageCharge(row)
   ) {
     return 0;
   }
   return row.amount;
 }
 
+function isIncludedUsageCharge(row: AgentBillingCharge): boolean {
+  return row.includedInAllowance === true || row.status === 'included';
+}
+
 function isCountableBillingRow(status: string): boolean {
   return status !== 'void' && status !== 'refunded';
+}
+
+function isChargedBill(row: AgentBillingCharge): boolean {
+  return !isIncludedUsageCharge(row) && isCountableBillingRow(row.status);
 }
 
 function paidRatioLabel(paid: number, total: number): string {
@@ -442,6 +424,7 @@ export default function BillPage() {
         .filter((row) => {
           if (isMonthlyInvoiceServiceType(row.serviceType)) return false;
           if (row.monthlyInvoiceId) return false;
+          if (isIncludedUsageCharge(row)) return false;
           return (
             isPrepaidInspectionServiceType(row.serviceType) || row.collectionMode === 'prepaid'
           );
@@ -469,8 +452,9 @@ export default function BillPage() {
 
   const invoicePaidCount = invoices.filter((row) => row.status === 'paid').length;
   const invoiceTotalCount = invoices.filter((row) => row.status !== 'void').length;
-  const billsPaidCount = prepaidExtras.filter((row) => row.status === 'paid').length;
-  const billsTotalCount = prepaidExtras.filter((row) => isCountableBillingRow(row.status)).length;
+  const chargedBills = prepaidExtras.filter(isChargedBill);
+  const billsPaidCount = chargedBills.filter((row) => row.status === 'paid').length;
+  const billsTotalCount = chargedBills.length;
   const allPaidCount = invoicePaidCount + billsPaidCount;
   const allTotalCount = invoiceTotalCount + billsTotalCount;
   const invoiceCount = level2MonthGroups.length;
@@ -699,9 +683,9 @@ export default function BillPage() {
 
   if (summary?.platformBillingDisabled) {
     return (
-      <AgentShell title="Bills">
+      <AgentShell title="Billing">
         <PageIntro
-          title="Bills"
+          title="Billing"
           description="Platform billing is paused for your service plan. There is nothing to pay."
         />
       </AgentShell>
@@ -709,10 +693,10 @@ export default function BillPage() {
   }
 
   return (
-    <AgentShell title={usesMonthlyInvoice ? 'Invoice' : 'Bills'}>
+    <AgentShell title="Billing">
       <div className="space-y-5">
         <PageIntro
-          title={usesMonthlyInvoice ? 'Invoice' : 'Bills'}
+          title="Payment Method"
           description={
             usesMonthlyInvoice
               ? summary?.portalServiceLevel === 'LEVEL_3_LEGACY'

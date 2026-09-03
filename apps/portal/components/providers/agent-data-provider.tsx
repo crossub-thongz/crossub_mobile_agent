@@ -642,6 +642,14 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     () => new Set(properties.map((p) => p.id)),
     [properties],
   );
+  const portfolioProperties = useMemo(
+    () => [...properties, ...archivedProperties],
+    [archivedProperties, properties],
+  );
+  const portfolioPropertyIds = useMemo(
+    () => new Set(portfolioProperties.map((p) => p.id)),
+    [portfolioProperties],
+  );
 
   const agencies = useMemo<Agency[]>(() => {
     const base = apiAgencies ?? [];
@@ -696,9 +704,9 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     if (!portfolio) return [];
     return enrichPropertyAddresses(
       mapAgentMaintenance(portfolio.maintenance ?? []),
-      properties,
+      portfolioProperties,
     );
-  }, [portfolio, properties]);
+  }, [portfolio, portfolioProperties]);
 
   const maintenanceFromApi = useMemo<AgentApiMaintenanceRef[]>(
     () =>
@@ -728,22 +736,22 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
 
   const inspections = useMemo(() => {
     const added = enrichPropertyAddresses(
-      filterByPropertyIds(addedInspections, propertyIds),
-      properties,
+      filterByPropertyIds(addedInspections, portfolioPropertyIds),
+      portfolioProperties,
     );
     // Portfolio is the unpaginated agency book; live open-viewings / staff list
     // overlay fresher rows. Never replace the book with a single page of /inspections.
     const portfolioRows = portfolio
       ? enrichPropertyAddresses(
-          filterByPropertyIds(mapAgentInspections(portfolio.inspections ?? []), propertyIds),
-          properties,
+          filterByPropertyIds(mapAgentInspections(portfolio.inspections ?? []), portfolioPropertyIds),
+          portfolioProperties,
         )
       : [];
     const liveRows =
       apiConnected && apiInspections
         ? enrichPropertyAddresses(
-            filterByPropertyIds(apiInspections, propertyIds),
-            properties,
+            filterByPropertyIds(apiInspections, portfolioPropertyIds),
+            portfolioProperties,
           )
         : [];
 
@@ -842,7 +850,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : 0;
       return bt - at;
     });
-  }, [apiConnected, apiInspections, portfolio, propertyIds, addedInspections, properties]);
+  }, [apiConnected, apiInspections, portfolio, portfolioProperties, portfolioPropertyIds, addedInspections]);
 
   useEffect(() => {
     if (!portfolio) return;
@@ -856,24 +864,24 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const rentReviews = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentRentReviews(portfolio.rentReviews ?? []), properties)
+        ? enrichPropertyAddresses(mapAgentRentReviews(portfolio.rentReviews ?? []), portfolioProperties)
         : [],
-    [portfolio, properties],
+    [portfolio, portfolioProperties],
   );
 
   const vacating = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentVacating(portfolio.vacating ?? []), properties)
+        ? enrichPropertyAddresses(mapAgentVacating(portfolio.vacating ?? []), portfolioProperties)
         : [],
-    [portfolio, properties],
+    [portfolio, portfolioProperties],
   );
 
   const tenantSelections = useMemo(() => {
     const base = portfolio
       ? enrichPropertyAddresses(
           mapAgentTenantSelections(portfolio.tenantSelections ?? []),
-          properties,
+          portfolioProperties,
         )
       : [];
     return base.map((selection) => {
@@ -883,7 +891,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         tenantSelectionDecisions[key],
       );
     });
-  }, [portfolio, properties, tenantSelectionDecisions]);
+  }, [portfolio, portfolioProperties, tenantSelectionDecisions]);
 
   const leasingRecords = useMemo(
     () => (portfolio ? mapAgentLeasing(portfolio.leasing ?? []) : []),
@@ -895,39 +903,38 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
       portfolio
         ? enrichPropertyAddresses(
             mapAgentLeasingCycles(portfolio.leasingCycles ?? []),
-            properties,
+            portfolioProperties,
           )
         : [],
-    [portfolio, properties],
+    [portfolio, portfolioProperties],
   );
 
   const archive = useMemo(() => {
     const mapped = mapAgentArchive(portfolio?.archive);
-    const addressSource = [...properties, ...archivedProperties];
     return {
       cancelledLeasingCycles: enrichPropertyAddresses(
         mapped.cancelledLeasingCycles,
-        addressSource,
+        portfolioProperties,
       ),
-      cancelledEndLeasing: enrichPropertyAddresses(mapped.cancelledEndLeasing, addressSource),
-      cancelledRentReviews: enrichPropertyAddresses(mapped.cancelledRentReviews, addressSource),
+      cancelledEndLeasing: enrichPropertyAddresses(mapped.cancelledEndLeasing, portfolioProperties),
+      cancelledRentReviews: enrichPropertyAddresses(mapped.cancelledRentReviews, portfolioProperties),
     };
-  }, [archivedProperties, portfolio, properties]);
+  }, [portfolio, portfolioProperties]);
 
   const accounting = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentAccounting(portfolio.accounting ?? []), properties)
+        ? enrichPropertyAddresses(mapAgentAccounting(portfolio.accounting ?? []), portfolioProperties)
         : [],
-    [portfolio, properties],
+    [portfolio, portfolioProperties],
   );
 
   const tribunalCases = useMemo(
     () =>
       portfolio
-        ? enrichPropertyAddresses(mapAgentTribunal(portfolio.tribunal ?? []), properties)
+        ? enrichPropertyAddresses(mapAgentTribunal(portfolio.tribunal ?? []), portfolioProperties)
         : [],
-    [portfolio, properties],
+    [portfolio, portfolioProperties],
   );
 
   const messages = useMemo<MessageThread[]>(() => {
@@ -1545,9 +1552,38 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
     [messages, createdThreadIds, apiConnected, refresh],
   )
 
+  const liveMaintenance = useMemo(
+    () => maintenanceAll.filter((row) => propertyIds.has(row.propertyId)),
+    [maintenanceAll, propertyIds],
+  );
+  const liveInspections = useMemo(
+    () => inspections.filter((row) => propertyIds.has(row.propertyId)),
+    [inspections, propertyIds],
+  );
+  const liveRentReviews = useMemo(
+    () => rentReviews.filter((row) => propertyIds.has(row.propertyId)),
+    [propertyIds, rentReviews],
+  );
+  const liveVacating = useMemo(
+    () => vacating.filter((row) => propertyIds.has(row.propertyId)),
+    [propertyIds, vacating],
+  );
+  const liveTenantSelections = useMemo(
+    () => tenantSelections.filter((row) => propertyIds.has(row.propertyId)),
+    [propertyIds, tenantSelections],
+  );
+  const liveAccounting = useMemo(
+    () => accounting.filter((row) => propertyIds.has(row.propertyId)),
+    [accounting, propertyIds],
+  );
+  const liveTribunalCases = useMemo(
+    () => tribunalCases.filter((row) => propertyIds.has(row.propertyId)),
+    [propertyIds, tribunalCases],
+  );
+
   const dashboardItems = useMemo(() => {
-    const maintDash = buildMaintenanceDashboard(maintenanceAll);
-    const tenantDash: DashboardItem[] = tenantSelections
+    const maintDash = buildMaintenanceDashboard(liveMaintenance);
+    const tenantDash: DashboardItem[] = liveTenantSelections
       .filter((t) => t.requiresApproval)
       .map((t) => ({
         id: t.id,
@@ -1564,43 +1600,51 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
         source: 'api' as const,
       }));
     return [...maintDash, ...tenantDash];
-  }, [maintenanceAll, tenantSelections]);
+  }, [liveMaintenance, liveTenantSelections]);
 
   const sectionStatus = useMemo(
     () =>
       buildSectionStatus({
-        maintenance: maintenanceAll,
-        inspections,
-        rentReviews,
-        vacating,
+        maintenance: liveMaintenance,
+        inspections: liveInspections,
+        rentReviews: liveRentReviews,
+        vacating: liveVacating,
         maintenanceOverdue: maintenanceKpis?.overdue,
       }),
-    [maintenanceAll, inspections, rentReviews, vacating, maintenanceKpis],
+    [liveInspections, liveMaintenance, liveRentReviews, liveVacating, maintenanceKpis],
   );
 
   const taskStatusList = useMemo(
     () =>
       buildTaskStatusList({
-        maintenance: maintenanceAll,
-        inspections,
-        rentReviews,
-        vacating,
+        maintenance: liveMaintenance,
+        inspections: liveInspections,
+        rentReviews: liveRentReviews,
+        vacating: liveVacating,
       }),
-    [maintenanceAll, inspections, rentReviews, vacating],
+    [liveInspections, liveMaintenance, liveRentReviews, liveVacating],
   );
 
   const dashboardKpis = useMemo(
     () =>
       buildDashboardKpis({
         properties,
-        maintenance: maintenanceAll,
-        inspections,
-        rentReviews,
-        tenantSelections,
-        accounting,
-        tribunalCases,
+        maintenance: liveMaintenance,
+        inspections: liveInspections,
+        rentReviews: liveRentReviews,
+        tenantSelections: liveTenantSelections,
+        accounting: liveAccounting,
+        tribunalCases: liveTribunalCases,
       }),
-    [properties, maintenanceAll, inspections, rentReviews, tenantSelections, accounting, tribunalCases],
+    [
+      liveAccounting,
+      liveInspections,
+      liveMaintenance,
+      liveRentReviews,
+      liveTenantSelections,
+      liveTribunalCases,
+      properties,
+    ],
   );
 
   const getPropertyActions = useCallback(
