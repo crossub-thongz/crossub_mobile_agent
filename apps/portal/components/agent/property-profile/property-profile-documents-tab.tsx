@@ -379,7 +379,7 @@ export function PropertyProfileDocumentsTab({
 
       {visibleDocuments.length === 0 ? (
         <div className="v2-dashboard__card rounded-2xl border px-4 py-8 text-center">
-          <p className="text-sm font-medium">No documents yet</p>
+          <p className="text-sm font-medium">No Documents Yet</p>
           <p className="text-muted-foreground mt-1 text-sm">
             Upload a document or complete property workflows to populate this list.
           </p>
@@ -405,12 +405,12 @@ export function PropertyProfileDocumentsTab({
               <col className="w-[18%]" />
               <col className="w-[20%]" />
             </colgroup>
-            <thead className="bg-muted/30 text-muted-foreground text-left text-[11px] uppercase tracking-wide">
+            <thead className="bg-muted/30 text-muted-foreground text-left text-[11px]">
               <tr>
                 <th className="px-4 py-3 font-semibold">Document</th>
                 <th className="px-4 py-3 font-semibold">Category</th>
                 <th className="px-4 py-3 font-semibold">Uploaded</th>
-                <th className="px-4 py-3 font-semibold">Uploaded by</th>
+                <th className="px-4 py-3 font-semibold">Uploaded By</th>
                 <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
@@ -465,7 +465,7 @@ export function PropertyProfileDocumentsTab({
             onClick={() => setShowAll(true)}
             className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
           >
-            View all documents
+            View All Documents
             <ChevronRight className="size-4" />
           </button>
         </div>
@@ -508,7 +508,7 @@ export function PropertyProfileDocumentsTab({
 
             <div className="space-y-2">
               <Label htmlFor="document-upload-title">
-                Document title <span className="text-destructive">*</span>
+                Document Title <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="document-upload-title"

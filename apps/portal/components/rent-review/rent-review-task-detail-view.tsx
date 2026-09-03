@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronRight, DollarSign } from 'lucide-react';
+import { ChevronLeft, ChevronRight, DollarSign } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
@@ -563,15 +563,13 @@ export function RentReviewTaskDetailView({
                 ))
               )}
             </ul>
-            {propertyId ? (
-              <Link
-                href={`${ROUTES.TASKS}?property=${encodeURIComponent(propertyId)}`}
-                className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-              >
-                View all tasks
-                <ChevronRight className="size-3.5" />
-              </Link>
-            ) : null}
+            <Link
+              href={ROUTES.TASKS}
+              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+            >
+              <ChevronLeft className="size-3.5" />
+              Back
+            </Link>
           </section>
         </aside>
       </div>

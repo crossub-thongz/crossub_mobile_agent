@@ -37,7 +37,7 @@ export default function ArchivedLandlordPage() {
     <AgentShell
       title="Archived landlord"
       backHref={`${propertyDetail(propertyId)}?section=archive&tab=Archive`}
-      backLabel="Archive"
+      backLabel="Archived"
     >
       <div className="space-y-4 pb-8">
         <section className="rounded-xl border bg-card p-3">

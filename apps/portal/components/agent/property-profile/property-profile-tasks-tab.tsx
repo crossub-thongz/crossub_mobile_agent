@@ -83,13 +83,13 @@ function TaskPhaseBadge({ task }: { task: PropertyProfileTask }) {
   return (
     <span
       className={cn(
-        'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        'inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold',
         completed
           ? 'bg-muted text-muted-foreground'
           : 'bg-primary/12 text-primary',
       )}
     >
-      {completed ? 'Completed' : 'In progress'}
+      {completed ? 'Completed' : 'In Progress'}
     </span>
   );
 }
@@ -140,10 +140,10 @@ function TaskCard({
               )}
             >
               {needsReview
-                ? 'Approval required'
+                ? 'Approval Required'
                 : completed
-                  ? 'No further action required'
-                  : 'No action required'}
+                  ? 'No Further Action Required'
+                  : 'No Action Required'}
             </p>
           </div>
         </div>
@@ -387,20 +387,20 @@ export function PropertyProfileTasksTab({
             }}
             className="bg-background rounded-xl border px-3 py-2 text-xs font-medium"
           >
-            <option value="all">All status</option>
+            <option value="all">All Status</option>
             <option value="in_progress">Active</option>
             <option value="completed">Completed</option>
             <option value="deleted">Deleted</option>
             <option value="archived">Archived</option>
-            <option value="needs_action">Needs action</option>
-            <option value="no_action">No action required</option>
+            <option value="needs_action">Needs Action</option>
+            <option value="no_action">No Action Required</option>
           </select>
         </label>
       </div>
 
       {visibleTasks.length === 0 ? (
         <div className="v2-dashboard__card rounded-2xl border px-4 py-10 text-center">
-          <p className="text-sm font-medium">No tasks match these filters</p>
+          <p className="text-sm font-medium">No Tasks Match These Filters</p>
           <p className="text-muted-foreground mt-1 text-sm">
             {statusFilter === 'in_progress'
               ? 'Active maintenance, inspections, leasing, and tribunal cases for this property appear here. Switch the status filter to All status or Completed to see finished jobs.'
@@ -424,7 +424,7 @@ export function PropertyProfileTasksTab({
             onClick={() => setShowAll(true)}
             className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
           >
-            View all tasks
+            View All Tasks
             <ChevronRight className="size-4" />
           </button>
         </div>

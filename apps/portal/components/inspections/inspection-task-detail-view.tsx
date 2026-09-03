@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronRight, ClipboardList, DoorOpen, Home, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardList, DoorOpen, Home, Sparkles } from 'lucide-react';
 
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
 import { InspectionTaskDocuments } from '@/components/inspections/inspection-task-documents';
@@ -390,15 +390,13 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                 ))
               )}
             </ul>
-            {propertyId ? (
-              <Link
-                href={`${ROUTES.TASKS}?property=${encodeURIComponent(propertyId)}`}
-                className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-              >
-                View all tasks
-                <ChevronRight className="size-3.5" />
-              </Link>
-            ) : null}
+            <Link
+              href={ROUTES.TASKS}
+              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+            >
+              <ChevronLeft className="size-3.5" />
+              Back
+            </Link>
           </section>
         </aside>
       </div>

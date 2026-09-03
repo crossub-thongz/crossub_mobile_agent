@@ -47,7 +47,7 @@ export const PROPERTY_PROFILE_SECTIONS: {
   { id: 'tasks', label: 'Tasks' },
   { id: 'financials', label: 'Financials' },
   { id: 'documents', label: 'Documents' },
-  { id: 'archive', label: 'Archive' },
+  { id: 'archive', label: 'Archived' },
   { id: 'activities', label: 'Activities' },
 ];
 

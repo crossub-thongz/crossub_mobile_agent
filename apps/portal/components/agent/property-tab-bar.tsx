@@ -54,7 +54,7 @@ const TAB_DISPLAY_LABELS: Record<string, string> = {
   Inspection: 'Inspection',
   Accounting: 'Accounting',
   Tribunal: 'Tribunal',
-  Archive: 'Archive',
+  Archive: 'Archived',
 };
 
 /** Compact labels for narrow mobile columns. */
@@ -70,7 +70,7 @@ const TAB_SHORT_LABELS: Record<string, string> = {
   Inspection: 'Inspect',
   Accounting: 'Accounts',
   Tribunal: 'Tribunal',
-  Archive: 'Archive',
+  Archive: 'Archived',
 };
 
 export type PropertyViewTab<T extends string> = T | 'Message';

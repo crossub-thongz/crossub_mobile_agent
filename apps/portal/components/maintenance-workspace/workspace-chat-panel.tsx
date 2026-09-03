@@ -9,6 +9,11 @@ import { AgentInputFeedbackAnchor } from '@/components/ui/agent-input-feedback';
 import { bindSanitizedTextValue } from '@/lib/strip-emojis';
 import type { ApiMaintenanceAuditLogEntry } from '@/lib/crossub-api/types';
 import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types';
+import {
+  isRawCaseId,
+  replaceRawCaseIdWithLabel,
+  workflowCaseReferenceLabel,
+} from '@/lib/workflow-case-reference';
 import { cn, formatDateTime } from '@/lib/utils';
 
 type ChatMessage = {
@@ -123,18 +128,51 @@ function mergeMessages(existing: ChatMessage[], seeds: ChatMessage[]): ChatMessa
   );
 }
 
+function displayCaseRef(
+  workspaceCase: MaintenanceWorkspaceCase,
+  reference?: string,
+): string {
+  const preferred = reference?.trim();
+  if (preferred && !isRawCaseId(preferred)) return preferred;
+  const ref = workspaceCase.caseRef?.trim();
+  if (ref && !isRawCaseId(ref)) return ref;
+  return workflowCaseReferenceLabel(workspaceCase.id, 'maintenance');
+}
+
+function withTaskNumber(text: string, caseId: string, caseRef: string): string {
+  return replaceRawCaseIdWithLabel(text, caseId, caseRef);
+}
+
+function scrollShellToTop(start: HTMLElement | null) {
+  let node: HTMLElement | null = start;
+  while (node) {
+    if (node.tagName === 'MAIN') {
+      node.scrollTop = 0;
+      break;
+    }
+    node = node.parentElement;
+  }
+  document.scrollingElement && (document.scrollingElement.scrollTop = 0);
+}
+
 export function WorkspaceChatPanel({
   workspaceCase,
   agentName,
+  reference,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   agentName: string;
+  /** Preferred task number (order no. / tracking no.) shown in the header. */
+  reference?: string;
 }) {
   const [chatTab, setChatTab] = useState<'app' | 'email'>('app');
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const shouldScrollListToBottom = useRef(false);
+  const caseRef = displayCaseRef(workspaceCase, reference);
 
   useEffect(() => {
     const stored = loadStoredMessages(workspaceCase.id);
@@ -145,9 +183,14 @@ export function WorkspaceChatPanel({
         ...seedFromAudit(workspaceCase.auditEntries),
       ],
     );
-    setMessages(mergeMessages(stored, seeds));
+    setMessages(
+      mergeMessages(stored, seeds).map((msg) => ({
+        ...msg,
+        text: withTaskNumber(msg.text, workspaceCase.id, caseRef),
+      })),
+    );
     setHydrated(true);
-  }, [workspaceCase]);
+  }, [caseRef, workspaceCase]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -155,8 +198,24 @@ export function WorkspaceChatPanel({
   }, [hydrated, messages, workspaceCase.id]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages, chatTab]);
+    if (!hydrated) return;
+    scrollShellToTop(rootRef.current);
+    const el = listRef.current;
+    if (el && !shouldScrollListToBottom.current) el.scrollTop = 0;
+  }, [hydrated]);
+
+  useEffect(() => {
+    scrollShellToTop(rootRef.current);
+    const el = listRef.current;
+    if (el) el.scrollTop = 0;
+  }, [chatTab, workspaceCase.id]);
+
+  useEffect(() => {
+    if (!shouldScrollListToBottom.current) return;
+    shouldScrollListToBottom.current = false;
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   const appMessages = useMemo(
     () => messages.filter((m) => m.channel === 'in_app'),
@@ -181,16 +240,20 @@ export function WorkspaceChatPanel({
       direction: 'outbound',
     };
 
+    shouldScrollListToBottom.current = true;
     setMessages((prev) => [...prev, msg]);
     setDraft('');
     toast.success(chatTab === 'app' ? 'In-app message sent' : 'Email message sent');
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col px-4 py-4 sm:px-5 sm:py-5">
+    <div
+      ref={rootRef}
+      className="flex h-full min-h-0 flex-col px-4 py-4 sm:px-5 sm:py-5"
+    >
       <div className="mb-4 min-w-0">
         <h3 className="truncate text-sm font-semibold text-foreground">
-          {workspaceCase.id} · {workspaceCase.issueType}
+          {caseRef} · {workspaceCase.issueType}
         </h3>
         <p className="text-muted-foreground mt-1 text-xs">
           Replying to: {workspaceCase.tenant?.name ?? 'Tenant'} · {workspaceCase.address}
@@ -233,7 +296,7 @@ export function WorkspaceChatPanel({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
+        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
           {visibleMessages.length === 0 ? (
             <div className="bg-muted/40 text-muted-foreground rounded-lg p-4 text-center text-xs">
               {chatTab === 'app'
@@ -263,12 +326,13 @@ export function WorkspaceChatPanel({
                           {formatDateTime(msg.atIso)}
                         </span>
                       </div>
-                      <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                      <p className="whitespace-pre-wrap leading-relaxed">
+                        {withTaskNumber(msg.text, workspaceCase.id, caseRef)}
+                      </p>
                     </div>
                   </div>
                 );
               })}
-              <div ref={bottomRef} />
             </div>
           )}
         </div>

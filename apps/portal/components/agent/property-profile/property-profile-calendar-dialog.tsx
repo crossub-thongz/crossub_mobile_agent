@@ -109,7 +109,7 @@ export function PropertyProfileCalendarDialog({
           />
 
           <div className="border-border/60 mx-3 mt-2 border-t pt-3">
-            <p className="text-muted-foreground mb-2 text-[10px] font-semibold uppercase tracking-wide">
+            <p className="text-muted-foreground mb-2 text-[10px] font-semibold">
               {selectedDay
                 ? selectedDay.toLocaleDateString('en-AU', {
                     weekday: 'short',
@@ -117,7 +117,7 @@ export function PropertyProfileCalendarDialog({
                     month: 'short',
                     year: 'numeric',
                   })
-                : 'Select a day'}
+                : 'Select a Day'}
             </p>
             {selectedEvents.length === 0 ? (
               <p className="text-muted-foreground text-sm">

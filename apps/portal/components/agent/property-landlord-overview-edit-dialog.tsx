@@ -191,7 +191,7 @@ export function PropertyLandlordOverviewEditDialog({
               <p className="text-muted-foreground text-[11px]">
                 Enter the new landlord below. The current landlord will be saved on this
                 property Archive tab (Landlord archive) when you save. Editing the fields
-                without this button updates the Owner / Landlord and Management tabs instead.
+                without this button updates the Owner Details and Agency Details cards instead.
               </p>
             ) : null}
             <div className="grid gap-2">

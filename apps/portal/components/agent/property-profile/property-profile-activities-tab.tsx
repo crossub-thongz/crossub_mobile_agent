@@ -286,7 +286,7 @@ export function PropertyProfileActivitiesTab({
 
       {groupedActivities.length === 0 ? (
         <div className="v2-dashboard__card rounded-2xl border px-4 py-8 text-center">
-          <p className="text-sm font-medium">No activities yet</p>
+          <p className="text-sm font-medium">No Activities Yet</p>
           <p className="text-muted-foreground mt-1 text-sm">
             Workflow updates, payments, and tenant actions for this property will appear here.
           </p>
@@ -295,7 +295,7 @@ export function PropertyProfileActivitiesTab({
         <div className="space-y-5">
           {groupedActivities.map((group) => (
             <section key={group.dayKey} className="space-y-1">
-              <h4 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+              <h4 className="text-muted-foreground text-xs font-semibold">
                 {group.label}
               </h4>
               <div className="property-profile-activities__day-card relative rounded-2xl border bg-card px-4">

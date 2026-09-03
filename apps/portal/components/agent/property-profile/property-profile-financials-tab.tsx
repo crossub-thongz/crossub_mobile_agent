@@ -39,7 +39,7 @@ function SnapshotCard({
 }) {
   return (
     <div className="property-profile-v2__metric rounded-2xl border bg-background/40 px-4 py-3">
-      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground text-[10px] font-medium">
         {label}
       </p>
       <p className="mt-2 text-lg font-semibold leading-tight tabular-nums">{value}</p>
@@ -174,7 +174,7 @@ export function PropertyProfileFinancialsTab({
         <h3 className="text-sm font-semibold">Financial snapshot</h3>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <SnapshotCard
-            label="Rent paid up to"
+            label="Rent Paid Up To"
             value={snapshot.rentPaidUpToLabel}
             subtext={snapshot.rentStatusLabel}
             subtextClassName={
@@ -197,7 +197,7 @@ export function PropertyProfileFinancialsTab({
             />
           </button>
           <SnapshotCard
-            label="Next disbursement"
+            label="Next Disbursement"
             value={snapshot.nextDisbursementDateLabel}
             subtext={snapshot.nextDisbursementEstimateLabel}
           />
@@ -207,7 +207,7 @@ export function PropertyProfileFinancialsTab({
             className={cn('text-left', !onOpenFees && 'pointer-events-none')}
           >
             <SnapshotCard
-              label="Management fee"
+              label="Management Fee"
               value={snapshot.managementFeeLabel}
               subtext={snapshot.managementFeeSubLabel}
             />
@@ -219,7 +219,7 @@ export function PropertyProfileFinancialsTab({
             onClick={() => setRentChasingOpen(true)}
             className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
           >
-            Rent chasing
+            Rent Chasing
             <ChevronRight className="size-4" />
           </button>
           <button
@@ -227,7 +227,7 @@ export function PropertyProfileFinancialsTab({
             onClick={() => setArrearsDialogOpen(true)}
             className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
           >
-            View arrears
+            View Arrears
             <ChevronRight className="size-4" />
           </button>
         </div>
@@ -235,12 +235,12 @@ export function PropertyProfileFinancialsTab({
 
       <section className="space-y-3">
         <div className="inline-flex rounded-full border bg-muted/20 px-3 py-1.5">
-          <h3 className="text-sm font-semibold">Rent ledger</h3>
+          <h3 className="text-sm font-semibold">Rent Ledger</h3>
         </div>
 
         {visibleLedgerRows.length === 0 ? (
           <div className="v2-dashboard__card rounded-2xl border px-4 py-8 text-center">
-            <p className="text-sm font-medium">No rent ledger entries yet</p>
+            <p className="text-sm font-medium">No Rent Ledger Entries Yet</p>
             <p className="text-muted-foreground mt-1 text-sm">
               Record a rent reconciliation from Actions to start the ledger for this property.
             </p>
@@ -249,20 +249,20 @@ export function PropertyProfileFinancialsTab({
               onClick={() => setRentReconOpen(true)}
               className="text-primary mt-4 inline-flex items-center gap-1 text-sm font-semibold"
             >
-              Record reconciliation
+              Record Reconciliation
               <ChevronRight className="size-4" />
             </button>
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border">
             <table className="w-full text-sm">
-              <thead className="bg-muted/30 text-muted-foreground text-left text-[11px] uppercase tracking-wide">
+              <thead className="bg-muted/30 text-muted-foreground text-left text-[11px]">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Due date</th>
+                  <th className="px-4 py-3 font-semibold">Due Date</th>
                   <th className="px-4 py-3 font-semibold">Description</th>
                   <th className="px-4 py-3 font-semibold">Amount</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Paid date</th>
+                  <th className="px-4 py-3 font-semibold">Paid Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -293,7 +293,7 @@ export function PropertyProfileFinancialsTab({
               onClick={() => setShowFullLedger(true)}
               className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
             >
-              View full ledger
+              View Full Ledger
               <ChevronRight className="size-4" />
             </button>
           </div>

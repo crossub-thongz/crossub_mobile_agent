@@ -74,6 +74,7 @@ function ProfileCard({
   children,
   footer,
   className,
+  bodyClassName,
 }: {
   title: string;
   subtitle?: string;
@@ -83,6 +84,7 @@ function ProfileCard({
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  bodyClassName?: string;
 }) {
   return (
     <section
@@ -108,7 +110,7 @@ function ProfileCard({
         </div>
         {headerExtra}
       </header>
-      <div className="flex-1 p-4">{children}</div>
+      <div className={cn('flex-1 p-4', bodyClassName)}>{children}</div>
       {footer ? <footer className="border-t px-4 py-3">{footer}</footer> : null}
     </section>
   );
@@ -116,9 +118,9 @@ function ProfileCard({
 
 function DetailRow({ label, value, valueClassName }: { label: string; value: ReactNode; valueClassName?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 py-1.5 text-sm sm:flex-row sm:items-baseline sm:gap-3">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className={cn('min-w-0 font-medium', valueClassName)}>{value}</span>
+    <div className="grid grid-cols-1 items-baseline gap-0.5 border-b border-border/40 py-1.5 text-sm last:border-b-0 sm:col-span-2 sm:grid-cols-subgrid sm:gap-x-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn('min-w-0 text-left font-medium', valueClassName)}>{value}</span>
     </div>
   );
 }
@@ -194,31 +196,22 @@ function OverviewGrid({
     archives,
     fallback: tenantName ? { name: tenantName } : undefined,
   });
+  const currentTenants = tenancyPages.filter((page) => page.kind === 'current');
+  const previousPages = tenancyPages.filter((page) => page.kind === 'previous');
+  const tenancyOverviewCount = 1 + previousPages.length;
   const [tenancyPageIndex, setTenancyPageIndex] = useState(0);
   useEffect(() => {
     setTenancyPageIndex(0);
   }, [propertyId]);
   useEffect(() => {
-    if (tenancyPageIndex >= tenancyPages.length) setTenancyPageIndex(0);
-  }, [tenancyPageIndex, tenancyPages.length]);
-  const activeTenancyPage = tenancyPages[tenancyPageIndex];
-  const viewingPrevious = activeTenancyPage?.kind === 'previous';
-  const archive = activeTenancyPage?.archive;
-  const currentTenantCount = tenancyPages.filter((page) => page.kind === 'current').length;
+    if (tenancyPageIndex >= tenancyOverviewCount) setTenancyPageIndex(0);
+  }, [tenancyPageIndex, tenancyOverviewCount]);
+  const viewingPrevious = tenancyPageIndex > 0;
+  const activePrevious = viewingPrevious ? previousPages[tenancyPageIndex - 1] : undefined;
+  const archive = activePrevious?.archive;
   const tenancyRef = tenancyReferenceLabel(currentLease?.id?.trim() || propertyId);
-  const tenancyHeading = isVacant
-    ? 'Vacant'
-    : viewingPrevious
-      ? `${activeTenancyPage?.name ?? 'Previous tenant'}${
-          archive?.vacateDate ? ` · vacated ${formatDate(archive.vacateDate)}` : ''
-        }`
-      : `${activeTenancyPage?.name ?? tenantName ?? '—'} (${tenancyRef})`;
-  const tenantRowLabel = viewingPrevious
-    ? 'Previous tenant'
-    : currentTenantCount > 1
-      ? `Tenant ${tenancyPageIndex + 1} of ${currentTenantCount}`
-      : 'Tenant';
-  const tenantRowValue = isVacant ? 'Vacant' : activeTenancyPage?.name || tenantName || '—';
+  const currentTenancyTitle = isVacant ? 'Current Tenancy' : `Current Tenancy (${tenancyRef})`;
+  const previousSubtitle = archive?.vacateDate ? `Vacated ${formatDate(archive.vacateDate)}` : undefined;
   const previousLeaseStart = archive?.leaseStartDate;
   const previousLeaseEnd = archive?.leaseEndDate;
   const crosJobs = buildCrosHandlingJobs({
@@ -240,30 +233,45 @@ function OverviewGrid({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <ProfileCard
-        title={viewingPrevious ? 'Previous tenancy' : 'Current tenancy'}
-        subtitle={tenancyHeading}
+        title={viewingPrevious ? 'Previous Tenancy' : currentTenancyTitle}
+        subtitle={viewingPrevious ? previousSubtitle : undefined}
         icon={User}
         headerExtra={
           <TenancyPagerControls
             index={tenancyPageIndex}
-            count={tenancyPages.length}
+            count={tenancyOverviewCount}
             onPrev={() =>
               setTenancyPageIndex((index) =>
-                wrapTenancyPageIndex(index, tenancyPages.length, -1),
+                wrapTenancyPageIndex(index, tenancyOverviewCount, -1),
               )
             }
             onNext={() =>
               setTenancyPageIndex((index) =>
-                wrapTenancyPageIndex(index, tenancyPages.length, 1),
+                wrapTenancyPageIndex(index, tenancyOverviewCount, 1),
               )
             }
           />
         }
       >
-        <div className="divide-y">
-          <DetailRow label={tenantRowLabel} value={tenantRowValue} />
+        <div className="grid grid-cols-1 sm:grid-cols-[max-content_minmax(0,1fr)]">
+          {viewingPrevious ? (
+            <DetailRow
+              label="Previous Tenant"
+              value={activePrevious?.name || '—'}
+            />
+          ) : isVacant || currentTenants.length === 0 ? (
+            <DetailRow label="Tenant" value="Vacant" />
+          ) : (
+            currentTenants.map((tenant, index) => (
+              <DetailRow
+                key={tenant.id}
+                label={currentTenants.length > 1 ? `Tenant ${index + 1}` : 'Tenant'}
+                value={tenant.name}
+              />
+            ))
+          )}
           <DetailRow
-            label="Lease period"
+            label="Lease Period"
             value={
               viewingPrevious
                 ? previousLeaseStart && previousLeaseEnd
@@ -287,7 +295,7 @@ function OverviewGrid({
             }
           />
           <DetailRow
-            label="Rent review"
+            label="Rent Review"
             value={
               viewingPrevious
                 ? '—'
@@ -318,9 +326,10 @@ function OverviewGrid({
       </ProfileCard>
 
       <ProfileCard
-        title="CROS is handling"
+        title="CROS Is Handling"
         icon={Briefcase}
         count={crosJobs.length}
+        bodyClassName="p-0"
         footer={
           crosJobs.length > 0 ? (
             <button
@@ -328,20 +337,22 @@ function OverviewGrid({
               onClick={onViewTasks}
               className="text-primary flex w-full items-center justify-center gap-1 text-sm font-semibold"
             >
-              View all tasks
+              View All Tasks
               <ChevronRight className="size-4" />
             </button>
           ) : null
         }
       >
         {crosJobs.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No active CROSSUB jobs for this property.</p>
+          <p className="text-muted-foreground px-4 py-4 text-sm">
+            No active CROSSUB jobs for this property.
+          </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-border/50">
             {crosJobs.map((job) => (
-              <li key={job.id} className="property-profile-v2__cros-item rounded-xl border p-3">
-                <div className="flex items-start gap-2.5">
-                  <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-lg">
+              <li key={job.id} className="px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <span className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
                     {job.kind === 'maintenance' ? (
                       <Wrench className="size-4" />
                     ) : job.kind === 'inspection' ? (
@@ -362,7 +373,7 @@ function OverviewGrid({
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {propertyJobDisplaySubtext(job)}
                     </p>
-                    <p className="text-muted-foreground mt-1 text-[10px]">No action required</p>
+                    <p className="text-muted-foreground mt-1 text-[10px]">No Action Required</p>
                   </div>
                 </div>
               </li>
@@ -372,7 +383,7 @@ function OverviewGrid({
       </ProfileCard>
 
       <ProfileCard
-        title="Needs your attention"
+        title="Needs Your Attention"
         icon={AlertCircle}
         count={attention.length}
         className={attention.length > 0 ? 'property-profile-v2__attention' : undefined}
@@ -394,7 +405,7 @@ function OverviewGrid({
                       <p className="text-sm font-semibold">{item.label}</p>
                       <p className="text-muted-foreground mt-0.5 text-xs">{item.propertyAddress}</p>
                       <span className="mt-2 inline-block rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-semibold text-white">
-                        Approval required
+                        Approval Required
                       </span>
                     </div>
                   </div>
@@ -586,7 +597,7 @@ export function PropertyProfileV2({
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {[
             { label: 'Rent', value: metrics.rentLabel },
-            { label: 'Lease expiry', value: metrics.leaseExpiryLabel },
+            { label: 'Lease Expiry', value: metrics.leaseExpiryLabel },
             { label: 'Bond', value: metrics.bondLabel },
             ...(hasFullManagementAccess
               ? [
@@ -602,7 +613,7 @@ export function PropertyProfileV2({
             const clickable = 'onClick' in metric && typeof metric.onClick === 'function';
             const inner = (
               <>
-                <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                <p className="text-muted-foreground text-[10px] font-medium">
                   {metric.label}
                 </p>
                 <p

@@ -22,8 +22,8 @@ export function PropertyProfileIncludedUsage({
         className,
       )}
     >
-      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
-        Included usage
+      <p className="text-muted-foreground text-[10px] font-medium">
+        Included Usage
         <span className="font-normal"> · {usage.calendarYear}</span>
       </p>
       <ul className="mt-1 space-y-0.5">

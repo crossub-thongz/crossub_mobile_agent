@@ -20,10 +20,9 @@ export function CaseContactActions({
 
   if (!property) return null;
 
-  const tenantVacant = property.tenantName.toLowerCase() === 'vacant';
-  const contacts = tenantVacant
-    ? property.homeOwnerName
-    : `${property.homeOwnerName} · ${property.tenantName}`;
+  const tenantName = property.tenantName.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  const tenantVacant = tenantName.toLowerCase() === 'vacant';
+  if (tenantVacant) return null;
 
   return (
     <div className="space-y-2 rounded-xl border bg-card p-3">
@@ -40,9 +39,9 @@ export function CaseContactActions({
         }}
       >
         <MessageSquare className="size-4" />
-        <span className="text-xs font-medium">Message owner & tenant</span>
+        <span className="text-xs font-medium">Message tenant</span>
         <span className="text-muted-foreground line-clamp-2 w-full text-center text-[10px] font-normal leading-tight">
-          {contacts}
+          {tenantName}
         </span>
       </Button>
     </div>

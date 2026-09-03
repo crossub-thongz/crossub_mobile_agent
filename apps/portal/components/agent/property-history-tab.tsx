@@ -24,8 +24,8 @@ function SubTabBar({
   onChange: (tab: ArchiveSubTab) => void;
 }) {
   const tabs: { id: ArchiveSubTab; label: string }[] = [
-    { id: 'tenant', label: 'Tenant archive' },
-    { id: 'landlord', label: 'Landlord archive' },
+    { id: 'tenant', label: 'Tenancy' },
+    { id: 'landlord', label: 'Owner' },
   ];
 
   return (
@@ -61,7 +61,7 @@ function ArchivedLandlordList({
   if (archived.length === 0) {
     return (
       <p className="text-muted-foreground text-sm">
-        No previous landlords archived yet. Use New landlord on Owner / Landlord to replace
+        No previous landlords archived yet. Use New landlord on Owner Details to replace
         the current owner; editing their details stays on the property tabs.
       </p>
     );
@@ -69,9 +69,9 @@ function ArchivedLandlordList({
 
   return (
     <div className="space-y-2">
-      <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
+      <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold">
         <Archive className="size-3.5" />
-        Previous landlords
+        Previous Landlords
       </p>
       {archived.map((landlord, index) => {
         const leaseStart = landlord.leaseStartDate ?? landlord.overview?.leaseStartDate;
@@ -95,7 +95,7 @@ function ArchivedLandlordList({
               </p>
               <p className="mt-1 text-sm font-semibold">{landlord.name}</p>
               {leaseLabel ? (
-                <p className="text-muted-foreground mt-1 text-xs">Lease period: {leaseLabel}</p>
+                <p className="text-muted-foreground mt-1 text-xs">Lease Period: {leaseLabel}</p>
               ) : null}
               {landlord.managementRatePercent != null ? (
                 <p className="text-muted-foreground mt-1 text-xs">
@@ -123,9 +123,9 @@ function ArchivedTenancySnapshots({
 
   return (
     <div className="space-y-2">
-      <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
+      <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold">
         <Archive className="size-3.5" />
-        Archived tenancy snapshots
+        Archived Tenancy Snapshots
       </p>
       {snapshots.map((snapshot, index) => (
         <div

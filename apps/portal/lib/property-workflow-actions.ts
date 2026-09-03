@@ -21,7 +21,7 @@ export type PropertyWorkflowTab =
 
 export const PROPERTY_WORKFLOW_ACTION_GROUPS: { title: string; tab: PropertyWorkflowTab }[] = [
   { title: 'Leasing', tab: 'leasing' },
-  { title: 'Rent review', tab: 'rent_review' },
+  { title: 'Rent Review', tab: 'rent_review' },
   { title: 'Maintenance', tab: 'maintenance' },
   { title: 'Inspection', tab: 'inspection' },
   { title: 'Financial', tab: 'accounting' },

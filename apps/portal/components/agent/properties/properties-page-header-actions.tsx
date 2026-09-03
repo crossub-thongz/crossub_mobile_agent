@@ -16,7 +16,7 @@ function scrollToPropertyFilters() {
 export function PropertiesPageHeaderActions({ className }: { className?: string }) {
   return (
     <div className={className}>
-      <Button
+      {/* <Button
         variant="outline"
         className="rounded-xl transition-colors hover:bg-muted/60"
         type="button"
@@ -24,7 +24,7 @@ export function PropertiesPageHeaderActions({ className }: { className?: string 
       >
         <Filter className="size-4" />
         Filters
-      </Button>
+      </Button> */}
       <Button className="rounded-xl transition-opacity hover:opacity-90" asChild>
         <Link href={propertyNew()}>
           <Plus className="size-4" />

@@ -28,7 +28,7 @@ function StatCell({
 }) {
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
-      <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
         <span>{label}</span>
         {labelAccessory}
       </p>
@@ -115,21 +115,21 @@ export function ArchivedLandlordOverview({
         />
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <StatCell
-            label="Rent paid to"
+            label="Rent Paid To"
             value={
               overview?.rentPaidUntilDate ? formatDate(overview.rentPaidUntilDate) : '—'
             }
           />
-          <StatCell label="Payment cycle" value={derivePaymentCycle(rentWeekly)} />
+          <StatCell label="Payment Cycle" value={derivePaymentCycle(rentWeekly)} />
           <StatCell label="Bond" value={formatBond(overview?.bondAmount)} />
           <StatCell
-            label="Next rent review"
+            label="Next Rent Review"
             value={
               overview?.nextRentReviewDate ? formatDate(overview.nextRentReviewDate) : '—'
             }
           />
           <StatCell
-            label="Lease start"
+            label="Lease Start"
             value={
               overview?.leaseStartDate ?? landlord.leaseStartDate
                 ? formatDate(overview?.leaseStartDate ?? landlord.leaseStartDate ?? '')
@@ -137,7 +137,7 @@ export function ArchivedLandlordOverview({
             }
           />
           <StatCell
-            label="Lease end"
+            label="Lease End"
             value={
               overview?.leaseEndDate ?? landlord.leaseEndDate
                 ? formatDate(overview?.leaseEndDate ?? landlord.leaseEndDate ?? '')
@@ -145,11 +145,11 @@ export function ArchivedLandlordOverview({
             }
           />
           <StatCell
-            label="Vacate date"
+            label="Vacate Date"
             value={overview?.vacateDate ? formatDate(overview.vacateDate) : '—'}
           />
           <StatCell
-            label="Next routine"
+            label="Next Routine"
             value={
               <NextRoutineStatValue
                 date={overview?.nextRoutineInspectionDate}
@@ -161,7 +161,7 @@ export function ArchivedLandlordOverview({
         </div>
       </OverviewSection>
 
-      <OverviewSection title="Management details">
+      <OverviewSection title="Management Details">
         <ContactTile
           title="Landlord"
           layout="row"
@@ -171,11 +171,11 @@ export function ArchivedLandlordOverview({
         />
         <div className="mt-2 grid grid-cols-2 gap-2">
           <StatCell
-            label="Management rate"
+            label="Management Rate"
             value={formatManagementRate(managementRatePercent, managementRateGst)}
           />
           <StatCell
-            label="Weekly rent"
+            label="Weekly Rent"
             value={rentWeekly > 0 ? `${formatCurrency(rentWeekly)}/wk` : '—'}
             labelAccessory={rentWeekly > 0 ? <RentEquivalentsHint weekly={rentWeekly} /> : undefined}
           />

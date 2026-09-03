@@ -62,7 +62,7 @@ function NavLink({
         href={href}
         title={label}
         className={cn(
-          'agent-sidebar-v2__nav-link relative flex items-center rounded-xl text-[13px] font-medium transition-colors',
+          'agent-sidebar-v2__nav-link relative flex items-center rounded-xl text-[13px] font-medium',
           compact
             ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
             : 'gap-3 px-3 py-2.5',
@@ -71,12 +71,12 @@ function NavLink({
             : 'text-muted-foreground hover:bg-white/40 hover:text-foreground',
         )}
       >
-        <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
+        <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
         <span
           className={cn(
             'min-w-0 flex-1 truncate',
             compact &&
-              'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
+              'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
           )}
         >
           {label}
@@ -102,7 +102,7 @@ function NavLink({
       href={href}
       title={label}
       className={cn(
-        'relative flex items-center rounded-lg text-sm font-medium transition-colors',
+        'relative flex items-center rounded-lg text-sm font-medium transition-[color,background-color,transform,box-shadow] duration-200 ease-out hover:translate-x-0.5',
         compact
           ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
           : 'gap-2.5 px-3 py-2',
@@ -111,12 +111,12 @@ function NavLink({
           : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
       )}
     >
-      <Icon className={cn('size-4 shrink-0', !active && 'opacity-70')} />
+      <Icon className={cn('size-4 shrink-0 transition-transform duration-200 ease-out', !active && 'opacity-70')} />
       <span
         className={cn(
           'min-w-0 flex-1 truncate',
           compact &&
-            'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
+            'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
         )}
       >
         {label}
@@ -167,7 +167,7 @@ function AgentSidebarAgency({
             className={cn(
               'min-w-0 flex-1',
               compact &&
-                'max-w-0 overflow-hidden opacity-0 transition-all duration-200 group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
+                'max-w-0 overflow-hidden opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
             )}
           >
             <span className="text-foreground block truncate text-sm font-semibold leading-tight">
@@ -294,7 +294,7 @@ export function AgentSidebar({
     return (
       <aside
         className={cn(
-          'agent-sidebar agent-sidebar-v2 group/sidebar z-30 hidden h-full shrink-0 flex-col overflow-hidden transition-[width,box-shadow] duration-300 ease-out lg:flex',
+          'agent-sidebar agent-sidebar-v2 group/sidebar z-30 hidden h-full shrink-0 flex-col overflow-hidden transition-[width,box-shadow] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
           compact
             ? 'w-[72px] hover:z-40 hover:w-[252px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)]'
             : 'w-[252px]',
@@ -348,7 +348,7 @@ export function AgentSidebar({
   return (
     <aside
       className={cn(
-        'agent-sidebar border-border group/sidebar sticky top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r transition-[width,box-shadow] duration-300 ease-out lg:flex',
+        'agent-sidebar border-border group/sidebar sticky top-0 z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r transition-[width,box-shadow] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:flex',
         compact
           ? 'w-[72px] hover:z-40 hover:w-[240px] hover:shadow-[8px_0_24px_-8px_rgba(0,0,0,0.12)] ui-v2:hover:shadow-none'
           : 'w-[260px]',
@@ -418,7 +418,7 @@ export function AgentSidebar({
           <span
             className={cn(
               compact
-                ? 'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/sidebar:max-w-[100px] group-hover/sidebar:opacity-100'
+                ? 'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[100px] group-hover/sidebar:opacity-100'
                 : '',
             )}
           >

@@ -14,6 +14,7 @@ import { PropertyTenancyManagementSections } from '@/components/agent/property-t
 import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
+import { PROPERTY_TYPE_LABEL, type PropertyType } from '@/constants/api-enums';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import {
   formatProfileLeaseStatus,
@@ -53,7 +54,7 @@ function StatCell({
   return (
     <div className="rounded-lg border border-border/40 bg-background/60 px-2.5 py-2">
       <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide">
+        <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-medium">
           <span>{label}</span>
           {labelAccessory}
         </p>
@@ -90,6 +91,14 @@ function StatCell({
 function formatKeyFobCount(count: number | null | undefined): string {
   if (count == null) return '—';
   return count === 1 ? '1 fob' : `${count} fobs`;
+}
+
+function formatPropertyTypeDisplay(value?: string | null): string {
+  if (!value?.trim()) return '—';
+  const key = value.trim().toUpperCase() as PropertyType;
+  if (key in PROPERTY_TYPE_LABEL) return PROPERTY_TYPE_LABEL[key];
+  const spaced = value.replace(/_/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
 }
 
 function contactFromScalars(
@@ -219,12 +228,12 @@ export function PropertyProfileDetails({
           label="Furnished"
           value={registry.furnished == null ? '—' : registry.furnished ? 'Yes' : 'No'}
         />
-        <StatCell label="Property type" value={registry.propertyType ?? '—'} />
-        <StatCell label="Key fob" value={formatKeyFobCount(sync.keyFobCount)} />
+        <StatCell label="Property Type" value={formatPropertyTypeDisplay(registry.propertyType)} />
+        <StatCell label="Key Fob" value={formatKeyFobCount(sync.keyFobCount)} />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <StatCell
-          label="Weekly rent"
+          label="Weekly Rent"
           value={weeklyRentLabel}
           hint={upcomingRentHint}
           labelAccessory={
@@ -233,12 +242,12 @@ export function PropertyProfileDetails({
             ) : undefined
           }
         />
-        <StatCell label="Lease status" value={profileLeaseStatus} />
+        <StatCell label="Lease Status" value={profileLeaseStatus} />
       </div>
       {property.paymentReference ? (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-2">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
-            Rent payment reference
+          <p className="text-[10px] font-medium text-amber-800 dark:text-amber-200">
+            Rent Payment Reference
           </p>
           <p className="mt-0.5 text-sm font-semibold tabular-nums tracking-wide text-amber-950 dark:text-amber-50">
             {property.paymentReference}
@@ -250,7 +259,7 @@ export function PropertyProfileDetails({
       ) : null}
       {hasContact(buildingManager) ? (
         <ContactTile
-          title="Building manager"
+          title="Building Manager"
           layout="row"
           name={buildingManager?.name}
           email={buildingManager?.email}
@@ -259,7 +268,7 @@ export function PropertyProfileDetails({
         />
       ) : (
         <ContactTile
-          title="Building manager"
+          title="Building Manager"
           variant="add"
           onAdd={apiConnected ? () => setBuildingDialogOpen(true) : undefined}
         />
@@ -306,7 +315,7 @@ export function PropertyProfileDetails({
           className="flex w-full items-center gap-2 text-left lg:pointer-events-none"
           aria-expanded={open}
         >
-          <h3 className="text-sm font-semibold">Property details</h3>
+          <h3 className="text-sm font-semibold">Property Details</h3>
           {open ? (
             <ChevronUp className="text-muted-foreground size-4 shrink-0 lg:hidden" aria-hidden />
           ) : (
@@ -332,7 +341,7 @@ export function PropertyProfileDetails({
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-2">
-        <PropertyProfileInfoCard title="Property details" icon={Home}>
+        <PropertyProfileInfoCard title="Property Details" icon={Home}>
           {propertyFacts}
         </PropertyProfileInfoCard>
         {tenancySections}

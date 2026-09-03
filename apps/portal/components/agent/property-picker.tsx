@@ -59,12 +59,11 @@ export function PropertyPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{property.address}</p>
                 <p className="text-muted-foreground truncate text-xs">{property.suburb}</p>
-                <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
-                  {property.homeOwnerName}
-                  {property.tenantName.toLowerCase() !== 'vacant'
-                    ? ` · ${property.tenantName}`
-                    : ''}
-                </p>
+                {property.tenantName.toLowerCase() !== 'vacant' ? (
+                  <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
+                    {property.tenantName}
+                  </p>
+                ) : null}
               </div>
               <ChevronRight className="text-muted-foreground size-4 shrink-0" />
             </div>

@@ -19,7 +19,10 @@ import type { MaintenanceWorkspaceCase } from '@/lib/maintenance-workspace/types
 import { SOURCE_LABELS } from '@/lib/maintenance-workspace/status-labels';
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
-import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import {
+  isRawCaseId,
+  workflowCaseReferenceLabel,
+} from '@/lib/workflow-case-reference';
 
 export const MAINTENANCE_TASK_STAGE_LABELS = [
   'Reported',
@@ -46,11 +49,11 @@ export function maintenanceTaskReference(
   workspaceCase: MaintenanceWorkspaceCase,
   item?: MaintenanceRequest,
 ): string {
-  return (
-    workspaceCase.caseRef ||
-    item?.trackingNumber ||
-    workflowCaseReferenceLabel(workspaceCase.id, 'maintenance')
-  );
+  const tracking = item?.trackingNumber?.trim();
+  if (tracking && !isRawCaseId(tracking)) return tracking;
+  const caseRef = workspaceCase.caseRef?.trim();
+  if (caseRef && !isRawCaseId(caseRef)) return caseRef;
+  return workflowCaseReferenceLabel(workspaceCase.id, 'maintenance');
 }
 
 export function resolveMaintenanceTaskStageIndex(
@@ -280,7 +283,7 @@ export function buildMaintenanceJobDetailRows(input: {
       value: SOURCE_LABELS[workspaceCase.source] ?? workspaceCase.source,
     },
     {
-      label: 'Case ref',
+      label: 'Reference',
       value: maintenanceTaskReference(workspaceCase, item),
     },
   ];

@@ -212,7 +212,7 @@ export default function MessagesPage() {
             description={
               readFilter === 'unread' && !search
                 ? 'You’re all caught up. Switch to All to browse by property.'
-                : 'Start a conversation with a landlord or tenant.'
+                : 'Start a conversation with a tenant.'
             }
             action={
               readFilter === 'unread' && !search ? (

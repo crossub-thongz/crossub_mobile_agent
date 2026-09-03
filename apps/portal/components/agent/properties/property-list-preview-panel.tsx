@@ -66,7 +66,7 @@ function PreviewMetric({
         frosted ? 'v2-frosted-surface' : 'bg-background/60',
       )}
     >
-      <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground text-[10px] font-medium">
         {label}
       </p>
       <p
@@ -84,9 +84,9 @@ function PreviewMetric({
 
 function DetailRow({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 py-1.5 text-sm sm:flex-row sm:items-baseline sm:gap-3">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className={cn('min-w-0 font-medium', valueClassName)}>{value}</span>
+    <div className="grid grid-cols-1 items-baseline gap-0.5 border-b border-border/40 py-1.5 text-sm last:border-b-0 sm:col-span-2 sm:grid-cols-subgrid sm:gap-x-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn('min-w-0 text-left font-medium', valueClassName)}>{value}</span>
     </div>
   );
 }
@@ -269,30 +269,21 @@ export function PropertyListPreviewPanel({
     archives: parseTenancyArchiveSnapshots(property.registryDraft),
     fallback: tenantName ? { name: tenantName } : undefined,
   });
+  const currentTenants = tenancyPages.filter((page) => page.kind === 'current');
+  const previousPages = tenancyPages.filter((page) => page.kind === 'previous');
+  const tenancyOverviewCount = 1 + previousPages.length;
   useEffect(() => {
     setTenancyPageIndex(0);
   }, [propertyId]);
   useEffect(() => {
-    if (tenancyPageIndex >= tenancyPages.length) setTenancyPageIndex(0);
-  }, [tenancyPageIndex, tenancyPages.length]);
-  const activeTenancyPage = tenancyPages[tenancyPageIndex];
-  const viewingPrevious = activeTenancyPage?.kind === 'previous';
-  const archive = activeTenancyPage?.archive;
-  const currentTenantCount = tenancyPages.filter((page) => page.kind === 'current').length;
+    if (tenancyPageIndex >= tenancyOverviewCount) setTenancyPageIndex(0);
+  }, [tenancyPageIndex, tenancyOverviewCount]);
+  const viewingPrevious = tenancyPageIndex > 0;
+  const activePrevious = viewingPrevious ? previousPages[tenancyPageIndex - 1] : undefined;
+  const archive = activePrevious?.archive;
   const tenancyRef = tenancyReferenceLabel(currentLease?.id?.trim() || propertyId);
-  const tenancyHeading = isVacant
-    ? 'Vacant'
-    : viewingPrevious
-      ? `${activeTenancyPage?.name ?? 'Previous tenant'}${
-          archive?.vacateDate ? ` · vacated ${formatDate(archive.vacateDate)}` : ''
-        }`
-      : `${activeTenancyPage?.name ?? tenantName ?? '—'} (${tenancyRef})`;
-  const tenantRowLabel = viewingPrevious
-    ? 'Previous tenant'
-    : currentTenantCount > 1
-      ? `Tenant ${tenancyPageIndex + 1} of ${currentTenantCount}`
-      : 'Tenant';
-  const tenantRowValue = isVacant ? 'Vacant' : activeTenancyPage?.name || tenantName || '—';
+  const currentTenancyTitle = isVacant ? 'Current Tenancy' : `Current Tenancy (${tenancyRef})`;
+  const previousSubtitle = archive?.vacateDate ? `Vacated ${formatDate(archive.vacateDate)}` : undefined;
   const profileHref = (section?: PropertyProfileSection) =>
     section && section !== 'overview'
       ? `${propertyDetail(propertyId)}?section=${section}`
@@ -372,7 +363,7 @@ export function PropertyListPreviewPanel({
         {metrics ? (
           <div className="mt-4 grid grid-cols-2 gap-2">
             <PreviewMetric label="Rent" value={metrics.rentLabel} frosted={shell} />
-            <PreviewMetric label="Lease expiry" value={metrics.leaseExpiryLabel} frosted={shell} />
+            <PreviewMetric label="Lease Expiry" value={metrics.leaseExpiryLabel} frosted={shell} />
             <PreviewMetric label="Bond" value={metrics.bondLabel} frosted={shell} />
             {hasFullManagementAccess ? (
               <PreviewMetric
@@ -448,29 +439,46 @@ export function PropertyListPreviewPanel({
                 <div className="mb-0.5 flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold">
-                      {viewingPrevious ? 'Previous tenancy' : 'Current tenancy'}
+                      {viewingPrevious ? 'Previous Tenancy' : currentTenancyTitle}
                     </h3>
-                    <p className="text-muted-foreground text-xs">{tenancyHeading}</p>
+                    {viewingPrevious && previousSubtitle ? (
+                      <p className="text-muted-foreground text-xs">{previousSubtitle}</p>
+                    ) : null}
                   </div>
                   <TenancyPagerControls
                     index={tenancyPageIndex}
-                    count={tenancyPages.length}
+                    count={tenancyOverviewCount}
                     onPrev={() =>
                       setTenancyPageIndex((index) =>
-                        wrapTenancyPageIndex(index, tenancyPages.length, -1),
+                        wrapTenancyPageIndex(index, tenancyOverviewCount, -1),
                       )
                     }
                     onNext={() =>
                       setTenancyPageIndex((index) =>
-                        wrapTenancyPageIndex(index, tenancyPages.length, 1),
+                        wrapTenancyPageIndex(index, tenancyOverviewCount, 1),
                       )
                     }
                   />
                 </div>
-                <div className={cn('mt-2 rounded-xl border p-3', nestedSurface)}>
-                  <DetailRow label={tenantRowLabel} value={tenantRowValue} />
+                <div className={cn('mt-2 grid grid-cols-1 rounded-xl border p-3 sm:grid-cols-[max-content_minmax(0,1fr)]', nestedSurface)}>
+                  {viewingPrevious ? (
+                    <DetailRow
+                      label="Previous Tenant"
+                      value={activePrevious?.name || '—'}
+                    />
+                  ) : isVacant || currentTenants.length === 0 ? (
+                    <DetailRow label="Tenant" value="Vacant" />
+                  ) : (
+                    currentTenants.map((tenant, index) => (
+                      <DetailRow
+                        key={tenant.id}
+                        label={currentTenants.length > 1 ? `Tenant ${index + 1}` : 'Tenant'}
+                        value={tenant.name}
+                      />
+                    ))
+                  )}
                   <DetailRow
-                    label="Lease period"
+                    label="Lease Period"
                     value={
                       viewingPrevious
                         ? archive?.leaseStartDate && archive?.leaseEndDate
@@ -494,7 +502,7 @@ export function PropertyListPreviewPanel({
                     }
                   />
                   <DetailRow
-                    label="Rent review"
+                    label="Rent Review"
                     value={
                       viewingPrevious
                         ? '—'
@@ -526,12 +534,12 @@ export function PropertyListPreviewPanel({
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">CROS is handling ({crosJobs.length})</h3>
+                  <h3 className="text-sm font-semibold">CROS Is Handling ({crosJobs.length})</h3>
                   <Link
                     href={profileHref('tasks')}
                     className="text-primary text-xs font-semibold transition-colors hover:underline"
                   >
-                    View all tasks →
+                    View All Tasks →
                   </Link>
                 </div>
                 {crosJobs.length === 0 ? (
@@ -566,7 +574,7 @@ export function PropertyListPreviewPanel({
                               {propertyJobDisplaySubtext(job)}
                             </p>
                             <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                              No action required
+                              No Action Required
                             </span>
                           </div>
                         </div>
@@ -577,7 +585,7 @@ export function PropertyListPreviewPanel({
               </div>
 
               <div>
-                <h3 className="mb-2 text-sm font-semibold">Needs your attention ({attention.length})</h3>
+                <h3 className="mb-2 text-sm font-semibold">Needs Your Attention ({attention.length})</h3>
                 {attention.length === 0 ? (
                   <p className={cn('text-muted-foreground rounded-xl border p-3 text-sm', nestedSurface)}>
                     No action required at the moment.
@@ -630,12 +638,12 @@ export function PropertyListPreviewPanel({
             <>
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">CROS is handling ({crosJobs.length})</h3>
+                  <h3 className="text-sm font-semibold">CROS Is Handling ({crosJobs.length})</h3>
                   <Link
                     href={profileHref('tasks')}
                     className="text-primary text-xs font-semibold transition-colors hover:underline"
                   >
-                    View all tasks →
+                    View All Tasks →
                   </Link>
                 </div>
                 {crosJobs.length === 0 ? (
@@ -670,7 +678,7 @@ export function PropertyListPreviewPanel({
                               {propertyJobDisplaySubtext(job)}
                             </p>
                             <span className="mt-1.5 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                              No action required
+                              No Action Required
                             </span>
                           </div>
                         </div>
@@ -680,7 +688,7 @@ export function PropertyListPreviewPanel({
                 )}
               </div>
               <div>
-                <h3 className="mb-2 text-sm font-semibold">Needs your attention ({attention.length})</h3>
+                <h3 className="mb-2 text-sm font-semibold">Needs Your Attention ({attention.length})</h3>
                 {attention.length === 0 ? (
                   <p className={cn('text-muted-foreground rounded-xl border p-3 text-sm', nestedSurface)}>
                     No action required at the moment.
@@ -704,19 +712,11 @@ export function PropertyListPreviewPanel({
           ) : null}
 
           {shell && activeTab === 'financials' ? (
-            <div className={cn('rounded-xl border p-4 text-sm', nestedSurface)}>
-              <p className="font-medium">Arrears and rent chasing</p>
+            <div className={cn('rounded-xl border p-4 text-center text-sm', nestedSurface)}>
+              <p className="font-medium">Coming Soon</p>
               <p className="text-muted-foreground mt-1">
-                Record rent, bill, or bond arrears, then open a tribunal case from the property
-                profile.
+                Property financials are not available yet.
               </p>
-              <Link
-                href={profileHref('financials')}
-                className="text-primary mt-3 inline-flex items-center gap-1 font-semibold transition-colors hover:underline"
-              >
-                View financials
-                <ChevronRight className="size-4" />
-              </Link>
             </div>
           ) : null}
 
@@ -729,7 +729,7 @@ export function PropertyListPreviewPanel({
                 href={profileHref('documents')}
                 className="text-primary mt-3 inline-flex items-center gap-1 font-semibold transition-colors hover:underline"
               >
-                View documents
+                View Documents
                 <ChevronRight className="size-4" />
               </Link>
             </div>
@@ -738,13 +738,13 @@ export function PropertyListPreviewPanel({
           {shell && activeTab === 'archive' ? (
             <div className={cn('rounded-xl border p-4 text-sm', nestedSurface)}>
               <p className="text-muted-foreground">
-                Previous landlords and tenancies for this property are kept on Archive.
+                Previous landlords and tenancies for this property are kept on the Archived tab.
               </p>
               <Link
                 href={profileHref('archive')}
                 className="text-primary mt-3 inline-flex items-center gap-1 font-semibold transition-colors hover:underline"
               >
-                View archive
+                View Archived
                 <ChevronRight className="size-4" />
               </Link>
             </div>
@@ -779,7 +779,7 @@ export function PropertyListPreviewPanel({
                 href={profileHref('activities')}
                 className="text-primary mt-4 inline-flex items-center gap-1 text-sm font-semibold transition-colors hover:underline"
               >
-                View all activity
+                View All Activity
                 <ChevronRight className="size-4" />
               </Link>
             </div>

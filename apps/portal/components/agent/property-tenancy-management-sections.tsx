@@ -74,7 +74,7 @@ function DetailsSubsection({
   return (
     <section className="border-border/60 border-t pt-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h4 className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <h4 className="text-muted-foreground text-[10px] font-semibold">
           {title}
         </h4>
         {onEdit ? (
@@ -118,7 +118,7 @@ function StatCell({
   return (
     <div className="rounded-lg border border-border/50 bg-muted/10 px-2.5 py-2">
       <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+        <p className="text-muted-foreground text-[10px] font-medium">
           {label}
         </p>
         {onEdit ? (
@@ -330,7 +330,7 @@ export function PropertyTenancyManagementSections({
     if (tenantHistoryIndex != null && tenancyArchives[tenantHistoryIndex]) {
       const archived = tenancyArchives[tenantHistoryIndex];
       return {
-        name: archived.tenantName ?? 'Previous tenant',
+        name: archived.tenantName ?? 'Previous Tenant',
         email: archived.tenantEmail ?? '',
         phone: archived.tenantPhone ?? '',
         hint: archived.vacateDate ? `Vacated ${formatDate(archived.vacateDate)}` : null,
@@ -637,7 +637,7 @@ export function PropertyTenancyManagementSections({
             key={activeTenancyPage.id}
             title={
               viewingPreviousPage
-                ? 'Previous tenant'
+                ? 'Previous Tenant'
                 : currentTenantCount > 1
                   ? `Tenant ${tenancyPageIndex + 1} of ${currentTenantCount}`
                   : 'Tenant'
@@ -682,7 +682,7 @@ export function PropertyTenancyManagementSections({
                     ? tenantPeople.length > 1
                       ? `Tenants (${tenantPeople.length})`
                       : 'Tenant'
-                    : 'Co-tenant'
+                    : 'Co-Tenant'
                 }
                 layout="row"
                 name={person.name}
@@ -698,8 +698,8 @@ export function PropertyTenancyManagementSections({
           </div>
           {tenancyArchives.length > 0 ? (
             <div className="mt-2">
-              <label className="text-muted-foreground mb-1 block text-[10px] font-semibold uppercase tracking-wide">
-                Tenant history
+              <label className="text-muted-foreground mb-1 block text-[10px] font-semibold">
+                Tenant History
               </label>
               <select
                 className="border-input bg-background h-8 w-full max-w-md rounded-lg border px-2 text-xs"
@@ -732,9 +732,9 @@ export function PropertyTenancyManagementSections({
           isV2 ? 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3' : 'mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4'
         }
       >
-        {!isV2 ? <StatCell label="Rent paid to" value={rentPaidTo ? formatDate(rentPaidTo) : '—'} /> : null}
+        {!isV2 ? <StatCell label="Rent Paid To" value={rentPaidTo ? formatDate(rentPaidTo) : '—'} /> : null}
         <StatCell
-          label="Payment cycle"
+          label="Payment Cycle"
           value={viewingPreviousPage ? '—' : paymentCycle}
         />
         <StatCell
@@ -753,23 +753,23 @@ export function PropertyTenancyManagementSections({
           onEdit={!viewingPreviousPage && canEditTenancy ? () => setBondDialogOpen(true) : undefined}
         />
         <StatCell
-          label="Next rent review"
+          label="Next Rent Review"
           value={pagedTenancyDates.nextRentReview ? formatDate(pagedTenancyDates.nextRentReview) : '—'}
         />
         <StatCell
-          label="Lease start"
+          label="Lease Start"
           value={pagedTenancyDates.leaseStart ? formatDate(pagedTenancyDates.leaseStart) : '—'}
         />
         <StatCell
-          label="Lease end"
+          label="Lease End"
           value={pagedTenancyDates.leaseEnd ? formatDate(pagedTenancyDates.leaseEnd) : '—'}
         />
         <StatCell
-          label="Vacate date"
+          label="Vacate Date"
           value={pagedTenancyDates.vacateDate ? formatDate(pagedTenancyDates.vacateDate) : '—'}
         />
         <StatCell
-          label="Next routine"
+          label="Next Routine"
           value={
             <NextRoutineStatValue
               date={pagedTenancyDates.nextRoutine || undefined}
@@ -784,11 +784,11 @@ export function PropertyTenancyManagementSections({
 
   const managementAgreementCell = (
     <StatCell
-      label="Management agreement"
+      label="Management Agreement"
       value={
         managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
-          ? 'View agreement'
-          : 'Not uploaded'
+          ? 'View Agreement'
+          : 'Not Uploaded'
       }
       onPreview={
         managementAgreementDoc?.href && isViewableDocumentUrl(managementAgreementDoc.href)
@@ -801,7 +801,7 @@ export function PropertyTenancyManagementSections({
   const endOfManagementCell =
     overview?.endOfManagementDate || property.endOfManagementDate ? (
       <StatCell
-        label="End of management"
+        label="End Of Management"
         value={formatDate(overview?.endOfManagementDate ?? property.endOfManagementDate ?? '')}
       />
     ) : null;
@@ -811,7 +811,7 @@ export function PropertyTenancyManagementSections({
       {isV2 ? (
         <>
           <PropertyProfileInfoCard
-            title={viewingPreviousPage ? 'Previous tenancy' : 'Tenancy details'}
+            title={viewingPreviousPage ? 'Previous Tenancy' : 'Tenancy Details'}
             icon={User}
             headerExtra={
               <TenancyPagerControls
@@ -838,12 +838,12 @@ export function PropertyTenancyManagementSections({
             {tenancyBody}
           </PropertyProfileInfoCard>
           <PropertyProfileInfoCard
-            title="Owner / Landlord"
+            title="Owner Details"
             icon={User}
             onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
           >
             <ContactTile
-              title="Landlord"
+              title="Owner"
               layout="row"
               name={landlord.name}
               email={landlord.email}
@@ -852,14 +852,14 @@ export function PropertyTenancyManagementSections({
             />
           </PropertyProfileInfoCard>
           <PropertyProfileInfoCard
-            title="Management / Agency"
+            title="Agency Details"
             icon={Building2}
             onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
           >
             <ContactTile title="Agency" layout="row" name={agencyName} />
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <StatCell label="Service type" value={serviceTypeLabel} />
-              <StatCell label="Management rate" value={managementRateDisplay} />
+              <StatCell label="Service Type" value={serviceTypeLabel} />
+              <StatCell label="Management Rate" value={managementRateDisplay} />
               {managementAgreementCell}
               {endOfManagementCell}
             </div>
@@ -868,13 +868,13 @@ export function PropertyTenancyManagementSections({
       ) : (
         <>
           <DetailsSubsection
-            title="Tenancy details"
+            title="Tenancy Details"
             onEdit={canEditTenancy ? () => setTenancyDialogOpen(true) : undefined}
           >
             {tenancyBody}
           </DetailsSubsection>
           <DetailsSubsection
-            title="Management details"
+            title="Management Details"
             onEdit={apiConnected ? () => setLandlordDialogOpen(true) : undefined}
           >
             <ContactTile
@@ -886,7 +886,7 @@ export function PropertyTenancyManagementSections({
               updatedHint={landlordUpdatedHint}
             />
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <StatCell label="Management rate" value={managementRateDisplay} />
+              <StatCell label="Management Rate" value={managementRateDisplay} />
               {managementAgreementCell}
               {endOfManagementCell}
             </div>

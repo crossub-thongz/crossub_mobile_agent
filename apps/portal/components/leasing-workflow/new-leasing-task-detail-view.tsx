@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ChevronLeft,
   ChevronRight,
   Home,
   Link2,
@@ -641,11 +642,11 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
               )}
             </ul>
             <Link
-              href={`${ROUTES.TASKS}?property=${encodeURIComponent(propertyId)}`}
+              href={ROUTES.TASKS}
               className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
             >
-              View all tasks
-              <ChevronRight className="size-3.5" />
+              <ChevronLeft className="size-3.5" />
+              Back
             </Link>
           </section>
         </aside>

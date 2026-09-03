@@ -3,8 +3,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ChevronLeft,
   ChevronRight,
   Sparkles,
   Star,
@@ -163,7 +164,20 @@ export function MaintenanceTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<MaintenanceTaskTab>('workflow');
+  const pageRef = useRef<HTMLDivElement | null>(null);
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
+
+  useEffect(() => {
+    let node: HTMLElement | null = pageRef.current;
+    while (node) {
+      if (node.tagName === 'MAIN') {
+        node.scrollTop = 0;
+        break;
+      }
+      node = node.parentElement;
+    }
+    document.scrollingElement && (document.scrollingElement.scrollTop = 0);
+  }, [activeTab, item.id]);
 
   const propertyId = item.propertyId;
   const parentEndLeasing = useMemo(() => {
@@ -295,7 +309,7 @@ export function MaintenanceTaskDetailView({
 
   return (
     <TaskWorkflowRailSlotProvider onStepActivate={showWorkflowTab}>
-    <div className="maintenance-task px-4 py-5 lg:px-8 lg:py-6">
+    <div ref={pageRef} className="maintenance-task px-4 py-5 lg:px-8 lg:py-6">
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
       <header className="space-y-4">
@@ -505,10 +519,11 @@ export function MaintenanceTaskDetailView({
           ) : null}
 
           {activeTab === 'messages' ? (
-            <section className="rounded-2xl border v2-frosted-surface p-2">
+            <section className="flex min-h-[28rem] max-h-[min(70dvh,44rem)] flex-col overflow-hidden rounded-2xl border v2-frosted-surface p-2">
               <WorkspaceChatPanel
                 workspaceCase={workspaceCase}
                 agentName={workspaceCase.agent?.name ?? assignedToName ?? 'Agent'}
+                reference={taskRef}
               />
             </section>
           ) : null}
@@ -616,15 +631,13 @@ export function MaintenanceTaskDetailView({
                 ))
               )}
             </ul>
-            {propertyId ? (
-              <Link
-                href={`${ROUTES.TASKS}?property=${encodeURIComponent(propertyId)}`}
-                className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-              >
-                View all tasks
-                <ChevronRight className="size-3.5" />
-              </Link>
-            ) : null}
+            <Link
+              href={ROUTES.TASKS}
+              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+            >
+              <ChevronLeft className="size-3.5" />
+              Back
+            </Link>
           </section>
         </aside>
       </div>

@@ -37,7 +37,7 @@ export function ContactTile({
         onClick={onAdd}
         className="flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-border/80 bg-muted/5 px-3 py-2.5 text-center"
       >
-        <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-xs font-semibold">
           {title}
         </p>
         <span className="text-primary inline-flex items-center gap-0.5 text-sm font-medium">
@@ -55,7 +55,7 @@ export function ContactTile({
         title={updatedHint ?? undefined}
       >
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs font-semibold">
             {title}
           </p>
           {onEdit ? (
@@ -83,19 +83,19 @@ export function ContactTile({
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
           <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <p className="text-muted-foreground text-[10px] font-medium">
               Name
             </p>
             <p className="mt-0.5 truncate text-sm font-semibold">{name?.trim() || '—'}</p>
           </div>
           <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <p className="text-muted-foreground text-[10px] font-medium">
               Email
             </p>
             <p className="mt-0.5 truncate text-sm">{email?.trim() || '—'}</p>
           </div>
           <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+            <p className="text-muted-foreground text-[10px] font-medium">
               Number
             </p>
             <p className="mt-0.5 truncate text-sm tabular-nums">{phone?.trim() || '—'}</p>
@@ -113,7 +113,7 @@ export function ContactTile({
       title={updatedHint ?? undefined}
     >
       <div className="flex items-center justify-between gap-1">
-        <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
+        <p className="text-muted-foreground text-[10px] font-semibold">
           {title}
         </p>
         {onEdit ? (

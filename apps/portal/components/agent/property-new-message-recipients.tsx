@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, ChevronLeft, Home, User } from 'lucide-react';
+import { Building2, ChevronLeft, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 
 const RECIPIENT_ICONS = {
   tenant: User,
-  landlord: Home,
   strata: Building2,
   building_manager: Building2,
 } as const;
@@ -93,7 +92,7 @@ export function PropertyNewMessageRecipients({
       <p className="text-muted-foreground text-xs">Send a message to</p>
       {recipients.length === 0 ? (
         <p className="text-muted-foreground rounded-xl border border-dashed px-3 py-4 text-center text-sm">
-          No tenant, landlord, strata, or building manager details on file for this property.
+          No tenant, strata, or building manager details on file for this property.
         </p>
       ) : (
         recipients.map((recipient) => (

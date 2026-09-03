@@ -50,6 +50,42 @@ export function workflowCaseReferenceLabel(
   return formatPrefixedReference(id.trim(), WORKFLOW_CASE_REF_PREFIX[kind]);
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_IN_TEXT_RE =
+  /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const COMPACT_UUID_RE = /^[0-9a-f]{32}$/i;
+
+function compactHexId(value: string): string {
+  return value.replace(/[^0-9a-f]/gi, '').toLowerCase();
+}
+
+/** True when a stored “reference” is still the raw case UUID. */
+export function isRawCaseId(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (UUID_RE.test(trimmed) || COMPACT_UUID_RE.test(trimmed)) return true;
+  const compact = compactHexId(trimmed);
+  return compact.length === 32 && COMPACT_UUID_RE.test(compact) && trimmed.length >= 32;
+}
+
+/** Swap a case UUID (and compact variants) for the display task number. */
+export function replaceRawCaseIdWithLabel(
+  text: string,
+  caseId: string,
+  label: string,
+): string {
+  if (!text || !label) return text;
+  let next = text;
+  const trimmedId = caseId.trim();
+  if (trimmedId && trimmedId !== label) next = next.split(trimmedId).join(label);
+  const compact = compactHexId(trimmedId);
+  if (!compact) return next;
+  return next.replace(UUID_IN_TEXT_RE, (match) =>
+    compactHexId(match) === compact ? label : match,
+  );
+}
+
 /**
  * Maintenance jobs carry a real order number from the API (`MR-00057`) — the one
  * printed on emails, invoices and the staff console. Show it whenever it exists and
@@ -60,7 +96,7 @@ export function maintenanceReferenceLabel(
   id: string,
 ): string {
   const trimmed = orderNumber?.trim();
-  if (trimmed) return trimmed;
+  if (trimmed && !isRawCaseId(trimmed)) return trimmed;
   return workflowCaseReferenceLabel(id, 'maintenance');
 }
 

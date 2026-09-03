@@ -8,7 +8,6 @@ export interface MentionCandidate {
 }
 
 export function buildThreadMentionCandidates(input: {
-  homeOwnerName: string;
   tenantName: string;
 }): MentionCandidate[] {
   const candidates: MentionCandidate[] = [
@@ -17,12 +16,6 @@ export function buildThreadMentionCandidates(input: {
       name: 'CROSSUB Team',
       role: 'crossub',
       subtitle: 'Operations & support',
-    },
-    {
-      id: 'owner',
-      name: input.homeOwnerName,
-      role: 'owner',
-      subtitle: 'Landlord',
     },
   ];
 

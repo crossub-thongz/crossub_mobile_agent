@@ -7,7 +7,7 @@ import {
 import type { MaintenanceRequest, Property } from '@/lib/types';
 import type { AuthUser } from '@/lib/auth-types';
 import { MAINTENANCE_STATUS } from '@/constants/api-enums';
-import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import { maintenanceReferenceLabel } from '@/lib/workflow-case-reference';
 
 import type { MaintenanceWorkspaceCase, MaintenanceWorkspaceParty, MaintenanceWorkspaceStatus } from './types';
 
@@ -161,7 +161,7 @@ export function buildWorkspaceCaseFromApi(
       : inferInvitedContractorIdsFromAudit(mapped.auditEntries);
   return {
     id: req.id,
-    caseRef: workflowCaseReferenceLabel(req.id, 'maintenance'),
+    caseRef: maintenanceReferenceLabel(req.orderNumber, req.id),
     issueType: req.issueType,
     description: req.description,
     address: req.address,
@@ -228,7 +228,7 @@ export function buildWorkspaceCaseFromRequest(
 
   return {
     id: item.id,
-    caseRef: workflowCaseReferenceLabel(item.id, 'maintenance'),
+    caseRef: maintenanceReferenceLabel(item.trackingNumber, item.id),
     issueType: item.title,
     description: item.description,
     address: item.propertyAddress,
