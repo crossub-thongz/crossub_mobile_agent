@@ -36,15 +36,27 @@ export function AddPaymentMethodPrompt({
   const [setupDialog, setSetupDialog] = useState<StripeSetupDialogState | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolved, setResolved] = useState(false);
+
+  const setupOpen = setupDialog != null;
+  const showRecommendation = open && !setupOpen && !resolved;
 
   useEffect(() => {
-    if (!open) return;
+    if (open) return;
+    setSetupDialog(null);
+    setStarting(false);
+    setError(null);
+    setResolved(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!showRecommendation) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const blockKeys = (event: KeyboardEvent) => {
-      if (!dismissible) return;
+      if (!dismissible || setupOpen) return;
       if (event.key === 'Escape' || event.key === 'Esc') {
         event.preventDefault();
         event.stopPropagation();
@@ -57,7 +69,7 @@ export function AddPaymentMethodPrompt({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', blockKeys, true);
     };
-  }, [dismissible, onDismiss, open]);
+  }, [dismissible, onDismiss, setupOpen, showRecommendation]);
 
   const startSetup = async () => {
     if (!getStripePublishableKey()) {
@@ -77,16 +89,18 @@ export function AddPaymentMethodPrompt({
   };
 
   const handleSaved = () => {
+    setResolved(true);
     setSetupDialog(null);
     onSaved();
   };
 
-  if (!open) {
+  if (!open && !setupOpen) {
     return null;
   }
 
   return (
     <>
+      {showRecommendation ? (
       <div
         className="fixed inset-0 z-[250] flex items-end justify-center bg-black/70 p-4 sm:items-center"
         role="dialog"
@@ -135,6 +149,7 @@ export function AddPaymentMethodPrompt({
           </div>
         </div>
       </div>
+      ) : null}
       <StripeSetupDialog
         state={setupDialog}
         dismissible={dismissible}
