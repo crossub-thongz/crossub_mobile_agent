@@ -8,6 +8,7 @@ import {
   MORE_PAGE_SECTIONS,
   MORE_PAGE_SECTION_TONE,
   MORE_MENU_ITEM_DESCRIPTION,
+  SUPPORT_PAGE_SECTION,
   type MorePageItem,
   type MorePageSection,
 } from '@/constants/more-page';
@@ -107,7 +108,7 @@ function MoreRow({
   );
 }
 
-function MoreSectionCard({
+export function MoreSectionCard({
   section,
   agencyId,
   onSignOut,
@@ -118,7 +119,7 @@ function MoreSectionCard({
 }: {
   section: MorePageSection;
   agencyId?: string | null;
-  onSignOut: () => void;
+  onSignOut?: () => void;
   expanded: boolean;
   onToggle: () => void;
   className?: string;
@@ -231,6 +232,10 @@ export function MoreHub() {
 
   const sections = [
     menuSection,
+    {
+      ...SUPPORT_PAGE_SECTION,
+      items: filterNavByAccess(SUPPORT_PAGE_SECTION.items, hasFullManagementAccess),
+    },
     ...MORE_PAGE_SECTIONS.map((section) => ({
       ...section,
       items: filterHiddenBillingNav(
@@ -272,7 +277,9 @@ export function MoreHub() {
             onSignOut={() => void logout()}
             expanded={expandedSections.has(section.id)}
             onToggle={() => toggleSection(section.id)}
-            className={section.id === 'menu' ? 'lg:hidden' : undefined}
+            className={
+              section.id === 'menu' || section.id === 'support' ? 'lg:hidden' : undefined
+            }
             collapsible={section.id !== 'menu'}
           />
         ))}

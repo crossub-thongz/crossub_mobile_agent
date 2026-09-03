@@ -120,8 +120,8 @@ export function WelcomeOnboarding() {
           </h2>
           <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
             {videoEnded
-              ? 'You can replay this anytime from More → Support → Intro video.'
-              : 'Watch this short intro, or skip and replay it later from More → Support → Intro video.'}
+              ? 'You can replay this anytime from Support → Intro video.'
+              : 'Watch this short intro, or skip and replay it later from Support → Intro video.'}
           </p>
         </div>
         <WelcomeVideoPlayer

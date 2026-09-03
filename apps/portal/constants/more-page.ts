@@ -4,7 +4,6 @@ import {
   Building2,
   CreditCard,
   FileText,
-  FolderArchive,
   HelpCircle,
   History,
   LogOut,
@@ -13,7 +12,6 @@ import {
   Receipt,
   Settings,
   Shield,
-  Sparkles,
   Tags,
   UserCog,
   Users,
@@ -34,6 +32,7 @@ export const MORE_MENU_ITEM_DESCRIPTION: Partial<Record<string, string>> = {
   [ROUTES.SETTINGS]: 'Preferences and account settings.',
   [ROUTES.FAQ]: 'Guides, tutorials and FAQs.',
   [ROUTES.PRICING]: 'Plans, fees and service inclusions.',
+  [ROUTES.SUPPORT]: 'Intro video, contact, help centre and system status.',
 };
 
 export type MorePageItem = {
@@ -55,6 +54,43 @@ export type MorePageSection = {
   items: MorePageItem[];
 };
 
+export const SUPPORT_PAGE_SECTION: MorePageSection = {
+  id: 'support',
+  title: 'Support',
+  icon: HelpCircle,
+  tone: 'amber',
+  items: [
+    {
+      id: 'intro-video',
+      title: 'Intro video',
+      description: 'Watch the agent portal welcome video again.',
+      href: ROUTES.SUPPORT_GETTING_STARTED,
+      icon: PlayCircle,
+    },
+    {
+      id: 'contact-am',
+      title: 'Contact account manager',
+      description: 'Message or call CROSSUB support for your portfolio.',
+      href: ROUTES.SUPPORT_CONTACT,
+      icon: MessageSquare,
+    },
+    {
+      id: 'help-centre',
+      title: 'Help centre',
+      description: 'Find guides, tutorials and FAQs.',
+      href: ROUTES.FAQ,
+      icon: HelpCircle,
+    },
+    {
+      id: 'system-status',
+      title: 'System status',
+      description: 'Check system status and announcements.',
+      href: ROUTES.NOTIFICATIONS,
+      icon: Bell,
+    },
+  ],
+};
+
 export const MORE_PAGE_SECTIONS: MorePageSection[] = [
   {
     id: 'agency',
@@ -62,13 +98,6 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
     icon: Building2,
     tone: 'emerald',
     items: [
-      {
-        id: 'agency-profile',
-        title: 'Agency profile',
-        description: 'View and update your agency details, license and contacts.',
-        href: ROUTES.AGENCIES,
-        icon: Building2,
-      },
       {
         id: 'team-users',
         title: 'Team & users',
@@ -84,13 +113,6 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
         icon: Tags,
       },
       {
-        id: 'archive',
-        title: 'History',
-        description: 'Archived properties and closed property tasks.',
-        href: ROUTES.ARCHIVE,
-        icon: FolderArchive,
-      },
-      {
         id: 'portfolio-settings',
         title: 'Portfolio settings',
         description: 'Manage default settings for your portfolio and tasks.',
@@ -102,7 +124,7 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
   },
   {
     id: 'billing',
-    title: 'Billing',
+    title: 'Invoice',
     icon: CreditCard,
     tone: 'violet',
     items: [
@@ -133,49 +155,6 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
         description: 'View your payment and billing history.',
         href: ROUTES.BILL,
         icon: History,
-      },
-    ],
-  },
-  {
-    id: 'support',
-    title: 'Support',
-    icon: HelpCircle,
-    tone: 'amber',
-    items: [
-      {
-        id: 'intro-video',
-        title: 'Intro video',
-        description: 'Watch the agent portal welcome video again.',
-        href: ROUTES.SUPPORT_GETTING_STARTED,
-        icon: PlayCircle,
-      },
-      {
-        id: 'ask-cros',
-        title: 'Ask CROS',
-        description: 'Get help from our AI assistant.',
-        href: ROUTES.DASHBOARD,
-        icon: Sparkles,
-      },
-      {
-        id: 'contact-am',
-        title: 'Contact account manager',
-        description: 'Message or call CROSSUB support for your portfolio.',
-        href: ROUTES.SUPPORT_CONTACT,
-        icon: MessageSquare,
-      },
-      {
-        id: 'help-centre',
-        title: 'Help centre',
-        description: 'Find guides, tutorials and FAQs.',
-        href: ROUTES.FAQ,
-        icon: HelpCircle,
-      },
-      {
-        id: 'system-status',
-        title: 'System status',
-        description: 'Check system status and announcements.',
-        href: ROUTES.NOTIFICATIONS,
-        icon: Bell,
       },
     ],
   },

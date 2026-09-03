@@ -8,7 +8,7 @@ import { ROUTES } from '@/constants/routes';
 
 function ContactSupportPageContent() {
   return (
-    <AgentShell title="Contact CROSSUB support" backHref={ROUTES.MORE} backLabel="More">
+    <AgentShell title="Contact CROSSUB support" backHref={ROUTES.SUPPORT} backLabel="Support">
       <ContactSupportHub />
     </AgentShell>
   );

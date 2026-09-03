@@ -10,7 +10,8 @@ import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { menuNavForUi } from '@/constants/nav';
+import { menuNavForUi, sidebarFooterNavForUi } from '@/constants/nav';
+import { SUPPORT_PAGE_SECTION } from '@/constants/more-page';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -125,6 +126,84 @@ function NavLink({
         <MessageUnreadBadge count={badge} size="sm" className="shrink-0 ring-2 ring-card" />
       ) : null}
     </Link>
+  );
+}
+
+function AgentSidebarSupport({
+  compact,
+  pathname,
+}: {
+  compact?: boolean;
+  pathname: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const items = SUPPORT_PAGE_SECTION.items.filter((item) => Boolean(item.href));
+  const active = items.some((item) => item.href && isActive(pathname, item.href));
+  const Icon = SUPPORT_PAGE_SECTION.icon;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title="Support"
+          className={cn(
+            'agent-sidebar-v2__nav-link relative flex w-full items-center rounded-xl text-[13px] font-medium',
+            compact
+              ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
+              : 'gap-3 px-3 py-2.5',
+            open || active
+              ? 'agent-sidebar-v2__nav-link--active text-foreground'
+              : 'text-muted-foreground hover:bg-white/40 hover:text-foreground',
+          )}
+        >
+          <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate text-left',
+              compact &&
+                'max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover/sidebar:max-w-[140px] group-hover/sidebar:opacity-100',
+            )}
+          >
+            Support
+          </span>
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-4 shrink-0 opacity-70',
+              compact && 'hidden group-hover/sidebar:block',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="top"
+        className="min-w-[220px] w-[var(--radix-popover-trigger-width)] p-2"
+      >
+        <div className="space-y-0.5">
+          {items.map((item) => {
+            const ItemIcon = item.icon;
+            const href = item.href!;
+            return (
+              <Link
+                key={item.id}
+                href={href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'hover:bg-muted/60 flex items-center gap-2 rounded-lg px-3 py-2 text-sm',
+                  isActive(pathname, href) && 'bg-muted/40 font-medium',
+                )}
+              >
+                <ItemIcon className="size-4 shrink-0 opacity-70" />
+                {item.title}
+              </Link>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -273,6 +352,7 @@ export function AgentSidebar({
 
   const mainNav = menuNav.filter((item) => !V2_SIDEBAR_PINNED_HREFS.has(item.href));
   const agencyMenuItems = menuNav.filter((item) => V2_AGENCY_MENU_HREFS.has(item.href));
+  const footerNav = sidebarFooterNavForUi(isV2);
 
   const v2SidebarNav = (() => {
     const archiveIndex = mainNav.findIndex((item) => item.href === ROUTES.ARCHIVE);
@@ -334,6 +414,11 @@ export function AgentSidebar({
 
         <div className="px-3 pb-4 pt-2">
           <div className="border-border/50 mb-3 border-t" />
+          {footerNav.length > 0 ? (
+            <div className="mb-1">
+              <AgentSidebarSupport compact={compact} pathname={pathname} />
+            </div>
+          ) : null}
           <AgentSidebarAgency
             compact={compact}
             onLogout={onLogout}

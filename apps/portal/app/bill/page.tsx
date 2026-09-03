@@ -683,9 +683,9 @@ export default function BillPage() {
 
   if (summary?.platformBillingDisabled) {
     return (
-      <AgentShell title="Billing">
+      <AgentShell title="Invoice">
         <PageIntro
-          title="Billing"
+          title="Invoice"
           description="Platform billing is paused for your service plan. There is nothing to pay."
         />
       </AgentShell>
@@ -693,7 +693,7 @@ export default function BillPage() {
   }
 
   return (
-    <AgentShell title="Billing">
+    <AgentShell title="Invoice">
       <div className="space-y-5">
         <PageIntro
           title="Payment Method"
@@ -776,7 +776,7 @@ export default function BillPage() {
         <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold tracking-tight">
-              {usesMonthlyInvoice ? 'Billing' : 'All payments'}
+              {usesMonthlyInvoice ? 'Invoice' : 'All payments'}
               {outstandingCountDisplay > 0 ? (
                 <span className="text-muted-foreground ml-2 text-xs font-normal">
                   {outstandingCountDisplay} awaiting payment

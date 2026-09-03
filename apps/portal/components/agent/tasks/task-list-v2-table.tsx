@@ -7,7 +7,6 @@ import {
   Calendar,
   Gavel,
   Home,
-  MoreVertical,
   Wrench,
 } from 'lucide-react';
 
@@ -153,35 +152,23 @@ export function TaskListV2Table({
                     <p className="text-xs font-medium tabular-nums">{row.updatedLabel}</p>
                   </td>
                   <td className="px-3 py-3 align-top text-right">
-                    <div className="inline-flex items-center gap-1">
-                      {row.needsReview ? (
-                        <Link
-                          href={row.href}
-                          onClick={(event) => event.stopPropagation()}
-                          className="inline-flex rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700"
-                        >
-                          Review
-                        </Link>
-                      ) : (
-                        <Link
-                          href={row.href}
-                          onClick={(event) => event.stopPropagation()}
-                          className="v2-frosted-surface inline-flex rounded-xl border px-3 py-1.5 text-xs font-semibold hover:bg-muted/40"
-                        >
-                          View
-                        </Link>
-                      )}
-                      {hideProperty ? null : (
-                        <button
-                          type="button"
-                          onClick={(event) => event.stopPropagation()}
-                          className="text-muted-foreground hover:text-foreground rounded-lg p-1.5"
-                          aria-label="Task options"
-                        >
-                          <MoreVertical className="size-4" />
-                        </button>
-                      )}
-                    </div>
+                    {row.needsReview ? (
+                      <Link
+                        href={row.href}
+                        onClick={(event) => event.stopPropagation()}
+                        className="inline-flex rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700"
+                      >
+                        Review
+                      </Link>
+                    ) : (
+                      <Link
+                        href={row.href}
+                        onClick={(event) => event.stopPropagation()}
+                        className="v2-frosted-surface inline-flex rounded-xl border px-3 py-1.5 text-xs font-semibold hover:bg-muted/40"
+                      >
+                        View
+                      </Link>
+                    )}
                   </td>
                 </tr>
               );

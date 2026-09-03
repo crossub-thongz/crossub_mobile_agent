@@ -7,7 +7,6 @@ import {
   HelpCircle,
   LayoutDashboard,
   ListTodo,
-  Receipt,
   Settings,
   Tags,
   Wrench,
@@ -43,7 +42,6 @@ export const V1_MORE_NAV_FOOTER: NavItem[] = [
   { href: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
   { href: ROUTES.FAQ, label: 'FAQ', icon: HelpCircle },
   { href: ROUTES.PRICING, label: 'Pricing', icon: Tags },
-  { href: ROUTES.BILL, label: 'Billing', icon: Receipt },
 ];
 
 /** Redesign — job hubs live on Tasks. Full Accounting stays off until launch. */
@@ -64,7 +62,6 @@ export const V2_MORE_NAV: NavItem[] = [
         },
       ]
     : []),
-  { href: ROUTES.BILL, label: 'Billing', icon: Receipt },
   { href: ROUTES.ARCHIVE, label: 'History', icon: FolderArchive },
 ];
 
@@ -84,6 +81,14 @@ export function moreNavForUi(isV2: boolean): NavItem[] {
 
 export function moreNavFooterForUi(isV2: boolean): NavItem[] {
   return isV2 ? V2_MORE_NAV_FOOTER : V1_MORE_NAV_FOOTER;
+}
+
+export const V2_SIDEBAR_FOOTER_NAV: NavItem[] = [
+  { href: ROUTES.SUPPORT, label: 'Support', icon: HelpCircle },
+];
+
+export function sidebarFooterNavForUi(isV2: boolean): NavItem[] {
+  return isV2 ? V2_SIDEBAR_FOOTER_NAV : [];
 }
 
 /**

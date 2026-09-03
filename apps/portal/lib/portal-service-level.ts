@@ -94,9 +94,9 @@ export function propertyBillingTabLabel(isInspectionOnly: boolean): 'Bills' | 'I
   return isInspectionOnly ? 'Bills' : 'Invoice';
 }
 
-/** Sidebar / bill page module name. */
-export function agencyBillingNavLabel(_hasFullManagementAccess?: boolean): 'Billing' {
-  return 'Billing';
+/** Module name for the agency invoice page and leftover nav links. */
+export function agencyBillingNavLabel(_hasFullManagementAccess?: boolean): 'Invoice' {
+  return 'Invoice';
 }
 
 export const FULL_MANAGEMENT_ROUTE_PREFIXES = [

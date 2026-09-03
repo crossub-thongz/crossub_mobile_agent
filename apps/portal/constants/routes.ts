@@ -37,6 +37,7 @@ export const ROUTES = {
   ARCHIVE: '/archive',
   MORE: '/more',
   TEAM: '/team',
+  SUPPORT: '/support',
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_GETTING_STARTED: '/support/getting-started',
   AGREEMENTS: '/agreements',

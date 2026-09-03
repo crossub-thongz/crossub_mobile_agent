@@ -7,7 +7,7 @@ import { ROUTES } from '@/constants/routes';
 
 export default function GettingStartedPage() {
   return (
-    <AgentShell title="Intro video" backHref={ROUTES.MORE} backLabel="More">
+    <AgentShell title="Intro video" backHref={ROUTES.SUPPORT} backLabel="Support">
       <div className="mx-auto w-full max-w-3xl space-y-4">
         <PageIntro description="Watch the agent portal welcome video again — how to manage your portfolio, jobs, and messages." />
         <WelcomeVideoPlayer autoPlay />

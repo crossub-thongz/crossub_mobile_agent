@@ -92,7 +92,6 @@ import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { useRecordRecentCaseVisit } from '@/hooks/use-record-recent-visit';
 import {
   INSPECTION_TYPE_LABEL,
-  inspectionNextAction,
   isInspectionDone,
 } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
@@ -418,7 +417,6 @@ export function InspectionDetailView({
     );
   }
 
-  const nextAction = inspectionNextAction(insp);
   const isOpenLeasingCase =
     insp.type === 'OPEN' && Boolean(leasingDetail) && !isStandaloneOpenViewing;
   const openConductedBy = resolveOpenConductedBy({
@@ -938,22 +936,6 @@ export function InspectionDetailView({
             {OPEN_TIME_PENDING_DESCRIPTION}
           </p>
         </InfoSection>
-      ) : null}
-
-      {!isOpenLeasingCase && !isStandaloneOpenViewing && nextAction ? (
-        <section
-          className={cn(
-            'rounded-2xl border p-4',
-            nextAction.tone === 'warning' && 'border-amber-500/40 bg-amber-500/10',
-            nextAction.tone === 'success' && 'border-primary/30 bg-primary/5',
-            nextAction.tone === 'info' && 'border-sky-500/30 bg-sky-500/5',
-            nextAction.tone === 'default' && 'bg-secondary/20',
-          )}
-        >
-          <p className="text-xs font-semibold uppercase tracking-wide">What to do next</p>
-          <p className="mt-1 text-sm font-semibold">{nextAction.title}</p>
-          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">{nextAction.description}</p>
-        </section>
       ) : null}
 
       {isSelfOpen && !isOpenResultsStep && !isStandaloneOpenViewing && (

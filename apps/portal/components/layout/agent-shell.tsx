@@ -35,7 +35,7 @@ import { filterHiddenBillingNav } from '@/lib/platform-billing-ui';
 import { isShellHomePath } from '@/components/layout/shell-back-button';
 import { useScrollbarReveal } from '@/lib/use-scrollbar-reveal';
 import { useShellAsideStore } from '@/lib/shell-aside-store';
-import { cn, displayName } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 import '@/components/agent/dashboard/v2-dashboard.css';
 
@@ -224,8 +224,6 @@ export function AgentShell({
                         aria-hidden
                       />
                     </button>
-                  ) : user ? (
-                    <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
                   ) : null}
                 </div>
                 {!hideGlobalFabs ? (
@@ -269,8 +267,6 @@ export function AgentShell({
                         aria-hidden
                       />
                     </button>
-                  ) : user ? (
-                    <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
                   ) : null}
                 </div>
               </div>
@@ -352,8 +348,6 @@ export function AgentShell({
                         aria-hidden
                       />
                     </button>
-                  ) : user ? (
-                    <p className="text-muted-foreground truncate text-xs">{displayName(user)}</p>
                   ) : null}
                 </div>
               </div>
@@ -393,15 +387,17 @@ export function AgentShell({
               ['--shell-header-offset' as string]: `${headerHeight + 16}px`,
             }}
           >
-            {user ? <EmailVerificationBanner /> : null}
-            {user ? <AgentPaymentReminderBanner /> : null}
-            {user ? <PlatformInvoiceReadyBanner /> : null}
-            {user ? <AddFirstPropertyBanner /> : null}
-            {showConnectionBanner && user && (
-              <div className="mb-4">
-                <ConnectionBanner />
-              </div>
-            )}
+            <div className={cn(wide && !immersive && 'lg:px-8')}>
+              {user ? <EmailVerificationBanner /> : null}
+              {user ? <AgentPaymentReminderBanner /> : null}
+              {user ? <PlatformInvoiceReadyBanner /> : null}
+              {user ? <AddFirstPropertyBanner /> : null}
+              {showConnectionBanner && user && (
+                <div className="mb-4">
+                  <ConnectionBanner />
+                </div>
+              )}
+            </div>
             {children}
           </div>
         </main>

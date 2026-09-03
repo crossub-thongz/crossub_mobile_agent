@@ -2,6 +2,7 @@
 
 import { CreditCard, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -11,6 +12,10 @@ import {
 } from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
+import {
+  AGENT_OPEN_PAYMENT_QUERY,
+  shouldAutoOpenInspectionPayment,
+} from '@/lib/billing/agent-pay-now';
 import {
   loadInspectionPlatformCharge,
   prepareInspectionPlatformCharge,
@@ -51,6 +56,9 @@ export function InspectionPlatformPaymentPrompt({
   active,
   className,
 }: InspectionPlatformPaymentPromptProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [summary, setSummary] = useState<AgentBillingSummary | null>(null);
   const [charge, setCharge] = useState<AgentBillingCharge | null>(null);
   const [billingInspectionId, setBillingInspectionId] = useState(inspectionId);
@@ -59,6 +67,7 @@ export function InspectionPlatformPaymentPrompt({
   const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
   const payInFlightRef = useRef(false);
   const activeChargeIdRef = useRef<string | null>(null);
+  const autoPayOpened = useRef(false);
 
   const billingInspectionIdRef = useRef(billingInspectionId);
   billingInspectionIdRef.current = billingInspectionId;
@@ -194,6 +203,30 @@ export function InspectionPlatformPaymentPrompt({
     propertyId,
     summary?.defaultPaymentMethod,
     viewingSessionId,
+  ]);
+
+  useEffect(() => {
+    if (!active || autoPayOpened.current || paying || paymentDialog != null) return;
+    if (!shouldAutoOpenInspectionPayment(searchParams)) return;
+    if (loading) return;
+    if (!charge || charge.status !== 'awaiting_payment') return;
+
+    autoPayOpened.current = true;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete(AGENT_OPEN_PAYMENT_QUERY);
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    void payNow();
+  }, [
+    active,
+    charge,
+    loading,
+    pathname,
+    payNow,
+    paying,
+    paymentDialog,
+    router,
+    searchParams,
   ]);
 
   const handleStripeSuccess = useCallback(async () => {

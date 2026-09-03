@@ -1,27 +1,25 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { CreditCard, Loader2, X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { CreditCard, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
-import {
-  StripePaymentDialog,
-  type StripePaymentDialogState,
-} from '@/components/billing/stripe-payment-dialog';
 import { Button } from '@/components/ui/button';
 import { isPublicRoute, ROUTES } from '@/constants/routes';
 import { isAgentPaymentNotification } from '@/lib/agent-payment-notification';
 import {
   AGENT_PAY_NOW_EVENT,
+  inspectionIdFromAgentHref,
+  isOnUnpaidInspectionTaskPath,
   isPrepaidAwaitingCharge,
-  startAgentPrepaidPayment,
+  unpaidInspectionTaskHref,
+  withOpenPaymentQuery,
   type AgentPayNowDetail,
 } from '@/lib/billing/agent-pay-now';
-import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
 import {
   listAgentChargeHistory,
   type AgentBillingCharge,
@@ -50,17 +48,16 @@ function isHiddenRoute(pathname: string): boolean {
 /**
  * Persistent top-of-app reminder for unpaid staff-created platform fees.
  * Closing it is session-only — a refresh brings it back until the fee is paid.
- * Pay now opens the Stripe popup instead of only navigating to Invoice.
+ * Pay now opens the unpaid job so payment happens on that task.
  */
 export function AgentPaymentReminderBanner() {
   const pathname = usePathname();
+  const router = useRouter();
   const isV2 = useIsAgentUiV2();
   const { user, status } = useAuth();
-  const { notifications, platformBillingDisabled } = useAgentData();
+  const { notifications, platformBillingDisabled, inspections } = useAgentData();
   const [charges, setCharges] = useState<AgentBillingCharge[] | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const [paying, setPaying] = useState(false);
-  const [paymentDialog, setPaymentDialog] = useState<StripePaymentDialogState | null>(null);
   const onBillPage = pathname === ROUTES.BILL;
 
   const reloadCharges = useCallback(async () => {
@@ -83,37 +80,32 @@ export function AgentPaymentReminderBanner() {
   }, [status, user, onBillPage, pathname, reloadCharges]);
 
   const unpaid = charges ?? [];
+  const taskHref = unpaidInspectionTaskHref(unpaid, inspections);
 
-  const payNow = useCallback(
-    async (href?: string) => {
-      if (paying || paymentDialog) return;
-      setPaying(true);
-      try {
-        const outcome = await startAgentPrepaidPayment({
-          charges: unpaid,
-          href,
-          setPaymentDialog,
-        });
-        if (outcome === 'complete') {
-          await reloadCharges().catch(() => undefined);
-        }
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Payment failed');
-      } finally {
-        setPaying(false);
+  const openUnpaidTask = useCallback(
+    (href?: string) => {
+      const fromHref = href?.trim();
+      if (fromHref && inspectionIdFromAgentHref(fromHref)) {
+        router.push(withOpenPaymentQuery(fromHref));
+        return;
       }
+      if (taskHref) {
+        router.push(taskHref);
+        return;
+      }
+      toast.message('Open the unpaid job from Tasks to pay.');
     },
-    [paying, paymentDialog, unpaid, reloadCharges],
+    [router, taskHref],
   );
 
   useEffect(() => {
     const onPayNow = (event: Event) => {
       const href = (event as CustomEvent<AgentPayNowDetail>).detail?.href;
-      void payNow(href);
+      openUnpaidTask(href);
     };
     window.addEventListener(AGENT_PAY_NOW_EVENT, onPayNow);
     return () => window.removeEventListener(AGENT_PAY_NOW_EVENT, onPayNow);
-  }, [payNow]);
+  }, [openUnpaidTask]);
 
   const paymentNotifications = useMemo(
     () => notifications.filter(isAgentPaymentNotification),
@@ -127,77 +119,51 @@ export function AgentPaymentReminderBanner() {
   if (isHiddenRoute(pathname)) return null;
   if (needsPasswordChange(user) || needsSystemAccessAgreement(user)) return null;
 
-  const showBanner = !dismissed && count > 0 && total > 0;
+  const onUnpaidTask = isOnUnpaidInspectionTaskPath(pathname, unpaid, inspections);
+  const showBanner = !dismissed && !onUnpaidTask && count > 0 && total > 0;
   const amountLabel = total > 0 ? ` ${formatCurrency(total)}` : '';
 
-  return (
-    <>
-      {showBanner ? (
-        <div
-          role="status"
-          className={cn(
-            'mb-4 rounded-xl border px-5 py-5 text-sm leading-relaxed',
-            isV2 ? 'v2-frosted-alert border-amber-500/35' : 'border-amber-500/35 bg-amber-500/10',
-          )}
-        >
-          <div className="flex flex-wrap items-center gap-4">
-            <CreditCard
-              className="size-4 shrink-0 text-amber-700 dark:text-amber-400"
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-amber-950 dark:text-amber-100">Payment required</p>
-              <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
-                {count === 1
-                  ? `Pay the platform fee${amountLabel} so CROSSUB can continue this job.`
-                  : `Pay ${count} outstanding platform fees${amountLabel} so CROSSUB can continue these jobs.`}{' '}
-                Unpaid fees also appear on the Bill page.
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                className="h-8"
-                disabled={paying}
-                onClick={() => void payNow()}
-              >
-                {paying ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <CreditCard className="size-3.5" />
-                )}
-                Pay now
-              </Button>
-              <button
-                type="button"
-                onClick={() => setDismissed(true)}
-                className={cn(
-                  'text-muted-foreground hover:text-foreground rounded-lg p-1 hover:bg-secondary',
-                )}
-                aria-label="Dismiss payment reminder"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+  if (!showBanner) return null;
 
-      <StripePaymentDialog
-        state={paymentDialog}
-        open={paymentDialog != null}
-        onOpenChange={(open) => {
-          if (!open) setPaymentDialog(null);
-        }}
-        onSuccess={async () => {
-          const chargeId = paymentDialog?.chargeId;
-          setPaymentDialog(null);
-          await finalizeBillingChargePayment(chargeId);
-          toast.success('Payment complete');
-          await reloadCharges().catch(() => undefined);
-        }}
-      />
-    </>
+  return (
+    <div
+      role="status"
+      className={cn(
+        'mt-3 mb-6 rounded-xl border px-6 py-5 text-sm leading-relaxed lg:mt-4',
+        isV2 ? 'v2-frosted-alert border-amber-500/35' : 'border-amber-500/35 bg-amber-500/10',
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-4">
+        <CreditCard
+          className="size-4 shrink-0 text-amber-700 dark:text-amber-400"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-amber-950 dark:text-amber-100">Payment required</p>
+          <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+            {count === 1
+              ? `Pay the platform fee${amountLabel} so CROSSUB can continue this job.`
+              : `Pay ${count} outstanding platform fees${amountLabel} so CROSSUB can continue these jobs.`}{' '}
+            Unpaid fees also appear on the Bill page.
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button type="button" size="sm" className="h-8" onClick={() => openUnpaidTask()}>
+            <CreditCard className="size-3.5" />
+            Pay now
+          </Button>
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            className={cn(
+              'text-muted-foreground hover:text-foreground rounded-lg p-1 hover:bg-secondary',
+            )}
+            aria-label="Dismiss payment reminder"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

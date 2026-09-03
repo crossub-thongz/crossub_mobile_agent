@@ -487,95 +487,104 @@ type Level2MonthlyBillingListProps = {
   onViewCharge: (charge: AgentBillingCharge) => void;
 };
 
-export function Level2MonthlyBillingList({
-  charges,
-  invoices,
-  includedUsageByProperty = [],
-  overdueLockDays = DEFAULT_OVERDUE_LOCK_DAYS,
-  billingBlocked = false,
+function Level2MonthGroupCard({
+  group,
+  includedUsageByProperty,
+  billingBlocked,
   openingInvoiceId,
-  disabled = false,
+  disabled,
   onViewInvoice,
-  onOpenInvoiceById: _onOpenInvoiceById,
   onViewCharge,
-}: Level2MonthlyBillingListProps) {
-  const groups = buildLevel2MonthGroups(charges, invoices, { overdueLockDays });
-
-  if (groups.length === 0) {
-    return null;
-  }
+}: {
+  group: Level2MonthGroup;
+  includedUsageByProperty: AgentBillingIncludedUsageRow[];
+  billingBlocked: boolean;
+  openingInvoiceId: string | null;
+  disabled: boolean;
+  onViewInvoice: (invoice: AgentBillingMonthlyInvoice) => void;
+  onViewCharge: (charge: AgentBillingCharge) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const showLockCountdown =
+    !billingBlocked &&
+    group.paymentStatus === 'unpaid' &&
+    group.daysUntilAccountLock != null;
 
   return (
-    <div className="space-y-5">
-      {groups.map((group) => {
-        const showLockCountdown =
-          !billingBlocked &&
-          group.paymentStatus === 'unpaid' &&
-          group.daysUntilAccountLock != null;
-
-        return (
-          <section
-            key={group.key}
-            className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm"
-          >
-            <header className="flex flex-wrap items-start justify-between gap-3 border-b bg-muted/30 px-5 py-4">
-              <div className="min-w-0 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-semibold tracking-tight">{group.label}</h3>
-                  <span
-                    className={cn(
-                      'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
-                      paymentStatusTone(group.paymentStatus),
-                    )}
-                  >
-                    {paymentStatusLabel(group.paymentStatus)}
-                  </span>
-                  {group.invoice?.status === 'overdue' ? (
-                    <span className="inline-flex rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
-                      Overdue
-                    </span>
-                  ) : null}
-                  {showLockCountdown ? (
-                    <span
-                      className={cn(
-                        'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
-                        group.daysUntilAccountLock! <= 3
-                          ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                          : 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
-                      )}
-                    >
-                      {group.daysUntilAccountLock! <= 0
-                        ? 'Locks today'
-                        : `${group.daysUntilAccountLock}d to lock`}
-                    </span>
-                  ) : null}
-                  {billingBlocked && group.paymentStatus === 'unpaid' ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
-                      <Lock className="size-3" />
-                      Account locked
-                    </span>
-                  ) : null}
-                </div>
-                {group.invoice ? (
-                  <p className="text-muted-foreground text-xs">
-                    {group.invoice.invoiceNumber}
-                    {group.invoice.dueDate ? ` · due ${formatDate(group.invoice.dueDate)}` : null}
-                    {group.invoice.paidAt
-                      ? ` · paid ${formatDateTime(group.invoice.paidAt)}`
-                      : null}
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    {group.paymentStatus === 'accruing'
-                      ? 'Charges this month — your invoice appears after CROSSUB Accounting approves it'
-                      : 'Invoice will appear here after CROSSUB Accounting approves it'}
-                  </p>
+    <section className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full flex-wrap items-start justify-between gap-3 bg-muted/30 px-5 py-4 text-left transition hover:bg-muted/50"
+      >
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold tracking-tight">{group.label}</h3>
+            <span
+              className={cn(
+                'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                paymentStatusTone(group.paymentStatus),
+              )}
+            >
+              {paymentStatusLabel(group.paymentStatus)}
+            </span>
+            {group.invoice?.status === 'overdue' ? (
+              <span className="inline-flex rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
+                Overdue
+              </span>
+            ) : null}
+            {showLockCountdown ? (
+              <span
+                className={cn(
+                  'inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                  group.daysUntilAccountLock! <= 3
+                    ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                    : 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',
                 )}
-              </div>
-              <p className="text-lg font-semibold tabular-nums tracking-tight">
-                {formatCurrency(group.totalAud)}
-              </p>
-            </header>
+              >
+                {group.daysUntilAccountLock! <= 0
+                  ? 'Locks today'
+                  : `${group.daysUntilAccountLock}d to lock`}
+              </span>
+            ) : null}
+            {billingBlocked && group.paymentStatus === 'unpaid' ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive">
+                <Lock className="size-3" />
+                Account locked
+              </span>
+            ) : null}
+          </div>
+          {group.invoice ? (
+            <p className="text-muted-foreground text-xs">
+              {group.invoice.invoiceNumber}
+              {group.invoice.dueDate ? ` · due ${formatDate(group.invoice.dueDate)}` : null}
+              {group.invoice.paidAt ? ` · paid ${formatDateTime(group.invoice.paidAt)}` : null}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              {group.paymentStatus === 'accruing'
+                ? 'Charges this month — your invoice appears after CROSSUB Accounting approves it'
+                : 'Invoice will appear here after CROSSUB Accounting approves it'}
+            </p>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <p className="text-lg font-semibold tabular-nums tracking-tight">
+            {formatCurrency(group.totalAud)}
+          </p>
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-4 shrink-0 transition-transform',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        </div>
+      </button>
+
+      {open ? (
+        <div className="border-t">
 
             {billingBlocked && group.paymentStatus === 'unpaid' ? (
               <div className="flex gap-2 border-b border-destructive/25 bg-destructive/10 px-5 py-3 text-xs text-destructive">
@@ -722,7 +731,10 @@ export function Level2MonthlyBillingList({
                   type="button"
                   className="w-full sm:w-auto"
                   variant="outline"
-                  onClick={() => onViewInvoice(group.invoice!)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onViewInvoice(group.invoice!);
+                  }}
                   disabled={disabled || openingInvoiceId === group.invoice.id}
                 >
                   {openingInvoiceId === group.invoice.id ? (
@@ -738,9 +750,44 @@ export function Level2MonthlyBillingList({
                 </p>
               )}
             </footer>
-          </section>
-        );
-      })}
+          </div>
+        ) : null}
+    </section>
+  );
+}
+
+export function Level2MonthlyBillingList({
+  charges,
+  invoices,
+  includedUsageByProperty = [],
+  overdueLockDays = DEFAULT_OVERDUE_LOCK_DAYS,
+  billingBlocked = false,
+  openingInvoiceId,
+  disabled = false,
+  onViewInvoice,
+  onOpenInvoiceById: _onOpenInvoiceById,
+  onViewCharge,
+}: Level2MonthlyBillingListProps) {
+  const groups = buildLevel2MonthGroups(charges, invoices, { overdueLockDays });
+
+  if (groups.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-5">
+      {groups.map((group) => (
+        <Level2MonthGroupCard
+          key={group.key}
+          group={group}
+          includedUsageByProperty={includedUsageByProperty}
+          billingBlocked={billingBlocked}
+          openingInvoiceId={openingInvoiceId}
+          disabled={disabled}
+          onViewInvoice={onViewInvoice}
+          onViewCharge={onViewCharge}
+        />
+      ))}
     </div>
   );
 }
