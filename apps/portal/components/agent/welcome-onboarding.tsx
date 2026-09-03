@@ -53,28 +53,8 @@ export function WelcomeOnboarding() {
     };
   }, [status, user?.id, deferredRoute, stillRegistering]);
 
-  useEffect(() => {
-    if (!welcomeStatus?.eligible || welcomeStatus.dismissed) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const blockKeys = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' || event.key === 'Esc') {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    window.addEventListener('keydown', blockKeys, true);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', blockKeys, true);
-    };
-  }, [welcomeStatus?.eligible, welcomeStatus?.dismissed]);
-
   const dismiss = useCallback(async () => {
-    if (!videoEnded || dismissing) return;
+    if (dismissing) return;
     setDismissing(true);
     try {
       const result = await dismissPortalWelcome();
@@ -88,7 +68,28 @@ export function WelcomeOnboarding() {
     } finally {
       setDismissing(false);
     }
-  }, [dismissing, videoEnded]);
+  }, [dismissing]);
+
+  useEffect(() => {
+    if (!welcomeStatus?.eligible || welcomeStatus.dismissed) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        event.preventDefault();
+        event.stopPropagation();
+        void dismiss();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, [dismiss, welcomeStatus?.eligible, welcomeStatus?.dismissed]);
 
   if (
     deferredRoute ||
@@ -120,7 +121,7 @@ export function WelcomeOnboarding() {
           <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
             {videoEnded
               ? 'You can replay this anytime from More → Support → Intro video.'
-              : 'Please watch this short intro before continuing.'}
+              : 'Watch this short intro, or skip and replay it later from More → Support → Intro video.'}
           </p>
         </div>
         <WelcomeVideoPlayer
@@ -129,13 +130,16 @@ export function WelcomeOnboarding() {
           className="mt-4"
           onEnded={() => setVideoEnded(true)}
         />
-        {videoEnded ? (
-          <div className="mt-5">
-            <Button className="w-full" disabled={dismissing} onClick={() => void dismiss()}>
-              Close
-            </Button>
-          </div>
-        ) : null}
+        <div className="mt-5">
+          <Button
+            className="w-full"
+            variant={videoEnded ? 'default' : 'outline'}
+            disabled={dismissing}
+            onClick={() => void dismiss()}
+          >
+            {videoEnded ? 'Close' : 'Skip intro'}
+          </Button>
+        </div>
       </div>
     </div>
   );
