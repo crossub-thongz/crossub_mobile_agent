@@ -4,7 +4,6 @@ import { CreditCard, FileText, Loader2, Lock, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-import { AddPaymentMethodPrompt } from '@/components/agent/add-payment-method-prompt';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { PageIntro } from '@/components/agent/page-intro';
@@ -358,15 +357,6 @@ export default function BillPage() {
   const usesMonthlyInvoice =
     summary?.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT' ||
     summary?.portalServiceLevel === 'LEVEL_3_LEGACY';
-  const showLevel3PaymentPrompt =
-    !loading &&
-    summary?.portalServiceLevel === 'LEVEL_3_LEGACY' &&
-    !summary.platformBillingDisabled &&
-    !summary.hasDefaultPaymentMethod &&
-    stripeConfigured &&
-    setupDialog == null &&
-    !savingPaymentMethod &&
-    paymentDialog == null;
 
   const payableInvoices = useMemo(() => invoices.filter(isPayableInvoice), [invoices]);
 
@@ -1155,10 +1145,6 @@ export default function BillPage() {
         }}
       />
 
-      <AddPaymentMethodPrompt
-        open={showLevel3PaymentPrompt}
-        onSaved={() => void handlePaymentMethodSuccess()}
-      />
     </AgentShell>
   );
 }

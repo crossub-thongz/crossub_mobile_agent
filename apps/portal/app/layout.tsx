@@ -111,6 +111,11 @@ export default function RootLayout({
                           <AddToHomeScreenPrompt />
                           {children}
                           <WelcomeOnboarding />
+                          {agentUi === AGENT_UI.V2 ? (
+                            <Suspense fallback={null}>
+                              <AddPaymentMethodGate />
+                            </Suspense>
+                          ) : null}
           <Suspense fallback={null}>
             <AgentPageGuideHost />
           </Suspense>
@@ -120,11 +125,6 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <AgentPageTourHost />
           </Suspense>
-                          {agentUi === AGENT_UI.V2 ? (
-                            <Suspense fallback={null}>
-                              <AddPaymentMethodGate />
-                            </Suspense>
-                          ) : null}
                         </AgentPageGuideProvider>
                       </AgentNotificationDialogProvider>
                     </PortalServiceLevelGate>

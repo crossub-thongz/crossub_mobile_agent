@@ -23,9 +23,8 @@ const EXEMPT_ROUTES = [
 ];
 
 /**
- * Blocking prompt until Level 1/2 agencies save a default card. v2 Agent UI only.
- * Runs before page guides and spotlight tours. Level 3 agencies only see this on
- * the Invoice page — see bill/page.tsx.
+ * Level 1/2 payment-method prompt. Shown once per login until the agent saves a card
+ * or dismisses it. Page guides and spotlight tours wait until this is resolved.
  */
 export function AddPaymentMethodGate() {
   const pathname = usePathname();
@@ -36,11 +35,16 @@ export function AddPaymentMethodGate() {
   const [needsPaymentMethod, setNeedsPaymentMethod] = useState(false);
   const [usesGlobalPrompt, setUsesGlobalPrompt] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [dismissedThisLogin, setDismissedThisLogin] = useState(false);
 
   const onExemptPage =
     !pathname ||
     isPublicRoute(pathname) ||
     EXEMPT_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+
+  useEffect(() => {
+    setDismissedThisLogin(false);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isV2 || status !== 'authed' || !user || onExemptPage) {
@@ -98,27 +102,53 @@ export function AddPaymentMethodGate() {
     return () => {
       cancelled = true;
     };
-  }, [isV2, status, user?.id, onExemptPage, pathname, refreshNeed]);
+  }, [isV2, status, user?.id, onExemptPage, refreshNeed]);
+
+  const awaitingBillingCheck =
+    isV2 && status === 'authed' && Boolean(user) && !onExemptPage && !checked;
+
+  const wantsPrompt =
+    checked &&
+    usesGlobalPrompt &&
+    needsPaymentMethod &&
+    !dismissedThisLogin &&
+    !welcomeBlocking &&
+    Boolean(getStripePublishableKey());
 
   const showGate =
     isV2 &&
     status === 'authed' &&
     Boolean(user) &&
     !onExemptPage &&
-    checked &&
-    usesGlobalPrompt &&
-    needsPaymentMethod &&
+    wantsPrompt;
+
+  const shouldBlockTours =
+    isV2 &&
+    status === 'authed' &&
+    Boolean(user) &&
+    !onExemptPage &&
     !welcomeBlocking &&
-    Boolean(getStripePublishableKey());
+    (awaitingBillingCheck || wantsPrompt);
 
   useEffect(() => {
-    setPaymentMethodGateBlocking(showGate);
+    setPaymentMethodGateBlocking(shouldBlockTours);
     return () => setPaymentMethodGateBlocking(false);
-  }, [showGate, setPaymentMethodGateBlocking]);
+  }, [shouldBlockTours, setPaymentMethodGateBlocking]);
 
   const handleSaved = () => {
     setNeedsPaymentMethod(false);
   };
 
-  return <AddPaymentMethodPrompt open={showGate} onSaved={handleSaved} />;
+  const handleDismiss = () => {
+    setDismissedThisLogin(true);
+  };
+
+  return (
+    <AddPaymentMethodPrompt
+      open={showGate}
+      dismissible
+      onDismiss={handleDismiss}
+      onSaved={handleSaved}
+    />
+  );
 }

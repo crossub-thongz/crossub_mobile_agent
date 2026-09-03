@@ -1,6 +1,6 @@
 'use client';
 
-import { CreditCard, Loader2 } from 'lucide-react';
+import { CreditCard, Loader2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -12,21 +12,25 @@ import { createAgentPaymentMethodSetup } from '@/lib/crossub-api/agent-billing-c
 import { getStripePublishableKey } from '@/lib/stripe-client';
 
 const DEFAULT_DESCRIPTION =
-  'Save a card so checkout is faster when you pay. We never charge it automatically — only when you tap Pay. This stays on screen until a payment method is saved.';
+  'Save a card so checkout is faster when you pay. We never charge it automatically — only when you tap Pay.';
 
 type AddPaymentMethodPromptProps = {
   open: boolean;
   onSaved: () => void;
+  onDismiss?: () => void;
+  dismissible?: boolean;
   description?: string;
 };
 
 /**
- * Blocking overlay prompting the agent to save a default card.
- * Used globally for Level 1/2 and on the Invoice page for Level 3.
+ * Overlay prompting the agent to save a default card.
+ * Used globally for Level 1/2 after login until dismissed or a card is saved.
  */
 export function AddPaymentMethodPrompt({
   open,
   onSaved,
+  onDismiss,
+  dismissible = false,
   description = DEFAULT_DESCRIPTION,
 }: AddPaymentMethodPromptProps) {
   const [setupDialog, setSetupDialog] = useState<StripeSetupDialogState | null>(null);
@@ -40,9 +44,11 @@ export function AddPaymentMethodPrompt({
     document.body.style.overflow = 'hidden';
 
     const blockKeys = (event: KeyboardEvent) => {
+      if (!dismissible) return;
       if (event.key === 'Escape' || event.key === 'Esc') {
         event.preventDefault();
         event.stopPropagation();
+        onDismiss?.();
       }
     };
     window.addEventListener('keydown', blockKeys, true);
@@ -51,7 +57,7 @@ export function AddPaymentMethodPrompt({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', blockKeys, true);
     };
-  }, [open]);
+  }, [dismissible, onDismiss, open]);
 
   const startSetup = async () => {
     if (!getStripePublishableKey()) {
@@ -88,27 +94,50 @@ export function AddPaymentMethodPrompt({
         aria-labelledby="add-payment-method-title"
       >
         <div className="relative w-full max-w-md rounded-xl border bg-card p-5 shadow-xl">
+          {dismissible ? (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground absolute right-3 top-3 rounded-lg p-1 transition-colors hover:bg-muted/60"
+              aria-label="Close"
+              onClick={() => onDismiss?.()}
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
           <p className="text-primary text-xs font-semibold uppercase tracking-wide">
-            Required to continue
+            {dismissible ? 'Recommended' : 'Required to continue'}
           </p>
           <h2 id="add-payment-method-title" className="mt-1 text-lg font-semibold">
             Add a payment method
           </h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{description}</p>
           {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
-          <Button className="mt-5 w-full" disabled={starting} onClick={() => void startSetup()}>
-            {starting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <CreditCard className="size-4" />
-            )}
-            Add payment method
-          </Button>
+          <div className="mt-5 space-y-2">
+            <Button className="w-full" disabled={starting} onClick={() => void startSetup()}>
+              {starting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CreditCard className="size-4" />
+              )}
+              Add payment method
+            </Button>
+            {dismissible ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-muted-foreground w-full"
+                disabled={starting}
+                onClick={() => onDismiss?.()}
+              >
+                Not now
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
       <StripeSetupDialog
         state={setupDialog}
-        dismissible={false}
+        dismissible={dismissible}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setSetupDialog(null);
         }}
