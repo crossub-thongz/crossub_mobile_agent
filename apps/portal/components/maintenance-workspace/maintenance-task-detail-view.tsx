@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ChevronLeft,
   ChevronRight,
   Sparkles,
   Star,
@@ -21,8 +20,9 @@ import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
+import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES, vacatingDetail } from '@/constants/routes';
+import { propertyDetail, vacatingDetail } from '@/constants/routes';
 import { fromTasks } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
@@ -631,13 +631,7 @@ export function MaintenanceTaskDetailView({
                 ))
               )}
             </ul>
-            <Link
-              href={ROUTES.TASKS}
-              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-            >
-              <ChevronLeft className="size-3.5" />
-              Back
-            </Link>
+            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

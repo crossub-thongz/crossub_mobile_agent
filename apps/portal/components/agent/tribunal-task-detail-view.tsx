@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Gavel } from 'lucide-react';
+import { ChevronRight, Gavel } from 'lucide-react';
 
 import { ModuleCommunications } from '@/components/agent/module-communications';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
@@ -13,8 +13,9 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { TribunalAwaitingAccountManagerPanel } from '@/components/agent/tribunal-awaiting-account-manager';
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
+import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyDetail } from '@/constants/routes';
 import { fetchAgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import type { AgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -558,13 +559,7 @@ export function TribunalTaskDetailView({
                 ))
               )}
             </ul>
-            <Link
-              href={ROUTES.TASKS}
-              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-            >
-              <ChevronLeft className="size-3.5" />
-              Back
-            </Link>
+            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

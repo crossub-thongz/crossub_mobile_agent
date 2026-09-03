@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ChevronRight, FileText } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
@@ -13,8 +13,9 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
+import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { inspectionDetail, propertyDetail, ROUTES } from '@/constants/routes';
+import { inspectionDetail, propertyDetail } from '@/constants/routes';
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
@@ -554,13 +555,7 @@ export function EndLeasingTaskDetailView({
                 ))
               )}
             </ul>
-            <Link
-              href={ROUTES.TASKS}
-              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-            >
-              <ChevronLeft className="size-3.5" />
-              Back
-            </Link>
+            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

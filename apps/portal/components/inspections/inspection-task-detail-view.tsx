@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardList, DoorOpen, Home, Sparkles } from 'lucide-react';
+import { ChevronRight, ClipboardList, DoorOpen, Home, Sparkles } from 'lucide-react';
 
 import { InspectionDetailView } from '@/components/inspections/inspection-detail-view';
 import { InspectionTaskDocuments } from '@/components/inspections/inspection-task-documents';
@@ -13,8 +13,9 @@ import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
+import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyDetail } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { INSPECTION_TYPE_LABEL, INSPECTION_TYPE_SHORT } from '@/lib/inspections/presentation';
 import {
@@ -390,13 +391,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                 ))
               )}
             </ul>
-            <Link
-              href={ROUTES.TASKS}
-              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-            >
-              <ChevronLeft className="size-3.5" />
-              Back
-            </Link>
+            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

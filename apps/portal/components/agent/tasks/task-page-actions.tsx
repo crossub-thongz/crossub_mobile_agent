@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { messageDetail, propertyDetail, ROUTES } from '@/constants/routes';
+import { usePortalBackNavigation } from '@/hooks/use-portal-back-navigation';
 
 const backButtonClass =
   'inline-flex items-center gap-1 rounded-xl border v2-frosted-surface px-3 py-2 text-sm font-semibold';
@@ -26,6 +27,8 @@ export function TaskPageActions({
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { ensureMessageThread, properties } = useAgentData();
+  const back = usePortalBackNavigation(ROUTES.TASKS, 'Tasks');
+  const backHref = back?.href ?? ROUTES.TASKS;
   const hasProperty = Boolean(propertyId);
   const property = propertyId ? properties.find((row) => row.id === propertyId) : undefined;
   const tenantName = property?.tenantName.replace(/\s*\([^)]*\)\s*$/, '').trim() ?? '';
@@ -35,7 +38,7 @@ export function TaskPageActions({
 
   return (
     <div className="flex items-center gap-2">
-      <Link href={ROUTES.TASKS} className={backButtonClass}>
+      <Link href={backHref} className={backButtonClass}>
         <ChevronLeft className="size-4" />
         Back
       </Link>

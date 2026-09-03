@@ -42,9 +42,10 @@ import {
 } from '@/lib/property-overview';
 import { householdTenantsFromOverview } from '@/lib/property-parties';
 import { parseTenancyArchiveSnapshots } from '@/lib/property-archive';
+import { CurrentTenancyTitle } from '@/components/agent/current-tenancy-title';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
+import { resolveCurrentTenancyRefs } from '@/lib/tenancy-references';
 import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
-import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import type {
   AgentDocument,
   ArchivedEndLeasingCase,
@@ -80,7 +81,7 @@ function ProfileCard({
   className,
   bodyClassName,
 }: {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   icon: React.ComponentType<{ className?: string }>;
   count?: number;
@@ -103,7 +104,7 @@ function ProfileCard({
             <Icon className="size-4" />
           </span>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold">
+            <h3 className="flex min-w-0 items-center gap-1 text-sm font-semibold">
               {title}
               {count != null ? ` (${count})` : ''}
             </h3>
@@ -213,8 +214,18 @@ function OverviewGrid({
   const viewingPrevious = tenancyPageIndex > 0;
   const activePrevious = viewingPrevious ? previousPages[tenancyPageIndex - 1] : undefined;
   const archive = activePrevious?.archive;
-  const tenancyRef = tenancyReferenceLabel(currentLease?.id?.trim() || propertyId);
-  const currentTenancyTitle = isVacant ? 'Current Tenancy' : `Current Tenancy (${tenancyRef})`;
+  const tenancyRefs = resolveCurrentTenancyRefs({
+    tenants: household,
+    leaseId: currentLease?.id,
+    propertyId,
+  });
+  const currentTenancyTitle = (
+    <CurrentTenancyTitle
+      vacant={isVacant}
+      primaryRef={tenancyRefs.primary}
+      others={tenancyRefs.others}
+    />
+  );
   const previousSubtitle = archive?.vacateDate ? `Vacated ${formatDate(archive.vacateDate)}` : undefined;
   const previousLeaseStart = archive?.leaseStartDate;
   const previousLeaseEnd = archive?.leaseEndDate;

@@ -38,9 +38,10 @@ import {
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
 import { householdTenantsFromOverview } from '@/lib/property-parties';
 import { parseTenancyArchiveSnapshots } from '@/lib/property-archive';
+import { CurrentTenancyTitle } from '@/components/agent/current-tenancy-title';
 import { TenancyPagerControls } from '@/components/agent/tenancy-pager-controls';
+import { resolveCurrentTenancyRefs } from '@/lib/tenancy-references';
 import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-pages';
-import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import { useAgentStore } from '@/lib/store';
 import type { Property } from '@/lib/types';
 import { usePropertyIncludedUsage } from '@/lib/use-property-included-usage';
@@ -281,8 +282,18 @@ export function PropertyListPreviewPanel({
   const viewingPrevious = tenancyPageIndex > 0;
   const activePrevious = viewingPrevious ? previousPages[tenancyPageIndex - 1] : undefined;
   const archive = activePrevious?.archive;
-  const tenancyRef = tenancyReferenceLabel(currentLease?.id?.trim() || propertyId);
-  const currentTenancyTitle = isVacant ? 'Current Tenancy' : `Current Tenancy (${tenancyRef})`;
+  const tenancyRefs = resolveCurrentTenancyRefs({
+    tenants: household,
+    leaseId: currentLease?.id,
+    propertyId,
+  });
+  const currentTenancyTitle = (
+    <CurrentTenancyTitle
+      vacant={isVacant}
+      primaryRef={tenancyRefs.primary}
+      others={tenancyRefs.others}
+    />
+  );
   const previousSubtitle = archive?.vacateDate ? `Vacated ${formatDate(archive.vacateDate)}` : undefined;
   const profileHref = (section?: PropertyProfileSection) =>
     section && section !== 'overview'
@@ -438,7 +449,7 @@ export function PropertyListPreviewPanel({
               <div>
                 <div className="mb-0.5 flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="text-sm font-semibold">
+                    <h3 className="flex min-w-0 items-center gap-1 text-sm font-semibold">
                       {viewingPrevious ? 'Previous Tenancy' : currentTenancyTitle}
                     </h3>
                     {viewingPrevious && previousSubtitle ? (

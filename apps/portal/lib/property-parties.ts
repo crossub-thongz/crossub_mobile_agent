@@ -57,7 +57,34 @@ export function splitParties(entries: PropertyPartyContact[]) {
   return { primary, additional, label };
 }
 
+/** Filled landlord/tenant rows from a registry draft, if the payload still carries them. */
+export function readRegistryDraftParties(
+  raw: unknown,
+  key: 'tenants' | 'landlords',
+): PropertyPartyContact[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+  const list = (raw as Record<string, unknown>)[key];
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((row): PropertyPartyContact | null => {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
+      const party = row as Record<string, unknown>;
+      const name = typeof party.name === 'string' ? party.name.trim() : '';
+      const email = typeof party.email === 'string' ? party.email.trim() : '';
+      const phone = typeof party.phone === 'string' ? party.phone.trim() : '';
+      if (!name && !email && !phone) return null;
+      return {
+        name,
+        email: email || undefined,
+        phone: phone || undefined,
+        isPrimary: party.isPrimary === true,
+      };
+    })
+    .filter((row): row is PropertyPartyContact => row != null);
+}
+
 export type HouseholdTenant = {
+  id?: string;
   name: string;
   email?: string;
   phone?: string;
@@ -65,6 +92,7 @@ export type HouseholdTenant = {
 };
 
 type HouseholdPersonInput = {
+  id?: string | null;
   name?: string | null;
   email?: string | null;
   phone?: string | null;
@@ -121,6 +149,7 @@ export function mergeHouseholdTenants(input: {
     if (emailKey) seen.add(emailKey);
     if (nameKey) seen.add(nameKey);
     out.push({
+      id: row.id?.trim() || undefined,
       name: name || email || 'Unnamed tenant',
       email: email || undefined,
       phone: phone || undefined,
@@ -209,6 +238,7 @@ export function householdTenantsFromOverview(input: {
     const match = matchingHouseholdContact(contacts, registryName, registryEmail);
     return mergeHouseholdTenants({
       primary: {
+        id: match?.id,
         name: registryName,
         email: match?.email ?? registryEmail,
         phone: match?.phone ?? registryPhone,

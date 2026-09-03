@@ -52,6 +52,7 @@ import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import { AGENT_INGOING_GATE_LABEL, deriveAgentIngoingGateStatus } from '@/lib/ingoing-inspection-display';
 import { AGENT_OUTGOING_GATE_LABEL, deriveAgentOutgoingGateStatus } from '@/lib/outgoing-inspection-display';
 import { INSPECTION_AWAITING_PAYMENT_LABEL } from '@/lib/inspections/awaiting-payment';
+import { readRegistryDraftParties } from '@/lib/property-parties';
 import type {
   AgencyMembershipTier,
   AgentArchiveView,
@@ -160,6 +161,17 @@ function readListFields(dto: AgentProperty): AgentPropertyListFields {
   return dto as AgentProperty & AgentPropertyListFields;
 }
 
+function additionalTenantsFromDraft(
+  registryDraft: Record<string, unknown> | null | undefined,
+): Property['additionalTenants'] {
+  const tenants = readRegistryDraftParties(registryDraft, 'tenants');
+  if (tenants.length <= 1) return undefined;
+  const extras = tenants.some((tenant) => tenant.isPrimary)
+    ? tenants.filter((tenant) => !tenant.isPrimary)
+    : tenants.slice(1);
+  return extras.length > 0 ? extras : undefined;
+}
+
 /** Map one enriched property card onto the app's rich Property view-model. */
 export function mapAgentProperty(
   dto: AgentProperty,
@@ -188,6 +200,9 @@ export function mapAgentProperty(
       email: dto.tenantEmail ?? undefined,
       phone: dto.tenantPhone ?? undefined,
     },
+    additionalTenants: additionalTenantsFromDraft(
+      list.registryDraft ?? ext.registryDraft,
+    ),
     leaseStatus: dto.leaseStatus,
     rentWeekly: dto.rentWeekly ?? 0,
     bondAmount: dto.bondAmount ?? undefined,

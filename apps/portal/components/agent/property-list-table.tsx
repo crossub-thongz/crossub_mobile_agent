@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, type ReactNode } from 'react';
 import { AlertCircle, AlertTriangle, ArchiveRestore, Bell, Pencil, Trash2 } from 'lucide-react';
 
+import { HoverInfoList } from '@/components/agent/hover-info-list';
 import {
   MODULE_TABLE_COLUMN_WIDTHS,
   ModuleTableTruncateText,
@@ -28,6 +29,8 @@ import { crossubWebPropertyUrl } from '@/lib/crossub-web-url';
 import { propertyCreatedAtIso } from '@/lib/record-created-at';
 import type { Agency, Property } from '@/lib/types';
 import { cn, formatCurrency, formatDate, formatPropertyFullAddress } from '@/lib/utils';
+import { propertyListV2TenancyLabel } from '@/lib/property-list-v2';
+import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
 
 function formatLeasePeriod(property: Property): string {
   if (!property.leaseStart && !property.leaseEnd) return '—';
@@ -136,6 +139,7 @@ export function PropertyListTable({
   canManage?: boolean;
 }) {
   const isArchived = variant === 'archived';
+  const tenantContactsByProperty = usePropertyTenantContacts(properties.map((property) => property.id));
   const { sortKey, sortDirection, onSort } = useClientTableSort<PropertySortKey>(
     isArchived ? 'endOfManagement' : 'createdAt',
     'desc',
@@ -288,6 +292,11 @@ export function PropertyListTable({
                   ? crossubWebPropertyUrl(property.id)
                   : null;
               const createdIso = propertyCreatedAtIso(property);
+              const tenancy = propertyListV2TenancyLabel(
+                property,
+                undefined,
+                tenantContactsByProperty[property.id],
+              );
 
               return (
                 <tr
@@ -335,7 +344,16 @@ export function PropertyListTable({
                     ) : null}
                   </td>
                   <td className={moduleTableCellClassName('text-muted-foreground')}>
-                    <ModuleTableTruncateText lines={1}>{property.tenantName || '—'}</ModuleTableTruncateText>
+                    <div className="flex min-w-0 items-start gap-1">
+                      <ModuleTableTruncateText lines={1}>
+                        {tenancy.primary || '—'}
+                      </ModuleTableTruncateText>
+                      <HoverInfoList
+                        ariaLabel="Other tenants"
+                        heading="Other tenants"
+                        items={tenancy.others.map((name) => ({ title: name }))}
+                      />
+                    </div>
                   </td>
                   <td className={moduleTableCellClassName('text-xs leading-snug text-muted-foreground tabular-nums')}>
                     <ModuleTableTruncateText lines={1}>{formatLeasePeriod(property)}</ModuleTableTruncateText>

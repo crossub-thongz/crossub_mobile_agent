@@ -31,6 +31,10 @@ export function fromTasks(): DetailNavContext {
   return { from: 'tasks' };
 }
 
+export function fromDashboard(): DetailNavContext {
+  return { from: 'dashboard' };
+}
+
 export function resolveBackNavigation(
   searchParams: Pick<URLSearchParams, 'get'>,
   fallback: { href: string; label: string },
@@ -52,6 +56,9 @@ export function resolveBackNavigation(
   }
   if (from === 'tasks') {
     return { href: ROUTES.TASKS, label: 'Tasks' };
+  }
+  if (from === 'dashboard') {
+    return { href: ROUTES.DASHBOARD, label: 'Dashboard' };
   }
   return fallback;
 }

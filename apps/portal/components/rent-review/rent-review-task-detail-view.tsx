@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, DollarSign } from 'lucide-react';
+import { ChevronRight, DollarSign } from 'lucide-react';
 
 import { CaseContactActions } from '@/components/agent/case-contact-actions';
 import { RentEquivalentsHint } from '@/components/rent-equivalents-hint';
@@ -14,8 +14,9 @@ import {
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { RentReviewAgentWorkflowPanel } from '@/components/rent-review/rent-review-agent-workflow-panel';
 import { RentReviewTaskDocuments } from '@/components/rent-review/rent-review-task-documents';
+import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
-import { propertyDetail, ROUTES } from '@/constants/routes';
+import { propertyDetail } from '@/constants/routes';
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
@@ -563,13 +564,7 @@ export function RentReviewTaskDetailView({
                 ))
               )}
             </ul>
-            <Link
-              href={ROUTES.TASKS}
-              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-            >
-              <ChevronLeft className="size-3.5" />
-              Back
-            </Link>
+            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

@@ -24,6 +24,7 @@ import { GlobalShellFabs, ShellHeaderQuickActions } from '@/components/agent/glo
 import { AgentSidebar } from '@/components/layout/agent-sidebar';
 import { AgentShellV2Header } from '@/components/layout/agent-shell-v2-header';
 import { ShellBackButton } from '@/components/layout/shell-back-button';
+import { PortalNavigationTracker } from '@/components/layout/portal-navigation-tracker';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
@@ -153,6 +154,9 @@ export function AgentShell({
         !isV2 && 'bg-background',
       )}
     >
+      <Suspense fallback={null}>
+        <PortalNavigationTracker />
+      </Suspense>
       <AgentSidebar onLogout={() => void logout()} />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

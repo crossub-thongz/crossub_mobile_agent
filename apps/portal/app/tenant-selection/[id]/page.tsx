@@ -11,6 +11,7 @@ import { AgentShell } from '@/components/layout/agent-shell';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { ROUTES, tenantNew } from '@/constants/routes';
+import { useBackNavigation } from '@/hooks/use-back-navigation';
 import { useAgentStore } from '@/lib/store';
 import { prefillFromTenantSelection } from '@/lib/tenant-provision-prefill';
 import { tenantSelectionDecisionKey } from '@/lib/tenant-selection';
@@ -20,6 +21,7 @@ export default function TenantSelectionPage() {
   const params = useParams();
   const id = params.id as string;
   const { tenantSelections } = useAgentData();
+  const back = useBackNavigation(ROUTES.TASKS, 'Tasks');
   const setTenantSelectionDecision = useAgentStore((s) => s.setTenantSelectionDecision);
   const item = tenantSelections.find((t) => t.id === id);
 
@@ -53,7 +55,7 @@ export default function TenantSelectionPage() {
   };
 
   return (
-    <AgentShell title="Tenant selection" backHref={ROUTES.DASHBOARD}>
+    <AgentShell title="Tenant selection" backHref={back.href} backLabel={back.label}>
       <div className="space-y-4">
         <div className="rounded-xl border bg-card p-4">
           <p className="font-semibold">{item.applicantName}</p>

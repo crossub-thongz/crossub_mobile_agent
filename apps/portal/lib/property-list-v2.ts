@@ -19,6 +19,8 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import type { RentReviewDecision } from '@/lib/rent-review';
+import { householdTenantsFromOverview, readRegistryDraftParties } from '@/lib/property-parties';
+import type { AgentPropertyContact } from '@/lib/crossub-api/agent-client';
 import { daysSinceDate, daysUntilDate, formatCurrency, formatDate } from '@/lib/utils';
 
 const NEW_PROPERTY_DAYS = 14;
@@ -287,15 +289,35 @@ export function formatPropertyListV2Rent(property: Property): string {
 export function propertyListV2TenancyLabel(
   property: Property,
   currentLease?: LeasingRecord,
-): { primary: string; secondary?: string } {
+  contacts?: AgentPropertyContact[],
+): { primary: string; secondary?: string; others: string[] } {
   if (isPropertyRegistryDraft(property)) {
-    return { primary: 'Draft', secondary: 'Registration incomplete' };
+    return { primary: 'Draft', secondary: 'Registration incomplete', others: [] };
   }
-  const tenant = property.tenantName?.trim() || currentLease?.approvedTenant?.trim();
+  const draftTenants = readRegistryDraftParties(property.registryDraft, 'tenants');
+  const household = householdTenantsFromOverview({
+    isVacant: property.leaseStatus === 'vacant',
+    property: {
+      tenantName: property.tenantName,
+      tenantContact: property.tenantContact,
+      additionalTenants: property.additionalTenants,
+    },
+    contacts: contacts?.length ? contacts : draftTenants,
+  });
+  const primaryTenant = household.find((tenant) => tenant.isPrimary) ?? household[0];
+  const others = household
+    .filter((tenant) => tenant !== primaryTenant)
+    .map((tenant) => tenant.name.trim())
+    .filter(Boolean);
+  const tenant =
+    primaryTenant?.name.trim() ||
+    property.tenantName?.trim() ||
+    currentLease?.approvedTenant?.trim();
   const { start } = resolveLeaseDates(property, currentLease);
   const leaseStart = start ?? property.leaseStart ?? currentLease?.leaseStart;
   return {
     primary: tenant || (property.leaseStatus === 'vacant' ? 'Vacant' : '—'),
     secondary: leaseStart ? `Since ${formatDate(leaseStart)}` : undefined,
+    others,
   };
 }

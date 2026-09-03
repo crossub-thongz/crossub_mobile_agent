@@ -214,6 +214,9 @@ export function V2PropertiesPage() {
           property.address.toLowerCase().includes(query) ||
           property.suburb.toLowerCase().includes(query) ||
           property.tenantName.toLowerCase().includes(query) ||
+          (property.additionalTenants ?? []).some((tenant) =>
+            tenant.name.toLowerCase().includes(query),
+          ) ||
           property.homeOwnerName.toLowerCase().includes(query) ||
           (property.agencyName?.toLowerCase().includes(query) ?? false) ||
           (property.propertyManager?.toLowerCase().includes(query) ?? false),

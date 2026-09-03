@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ChevronLeft,
   ChevronRight,
   Home,
   Link2,
@@ -19,6 +18,7 @@ import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
+import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PROPERTY_JOB_KIND_ICON } from '@/constants/property-jobs';
@@ -641,13 +641,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                 })
               )}
             </ul>
-            <Link
-              href={ROUTES.TASKS}
-              className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-            >
-              <ChevronLeft className="size-3.5" />
-              Back
-            </Link>
+            <PortalBackLink className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline" />
           </section>
         </aside>
       </div>

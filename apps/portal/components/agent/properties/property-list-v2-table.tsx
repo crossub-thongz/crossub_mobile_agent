@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Briefcase, Building2, MoreHorizontal, Wrench } from 'lucide-react';
 
+import { HoverInfoList } from '@/components/agent/hover-info-list';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -16,6 +17,7 @@ import {
 } from '@/lib/property-list-v2';
 import { isPropertyRegistryDraft } from '@/lib/property-registry-persist';
 import { useAgentStore } from '@/lib/store';
+import { usePropertyTenantContacts } from '@/lib/use-property-tenant-contacts';
 import type { LeasingRecord, Property, PropertyAccounting } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -273,6 +275,7 @@ export function PropertyListV2Table({
     getPropertyActions,
   } = useAgentData();
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
+  const tenantContactsByProperty = usePropertyTenantContacts(properties.map((property) => property.id));
 
   const rowMeta = useMemo(() => {
     const meta = new Map<
@@ -294,7 +297,11 @@ export function PropertyListV2Table({
       meta.set(propertyId, {
         status: buildPropertyListV2RowStatus(property, acct),
         leaseExpiry: buildPropertyListV2LeaseExpiry(property, currentLease),
-        tenancy: propertyListV2TenancyLabel(property, currentLease),
+        tenancy: propertyListV2TenancyLabel(
+          property,
+          currentLease,
+          tenantContactsByProperty[propertyId],
+        ),
         needActionCount: needActionCountFor(propertyId),
         ...buildPropertyListV2RowTasks({
           propertyId,
@@ -326,6 +333,7 @@ export function PropertyListV2Table({
     properties,
     rentReviewDecisions,
     rentReviews,
+    tenantContactsByProperty,
     tenantSelections,
     tribunalCases,
     vacating,
@@ -409,10 +417,22 @@ export function PropertyListV2Table({
                     ) : null}
                   </td>
                   <td className="px-3 py-3 align-top">
-                    <p className="truncate font-medium">{meta.tenancy.primary}</p>
-                    {meta.tenancy.secondary ? (
-                      <p className="text-muted-foreground truncate text-xs">{meta.tenancy.secondary}</p>
-                    ) : null}
+                    <div className="flex min-w-0 items-start gap-1">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{meta.tenancy.primary}</p>
+                        {meta.tenancy.secondary ? (
+                          <p className="text-muted-foreground truncate text-xs">
+                            {meta.tenancy.secondary}
+                          </p>
+                        ) : null}
+                      </div>
+                      <HoverInfoList
+                        ariaLabel="Other tenants"
+                        heading="Other tenants"
+                        items={meta.tenancy.others.map((name) => ({ title: name }))}
+                        className="mt-0.5"
+                      />
+                    </div>
                   </td>
                   <td className="px-3 py-3 align-top font-medium tabular-nums">
                     {formatPropertyListV2Rent(property)}
