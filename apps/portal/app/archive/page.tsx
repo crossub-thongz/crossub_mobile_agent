@@ -126,6 +126,9 @@ export default function ArchivePage() {
           }))}
           value={tab}
           onChange={setTab}
+          tourIdFor={(id) =>
+            id === 'properties' ? 'history-tab-properties' : 'history-tab-property-tasks'
+          }
         />
 
         {tab === 'properties' ? (
@@ -136,16 +139,18 @@ export default function ArchivePage() {
               description="Properties you archive leave the live list and appear here."
             />
           ) : (
-            <PropertyListView
-              properties={archivedProperties}
-              agencies={agencies}
-              variant="archived"
-              rowHref={(property) => propertyDetail(property.id)}
-              onDelete={() => undefined}
-              onRestore={(property) => void handleRestore(property)}
-              restoringId={restoringId}
-              canManage={false}
-            />
+            <div data-tour="history-property-list">
+              <PropertyListView
+                properties={archivedProperties}
+                agencies={agencies}
+                variant="archived"
+                rowHref={(property) => propertyDetail(property.id)}
+                onDelete={() => undefined}
+                onRestore={(property) => void handleRestore(property)}
+                restoringId={restoringId}
+                canManage={false}
+              />
+            </div>
           )
         ) : propertyTaskGroups.length === 0 ? (
           <EmptyState

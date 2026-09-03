@@ -139,6 +139,7 @@ export function PropertyListCard({
             variant="outline"
             className="w-full"
             disabled={restoring}
+            data-tour="history-restore"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();

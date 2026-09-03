@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Building2, CheckCircle2, FolderArchive, Lightbulb, ListTodo } from 'lucide-react';
+import { Building2, CheckCircle2, FolderArchive, Lightbulb, ListTodo } from 'lucide-react';
 
-import type { AgentTutorialModule, AgentTutorialModuleId } from '@/constants/agent-module-tutorial';
+import type { AgentTutorialModule } from '@/constants/agent-module-tutorial';
 import { ROUTES } from '@/constants/routes';
 import { cn } from '@/lib/utils';
 
@@ -133,24 +133,4 @@ export function AgentModuleTutorial({
   );
 }
 
-export function AgentHowToUseLink({
-  module,
-  className,
-}: {
-  module?: AgentTutorialModuleId;
-  className?: string;
-}) {
-  const href = module ? `${ROUTES.SUPPORT_TUTORIAL}?page=${module}` : ROUTES.SUPPORT_TUTORIAL;
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted/60',
-        className,
-      )}
-    >
-      <BookOpen className="size-4" />
-      How to use
-    </Link>
-  );
-}
+export { AgentHowToUseLink } from '@/components/agent/agent-page-tour';

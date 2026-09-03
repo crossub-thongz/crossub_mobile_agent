@@ -207,6 +207,7 @@ export function V2TasksPage() {
             <button
               key={option.id}
               type="button"
+              data-tour={`tasks-bucket-${option.id}`}
               onClick={() => setBucket((current) => (current === option.id ? 'all' : option.id))}
               className={cn(
                 'v2-frosted-surface rounded-2xl border p-4 text-left transition',
@@ -231,7 +232,7 @@ export function V2TasksPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b">
         <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-          <div className="flex gap-1">
+          <div className="flex gap-1" data-tour="tasks-type-tabs">
             {categoryFilters.map((option) => (
               <button
                 key={option.id}
@@ -256,13 +257,14 @@ export function V2TasksPage() {
             size="sm"
             className="v2-frosted-surface mb-1 shrink-0 rounded-xl"
             type="button"
+            data-tour="tasks-filters"
             onClick={() => searchInputRef.current?.focus()}
           >
             <SlidersHorizontal className="size-3.5" />
             Filters
           </Button>
         </div>
-        <div className="relative mb-1 min-w-[16rem] flex-1 sm:max-w-xs">
+        <div className="relative mb-1 min-w-[16rem] flex-1 sm:max-w-xs" data-tour="tasks-search">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             ref={searchInputRef}
@@ -286,7 +288,7 @@ export function V2TasksPage() {
           }
         />
       ) : (
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="tasks-table">
           <TaskListV2Table rows={pageRows} />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-xs">

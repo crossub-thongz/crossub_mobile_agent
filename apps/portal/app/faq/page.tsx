@@ -21,7 +21,7 @@ export default function FaqPage() {
           Need more help?
         </p>
         <p className="mt-2 text-sm leading-relaxed">
-          Replay in-app guides or open the Properties, Tasks and History tutorial. Message CROSSUB support for account and billing questions.
+          Replay in-app guides or tap How to use on Properties, Tasks, or History. Message CROSSUB support for account and billing questions.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <Link
@@ -31,7 +31,7 @@ export default function FaqPage() {
             <span className="bg-primary/15 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
               <BookOpen className="size-4" />
             </span>
-            How to use Properties, Tasks & History
+            How to use Properties
           </Link>
           <Link
             href={ROUTES.SETTINGS}

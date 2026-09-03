@@ -55,7 +55,7 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
       {
         question: 'How do I use Properties, Tasks, and History?',
         answer:
-          'Open Support → How to use for a full tutorial of every control on those three pages. You can also tap How to use on each page, or wait for the first-visit guide (How to use, then Functions).',
+          'The first time you open Properties, Tasks, or History, a walkthrough highlights each button on that page. Tap How to use on the page anytime to replay it, or open Support → How to use to jump into the Properties tour.',
       },
       {
         question: 'What is the Need Action queue?',
@@ -205,7 +205,7 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
       {
         question: 'How do page guides work?',
         answer:
-          'The first time you open Properties, Tasks, or History, a two-step tutorial explains how to use the page and every function on it. Open Support → How to use anytime for the full walkthrough, or replay first-visit guides from Settings → Help → Replay page guides.',
+          'The first time you open Properties, Tasks, or History, a walkthrough highlights each control on the page. Tap How to use on that page to replay it, or Support → How to use to start the Properties tour. Replay first-visit guides from Settings → Help → Replay page guides.',
       },
       {
         question: 'Who do I contact for platform support?',

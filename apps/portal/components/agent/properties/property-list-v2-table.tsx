@@ -96,6 +96,7 @@ function PropertyRowActions({
           size="icon"
           className="text-muted-foreground hover:text-foreground size-8"
           aria-label="Property actions"
+          data-tour="properties-row-menu"
           onClick={(event) => event.stopPropagation()}
           onDoubleClick={(event) => event.stopPropagation()}
         >
@@ -355,10 +356,14 @@ export function PropertyListV2Table({
           <thead>
             <tr className="border-b bg-muted/30 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-3">Property</th>
-              <th className="px-3 py-3">Tenancy</th>
+              <th className="px-3 py-3" data-tour="properties-tenancy">
+                Tenancy
+              </th>
               <th className="px-3 py-3">Rent</th>
               <th className="px-3 py-3">Lease expiry</th>
-              <th className="px-3 py-3">Status</th>
+              <th className="px-3 py-3" data-tour="properties-status">
+                Status
+              </th>
               <th className="px-3 py-3">Tasks</th>
               <th className="px-1 py-3">
                 <span className="sr-only">Actions</span>

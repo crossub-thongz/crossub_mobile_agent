@@ -18,10 +18,12 @@ export function FilterChips<T extends string>({
   options,
   value,
   onChange,
+  tourIdFor,
 }: {
   options: readonly { readonly id: T; readonly label: string }[];
   value: T;
   onChange: (id: T) => void;
+  tourIdFor?: (id: T) => string | undefined;
 }) {
   return (
     <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -29,6 +31,7 @@ export function FilterChips<T extends string>({
         <button
           key={opt.id}
           type="button"
+          data-tour={tourIdFor?.(opt.id)}
           onClick={() => onChange(opt.id)}
           className={cn(
             'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',

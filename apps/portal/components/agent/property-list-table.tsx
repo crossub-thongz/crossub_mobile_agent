@@ -454,6 +454,7 @@ export function PropertyListTable({
                           size="sm"
                           className="h-8 gap-1 px-2"
                           disabled={restoringId === property.id}
+                          data-tour="history-restore"
                           onClick={() => onRestore(property)}
                           aria-label={`Restore ${property.address}`}
                           title="Restore property"

@@ -22,6 +22,7 @@ import { EnvironmentBanner } from '@/components/agent/environment-banner';
 import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { AddPaymentMethodGate } from '@/components/agent/add-payment-method-gate';
 import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
+import { AgentPageTourHost } from '@/components/agent/agent-page-tour-host';
 import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
 import { AgentUiProvider } from '@/components/providers/agent-ui-provider';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
@@ -109,9 +110,12 @@ export default function RootLayout({
                           <AddToHomeScreenPrompt />
                           {children}
                           <WelcomeOnboarding />
-                          <Suspense fallback={null}>
-                            <AgentPageGuideHost />
-                          </Suspense>
+          <Suspense fallback={null}>
+            <AgentPageGuideHost />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AgentPageTourHost />
+          </Suspense>
                           {agentUi === AGENT_UI.V2 ? (
                             <Suspense fallback={null}>
                               <AddPaymentMethodGate />

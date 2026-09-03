@@ -67,7 +67,7 @@ export const SUPPORT_PAGE_SECTION: MorePageSection = {
     {
       id: 'how-to-use',
       title: 'How to use',
-      description: 'Tutorial for Properties, Tasks and History.',
+      description: 'Highlights each control on Properties, Tasks and History.',
       href: ROUTES.SUPPORT_TUTORIAL,
       icon: BookOpen,
     },

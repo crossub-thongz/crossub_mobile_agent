@@ -69,6 +69,15 @@ function NavLink({
             : 'gap-3 px-5 py-3.5',
           active ? 'agent-sidebar-v2__nav-link--active' : 'agent-sidebar-v2__nav-link--idle',
         )}
+        data-tour={
+          href === ROUTES.PROPERTIES
+            ? 'nav-properties'
+            : href === ROUTES.TASKS
+              ? 'nav-tasks'
+              : href === ROUTES.ARCHIVE
+                ? 'nav-history'
+                : undefined
+        }
       >
         <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
         <span
@@ -109,6 +118,15 @@ function NavLink({
           ? 'rounded-xl bg-primary/10 text-primary shadow-sm shadow-primary/5'
           : 'text-muted-foreground hover:bg-secondary/80 hover:text-foreground',
       )}
+      data-tour={
+        href === ROUTES.PROPERTIES
+          ? 'nav-properties'
+          : href === ROUTES.TASKS
+            ? 'nav-tasks'
+            : href === ROUTES.ARCHIVE
+              ? 'nav-history'
+              : undefined
+      }
     >
       <Icon className={cn('size-4 shrink-0 transition-transform duration-200 ease-out', !active && 'opacity-70')} />
       <span

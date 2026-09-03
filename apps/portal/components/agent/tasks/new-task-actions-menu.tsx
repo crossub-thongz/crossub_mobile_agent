@@ -100,7 +100,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" className="rounded-xl">
+          <Button type="button" className="rounded-xl" data-tour="tasks-new">
             <Plus className="size-4" />
             New task
             <ChevronDown className="size-4" />

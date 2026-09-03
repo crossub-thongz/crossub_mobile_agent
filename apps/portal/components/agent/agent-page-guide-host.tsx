@@ -77,8 +77,10 @@ export function AgentPageGuideHost() {
 
     const pathnameGuideId = resolveAgentPageGuideId(pathname, searchParams);
     const guideId = contextGuideId ?? pathnameGuideId;
+    const usesOnPageTour =
+      guideId === 'properties' || guideId === 'tasks' || guideId === 'archive';
 
-    if (!guideId || isSeen(guideId)) {
+    if (!guideId || usesOnPageTour || isSeen(guideId)) {
       setPageGuideBlocking(false);
       setActiveGuideId(null);
       return;

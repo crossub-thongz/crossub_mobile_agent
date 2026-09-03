@@ -144,7 +144,7 @@ export const AGENT_MODULE_TUTORIALS: Record<AgentTutorialModuleId, AgentTutorial
       'Click once to preview, again (or Open profile) to work the property.',
       'Needs attention is the fastest way to see which addresses are blocking CROS.',
       'Archive is reversible. Delete draft is not. End management keeps the property on the live list.',
-      'Replay this tutorial anytime from Support → How to use, or from How to use on this page.',
+      'Replay this walkthrough anytime from How to use on this page, or from Support → How to use.',
     ],
   },
   tasks: {

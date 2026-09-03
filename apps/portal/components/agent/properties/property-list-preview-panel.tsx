@@ -812,14 +812,14 @@ export function PropertyListPreviewPanel({
 
   if (shell) {
     return (
-      <div className="property-list-v2__shell-panel v2-frosted-surface flex h-full min-h-0 w-full flex-col overflow-hidden rounded-none border-0">
+      <div className="property-list-v2__shell-panel v2-frosted-surface flex h-full min-h-0 w-full flex-col overflow-hidden rounded-none border-0" data-tour="properties-preview">
         {content}
       </div>
     );
   }
 
   return (
-    <aside className="property-list-v2__panel v2-dashboard__card hidden w-[22rem] shrink-0 flex-col overflow-hidden rounded-2xl border xl:flex xl:w-[24rem]">
+    <aside className="property-list-v2__panel v2-dashboard__card hidden w-[22rem] shrink-0 flex-col overflow-hidden rounded-2xl border xl:flex xl:w-[24rem]" data-tour="properties-preview">
       {content}
     </aside>
   );

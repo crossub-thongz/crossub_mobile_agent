@@ -304,7 +304,7 @@ export function V2PropertiesPage() {
     <div className="property-list-v2 normal-case flex flex-col gap-4 px-4 py-4 lg:px-6 lg:py-5">
       <PropertiesPageHeaderActions className="flex flex-wrap gap-2 lg:hidden" />
 
-      <div className="relative shrink-0">
+      <div className="relative shrink-0" data-tour="properties-search">
         <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
           placeholder="Search address, tenant, owner…"
@@ -319,24 +319,46 @@ export function V2PropertiesPage() {
         className="flex shrink-0 flex-wrap items-center justify-between gap-3"
       >
         <div className="flex flex-wrap gap-2">
-          {listFilters.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setFilter(option.id)}
-              className={cn(
-                'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
-                filter === option.id
-                  ? 'border-primary/30 bg-primary/12 text-primary'
-                  : 'text-muted-foreground hover:border-primary/20 hover:bg-muted/60 hover:text-foreground',
-              )}
-            >
-              {option.label} {filterCounts[option.id]}
-            </button>
-          ))}
+          <span className="flex flex-wrap gap-2" data-tour="properties-occupancy">
+            {listFilters
+              .filter((option) => option.id === 'all' || option.id === 'occupied' || option.id === 'vacant')
+              .map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setFilter(option.id)}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                    filter === option.id
+                      ? 'border-primary/30 bg-primary/12 text-primary'
+                      : 'text-muted-foreground hover:border-primary/20 hover:bg-muted/60 hover:text-foreground',
+                  )}
+                >
+                  {option.label} {filterCounts[option.id]}
+                </button>
+              ))}
+          </span>
+          {listFilters
+            .filter((option) => option.id !== 'all' && option.id !== 'occupied' && option.id !== 'vacant')
+            .map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                data-tour={`properties-filter-${option.id}`}
+                onClick={() => setFilter(option.id)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                  filter === option.id
+                    ? 'border-primary/30 bg-primary/12 text-primary'
+                    : 'text-muted-foreground hover:border-primary/20 hover:bg-muted/60 hover:text-foreground',
+                )}
+              >
+                {option.label} {filterCounts[option.id]}
+              </button>
+            ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-muted-foreground flex items-center gap-2 text-xs">
+          <label className="text-muted-foreground flex items-center gap-2 text-xs" data-tour="properties-sort">
             Sort
             <select
               value={sort}
@@ -350,7 +372,7 @@ export function V2PropertiesPage() {
               ))}
             </select>
           </label>
-          <div className="flex items-center gap-1 rounded-xl border bg-card p-1">
+          <div className="flex items-center gap-1 rounded-xl border bg-card p-1" data-tour="properties-view">
             <button
               type="button"
               onClick={() => setViewMode('list')}
@@ -433,7 +455,10 @@ export function V2PropertiesPage() {
             restoringId={restoringId}
           />
 
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
+          <div
+            className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm"
+            data-tour="properties-pagination"
+          >
             <p className="text-muted-foreground text-xs">
               Showing {pageStart + 1} to {pageEnd} of {filtered.length} properties
             </p>

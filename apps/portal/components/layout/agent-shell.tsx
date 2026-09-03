@@ -467,6 +467,15 @@ export function AgentShell({
                 <Link
                   key={href}
                   href={href}
+                  data-tour={
+                    href === ROUTES.PROPERTIES
+                      ? 'nav-properties'
+                      : href === ROUTES.TASKS
+                        ? 'nav-tasks'
+                        : href === ROUTES.ARCHIVE
+                          ? 'nav-history'
+                          : undefined
+                  }
                   className={cn(
                     'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium',
                     active ? 'text-primary' : 'text-muted-foreground',
