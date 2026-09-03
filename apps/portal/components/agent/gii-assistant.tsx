@@ -1146,7 +1146,7 @@ export function GiiAssistant({
         'flex flex-col',
         isDashboardV2Panel && 'bg-transparent',
         isFrostedV2Panel && 'v2-frosted-surface border-0 shadow-none',
-        !isDashboardV2Panel && !isFrostedV2Panel && 'bg-background',
+        !isDashboardV2Panel && !isFrostedV2Panel && 'bg-white dark:bg-card',
         isEmbedded
           ? 'w-full'
           : isPanel
@@ -1353,7 +1353,7 @@ export function GiiAssistant({
           'sticky bottom-0 z-10 shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
           isFrostedV2Panel
             ? 'border-border/50 bg-transparent shadow-none'
-            : 'bg-background shadow-[0_-4px_16px_rgba(0,0,0,0.06)]',
+            : 'bg-white shadow-[0_-4px_16px_rgba(0,0,0,0.06)] dark:bg-card',
         )}
       >
         {!sending && !hasUserMessages ? (

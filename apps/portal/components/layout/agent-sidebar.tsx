@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, ChevronDown, ChevronRight, LogOut, MoreHorizontal } from 'lucide-react';
+import { Building2, ChevronDown, LogOut, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
 import { MessageUnreadBadge } from '@/components/agent/message-unread-badge';
@@ -63,13 +63,11 @@ function NavLink({
         href={href}
         title={label}
         className={cn(
-          'agent-sidebar-v2__nav-link relative flex items-center rounded-xl text-[13px] font-medium',
+          'agent-sidebar-v2__nav-link relative flex items-center text-[14px] font-medium',
           compact
-            ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
-            : 'gap-3 px-3 py-2.5',
-          active
-            ? 'agent-sidebar-v2__nav-link--active text-foreground'
-            : 'text-muted-foreground hover:bg-white/40 hover:text-foreground',
+            ? 'justify-center px-2 py-3.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-5'
+            : 'gap-3 px-5 py-3.5',
+          active ? 'agent-sidebar-v2__nav-link--active' : 'agent-sidebar-v2__nav-link--idle',
         )}
       >
         <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
@@ -83,12 +81,12 @@ function NavLink({
           {label}
         </span>
         {badge && badge > 0 ? (
-          <MessageUnreadBadge count={badge} size="sm" className="shrink-0 ring-2 ring-white/80" />
+          <MessageUnreadBadge count={badge} size="sm" className="shrink-0" />
         ) : null}
         {trailingChevron ? (
-          <ChevronRight
+          <ChevronDown
             className={cn(
-              'text-muted-foreground size-4 shrink-0 opacity-70',
+              'agent-sidebar-v2__nav-chevron size-4 shrink-0',
               compact && 'hidden group-hover/sidebar:block',
             )}
             aria-hidden
@@ -153,8 +151,8 @@ function AgentSidebarSupport({
               ? 'justify-center px-2 py-2.5 group-hover/sidebar:justify-start group-hover/sidebar:gap-3 group-hover/sidebar:px-3'
               : 'gap-3 px-3 py-2.5',
             open || active
-              ? 'agent-sidebar-v2__nav-link--active text-foreground'
-              : 'text-muted-foreground hover:bg-white/40 hover:text-foreground',
+              ? 'agent-sidebar-v2__nav-link--active'
+              : 'agent-sidebar-v2__nav-link--idle',
           )}
         >
           <Icon className="agent-sidebar-v2__nav-icon size-[18px] shrink-0 stroke-[1.75]" />
@@ -233,7 +231,7 @@ function AgentSidebarAgency({
         <button
           type="button"
           className={cn(
-            'agent-sidebar-v2__agency flex w-full items-center rounded-xl text-left transition-colors hover:bg-white/40',
+            'agent-sidebar-v2__agency flex w-full items-center rounded-xl text-left transition-colors hover:bg-[color-mix(in_oklab,var(--card)_50%,transparent)]',
             compact
               ? 'justify-center p-2 group-hover/sidebar:gap-3 group-hover/sidebar:px-3 group-hover/sidebar:py-2.5'
               : 'gap-3 px-3 py-2.5',
@@ -395,10 +393,10 @@ export function AgentSidebar({
           />
         </div>
 
-        <nav className="scrollbar-subtle flex-1 overflow-x-hidden overflow-y-auto px-3 py-1">
-          <ul className="space-y-0.5">
+        <nav className="scrollbar-subtle flex-1 overflow-x-hidden overflow-y-auto">
+          <ul className="agent-sidebar-v2__nav-list">
             {v2SidebarNav.map((item) => (
-              <li key={item.href}>
+              <li key={item.href} className="agent-sidebar-v2__nav-item">
                 <NavLink
                   {...item}
                   v2

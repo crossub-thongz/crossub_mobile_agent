@@ -534,7 +534,7 @@ export function AgentShell({
             hideCrosRail ? 'hidden' : 'hidden lg:flex',
             isV2 ? 'w-[min(100%,380px)] min-w-[320px] max-w-[420px]' : 'w-1/4 min-w-[300px] max-w-[420px]',
             isV2
-              ? 'v2-dashboard-chrome border-border/50'
+              ? 'v2-frosted-surface border-border/50'
               : 'border-border bg-background',
           )}
         >

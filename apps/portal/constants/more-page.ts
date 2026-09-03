@@ -24,7 +24,7 @@ export const MORE_MENU_ITEM_DESCRIPTION: Partial<Record<string, string>> = {
   [ROUTES.ACCOUNTING]: 'Rent and invoice arrears, plus rent chasing.',
   [ROUTES.TRIBUNAL]: 'Tribunal cases and rent chasing.',
   [ROUTES.ARCHIVE]: 'Archived properties and closed property tasks.',
-  [ROUTES.BILL]: 'Platform invoices and payments.',
+  [ROUTES.BILL]: 'Platform invoices, bills and payments.',
   [ROUTES.SETTINGS]: 'Preferences and account settings.',
   [ROUTES.FAQ]: 'Guides, tutorials and FAQs.',
   [ROUTES.PRICING]: 'Plans, fees and service inclusions.',
@@ -120,14 +120,14 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
   },
   {
     id: 'billing',
-    title: 'Invoice',
+    title: 'Billing',
     icon: CreditCard,
     tone: 'violet',
     items: [
       {
         id: 'invoices',
-        title: 'Invoices',
-        description: 'View and download your invoices and statements.',
+        title: 'Bills',
+        description: 'View invoices, bills and payments.',
         href: ROUTES.BILL,
         icon: Receipt,
       },
