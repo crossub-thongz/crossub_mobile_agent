@@ -232,7 +232,6 @@ export function GiiAssistant({
     value: string;
     onChange: (value: string) => void;
     onSend: () => void;
-    homeOwnerName: string;
     tenantName: string;
     placeholder?: string;
   };
@@ -1085,7 +1084,6 @@ export function GiiAssistant({
                 onChange={messageReply.onChange}
                 onSubmit={messageReply.onSend}
                 placeholder={messageReply.placeholder ?? 'Reply via app…'}
-                homeOwnerName={messageReply.homeOwnerName}
                 tenantName={messageReply.tenantName}
                 rows={2}
                 variant={isV2 ? 'v2' : 'default'}

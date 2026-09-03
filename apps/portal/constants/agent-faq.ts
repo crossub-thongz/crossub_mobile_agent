@@ -163,9 +163,9 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
     title: 'Messages & notifications',
     items: [
       {
-        question: 'How do I message a tenant or landlord?',
+        question: 'How do I message a tenant?',
         answer:
-          'Open Messages, start a new thread, and select the property and participant. Topics include leasing, maintenance, inspection, and accounting so conversations stay organised.',
+          'Open Messages, start a new thread, and select the property and tenant. Topics include leasing, maintenance, inspection, and accounting so conversations stay organised. Agents do not message landlords from this app.',
       },
       {
         question: 'What is the Communications log?',

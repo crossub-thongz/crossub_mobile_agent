@@ -77,7 +77,6 @@ export function MessageThreadWorkspace({
           value: reply,
           onChange: onReplyChange,
           onSend: onReplySend,
-          homeOwnerName: thread.homeOwnerName,
           tenantName: thread.tenantName,
           placeholder: replyPlaceholder,
         }}

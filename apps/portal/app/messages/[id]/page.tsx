@@ -18,8 +18,7 @@ export default function MessageDetailPage() {
   const searchParams = useSearchParams();
   const threadId = params.id as string;
   const partyParam = searchParams.get('party');
-  const highlightParty =
-    partyParam === 'tenant' || partyParam === 'owner' ? partyParam : undefined;
+  const highlightParty = partyParam === 'tenant' ? 'tenant' : undefined;
   const { messages, sendMessage, markThreadRead } = useAgentData();
   const thread = messages.find((m) => m.id === threadId);
   const [reply, setReply] = useState('');
@@ -30,7 +29,6 @@ export default function MessageDetailPage() {
     () =>
       thread
         ? buildThreadMentionCandidates({
-            homeOwnerName: thread.homeOwnerName,
             tenantName: thread.tenantName,
           })
         : [],
@@ -50,9 +48,7 @@ export default function MessageDetailPage() {
   const partyLabel =
     highlightParty === 'tenant'
       ? thread.tenantName.replace(/\s*\([^)]*\)\s*$/, '').trim()
-      : highlightParty === 'owner'
-        ? thread.homeOwnerName
-        : null;
+      : null;
 
   const handleSend = () => {
     const text = reply.trim();
@@ -82,8 +78,6 @@ export default function MessageDetailPage() {
         onToggle: () => setContactsOpen((value) => !value),
         panel: (
           <ContactDetails
-            homeOwnerName={thread.homeOwnerName}
-            homeOwnerContact={thread.homeOwnerContact}
             tenantName={thread.tenantName}
             tenantContact={thread.tenantContact}
             highlightParty={highlightParty}

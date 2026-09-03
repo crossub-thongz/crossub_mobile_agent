@@ -115,10 +115,9 @@ function ThreadDetailPanel({
   const mentionCandidates = useMemo(
     () =>
       buildThreadMentionCandidates({
-        homeOwnerName: thread.homeOwnerName,
         tenantName: thread.tenantName,
       }),
-    [thread.homeOwnerName, thread.tenantName],
+    [thread.tenantName],
   );
 
   const handleSend = () => {
@@ -155,21 +154,6 @@ function ThreadDetailPanel({
                   Tenant
                 </Button>
               )}
-            {thread.homeOwnerContact.phone && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 gap-1 px-2 text-xs"
-                onClick={() => {
-                  placePhoneCall(thread.homeOwnerContact.phone!);
-                  toast.success(`Calling ${thread.homeOwnerName}…`);
-                }}
-              >
-                <PhoneCall className="size-3" />
-                Landlord
-              </Button>
-            )}
             <span className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">
               {channelLabel(thread.channel)}
             </span>
@@ -190,8 +174,6 @@ function ThreadDetailPanel({
           <div className="space-y-4 px-4 pt-4">
             <div className="rounded-lg border bg-card p-3 text-xs">
               <ContactDetails
-                homeOwnerName={thread.homeOwnerName}
-                homeOwnerContact={thread.homeOwnerContact}
                 tenantName={thread.tenantName}
                 tenantContact={thread.tenantContact}
               />

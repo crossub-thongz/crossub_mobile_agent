@@ -3,26 +3,16 @@ import { Mail, Phone } from 'lucide-react';
 import type { PropertyContact } from '@/lib/types';
 
 export function ContactDetails({
-  homeOwnerName,
-  homeOwnerContact,
   tenantName,
   tenantContact,
   highlightParty,
 }: {
-  homeOwnerName: string;
-  homeOwnerContact: PropertyContact;
   tenantName: string;
   tenantContact: PropertyContact;
-  highlightParty?: 'tenant' | 'owner';
+  highlightParty?: 'tenant';
 }) {
   return (
     <dl className="grid gap-3 text-xs">
-      <ContactBlock
-        label="Landlord"
-        name={homeOwnerName}
-        contact={homeOwnerContact}
-        highlighted={highlightParty === 'owner'}
-      />
       <ContactBlock
         label="Tenant"
         name={tenantName}

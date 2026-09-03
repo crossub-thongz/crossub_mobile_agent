@@ -22,7 +22,6 @@ export function MessageCompose({
   onSubmit,
   placeholder,
   disabled,
-  homeOwnerName,
   tenantName,
   rows = 4,
   variant = 'default',
@@ -32,7 +31,6 @@ export function MessageCompose({
   onSubmit: () => void;
   placeholder?: string;
   disabled?: boolean;
-  homeOwnerName: string;
   tenantName: string;
   rows?: number;
   variant?: 'default' | 'v2';
@@ -42,8 +40,8 @@ export function MessageCompose({
   const [activeIndex, setActiveIndex] = useState(0);
 
   const candidates = useMemo(
-    () => buildThreadMentionCandidates({ homeOwnerName, tenantName }),
-    [homeOwnerName, tenantName],
+    () => buildThreadMentionCandidates({ tenantName }),
+    [tenantName],
   );
 
   const mentionQuery = useMemo(() => {
