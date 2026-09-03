@@ -53,6 +53,11 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
           'Open Properties, select an address, then use the property hub tabs — Overview, Leasing, Maintenance, Inspections, Accounting, Tribunal, Documents, History, and Fees. Most workflows start from the relevant tab.',
       },
       {
+        question: 'How do I use Properties, Tasks, and History?',
+        answer:
+          'Open Support → How to use for a full tutorial of every control on those three pages. You can also tap How to use on each page, or wait for the first-visit guide (How to use, then Functions).',
+      },
+      {
         question: 'What is the Need Action queue?',
         answer:
           'Tasks lists portfolio alerts requiring your decision — quote approvals, rent reviews, tenant applications, inspection follow-ups, and overdue onboarding steps. Filter by property from the property hub or open Tasks globally.',
@@ -200,7 +205,7 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
       {
         question: 'How do page guides work?',
         answer:
-          'Short guides appear the first time you open each main section. Replay them from Settings → Help → Replay page guides if you want a refresher.',
+          'The first time you open Properties, Tasks, or History, a two-step tutorial explains how to use the page and every function on it. Open Support → How to use anytime for the full walkthrough, or replay first-visit guides from Settings → Help → Replay page guides.',
       },
       {
         question: 'Who do I contact for platform support?',

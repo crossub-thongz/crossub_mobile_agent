@@ -7,11 +7,14 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useAuth } from '@/components/providers/auth-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
+import { RegisterTermsAgreementCard } from '@/components/register/register-terms-agreement';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
+import { AuthScreen, authPanelClass } from '@/lib/auth-page';
 import {
   completeAgencyAgentInviteRegistration,
   fetchAgencyAgentInvitePreview,
@@ -60,6 +63,7 @@ export default function AgencyTeamInviteRegisterPage() {
   const token = params.token;
   const router = useRouter();
   const { refresh } = useAuth();
+  const isV2 = useIsAgentUiV2();
   const [invite, setInvite] = useState<AgentInvitePreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -100,26 +104,26 @@ export default function AgencyTeamInviteRegisterPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <AuthScreen isV2={isV2}>
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      </AuthScreen>
     );
   }
 
   if (!invite) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <AuthScreen isV2={isV2} className="text-center">
         <p className="text-muted-foreground">This registration link is invalid.</p>
         <Link href={ROUTES.LOGIN} className="mt-4 text-primary hover:underline">
           Sign in
         </Link>
-      </div>
+      </AuthScreen>
     );
   }
 
   if (invite.expired || invite.used) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <AuthScreen isV2={isV2} className="text-center">
         <p className="text-muted-foreground">
           {invite.used
             ? 'This registration link has already been used.'
@@ -128,14 +132,14 @@ export default function AgencyTeamInviteRegisterPage() {
         <Link href={ROUTES.LOGIN} className="mt-4 text-primary hover:underline">
           Sign in
         </Link>
-      </div>
+      </AuthScreen>
     );
   }
 
   if (registeredUser) {
     return (
-      <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
-        <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg">
+      <AuthScreen isV2={isV2}>
+        <div className={authPanelClass(isV2, 'max-w-md')}>
           <div className="mb-4 flex items-center gap-2 text-emerald-600">
             <CheckCircle2 className="size-5" />
             <p className="font-medium">Registration complete</p>
@@ -162,14 +166,14 @@ export default function AgencyTeamInviteRegisterPage() {
             Choose password
           </Button>
         </div>
-      </div>
+      </AuthScreen>
     );
   }
 
   const who = invite.contactName?.trim() || invite.email;
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
+    <AuthScreen isV2={isV2}>
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -178,7 +182,7 @@ export default function AgencyTeamInviteRegisterPage() {
         <p className="text-muted-foreground text-sm">Join your agency team</p>
       </div>
 
-      <div className="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg">
+      <div className={authPanelClass(isV2, 'max-w-md')}>
         <p className="text-sm">
           Hi <strong>{who}</strong>, you&apos;ve been invited to join{' '}
           <strong>{invite.agencyName}</strong> on CROSSUB.
@@ -198,13 +202,7 @@ export default function AgencyTeamInviteRegisterPage() {
           </p>
         ) : null}
 
-        <div className="mt-6 rounded-lg border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">Terms &amp; system access agreement</p>
-          <p className="mt-2">
-            By registering you agree to the CROSSUB terms of service, privacy policy, and the
-            agency portal access agreement.
-          </p>
-        </div>
+        <RegisterTermsAgreementCard />
 
         <div className="mt-4 flex items-start gap-2">
           <input
@@ -240,6 +238,6 @@ export default function AgencyTeamInviteRegisterPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthScreen>
   );
 }

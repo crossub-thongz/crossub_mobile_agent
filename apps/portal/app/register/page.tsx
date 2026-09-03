@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { useAuth } from '@/components/providers/auth-provider';
+import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
 import { AddressLineAutocomplete } from '@/components/end-leasing/address-line-autocomplete';
 import { RegisterPricingPanel } from '@/components/register/register-pricing-panel';
@@ -44,6 +45,7 @@ import {
   type AgentPortalServiceLevel,
 } from '@/lib/portal-service-level';
 import { ApiError } from '@/lib/api';
+import { AuthScreen, authPanelClass } from '@/lib/auth-page';
 import { cn } from '@/lib/utils';
 
 const STEPS = ['Your details', 'Service & pricing', 'Confirm'] as const;
@@ -103,6 +105,7 @@ function StepIndicator({ current }: { current: RegisterStep }) {
 export default function RegisterPage() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const isV2 = useIsAgentUiV2();
   const [step, setStep] = useState<RegisterStep>('Your details');
   const [showPassword, setShowPassword] = useState(false);
   const [portalServiceLevel, setPortalServiceLevel] =
@@ -247,7 +250,7 @@ export default function RegisterPage() {
   });
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
+    <AuthScreen isV2={isV2}>
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -257,8 +260,8 @@ export default function RegisterPage() {
       </div>
 
       <div
-        className={cn(
-          'w-full rounded-xl border bg-card p-6 shadow-lg sm:p-8',
+        className={authPanelClass(
+          isV2,
           step === 'Service & pricing' || step === 'Confirm' ? 'max-w-3xl' : 'max-w-lg',
         )}
       >
@@ -503,6 +506,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthScreen>
   );
 }

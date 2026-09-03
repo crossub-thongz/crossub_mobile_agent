@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { EmptyState } from '@/components/agent/empty-state';
 import { FilterChips } from '@/components/agent/filter-chips';
 import { HistoryPropertyTasksList } from '@/components/agent/history-property-tasks';
+import { AgentHowToUseLink } from '@/components/agent/agent-module-tutorial';
 import { PageIntro } from '@/components/agent/page-intro';
 import { PropertyListView } from '@/components/agent/property-list-view';
 import { AgentShell } from '@/components/layout/agent-shell';
@@ -106,7 +107,10 @@ export default function ArchivePage() {
   return (
     <AgentShell title="History" backHref={ROUTES.DASHBOARD}>
       <div className="space-y-4">
-        <PageIntro description="Archived properties and their closed tasks." />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <PageIntro description="Archived properties and their closed tasks." />
+          <AgentHowToUseLink module="history" />
+        </div>
 
         <FilterChips
           options={TABS.map((item) => ({

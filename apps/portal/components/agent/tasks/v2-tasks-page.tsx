@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
+import { AgentHowToUseLink } from '@/components/agent/agent-module-tutorial';
 import { EmptyState } from '@/components/agent/empty-state';
 import { NewTaskActionsMenu } from '@/components/agent/tasks/new-task-actions-menu';
 import { TaskListV2Table } from '@/components/agent/tasks/task-list-v2-table';
@@ -192,7 +193,10 @@ export function V2TasksPage() {
             Track all work being handled by CROSSUB
           </p>
         </div>
-        <NewTaskActionsMenu propertyId={propertyFilter ?? undefined} />
+        <div className="flex flex-wrap items-center gap-2">
+          <AgentHowToUseLink module="tasks" className="rounded-xl border bg-transparent px-3 py-2" />
+          <NewTaskActionsMenu propertyId={propertyFilter ?? undefined} />
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -132,9 +132,15 @@ export default function SettingsPage() {
           <div className="rounded-xl border bg-card p-4">
             <p className="text-sm font-medium">Page guides</p>
             <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-              Short onboarding guides appear the first time you open each main section. Progress
-              is saved to your account.
+              The first time you open Properties, Tasks, or History, a tutorial covers how to use
+              the page and every function. Progress is saved to your account.
             </p>
+            <Link
+              href={ROUTES.SUPPORT_TUTORIAL}
+              className="text-primary mt-3 mr-3 inline-block text-sm font-medium"
+            >
+              Open tutorial →
+            </Link>
             <Button
               type="button"
               variant="outline"

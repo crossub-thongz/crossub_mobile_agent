@@ -70,6 +70,8 @@ export function labelForPortalPath(href: string): string {
   if (pathname === ROUTES.PROFILE) return 'Profile';
   if (pathname === ROUTES.SEARCH) return 'Search';
   if (pathname === ROUTES.SUPPORT) return 'Support';
+  if (pathname === ROUTES.SUPPORT_TUTORIAL) return 'How to use';
+  if (pathname === ROUTES.SUPPORT_GETTING_STARTED) return 'Intro video';
   if (pathname.startsWith('/properties/')) return 'Property';
   if (pathname.startsWith('/inspections')) return 'Inspection';
   if (pathname.startsWith('/maintenance')) return 'Maintenance';

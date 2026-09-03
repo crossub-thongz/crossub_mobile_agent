@@ -29,6 +29,7 @@ import { ApiError, api } from '@/lib/api';
 import type { AuthUser } from '@/lib/auth-types';
 import { loginLocalAccount } from '@/lib/local-auth';
 import { postAuthDestination } from '@/lib/system-access-agreement';
+import { AuthScreen, authPanelClass } from '@/lib/auth-page';
 import { cn } from '@/lib/utils';
 
 /**
@@ -136,7 +137,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-background px-4">
+    <AuthScreen isV2={isV2} className="py-0">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -152,12 +153,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div
-        className={cn(
-          'w-full max-w-md rounded-xl border bg-card p-8 shadow-lg',
-          isV2 && 'rounded-lg p-6 shadow-none',
-        )}
-      >
+      <div className={authPanelClass(isV2, 'max-w-md')}>
         <div className={cn('mb-6 space-y-1', isV2 ? 'text-left' : 'text-center')}>
           <h1 className={cn('text-xl font-semibold', isV2 && 'tracking-tight')}>Sign in</h1>
           <p className="text-sm text-muted-foreground">
@@ -251,6 +247,6 @@ export default function LoginPage() {
           {' — '}contact the Leasing Team for registration details.
         </p>
       </div>
-    </div>
+    </AuthScreen>
   );
 }

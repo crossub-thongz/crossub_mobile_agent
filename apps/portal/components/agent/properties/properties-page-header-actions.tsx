@@ -1,30 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { Filter, Plus } from 'lucide-react';
+import { BookOpen, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { propertyNew } from '@/constants/routes';
-
-function scrollToPropertyFilters() {
-  document.getElementById('property-list-v2-filters')?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'nearest',
-  });
-}
+import { propertyNew, ROUTES } from '@/constants/routes';
 
 export function PropertiesPageHeaderActions({ className }: { className?: string }) {
   return (
     <div className={className}>
-      {/* <Button
-        variant="outline"
-        className="rounded-xl transition-colors hover:bg-muted/60"
-        type="button"
-        onClick={scrollToPropertyFilters}
-      >
-        <Filter className="size-4" />
-        Filters
-      </Button> */}
+      <Button variant="outline" className="rounded-xl" asChild>
+        <Link href={`${ROUTES.SUPPORT_TUTORIAL}?page=properties`}>
+          <BookOpen className="size-4" />
+          How to use
+        </Link>
+      </Button>
       <Button className="rounded-xl transition-opacity hover:opacity-90" asChild>
         <Link href={propertyNew()}>
           <Plus className="size-4" />

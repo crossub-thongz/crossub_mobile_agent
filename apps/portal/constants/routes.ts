@@ -40,6 +40,7 @@ export const ROUTES = {
   SUPPORT: '/support',
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_GETTING_STARTED: '/support/getting-started',
+  SUPPORT_TUTORIAL: '/support/tutorial',
   AGREEMENTS: '/agreements',
 } as const;
 

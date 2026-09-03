@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Bell,
+  BookOpen,
   Building2,
   CreditCard,
   HelpCircle,
@@ -28,7 +29,7 @@ export const MORE_MENU_ITEM_DESCRIPTION: Partial<Record<string, string>> = {
   [ROUTES.SETTINGS]: 'Preferences and account settings.',
   [ROUTES.FAQ]: 'Guides, tutorials and FAQs.',
   [ROUTES.PRICING]: 'Plans, fees and service inclusions.',
-  [ROUTES.SUPPORT]: 'Intro video, contact, help centre and system status.',
+  [ROUTES.SUPPORT]: 'Intro video, how to use, contact, help centre and system status.',
 };
 
 export type MorePageItem = {
@@ -62,6 +63,13 @@ export const SUPPORT_PAGE_SECTION: MorePageSection = {
       description: 'Watch the agent portal welcome video again.',
       href: ROUTES.SUPPORT_GETTING_STARTED,
       icon: PlayCircle,
+    },
+    {
+      id: 'how-to-use',
+      title: 'How to use',
+      description: 'Tutorial for Properties, Tasks and History.',
+      href: ROUTES.SUPPORT_TUTORIAL,
+      icon: BookOpen,
     },
     {
       id: 'contact-am',

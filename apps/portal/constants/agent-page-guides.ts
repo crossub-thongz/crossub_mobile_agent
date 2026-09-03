@@ -1,3 +1,5 @@
+import { AGENT_MODULE_TUTORIALS } from '@/constants/agent-module-tutorial';
+
 export type AgentPageGuideId =
   | 'dashboard'
   | 'properties'
@@ -37,6 +39,7 @@ export type AgentPageGuideContent = {
   eyebrow: string;
   overview: string;
   steps: Array<{ title: string; description: string }>;
+  functions?: Array<{ title: string; description: string }>;
   tips: string[];
 };
 
@@ -122,47 +125,21 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
   },
   properties: {
     id: 'properties',
-    pageName: 'Properties',
-    eyebrow: 'Your portfolio',
-    overview:
-      'Every listing you manage lives here. Add properties, resume drafts, and open the full workflow hub per address.',
-    steps: [
-      {
-        title: 'Add a listing',
-        description: 'Use + Add property to register a new address under your agency.',
-      },
-      {
-        title: 'Open property hub',
-        description: 'Each property links to leasing, maintenance, inspections, documents, and contacts.',
-      },
-      {
-        title: 'Track need-action',
-        description: 'The badge on Properties mirrors urgent items waiting on you.',
-      },
-    ],
-    tips: ['Incomplete registry drafts can be resumed from the list.', 'End management when an agency no longer oversees a property.'],
+    pageName: AGENT_MODULE_TUTORIALS.properties.pageName,
+    eyebrow: AGENT_MODULE_TUTORIALS.properties.eyebrow,
+    overview: AGENT_MODULE_TUTORIALS.properties.overview,
+    steps: AGENT_MODULE_TUTORIALS.properties.steps,
+    functions: AGENT_MODULE_TUTORIALS.properties.functions,
+    tips: AGENT_MODULE_TUTORIALS.properties.tips,
   },
   tasks: {
     id: 'tasks',
-    pageName: 'Need-action queue',
-    eyebrow: 'Your to-do list',
-    overview:
-      'Approvals, overdue steps, and portfolio alerts land here so nothing slips through while you are in the field.',
-    steps: [
-      {
-        title: 'Work oldest first',
-        description: 'Items are grouped by urgency — quotes, messages, and workflow blockers surface at the top.',
-      },
-      {
-        title: 'Tap through to the case',
-        description: 'Each row deep-links to the maintenance job, lease step, or message thread that needs you.',
-      },
-      {
-        title: 'Clear the queue daily',
-        description: 'Resolving items here keeps automations and tenant comms moving.',
-      },
-    ],
-    tips: ['Filter by property when you are on-site at one address.'],
+    pageName: AGENT_MODULE_TUTORIALS.tasks.pageName,
+    eyebrow: AGENT_MODULE_TUTORIALS.tasks.eyebrow,
+    overview: AGENT_MODULE_TUTORIALS.tasks.overview,
+    steps: AGENT_MODULE_TUTORIALS.tasks.steps,
+    functions: AGENT_MODULE_TUTORIALS.tasks.functions,
+    tips: AGENT_MODULE_TUTORIALS.tasks.tips,
   },
   messages: {
     id: 'messages',
@@ -408,25 +385,12 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
   },
   archive: {
     id: 'archive',
-    pageName: 'History',
-    eyebrow: 'Archived properties and tasks',
-    overview:
-      'Archived properties and the tasks closed with them, kept for lookup without cluttering live lists.',
-    steps: [
-      {
-        title: 'Find an archived property',
-        description: 'The Properties tag lists addresses that have left the live list, including when management ended.',
-      },
-      {
-        title: 'Review closed property tasks',
-        description: 'Properties Tasks groups every closed job under its archived address. Expand a property to view the list.',
-      },
-      {
-        title: 'Restore if needed',
-        description: 'Restore a property back to the live list when management resumes. Closed tasks stay closed.',
-      },
-    ],
-    tips: ['Use History when auditing a handover to another agency.'],
+    pageName: AGENT_MODULE_TUTORIALS.history.pageName,
+    eyebrow: AGENT_MODULE_TUTORIALS.history.eyebrow,
+    overview: AGENT_MODULE_TUTORIALS.history.overview,
+    steps: AGENT_MODULE_TUTORIALS.history.steps,
+    functions: AGENT_MODULE_TUTORIALS.history.functions,
+    tips: AGENT_MODULE_TUTORIALS.history.tips,
   },
   settings: {
     id: 'settings',
