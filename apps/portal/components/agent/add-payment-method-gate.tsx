@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { AddPaymentMethodPrompt } from '@/components/agent/add-payment-method-prompt';
@@ -127,10 +127,9 @@ export function AddPaymentMethodGate() {
     status === 'authed' &&
     Boolean(user) &&
     !onExemptPage &&
-    !welcomeBlocking &&
-    (awaitingBillingCheck || wantsPrompt);
+    (welcomeBlocking || awaitingBillingCheck || wantsPrompt);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPaymentMethodGateBlocking(shouldBlockTours);
     return () => setPaymentMethodGateBlocking(false);
   }, [shouldBlockTours, setPaymentMethodGateBlocking]);

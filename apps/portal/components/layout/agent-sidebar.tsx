@@ -163,6 +163,7 @@ function AgentSidebarSupport({
         <button
           type="button"
           title="Support"
+          data-tour="contact-account-manager"
           className={cn(
             'agent-sidebar-v2__nav-link relative flex w-full items-center rounded-xl text-[13px] font-medium',
             compact

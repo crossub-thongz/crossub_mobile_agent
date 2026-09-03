@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { AgentPageTourOverlay } from '@/components/agent/agent-page-tour';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -24,8 +24,9 @@ export function AgentPageTourHost() {
     setPageGuideBlocking,
     paymentMethodGateBlocking,
   } = useAgentPageGuides();
-  const [welcomeBlocking, setWelcomeBlocking] = useState(false);
+  const [welcomeBlocking, setWelcomeBlocking] = useState(true);
   const [open, setOpen] = useState(false);
+  const pendingTourParamRef = useRef(false);
 
   const module = tourModuleFromPathname(pathname);
   const tourParam = searchParams.get('tour') === '1';
@@ -53,13 +54,26 @@ export function AgentPageTourHost() {
     };
   }, [status]);
 
-  useEffect(() => subscribeAgentPageTour(() => {
-    if (module) setOpen(true);
-  }), [module]);
+  useEffect(() => {
+    if (tourParam) pendingTourParamRef.current = true;
+  }, [tourParam]);
+
+  useEffect(() => {
+    return subscribeAgentPageTour(() => {
+      if (!module || welcomeBlocking || paymentMethodGateBlocking) return;
+      setOpen(true);
+    });
+  }, [module, paymentMethodGateBlocking, welcomeBlocking]);
+
+  useEffect(() => {
+    if (paymentMethodGateBlocking && open) {
+      setOpen(false);
+      setPageGuideBlocking(false);
+    }
+  }, [open, paymentMethodGateBlocking, setPageGuideBlocking]);
 
   useEffect(() => {
     if (
-      open ||
       status !== 'authed' ||
       !ready ||
       welcomeBlocking ||
@@ -71,17 +85,24 @@ export function AgentPageTourHost() {
       return;
     }
 
-    if (tourParam) {
-      setOpen(true);
+    const guideId = tourGuideId(module);
+    const shouldOpenFromParam = tourParam || pendingTourParamRef.current;
+
+    if (shouldOpenFromParam) {
       setPageGuideBlocking(true);
-      const next = new URLSearchParams(searchParams.toString());
-      next.delete('tour');
-      const query = next.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-      return;
+      const timer = window.setTimeout(() => {
+        setOpen(true);
+        pendingTourParamRef.current = false;
+        if (tourParam) {
+          const next = new URLSearchParams(searchParams.toString());
+          next.delete('tour');
+          const query = next.toString();
+          router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        }
+      }, 450);
+      return () => window.clearTimeout(timer);
     }
 
-    const guideId = tourGuideId(module);
     if (isSeen(guideId)) return;
 
     setPageGuideBlocking(true);
@@ -99,10 +120,9 @@ export function AgentPageTourHost() {
     tourParam,
     welcomeBlocking,
     paymentMethodGateBlocking,
-    open,
   ]);
 
-  if (!open || !module) return null;
+  if (!open || !module || paymentMethodGateBlocking) return null;
 
   const guideId = tourGuideId(module);
 

@@ -31,7 +31,7 @@ export function AgentPageGuideHost() {
     setPageGuideBlocking,
     paymentMethodGateBlocking,
   } = useAgentPageGuides();
-  const [welcomeBlocking, setWelcomeBlocking] = useState(false);
+  const [welcomeBlocking, setWelcomeBlocking] = useState(true);
   const [contextGuideId, setContextGuideId] = useState<AgentPageGuideId | null>(null);
   const [activeGuideId, setActiveGuideId] = useState<AgentPageGuideId | null>(null);
 
@@ -108,7 +108,14 @@ export function AgentPageGuideHost() {
     setPageGuideBlocking,
   ]);
 
-  if (!activeGuideId) return null;
+  useEffect(() => {
+    if (paymentMethodGateBlocking && activeGuideId) {
+      setActiveGuideId(null);
+      setPageGuideBlocking(false);
+    }
+  }, [activeGuideId, paymentMethodGateBlocking, setPageGuideBlocking]);
+
+  if (!activeGuideId || paymentMethodGateBlocking) return null;
 
   const guide = getAgentPageGuide(activeGuideId);
   const guideId = activeGuideId;

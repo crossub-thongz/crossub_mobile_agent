@@ -20,10 +20,11 @@ export function AgentPostLoginTasksTourRedirect() {
   const pathname = usePathname();
   const router = useRouter();
   const { status, user } = useAuth();
-  const { ready, isSeen } = useAgentPageGuides();
+  const { ready, isSeen, paymentMethodGateBlocking } = useAgentPageGuides();
 
   useEffect(() => {
     if (status !== 'authed' || !user || !ready || !pathname) return;
+    if (paymentMethodGateBlocking) return;
     if (isPublicRoute(pathname) || isPortalWelcomeDeferredRoute(pathname)) return;
     if (needsSystemAccessAgreement(user) || needsPasswordChange(user)) return;
     if (isSeen('tasks')) return;
@@ -33,7 +34,7 @@ export function AgentPostLoginTasksTourRedirect() {
     if (!POST_LOGIN_LANDING_PATHS.has(normalized)) return;
 
     router.replace(tourHref('tasks'));
-  }, [isSeen, pathname, ready, router, status, user]);
+  }, [isSeen, pathname, paymentMethodGateBlocking, ready, router, status, user]);
 
   return null;
 }

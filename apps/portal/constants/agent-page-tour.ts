@@ -10,6 +10,18 @@ export type AgentTourStep = {
   target?: string;
 };
 
+/** Shown on every live tour step — where agents reach their Account Manager. */
+export const AGENT_TOUR_ACCOUNT_MANAGER_NOTE =
+  'Your Account Manager: Support → Contact account manager (sidebar), More → Support (mobile), or Phone in the header.';
+
+export const AGENT_TOUR_ACCOUNT_MANAGER_STEP: AgentTourStep = {
+  id: 'account-manager',
+  target: 'contact-account-manager',
+  title: 'Contact your Account Manager',
+  description:
+    'CROSSUB Account Managers run day-to-day work on your portfolio. The highlighted control is how you reach them — Support → Contact account manager on desktop, More → Support on mobile, or Phone in the header for calls and manager messages.',
+};
+
 export function tourModuleFromPathname(pathname: string | null): AgentTutorialModuleId | null {
   if (!pathname) return null;
   const root = pathname.replace(/\/$/, '').split('/').filter(Boolean)[0];
@@ -46,6 +58,7 @@ export const AGENT_PAGE_TOURS: Record<AgentTutorialModuleId, AgentTourStep[]> = 
       title: AGENT_MODULE_TUTORIALS.properties.pageName,
       description: AGENT_MODULE_TUTORIALS.properties.overview,
     },
+    AGENT_TOUR_ACCOUNT_MANAGER_STEP,
     { id: 'properties-nav', target: 'nav-properties', ...copy('properties', 'Open Properties') },
     { id: 'properties-add', target: 'properties-add', ...copy('properties', 'Add property') },
     { id: 'properties-search', target: 'properties-search', ...copy('properties', 'Search') },
@@ -83,6 +96,7 @@ export const AGENT_PAGE_TOURS: Record<AgentTutorialModuleId, AgentTourStep[]> = 
       title: AGENT_MODULE_TUTORIALS.tasks.pageName,
       description: AGENT_MODULE_TUTORIALS.tasks.overview,
     },
+    AGENT_TOUR_ACCOUNT_MANAGER_STEP,
     { id: 'tasks-nav', target: 'nav-tasks', ...copy('tasks', 'Open Tasks') },
     { id: 'tasks-need', target: 'tasks-bucket-need_action', ...copy('tasks', 'Need my action') },
     { id: 'tasks-cros', target: 'tasks-bucket-cros_handling', ...copy('tasks', 'CROS handling') },
@@ -110,6 +124,7 @@ export const AGENT_PAGE_TOURS: Record<AgentTutorialModuleId, AgentTourStep[]> = 
       title: AGENT_MODULE_TUTORIALS.history.pageName,
       description: AGENT_MODULE_TUTORIALS.history.overview,
     },
+    AGENT_TOUR_ACCOUNT_MANAGER_STEP,
     { id: 'history-nav', target: 'nav-history', ...copy('history', 'Open History') },
     { id: 'history-properties', target: 'history-tab-properties', ...copy('history', 'Properties tab') },
     { id: 'history-open', target: 'history-property-list', ...copy('history', 'Open archived property') },

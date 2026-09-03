@@ -142,6 +142,7 @@ export function ShellHeaderQuickActions({
               btn.id === 'message-menu' ? 'Message' : 'Contacts and Account Manager'
             }
             aria-pressed={isActive}
+            data-tour={btn.id === 'phone' ? 'contact-account-manager' : undefined}
             onClick={() => handleClick(btn.id)}
             className={headerQuickActionClass(isActive, inline)}
           >

@@ -501,6 +501,7 @@ export function AgentShell({
             <button
               type="button"
               onClick={() => setMoreOpen((v) => !v)}
+              data-tour="contact-account-manager"
               className={cn(
                 'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[9px] font-medium lg:hidden',
                 !isV2 && (moreOpen ? 'text-primary' : 'text-muted-foreground'),
@@ -513,6 +514,7 @@ export function AgentShell({
             {isV2 ? (
               <Link
                 href={ROUTES.MORE}
+                data-tour="contact-account-manager"
                 className={cn(
                   'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-medium lg:hidden',
                   'ui-v2:rounded-xl',
