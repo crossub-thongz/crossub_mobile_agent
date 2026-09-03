@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, MessageSquare, Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { MessageSquare, Search } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
 
 import { AgentNotificationBell } from '@/components/agent/agent-notification-bell';
 import { AgentSidebarStatus } from '@/components/layout/agent-sidebar-status';
@@ -13,9 +13,8 @@ import { CROS_ASSISTANT_NAME } from '@/constants/cros-branding';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useShellDockStore } from '@/lib/shell-dock-store';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ROUTES } from '@/constants/routes';
-import { cn, displayName } from '@/lib/utils';
+import { displayName } from '@/lib/utils';
 
 function userInitials(user: {
   firstName?: string | null;
@@ -37,11 +36,9 @@ function userRoleLabel(user: { jobTitle?: string | null; role?: string }): strin
 
 export function AgentShellV2Header({
   unreadNotificationCount,
-  onLogout,
   showCrosLauncher = false,
 }: {
   unreadNotificationCount: number;
-  onLogout: () => void;
   /** Desktop header CROS when the Ask CROS rail is not on screen. */
   showCrosLauncher?: boolean;
 }) {
@@ -51,7 +48,6 @@ export function AgentShellV2Header({
   const openGii = useShellDockStore((s) => s.openGii);
   const activePanel = useShellDockStore((s) => s.activePanel);
   const giiExpanded = useShellDockStore((s) => s.giiExpanded);
-  const [profileOpen, setProfileOpen] = useState(false);
 
   const messageUnread = useMemo(
     () => messages.reduce((sum, thread) => sum + (thread.unread > 0 ? thread.unread : 0), 0),
@@ -125,53 +121,17 @@ export function AgentShellV2Header({
           badgeClassName="bg-rose-500 ring-background"
         />
 
-        <Popover open={profileOpen} onOpenChange={setProfileOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="hover:bg-card/70 ml-1 flex min-w-0 items-center gap-2.5 rounded-xl py-1.5 pr-1 pl-1.5 transition-colors"
-            >
-              <span className="bg-primary/15 text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-                {initials}
-              </span>
-              <span className="hidden min-w-0 text-left xl:block">
-                <span className="text-foreground block truncate text-sm font-semibold leading-tight">
-                  {name}
-                </span>
-                <span className="text-primary block truncate text-xs leading-tight">{role}</span>
-              </span>
-              <ChevronDown className="text-muted-foreground hidden size-4 shrink-0 xl:block" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-52 p-2">
-            <div className="space-y-0.5">
-              <Link
-                href={ROUTES.PROFILE}
-                onClick={() => setProfileOpen(false)}
-                className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm font-medium"
-              >
-                Profile
-              </Link>
-              <Link
-                href={ROUTES.SETTINGS}
-                onClick={() => setProfileOpen(false)}
-                className="hover:bg-muted/60 block rounded-lg px-3 py-2 text-sm"
-              >
-                Settings
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setProfileOpen(false);
-                  onLogout();
-                }}
-                className="text-muted-foreground hover:bg-muted/60 w-full rounded-lg px-3 py-2 text-left text-sm"
-              >
-                Sign out
-              </button>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <div className="ml-1 flex min-w-0 items-center gap-2.5 py-1.5 pr-1 pl-1.5">
+          <span className="bg-primary/15 text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+            {initials}
+          </span>
+          <span className="hidden min-w-0 text-left xl:block">
+            <span className="text-foreground block truncate text-sm font-semibold leading-tight">
+              {name}
+            </span>
+            <span className="text-primary block truncate text-xs leading-tight">{role}</span>
+          </span>
+        </div>
       </div>
     </header>
   );

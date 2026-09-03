@@ -264,7 +264,7 @@ export function MoreHub() {
           More
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-          Manage your agency, billing, documents and account settings.
+          Manage your agency, billing and documents.
         </p>
       </header>
 

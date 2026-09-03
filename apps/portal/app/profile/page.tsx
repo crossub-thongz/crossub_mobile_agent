@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Building2, ChevronRight, History, LogOut, Mail, Phone, Settings, User, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateAgencyBilling, fetchAgencyTeam, updateAgencyPrimaryContact, type AgencyTeamMember } from '@/lib/crossub-api/agent-client';
+import { mapAgentAgencies } from '@/lib/crossub-api/agent-mappers';
+import type { Agency } from '@/lib/types';
 import { buildProfileHistory } from '@/lib/profile-history';
 import { buildPhonebook } from '@/lib/phonebook';
 import { ROUTES } from '@/constants/routes';
@@ -21,6 +23,40 @@ import { useAgentStore } from '@/lib/store';
 import { cn, displayName, formatDateTime, formatRelative } from '@/lib/utils';
 
 type ProfileTab = 'history' | 'contacts';
+
+type InvoiceBillingFields = {
+  abn: string;
+  licenceNumber: string;
+  bankName: string;
+  bankAccountName: string;
+  bankBsb: string;
+  bankAccountNumber: string;
+};
+
+const EMPTY_BILLING: InvoiceBillingFields = {
+  abn: '',
+  licenceNumber: '',
+  bankName: '',
+  bankAccountName: '',
+  bankBsb: '',
+  bankAccountNumber: '',
+};
+
+function billingFromAgency(agency: Agency | null | undefined): InvoiceBillingFields {
+  if (!agency) return EMPTY_BILLING;
+  return {
+    abn: agency.abn ?? '',
+    licenceNumber: agency.licenceNumber ?? '',
+    bankName: agency.bankName ?? '',
+    bankAccountName: agency.bankAccountName ?? '',
+    bankBsb: agency.bankBsb ?? '',
+    bankAccountNumber: agency.bankAccountNumber ?? '',
+  };
+}
+
+function hasInvoiceBillingDetails(fields: InvoiceBillingFields): boolean {
+  return Object.values(fields).some((value) => value.trim().length > 0);
+}
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
@@ -36,6 +72,8 @@ export default function ProfilePage() {
   const rentReviewDecisions = useAgentStore((s) => s.rentReviewDecisions);
   const [tab, setTab] = useState<ProfileTab>('contacts');
   const [billingSaving, setBillingSaving] = useState(false);
+  const [billingEditing, setBillingEditing] = useState(false);
+  const [savedBilling, setSavedBilling] = useState<InvoiceBillingFields>(EMPTY_BILLING);
   const [abn, setAbn] = useState('');
   const [licenceNumber, setLicenceNumber] = useState('');
   const [bankName, setBankName] = useState('');
@@ -45,13 +83,22 @@ export default function ProfilePage() {
   const [teamMembers, setTeamMembers] = useState<AgencyTeamMember[]>([]);
   const [primaryContactSaving, setPrimaryContactSaving] = useState(false);
 
+  const savedBillingRef = useRef(savedBilling);
+  savedBillingRef.current = savedBilling;
+
   useEffect(() => {
-    setAbn(primaryAgency?.abn ?? '');
-    setLicenceNumber(primaryAgency?.licenceNumber ?? '');
-    setBankName(primaryAgency?.bankName ?? '');
-    setBankAccountName(primaryAgency?.bankAccountName ?? '');
-    setBankBsb(primaryAgency?.bankBsb ?? '');
-    setBankAccountNumber(primaryAgency?.bankAccountNumber ?? '');
+    const next = billingFromAgency(primaryAgency);
+    if (!hasInvoiceBillingDetails(next) && hasInvoiceBillingDetails(savedBillingRef.current)) {
+      return;
+    }
+    setSavedBilling(next);
+    setAbn(next.abn);
+    setLicenceNumber(next.licenceNumber);
+    setBankName(next.bankName);
+    setBankAccountName(next.bankAccountName);
+    setBankBsb(next.bankBsb);
+    setBankAccountNumber(next.bankAccountNumber);
+    setBillingEditing(!hasInvoiceBillingDetails(next));
   }, [primaryAgency]);
 
   useEffect(() => {
@@ -302,78 +349,149 @@ export default function ProfilePage() {
             <p className="text-muted-foreground mt-1 text-xs">
               ABN, licence, and bank details used on Crossub tax invoices.
             </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <BillingField label="ABN">
-                <Input value={abn} onChange={(e) => setAbn(e.target.value)} disabled={billingSaving} />
-              </BillingField>
-              <BillingField label="Licence number">
-                <Input
-                  value={licenceNumber}
-                  onChange={(e) => setLicenceNumber(e.target.value)}
-                  disabled={billingSaving}
-                />
-              </BillingField>
-              <BillingField label="Bank name">
-                <Input
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  disabled={billingSaving}
-                />
-              </BillingField>
-              <BillingField label="Account name">
-                <Input
-                  inputKind="person_name"
-                  value={bankAccountName}
-                  onChange={(e) => setBankAccountName(e.target.value)}
-                  disabled={billingSaving}
-                />
-              </BillingField>
-              <BillingField label="BSB">
-                <Input
-                  value={bankBsb}
-                  onChange={(e) => setBankBsb(e.target.value)}
-                  disabled={billingSaving}
-                />
-              </BillingField>
-              <BillingField label="Account number">
-                <Input
-                  value={bankAccountNumber}
-                  onChange={(e) => setBankAccountNumber(e.target.value)}
-                  disabled={billingSaving}
-                />
-              </BillingField>
-            </div>
-            <Button
-              type="button"
-              className="mt-3"
-              size="sm"
-              disabled={billingSaving}
-              onClick={() => {
-                void (async () => {
-                  setBillingSaving(true);
-                  try {
-                    await updateAgencyBilling(primaryAgency.id, {
-                      abn: abn.trim() || undefined,
-                      licenceNumber: licenceNumber.trim() || undefined,
-                      bankName: bankName.trim() || undefined,
-                      bankAccountName: bankAccountName.trim() || undefined,
-                      bankBsb: bankBsb.trim() || undefined,
-                      bankAccountNumber: bankAccountNumber.trim() || undefined,
-                    });
-                    await refresh({ force: true });
-                    toast.success('Billing details saved');
-                  } catch (err) {
-                    toast.error(
-                      err instanceof Error ? err.message : 'Could not save billing details',
-                    );
-                  } finally {
-                    setBillingSaving(false);
-                  }
-                })();
-              }}
-            >
-              {billingSaving ? 'Saving…' : 'Save billing details'}
-            </Button>
+            {hasInvoiceBillingDetails(savedBilling) && !billingEditing ? (
+              <>
+                <dl className="mt-3 space-y-2">
+                  <ProfileRow label="ABN" value={savedBilling.abn} />
+                  <ProfileRow label="Licence number" value={savedBilling.licenceNumber} />
+                  <ProfileRow label="Bank name" value={savedBilling.bankName} />
+                  <ProfileRow label="Account name" value={savedBilling.bankAccountName} />
+                  <ProfileRow label="BSB" value={savedBilling.bankBsb} />
+                  <ProfileRow label="Account number" value={savedBilling.bankAccountNumber} />
+                </dl>
+                <Button
+                  type="button"
+                  className="mt-3"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setAbn(savedBilling.abn);
+                    setLicenceNumber(savedBilling.licenceNumber);
+                    setBankName(savedBilling.bankName);
+                    setBankAccountName(savedBilling.bankAccountName);
+                    setBankBsb(savedBilling.bankBsb);
+                    setBankAccountNumber(savedBilling.bankAccountNumber);
+                    setBillingEditing(true);
+                  }}
+                >
+                  Change Billing Details
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <BillingField label="ABN">
+                    <Input value={abn} onChange={(e) => setAbn(e.target.value)} disabled={billingSaving} />
+                  </BillingField>
+                  <BillingField label="Licence number">
+                    <Input
+                      value={licenceNumber}
+                      onChange={(e) => setLicenceNumber(e.target.value)}
+                      disabled={billingSaving}
+                    />
+                  </BillingField>
+                  <BillingField label="Bank name">
+                    <Input
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      disabled={billingSaving}
+                    />
+                  </BillingField>
+                  <BillingField label="Account name">
+                    <Input
+                      inputKind="person_name"
+                      value={bankAccountName}
+                      onChange={(e) => setBankAccountName(e.target.value)}
+                      disabled={billingSaving}
+                    />
+                  </BillingField>
+                  <BillingField label="BSB">
+                    <Input
+                      value={bankBsb}
+                      onChange={(e) => setBankBsb(e.target.value)}
+                      disabled={billingSaving}
+                    />
+                  </BillingField>
+                  <BillingField label="Account number">
+                    <Input
+                      value={bankAccountNumber}
+                      onChange={(e) => setBankAccountNumber(e.target.value)}
+                      disabled={billingSaving}
+                    />
+                  </BillingField>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={billingSaving}
+                    onClick={() => {
+                      void (async () => {
+                        setBillingSaving(true);
+                        try {
+                          const updated = await updateAgencyBilling(primaryAgency.id, {
+                            abn: abn.trim() || undefined,
+                            licenceNumber: licenceNumber.trim() || undefined,
+                            bankName: bankName.trim() || undefined,
+                            bankAccountName: bankAccountName.trim() || undefined,
+                            bankBsb: bankBsb.trim() || undefined,
+                            bankAccountNumber: bankAccountNumber.trim() || undefined,
+                          });
+                          const mapped = mapAgentAgencies([updated])[0];
+                          const next = mapped
+                            ? billingFromAgency(mapped)
+                            : {
+                                abn: abn.trim(),
+                                licenceNumber: licenceNumber.trim(),
+                                bankName: bankName.trim(),
+                                bankAccountName: bankAccountName.trim(),
+                                bankBsb: bankBsb.trim(),
+                                bankAccountNumber: bankAccountNumber.trim(),
+                              };
+                          setSavedBilling(next);
+                          setAbn(next.abn);
+                          setLicenceNumber(next.licenceNumber);
+                          setBankName(next.bankName);
+                          setBankAccountName(next.bankAccountName);
+                          setBankBsb(next.bankBsb);
+                          setBankAccountNumber(next.bankAccountNumber);
+                          setBillingEditing(!hasInvoiceBillingDetails(next));
+                          await refresh({ force: true });
+                          toast.success('Billing details saved');
+                        } catch (err) {
+                          toast.error(
+                            err instanceof Error ? err.message : 'Could not save billing details',
+                          );
+                        } finally {
+                          setBillingSaving(false);
+                        }
+                      })();
+                    }}
+                  >
+                    {billingSaving ? 'Saving…' : 'Save billing details'}
+                  </Button>
+                  {hasInvoiceBillingDetails(savedBilling) ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={billingSaving}
+                      onClick={() => {
+                        setAbn(savedBilling.abn);
+                        setLicenceNumber(savedBilling.licenceNumber);
+                        setBankName(savedBilling.bankName);
+                        setBankAccountName(savedBilling.bankAccountName);
+                        setBankBsb(savedBilling.bankBsb);
+                        setBankAccountNumber(savedBilling.bankAccountNumber);
+                        setBillingEditing(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  ) : null}
+                </div>
+              </>
+            )}
           </section>
         ) : null}
 

@@ -159,7 +159,6 @@ export function AgentShell({
         {isV2 && !immersive ? (
           <AgentShellV2Header
             unreadNotificationCount={unreadNotificationCount}
-            onLogout={() => void logout()}
             showCrosLauncher={hideCrosRail || showPropertyShellPreview}
           />
         ) : null}
