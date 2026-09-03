@@ -647,6 +647,26 @@
   animation: voice-pulse-ring 1.5s ease-out infinite;
 }
 
+/* docx-preview: keep pages left-aligned so mobile scale-to-fit can show the left edge. */
+.docx-preview-host .docx-wrapper {
+  padding: 8px !important;
+  background: transparent !important;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.docx-preview-host section.docx {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+@media (min-width: 640px) {
+  .docx-preview-host .docx-wrapper {
+    padding: 16px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-voice-wave,
   .animate-voice-wave-settle,

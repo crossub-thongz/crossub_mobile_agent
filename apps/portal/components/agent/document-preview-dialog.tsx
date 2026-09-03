@@ -171,7 +171,40 @@ function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
   );
 }
 
+/**
+ * Word pages render at A4/letter width. Centering that page in a narrow
+ * dialog (`mx-auto`) overflows equally on both sides — and overflow on the
+ * left cannot be scrolled to. Scale from the top-left instead so the full
+ * page stays in view on mobile.
+ */
+function fitDocxToViewport(host: HTMLElement, viewport: HTMLElement) {
+  const wrapper =
+    host.querySelector<HTMLElement>('.docx-wrapper') ??
+    host.querySelector<HTMLElement>('section.docx') ??
+    host;
+
+  wrapper.style.transform = '';
+  wrapper.style.marginRight = '';
+  wrapper.style.marginBottom = '';
+
+  const styles = getComputedStyle(viewport);
+  const available =
+    viewport.clientWidth -
+    (Number.parseFloat(styles.paddingLeft) || 0) -
+    (Number.parseFloat(styles.paddingRight) || 0);
+  const naturalWidth = wrapper.scrollWidth;
+  const naturalHeight = wrapper.scrollHeight;
+  if (available <= 0 || naturalWidth <= available + 1) return;
+
+  const scale = available / naturalWidth;
+  wrapper.style.transformOrigin = 'top left';
+  wrapper.style.transform = `scale(${scale})`;
+  wrapper.style.marginRight = `${naturalWidth * scale - naturalWidth}px`;
+  wrapper.style.marginBottom = `${naturalHeight * scale - naturalHeight}px`;
+}
+
 function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -184,6 +217,7 @@ function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
     // Keep the host node mounted (see render below) so the ref is available here.
     void (async () => {
       const container = containerRef.current;
+      const viewport = viewportRef.current;
       if (!container) {
         if (!cancelled) {
           setError(true);
@@ -206,6 +240,9 @@ function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
           ignoreFonts: false,
           breakPages: true,
         });
+        if (!cancelled && viewport) {
+          fitDocxToViewport(container, viewport);
+        }
       } catch {
         if (!cancelled) setError(true);
       } finally {
@@ -218,8 +255,22 @@ function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
     };
   }, [href]);
 
+  useEffect(() => {
+    if (loading || error) return;
+    const container = containerRef.current;
+    const viewport = viewportRef.current;
+    if (!container || !viewport) return;
+
+    const refit = () => fitDocxToViewport(container, viewport);
+    refit();
+
+    const observer = new ResizeObserver(refit);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [loading, error]);
+
   return (
-    <div className="relative h-full min-h-[320px]">
+    <div className="relative h-full min-h-[320px] min-w-0">
       {loading ? (
         <div className="absolute inset-0 z-10 bg-background">
           <PreviewLoadingState />
@@ -230,10 +281,13 @@ function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
           <PreviewErrorState />
         </div>
       ) : null}
-      <div className="h-full overflow-auto bg-background p-4">
+      <div
+        ref={viewportRef}
+        className="h-full min-w-0 overflow-auto bg-background p-2 sm:p-4"
+      >
         <div
           ref={containerRef}
-          className="docx-preview-host mx-auto max-w-4xl bg-white text-foreground shadow-sm"
+          className="docx-preview-host w-full min-w-0 origin-top-left bg-white text-foreground shadow-sm"
           aria-label={title}
         />
       </div>
@@ -283,7 +337,7 @@ export function DocumentPreviewDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent
-        className="flex h-[96vh] max-h-[96vh] w-[min(98vw,72rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-[72rem]"
+        className="flex h-[96vh] max-h-[96vh] w-[min(100vw,72rem)] max-w-[calc(100%-0.75rem)] flex-col gap-3 overflow-hidden p-3 sm:w-[min(98vw,72rem)] sm:max-w-[72rem] sm:p-4"
         aria-describedby={undefined}
       >
         <DialogHeader className="shrink-0 pr-6">
@@ -297,7 +351,7 @@ export function DocumentPreviewDialog({
           ) : null}
         </DialogHeader>
 
-        <div className="bg-secondary/40 min-h-0 flex-1 overflow-hidden rounded-lg border">
+        <div className="bg-secondary/40 min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border">
           {!url ? (
             <div className="flex h-full min-h-[320px] flex-col items-center justify-center p-6 text-center">
               <FileText className="text-muted-foreground mb-2 size-10" />
