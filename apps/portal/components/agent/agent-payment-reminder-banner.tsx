@@ -24,6 +24,10 @@ import {
   listAgentChargeHistory,
   type AgentBillingCharge,
 } from '@/lib/crossub-api/agent-billing-client';
+import {
+  isLegacyLevel,
+  resolvePortalServiceLevel,
+} from '@/lib/portal-service-level';
 import { needsPasswordChange, needsSystemAccessAgreement } from '@/lib/system-access-agreement';
 import { cn, formatCurrency } from '@/lib/utils';
 
@@ -55,7 +59,7 @@ export function AgentPaymentReminderBanner() {
   const router = useRouter();
   const isV2 = useIsAgentUiV2();
   const { user, status } = useAuth();
-  const { notifications, platformBillingDisabled, inspections } = useAgentData();
+  const { notifications, platformBillingDisabled, inspections, primaryAgency } = useAgentData();
   const [charges, setCharges] = useState<AgentBillingCharge[] | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const onBillPage = pathname === ROUTES.BILL;
@@ -116,6 +120,15 @@ export function AgentPaymentReminderBanner() {
 
   if (!user || status !== 'authed') return null;
   if (platformBillingDisabled) return null;
+
+  // Level 3 with billing on (BILLING_LEVEL_3_DISABLED=false) pays on the task, not here.
+  if (
+    primaryAgency &&
+    isLegacyLevel(resolvePortalServiceLevel(primaryAgency.portalServiceLevel))
+  ) {
+    return null;
+  }
+
   if (isHiddenRoute(pathname)) return null;
   if (needsPasswordChange(user) || needsSystemAccessAgreement(user)) return null;
 
