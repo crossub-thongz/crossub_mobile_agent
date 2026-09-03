@@ -2,7 +2,7 @@
 
 import { BookOpen } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -15,37 +15,74 @@ import { findTourTarget, startAgentPageTour } from '@/lib/agent-page-tour';
 import { cn } from '@/lib/utils';
 
 const PAD = 8;
+const VIEW_MARGIN = 12;
+const GAP = 12;
 
 function measureTarget(id: string | undefined): DOMRect | null {
   if (!id) return null;
   const node = findTourTarget(id);
   if (!node) return null;
-  node.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  const large = node.getBoundingClientRect().height > window.innerHeight * 0.55;
+  node.scrollIntoView({
+    block: large ? 'start' : 'center',
+    inline: 'nearest',
+    behavior: 'smooth',
+  });
   return node.getBoundingClientRect();
 }
 
-function tooltipStyle(rect: DOMRect | null): CSSProperties {
-  const width = Math.min(360, window.innerWidth - 24);
+function visibleRect(rect: DOMRect): DOMRect {
+  const top = Math.max(rect.top, VIEW_MARGIN);
+  const left = Math.max(rect.left, VIEW_MARGIN);
+  const right = Math.min(rect.right, window.innerWidth - VIEW_MARGIN);
+  const bottom = Math.min(rect.bottom, window.innerHeight - VIEW_MARGIN);
+  return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
+}
+
+function tooltipPosition(
+  rect: DOMRect | null,
+  tooltipWidth: number,
+  tooltipHeight: number,
+): CSSProperties {
+  const maxWidth = Math.min(360, window.innerWidth - VIEW_MARGIN * 2);
+  const width = Math.min(tooltipWidth || maxWidth, maxWidth);
+  const maxHeight = window.innerHeight - VIEW_MARGIN * 2;
+  const height = Math.min(tooltipHeight || 220, maxHeight);
+
   if (!rect) {
     return {
-      top: '50%',
-      left: '50%',
+      top: Math.max(VIEW_MARGIN, (window.innerHeight - height) / 2),
+      left: Math.max(VIEW_MARGIN, (window.innerWidth - width) / 2),
       width,
-      transform: 'translate(-50%, -50%)',
+      maxHeight,
     };
   }
 
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const placeBelow = spaceBelow > 200 || rect.top < 140;
-  const left = Math.min(
-    Math.max(12, rect.left + rect.width / 2 - width / 2),
-    window.innerWidth - width - 12,
-  );
+  const visible = visibleRect(rect);
+  const viewportH = window.innerHeight;
+  const viewportW = window.innerWidth;
+  let top: number;
+  let left = visible.left + visible.width / 2 - width / 2;
 
-  if (placeBelow) {
-    return { top: Math.min(window.innerHeight - 220, rect.bottom + 12), left, width };
+  if (visible.height > viewportH * 0.45) {
+    const roomBelow = viewportH - visible.bottom - VIEW_MARGIN;
+    top =
+      roomBelow >= height + GAP
+        ? visible.bottom + GAP
+        : viewportH - height - VIEW_MARGIN;
+  } else {
+    const spaceBelow = viewportH - VIEW_MARGIN - visible.bottom;
+    const spaceAbove = visible.top - VIEW_MARGIN;
+    top =
+      spaceBelow >= height + GAP || spaceBelow >= spaceAbove
+        ? visible.bottom + GAP
+        : visible.top - GAP - height;
   }
-  return { bottom: Math.max(12, window.innerHeight - rect.top + 12), left, width };
+
+  top = Math.min(Math.max(top, VIEW_MARGIN), viewportH - height - VIEW_MARGIN);
+  left = Math.min(Math.max(left, VIEW_MARGIN), viewportW - width - VIEW_MARGIN);
+
+  return { top, left, width, maxHeight };
 }
 
 export function AgentPageTourOverlay({
@@ -72,8 +109,12 @@ export function AgentPageTourOverlay({
   );
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [tipBox, setTipBox] = useState({ width: 360, height: 220 });
 
   const step = playable[Math.min(index, Math.max(playable.length - 1, 0))];
+  const highlight = step?.target ? rect : null;
+  const spotlight = highlight ? visibleRect(highlight) : null;
 
   const syncRect = useCallback(() => {
     if (!step) return;
@@ -92,12 +133,26 @@ export function AgentPageTourOverlay({
     };
   }, [syncRect, index]);
 
+  useEffect(() => {
+    const node = tooltipRef.current;
+    if (!node) return;
+    const update = () => {
+      setTipBox({
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+      });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [step, index, ready]);
+
   if (!ready) return null;
+  if (!step || playable.length === 0) return null;
 
   const last = index >= playable.length - 1;
-  const highlight = step?.target ? rect : null;
-
-  if (!step || playable.length === 0) return null;
+  const tooltipStyle = tooltipPosition(spotlight, tipBox.width, tipBox.height);
 
   return (
     <div className="fixed inset-0 z-[200]" role="dialog" aria-modal="true" aria-label={step.title}>
@@ -107,29 +162,32 @@ export function AgentPageTourOverlay({
         aria-label="Dismiss tutorial"
         onClick={() => onClose('skipped')}
       />
-      {highlight ? (
+      {spotlight && spotlight.width > 0 && spotlight.height > 0 ? (
         <div
           className="pointer-events-none fixed z-[1] rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-transparent"
           style={{
-            top: highlight.top - PAD,
-            left: highlight.left - PAD,
-            width: highlight.width + PAD * 2,
-            height: highlight.height + PAD * 2,
+            top: Math.max(4, spotlight.top - PAD),
+            left: Math.max(4, spotlight.left - PAD),
+            width: Math.min(spotlight.width + PAD * 2, window.innerWidth - 8),
+            height: Math.min(spotlight.height + PAD * 2, window.innerHeight - 8),
             boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.58)',
           }}
         />
       ) : null}
 
       <div
-        className="bg-background pointer-events-auto fixed z-[2] rounded-2xl border p-4 shadow-2xl"
-        style={tooltipStyle(highlight)}
+        ref={tooltipRef}
+        className="bg-background pointer-events-auto fixed z-[2] flex max-h-[calc(100dvh-24px)] flex-col rounded-2xl border p-4 shadow-2xl"
+        style={tooltipStyle}
       >
-        <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+        <p className="text-muted-foreground shrink-0 text-[11px] font-semibold tracking-wide uppercase">
           {index + 1} of {playable.length}
         </p>
-        <p className="mt-1 text-base font-semibold">{step.title}</p>
-        <p className="text-muted-foreground mt-1.5 max-h-[36vh] overflow-y-auto text-sm leading-relaxed">{step.description}</p>
-        <div className="mt-4 flex items-center justify-between gap-2">
+        <p className="mt-1 shrink-0 text-base font-semibold">{step.title}</p>
+        <p className="text-muted-foreground mt-1.5 min-h-0 flex-1 overflow-y-auto text-sm leading-relaxed">
+          {step.description}
+        </p>
+        <div className="mt-4 flex shrink-0 items-center justify-between gap-2">
           {index === 0 ? (
             <Button type="button" variant="ghost" className="text-muted-foreground" onClick={() => onClose('skipped')}>
               Skip
