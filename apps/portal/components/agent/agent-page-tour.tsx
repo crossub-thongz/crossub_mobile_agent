@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen } from 'lucide-react';
+import { BookOpen, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 const PAD = 8;
 const VIEW_MARGIN = 12;
 const GAP = 12;
+const TOUR_OVERLAY_COLOR = 'rgba(15, 23, 42, 0.58)';
 
 function measureTarget(id: string | undefined): DOMRect | null {
   if (!id) return null;
@@ -159,7 +160,7 @@ export function AgentPageTourOverlay({
       <button
         type="button"
         className="absolute inset-0 cursor-default bg-transparent"
-        aria-label="Dismiss tutorial"
+        aria-label="Exit tutorial"
         onClick={() => onClose('skipped')}
       />
       {spotlight && spotlight.width > 0 && spotlight.height > 0 ? (
@@ -170,33 +171,54 @@ export function AgentPageTourOverlay({
             left: Math.max(4, spotlight.left - PAD),
             width: Math.min(spotlight.width + PAD * 2, window.innerWidth - 8),
             height: Math.min(spotlight.height + PAD * 2, window.innerHeight - 8),
-            boxShadow: '0 0 0 9999px rgba(15, 23, 42, 0.58)',
+            boxShadow: `0 0 0 9999px ${TOUR_OVERLAY_COLOR}`,
           }}
         />
-      ) : null}
+      ) : (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1]"
+          style={{ backgroundColor: TOUR_OVERLAY_COLOR }}
+        />
+      )}
 
       <div
         ref={tooltipRef}
         className="bg-background pointer-events-auto fixed z-[2] flex max-h-[calc(100dvh-24px)] flex-col rounded-2xl border p-4 shadow-2xl"
         style={tooltipStyle}
       >
-        <p className="text-muted-foreground shrink-0 text-[11px] font-semibold tracking-wide uppercase">
-          {index + 1} of {playable.length}
-        </p>
+        <div className="flex shrink-0 items-start justify-between gap-2">
+          <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+            {index + 1} of {playable.length}
+          </p>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground -mr-1 -mt-1 rounded-lg p-1 transition-colors hover:bg-muted/60"
+            aria-label="Exit tutorial"
+            onClick={() => onClose('skipped')}
+          >
+            <X className="size-4" />
+          </button>
+        </div>
         <p className="mt-1 shrink-0 text-base font-semibold">{step.title}</p>
         <p className="text-muted-foreground mt-1.5 min-h-0 flex-1 overflow-y-auto text-sm leading-relaxed">
           {step.description}
         </p>
         <div className="mt-4 flex shrink-0 items-center justify-between gap-2">
-          {index === 0 ? (
-            <Button type="button" variant="ghost" className="text-muted-foreground" onClick={() => onClose('skipped')}>
-              Skip
+          <div className="flex items-center gap-1">
+            {index > 0 ? (
+              <Button type="button" variant="ghost" onClick={() => setIndex((value) => Math.max(0, value - 1))}>
+                Back
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-muted-foreground"
+              onClick={() => onClose('skipped')}
+            >
+              Exit
             </Button>
-          ) : (
-            <Button type="button" variant="ghost" onClick={() => setIndex((value) => Math.max(0, value - 1))}>
-              Back
-            </Button>
-          )}
+          </div>
           <Button
             type="button"
             onClick={() => {

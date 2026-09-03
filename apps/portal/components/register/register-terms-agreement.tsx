@@ -69,13 +69,13 @@ export function RegisterTermsAgreementCard({ className }: { className?: string }
         </div>
         <p className="mt-2">
           By registering you agree to the CROSSUB terms of service, privacy policy, and the
-          agency portal access agreement. Tap here to open the document before you accept.
+          CROSSUB Service Agreement (NSW). Tap here to open the document before you accept.
         </p>
       </button>
 
       <DocumentPreviewDialog
         doc={open ? preview : null}
-        subtitle="Agency portal access, confidentiality and privacy"
+        subtitle="CROSSUB Service Agreement (NSW)"
         open={open}
         onClose={() => setOpen(false)}
       />

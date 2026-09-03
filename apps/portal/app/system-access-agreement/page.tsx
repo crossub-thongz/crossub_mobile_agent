@@ -128,9 +128,8 @@ export default function SystemAccessAgreementPage() {
         </div>
 
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Before using the CROSSUB Agent portal, you must read and accept the agency portal
-          user access, confidentiality and privacy agreement. Your signed acceptance will be
-          stored in the agency records.
+          Before using the CROSSUB Agent portal, you must read and accept the CROSSUB Service
+          Agreement (NSW). Your signed acceptance will be stored in the agency records.
         </p>
 
         {agreement ? (
@@ -176,8 +175,8 @@ export default function SystemAccessAgreementPage() {
               className="mt-1 size-4 accent-primary"
             />
             <span className="text-sm leading-relaxed text-foreground">
-              I have read the agency portal access agreement and agree to be bound by its
-              confidentiality and privacy terms.
+              I have read the CROSSUB Service Agreement (NSW) and agree to be bound by its
+              terms.
             </span>
           </label>
         </div>

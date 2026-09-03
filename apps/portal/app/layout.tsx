@@ -23,6 +23,7 @@ import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { AddPaymentMethodGate } from '@/components/agent/add-payment-method-gate';
 import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { AgentPageTourHost } from '@/components/agent/agent-page-tour-host';
+import { AgentPostLoginTasksTourRedirect } from '@/components/agent/agent-post-login-tasks-tour-redirect';
 import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
 import { AgentUiProvider } from '@/components/providers/agent-ui-provider';
 import { ThemedToaster } from '@/components/ui/themed-toaster';
@@ -112,6 +113,9 @@ export default function RootLayout({
                           <WelcomeOnboarding />
           <Suspense fallback={null}>
             <AgentPageGuideHost />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AgentPostLoginTasksTourRedirect />
           </Suspense>
           <Suspense fallback={null}>
             <AgentPageTourHost />
