@@ -30,6 +30,9 @@ type AgentPageGuideContextValue = {
   ready: boolean;
   pageGuideBlocking: boolean;
   setPageGuideBlocking: (blocking: boolean) => void;
+  /** True while Level 1/2 must save a card before page guides or tours may start. */
+  paymentMethodGateBlocking: boolean;
+  setPaymentMethodGateBlocking: (blocking: boolean) => void;
   isSeen: (guideId: AgentPageGuideId) => boolean;
   markSeen: (guideId: AgentPageGuideId, status: AgentPageGuideStatus) => Promise<void>;
   resetGuides: () => Promise<void>;
@@ -43,12 +46,14 @@ export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
   const [seen, setSeen] = useState<Record<string, AgentPageGuideStatus>>({});
   const [ready, setReady] = useState(false);
   const [pageGuideBlocking, setPageGuideBlocking] = useState(false);
+  const [paymentMethodGateBlocking, setPaymentMethodGateBlocking] = useState(false);
 
   useEffect(() => {
     if (status !== 'authed' || !userId) {
       setSeen({});
       setReady(false);
       setPageGuideBlocking(false);
+      setPaymentMethodGateBlocking(false);
       return;
     }
 
@@ -123,8 +128,17 @@ export function AgentPageGuideProvider({ children }: { children: ReactNode }) {
   }, [userId]);
 
   const value = useMemo(
-    () => ({ ready, pageGuideBlocking, setPageGuideBlocking, isSeen, markSeen, resetGuides }),
-    [ready, pageGuideBlocking, isSeen, markSeen, resetGuides],
+    () => ({
+      ready,
+      pageGuideBlocking,
+      setPageGuideBlocking,
+      paymentMethodGateBlocking,
+      setPaymentMethodGateBlocking,
+      isSeen,
+      markSeen,
+      resetGuides,
+    }),
+    [ready, pageGuideBlocking, paymentMethodGateBlocking, isSeen, markSeen, resetGuides],
   );
 
   return (

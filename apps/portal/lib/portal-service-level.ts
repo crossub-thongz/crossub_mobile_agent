@@ -82,6 +82,13 @@ export function isLegacyLevel(level: AgentPortalServiceLevel): boolean {
   return level === 'LEVEL_3_LEGACY';
 }
 
+/** Level 1 and 2 see a blocking add-card prompt on every portal page until a card is saved. */
+export function usesGlobalPaymentMethodPrompt(
+  level: AgentPortalServiceLevel | string | undefined,
+): boolean {
+  return !isLegacyLevel(resolvePortalServiceLevel(level as AgentPortalServiceLevel | undefined));
+}
+
 export function isPropertyInspectionOnly(
   agencies: Agency[],
   propertyAgencyId?: string,

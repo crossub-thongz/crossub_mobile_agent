@@ -17,7 +17,13 @@ export function AgentPageTourHost() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { status } = useAuth();
-  const { ready, isSeen, markSeen, setPageGuideBlocking } = useAgentPageGuides();
+  const {
+    ready,
+    isSeen,
+    markSeen,
+    setPageGuideBlocking,
+    paymentMethodGateBlocking,
+  } = useAgentPageGuides();
   const [welcomeBlocking, setWelcomeBlocking] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -57,6 +63,7 @@ export function AgentPageTourHost() {
       status !== 'authed' ||
       !ready ||
       welcomeBlocking ||
+      paymentMethodGateBlocking ||
       !pathname ||
       isPublicRoute(pathname) ||
       !module
@@ -91,6 +98,7 @@ export function AgentPageTourHost() {
     status,
     tourParam,
     welcomeBlocking,
+    paymentMethodGateBlocking,
     open,
   ]);
 
