@@ -6,6 +6,7 @@ import {
   CreditCard,
   HelpCircle,
   History,
+  LogOut,
   MessageSquare,
   PlayCircle,
   Receipt,
@@ -163,6 +164,22 @@ export const MORE_PAGE_SECTIONS: MorePageSection[] = [
     ],
   },
 ];
+
+export const MORE_ACCOUNT_SECTION: MorePageSection = {
+  id: 'account',
+  title: 'Account',
+  icon: LogOut,
+  tone: 'slate',
+  items: [
+    {
+      id: 'sign-out',
+      title: 'Sign out',
+      description: 'Sign out of the agent app on this device.',
+      icon: LogOut,
+      action: 'sign-out',
+    },
+  ],
+};
 
 export const MORE_PAGE_SECTION_TONE: Record<
   MorePageSection['tone'],

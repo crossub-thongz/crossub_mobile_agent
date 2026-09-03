@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, LayoutGrid } from 'lucide-react';
 
 import {
+  MORE_ACCOUNT_SECTION,
   MORE_PAGE_SECTIONS,
   MORE_PAGE_SECTION_TONE,
   MORE_MENU_ITEM_DESCRIPTION,
@@ -243,6 +244,7 @@ export function MoreHub() {
         platformBillingDisabled,
       ),
     })),
+    MORE_ACCOUNT_SECTION,
   ].filter((section) => section.items.length > 0);
 
   const toggleSection = (sectionId: string) => {
@@ -280,7 +282,7 @@ export function MoreHub() {
             className={
               section.id === 'menu' || section.id === 'support' ? 'lg:hidden' : undefined
             }
-            collapsible={section.id !== 'menu'}
+            collapsible={section.id !== 'menu' && section.id !== 'account'}
           />
         ))}
       </div>
