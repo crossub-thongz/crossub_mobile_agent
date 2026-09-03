@@ -172,35 +172,44 @@ function PdfPreviewPanel({ href, title }: { href: string; title: string }) {
 }
 
 /**
- * Word pages render at A4/letter width. Centering that page in a narrow
- * dialog (`mx-auto`) overflows equally on both sides — and overflow on the
- * left cannot be scrolled to. Scale from the top-left instead so the full
- * page stays in view on mobile.
+ * docx-preview (className `docx-preview`) builds `.docx-preview-wrapper` with
+ * `align-items: center`. On a phone the A4 `section` is wider than the dialog,
+ * so it overflows to the left — and that overflow cannot be scrolled to.
+ * Left-align, let the wrapper be as wide as the page, then scale from top-left.
  */
 function fitDocxToViewport(host: HTMLElement, viewport: HTMLElement) {
-  const wrapper =
-    host.querySelector<HTMLElement>('.docx-wrapper') ??
-    host.querySelector<HTMLElement>('section.docx') ??
-    host;
+  host.style.transform = '';
+  host.style.marginRight = '';
+  host.style.marginBottom = '';
 
-  wrapper.style.transform = '';
-  wrapper.style.marginRight = '';
-  wrapper.style.marginBottom = '';
+  const wrapper = host.querySelector<HTMLElement>('[class$="-wrapper"]');
+  if (wrapper) {
+    wrapper.style.alignItems = 'flex-start';
+    wrapper.style.width = 'max-content';
+    wrapper.style.maxWidth = 'none';
+    wrapper.style.overflow = 'visible';
+  }
+
+  for (const page of host.querySelectorAll<HTMLElement>('section')) {
+    page.style.marginLeft = '0';
+    page.style.marginRight = '0';
+    page.style.alignSelf = 'flex-start';
+  }
 
   const styles = getComputedStyle(viewport);
   const available =
     viewport.clientWidth -
     (Number.parseFloat(styles.paddingLeft) || 0) -
     (Number.parseFloat(styles.paddingRight) || 0);
-  const naturalWidth = wrapper.scrollWidth;
-  const naturalHeight = wrapper.scrollHeight;
+  const naturalWidth = Math.max(host.scrollWidth, wrapper?.scrollWidth ?? 0);
+  const naturalHeight = Math.max(host.scrollHeight, wrapper?.scrollHeight ?? 0);
   if (available <= 0 || naturalWidth <= available + 1) return;
 
   const scale = available / naturalWidth;
-  wrapper.style.transformOrigin = 'top left';
-  wrapper.style.transform = `scale(${scale})`;
-  wrapper.style.marginRight = `${naturalWidth * scale - naturalWidth}px`;
-  wrapper.style.marginBottom = `${naturalHeight * scale - naturalHeight}px`;
+  host.style.transformOrigin = 'top left';
+  host.style.transform = `scale(${scale})`;
+  host.style.marginRight = `${naturalWidth * scale - naturalWidth}px`;
+  host.style.marginBottom = `${naturalHeight * scale - naturalHeight}px`;
 }
 
 function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
@@ -287,7 +296,7 @@ function DocxPreviewPanel({ href, title }: { href: string; title: string }) {
       >
         <div
           ref={containerRef}
-          className="docx-preview-host w-full min-w-0 origin-top-left bg-white text-foreground shadow-sm"
+          className="docx-preview-host w-max max-w-none origin-top-left bg-white text-foreground shadow-sm"
           aria-label={title}
         />
       </div>

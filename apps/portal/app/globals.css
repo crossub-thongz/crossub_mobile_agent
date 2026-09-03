@@ -647,22 +647,26 @@
   animation: voice-pulse-ring 1.5s ease-out infinite;
 }
 
-/* docx-preview: keep pages left-aligned so mobile scale-to-fit can show the left edge. */
-.docx-preview-host .docx-wrapper {
+/* docx-preview uses `${className}-wrapper` (e.g. .docx-preview-wrapper). */
+.docx-preview-host [class$='-wrapper'] {
   padding: 8px !important;
   background: transparent !important;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  width: max-content !important;
+  max-width: none !important;
+  overflow: visible !important;
 }
 
-.docx-preview-host section.docx {
+.docx-preview-host section {
   margin-left: 0 !important;
   margin-right: 0 !important;
+  align-self: flex-start !important;
 }
 
 @media (min-width: 640px) {
-  .docx-preview-host .docx-wrapper {
+  .docx-preview-host [class$='-wrapper'] {
     padding: 16px !important;
   }
 }
