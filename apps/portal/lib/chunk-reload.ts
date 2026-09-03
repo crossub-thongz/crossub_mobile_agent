@@ -12,6 +12,18 @@ export function isChunkLoadError(error: unknown): boolean {
   );
 }
 
+/** Fast Refresh cannot recover after a hooks-order crash; a full reload is required. */
+export function isHooksOrderError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /Rendered more hooks than during the previous render|change in the order of Hooks/i.test(
+    message,
+  );
+}
+
+export function isStaleClientRenderError(error: unknown): boolean {
+  return isChunkLoadError(error) || isHooksOrderError(error);
+}
+
 /** Reload once per tab session so a post-deploy stale bundle can fetch the latest chunks. */
 export function reloadOnceForStaleChunks(): boolean {
   try {

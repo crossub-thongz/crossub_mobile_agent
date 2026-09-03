@@ -3,7 +3,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { isChunkLoadError, reloadOnceForStaleChunks } from '@/lib/chunk-reload';
+import { isStaleClientRenderError, reloadOnceForStaleChunks } from '@/lib/chunk-reload';
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
@@ -17,7 +17,7 @@ class ProviderErrorBoundaryInner extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (isChunkLoadError(error)) {
+    if (isStaleClientRenderError(error)) {
       reloadOnceForStaleChunks();
       return;
     }
@@ -38,7 +38,7 @@ class ProviderErrorBoundaryInner extends Component<Props, State> {
 
   render() {
     if (this.state.error) {
-      const staleBuild = isChunkLoadError(this.state.error);
+      const staleBuild = isStaleClientRenderError(this.state.error);
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
           <h1 className="text-lg font-semibold">

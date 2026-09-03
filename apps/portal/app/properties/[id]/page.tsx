@@ -282,6 +282,10 @@ export default function PropertyDetailPage() {
     arrearsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [searchParams, tab]);
 
+  useEffect(() => {
+    setLocalImageUrl(undefined);
+  }, [property?.imageUrl]);
+
   const needActions = useMemo(
     () => (property ? getPropertyActions(property.id) : []),
     [property, getPropertyActions],
@@ -452,10 +456,6 @@ export default function PropertyDetailPage() {
     router.replace(`/properties/${id}?${next.toString()}`);
   };
 
-  useEffect(() => {
-    setLocalImageUrl(undefined);
-  }, [property?.imageUrl]);
-
   const updateWorkflowTab = (nextTab: ViewTab) => {
     setTab(nextTab);
     const next = new URLSearchParams(searchParams.toString());
@@ -563,6 +563,9 @@ export default function PropertyDetailPage() {
             void refresh();
           }}
           banners={profileBanners}
+          deletedLeasingCycles={propertyDeletedLeasingCycles}
+          deletedEndLeasingCases={propertyDeletedEndLeasingCases}
+          deletedRentReviews={propertyDeletedRentReviews}
           tasksPanel={
             <PropertyProfileTasksTab
               property={property}

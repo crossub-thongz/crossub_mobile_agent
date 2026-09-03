@@ -32,7 +32,8 @@ import {
   countPropertyProfileTabTasks,
 } from '@/lib/property-profile-tasks';
 import { usePropertyOverviewSync } from '@/lib/use-property-overview-sync';
-import { isPropertyVacant } from '@/lib/property-leasing';
+import { filterTenancyRentReviews, isPropertyVacant } from '@/lib/property-leasing';
+import { isPropertyInspectionOnly } from '@/lib/portal-service-level';
 import {
   formatProfileLeaseStatus,
   resolveBondOverviewDisplay,
@@ -46,6 +47,9 @@ import { buildTenancyViewPages, wrapTenancyPageIndex } from '@/lib/tenancy-view-
 import { tenancyReferenceLabel } from '@/lib/workflow-case-reference';
 import type {
   AgentDocument,
+  ArchivedEndLeasingCase,
+  ArchivedLeasingCycle,
+  ArchivedRentReview,
   Inspection,
   LeasingCycle,
   LeasingRecord,
@@ -447,6 +451,9 @@ export function PropertyProfileV2({
   archivePanel,
   activitiesPanel,
   banners,
+  deletedLeasingCycles = [],
+  deletedEndLeasingCases = [],
+  deletedRentReviews = [],
 }: {
   property: Property;
   propertyId: string;
@@ -475,8 +482,11 @@ export function PropertyProfileV2({
   archivePanel: ReactNode;
   activitiesPanel: ReactNode;
   banners?: ReactNode;
+  deletedLeasingCycles?: ArchivedLeasingCycle[];
+  deletedEndLeasingCases?: ArchivedEndLeasingCase[];
+  deletedRentReviews?: ArchivedRentReview[];
 }) {
-  const { hasFullManagementAccess } = useAgentData();
+  const { agencies, hasFullManagementAccess } = useAgentData();
   const activeCycle = leasingCycles[0];
 
   useEffect(() => {
@@ -492,6 +502,8 @@ export function PropertyProfileV2({
     currentLease,
   );
   const isVacant = isPropertyVacant(property, currentLease ? [currentLease] : []);
+  const inspectionOnly = isPropertyInspectionOnly(agencies, property.agencyId);
+  const tenancyRentReviews = filterTenancyRentReviews(rentReviews, isVacant);
   const metrics = buildPropertyProfileMetrics({
     property,
     currentLease,
@@ -501,27 +513,39 @@ export function PropertyProfileV2({
   });
   const includedUsage = usePropertyIncludedUsage(propertyId, property.agencyId);
   const taskCount = useMemo(
-    () =>
-      countPropertyProfileTabTasks(
-        buildPropertyProfileTasks({
-          property,
-          propertyId,
-          maintenance,
-          inspections,
-          rentReviews,
-          rentReviewDecisions,
-          leasingCycles,
-          tenantSelections,
-          vacatingCases,
-          tribunalCases,
-          accounting,
-          currentLease,
-          needActions,
-        }),
-      ),
+    () => {
+      const tasks = buildPropertyProfileTasks({
+        property,
+        propertyId,
+        maintenance,
+        inspections,
+        rentReviews: tenancyRentReviews,
+        rentReviewDecisions,
+        leasingCycles,
+        tenantSelections,
+        vacatingCases,
+        tribunalCases,
+        accounting,
+        currentLease,
+        needActions,
+        deletedLeasingCycles,
+        deletedEndLeasingCases,
+        deletedRentReviews,
+      });
+      const visible = inspectionOnly
+        ? tasks.filter(
+            (task) => task.category === 'inspection' || task.category === 'tribunal',
+          )
+        : tasks;
+      return countPropertyProfileTabTasks(visible);
+    },
     [
       accounting,
       currentLease,
+      deletedEndLeasingCases,
+      deletedLeasingCycles,
+      deletedRentReviews,
+      inspectionOnly,
       inspections,
       leasingCycles,
       maintenance,
@@ -529,7 +553,7 @@ export function PropertyProfileV2({
       property,
       propertyId,
       rentReviewDecisions,
-      rentReviews,
+      tenancyRentReviews,
       tenantSelections,
       tribunalCases,
       vacatingCases,

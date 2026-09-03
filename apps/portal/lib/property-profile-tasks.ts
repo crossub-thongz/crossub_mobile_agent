@@ -328,9 +328,7 @@ export function countPropertyProfileTasksByCategory(
 }
 
 export function countPropertyProfileTabTasks(tasks: PropertyProfileTask[]): number {
-  return tasks.filter(
-    (task) => task.lifecycle === 'active' || task.lifecycle === 'completed',
-  ).length;
+  return tasks.length;
 }
 
 export function filterPropertyProfileTasks(
