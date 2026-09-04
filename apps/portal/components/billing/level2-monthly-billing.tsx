@@ -208,11 +208,9 @@ export function buildLevel2MonthGroups(
     const totalAud =
       invoice?.retracted
         ? invoice.withdrawnAmountAud ?? invoice.refundedAmountAud ?? 0
-        : invoice?.status === 'paid'
-          ? 0
-          : invoice != null
-            ? invoice.amountDue
-            : monthCharges.reduce((sum, row) => sum + billedChargeAmount(row), 0);
+        : invoice != null
+          ? invoice.amountDue
+          : monthCharges.reduce((sum, row) => sum + billedChargeAmount(row), 0);
 
     groups.push({
       key,

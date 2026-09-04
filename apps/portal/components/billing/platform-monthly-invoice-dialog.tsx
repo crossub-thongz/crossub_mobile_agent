@@ -171,7 +171,7 @@ export function PlatformMonthlyInvoiceDialog({
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="truncate text-base font-semibold">
-                CROSSUB tax invoice
+                {invoice?.invoiceNumber ?? 'Invoice'}
               </DialogTitle>
               {invoice ? (
                 <span
@@ -233,7 +233,7 @@ export function PlatformMonthlyInvoiceDialog({
             </div>
           ) : embedSrc ? (
             <iframe
-              title={invoice?.invoiceNumber ? `Tax invoice ${invoice.invoiceNumber}` : 'Tax invoice'}
+              title={invoice?.invoiceNumber ? `Invoice ${invoice.invoiceNumber}` : 'Invoice'}
               src={embedSrc}
               className="absolute inset-0 size-full border-0 bg-background"
             />
