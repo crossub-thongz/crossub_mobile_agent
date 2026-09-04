@@ -146,13 +146,13 @@ export function ContactSupportHub() {
                   <button
                     type="button"
                     onClick={() => setPropertyId(property.id)}
-                    className="hover:border-primary/30 flex w-full rounded-xl border px-3 py-2.5 text-left text-sm transition hover:bg-secondary/40"
+                    className="hover:border-primary/30 flex w-full flex-col gap-1 rounded-xl border px-3 py-2.5 text-left text-sm transition hover:bg-secondary/40"
                   >
-                    <span className="block truncate font-medium">
+                    <span className="truncate font-medium">
                       {formatPropertyFullAddress(property)}
                     </span>
                     {property.accountManagerName ? (
-                      <span className="text-muted-foreground block truncate text-xs">
+                      <span className="text-muted-foreground truncate text-xs">
                         {property.accountManagerName}
                       </span>
                     ) : null}
