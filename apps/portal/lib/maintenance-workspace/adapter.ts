@@ -1,5 +1,5 @@
-import type { ApiMaintenanceParty } from '@/lib/crossub-api/types';
 import type { MappedMaintenance } from '@/lib/data/map-maintenance';
+import type { ApiMaintenanceParty } from '@/lib/crossub-api/types';
 import {
   inferInvitedContractorIdsFromAudit,
   resolveResponsibilityFromSources,
@@ -205,12 +205,26 @@ export function buildWorkspaceCaseFromApi(
   };
 }
 
+function resolveMaintenanceRequestCreatedAt(item: MaintenanceRequest): string {
+  const fromMappedApi =
+    'apiRequest' in item && item.apiRequest && typeof item.apiRequest === 'object'
+      ? (item as MappedMaintenance).apiRequest.createdAt
+      : undefined;
+  return (
+    item.createdAt?.trim() ||
+    fromMappedApi?.trim() ||
+    item.timeline[0]?.at?.trim() ||
+    item.updatedAt?.trim() ||
+    ''
+  );
+}
+
 export function buildWorkspaceCaseFromRequest(
   item: MaintenanceRequest,
   property?: Property,
   agent?: AuthUser | null,
 ): MaintenanceWorkspaceCase {
-  const firstTimeline = item.timeline[0]?.at ?? new Date().toISOString();
+  const createdAt = resolveMaintenanceRequestCreatedAt(item);
   const auditEntries = timelineToAudit(item);
   const responsibility = resolveResponsibilityFromSources({
     explicit: item.responsibility,
@@ -235,8 +249,8 @@ export function buildWorkspaceCaseFromRequest(
     priority: mapRequestPriority(item.priority),
     responsibility,
     status: mapRequestStatus(item.status, item.apiStatus),
-    createdAt: firstTimeline,
-    dueAt: item.quoteExpiry ?? firstTimeline,
+    createdAt,
+    dueAt: item.quoteExpiry ?? createdAt,
     source: 'agent_submission',
     assignedContractorId: item.contractorName ? `contractor-${item.id}` : undefined,
     invitedContractorIds: invitedContractorIds.length ? invitedContractorIds : undefined,
@@ -262,8 +276,8 @@ export function buildWorkspaceCaseFromRequest(
             price: item.quoteAmount,
             currency: 'AUD',
             scope: item.recommendation ?? item.description,
-            availableSchedule: item.quoteExpiry ?? firstTimeline,
-            submittedAt: firstTimeline,
+            availableSchedule: item.quoteExpiry ?? createdAt,
+            submittedAt: createdAt,
             status: item.requiresApproval ? 'submitted' : 'approved',
           },
         ]

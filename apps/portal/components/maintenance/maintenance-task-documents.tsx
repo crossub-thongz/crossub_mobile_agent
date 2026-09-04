@@ -19,6 +19,10 @@ export function MaintenanceTaskDocuments({
     () => buildMaintenanceDocumentGroups(attachments, requestId),
     [attachments, requestId],
   );
+  const gallery = useMemo(
+    () => groups.flatMap((group) => group.people.flatMap((person) => person.documents.map((doc) => doc.attachment))),
+    [groups],
+  );
   const [preview, setPreview] = useState<ApiMaintenanceAttachment | null>(null);
 
   if (groups.length === 0) {
@@ -56,6 +60,7 @@ export function MaintenanceTaskDocuments({
       ))}
       <MaintenanceAttachmentPreviewDialog
         attachment={preview}
+        attachments={gallery}
         onClose={() => setPreview(null)}
       />
     </section>

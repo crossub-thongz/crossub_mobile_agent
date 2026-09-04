@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
+  MaintenanceAttachmentPreviewDialog,
+  maintenanceAttachmentPreviewUrl,
+} from '@/components/maintenance/maintenance-attachment-preview-dialog';
+import {
   deleteMaintenanceAttachment,
   uploadMaintenanceAttachment,
 } from '@/lib/crossub-api/maintenance-client';
@@ -14,10 +18,6 @@ import { fileToBase64 } from '@/lib/file-upload';
 import { cn } from '@/lib/utils';
 
 export const MAINTENANCE_MAX_INITIAL_EVIDENCE_UPLOADS = 8;
-
-function attachmentPreviewUrl(att: ApiMaintenanceAttachment): string {
-  return att.previewUrl ?? `/api/maintenance/attachments/${att.id}/preview`;
-}
 
 function isReviewEvidenceAttachment(att: ApiMaintenanceAttachment): boolean {
   return att.kind === 'initial_evidence';
@@ -43,6 +43,7 @@ export function MaintenanceReviewEvidencePanel({
   const [expanded, setExpanded] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<ApiMaintenanceAttachment | null>(null);
 
   const evidenceAttachments = useMemo(
     () => attachments.filter((a) => a.maintenanceRequestId === requestId && isReviewEvidenceAttachment(a)),
@@ -197,17 +198,16 @@ export function MaintenanceReviewEvidencePanel({
                 </p>
               ) : (
                 evidenceAttachments.map((att) => {
-                  const preview = attachmentPreviewUrl(att);
+                  const preview = maintenanceAttachmentPreviewUrl(att);
                   const isImage = att.mimeType.startsWith('image/');
                   const isVideo = att.mimeType.startsWith('video/');
 
                   return (
                     <div key={att.id} className="group relative">
-                      <a
-                        href={preview}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
                         title={att.fileName}
+                        onClick={() => setPreviewAttachment(att)}
                         className="relative flex aspect-square w-full overflow-hidden rounded-md border bg-muted hover:bg-secondary/20"
                       >
                         {isImage ? (
@@ -232,7 +232,7 @@ export function MaintenanceReviewEvidencePanel({
                             </span>
                           </div>
                         )}
-                      </a>
+                      </button>
                       {canManage ? (
                         <Button
                           type="button"
@@ -258,6 +258,12 @@ export function MaintenanceReviewEvidencePanel({
           </div>
         ) : null}
       </section>
+
+      <MaintenanceAttachmentPreviewDialog
+        attachment={previewAttachment}
+        attachments={evidenceAttachments}
+        onClose={() => setPreviewAttachment(null)}
+      />
     </div>
   );
 }

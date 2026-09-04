@@ -388,6 +388,7 @@ export function MaintenanceCompletionGatesPanel({
 
       <MaintenanceAttachmentPreviewDialog
         attachment={previewAttachment}
+        attachments={evidenceAttachments}
         onClose={() => setPreviewAttachment(null)}
       />
     </div>
@@ -540,6 +541,7 @@ function EvidenceGallery({
     {onPreview ? null : (
       <MaintenanceAttachmentPreviewDialog
         attachment={localPreview}
+        attachments={attachments}
         onClose={() => setLocalPreview(null)}
       />
     )}

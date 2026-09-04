@@ -3,6 +3,10 @@
 import { useMemo, useState } from 'react';
 import { FileText, Play } from 'lucide-react';
 
+import {
+  MaintenanceAttachmentPreviewDialog,
+  maintenanceAttachmentPreviewUrl,
+} from '@/components/maintenance/maintenance-attachment-preview-dialog';
 import { maintenanceSourceLabel } from '@/lib/maintenance/maintenance-source-labels';
 import type { MaintenanceWorkflowContext } from '@/lib/maintenance/agent-workflow-model';
 import type { ApiMaintenanceAttachment } from '@/lib/crossub-api/types';
@@ -17,10 +21,6 @@ function splitTenantNames(name: string | null | undefined): string[] {
     .map((part) => part.trim())
     .filter(Boolean);
   return parts.length > 0 ? parts : [value];
-}
-
-function attachmentPreviewUrl(att: ApiMaintenanceAttachment): string {
-  return att.previewUrl ?? `/api/maintenance/attachments/${att.id}/preview`;
 }
 
 function IntakeEvidenceGrid({
@@ -38,7 +38,7 @@ function IntakeEvidenceGrid({
     <>
       <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5">
         {attachments.map((att) => {
-          const previewUrl = attachmentPreviewUrl(att);
+          const previewUrl = maintenanceAttachmentPreviewUrl(att);
           const isImage = att.mimeType.startsWith('image/');
           const isVideo = att.mimeType.startsWith('video/');
 
@@ -71,40 +71,11 @@ function IntakeEvidenceGrid({
         })}
       </div>
 
-      {previewAttachment ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setPreviewAttachment(null)}
-          role="presentation"
-        >
-          <div
-            className="max-h-[90vh] max-w-3xl overflow-auto rounded-lg bg-background p-2"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-          >
-            {previewAttachment.mimeType.startsWith('image/') ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={attachmentPreviewUrl(previewAttachment)}
-                alt={previewAttachment.fileName}
-                className="max-h-[80vh] w-full object-contain"
-              />
-            ) : previewAttachment.mimeType.startsWith('video/') ? (
-              <video
-                src={attachmentPreviewUrl(previewAttachment)}
-                controls
-                className="max-h-[80vh] w-full"
-              />
-            ) : (
-              <iframe
-                src={attachmentPreviewUrl(previewAttachment)}
-                title={previewAttachment.fileName}
-                className="h-[80vh] w-full min-w-[min(90vw,640px)]"
-              />
-            )}
-          </div>
-        </div>
-      ) : null}
+      <MaintenanceAttachmentPreviewDialog
+        attachment={previewAttachment}
+        attachments={attachments}
+        onClose={() => setPreviewAttachment(null)}
+      />
     </>
   );
 }
@@ -149,7 +120,11 @@ export function MaintenanceJobIntakeSummary({
         </div>
         <div>
           <dt className="text-muted-foreground">Date &amp; time created</dt>
-          <dd className="font-medium">{formatDateTime(ctx.workspaceCase.createdAt)}</dd>
+          <dd className="font-medium">
+            {ctx.workspaceCase.createdAt
+              ? formatDateTime(ctx.workspaceCase.createdAt)
+              : '—'}
+          </dd>
         </div>
         <div className="sm:col-span-2">
           <dt className="text-muted-foreground">

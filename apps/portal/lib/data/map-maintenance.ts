@@ -204,6 +204,7 @@ export function mapApiMaintenanceRequest(
       !!submittedQuote &&
       (req.status === 'pending_approval' || req.status === 'pending_quotation'),
     timeline: auditToTimeline(reqAudit),
+    createdAt: req.createdAt,
     source: 'api',
     submittedQuotationId: submittedQuote?.id,
     invoiceUploaded: req.invoiceUploaded,

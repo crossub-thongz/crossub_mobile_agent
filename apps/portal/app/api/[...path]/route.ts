@@ -15,6 +15,14 @@ const buildUpstreamUrl = (req: NextRequest, path: string[]): string => {
   return `${apiBase()}/api/${suffix}${req.nextUrl.search}`;
 };
 
+/** R2/CDN previews redirect; follow server-side so browser blob downloads stay same-origin. */
+const shouldFollowUpstreamRedirects = (req: NextRequest, path: string[]): boolean =>
+  req.method === 'GET' &&
+  path[0] === 'maintenance' &&
+  path[1] === 'attachments' &&
+  path.length >= 4 &&
+  path[3] === 'preview';
+
 const rewriteSetCookie = (cookie: string, hostname: string): string => {
   const isLocalhost =
     hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
@@ -58,7 +66,7 @@ const proxy = async (
       body: isBodyMethod ? req.body : undefined,
       // Stream large JSON uploads (base64 documents) without buffering the full body in the portal.
       ...(isBodyMethod ? { duplex: 'half' as const } : {}),
-      redirect: 'manual',
+      redirect: shouldFollowUpstreamRedirects(req, path) ? 'follow' : 'manual',
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Upstream request failed';
