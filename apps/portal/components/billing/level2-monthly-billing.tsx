@@ -154,6 +154,8 @@ export function formatAccountLockCountdown(days: number): string {
 /**
  * Group Level 2 invoice-eligible charges + monthly invoices by Sydney calendar month.
  * Invoice periodStart is the billing month (periodEnd can land on 1 Sep in Sydney).
+ * Only months with an invoice sent from Accounting (SENT / OVERDUE / PAID) are returned —
+ * accruing charges before admin approval stay hidden on the Agent Invoice tab.
  */
 export function buildLevel2MonthGroups(
   charges: AgentBillingCharge[],
@@ -212,6 +214,7 @@ export function buildLevel2MonthGroups(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
     const invoice = invoiceByMonth.get(key) ?? null;
+    if (!invoice) continue;
     const ended = isMonthEnded(key, now);
 
     let paymentStatus: Level2MonthGroup['paymentStatus'];

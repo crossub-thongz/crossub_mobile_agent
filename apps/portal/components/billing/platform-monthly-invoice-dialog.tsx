@@ -1,7 +1,7 @@
 'use client';
 
 import { Download, Info, Loader2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -72,14 +72,18 @@ export function PlatformMonthlyInvoiceDialog({
   const [downloading, setDownloading] = useState(false);
 
   const invoiceId = state?.invoice.id;
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
 
   useEffect(() => {
     if (!invoiceId) {
       setDetail(null);
+      setLoading(false);
       return;
     }
 
     let cancelled = false;
+    setDetail(null);
     setLoading(true);
     void fetchAgentMonthlyInvoice(invoiceId)
       .then((row) => {
@@ -88,7 +92,7 @@ export function PlatformMonthlyInvoiceDialog({
       .catch((err) => {
         if (!cancelled) {
           toast.error(err instanceof Error ? err.message : 'Could not load invoice');
-          onOpenChange(false);
+          onOpenChangeRef.current(false);
         }
       })
       .finally(() => {
@@ -98,7 +102,7 @@ export function PlatformMonthlyInvoiceDialog({
     return () => {
       cancelled = true;
     };
-  }, [invoiceId, onOpenChange]);
+  }, [invoiceId]);
 
   const lineTotal = useMemo(
     () => (detail?.lineItems ?? []).reduce((sum, row) => sum + row.amount, 0),

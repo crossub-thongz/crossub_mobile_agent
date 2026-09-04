@@ -970,7 +970,7 @@ export default function BillPage() {
                 title="No payments yet"
                 description={
                   usesMonthlyInvoice
-                    ? 'Monthly invoices and prepaid extras after included usage will appear here.'
+                    ? 'Sent monthly invoices and prepaid extras after included usage will appear here.'
                     : 'Prepaid inspections, tribunal sessions, and monthly service invoices will appear here.'
                 }
               />
@@ -979,8 +979,8 @@ export default function BillPage() {
                 title="No monthly invoices yet"
                 description={
                   usesMonthlyInvoice
-                    ? 'Management fee, tribunal, and letting fee appear here by property once Accounting sends the invoice. Inspections are prepaid on Bills.'
-                    : 'Monthly service invoices will appear here when they are issued.'
+                    ? 'Monthly invoices appear here after CROSSUB Accounting approves and sends them. Prepaid inspections are on Bills.'
+                    : 'Monthly service invoices will appear here after Accounting sends them.'
                 }
               />
             ) : billingTab === 'bills' && billsCount === 0 ? (

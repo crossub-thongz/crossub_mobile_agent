@@ -608,11 +608,15 @@ export async function listAgentInvoiceHistory(): Promise<AgentBillingMonthlyInvo
 export async function fetchAgentMonthlyInvoice(
   invoiceId: string,
 ): Promise<AgentBillingMonthlyInvoiceDetail> {
-  return agentFetch(`/agent/billing/invoices/${encodeURIComponent(invoiceId)}`);
+  return agentFetch(
+    `/agent/billing/invoices/${encodeURIComponent(invoiceId)}?_=${Date.now()}`,
+  );
 }
 
 export async function downloadAgentMonthlyInvoicePdf(invoiceId: string): Promise<Blob> {
-  return apiV1.getBlob(`/agent/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`);
+  return apiV1.getBlob(
+    `/agent/billing/invoices/${encodeURIComponent(invoiceId)}/pdf?_=${Date.now()}`,
+  );
 }
 
 export async function payAgentMonthlyInvoice(
