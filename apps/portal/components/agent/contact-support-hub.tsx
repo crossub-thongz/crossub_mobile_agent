@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { messageDetail } from '@/constants/routes';
 import { resolveAccountManagerContact } from '@/lib/agent-phonebook';
-import { placePhoneCall } from '@/lib/phone';
+import { buildDialString, placePhoneCall } from '@/lib/phone';
 import { findStaffSupportThread } from '@/lib/staff-support-thread';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -169,6 +169,14 @@ export function ContactSupportHub() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{accountManager.name}</p>
               <p className="text-muted-foreground text-xs">CROSSUB Account Manager</p>
+              {accountManager.phone ? (
+                <a
+                  href={`tel:${buildDialString(accountManager.phone, accountManager.extension)}`}
+                  className="text-primary mt-1 block truncate text-sm font-medium tabular-nums hover:underline"
+                >
+                  {accountManager.phone}
+                </a>
+              ) : null}
             </div>
           </div>
 

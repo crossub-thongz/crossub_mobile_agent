@@ -68,7 +68,6 @@ import { terminationApi } from '@/lib/termination-case-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
 import {
-  AGENT_CONDUCTED_OPEN_SHORT_NOTE,
   getOpenListingContext,
   OPEN_CONDUCTED_BY_LABEL,
   SELF_OPEN_INSPECTION_DISCLAIMER,
@@ -531,6 +530,22 @@ export function CreateInspectionWizard({
         store.ensureDetail(property!.id, formatPropertyFullAddress(property!), rentPerWeek);
         store.applyCycleView(property!.id, view);
         store.setActiveStep(property!.id, LEASING_LIFECYCLE_STEP.APPLICATION_APPROVAL);
+        const sessionId = view.openInspection?.viewingSessionId;
+        if (sessionId) {
+          try {
+            const session = await openViewingsApi.get(sessionId);
+            const inspection = mapOpenSessionToInspection(session, property!.id);
+            registerInspection(inspection);
+            onCreated?.({ inspectionId: inspection.id, inspection });
+            if (navigateOnSuccess) {
+              router.push(inspectionDetail(inspection.id));
+              await refresh();
+              return;
+            }
+          } catch {
+            /* viewing session will sync on the next refresh */
+          }
+        }
       } catch {
         /* live sync will catch up when the workflow opens */
       }
@@ -770,13 +785,14 @@ export function CreateInspectionWizard({
             'This property is not on a letting yet — open the leasing workflow and request the open inspection from there',
           );
         }
-        // An agent-conducted open is the agent's own diary and stays theirs to set: they
-        // are the one attending it. CRS-0068 is about the inspections CROSSUB runs.
-        const scheduledAt = openConductedBy === 'crossub'
-          ? new Date(openPreferredStartLocal).toISOString()
-          : new Date(openScheduledLocal).toISOString();
+        if (openConductedBy === 'agent') {
+          throw new Error(
+            'Self open inspections need a start date and time — choose Agent conducts and set the viewing window.',
+          );
+        }
+        const scheduledAt = new Date(openPreferredStartLocal).toISOString();
         const start = scheduledAt;
-        const end = openConductedBy === 'crossub' && openPreferredEndLocal
+        const end = openPreferredEndLocal
           ? new Date(openPreferredEndLocal).toISOString()
           : new Date(new Date(start).getTime() + 60 * 60_000).toISOString();
         const standaloneLeaseTermWeeks = manualStandaloneCrossubOpen
@@ -787,10 +803,7 @@ export function CreateInspectionWizard({
             propertyId: property.id,
             startTime: start,
             endTime: end,
-            shortNote:
-              openConductedBy === 'crossub'
-                ? openPreferredNotes
-                : AGENT_CONDUCTED_OPEN_SHORT_NOTE,
+            shortNote: openPreferredNotes,
             agentName: agentContact.agentName || undefined,
             agentPhone: agentContact.agentPhone || undefined,
             agentRole: 'leasing_agent',
@@ -804,22 +817,14 @@ export function CreateInspectionWizard({
               : {}),
           });
           const view = mapOpenSessionToInspection(session, property.id);
-          toast.success(
-            openConductedBy === 'crossub'
-              ? 'Open inspection requested'
-              : 'Self open inspection scheduled',
-          );
+          toast.success('Open inspection requested');
           finalizeInspectionCreate(view);
         };
-        if (openConductedBy === 'crossub') {
-          await withInspectionOrderPayment(
-            'open_inspection',
-            property.id,
-            createStandaloneViewing,
-          );
-          return;
-        }
-        await createStandaloneViewing();
+        await withInspectionOrderPayment(
+          'open_inspection',
+          property.id,
+          createStandaloneViewing,
+        );
         return;
       }
 
