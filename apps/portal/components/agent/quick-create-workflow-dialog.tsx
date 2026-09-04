@@ -253,7 +253,7 @@ export function QuickCreateWorkflowDialog({
           closeAll();
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" data-tour="workflow-tour-property-picker">
           <DialogHeader>
             <DialogTitle>{label}</DialogTitle>
             <DialogDescription>Select a property to continue.</DialogDescription>

@@ -17,6 +17,10 @@ import {
   focusWorkflowTourTab,
   shouldFocusWorkflowTourTab,
 } from '@/lib/workflow-tour-tab-focus';
+import {
+  requestWorkflowTourOpenCreateMenu,
+  shouldOpenWorkflowTourCreateMenu,
+} from '@/lib/agent-workflow-tour';
 import { cn } from '@/lib/utils';
 
 const PAD = 8;
@@ -129,6 +133,9 @@ export function AgentPageTourOverlay({
   useEffect(() => {
     if (step && shouldFocusWorkflowTourTab(step.target)) {
       focusWorkflowTourTab();
+    }
+    if (step && shouldOpenWorkflowTourCreateMenu(step.target)) {
+      requestWorkflowTourOpenCreateMenu();
     }
     syncRect();
     const timer = window.setTimeout(syncRect, 280);

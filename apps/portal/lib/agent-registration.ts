@@ -40,9 +40,28 @@ export const REGISTER_TERMS_AND_CONDITIONS_TITLE = 'Terms and Conditions';
 /** Shown on the confirm step when metadata cannot be loaded from the API. */
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK = {
   title: REGISTER_TERMS_AND_CONDITIONS_TITLE,
-  fileName: 'CROSSUB_System_Access_Website_Registration_Terms_Clickwrap_Final.docx',
-  version: 'website-registration-clickwrap-2026-08',
+  fileName: 'CROSSUB_Agency_Portal_Website_Registration_Terms_Clickwrap_Final.docx',
+  version: 'agency-portal-registration-terms-2026-08',
 } as const;
+
+function isServiceAgreementDocument(meta: {
+  fileName?: string | null;
+  title?: string | null;
+} | null): boolean {
+  const fileName = meta?.fileName?.toLowerCase() ?? '';
+  const title = meta?.title?.toLowerCase() ?? '';
+  return fileName.includes('service agreement') || title.includes('service agreement');
+}
+
+/** Prefer the agency portal registration terms when the API still returns the NSW service agreement. */
+export function registerTermsDocumentFileName(
+  meta: { fileName?: string | null; title?: string | null } | null,
+): string {
+  if (meta?.fileName && !isServiceAgreementDocument(meta)) {
+    return meta.fileName;
+  }
+  return REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.fileName;
+}
 
 /** Default platform pricing for the registration flow (public, no auth). */
 export async function fetchRegisterAgentPricing(): Promise<

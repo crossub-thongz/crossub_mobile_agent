@@ -9,6 +9,7 @@ import {
   workflowStepTourTarget,
 } from '@/constants/workflow-tour-stages';
 import { ROUTES } from '@/constants/routes';
+import type { PropertyWorkflowActionId } from '@/lib/property-workflow-actions';
 
 export type AgentWorkflowTourId =
   | 'maintenance'
@@ -49,13 +50,12 @@ export function workflowTourGuideId(id: AgentWorkflowTourId): AgentPageGuideId {
 }
 
 export function workflowTourEntryHref(id: AgentWorkflowTourId): string {
-  if (id === 'end_leasing') return `${ROUTES.VACATING}?workflowTour=${id}`;
   const filter =
     id === 'maintenance'
       ? 'Maintenance'
       : id === 'inspections'
         ? 'Inspection'
-        : id === 'new_leasing'
+        : id === 'new_leasing' || id === 'end_leasing'
           ? 'Leasing'
           : 'Tribunal';
   return `${ROUTES.TASKS}?filter=${filter}&workflowTour=${id}`;
@@ -80,164 +80,170 @@ function moduleCopy(id: AgentWorkflowTourId) {
   return { pageName: mod.pageName, overview: mod.overview, eyebrow: mod.eyebrow };
 }
 
-const ENTRY_TASKS_STEPS: Record<
-  Exclude<AgentWorkflowTourId, 'end_leasing'>,
-  AgentTourStep[]
-> = {
+const WORKFLOW_TOUR_CREATE_ACTION: Record<AgentWorkflowTourId, PropertyWorkflowActionId> = {
+  maintenance: 'start_maintenance',
+  inspections: 'schedule_open_inspection',
+  new_leasing: 'start_leasing',
+  end_leasing: 'start_end_leasing',
+  tribunal: 'open_tribunal',
+};
+
+export function workflowTourCreateAction(id: AgentWorkflowTourId): PropertyWorkflowActionId {
+  return WORKFLOW_TOUR_CREATE_ACTION[id];
+}
+
+export function workflowTourCreateMenuTarget(id: AgentWorkflowTourId): string {
+  return `workflow-tour-new-action-${workflowTourCreateAction(id)}`;
+}
+
+const CREATE_MENU_LABEL: Record<AgentWorkflowTourId, string> = {
+  maintenance: 'Add new repair job',
+  inspections: 'Open inspection (or Ingoing / Outgoing / Routine)',
+  new_leasing: 'New Leasing / Re-Letting',
+  end_leasing: 'Vacating / End leasing',
+  tribunal: 'Add tribunal',
+};
+
+function buildCreateSteps(id: AgentWorkflowTourId): AgentTourStep[] {
+  const menuTarget = workflowTourCreateMenuTarget(id);
+  const menuLabel = CREATE_MENU_LABEL[id];
+  return [
+    {
+      id: `${id}-create-new`,
+      target: 'tasks-new',
+      title: 'Open New task',
+      description:
+        'Every workflow starts from New task on Tasks. Click it to open the create menu.',
+      actionNote: 'Click New task now — the next step highlights the menu option for this workflow.',
+    },
+    {
+      id: `${id}-create-pick`,
+      target: menuTarget,
+      title: 'Choose this workflow',
+      description: `Select ${menuLabel} from the menu to start the create form.`,
+      actionNote: `Tap ${menuLabel} to pick a property and open the form.`,
+    },
+    {
+      id: `${id}-create-property`,
+      target: 'workflow-tour-property-picker',
+      title: 'Select a property',
+      description:
+        'Search by address or tenant, then choose the property this case belongs to.',
+      actionNote: 'Pick the property — the create form opens automatically.',
+    },
+    {
+      id: `${id}-create-form`,
+      target: 'workflow-tour-create-form',
+      title: 'Complete the create form',
+      description:
+        'Required fields are marked. Portfolio data may prefill tenant, rent, and access details.',
+      actionNote:
+        'Fill in the essentials for your demo case. You can use test data — the tour continues after you submit.',
+    },
+    {
+      id: `${id}-create-submit`,
+      target: 'workflow-tour-create-submit',
+      title: 'Create the case',
+      description:
+        'Submit to open the job. The tour resumes on the job page and walks through every workflow stage.',
+      actionNote:
+        'After you create the case, the guided tour continues on the Workflow tab with each lifecycle step.',
+    },
+  ];
+}
+
+const ENTRY_TASKS_STEPS: Record<AgentWorkflowTourId, AgentTourStep[]> = {
   maintenance: [
     {
       id: 'maint-entry-category',
       target: 'tasks-category-maintenance',
-      title: 'Filter to Maintenance',
+      title: 'Maintenance on Tasks',
       description:
-        'The Maintenance tab shows every repair job across your portfolio. Use it to triage quotes, scheduling, and completions.',
+        'Filter to Maintenance to see repair jobs across your portfolio — quotes, scheduling, and completions.',
     },
     {
       id: 'maint-entry-bucket',
       target: 'tasks-bucket-need_action',
       title: 'Need my action',
       description:
-        'Jobs waiting on you — quote approvals, responsibility decisions, completion sign-off — appear under Need my action.',
+        'Jobs waiting on you appear here. After you create a case, rose badges on the job page show where to decide.',
       actionNote:
-        'Start here each session. Rose-highlighted rows in the table are the same cases — open them and use the Workflow panel to approve or decide.',
-    },
-    {
-      id: 'maint-entry-new',
-      target: 'tasks-new',
-      title: 'Create a maintenance job',
-      description:
-        'Use New task → Maintenance to log landlord or agent-initiated repairs. Tenant reports also land here automatically.',
-    },
-    {
-      id: 'maint-entry-open',
-      target: 'tasks-table',
-      title: 'Open a job to continue',
-      description:
-        'Select any maintenance row to open the full workflow. The guided tour continues on the job page with the lifecycle rail and tabs.',
+        'Use Need my action each session to triage. The tour below shows how to create a job and walk every stage.',
     },
   ],
   inspections: [
     {
       id: 'insp-entry-category',
       target: 'tasks-category-inspection',
-      title: 'Filter to Inspection',
+      title: 'Inspections on Tasks',
       description:
-        'Open, ingoing, outgoing, and routine inspections all appear here. Pick the Inspection tab to focus the queue.',
+        'Open, ingoing, outgoing, and routine inspections are grouped under the Inspection tab.',
     },
     {
       id: 'insp-entry-bucket',
       target: 'tasks-bucket-need_action',
       title: 'Report reviews',
       description:
-        'Inspections awaiting your approval or follow-up show under Need my action — the same prioritisation as maintenance and leasing.',
+        'Inspections awaiting your approval show under Need my action before CROSSUB can publish reports.',
       actionNote:
-        'Open each inspection here and approve or request report changes in the Workflow tab before CROSSUB can publish.',
-    },
-    {
-      id: 'insp-entry-new',
-      target: 'tasks-new',
-      title: 'Book an inspection',
-      description:
-        'New task → Inspection lets you choose the type (Open, Ingoing, Outgoing, Routine) and property before scheduling.',
-    },
-    {
-      id: 'insp-entry-open',
-      target: 'tasks-table',
-      title: 'Open an inspection',
-      description:
-        'Open any inspection row to walk through scheduling, field work, report review, and documents on the job page.',
+        'The tour walks you through creating an inspection, then each workflow stage on the job page.',
     },
   ],
   new_leasing: [
     {
       id: 'lease-entry-category',
       target: 'tasks-category-leasing',
-      title: 'Filter to Leasing',
+      title: 'Leasing on Tasks',
       description:
-        'Active re-let cycles — advertising, applications, onboarding — are grouped under the Leasing tab on Tasks.',
+        'Active re-let cycles — advertising, applicants, onboarding — appear under the Leasing tab.',
     },
     {
       id: 'lease-entry-bucket',
       target: 'tasks-bucket-need_action',
-      title: 'Decisions that unblock onboarding',
+      title: 'Leasing decisions',
       description:
-        'Applicant approvals, bond issues, and agreement blockers surface here when you must decide before CROSSUB can proceed.',
+        'Applicant approvals and onboarding blockers surface here when you must act before CROSSUB proceeds.',
       actionNote:
-        'Leasing blockers — applicant approval, bond, agreement signing — appear here. Clear them on the job Workflow tab.',
+        'Next: create a leasing case, then the tour guides you through every letting stage on the job page.',
+    },
+  ],
+  end_leasing: [
+    {
+      id: 'vacate-entry-category',
+      target: 'tasks-category-leasing',
+      title: 'End leasing on Tasks',
+      description:
+        'Vacate files appear alongside leasing work. End-of-lease cases run notice → outgoing inspection → bond settlement.',
     },
     {
-      id: 'lease-entry-new',
-      target: 'tasks-new',
-      title: 'Start a new let',
+      id: 'vacate-entry-bucket',
+      target: 'tasks-bucket-need_action',
+      title: 'Vacate approvals',
       description:
-        'New task → Leasing / Re-letting starts a cycle on a vacant property. You can also launch from the property hub.',
-    },
-    {
-      id: 'lease-entry-open',
-      target: 'tasks-table',
-      title: 'Open a leasing job',
-      description:
-        'Open a leasing row to continue the demo on the job page — workflow rail, applicants, and onboarding steps.',
+        'Bond and make-good decisions show under Need my action when the file needs your sign-off.',
+      actionNote:
+        'You will create a vacate case from New task, then tour each end-leasing stage on the job page.',
     },
   ],
   tribunal: [
     {
       id: 'trib-entry-category',
       target: 'tasks-category-tribunal',
-      title: 'Filter to Tribunal',
+      title: 'Tribunal on Tasks',
       description:
-        'NCAT and rent-chasing matters appear under Tribunal. Use this tab to see active and completed applications.',
+        'NCAT and rent-chasing matters appear under Tribunal.',
     },
     {
       id: 'trib-entry-bucket',
       target: 'tasks-bucket-need_action',
       title: 'Matters needing your input',
       description:
-        'Evidence requests, hearing prep, and landlord decisions show under Need my action until CROSSUB can advance the file.',
+        'Evidence requests and hearing prep show under Need my action until CROSSUB can advance the file.',
       actionNote:
-        'Upload evidence, confirm hearing details, or approve tribunal steps from the job Workflow and Documents tabs.',
-    },
-    {
-      id: 'trib-entry-new',
-      target: 'tasks-new',
-      title: 'Start tribunal work',
-      description:
-        'New task → Tribunal (or Financial flows where applicable) opens a matter tied to the property and tenancy record.',
-    },
-    {
-      id: 'trib-entry-open',
-      target: 'tasks-table',
-      title: 'Open a tribunal job',
-      description:
-        'Open any tribunal row to tour the workflow rail, evidence, orders, and hearing stages on the detail page.',
+        'Upload evidence and confirm hearing details from the job Workflow tab when prompted.',
     },
   ],
 };
-
-const END_LEASING_ENTRY_STEPS: AgentTourStep[] = [
-  {
-    id: 'vacate-entry-list',
-    target: 'vacating-case-list',
-    title: 'End leasing portfolio',
-    description:
-      'The End leasing page lists active vacate files — notice, outgoing inspection, bond settlement — across your portfolio.',
-  },
-  {
-    id: 'vacate-entry-create',
-    title: 'Start end of lease',
-    description:
-      'From Tasks, use New task → Vacating / End leasing on a tenanted property to open a new vacate file.',
-  },
-  {
-    id: 'vacate-entry-open',
-    target: 'vacating-case-list',
-    title: 'Open a vacate file',
-    description:
-      'Select any case to open the full end-leasing workflow. The guided tour continues on the job page.',
-    actionNote:
-      'Rows marked Action required need your approval — open them and work through the Workflow panel.',
-  },
-];
 
 function detailRailStageSteps(id: AgentWorkflowTourId): AgentTourStep[] {
   return WORKFLOW_TOUR_STAGES[id].map((stage) => ({
@@ -371,7 +377,7 @@ function buildDetailSteps(id: AgentWorkflowTourId): AgentTourStep[] {
       title: `${pageName} workflow`,
       description: overview,
       actionNote:
-        'Cases that need you appear under Tasks → Need my action and show a rose Need your action badge on the job page.',
+        'You created the case — now walk each stage on the rail. Rose Need your action badges show where you must decide.',
     },
     AGENT_TOUR_ACCOUNT_MANAGER_STEP,
     {
@@ -441,24 +447,14 @@ function buildEntrySteps(id: AgentWorkflowTourId): AgentTourStep[] {
   const intro: AgentTourStep = {
     id: `${id}-entry-intro`,
     title: `${pageName} demo tour`,
-    description: `${eyebrow}. ${overview}`,
+    description: `${eyebrow}. ${overview} This tour covers creating a case, then every workflow stage on the job page.`,
   };
-  const openInstruction: AgentTourStep = {
-    id: `${id}-entry-handoff`,
-    title: 'Continue on the job page',
-    description:
-      'When you open a case from the list, the tour picks up automatically on the job detail page with the full workflow walkthrough.',
-  };
-
-  if (id === 'end_leasing') {
-    return [intro, AGENT_TOUR_ACCOUNT_MANAGER_STEP, ...END_LEASING_ENTRY_STEPS, openInstruction];
-  }
 
   return [
     intro,
     AGENT_TOUR_ACCOUNT_MANAGER_STEP,
     ...ENTRY_TASKS_STEPS[id],
-    openInstruction,
+    ...buildCreateSteps(id),
   ];
 }
 
@@ -476,10 +472,7 @@ export function resolveWorkflowTourContext(
 ): { id: AgentWorkflowTourId; phase: AgentWorkflowTourPhase } | null {
   const param = searchParams.get('workflowTour');
   if (isAgentWorkflowTourId(param)) {
-    const onEntryPage =
-      (param === 'end_leasing' && pathname === ROUTES.VACATING) ||
-      (param !== 'end_leasing' && pathname === ROUTES.TASKS);
-    if (onEntryPage) return { id: param, phase: 'entry' };
+    if (pathname === ROUTES.TASKS) return { id: param, phase: 'entry' };
   }
 
   const detailId = workflowTourFromDetailPath(pathname);
@@ -500,19 +493,19 @@ export const AGENT_WORKFLOW_TOUR_LABELS: Record<
 > = {
   maintenance: {
     title: 'Maintenance',
-    description: 'Intake → responsibility → quote → schedule → completion',
+    description: 'Create a job → intake through completion on the workflow rail',
   },
   inspections: {
     title: 'Inspections',
-    description: 'Open, ingoing, routine, and outgoing condition reports',
+    description: 'Book an inspection → every stage from schedule to report',
   },
   new_leasing: {
     title: 'New leasing',
-    description: 'Advertising → applicants → onboarding → move-in',
+    description: 'Start a let → advertising through onboarding',
   },
   end_leasing: {
     title: 'End leasing',
-    description: 'Notice → outgoing inspection → bond settlement → close',
+    description: 'Open a vacate file → notice through bond settlement',
   },
   tribunal: {
     title: 'Tribunal',

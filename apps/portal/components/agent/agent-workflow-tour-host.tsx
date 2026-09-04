@@ -19,6 +19,7 @@ import {
   readPendingWorkflowTour,
   setPendingWorkflowTour,
   subscribeAgentWorkflowTour,
+  subscribeWorkflowTourCaseCreated,
 } from '@/lib/agent-workflow-tour';
 import { focusWorkflowTourTab } from '@/lib/workflow-tour-tab-focus';
 import { PORTAL_WELCOME_DISMISSED_EVENT } from '@/lib/agent-page-guide-events';
@@ -98,6 +99,15 @@ export function AgentWorkflowTourHost() {
       setActiveTour(null);
     }
   }, [open, paymentMethodGateBlocking, setPageGuideBlocking]);
+
+  useEffect(() => {
+    return subscribeWorkflowTourCaseCreated(() => {
+      if (!readPendingWorkflowTour()) return;
+      setOpen(false);
+      setPageGuideBlocking(false);
+      setActiveTour(null);
+    });
+  }, [setPageGuideBlocking]);
 
   useEffect(() => {
     if (

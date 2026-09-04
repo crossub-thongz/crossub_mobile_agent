@@ -17,9 +17,9 @@ import {
   REGISTER_SERVICE_AGREEMENT_FALLBACK,
   REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH,
-  REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH,
   REGISTER_TERMS_AND_CONDITIONS_TITLE,
+  registerTermsDocumentFileName,
 } from '@/lib/agent-registration';
 import {
   openInspectionRateLabel,
@@ -111,8 +111,7 @@ export function RegisterConfirmPanel({
     })();
   }, []);
 
-  const privacyFileName =
-    privacyMeta?.fileName ?? REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.fileName;
+  const privacyFileName = registerTermsDocumentFileName(privacyMeta);
 
   const servicePreview = useMemo<DocumentPreviewItem>(
     () => ({

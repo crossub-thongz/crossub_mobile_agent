@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Plus } from 'lucide-react';
 
@@ -22,6 +22,11 @@ import {
   isWorkflowCreatedCase,
   type PropertyWorkflowCreatedResult,
 } from '@/lib/property-workflow-created';
+import {
+  notifyWorkflowTourCaseCreated,
+  readPendingWorkflowTour,
+  subscribeWorkflowTourOpenCreateMenu,
+} from '@/lib/agent-workflow-tour';
 import { cn } from '@/lib/utils';
 
 export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
@@ -84,6 +89,9 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
   const handleCreated = (result?: PropertyWorkflowCreatedResult, createdPropertyId?: string) => {
     const pid = createdPropertyId ?? propertyId;
     setWorkflowAction(null);
+    if (readPendingWorkflowTour()) {
+      notifyWorkflowTourCaseCreated();
+    }
     void refresh();
     if (!result || !pid) return;
     if (isWorkflowCreatedCase(result)) {
@@ -96,6 +104,10 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
     }
   };
 
+  useEffect(() => {
+    return subscribeWorkflowTourOpenCreateMenu(() => setOpen(true));
+  }, []);
+
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
@@ -106,7 +118,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
             <ChevronDown className="size-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="end" className="w-[min(100vw-2rem,22rem)] p-0">
+        <PopoverContent align="end" className="w-[min(100vw-2rem,22rem)] p-0" data-tour="workflow-tour-new-menu">
           <div className="max-h-[min(70vh,26rem)] overflow-y-auto p-2">
             {groupedActions.map((group, groupIndex) => (
               <div
@@ -122,6 +134,7 @@ export function NewTaskActionsMenu({ propertyId }: { propertyId?: string }) {
                       <button
                         type="button"
                         disabled={action.disabled}
+                        data-tour={`workflow-tour-new-action-${action.id}`}
                         onClick={() => openAction(action)}
                         className={cn(
                           'hover:bg-muted/60 w-full rounded-lg px-2 py-2 text-left transition',

@@ -1079,7 +1079,10 @@ export function CreateInspectionWizard({
       ) : null}
 
       {showForm ? (
-        <section className="relative space-y-4 rounded-xl border bg-card p-4">
+        <section
+          className="relative space-y-4 rounded-xl border bg-card p-4"
+          data-tour={hidePropertySelect ? 'workflow-tour-create-form' : undefined}
+        >
           {prefillLoading ? (
             <div
               className="bg-card/80 absolute inset-0 z-10 flex items-center justify-center rounded-xl backdrop-blur-[1px]"
@@ -1192,6 +1195,7 @@ export function CreateInspectionWizard({
 
               <Button
                 className="h-11 w-full rounded-xl"
+                data-tour={hidePropertySelect ? 'workflow-tour-create-submit' : undefined}
                 disabled={
                   submitting ||
                   prefillLoading ||

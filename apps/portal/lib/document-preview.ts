@@ -48,11 +48,13 @@ export function documentPreviewKind(url: string, fileName?: string): DocumentPre
   if (path.endsWith('.pdf') || url.startsWith('blob:')) return 'pdf';
   if (/\.(docx?|word)$/i.test(path)) return 'docx';
   if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(path)) return 'image';
-  // Registration / system-access document endpoints often omit a file extension.
   if (
-    (path.includes('system-access-agreement') || path.includes('service-agreement')) &&
+    path.includes('register-agent-system-access-agreement') &&
     path.endsWith('/document')
   ) {
+    return 'docx';
+  }
+  if (path.includes('register-agent-service-agreement') && path.endsWith('/document')) {
     return 'pdf';
   }
   // Assume remote/API URLs without extension are PDFs (common for document storage).

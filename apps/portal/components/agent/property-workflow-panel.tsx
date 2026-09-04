@@ -856,6 +856,7 @@ export function PropertyWorkflowCreateDialog({
           'max-h-[90vh] overflow-y-auto',
           actionId === 'start_maintenance' && 'sm:max-w-[640px]',
         )}
+        data-tour="workflow-tour-create-form"
       >
         <DialogHeader>
           <DialogTitle>{actionId ? titles[actionId] : 'Create'}</DialogTitle>
@@ -1583,6 +1584,7 @@ export function PropertyWorkflowCreateDialog({
             </Button>
             <Button
               type="button"
+              data-tour="workflow-tour-create-submit"
               disabled={
                 submitting ||
                 (actionId === 'start_rent_review' && prefillLoading) ||
