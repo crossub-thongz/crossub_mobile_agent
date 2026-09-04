@@ -98,3 +98,9 @@ export function revokeInspectionReportBlobUrl(objectUrl: string | null | undefin
     URL.revokeObjectURL(objectUrl);
   }
 }
+
+/** Chrome/Edge PDF embed params — hide side panes, fit page width to the iframe. */
+export function inspectionReportPdfEmbedSrc(url: string): string {
+  const base = url.split('#')[0] ?? url;
+  return `${base}#navpanes=0&toolbar=1&scrollbar=1&view=FitH`;
+}
