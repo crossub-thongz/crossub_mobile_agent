@@ -107,7 +107,7 @@ function formatCardExpiry(expMonth: number, expYear: number): string {
 }
 
 function isPayableInvoice(row: AgentBillingMonthlyInvoice): boolean {
-  return row.status === 'sent' || row.status === 'overdue';
+  return !row.retracted && (row.status === 'sent' || row.status === 'overdue');
 }
 
 function chargeOpensInvoice(row: AgentBillingCharge): boolean {
@@ -450,8 +450,8 @@ export default function BillPage() {
     [charges, invoices, summary?.overdueLockDays],
   );
 
-  const invoicePaidCount = invoices.filter((row) => row.status === 'paid').length;
-  const invoiceTotalCount = invoices.filter((row) => row.status !== 'void').length;
+  const invoicePaidCount = invoices.filter((row) => row.status === 'paid' && !row.retracted).length;
+  const invoiceTotalCount = invoices.filter((row) => row.retracted || row.status !== 'void').length;
   const chargedBills = prepaidExtras.filter(isChargedBill);
   const billsPaidCount = chargedBills.filter((row) => row.status === 'paid').length;
   const billsTotalCount = chargedBills.length;
@@ -532,6 +532,11 @@ export default function BillPage() {
           status: detail.status,
           amountDue: detail.amountDue,
           paidAt: detail.paidAt,
+          retracted: detail.retracted,
+          retractedAt: detail.retractedAt,
+          refunded: detail.refunded,
+          refundedAmountAud: detail.refundedAmountAud,
+          withdrawnAmountAud: detail.withdrawnAmountAud,
         },
       });
     } catch (err) {

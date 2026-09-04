@@ -50,7 +50,7 @@ export type Level2MonthGroup = {
   label: string;
   charges: AgentBillingCharge[];
   invoice: AgentBillingMonthlyInvoice | null;
-  paymentStatus: 'paid' | 'unpaid' | 'accruing';
+  paymentStatus: 'paid' | 'unpaid' | 'accruing' | 'retracted' | 'retracted_refunded';
   showOverdueWarning: boolean;
   /** Whole days until portal lock; null when paid/accruing/no due date. */
   daysUntilAccountLock: number | null;
@@ -154,7 +154,7 @@ export function formatAccountLockCountdown(days: number): string {
 /**
  * Group Level 2 invoice-eligible charges + monthly invoices by Sydney calendar month.
  * Invoice periodStart is the billing month (periodEnd can land on 1 Sep in Sydney).
- * Only months with an invoice sent from Accounting (SENT / OVERDUE / PAID) are returned —
+ * Only months with an invoice sent from Accounting (SENT / OVERDUE / PAID / retracted) are returned —
  * accruing charges before admin approval stay hidden on the Agent Invoice tab.
  */
 export function buildLevel2MonthGroups(
@@ -167,6 +167,7 @@ export function buildLevel2MonthGroups(
   const invoiceById = new Map(
     invoices
       .filter((row) => {
+        if (row.retracted) return true;
         const status = row.status.toLowerCase();
         return status !== 'draft' && status !== 'void';
       })
@@ -218,7 +219,9 @@ export function buildLevel2MonthGroups(
     const ended = isMonthEnded(key, now);
 
     let paymentStatus: Level2MonthGroup['paymentStatus'];
-    if (invoice?.status === 'paid') {
+    if (invoice?.retracted) {
+      paymentStatus = invoice.refunded ? 'retracted_refunded' : 'retracted';
+    } else if (invoice?.status === 'paid') {
       paymentStatus = 'paid';
     } else if (invoice) {
       paymentStatus = 'unpaid';
@@ -236,11 +239,13 @@ export function buildLevel2MonthGroups(
         : null;
 
     const totalAud =
-      invoice?.status === 'paid'
-        ? 0
-        : invoice != null
-          ? invoice.amountDue
-          : monthCharges.reduce((sum, row) => sum + billedChargeAmount(row), 0);
+      invoice?.retracted
+        ? invoice.withdrawnAmountAud ?? invoice.refundedAmountAud ?? 0
+        : invoice?.status === 'paid'
+          ? 0
+          : invoice != null
+            ? invoice.amountDue
+            : monthCharges.reduce((sum, row) => sum + billedChargeAmount(row), 0);
 
     groups.push({
       key,
@@ -446,6 +451,12 @@ export function PropertyChargeGroupCard({
 }
 
 function paymentStatusTone(status: Level2MonthGroup['paymentStatus']): string {
+  if (status === 'retracted_refunded') {
+    return 'border-violet-500/30 bg-violet-500/10 text-violet-800 dark:text-violet-200';
+  }
+  if (status === 'retracted') {
+    return 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300';
+  }
   if (status === 'paid') {
     return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
   }
@@ -456,9 +467,21 @@ function paymentStatusTone(status: Level2MonthGroup['paymentStatus']): string {
 }
 
 function paymentStatusLabel(status: Level2MonthGroup['paymentStatus']): string {
+  if (status === 'retracted_refunded') return 'Retracted · refunded';
+  if (status === 'retracted') return 'Retracted';
   if (status === 'paid') return 'Paid';
   if (status === 'accruing') return 'Accruing';
   return 'Not paid';
+}
+
+function retractedInvoiceCaption(invoice: AgentBillingMonthlyInvoice): string {
+  if (invoice.refunded) {
+    const amount = invoice.refundedAmountAud ?? invoice.withdrawnAmountAud;
+    return amount != null
+      ? `This invoice was retracted by CROSSUB Accounting. A refund of ${formatCurrency(amount)} was issued — do not pay this invoice. A corrected invoice will be sent separately.`
+      : 'This invoice was retracted by CROSSUB Accounting and refunded — do not pay this invoice. A corrected invoice will be sent separately.';
+  }
+  return 'This invoice was retracted by CROSSUB Accounting before payment — do not pay it. A corrected invoice will be sent separately.';
 }
 
 const CHARGE_STATUS_TONE: Record<string, string> = {
@@ -561,8 +584,15 @@ function Level2MonthGroupCard({
           {group.invoice ? (
             <p className="text-muted-foreground text-xs">
               {group.invoice.invoiceNumber}
-              {group.invoice.dueDate ? ` · due ${formatDate(group.invoice.dueDate)}` : null}
-              {group.invoice.paidAt ? ` · paid ${formatDateTime(group.invoice.paidAt)}` : null}
+              {group.invoice.retracted && group.invoice.retractedAt
+                ? ` · retracted ${formatDateTime(group.invoice.retractedAt)}`
+                : null}
+              {!group.invoice.retracted && group.invoice.dueDate
+                ? ` · due ${formatDate(group.invoice.dueDate)}`
+                : null}
+              {!group.invoice.retracted && group.invoice.paidAt
+                ? ` · paid ${formatDateTime(group.invoice.paidAt)}`
+                : null}
             </p>
           ) : (
             <p className="text-muted-foreground text-xs">
@@ -588,6 +618,12 @@ function Level2MonthGroupCard({
 
       {open ? (
         <div className="border-t">
+            {group.invoice?.retracted ? (
+              <div className="flex gap-2 border-b border-violet-500/25 bg-violet-500/10 px-5 py-3 text-xs text-violet-950 dark:text-violet-100">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                <p>{retractedInvoiceCaption(group.invoice)}</p>
+              </div>
+            ) : null}
 
             {billingBlocked && group.paymentStatus === 'unpaid' ? (
               <div className="flex gap-2 border-b border-destructive/25 bg-destructive/10 px-5 py-3 text-xs text-destructive">
@@ -729,7 +765,11 @@ function Level2MonthGroupCard({
             )}
 
             <footer className="border-t bg-muted/25 px-5 py-3.5">
-              {group.invoice ? (
+              {group.invoice?.retracted ? (
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  {retractedInvoiceCaption(group.invoice)}
+                </p>
+              ) : group.invoice ? (
                 <Button
                   type="button"
                   className="w-full sm:w-auto"

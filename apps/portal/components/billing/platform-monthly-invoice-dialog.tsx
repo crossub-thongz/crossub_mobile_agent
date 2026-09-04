@@ -19,7 +19,7 @@ import {
   inspectionReportPdfEmbedSrc,
   revokeInspectionReportBlobUrl,
 } from '@/lib/inspection-report-pdf';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, formatDate, formatDateTime, formatCurrency } from '@/lib/utils';
 
 export type PlatformMonthlyInvoiceDialogState = {
   invoice: AgentBillingMonthlyInvoice;
@@ -30,14 +30,36 @@ type PlatformMonthlyInvoiceDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-function statusTone(status: string): string {
-  if (status === 'paid') {
+function statusTone(invoice: AgentBillingMonthlyInvoice): string {
+  if (invoice.retracted) {
+    return invoice.refunded
+      ? 'border-violet-500/30 bg-violet-500/10 text-violet-800 dark:text-violet-200'
+      : 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300';
+  }
+  if (invoice.status === 'paid') {
     return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
   }
-  if (status === 'overdue') {
+  if (invoice.status === 'overdue') {
     return 'border-destructive/30 bg-destructive/10 text-destructive';
   }
   return 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200';
+}
+
+function statusLabel(invoice: AgentBillingMonthlyInvoice): string {
+  if (invoice.retracted) {
+    return invoice.refunded ? 'Retracted · refunded' : 'Retracted';
+  }
+  return invoice.status.replace(/_/g, ' ');
+}
+
+function retractedDescription(invoice: AgentBillingMonthlyInvoice): string {
+  if (invoice.refunded) {
+    const amount = invoice.refundedAmountAud ?? invoice.withdrawnAmountAud;
+    return amount != null
+      ? `This invoice was retracted by CROSSUB Accounting and refunded (${formatCurrency(amount)}). Do not pay it — a corrected invoice will be sent separately.`
+      : 'This invoice was retracted by CROSSUB Accounting and refunded. Do not pay it — a corrected invoice will be sent separately.';
+  }
+  return 'This invoice was retracted by CROSSUB Accounting before payment. Do not pay it — a corrected invoice will be sent separately.';
 }
 
 export function PlatformMonthlyInvoiceDialog({
@@ -55,7 +77,7 @@ export function PlatformMonthlyInvoiceDialog({
   onOpenChangeRef.current = onOpenChange;
 
   useEffect(() => {
-    if (!invoiceId) {
+    if (!invoiceId || invoice?.retracted) {
       setPdfBlob(null);
       setPreviewUrl(null);
       setLoading(false);
@@ -87,7 +109,7 @@ export function PlatformMonthlyInvoiceDialog({
     return () => {
       cancelled = true;
     };
-  }, [invoiceId]);
+  }, [invoiceId, invoice?.retracted]);
 
   useEffect(() => {
     return () => {
@@ -155,17 +177,17 @@ export function PlatformMonthlyInvoiceDialog({
                 <span
                   className={cn(
                     'inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize',
-                    statusTone(invoice.status),
+                    statusTone(invoice),
                   )}
                 >
-                  {invoice.status}
+                  {statusLabel(invoice)}
                 </span>
               ) : null}
             </div>
             <DialogDescription className="text-left text-xs leading-relaxed">
-              {invoice?.invoiceNumber ?? 'Invoice'}
-              {invoice?.dueDate ? ` · due ${formatDate(invoice.dueDate)}` : ' · due the 7th'}
-              {' · unpaid accounts are held from the 14th'}
+              {invoice?.retracted
+                ? `${invoice.invoiceNumber ?? 'Invoice'}${invoice.retractedAt ? ` · retracted ${formatDateTime(invoice.retractedAt)}` : ''}. ${retractedDescription(invoice)}`
+                : `${invoice?.invoiceNumber ?? 'Invoice'}${invoice?.dueDate ? ` · due ${formatDate(invoice.dueDate)}` : ' · due the 7th'} · unpaid accounts are held from the 14th`}
             </DialogDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -174,7 +196,7 @@ export function PlatformMonthlyInvoiceDialog({
               variant="outline"
               size="sm"
               className="hidden gap-1.5 sm:inline-flex"
-              disabled={downloading || loading || !invoice || !pdfBlob}
+              disabled={downloading || loading || !invoice || !pdfBlob || invoice?.retracted}
               onClick={() => void downloadPdf()}
             >
               {downloading ? (
@@ -198,7 +220,13 @@ export function PlatformMonthlyInvoiceDialog({
         </header>
 
         <div className="relative min-h-0 flex-1 overflow-hidden bg-muted/30">
-          {loading ? (
+          {invoice?.retracted ? (
+            <div className="flex h-full min-h-[240px] items-center justify-center px-6">
+              <p className="text-muted-foreground max-w-lg text-center text-sm leading-relaxed">
+                {retractedDescription(invoice)}
+              </p>
+            </div>
+          ) : loading ? (
             <div className="text-muted-foreground flex h-full min-h-[240px] items-center justify-center gap-2 text-sm">
               <Loader2 className="size-4 animate-spin" />
               Loading invoice PDF…
@@ -222,7 +250,7 @@ export function PlatformMonthlyInvoiceDialog({
             variant="outline"
             size="sm"
             className="w-full gap-1.5"
-            disabled={downloading || loading || !invoice || !pdfBlob}
+            disabled={downloading || loading || !invoice || !pdfBlob || invoice?.retracted}
             onClick={() => void downloadPdf()}
           >
             {downloading ? (

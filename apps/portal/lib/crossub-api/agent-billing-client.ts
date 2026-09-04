@@ -379,6 +379,11 @@ export type AgentBillingMonthlyInvoice = {
   status: string;
   amountDue: number;
   paidAt?: string | null;
+  retracted?: boolean;
+  retractedAt?: string | null;
+  refunded?: boolean;
+  refundedAmountAud?: number | null;
+  withdrawnAmountAud?: number | null;
 };
 
 export type AgentBillingMonthlyInvoiceLineItem = {
