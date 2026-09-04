@@ -4,28 +4,15 @@ import { AlertTriangle, ChevronDown, FileText, Loader2, Lock } from 'lucide-reac
 import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { JobCaseReferenceLink } from '@/components/billing/job-case-reference-link';
 import {
   includedAllowanceRemainingLabel,
   isMonthlyInvoiceServiceType,
-  platformChargeServiceAmountLabel,
-  platformChargeShowsAllowanceRemaining,
   propertyLabelFromCharge,
   type AgentBillingCharge,
   type AgentBillingIncludedUsageRow,
   type AgentBillingMonthlyInvoice,
 } from '@/lib/crossub-api/agent-billing-client';
 import { cn, formatAgreementPeriod, formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
-
-const SERVICE_LABEL: Record<string, string> = {
-  open_inspection: 'Open inspection',
-  routine_inspection: 'Routine inspection',
-  ingoing_inspection: 'Ingoing inspection',
-  outgoing_inspection: 'Outgoing inspection',
-  tribunal: 'Tribunal',
-  service_fee: 'Management fee',
-  letting_fee: 'Letting fee',
-};
 
 /** Management fee, then letting fee, then every other service on that property. */
 function serviceDisplayRank(serviceType: string): number {
@@ -83,26 +70,6 @@ function billedChargeAmount(row: AgentBillingCharge): number {
     return 0;
   }
   return row.amount;
-}
-
-function serviceLabel(raw: string): string {
-  return SERVICE_LABEL[raw] ?? raw.replace(/_/g, ' ');
-}
-
-function isNotCharged(row: AgentBillingCharge): boolean {
-  return row.status === 'void' || row.status === 'refunded';
-}
-
-function notChargedCaption(row: AgentBillingCharge): string {
-  if (row.status === 'refunded') return 'Refunded — not charged';
-  const reason = (row.voidReason ?? '').toLowerCase();
-  if (reason.includes('cancel') || reason.includes('deleted')) {
-    return 'Not charged — job cancelled';
-  }
-  if (reason.includes('inspector')) {
-    return 'Not charged — no inspector confirmed within 48 hours';
-  }
-  return 'Not charged';
 }
 
 export function monthKeyFromIso(iso: string): string {
@@ -484,22 +451,6 @@ function retractedInvoiceCaption(invoice: AgentBillingMonthlyInvoice): string {
   return 'This invoice was retracted by CROSSUB Accounting before payment — do not pay it. A corrected invoice will be sent separately.';
 }
 
-const CHARGE_STATUS_TONE: Record<string, string> = {
-  paid: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  included: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  awaiting_payment: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-  accrued: 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-  invoiced: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
-  refunded: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
-  void: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
-};
-
-function chargeStatusLabel(raw: string): string {
-  if (raw === 'void') return 'Not charged';
-  if (raw === 'included') return 'Included';
-  return raw.replace(/_/g, ' ');
-}
-
 type Level2MonthlyBillingListProps = {
   charges: AgentBillingCharge[];
   invoices: AgentBillingMonthlyInvoice[];
@@ -515,20 +466,16 @@ type Level2MonthlyBillingListProps = {
 
 function Level2MonthGroupCard({
   group,
-  includedUsageByProperty,
   billingBlocked,
   openingInvoiceId,
   disabled,
   onViewInvoice,
-  onViewCharge,
 }: {
   group: Level2MonthGroup;
-  includedUsageByProperty: AgentBillingIncludedUsageRow[];
   billingBlocked: boolean;
   openingInvoiceId: string | null;
   disabled: boolean;
   onViewInvoice: (invoice: AgentBillingMonthlyInvoice) => void;
-  onViewCharge: (charge: AgentBillingCharge) => void;
 }) {
   const [open, setOpen] = useState(false);
   const showLockCountdown =
@@ -603,6 +550,26 @@ function Level2MonthGroupCard({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {group.invoice && !group.invoice.retracted ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5"
+              onClick={(event) => {
+                event.stopPropagation();
+                onViewInvoice(group.invoice!);
+              }}
+              disabled={disabled || openingInvoiceId === group.invoice.id}
+            >
+              {openingInvoiceId === group.invoice.id ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <FileText className="size-3.5" />
+              )}
+              View invoice
+            </Button>
+          ) : null}
           <p className="text-lg font-semibold tabular-nums tracking-tight">
             {formatCurrency(group.totalAud)}
           </p>
@@ -657,142 +624,13 @@ function Level2MonthGroupCard({
               </div>
             ) : null}
 
-            {group.charges.length === 0 ? (
-              <p className="text-muted-foreground px-5 py-5 text-sm">
-                No service lines listed for this month yet.
-              </p>
-            ) : (
-              <div className="divide-y">
-                {groupChargesByProperty(group.charges, includedUsageByProperty).map((property) => (
-                  <PropertyChargeGroupCard key={property.key} property={property} framed={false}>
-                    <ul className="divide-y">
-                      {property.charges.map((row) => {
-                        const struck = isNotCharged(row);
-                        const showRemaining = platformChargeShowsAllowanceRemaining(row);
-                        return (
-                          <li
-                            key={row.id}
-                            className="flex flex-wrap items-start justify-between gap-3 px-5 py-3.5 pl-8 hover:bg-muted/20"
-                          >
-                            <div className={cn('min-w-0 flex-1', struck && 'text-muted-foreground')}>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className={cn('text-sm font-medium', struck && 'line-through')}>
-                                  {serviceLabel(row.serviceType)}
-                                </p>
-                                <span
-                                  className={cn(
-                                    'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                                    CHARGE_STATUS_TONE[row.status] ??
-                                      'border-border bg-muted text-muted-foreground',
-                                  )}
-                                >
-                                  {chargeStatusLabel(row.status)}
-                                </span>
-                              </div>
-                              <p
-                                className={cn(
-                                  'text-muted-foreground mt-0.5 text-xs leading-snug',
-                                  struck && 'line-through',
-                                )}
-                              >
-                                {row.description}
-                              </p>
-                              {row.jobCaseName ? (
-                                <p className="mt-1 text-sm">
-                                  <JobCaseReferenceLink
-                                    charge={row}
-                                    className={
-                                      struck ? 'text-muted-foreground line-through' : undefined
-                                    }
-                                  />
-                                </p>
-                              ) : null}
-                              {struck ? (
-                                <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-                                  {notChargedCaption(row)}
-                                </p>
-                              ) : null}
-                              {row.calculationDetail && !showRemaining ? (
-                                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                                  {row.calculationDetail}
-                                </p>
-                              ) : null}
-                              <p className="text-muted-foreground mt-1 text-xs">
-                                {[
-                                  row.createdByName ? `Created by ${row.createdByName}` : null,
-                                  `Created ${formatDateTime(row.createdAt)}`,
-                                  row.paidAt && !showRemaining
-                                    ? `Paid ${formatDateTime(row.paidAt)}`
-                                    : null,
-                                  row.refundedAt
-                                    ? `Refunded ${formatDateTime(row.refundedAt)}`
-                                    : null,
-                                  row.voidedAt && row.status === 'void'
-                                    ? `Not charged ${formatDateTime(row.voidedAt)}`
-                                    : null,
-                                ]
-                                  .filter(Boolean)
-                                  .join(' · ')}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 flex-col items-end gap-2">
-                              <p
-                                className={cn(
-                                  'text-sm font-semibold tabular-nums',
-                                  struck && 'text-muted-foreground line-through',
-                                )}
-                              >
-                                {platformChargeServiceAmountLabel(row, formatCurrency)}
-                              </p>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => onViewCharge(row)}
-                                disabled={disabled}
-                              >
-                                Details
-                              </Button>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </PropertyChargeGroupCard>
-                ))}
-              </div>
-            )}
-
-            <footer className="border-t bg-muted/25 px-5 py-3.5">
-              {group.invoice?.retracted ? (
+            {group.invoice?.retracted ? (
+              <footer className="border-t bg-muted/25 px-5 py-3.5">
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {retractedInvoiceCaption(group.invoice)}
                 </p>
-              ) : group.invoice ? (
-                <Button
-                  type="button"
-                  className="w-full sm:w-auto"
-                  variant="outline"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onViewInvoice(group.invoice!);
-                  }}
-                  disabled={disabled || openingInvoiceId === group.invoice.id}
-                >
-                  {openingInvoiceId === group.invoice.id ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <FileText className="size-4" />
-                  )}
-                  View invoice
-                </Button>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  View invoice appears here after CROSSUB Accounting approves and sends it.
-                </p>
-              )}
-            </footer>
+              </footer>
+            ) : null}
           </div>
         ) : null}
     </section>
@@ -823,12 +661,10 @@ export function Level2MonthlyBillingList({
         <Level2MonthGroupCard
           key={group.key}
           group={group}
-          includedUsageByProperty={includedUsageByProperty}
           billingBlocked={billingBlocked}
           openingInvoiceId={openingInvoiceId}
           disabled={disabled}
           onViewInvoice={onViewInvoice}
-          onViewCharge={onViewCharge}
         />
       ))}
     </div>
