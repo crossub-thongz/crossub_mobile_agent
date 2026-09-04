@@ -24,7 +24,7 @@ type AddPaymentMethodPromptProps = {
 
 /**
  * Overlay prompting the agent to save a default card.
- * Used globally for Level 1/2 after login until dismissed or a card is saved.
+ * Level 1: once per login until dismissed or saved. Level 2: once per Sydney day.
  */
 export function AddPaymentMethodPrompt({
   open,

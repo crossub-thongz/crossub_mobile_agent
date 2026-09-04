@@ -11,6 +11,11 @@ import { isPublicRoute, ROUTES } from '@/constants/routes';
 import { PORTAL_WELCOME_DISMISSED_EVENT } from '@/lib/agent-page-guide-events';
 import { fetchAgentBillingSummary } from '@/lib/crossub-api/agent-billing-client';
 import { fetchPortalWelcomeStatus } from '@/lib/crossub-api/agent-client';
+import {
+  dismissL2PaymentMethodPromptForToday,
+  isL2PaymentMethodPromptDismissedToday,
+} from '@/lib/add-payment-method-prompt-state';
+import type { AgentPortalServiceLevel } from '@/lib/portal-service-level';
 import { usesGlobalPaymentMethodPrompt } from '@/lib/portal-service-level';
 import { getStripePublishableKey } from '@/lib/stripe-client';
 
@@ -23,8 +28,9 @@ const EXEMPT_ROUTES = [
 ];
 
 /**
- * Level 1/2 payment-method prompt. Shown once per login until the agent saves a card
- * or dismisses it. Page guides and spotlight tours wait until this is resolved.
+ * Level 1/2 payment-method prompt until the agent saves a card or dismisses it.
+ * Level 1: once per login session. Level 2: at most once per Sydney calendar day.
+ * Page guides and spotlight tours wait until this is resolved.
  */
 export function AddPaymentMethodGate() {
   const pathname = usePathname();
@@ -34,8 +40,15 @@ export function AddPaymentMethodGate() {
   const [welcomeBlocking, setWelcomeBlocking] = useState(true);
   const [needsPaymentMethod, setNeedsPaymentMethod] = useState(false);
   const [usesGlobalPrompt, setUsesGlobalPrompt] = useState(false);
+  const [portalServiceLevel, setPortalServiceLevel] = useState<AgentPortalServiceLevel | null>(
+    null,
+  );
   const [checked, setChecked] = useState(false);
   const [dismissedThisLogin, setDismissedThisLogin] = useState(false);
+  const [dismissedToday, setDismissedToday] = useState(false);
+
+  const isLevel2 = portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT';
+  const promptDismissed = isLevel2 ? dismissedToday : dismissedThisLogin;
 
   const onExemptPage =
     !pathname ||
@@ -44,6 +57,11 @@ export function AddPaymentMethodGate() {
 
   useEffect(() => {
     setDismissedThisLogin(false);
+    if (user?.id) {
+      setDismissedToday(isL2PaymentMethodPromptDismissedToday(user.id));
+    } else {
+      setDismissedToday(false);
+    }
   }, [user?.id]);
 
   useEffect(() => {
@@ -71,12 +89,20 @@ export function AddPaymentMethodGate() {
 
   const refreshNeed = useCallback(async () => {
     const summary = await fetchAgentBillingSummary();
+    setPortalServiceLevel(summary.portalServiceLevel);
     setUsesGlobalPrompt(
       usesGlobalPaymentMethodPrompt(summary.portalServiceLevel) &&
         !summary.platformBillingDisabled,
     );
     setNeedsPaymentMethod(!summary.hasDefaultPaymentMethod);
-  }, []);
+    if (
+      summary.portalServiceLevel === 'LEVEL_2_FULL_MANAGEMENT' &&
+      user?.id &&
+      isL2PaymentMethodPromptDismissedToday(user.id)
+    ) {
+      setDismissedToday(true);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isV2 || status !== 'authed' || !user || onExemptPage) {
@@ -111,7 +137,7 @@ export function AddPaymentMethodGate() {
     checked &&
     usesGlobalPrompt &&
     needsPaymentMethod &&
-    !dismissedThisLogin &&
+    !promptDismissed &&
     !welcomeBlocking &&
     Boolean(getStripePublishableKey());
 
@@ -139,6 +165,11 @@ export function AddPaymentMethodGate() {
   };
 
   const handleDismiss = () => {
+    if (isLevel2 && user?.id) {
+      dismissL2PaymentMethodPromptForToday(user.id);
+      setDismissedToday(true);
+      return;
+    }
     setDismissedThisLogin(true);
   };
 
