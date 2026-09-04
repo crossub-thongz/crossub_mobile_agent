@@ -451,6 +451,25 @@ function retractedInvoiceCaption(invoice: AgentBillingMonthlyInvoice): string {
   return 'This invoice was retracted by CROSSUB Accounting before payment — do not pay it. A corrected invoice will be sent separately.';
 }
 
+function invoiceDisplayNumber(invoice: AgentBillingMonthlyInvoice): string {
+  if (invoice.invoiceNumber.includes('-void-')) {
+    return invoice.invoiceNumber.split('-void-')[0] ?? invoice.invoiceNumber;
+  }
+  return invoice.invoiceNumber;
+}
+
+function invoiceMetaCaption(invoice: AgentBillingMonthlyInvoice): string {
+  const parts = [invoiceDisplayNumber(invoice)];
+  if (invoice.retracted) {
+    if (invoice.issuedAt) parts.push(`sent ${formatDateTime(invoice.issuedAt)}`);
+    if (invoice.retractedAt) parts.push(`retracted ${formatDateTime(invoice.retractedAt)}`);
+  } else {
+    if (invoice.dueDate) parts.push(`due ${formatDate(invoice.dueDate)}`);
+    if (invoice.paidAt) parts.push(`paid ${formatDateTime(invoice.paidAt)}`);
+  }
+  return parts.join(' · ');
+}
+
 type Level2MonthlyBillingListProps = {
   charges: AgentBillingCharge[];
   invoices: AgentBillingMonthlyInvoice[];
@@ -529,18 +548,7 @@ function Level2MonthGroupCard({
             ) : null}
           </div>
           {group.invoice ? (
-            <p className="text-muted-foreground text-xs">
-              {group.invoice.invoiceNumber}
-              {group.invoice.retracted && group.invoice.retractedAt
-                ? ` · retracted ${formatDateTime(group.invoice.retractedAt)}`
-                : null}
-              {!group.invoice.retracted && group.invoice.dueDate
-                ? ` · due ${formatDate(group.invoice.dueDate)}`
-                : null}
-              {!group.invoice.retracted && group.invoice.paidAt
-                ? ` · paid ${formatDateTime(group.invoice.paidAt)}`
-                : null}
-            </p>
+            <p className="text-muted-foreground text-xs">{invoiceMetaCaption(group.invoice)}</p>
           ) : (
             <p className="text-muted-foreground text-xs">
               {group.paymentStatus === 'accruing'
@@ -622,14 +630,6 @@ function Level2MonthGroupCard({
                   available.
                 </p>
               </div>
-            ) : null}
-
-            {group.invoice?.retracted ? (
-              <footer className="border-t bg-muted/25 px-5 py-3.5">
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  {retractedInvoiceCaption(group.invoice)}
-                </p>
-              </footer>
             ) : null}
           </div>
         ) : null}

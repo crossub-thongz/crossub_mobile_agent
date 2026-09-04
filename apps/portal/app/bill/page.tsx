@@ -532,6 +532,7 @@ export default function BillPage() {
           status: detail.status,
           amountDue: detail.amountDue,
           paidAt: detail.paidAt,
+          issuedAt: detail.issuedAt,
           retracted: detail.retracted,
           retractedAt: detail.retractedAt,
           refunded: detail.refunded,
