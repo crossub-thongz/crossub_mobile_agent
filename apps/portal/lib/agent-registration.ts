@@ -143,10 +143,44 @@ export interface AgentInvitePreview {
   email: string;
   agencyName: string;
   contactName: string | null;
+  agencyCompany?: string | null;
+  phone?: string | null;
+  abn?: string | null;
+  licenceNumber?: string | null;
+  officeAddress?: string | null;
   expired: boolean;
   used: boolean;
   requiresServiceLevel?: boolean;
   portalServiceLevel?: AgentPortalServiceLevel | null;
+}
+
+function splitContactName(contactName: string | null | undefined): {
+  firstName: string;
+  lastName: string;
+} {
+  const trimmed = contactName?.trim() ?? '';
+  if (!trimmed) return { firstName: 'Agent', lastName: 'User' };
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return { firstName: parts[0], lastName: parts[0] };
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+
+/** Map a sales invite preview to service-agreement pre-fill fields. */
+export function inviteToServiceAgreementPreview(
+  invite: AgentInvitePreview,
+): RegisterServiceAgreementPreviewInput {
+  const { firstName, lastName } = splitContactName(invite.contactName);
+  return {
+    email: invite.email,
+    firstName,
+    lastName,
+    agencyName: invite.agencyName,
+    agencyCompany: invite.agencyCompany?.trim() || undefined,
+    phone: invite.phone?.trim() || undefined,
+    abn: invite.abn?.trim() || undefined,
+    licenceNumber: invite.licenceNumber?.trim() || 'Pending',
+    officeAddress: invite.officeAddress?.trim() || undefined,
+  };
 }
 
 export async function fetchAgentInvitePreview(token: string): Promise<AgentInvitePreview> {

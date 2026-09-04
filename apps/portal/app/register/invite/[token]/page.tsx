@@ -3,22 +3,25 @@
 import { Check, CheckCircle2, Copy, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useAuth } from '@/components/providers/auth-provider';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import { CrossubLogo } from '@/components/brand/crossub-logo';
+import {
+  RegisterAgreementsSection,
+  registerAgreementsReady,
+} from '@/components/register/register-agreements-section';
 import { RegisterPricingPanel } from '@/components/register/register-pricing-panel';
-import { RegisterTermsAgreementCard } from '@/components/register/register-terms-agreement';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/constants/routes';
 import { AuthScreen, authPanelClass } from '@/lib/auth-page';
 import {
   completeAgentInviteRegistration,
   fetchAgentInvitePreview,
+  inviteToServiceAgreementPreview,
   registerAgentErrorMessage,
   type AgentInvitePreview,
 } from '@/lib/agent-registration';
@@ -64,11 +67,17 @@ export default function AgentInviteRegisterPage() {
   const isV2 = useIsAgentUiV2();
   const [invite, setInvite] = useState<AgentInvitePreview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptServiceAgreement, setAcceptServiceAgreement] = useState(false);
+  const [acceptPrivacyAgreement, setAcceptPrivacyAgreement] = useState(false);
   const [portalServiceLevel, setPortalServiceLevel] =
     useState<AgentPortalServiceLevel | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [registeredUser, setRegisteredUser] = useState<AuthUser | null>(null);
+
+  const serviceAgreementSummary = useMemo(
+    () => (invite ? inviteToServiceAgreementPreview(invite) : null),
+    [invite],
+  );
 
   useEffect(() => {
     if (!token) return;
@@ -81,8 +90,11 @@ export default function AgentInviteRegisterPage() {
   }, [token]);
 
   async function onComplete() {
-    if (!token || !acceptTerms) {
-      toast.error('Please accept the terms and conditions to continue.');
+    if (
+      !token ||
+      !registerAgreementsReady(acceptServiceAgreement, acceptPrivacyAgreement)
+    ) {
+      toast.error('Please accept the required agreements to continue.');
       return;
     }
     if (!portalServiceLevel) {
@@ -176,6 +188,10 @@ export default function AgentInviteRegisterPage() {
   }
 
   const who = invite.contactName?.trim() || invite.email;
+  const agreementsReady = registerAgreementsReady(
+    acceptServiceAgreement,
+    acceptPrivacyAgreement,
+  );
 
   return (
     <AuthScreen isV2={isV2}>
@@ -193,7 +209,7 @@ export default function AgentInviteRegisterPage() {
           <strong>{invite.agencyName}</strong>.
         </p>
         <p className="text-muted-foreground mt-2 text-sm">
-          Choose your service plan, then accept the terms below to create your Agent Portal
+          Choose your service plan, then accept the agreements below to create your Agent Portal
           account. You&apos;ll choose your password immediately after registration.
         </p>
 
@@ -204,24 +220,23 @@ export default function AgentInviteRegisterPage() {
           />
         </div>
 
-        <RegisterTermsAgreementCard />
-
-        <div className="mt-4 flex items-start gap-2">
-          <input
-            id="acceptTerms"
-            type="checkbox"
-            className="mt-1 size-4 rounded border border-input"
-            checked={acceptTerms}
-            onChange={(e) => setAcceptTerms(e.target.checked)}
-          />
-          <Label htmlFor="acceptTerms" className="text-sm leading-snug">
-            I accept the CROSSUB terms &amp; conditions and system access agreement
-          </Label>
-        </div>
+        {serviceAgreementSummary ? (
+          <div className="mt-6">
+            <RegisterAgreementsSection
+              summary={serviceAgreementSummary}
+              acceptServiceAgreement={acceptServiceAgreement}
+              acceptPrivacyAgreement={acceptPrivacyAgreement}
+              onAcceptServiceAgreementChange={setAcceptServiceAgreement}
+              onAcceptPrivacyAgreementChange={setAcceptPrivacyAgreement}
+              serviceAgreementHelpText="Checking this box pre-fills the Service Agreement with your invite and agency details from the sales onboarding record."
+              showIntermediarySummary={false}
+            />
+          </div>
+        ) : null}
 
         <Button
           className="mt-6 w-full"
-          disabled={!acceptTerms || !portalServiceLevel || submitting}
+          disabled={!agreementsReady || !portalServiceLevel || submitting}
           onClick={() => void onComplete()}
         >
           {submitting ? (
