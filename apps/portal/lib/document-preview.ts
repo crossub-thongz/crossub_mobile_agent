@@ -52,7 +52,7 @@ export function documentPreviewKind(url: string, fileName?: string): DocumentPre
     path.includes('register-agent-system-access-agreement') &&
     path.endsWith('/document')
   ) {
-    return 'docx';
+    return 'pdf';
   }
   if (path.includes('register-agent-service-agreement') && path.endsWith('/document')) {
     return 'pdf';

@@ -1,7 +1,7 @@
 'use client';
 
 import { ExternalLink, Loader2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   DocumentPreviewDialog,
@@ -14,6 +14,7 @@ import {
 } from '@/components/register/register-full-service-details';
 import {
   fetchRegisterAgentPricing,
+  fetchRegisterServiceAgreementPreview,
   REGISTER_SERVICE_AGREEMENT_FALLBACK,
   REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH,
@@ -77,9 +78,27 @@ export function RegisterConfirmPanel({
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [privacyMeta, setPrivacyMeta] = useState<SystemAccessAgreementView | null>(null);
   const [previewKind, setPreviewKind] = useState<PreviewKind>(null);
+  const [servicePreviewLoading, setServicePreviewLoading] = useState(false);
+  const serviceBlobUrlRef = useRef<string | null>(null);
+  const [servicePreviewHref, setServicePreviewHref] = useState(
+    () => `/api${REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH}`,
+  );
 
   const privacyDocumentHref = `/api${REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH}`;
-  const serviceDocumentHref = `/api${REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH}`;
+
+  const revokeServiceBlob = useCallback(() => {
+    if (serviceBlobUrlRef.current) {
+      URL.revokeObjectURL(serviceBlobUrlRef.current);
+      serviceBlobUrlRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => revokeServiceBlob(), [revokeServiceBlob]);
+
+  useEffect(() => {
+    revokeServiceBlob();
+    setServicePreviewHref(`/api${REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH}`);
+  }, [summary, revokeServiceBlob]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,9 +137,9 @@ export function RegisterConfirmPanel({
       title: REGISTER_SERVICE_AGREEMENT_FALLBACK.title,
       fileName: REGISTER_SERVICE_AGREEMENT_FALLBACK.fileName,
       downloadFileName: REGISTER_SERVICE_AGREEMENT_FALLBACK.fileName,
-      href: serviceDocumentHref,
+      href: servicePreviewHref,
     }),
-    [serviceDocumentHref],
+    [servicePreviewHref],
   );
 
   const privacyPreview = useMemo<DocumentPreviewItem>(
@@ -136,6 +155,26 @@ export function RegisterConfirmPanel({
   const activePreview = previewKind === 'service' ? servicePreview : privacyPreview;
 
   const openAgreement = (kind: Exclude<PreviewKind, null>) => {
+    if (kind === 'service') {
+      setServicePreviewLoading(true);
+      void (async () => {
+        try {
+          const blob = await fetchRegisterServiceAgreementPreview(summary);
+          revokeServiceBlob();
+          const url = URL.createObjectURL(blob);
+          serviceBlobUrlRef.current = url;
+          setServicePreviewHref(url);
+          setPreviewKind('service');
+        } catch {
+          revokeServiceBlob();
+          setServicePreviewHref(`/api${REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH}`);
+          setPreviewKind('service');
+        } finally {
+          setServicePreviewLoading(false);
+        }
+      })();
+      return;
+    }
     setPreviewKind(kind);
   };
 
@@ -253,7 +292,7 @@ export function RegisterConfirmPanel({
                 </p>
                 <ExternalLink className="size-3.5 shrink-0 text-primary opacity-70 group-hover:opacity-100" />
                 <span className="text-muted-foreground text-[11px] font-medium normal-case tracking-normal">
-                  Click to preview
+                  {servicePreviewLoading ? 'Preparing preview…' : 'Click to preview'}
                 </span>
               </div>
               <p id="service-agreement-help" className="text-muted-foreground text-xs leading-relaxed">

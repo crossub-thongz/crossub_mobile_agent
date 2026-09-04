@@ -22,6 +22,9 @@ export interface RegisterAgentInput {
 export const REGISTER_SERVICE_AGREEMENT_TEMPLATE_PATH =
   '/auth/register-agent-service-agreement-template';
 
+export const REGISTER_SERVICE_AGREEMENT_PREVIEW_PATH =
+  '/auth/register-agent-service-agreement-preview';
+
 export const REGISTER_SERVICE_AGREEMENT_FALLBACK = {
   title: 'CROSSUB Service Agreement (NSW)',
   fileName: 'CROSSUB Service Agreement NSW.pdf',
@@ -40,8 +43,8 @@ export const REGISTER_TERMS_AND_CONDITIONS_TITLE = 'Terms and Conditions';
 /** Shown on the confirm step when metadata cannot be loaded from the API. */
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK = {
   title: REGISTER_TERMS_AND_CONDITIONS_TITLE,
-  fileName: 'CROSSUB_Agency_Portal_Website_Registration_Terms_Clickwrap_Final.docx',
-  version: 'agency-portal-registration-terms-2026-08',
+  fileName: 'CROSSUB_Agency_Portal_Website_Registration_Terms_Clickwrap_Final.pdf',
+  version: 'agency-portal-registration-terms-2026-09-04',
 } as const;
 
 function isServiceAgreementDocument(meta: {
@@ -61,6 +64,38 @@ export function registerTermsDocumentFileName(
     return meta.fileName;
   }
   return REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.fileName;
+}
+
+export type RegisterServiceAgreementPreviewInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  agencyName: string;
+  agencyCompany?: string;
+  phone?: string;
+  abn?: string;
+  licenceNumber: string;
+  officeAddress?: string;
+};
+
+/** Pre-filled NSW service agreement PDF for the registration confirm preview. */
+export async function fetchRegisterServiceAgreementPreview(
+  input: RegisterServiceAgreementPreviewInput,
+): Promise<Blob> {
+  return api.getBlob(REGISTER_SERVICE_AGREEMENT_PREVIEW_PATH, {
+    method: 'POST',
+    body: JSON.stringify({
+      email: input.email.trim(),
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      agencyName: input.agencyName.trim(),
+      agencyCompany: input.agencyCompany?.trim() || undefined,
+      phone: input.phone?.trim() || undefined,
+      abn: input.abn?.trim() || undefined,
+      licenceNumber: input.licenceNumber.trim(),
+      officeAddress: input.officeAddress?.trim() || undefined,
+    }),
+  });
 }
 
 /** Default platform pricing for the registration flow (public, no auth). */
