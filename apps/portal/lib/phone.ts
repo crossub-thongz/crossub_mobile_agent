@@ -21,6 +21,24 @@ export function buildDialString(phone: string, extension?: string | null): strin
 }
 
 /**
+ * Label for an Account Manager line in the UI.
+ *
+ * Officers on the shared agency line share the same base number; the API sends the menu
+ * digit separately as `accountManagerExtension`. Append it here so Qiaolin reads …9661 and
+ * Angel …9663 without hard-coding names or keys in the app.
+ */
+export function formatAccountManagerPhoneDisplay(
+  phone: string,
+  extension?: string | null,
+): string {
+  const trimmed = phone.trim();
+  if (!trimmed) return '';
+  const digit = extension?.replace(/[^\d*#]/g, '') ?? '';
+  if (!digit) return trimmed;
+  return `${trimmed}${digit}`;
+}
+
+/**
  * Open the device dialer (mobile) or tel handler (desktop). Pass `extension` to have the
  * dialer press a menu key after the call connects.
  */

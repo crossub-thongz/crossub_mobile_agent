@@ -13,7 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { messageDetail } from '@/constants/routes';
 import { resolveAccountManagerContact } from '@/lib/agent-phonebook';
-import { buildDialString, placePhoneCall } from '@/lib/phone';
+import {
+  buildDialString,
+  formatAccountManagerPhoneDisplay,
+  placePhoneCall,
+} from '@/lib/phone';
 import { findStaffSupportThread } from '@/lib/staff-support-thread';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -174,7 +178,10 @@ export function ContactSupportHub() {
                   href={`tel:${buildDialString(accountManager.phone, accountManager.extension)}`}
                   className="text-primary mt-1 block truncate text-sm font-medium tabular-nums hover:underline"
                 >
-                  {accountManager.phone}
+                  {formatAccountManagerPhoneDisplay(
+                    accountManager.phone,
+                    accountManager.extension,
+                  )}
                 </a>
               ) : null}
             </div>

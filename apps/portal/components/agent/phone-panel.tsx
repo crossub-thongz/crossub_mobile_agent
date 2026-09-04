@@ -18,7 +18,11 @@ import {
   type AgentPhonebookContact,
   type AgentPhonebookGroup,
 } from '@/lib/agent-phonebook';
-import { buildDialString, placePhoneCall } from '@/lib/phone';
+import {
+  buildDialString,
+  formatAccountManagerPhoneDisplay,
+  placePhoneCall,
+} from '@/lib/phone';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -357,7 +361,10 @@ export function PhonePanel({
                       href={`tel:${buildDialString(accountManagerPhone, accountManagerExtension)}`}
                       className="text-emerald-700 dark:text-emerald-300 mt-1 block truncate text-sm font-medium tabular-nums hover:underline"
                     >
-                      {accountManagerPhone}
+                      {formatAccountManagerPhoneDisplay(
+                        accountManagerPhone,
+                        accountManagerExtension,
+                      )}
                     </a>
                   ) : null}
                 </div>
