@@ -152,7 +152,7 @@ function StepPanel({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-tour="workflow-action-panel">
       <StepPanelContent
         step={step}
         detail={detail}

@@ -21,9 +21,19 @@ export default function FaqPage() {
           Need more help?
         </p>
         <p className="mt-2 text-sm leading-relaxed">
-          Replay in-app guides or tap How to use on Properties, Tasks, or History. Message CROSSUB support for account and billing questions.
+          Replay in-app guides, workflow demo tours for maintenance and leasing, or tap How to use on
+          Properties, Tasks, and History. Message CROSSUB support for account and billing questions.
         </p>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <Link
+            href={ROUTES.SUPPORT_WORKFLOW_TOURS}
+            className="hover:border-primary/35 hover:bg-primary/5 flex items-center gap-3 rounded-xl border bg-background/80 px-4 py-3 text-sm font-medium transition-colors sm:col-span-2"
+          >
+            <span className="bg-primary/15 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+              <BookOpen className="size-4" />
+            </span>
+            Workflow demo tours (maintenance, inspections, leasing, tribunal)
+          </Link>
           <Link
             href={ROUTES.SUPPORT_TUTORIAL}
             className="hover:border-primary/35 hover:bg-primary/5 flex items-center gap-3 rounded-xl border bg-background/80 px-4 py-3 text-sm font-medium transition-colors"

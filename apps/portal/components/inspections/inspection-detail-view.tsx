@@ -1027,6 +1027,10 @@ export function InspectionDetailView({
               ? leasingDetail.openInspection.inspectorName
               : undefined
           }
+          railContext={{
+            agentConducted:
+              isSelfOpen || leasingDetail?.openInspection.agentConducted === true,
+          }}
         />
       ) : null}
 

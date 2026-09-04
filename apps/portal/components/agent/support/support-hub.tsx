@@ -17,7 +17,7 @@ export function SupportHub() {
           Support
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">
-          Intro video, contact, help centre and system status.
+          Intro video, page tours, workflow demo tours, contact, help centre and system status.
         </p>
       </header>
 

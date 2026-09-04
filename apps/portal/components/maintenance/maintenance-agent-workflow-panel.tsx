@@ -206,6 +206,7 @@ export function MaintenanceAgentWorkflowPanel({
           return step != null && step.status !== 'upcoming';
         }}
         onStepClick={handleStepClick}
+        tourStepAnchors
       />
       </TaskWorkflowRailPortal>
 
@@ -223,7 +224,7 @@ export function MaintenanceAgentWorkflowPanel({
         hideEvidence={resolvedViewingStepId === MAINTENANCE_AGENT_STEP.REVIEW}
       />
 
-      <div className="rounded-xl border bg-card">
+      <div className="rounded-xl border bg-card" data-tour="workflow-action-panel">
         <div
           className={cn(
             'border-b px-4 py-3',

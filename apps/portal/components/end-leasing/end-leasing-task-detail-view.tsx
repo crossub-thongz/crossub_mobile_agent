@@ -15,6 +15,7 @@ import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasi
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { inspectionDetail, propertyDetail } from '@/constants/routes';
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
@@ -121,6 +122,7 @@ export function EndLeasingTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<EndLeasingTaskTab>('workflow');
+  useWorkflowTourTabFocus(setActiveTab, 'workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
   const propertyId = caseData.propertyId ?? '';
@@ -209,9 +211,23 @@ export function EndLeasingTaskDetailView({
               <FileText className="size-5" />
             </span>
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold tracking-tight">
-                End of lease – {caseData.property.address}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold tracking-tight">
+                  End of lease – {caseData.property.address}
+                </h1>
+                {banner ? (
+                  <span
+                    data-tour="workflow-case-badge"
+                    className={
+                      banner.needsAction
+                        ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                        : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                    }
+                  >
+                    {banner.needsAction ? 'Need your action' : 'CROS handling'}
+                  </span>
+                ) : null}
+              </div>
               <p className="text-muted-foreground mt-1 text-sm">{displayAddress}</p>
               {tenantName || vacateDate ? (
                 <p className="text-muted-foreground mt-1 text-xs">
@@ -253,7 +269,7 @@ export function EndLeasingTaskDetailView({
       </header>
 
       {banner ? (
-        <section className="end-leasing-task__status-card rounded-2xl border border-orange-500/20 p-5">
+        <section className="end-leasing-task__status-card rounded-2xl border border-orange-500/20 p-5" data-tour="workflow-status">
           <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
             Current status
           </p>
@@ -266,12 +282,13 @@ export function EndLeasingTaskDetailView({
 
           <TaskWorkflowRailSlot />
 
-          <div className="border-b">
+          <div className="border-b" data-tour="workflow-tabs">
             <div className="flex gap-1 overflow-x-auto">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
+                  data-tour={`workflow-tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     'border-b-2 px-4 py-2 text-sm font-semibold whitespace-nowrap transition',

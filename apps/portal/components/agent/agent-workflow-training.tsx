@@ -1,34 +1,59 @@
 'use client';
 
 import Link from 'next/link';
-import { Building2, CheckCircle2, FolderArchive, Lightbulb, ListTodo } from 'lucide-react';
+import {
+  Building2,
+  CheckCircle2,
+  ClipboardCheck,
+  Gavel,
+  Lightbulb,
+  LogOut,
+  Wrench,
+} from 'lucide-react';
 
-import type { AgentTutorialModule, AgentTutorialModuleId } from '@/constants/agent-module-tutorial';
-import { ROUTES } from '@/constants/routes';
+import type {
+  AgentWorkflowTrainingId,
+  AgentWorkflowTrainingModule,
+} from '@/constants/agent-workflow-tutorial';
+import { AGENT_TOUR_ACCOUNT_MANAGER_NOTE } from '@/constants/agent-page-tour';
 import { cn } from '@/lib/utils';
 
 const MODULE_ICON = {
-  properties: Building2,
-  tasks: ListTodo,
-  history: FolderArchive,
+  maintenance: Wrench,
+  inspections: ClipboardCheck,
+  new_leasing: Building2,
+  end_leasing: LogOut,
+  tribunal: Gavel,
 } as const;
 
-export function AgentModuleTutorial({
+export function AgentWorkflowTraining({
   modules,
   activeId,
   onSelect,
 }: {
-  modules: AgentTutorialModule[];
-  activeId: AgentTutorialModuleId;
-  onSelect: (id: AgentTutorialModuleId) => void;
+  modules: AgentWorkflowTrainingModule[];
+  activeId: AgentWorkflowTrainingId;
+  onSelect: (id: AgentWorkflowTrainingId) => void;
 }) {
   const active = modules.find((module) => module.id === activeId) ?? modules[0]!;
   const Icon = MODULE_ICON[active.id];
+  const activeIndex = modules.findIndex((module) => module.id === active.id);
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-primary/15 bg-primary/[0.04] px-4 py-3">
+        <p className="text-sm font-medium">Workflow training curriculum</p>
+        <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+          Work through each module in order — maintenance, inspections, new leasing, end leasing,
+          then tribunal. Each section explains how CROSSUB runs the job and what you must decide.
+        </p>
+        <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+          Module {activeIndex + 1} of {modules.length}
+        </p>
+      </div>
+
       <div className="flex flex-wrap gap-2">
-        {modules.map((module) => {
+        {modules.map((module, index) => {
           const TabIcon = MODULE_ICON[module.id];
           const selected = module.id === active.id;
           return (
@@ -43,6 +68,7 @@ export function AgentModuleTutorial({
                   : 'text-muted-foreground hover:border-primary/20 hover:bg-muted/60 hover:text-foreground',
               )}
             >
+              <span className="text-[10px] font-bold tabular-nums opacity-70">{index + 1}</span>
               <TabIcon className="size-4" />
               {module.pageName}
             </button>
@@ -66,7 +92,7 @@ export function AgentModuleTutorial({
                 href={active.href}
                 className="text-primary mt-3 inline-flex text-sm font-medium hover:underline"
               >
-                Open {active.pageName} →
+                Open {active.pageName} in the portal →
               </Link>
             </div>
           </div>
@@ -75,7 +101,7 @@ export function AgentModuleTutorial({
         <div className="space-y-6 px-5 py-5">
           <section>
             <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-              How to use this page
+              Workflow steps
             </h3>
             <ol className="mt-3 space-y-2.5">
               {active.steps.map((step, index) => (
@@ -99,13 +125,15 @@ export function AgentModuleTutorial({
 
           <section>
             <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-              Every function on this page
+              Key functions
             </h3>
             <ul className="mt-3 space-y-2">
               {active.functions.map((item) => (
                 <li key={item.title} className="rounded-xl border border-border/70 bg-background/50 p-3">
                   <p className="text-sm font-semibold">{item.title}</p>
-                  <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{item.description}</p>
+                  <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+                    {item.description}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -127,10 +155,15 @@ export function AgentModuleTutorial({
               </ul>
             </section>
           ) : null}
+
+          <section className="rounded-xl border border-border/70 bg-muted/30 p-3">
+            <p className="text-sm font-medium">Account Manager</p>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              {AGENT_TOUR_ACCOUNT_MANAGER_NOTE}
+            </p>
+          </section>
         </div>
       </article>
     </div>
   );
 }
-
-export { AgentHowToUseLink } from '@/components/agent/agent-page-tour';

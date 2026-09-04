@@ -113,6 +113,7 @@ export function EndLeasingAgentWorkflowPanel({
           workflow.steps.find((s) => s.id === stepId)?.status === 'done'
         }
         isStepEnabled={isStepEnabled}
+        tourStepAnchors
       />
 
       <div className="hidden md:block">
@@ -134,11 +135,12 @@ export function EndLeasingAgentWorkflowPanel({
           }
           isStepEnabled={isStepEnabled}
           onStepClick={handleStepClick}
+          tourStepAnchors
         />
       </div>
       </TaskWorkflowRailPortal>
 
-      <div className="rounded-xl border bg-card">
+      <div className="rounded-xl border bg-card" data-tour="workflow-action-panel">
         <div className="border-b px-3 py-3 md:px-4">
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
             {isLiveStep ? 'Current step' : 'Step detail'}

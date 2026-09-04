@@ -19,6 +19,7 @@ import {
   REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH,
+  REGISTER_TERMS_AND_CONDITIONS_TITLE,
 } from '@/lib/agent-registration';
 import {
   openInspectionRateLabel,
@@ -110,8 +111,6 @@ export function RegisterConfirmPanel({
     })();
   }, []);
 
-  const privacyTitle =
-    privacyMeta?.title ?? REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.title;
   const privacyFileName =
     privacyMeta?.fileName ?? REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.fileName;
 
@@ -127,12 +126,12 @@ export function RegisterConfirmPanel({
 
   const privacyPreview = useMemo<DocumentPreviewItem>(
     () => ({
-      title: privacyTitle,
+      title: REGISTER_TERMS_AND_CONDITIONS_TITLE,
       fileName: privacyFileName,
       downloadFileName: privacyFileName,
       href: privacyDocumentHref,
     }),
-    [privacyDocumentHref, privacyFileName, privacyTitle],
+    [privacyDocumentHref, privacyFileName],
   );
 
   const activePreview = previewKind === 'service' ? servicePreview : privacyPreview;
@@ -361,7 +360,7 @@ export function RegisterConfirmPanel({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold uppercase tracking-wide text-primary underline underline-offset-2 group-hover:opacity-90">
-                  {privacyTitle}
+                  {REGISTER_TERMS_AND_CONDITIONS_TITLE}
                 </p>
                 <ExternalLink className="size-3.5 shrink-0 text-primary opacity-70 group-hover:opacity-100" />
                 <span className="text-muted-foreground text-[11px] font-medium normal-case tracking-normal">
@@ -376,7 +375,7 @@ export function RegisterConfirmPanel({
       <DocumentPreviewDialog
         doc={previewKind ? activePreview : null}
         subtitle={
-          previewKind === 'privacy' ? 'CROSSUB Service Agreement (NSW)' : undefined
+          previewKind === 'privacy' ? REGISTER_TERMS_AND_CONDITIONS_TITLE : undefined
         }
         open={previewKind != null}
         onClose={() => setPreviewKind(null)}

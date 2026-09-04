@@ -15,12 +15,14 @@ export default function VacatingPage() {
 
   return (
     <AgentShell title="End leasing">
+      <div data-tour="vacating-case-list">
       <EndLeasingCasesList
         cases={vacating}
         selectedId={selectedId}
         portfolioData={portfolioData}
         onOpenCase={openJob}
       />
+      </div>
 
       <PortfolioCaseDialogHost
         job={selectedJob}

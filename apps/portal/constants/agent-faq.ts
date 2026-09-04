@@ -189,6 +189,22 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
     ],
   },
   {
+    id: 'training',
+    title: 'Training & guides',
+    items: [
+      {
+        question: 'Where are workflow demo tours for maintenance, leasing, and tribunal?',
+        answer:
+          'Open Support → Workflow demo tours (or FAQ → Workflow demo tours). Pick a workflow to start an interactive spotlight tour on Tasks and job pages — maintenance, inspections, new leasing, end leasing, and tribunal.',
+      },
+      {
+        question: 'How do page tours work?',
+        answer:
+          'The first time you open Properties, Tasks, or History, a walkthrough highlights each control on the page. Tap How to use on that page to replay it, or Support → How to use to start the Properties tour. Replay first-visit guides from Settings → Help → Replay page guides.',
+      },
+    ],
+  },
+  {
     id: 'support',
     title: 'Billing, agreements & help',
     items: [
@@ -203,14 +219,9 @@ export const AGENT_FAQ_SECTIONS: AgentFaqSection[] = [
           'Agreements tracks your agency’s CROSSUB sales agreement and related documents. Complete any required signing before full portal features unlock.',
       },
       {
-        question: 'How do page guides work?',
-        answer:
-          'The first time you open Properties, Tasks, or History, a walkthrough highlights each control on the page. Tap How to use on that page to replay it, or Support → How to use to start the Properties tour. Replay first-visit guides from Settings → Help → Replay page guides.',
-      },
-      {
         question: 'Who do I contact for platform support?',
         answer:
-          'Message CROSSUB through the staff support thread in Messages, or use in-app notifications when CROSSUB reaches out about billing or account issues.',
+          'Message CROSSUB through the staff support thread in Messages, or use in-app notifications when CROSSUB reaches out about billing or account issues. Your Account Manager is also reachable from Support → Contact account manager.',
       },
     ],
   },

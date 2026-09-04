@@ -33,6 +33,10 @@ export const OPEN_CONDUCTED_BY_LABEL: Record<OpenConductedBy, string> = {
   crossub: 'CROSSUB conducts open inspection',
 };
 
+/** Stored on viewing sessions so agent self-opens can be recognised before the start time. */
+export const AGENT_CONDUCTED_OPEN_SHORT_NOTE =
+  'Agent-conducted open — share check-in and application links with prospects';
+
 export const SELF_OPEN_INSPECTION_DISCLAIMER =
   'If you conduct the open inspection yourself, CROSSUB is not responsible for contacting the tenant or arranging inspection times on your behalf. You must notify the tenant of the date and time yourself. No CROSSUB open-inspection fee applies.';
 

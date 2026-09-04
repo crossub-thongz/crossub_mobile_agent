@@ -23,6 +23,7 @@ import { WelcomeOnboarding } from '@/components/agent/welcome-onboarding';
 import { AddPaymentMethodGate } from '@/components/agent/add-payment-method-gate';
 import { AgentPageGuideHost } from '@/components/agent/agent-page-guide-host';
 import { AgentPageTourHost } from '@/components/agent/agent-page-tour-host';
+import { AgentWorkflowTourHost } from '@/components/agent/agent-workflow-tour-host';
 import { AgentPostLoginTasksTourRedirect } from '@/components/agent/agent-post-login-tasks-tour-redirect';
 import { AgentPageGuideProvider } from '@/components/providers/agent-page-guide-provider';
 import { AgentUiProvider } from '@/components/providers/agent-ui-provider';
@@ -124,6 +125,9 @@ export default function RootLayout({
           </Suspense>
           <Suspense fallback={null}>
             <AgentPageTourHost />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AgentWorkflowTourHost />
           </Suspense>
                         </AgentPageGuideProvider>
                       </AgentNotificationDialogProvider>

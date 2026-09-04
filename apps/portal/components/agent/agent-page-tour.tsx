@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpen, Headphones, X } from 'lucide-react';
+import { BookOpen, CircleAlert, Headphones, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
@@ -13,6 +13,10 @@ import {
 } from '@/constants/agent-page-tour';
 import type { AgentTutorialModuleId } from '@/constants/agent-module-tutorial';
 import { findTourTarget, startAgentPageTour } from '@/lib/agent-page-tour';
+import {
+  focusWorkflowTourTab,
+  shouldFocusWorkflowTourTab,
+} from '@/lib/workflow-tour-tab-focus';
 import { cn } from '@/lib/utils';
 
 const PAD = 8;
@@ -104,8 +108,7 @@ export function AgentPageTourOverlay({
     () =>
       steps.filter((step) => {
         if (!step.target) return true;
-        if (!ready) return false;
-        return Boolean(findTourTarget(step.target));
+        return ready;
       }),
     [ready, steps],
   );
@@ -124,6 +127,9 @@ export function AgentPageTourOverlay({
   }, [step]);
 
   useEffect(() => {
+    if (step && shouldFocusWorkflowTourTab(step.target)) {
+      focusWorkflowTourTab();
+    }
     syncRect();
     const timer = window.setTimeout(syncRect, 280);
     window.addEventListener('resize', syncRect);
@@ -204,6 +210,15 @@ export function AgentPageTourOverlay({
         <p className="text-muted-foreground mt-1.5 min-h-0 flex-1 overflow-y-auto text-sm leading-relaxed">
           {step.description}
         </p>
+        {step.actionNote ? (
+          <div className="border-rose-500/25 bg-rose-500/[0.06] mt-3 flex shrink-0 gap-2.5 rounded-xl border p-2.5">
+            <CircleAlert className="mt-0.5 size-4 shrink-0 text-rose-600" aria-hidden />
+            <p className="text-xs leading-relaxed text-rose-950/90 dark:text-rose-100/90">
+              <span className="font-semibold">Your action: </span>
+              {step.actionNote}
+            </p>
+          </div>
+        ) : null}
         <div className="border-primary/15 bg-primary/[0.04] mt-3 flex shrink-0 gap-2.5 rounded-xl border p-2.5">
           <Headphones className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
           <p className="text-muted-foreground text-xs leading-relaxed">{AGENT_TOUR_ACCOUNT_MANAGER_NOTE}</p>

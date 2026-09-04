@@ -68,6 +68,7 @@ import { terminationApi } from '@/lib/termination-case-api';
 import { inspectionReferenceLabel } from '@/lib/workflow-case-reference';
 import { resolveOpenInspectionForCycle } from '@/lib/open-inspection-resolve';
 import {
+  AGENT_CONDUCTED_OPEN_SHORT_NOTE,
   getOpenListingContext,
   OPEN_CONDUCTED_BY_LABEL,
   SELF_OPEN_INSPECTION_DISCLAIMER,
@@ -786,7 +787,10 @@ export function CreateInspectionWizard({
             propertyId: property.id,
             startTime: start,
             endTime: end,
-            shortNote: openConductedBy === 'crossub' ? openPreferredNotes : undefined,
+            shortNote:
+              openConductedBy === 'crossub'
+                ? openPreferredNotes
+                : AGENT_CONDUCTED_OPEN_SHORT_NOTE,
             agentName: agentContact.agentName || undefined,
             agentPhone: agentContact.agentPhone || undefined,
             agentRole: 'leasing_agent',

@@ -27,18 +27,21 @@ export const REGISTER_SERVICE_AGREEMENT_FALLBACK = {
   fileName: 'CROSSUB Service Agreement NSW.pdf',
 } as const;
 
-/** Agency system access agreement for the registration confirm step (public, no auth). */
+/** Website registration terms for the registration confirm step (public, no auth). */
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH =
   '/auth/register-agent-system-access-agreement';
 
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH =
   '/auth/register-agent-system-access-agreement/document';
 
+/** Card label for the registration terms checkbox (distinct from the NSW service agreement). */
+export const REGISTER_TERMS_AND_CONDITIONS_TITLE = 'Terms and Conditions';
+
 /** Shown on the confirm step when metadata cannot be loaded from the API. */
 export const REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK = {
-  title: 'CROSSUB Service Agreement (NSW)',
-  fileName: 'CROSSUB Service Agreement NSW.pdf',
-  version: 'nsw-service-agreement-2026-09',
+  title: REGISTER_TERMS_AND_CONDITIONS_TITLE,
+  fileName: 'CROSSUB_System_Access_Website_Registration_Terms_Clickwrap_Final.docx',
+  version: 'website-registration-clickwrap-2026-08',
 } as const;
 
 /** Default platform pricing for the registration flow (public, no auth). */

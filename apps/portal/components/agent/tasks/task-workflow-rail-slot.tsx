@@ -50,6 +50,7 @@ export function TaskWorkflowRailSlot() {
   return (
     <div
       ref={ctx.setNode}
+      data-tour="workflow-rail"
       className="rounded-2xl border v2-frosted-surface p-2 empty:hidden md:p-3"
     />
   );

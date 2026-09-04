@@ -11,6 +11,7 @@ import {
   REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK,
   REGISTER_SYSTEM_ACCESS_AGREEMENT_PATH,
+  REGISTER_TERMS_AND_CONDITIONS_TITLE,
 } from '@/lib/agent-registration';
 import { api } from '@/lib/api';
 import type { SystemAccessAgreementView } from '@/lib/system-access-agreement';
@@ -37,7 +38,7 @@ export function RegisterTermsAgreementCard({ className }: { className?: string }
 
   const preview = useMemo<DocumentPreviewItem>(
     () => ({
-      title: meta?.title ?? REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.title,
+      title: REGISTER_TERMS_AND_CONDITIONS_TITLE,
       fileName: meta?.fileName ?? REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.fileName,
       downloadFileName: meta?.fileName ?? REGISTER_SYSTEM_ACCESS_AGREEMENT_FALLBACK.fileName,
       href: `/api${REGISTER_SYSTEM_ACCESS_AGREEMENT_DOCUMENT_PATH}`,
@@ -68,14 +69,14 @@ export function RegisterTermsAgreementCard({ className }: { className?: string }
           <span className="text-[11px] font-medium">Open to read</span>
         </div>
         <p className="mt-2">
-          By registering you agree to the CROSSUB terms of service, privacy policy, and the
-          CROSSUB Service Agreement (NSW). Tap here to open the document before you accept.
+          By registering you agree to the CROSSUB terms and conditions and privacy policy. Tap
+          here to open the document before you accept on the final step.
         </p>
       </button>
 
       <DocumentPreviewDialog
         doc={open ? preview : null}
-        subtitle="CROSSUB Service Agreement (NSW)"
+        subtitle="Terms and Conditions"
         open={open}
         onClose={() => setOpen(false)}
       />

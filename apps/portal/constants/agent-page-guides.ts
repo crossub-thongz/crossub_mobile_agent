@@ -24,7 +24,12 @@ export type AgentPageGuideId =
   | 'notifications'
   | 'reports'
   | 'tenants'
-  | 'search';
+  | 'search'
+  | 'workflow-tour-maintenance'
+  | 'workflow-tour-inspections'
+  | 'workflow-tour-new-leasing'
+  | 'workflow-tour-end-leasing'
+  | 'workflow-tour-tribunal';
 
 const INSPECTION_TYPE_GUIDE_MAP: Record<string, AgentPageGuideId> = {
   OPEN: 'inspections-open',
@@ -565,6 +570,46 @@ export const AGENT_PAGE_GUIDES: Record<AgentPageGuideId, AgentPageGuideContent> 
       },
     ],
     tips: ['Use partial suburb names if the street number is unknown.'],
+  },
+  'workflow-tour-maintenance': {
+    id: 'workflow-tour-maintenance',
+    pageName: 'Maintenance demo tour',
+    eyebrow: 'Workflow tour',
+    overview: 'Interactive spotlight tour for the maintenance workflow.',
+    steps: [],
+    tips: [],
+  },
+  'workflow-tour-inspections': {
+    id: 'workflow-tour-inspections',
+    pageName: 'Inspections demo tour',
+    eyebrow: 'Workflow tour',
+    overview: 'Interactive spotlight tour for the inspections workflow.',
+    steps: [],
+    tips: [],
+  },
+  'workflow-tour-new-leasing': {
+    id: 'workflow-tour-new-leasing',
+    pageName: 'New leasing demo tour',
+    eyebrow: 'Workflow tour',
+    overview: 'Interactive spotlight tour for the new leasing workflow.',
+    steps: [],
+    tips: [],
+  },
+  'workflow-tour-end-leasing': {
+    id: 'workflow-tour-end-leasing',
+    pageName: 'End leasing demo tour',
+    eyebrow: 'Workflow tour',
+    overview: 'Interactive spotlight tour for the end leasing workflow.',
+    steps: [],
+    tips: [],
+  },
+  'workflow-tour-tribunal': {
+    id: 'workflow-tour-tribunal',
+    pageName: 'Tribunal demo tour',
+    eyebrow: 'Workflow tour',
+    overview: 'Interactive spotlight tour for the tribunal workflow.',
+    steps: [],
+    tips: [],
   },
 };
 

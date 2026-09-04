@@ -71,6 +71,7 @@ export function labelForPortalPath(href: string): string {
   if (pathname === ROUTES.SEARCH) return 'Search';
   if (pathname === ROUTES.SUPPORT) return 'Support';
   if (pathname === ROUTES.SUPPORT_TUTORIAL) return 'How to use';
+  if (pathname === ROUTES.SUPPORT_WORKFLOW_TOURS) return 'Workflow demo tours';
   if (pathname === ROUTES.SUPPORT_GETTING_STARTED) return 'Intro video';
   if (pathname.startsWith('/properties/')) return 'Property';
   if (pathname.startsWith('/inspections')) return 'Inspection';

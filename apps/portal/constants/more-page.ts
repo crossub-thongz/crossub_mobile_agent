@@ -73,6 +73,14 @@ export const SUPPORT_PAGE_SECTION: MorePageSection = {
       icon: BookOpen,
     },
     {
+      id: 'workflow-tours',
+      title: 'Workflow demo tours',
+      description:
+        'Guided walkthroughs for maintenance, inspections, leasing, end leasing, and tribunal.',
+      href: ROUTES.SUPPORT_WORKFLOW_TOURS,
+      icon: BookOpen,
+    },
+    {
       id: 'contact-am',
       title: 'Contact account manager',
       description: 'Message or call CROSSUB support for your portfolio.',

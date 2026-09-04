@@ -10,6 +10,7 @@ export function WorkflowMobileStepChips<T extends string>({
   isStepEnabled,
   isStepCompleted,
   className,
+  tourStepAnchors = false,
 }: {
   steps: readonly T[];
   labels: Record<T, string>;
@@ -18,6 +19,7 @@ export function WorkflowMobileStepChips<T extends string>({
   isStepEnabled?: (step: T) => boolean;
   isStepCompleted?: (step: T) => boolean;
   className?: string;
+  tourStepAnchors?: boolean;
 }) {
   return (
     <div className={cn('scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden', className)}>
@@ -30,6 +32,7 @@ export function WorkflowMobileStepChips<T extends string>({
             key={stepId}
             type="button"
             disabled={!enabled || !onStepClick}
+            data-tour={tourStepAnchors ? `workflow-step-${stepId}` : undefined}
             onClick={() => enabled && onStepClick?.(stepId)}
             className={cn(
               'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',

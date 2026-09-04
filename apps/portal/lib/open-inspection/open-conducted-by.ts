@@ -2,6 +2,10 @@ import type { OpenInspectionSession } from '@/constants/open-inspection-ops';
 import type { LeasingPropertyDetail } from '@/lib/leasing/types';
 import type { Inspection } from '@/lib/types';
 
+export function isAgentConductedOpenSession(session: OpenInspectionSession): boolean {
+  return resolveOpenConductedByFromSession(session) === 'agent';
+}
+
 /** Session-only heuristic — leasing `agentConducted` overrides when present. */
 export function resolveOpenConductedByFromSession(
   session: OpenInspectionSession,

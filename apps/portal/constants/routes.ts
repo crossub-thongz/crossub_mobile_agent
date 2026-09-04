@@ -41,6 +41,8 @@ export const ROUTES = {
   SUPPORT_CONTACT: '/support/contact',
   SUPPORT_GETTING_STARTED: '/support/getting-started',
   SUPPORT_TUTORIAL: '/support/tutorial',
+  SUPPORT_TRAINING: '/support/training',
+  SUPPORT_WORKFLOW_TOURS: '/support/workflow-tours',
   AGREEMENTS: '/agreements',
 } as const;
 

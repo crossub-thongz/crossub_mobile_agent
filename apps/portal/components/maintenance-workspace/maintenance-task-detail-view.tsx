@@ -62,7 +62,7 @@ import {
   formatTime,
 } from '@/lib/utils';
 
-import './maintenance-task-detail.css';
+import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 
 const TABS: { id: MaintenanceTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
@@ -164,6 +164,7 @@ export function MaintenanceTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<MaintenanceTaskTab>('workflow');
+  useWorkflowTourTabFocus(setActiveTab, 'workflow');
   const pageRef = useRef<HTMLDivElement | null>(null);
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
 
@@ -324,6 +325,7 @@ export function MaintenanceTaskDetailView({
                   {item.title || workspaceCase.issueType}
                 </h1>
                 <span
+                  data-tour="workflow-case-badge"
                   className={cn(
                     'rounded-full px-2 py-0.5 text-[11px] font-semibold',
                     tenantRejected
@@ -357,7 +359,7 @@ export function MaintenanceTaskDetailView({
         </div>
       </header>
 
-      <section className="maintenance-task__status-card rounded-2xl border border-rose-500/20 p-5">
+      <section className="maintenance-task__status-card rounded-2xl border border-rose-500/20 p-5" data-tour="workflow-status">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div>
             <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
@@ -383,12 +385,13 @@ export function MaintenanceTaskDetailView({
 
       <TaskWorkflowRailSlot />
 
-          <div className="border-b">
+          <div className="border-b" data-tour="workflow-tabs">
             <div className="flex gap-1 overflow-x-auto">
               {visibleTabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
+                  data-tour={`workflow-tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     'border-b-2 px-4 py-2 text-sm font-semibold whitespace-nowrap transition',

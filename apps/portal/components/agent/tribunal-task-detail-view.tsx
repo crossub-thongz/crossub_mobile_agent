@@ -15,6 +15,7 @@ import { TribunalAwaitingAccountManagerPanel } from '@/components/agent/tribunal
 import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chasing-detail';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
+import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 import { propertyDetail } from '@/constants/routes';
 import { fetchAgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import type { AgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
@@ -125,6 +126,7 @@ export function TribunalTaskDetailView({
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<TribunalTaskTab>('workflow');
+  useWorkflowTourTabFocus(setActiveTab, 'workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
   const [rentChasingDetail, setRentChasingDetail] = useState<AgentTribunalRentChasingDetail | null>(
     null,
@@ -236,9 +238,21 @@ export function TribunalTaskDetailView({
               <Gavel className="size-5" />
             </span>
             <div className="min-w-0">
-              <h1 className="text-xl font-semibold tracking-tight">
-                Tribunal application – {matterTitle}
-              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold tracking-tight">
+                  Tribunal application – {matterTitle}
+                </h1>
+                <span
+                  data-tour="workflow-case-badge"
+                  className={
+                    banner.needsAction
+                      ? 'rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                      : 'rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  }
+                >
+                  {banner.needsAction ? 'Need your action' : 'CROS handling'}
+                </span>
+              </div>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>
               <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                 <span>Task ID {taskRef}</span>
@@ -251,7 +265,7 @@ export function TribunalTaskDetailView({
         </div>
       </header>
 
-      <section className="tribunal-task__status-card rounded-2xl border border-sky-500/20 p-5">
+      <section className="tribunal-task__status-card rounded-2xl border border-sky-500/20 p-5" data-tour="workflow-status">
         <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
           Current status
         </p>
@@ -263,12 +277,13 @@ export function TribunalTaskDetailView({
 
           <TaskWorkflowRailSlot />
 
-          <div className="border-b">
+          <div className="border-b" data-tour="workflow-tabs">
             <div className="flex gap-1 overflow-x-auto">
               {tabsWithCounts.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
+                  data-tour={`workflow-tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     'border-b-2 px-4 py-2 text-sm font-semibold whitespace-nowrap transition',
@@ -283,7 +298,7 @@ export function TribunalTaskDetailView({
             </div>
           </div>
 
-          <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
+          <div className={activeTab === 'workflow' ? undefined : 'hidden'} data-tour="workflow-action-panel">
             {rentChasing ? (
               <TribunalRentChasingDetail caseId={tribunalCase.id} />
             ) : (

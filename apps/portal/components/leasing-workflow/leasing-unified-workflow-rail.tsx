@@ -71,6 +71,7 @@ export function LeasingUnifiedWorkflowRail({
         onStepClick={handleRailStepClick}
         isStepCompleted={(step) => isUnifiedLeasingRailStepCompleted(detail, step, now)}
         isStepEnabled={isStepEnabled}
+        tourStepAnchors
       />
       <div className="hidden overflow-x-auto md:block">
         <div className="min-w-[44rem]">
@@ -90,6 +91,7 @@ export function LeasingUnifiedWorkflowRail({
             isStepCompleted={(step) => isUnifiedLeasingRailStepCompleted(detail, step, now)}
             isStepEnabled={isStepEnabled}
             onStepClick={handleRailStepClick}
+            tourStepAnchors
           />
         </div>
       </div>

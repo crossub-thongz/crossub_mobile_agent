@@ -558,6 +558,7 @@ export function OutgoingFieldInspectionDetail({
             return resolveWorkflowStepState(isDone, isViewing);
           }}
           onStepClick={(step) => setViewingGateStep(step)}
+          tourStepAnchors
         />
         </TaskWorkflowRailPortal>
         <p className="text-muted-foreground px-1 pb-1 text-xs leading-relaxed">

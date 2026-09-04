@@ -237,6 +237,7 @@ export function V2TasksPage() {
               <button
                 key={option.id}
                 type="button"
+                data-tour={option.id === 'all' ? undefined : `tasks-category-${option.id}`}
                 onClick={() => setCategory(option.id)}
                 className={cn(
                   'border-b-2 px-4 py-2 text-sm font-semibold whitespace-nowrap transition',

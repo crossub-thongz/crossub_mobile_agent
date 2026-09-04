@@ -8,6 +8,8 @@ export type AgentTourStep = {
   description: string;
   /** `data-tour` value. Omit for a centered intro card. */
   target?: string;
+  /** When the agent must act at this step — shown in the tour callout. */
+  actionNote?: string;
 };
 
 /** Shown on every live tour step — where agents reach their Account Manager. */

@@ -37,7 +37,7 @@ import {
   formatTime,
 } from '@/lib/utils';
 
-import './inspection-task-detail.css';
+import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
 
 const TABS: { id: InspectionTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
@@ -101,6 +101,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
   } = useAgentData();
 
   const [activeTab, setActiveTab] = useState<InspectionTaskTab>('workflow');
+  useWorkflowTourTabFocus(setActiveTab, 'workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
   const { inspection, resolveState } = useResolvedInspection(inspectionId);
 
@@ -198,6 +199,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                   {INSPECTION_TYPE_LABEL[inspection.type]}
                 </h1>
                 <span
+                  data-tour="workflow-case-badge"
                   className={cn(
                     'rounded-full px-2 py-0.5 text-[11px] font-semibold',
                     banner.needsAction && 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
@@ -209,7 +211,11 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
                       'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
                   )}
                 >
-                  {banner.statusLabel}
+                  {banner.needsAction
+                    ? 'Need your action'
+                    : banner.statusLabel === 'Completed'
+                      ? banner.statusLabel
+                      : 'CROS handling'}
                 </span>
               </div>
               <p className="text-muted-foreground mt-1 text-sm">{address}</p>
@@ -231,6 +237,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
             ? 'inspection-task__status-card--action border-rose-500/20'
             : 'inspection-task__status-card border-sky-500/20',
         )}
+        data-tour="workflow-status"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div>
@@ -266,12 +273,13 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
 
       <TaskWorkflowRailSlot />
 
-          <div className="border-b">
+          <div className="border-b" data-tour="workflow-tabs">
             <div className="flex gap-1 overflow-x-auto">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
+                  data-tour={`workflow-tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     'border-b-2 px-4 py-2 text-sm font-semibold whitespace-nowrap transition',
@@ -286,7 +294,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
             </div>
           </div>
 
-          <div className={activeTab === 'workflow' ? undefined : 'hidden'}>
+          <div className={activeTab === 'workflow' ? undefined : 'hidden'} data-tour="workflow-action-panel">
             <InspectionDetailView inspectionId={inspection.id} />
           </div>
 

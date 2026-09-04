@@ -12,6 +12,7 @@ import {
   deriveOpenSessionRailProgress,
   isOpenSessionRailStepCompleted,
   isOpenSessionRailStepNavigable,
+  type OpenSessionRailContext,
   type OpenSessionRailStep,
 } from '@/lib/open-inspection-session-rail';
 
@@ -20,13 +21,15 @@ export function OpenInspectionSessionRail({
   viewedStep,
   onStepClick,
   className,
+  railContext,
 }: {
   session: OpenInspectionSession;
   viewedStep?: OpenSessionRailStep;
   onStepClick?: (step: OpenSessionRailStep) => void;
   className?: string;
+  railContext?: OpenSessionRailContext;
 }) {
-  const { currentRailStep, fillIndex } = deriveOpenSessionRailProgress(session);
+  const { currentRailStep, fillIndex } = deriveOpenSessionRailProgress(session, undefined, railContext);
   const displayStep = viewedStep ?? currentRailStep;
 
   return (
@@ -37,14 +40,15 @@ export function OpenInspectionSessionRail({
       currentStep={displayStep}
       progressFillIndex={fillIndex}
       getStepState={(step) => {
-        const isDone = isOpenSessionRailStepCompleted(session, step);
+        const isDone = isOpenSessionRailStepCompleted(session, step, undefined, railContext);
         const isViewing = step === displayStep;
         return resolveWorkflowStepState(isDone, isViewing);
       }}
-      isStepCompleted={(step) => isOpenSessionRailStepCompleted(session, step)}
+      isStepCompleted={(step) => isOpenSessionRailStepCompleted(session, step, undefined, railContext)}
       onStepClick={onStepClick}
-      isStepEnabled={(step) => isOpenSessionRailStepNavigable(session, step)}
+      isStepEnabled={(step) => isOpenSessionRailStepNavigable(session, step, undefined, railContext)}
       className={className}
+      tourStepAnchors
     />
     </TaskWorkflowRailPortal>
   );

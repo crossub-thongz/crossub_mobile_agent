@@ -149,6 +149,7 @@ export function WorkflowProgressRail<T extends string>({
   tone = 'primary',
   showStatusCaption = true,
   labelCasing = 'uppercase',
+  tourStepAnchors = false,
 }: {
   steps: readonly T[];
   labels: Record<T, string>;
@@ -169,6 +170,8 @@ export function WorkflowProgressRail<T extends string>({
   /** Hide the Viewing / Live captions under the current step. */
   showStatusCaption?: boolean;
   labelCasing?: 'uppercase' | 'sentence';
+  /** When true, each step is tagged with `data-tour="workflow-step-{id}"` for guided tours. */
+  tourStepAnchors?: boolean;
 }) {
   const stepCount = steps.length;
   const lineInset = stepCount > 1 ? `${50 / stepCount}%` : '0%';
@@ -268,6 +271,7 @@ export function WorkflowProgressRail<T extends string>({
                 key={step}
                 type="button"
                 disabled={!enabled}
+                data-tour={tourStepAnchors ? `workflow-step-${step}` : undefined}
                 onClick={() => enabled && onStepClick(step)}
                 className={cn(
                   'flex min-w-0 flex-1 flex-col items-center rounded-lg px-0.5 py-0.5 transition-colors',
@@ -285,6 +289,7 @@ export function WorkflowProgressRail<T extends string>({
           return (
             <div
               key={step}
+              data-tour={tourStepAnchors ? `workflow-step-${step}` : undefined}
               className={cn(
                 'flex min-w-0 flex-1 flex-col items-center px-0.5',
                 isViewing && 'bg-primary/5 rounded-lg',
