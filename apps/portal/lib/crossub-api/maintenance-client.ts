@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import type { MaintenanceCloseReason } from '@/constants/maintenance-close';
 import type {
   ApiMaintenanceState,
   ApiMaintenanceUserRole,
@@ -99,6 +100,34 @@ export async function transitionMaintenanceCase(
     actorRole: AGENT_ROLE,
     ...extras,
   });
+}
+
+/**
+ * Close a case that should not proceed (duplicate, raised in error, resolved by the tenant …).
+ *
+ * The manual-close path — distinct from the completion close in `maintenance-case-ops.ts`. It
+ * deliberately bypasses the completion gates and records a reason so a cancelled job stays
+ * tellable from completed work. The API refuses (409) a job carrying commitments (an assigned
+ * contractor, an approved quote, a booked visit) unless `acknowledgeCommitments` is set; the
+ * dialog surfaces that message and re-sends with the flag. `actorRole` is derived server-side,
+ * so it is not sent here. Returns the single updated request, same shape as the DELETE route.
+ */
+export async function closeMaintenanceCaseWithReason(
+  requestId: string,
+  body: {
+    reason: MaintenanceCloseReason;
+    note?: string;
+    acknowledgeCommitments?: boolean;
+  },
+): Promise<{ request: ApiMaintenanceState['maintenanceRequests'][number] | null }> {
+  return api.post<{ request: ApiMaintenanceState['maintenanceRequests'][number] | null }>(
+    `/maintenance/requests/${requestId}/close`,
+    {
+      reason: body.reason,
+      ...(body.note ? { note: body.note } : {}),
+      ...(body.acknowledgeCommitments ? { acknowledgeCommitments: true } : {}),
+    },
+  );
 }
 
 export async function setMaintenanceCompletionEvidence(

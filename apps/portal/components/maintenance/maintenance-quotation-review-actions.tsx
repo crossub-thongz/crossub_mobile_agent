@@ -135,7 +135,7 @@ export function MaintenanceQuotationReviewActions({
               disabled={isBusy}
               onClick={() => setNegotiateOpen((v) => !v)}
             >
-              Requote
+              Price review
             </Button>
             <Button
               type="button"
@@ -190,7 +190,7 @@ export function MaintenanceQuotationReviewActions({
 
       {canReview && negotiateOpen && canAct && !decision ? (
         <div className="bg-muted/20 space-y-2 rounded-md border p-3">
-          <p className="text-xs font-semibold">Requote (counter offer)</p>
+          <p className="text-xs font-semibold">Price review (counter offer)</p>
           <input
             type="number"
             min={0}

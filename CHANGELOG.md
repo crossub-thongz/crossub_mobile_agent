@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-08
+
+### Added
+- **"Close job" on the maintenance detail view — the agent can now end a job that should not proceed, not only push it forward.** Daniel's V2 §10 gives agents four verbs (Approve / Reject / Price review / Close); the first three already lived on the quote row, but a duplicate, a request raised in error, or one the tenant sorted out themselves had no exit — the only ways off the board were to keep quoting or to archive, and archiving loses the case where a completed one is kept. The button sits beside the header's More menu and posts to `POST /maintenance/requests/:id/close` through the same BFF lane as the other maintenance calls (cookie session, `actorRole` derived server-side), then refetches via `onCaseUpdated`. It is hidden once `workspaceCase.status` is one of `MAINTENANCE_CLOSE_HIDDEN_STATUSES` (completed / closed / deleted), because there is nothing left to close. Reasons mirror the API's fixed set (`constants/maintenance-close.ts` ← `apps/api/src/constants/maintenance-close.constants.ts`): a cancelled job and a finished one both rest at `closed`, so the reason is what keeps them tellable apart in reporting, `OTHER` must carry a note, and the note is capped at 500 like the DTO. The commitment warning is the server's judgement, never re-derived here — a 409 whose message reads "…commitments that need acknowledging first…" (an assigned contractor, an approved quote, a booked visit) is surfaced in a callout and the button becomes **Close anyway**, which re-sends with `acknowledgeCommitments: true`; a second copy of that rule in the browser would be a second copy to drift.
+
+### Changed
+- **The quote row now reads Approve / Decline / Price review, and the version chain is labelled V1 / V2… by thread order.** The negotiation trigger was called "Requote", which named the mechanic (a counter offer) rather than the decision the agent is making; renamed to **Price review** to line the four verbs up with the backend's decision vocabulary (behaviour is unchanged — it still opens the counter-offer panel and calls `sendMaintenanceQuotationCounterOffer`). The contractor's re-submitted history was headed "Previous quotation" / "Previous quote N", which reads as "old" rather than as a position in a sequence; the previous-quotation panel and the Requoted badge dropdown now stamp each entry with its version (`V{n}`, oldest = V1) and mark the live quote as the current, latest version, so an agent negotiating across three rounds can see which figure is which.
+
 ## 2026-08-28
 
 ### Added

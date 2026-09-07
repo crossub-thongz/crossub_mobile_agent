@@ -73,7 +73,8 @@ export function RequotedQuotationBadge({
               setOpen(false);
             }}
           >
-            Current quotation
+            {/* The current quotation is the latest version in the thread. */}
+            V{previousQuotes.length + 1} · Current
           </button>
           {previousQuotes.map((quote, index) => (
             <button
@@ -88,7 +89,8 @@ export function RequotedQuotationBadge({
                 setOpen(false);
               }}
             >
-              <p className="font-medium">Previous quote {previousQuotes.length - index}</p>
+              {/* Newest-first, so index 0 is the highest previous version. Oldest = V1. */}
+              <p className="font-medium">V{previousQuotes.length - index}</p>
               <p className="text-muted-foreground mt-0.5 text-[10px] tabular-nums">
                 {new Date(quote.submittedAt).toLocaleString('en-AU')} ·{' '}
                 {formatCurrency(quote.price)}

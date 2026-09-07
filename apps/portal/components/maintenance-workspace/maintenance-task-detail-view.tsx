@@ -9,13 +9,17 @@ import {
   Sparkles,
   Star,
   Wrench,
+  XCircle,
 } from 'lucide-react';
 
 import { WorkspaceChatPanel } from '@/components/maintenance-workspace/workspace-chat-panel';
 import { MaintenanceAgentWorkflowPanel } from '@/components/maintenance/maintenance-agent-workflow-panel';
+import { MaintenanceCloseJobDialog } from '@/components/maintenance/maintenance-close-job-dialog';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
 import { MaintenanceTaskDocuments } from '@/components/maintenance/maintenance-task-documents';
 import { TaskPageActions } from '@/components/agent/tasks/task-page-actions';
+import { Button } from '@/components/ui/button';
+import { MAINTENANCE_CLOSE_HIDDEN_STATUSES } from '@/constants/maintenance-close';
 import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
@@ -165,8 +169,11 @@ export function MaintenanceTaskDetailView({
 
   const [activeTab, setActiveTab] = useState<MaintenanceTaskTab>('workflow');
   useWorkflowTourTabFocus(setActiveTab, 'workflow');
+  const [closeJobOpen, setCloseJobOpen] = useState(false);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
+  // Hidden once the job is finished or gone — there is nothing left to close.
+  const canCloseJob = !MAINTENANCE_CLOSE_HIDDEN_STATUSES.includes(workspaceCase.status);
 
   useEffect(() => {
     let node: HTMLElement | null = pageRef.current;
@@ -355,7 +362,21 @@ export function MaintenanceTaskDetailView({
               </div>
             </div>
           </div>
-          <TaskPageActions propertyId={item.propertyId} reference={taskRef} />
+          <div className="flex items-center gap-2">
+            {canCloseJob ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setCloseJobOpen(true)}
+              >
+                <XCircle className="size-4" />
+                Close job
+              </Button>
+            ) : null}
+            <TaskPageActions propertyId={item.propertyId} reference={taskRef} />
+          </div>
         </div>
       </header>
 
@@ -639,6 +660,12 @@ export function MaintenanceTaskDetailView({
         </aside>
       </div>
     </div>
+    <MaintenanceCloseJobDialog
+      open={closeJobOpen}
+      onOpenChange={setCloseJobOpen}
+      requestId={item.id}
+      onClosed={onCaseUpdated}
+    />
     </TaskWorkflowRailSlotProvider>
   );
 }

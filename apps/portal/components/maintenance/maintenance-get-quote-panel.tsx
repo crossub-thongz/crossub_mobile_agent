@@ -124,8 +124,10 @@ function ContractorQuoteCollapsible({
   const viewingPreviousQuote = viewingPreviousId
     ? quotations.find((quote) => quote.id === viewingPreviousId)
     : undefined;
+  // Version chips by thread order (oldest = V1). previousQuotes is newest-first, so a previous
+  // quote at index i is V(previousQuotes.length - i); the current submitted quote is the latest.
   const previousVersionLabel = viewingPreviousQuote
-    ? `Previous quote ${
+    ? `V${
         previousQuotes.findIndex((quote) => quote.id === viewingPreviousQuote.id) >= 0
           ? previousQuotes.length -
             previousQuotes.findIndex((quote) => quote.id === viewingPreviousQuote.id)
