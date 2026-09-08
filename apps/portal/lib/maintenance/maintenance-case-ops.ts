@@ -4,7 +4,6 @@ import {
   declineMaintenanceQuotation,
   inviteMaintenanceContractorsForRfq,
   requestMaintenanceEvidence,
-  reviewMaintenanceQuotationDecision,
   sendMaintenanceContractorFeedback,
   sendMaintenanceQuotationCounterOffer,
   sendMaintenanceQuotationToLandlord,
@@ -15,7 +14,6 @@ import {
   transitionMaintenanceCase,
   type MaintenanceWorkflowResponsibility,
 } from '@/lib/crossub-api/maintenance-client';
-import type { ApiQuotation } from '@/lib/crossub-api/types';
 
 /** Row id for `assign-contractor` when the selection key is agency-scoped. */
 function preferredRowIdForAssign(selectionKey: string): string | null {
@@ -115,46 +113,35 @@ export async function markMaintenanceWorkComplete(requestId: string) {
   });
 }
 
-/** Payload the review-decision endpoint needs when the in-memory board was reset. */
-export function quotationSnapshotFromApi(quote: ApiQuotation) {
-  return {
-    maintenanceRequestId: quote.maintenanceRequestId,
-    contractorId: quote.contractorId,
-    price: quote.price,
-    currency: quote.currency,
-    scope: quote.scope,
-    availableSchedule: quote.availableSchedule,
-    submittedAt: quote.submittedAt,
-    status: quote.status,
-    lineItems: quote.lineItems,
-    comments: quote.comments,
-  };
+/** Approve a specific submitted quote via the agent facade — the same workflow the staff run. */
+export async function approveMaintenanceQuotationCase(requestId: string, quotationId: string) {
+  await approveMaintenanceQuotation(requestId, quotationId);
 }
 
-/** Approve via `/maintenance/quotations/*` — same workflow board as the admin portal. */
-export async function approveMaintenanceQuotationCase(quotationId: string) {
-  await approveMaintenanceQuotation(quotationId);
+export async function declineMaintenanceQuotationCase(
+  requestId: string,
+  quotationId: string,
+  reason: string,
+) {
+  await declineMaintenanceQuotation(requestId, quotationId, reason);
 }
 
-export async function declineMaintenanceQuotationCase(quotationId: string, reason: string) {
-  await declineMaintenanceQuotation(quotationId, reason);
-}
-
+/**
+ * Record the agent's decision on a submitted quote through the facade. Approve and decline are
+ * two distinct facade routes, so this fans out on the decision. The facade re-hydrates the job
+ * server-side, so the old in-memory quotation snapshot is no longer threaded through.
+ */
 export async function reviewMaintenanceQuotationDecisionCase(
+  requestId: string,
   quotationId: string,
   decision: 'approved' | 'declined',
   declineReason?: string,
-  quotationSnapshot?: Parameters<typeof reviewMaintenanceQuotationDecision>[4],
-  opts?: { skipRecipientEmail?: boolean },
 ) {
-  await reviewMaintenanceQuotationDecision(
-    quotationId,
-    decision,
-    declineReason,
-    'agent',
-    quotationSnapshot,
-    opts,
-  );
+  if (decision === 'approved') {
+    await approveMaintenanceQuotation(requestId, quotationId);
+  } else {
+    await declineMaintenanceQuotation(requestId, quotationId, declineReason ?? '');
+  }
 }
 
 export async function sendMaintenanceQuotationToLandlordCase(
@@ -172,11 +159,12 @@ export async function sendMaintenanceContractorFeedbackCase(
 }
 
 export async function sendMaintenanceQuotationCounterOfferCase(
+  requestId: string,
   quotationId: string,
   counterPrice: number,
   message?: string,
 ) {
-  await sendMaintenanceQuotationCounterOffer(quotationId, counterPrice, message);
+  await sendMaintenanceQuotationCounterOffer(requestId, quotationId, counterPrice, message);
 }
 
 /** @deprecated Use confirmMaintenanceResponsibility */

@@ -258,24 +258,12 @@ function ContractorQuoteCollapsible({
                 quote={submitted}
                 review={review}
                 canReview={canReview}
-                onReviewDecision={async (decision, declineReason, opts) => {
+                onReviewDecision={async (decision, declineReason) => {
                   await reviewMaintenanceQuotationDecisionCase(
+                    submitted.maintenanceRequestId,
                     submitted.id,
                     decision,
                     declineReason,
-                    {
-                      maintenanceRequestId: submitted.maintenanceRequestId,
-                      contractorId: submitted.contractorId,
-                      price: submitted.price,
-                      currency: submitted.currency,
-                      scope: submitted.scope,
-                      availableSchedule: submitted.availableSchedule,
-                      submittedAt: submitted.submittedAt,
-                      status: submitted.status,
-                      lineItems: submitted.lineItems,
-                      comments: submitted.comments,
-                    },
-                    opts,
                   );
                   await onCaseUpdated?.();
                 }}
@@ -289,6 +277,7 @@ function ContractorQuoteCollapsible({
                 }}
                 onCounterOffer={async (counterPrice, message) => {
                   await sendMaintenanceQuotationCounterOfferCase(
+                    submitted.maintenanceRequestId,
                     submitted.id,
                     counterPrice,
                     message,

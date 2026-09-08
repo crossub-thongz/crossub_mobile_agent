@@ -41,7 +41,7 @@ export default function MaintenanceDetailPage() {
     [properties, item?.propertyId],
   );
 
-  const { workspaceCase, liveMapped, remindersSent, nextReminderDueAt, syncing, attachments, refresh: refreshCase, contractors, quotations, workflowRequest, maintenanceReminders } =
+  const { workspaceCase, liveMapped, remindersSent, nextReminderDueAt, syncing, attachments, refresh: refreshCase, contractors, quotations, workflowRequest, maintenanceReminders, agentDetail } =
     useMaintenanceCaseLiveSync(item, property, apiConnected);
 
   useRecordRecentCaseVisit({
@@ -168,6 +168,7 @@ export default function MaintenanceDetailPage() {
           quotations={quotations}
           workflowRequest={workflowRequest}
           maintenanceReminders={maintenanceReminders}
+          agentDetail={agentDetail}
         />
       )}
     </AgentShell>

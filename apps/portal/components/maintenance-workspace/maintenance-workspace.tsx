@@ -17,6 +17,11 @@ import { ApprovalPanel } from '@/components/agent/approval-panel';
 import { MaintenanceCompletionGatesPanel } from '@/components/maintenance/maintenance-completion-gates-panel';
 import { MaintenanceGetQuotePanel } from '@/components/maintenance/maintenance-get-quote-panel';
 import { Button } from '@/components/ui/button';
+import {
+  MAINTENANCE_PAYMENT_STATUS_LABEL,
+  MAINTENANCE_PAYMENT_STATUS_TONE,
+} from '@/constants/maintenance-v2';
+import type { AgentMaintenanceDetail } from '@/lib/crossub-api/maintenance-client';
 import type {
   ApiMaintenanceAttachment,
   ApiMaintenanceRequest,
@@ -40,6 +45,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 
 import { WorkspaceBottomNav } from './bottom-nav';
 import { WorkspaceTimelinePanel } from './audit-timeline';
+import { MaintenanceV2SpinePanel } from './maintenance-v2-spine-panel';
 import { WorkspaceSideInformationPanel } from './side-information-panel';
 import { WorkspaceHeader } from './workspace-header';
 import { WorkspaceChatPanel } from './workspace-chat-panel';
@@ -73,6 +79,7 @@ export function MaintenanceWorkspace({
   quotations = [],
   workflowRequest = null,
   maintenanceReminders = [],
+  agentDetail = null,
 }: {
   workspaceCase: MaintenanceWorkspaceCase;
   backHref: string;
@@ -100,6 +107,7 @@ export function MaintenanceWorkspace({
   quotations?: ApiQuotation[];
   workflowRequest?: ApiMaintenanceRequest | null;
   maintenanceReminders?: ApiMaintenanceState['maintenanceReminders'];
+  agentDetail?: AgentMaintenanceDetail | null;
 }) {
   const [bottomNavTab, setBottomNavTab] = useState<'details' | 'chat'>('details');
   const [caseFlagged, setCaseFlagged] = useState(false);
@@ -639,8 +647,24 @@ export function MaintenanceWorkspace({
                         </div>
                         <div>
                           <dt className="text-muted-foreground">Invoice</dt>
-                          <dd className="font-medium">
+                          <dd className="flex flex-wrap items-center gap-1.5 font-medium">
                             {workspaceCase.invoiceUploaded ? 'Sent' : 'Pending'}
+                            {agentDetail?.invoiceMatch ? (
+                              <span
+                                className={cn(
+                                  'inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                  MAINTENANCE_PAYMENT_STATUS_TONE[
+                                    agentDetail.invoiceMatch.paymentStatus
+                                  ],
+                                )}
+                              >
+                                {
+                                  MAINTENANCE_PAYMENT_STATUS_LABEL[
+                                    agentDetail.invoiceMatch.paymentStatus
+                                  ]
+                                }
+                              </span>
+                            ) : null}
                           </dd>
                         </div>
                       </dl>
@@ -700,6 +724,7 @@ export function MaintenanceWorkspace({
                 <p className="text-[11px] font-semibold text-foreground">{statusLabel}</p>
               }
             />
+            <MaintenanceV2SpinePanel agentDetail={agentDetail} />
             <WorkspaceTimelinePanel entries={workspaceCase.auditEntries} />
           </div>
         </aside>

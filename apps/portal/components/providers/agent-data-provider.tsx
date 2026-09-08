@@ -129,7 +129,6 @@ import { displayName, formatCurrency, formatPropertyFullAddress } from '@/lib/ut
 import { fetchMaintenanceCase } from '@/lib/maintenance/fetch-maintenance-case';
 import { pickLatestSubmittedQuote } from '@/lib/data/map-maintenance';
 import {
-  quotationSnapshotFromApi,
   reviewMaintenanceQuotationDecisionCase,
   sendMaintenanceContractorFeedbackCase,
   sendMaintenanceQuotationCounterOfferCase,
@@ -1705,15 +1704,11 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const approveMaintenanceQuote = useCallback(
-    async (requestId: string, opts?: { skipRecipientEmail?: boolean }) => {
+    // `opts` (skip landlord email) is kept for the callers' toast copy; the agent facade owns the
+    // recipient decision server-side, so it is no longer forwarded.
+    async (requestId: string, _opts?: { skipRecipientEmail?: boolean }) => {
       const quote = await resolveLiveSubmittedQuote(requestId);
-      await reviewMaintenanceQuotationDecisionCase(
-        quote.id,
-        'approved',
-        undefined,
-        quotationSnapshotFromApi(quote),
-        opts,
-      );
+      await reviewMaintenanceQuotationDecisionCase(requestId, quote.id, 'approved');
       await refresh();
     },
     [refresh, resolveLiveSubmittedQuote],
@@ -1722,8 +1717,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const declineMaintenanceQuote = useCallback(
     async (requestId: string, reason: string) => {
       const quote = await resolveLiveSubmittedQuote(requestId);
-      const snapshot = quotationSnapshotFromApi(quote);
-      await reviewMaintenanceQuotationDecisionCase(quote.id, 'declined', reason, snapshot);
+      await reviewMaintenanceQuotationDecisionCase(requestId, quote.id, 'declined', reason);
       try {
         await sendMaintenanceContractorFeedbackCase(quote.id, reason);
       } catch {
@@ -1737,7 +1731,7 @@ export function AgentDataProvider({ children }: { children: React.ReactNode }) {
   const requoteMaintenanceQuote = useCallback(
     async (requestId: string, counterPrice: number, message?: string) => {
       const quote = await resolveLiveSubmittedQuote(requestId);
-      await sendMaintenanceQuotationCounterOfferCase(quote.id, counterPrice, message);
+      await sendMaintenanceQuotationCounterOfferCase(requestId, quote.id, counterPrice, message);
       await refresh();
     },
     [refresh, resolveLiveSubmittedQuote],

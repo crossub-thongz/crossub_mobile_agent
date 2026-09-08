@@ -1,10 +1,46 @@
-import { api } from '@/lib/api';
+import type { components } from '@crossub-thongz/api-contract';
+
+import { ApiError, api } from '@/lib/api';
 import type { MaintenanceCloseReason } from '@/constants/maintenance-close';
 import type {
   ApiMaintenanceState,
   ApiMaintenanceUserRole,
   ApiQuotation,
 } from '@/lib/crossub-api/types';
+
+import { crossub } from './client';
+
+/**
+ * Contract-derived shapes for the `/api/v1/agent/maintenance/*` facade — the agent's own lane
+ * for the decisions it makes on a job (approve / reject / price review / close) and the read of
+ * the V2 spine that rides on the job detail (quote versions, work order, invoice match, urgent
+ * authorisations). Never hand-rolled: the whole point of the facade is that the agent stops
+ * borrowing the staff `/maintenance/*` endpoints for these.
+ */
+export type AgentMaintenanceCard = components['schemas']['AgentMaintenanceDto'];
+export type AgentMaintenanceDetail = components['schemas']['AgentMaintenanceDetailDto'];
+export type AgentMaintenanceQuoteVersion =
+  components['schemas']['AgentMaintenanceQuoteVersionDto'];
+export type AgentMaintenanceWorkOrder = components['schemas']['AgentMaintenanceWorkOrderDto'];
+export type AgentMaintenanceInvoiceMatch =
+  components['schemas']['AgentMaintenanceInvoiceMatchDto'];
+export type AgentMaintenanceUrgentAuthorisation =
+  components['schemas']['AgentMaintenanceUrgentAuthorisationDto'];
+
+/**
+ * openapi-fetch resolves rather than throws — but the app's callers (and the close dialog's 409
+ * "commitments" flow in particular) expect a thrown `ApiError` carrying the server's message.
+ * Re-raise so the existing try/catch + message parsing keeps working unchanged.
+ */
+function unwrapAgentMaintenance<T>(
+  result: { data?: T; error?: unknown; response: Response },
+  fallback: string,
+): T {
+  if (result.error !== undefined || result.data === undefined) {
+    throw new ApiError(result.response?.status ?? 500, result.error ?? fallback);
+  }
+  return result.data;
+}
 
 export type MaintenanceWorkflowResponsibility = 'tenant' | 'landlord' | 'strata';
 
@@ -103,14 +139,14 @@ export async function transitionMaintenanceCase(
 }
 
 /**
- * Close a case that should not proceed (duplicate, raised in error, resolved by the tenant …).
+ * Close a case that should not proceed (duplicate, raised in error, resolved by the tenant …)
+ * through the agent facade (`POST /agent/maintenance/:requestId/close`).
  *
  * The manual-close path — distinct from the completion close in `maintenance-case-ops.ts`. It
  * deliberately bypasses the completion gates and records a reason so a cancelled job stays
  * tellable from completed work. The API refuses (409) a job carrying commitments (an assigned
  * contractor, an approved quote, a booked visit) unless `acknowledgeCommitments` is set; the
- * dialog surfaces that message and re-sends with the flag. `actorRole` is derived server-side,
- * so it is not sent here. Returns the single updated request, same shape as the DELETE route.
+ * dialog surfaces that message and re-sends with the flag. `actorRole` is derived server-side.
  */
 export async function closeMaintenanceCaseWithReason(
   requestId: string,
@@ -119,15 +155,31 @@ export async function closeMaintenanceCaseWithReason(
     note?: string;
     acknowledgeCommitments?: boolean;
   },
-): Promise<{ request: ApiMaintenanceState['maintenanceRequests'][number] | null }> {
-  return api.post<{ request: ApiMaintenanceState['maintenanceRequests'][number] | null }>(
-    `/maintenance/requests/${requestId}/close`,
-    {
+): Promise<AgentMaintenanceCard> {
+  const result = await crossub.POST('/agent/maintenance/{requestId}/close', {
+    params: { path: { requestId } },
+    body: {
       reason: body.reason,
       ...(body.note ? { note: body.note } : {}),
       ...(body.acknowledgeCommitments ? { acknowledgeCommitments: true } : {}),
     },
-  );
+  });
+  return unwrapAgentMaintenance(result, "Couldn't close the job");
+}
+
+/**
+ * Read one maintenance job in full off the agent facade (`GET /agent/maintenance/:requestId`) —
+ * the portfolio card plus its V2 spine: the quote-version chain (V1/V2… per contractor thread),
+ * the active/latest work order, the latest reconciled invoice (with its read-only payment lane),
+ * and any Account-Manager urgent authorisations. Read-only; the agent sees these, never sets them.
+ */
+export async function fetchAgentMaintenanceDetail(
+  requestId: string,
+): Promise<AgentMaintenanceDetail> {
+  const result = await crossub.GET('/agent/maintenance/{requestId}', {
+    params: { path: { requestId } },
+  });
+  return unwrapAgentMaintenance(result, 'Failed to load the maintenance job');
 }
 
 export async function setMaintenanceCompletionEvidence(
@@ -275,26 +327,34 @@ export async function createMaintenanceQuotation(input: {
   });
 }
 
+/**
+ * Approve a specific submitted contractor quote through the agent facade
+ * (`POST /agent/maintenance/:requestId/quotes/:quotationId/approve`). The server mints the
+ * approved quote, issues the work order and advances the job — the same approval the staff
+ * console runs — so no client-side quotation snapshot is needed any more.
+ */
 export async function approveMaintenanceQuotation(
+  requestId: string,
   quotationId: string,
-  actorRole: ApiMaintenanceUserRole = 'agent',
-): Promise<ApiMaintenanceState> {
-  return api.post<ApiMaintenanceState>('/maintenance/quotations/approve', {
-    quotationId,
-    actorRole,
-  });
+): Promise<AgentMaintenanceCard> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/quotes/{quotationId}/approve',
+    { params: { path: { requestId, quotationId } } },
+  );
+  return unwrapAgentMaintenance(result, 'Failed to approve the quote');
 }
 
+/** Reject a specific submitted quote with a required reason (`…/quotes/:quotationId/reject`). */
 export async function declineMaintenanceQuotation(
+  requestId: string,
   quotationId: string,
   declineReason: string,
-  actorRole: ApiMaintenanceUserRole = 'agent',
-): Promise<ApiMaintenanceState> {
-  return api.post<ApiMaintenanceState>('/maintenance/quotations/decline', {
-    quotationId,
-    declineReason,
-    actorRole,
-  });
+): Promise<AgentMaintenanceCard> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/quotes/{quotationId}/reject',
+    { params: { path: { requestId, quotationId } }, body: { reason: declineReason } },
+  );
+  return unwrapAgentMaintenance(result, 'Failed to decline the quote');
 }
 
 export async function reviewMaintenanceQuotationDecision(
@@ -350,18 +410,25 @@ export async function sendMaintenanceContractorFeedback(
   });
 }
 
+/**
+ * Send a price-review counter-offer on a submitted quote through the agent facade
+ * (`…/quotes/:quotationId/price-review`). The contractor resubmits as the next version in the
+ * negotiation thread (§10.1).
+ */
 export async function sendMaintenanceQuotationCounterOffer(
+  requestId: string,
   quotationId: string,
   counterPrice: number,
   message?: string,
-  actorRole: ApiMaintenanceUserRole = AGENT_ROLE,
-): Promise<ApiMaintenanceState> {
-  return api.post<ApiMaintenanceState>('/maintenance/quotations/counter-offer', {
-    quotationId,
-    counterPrice,
-    message,
-    actorRole,
-  });
+): Promise<AgentMaintenanceCard> {
+  const result = await crossub.POST(
+    '/agent/maintenance/{requestId}/quotes/{quotationId}/price-review',
+    {
+      params: { path: { requestId, quotationId } },
+      body: { counterPrice, ...(message ? { message } : {}) },
+    },
+  );
+  return unwrapAgentMaintenance(result, 'Failed to send the counter-offer');
 }
 
 export async function uploadMaintenanceAttachment(input: {

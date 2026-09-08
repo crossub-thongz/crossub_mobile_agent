@@ -1,6 +1,8 @@
 import {
+  fetchAgentMaintenanceDetail,
   fetchMaintenanceRequest,
   fetchMaintenanceState,
+  type AgentMaintenanceDetail,
 } from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceState } from '@/lib/crossub-api/types';
 import {
@@ -35,6 +37,8 @@ export type MaintenanceCaseSnapshot = {
   quotations: ApiMaintenanceState['quotations'];
   attachments: NonNullable<ApiMaintenanceState['maintenanceAttachments']>;
   contractors: ApiMaintenanceState['contractors'];
+  /** Read-only V2 spine off the agent facade (work order, invoice payment lane, urgent auth). */
+  agentDetail: AgentMaintenanceDetail | null;
 };
 
 export function remindersForCase(
@@ -99,6 +103,11 @@ export async function fetchMaintenanceCase(
     // Fall through — the case may still exist on the workflow board snapshot.
   }
 
+  // The agent facade's V2 spine (work order, invoice payment lane, urgent authorisation) is
+  // additive read-only detail — fetch it alongside the board so it never delays or blocks the
+  // core case, and a failure simply leaves those facts unshown.
+  const agentDetailPromise = fetchAgentMaintenanceDetail(caseId).catch(() => null);
+
   const state = await fetchMaintenanceState();
   const workflowReq = state.maintenanceRequests.find((r) => r.id === caseId);
   if (req && workflowReq) {
@@ -158,6 +167,7 @@ export async function fetchMaintenanceCase(
     quotations,
     attachments,
     contractors: state.contractors ?? [],
+    agentDetail: await agentDetailPromise,
   };
 }
 
