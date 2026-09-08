@@ -5,6 +5,13 @@ import { toast } from 'sonner';
 
 import { MaintenanceApproveLandlordEmailDialog } from '@/components/maintenance/maintenance-approve-landlord-email-dialog';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
 import { isContractorRequotedAwaitingAgent } from '@/lib/maintenance/quotation-review-state';
@@ -55,6 +62,7 @@ export function MaintenanceQuotationReviewActions({
   onSendToLandlord,
   onSendFeedback,
   onCounterOffer,
+  onOwnerToHandle,
 }: {
   quote: ApiQuotation;
   review?: QuotationReviewRecord;
@@ -68,6 +76,7 @@ export function MaintenanceQuotationReviewActions({
   onSendToLandlord: (opts?: { skipRecipientEmail?: boolean }) => Promise<void>;
   onSendFeedback: (message?: string) => Promise<void>;
   onCounterOffer: (counterPrice: number, message?: string) => Promise<void>;
+  onOwnerToHandle: () => Promise<void>;
 }) {
   const [declineReason, setDeclineReason] = useState(review?.declineReason ?? '');
   const [negotiateOpen, setNegotiateOpen] = useState(false);
@@ -75,6 +84,7 @@ export function MaintenanceQuotationReviewActions({
   const [counterMessage, setCounterMessage] = useState('');
   const [acting, setActing] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [ownerToHandleOpen, setOwnerToHandleOpen] = useState(false);
 
   const isBusy = busy || acting;
   const canAct = canReview && quote.status === 'submitted';
@@ -117,12 +127,12 @@ export function MaintenanceQuotationReviewActions({
       {canReview && canAct && !decision ? (
         <>
           <div>
-            <p className="text-muted-foreground mb-1.5 text-xs font-medium">Decline reason</p>
+            <p className="text-muted-foreground mb-1.5 text-xs font-medium">Rejection reason</p>
             <Textarea
               value={declineReason}
               inputKind="contractor_quote_note"
               onChange={(e) => setDeclineReason(e.target.value)}
-              placeholder="Required if declining — contractor comments are shown above"
+              placeholder="Required if rejecting — contractor comments are shown above"
               className="min-h-[80px] resize-none text-xs"
               disabled={isBusy}
             />
@@ -133,9 +143,18 @@ export function MaintenanceQuotationReviewActions({
               variant="outline"
               size="sm"
               disabled={isBusy}
+              onClick={() => setOwnerToHandleOpen(true)}
+            >
+              Owner to Handle
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isBusy}
               onClick={() => setNegotiateOpen((v) => !v)}
             >
-              Price review
+              Negotiate
             </Button>
             <Button
               type="button"
@@ -147,15 +166,15 @@ export function MaintenanceQuotationReviewActions({
                 void run(async () => {
                   const reason = declineReason.trim();
                   if (!reason) {
-                    toast.error('Enter a decline reason');
+                    toast.error('Enter a rejection reason');
                     return;
                   }
                   await onReviewDecision('declined', reason);
-                  toast.success('Quote declined — send feedback to contractor when ready');
+                  toast.success('Quote rejected — send feedback to contractor when ready');
                 })
               }
             >
-              Decline
+              Reject
             </Button>
             <Button
               type="button"
@@ -167,6 +186,40 @@ export function MaintenanceQuotationReviewActions({
               Approve
             </Button>
           </div>
+          <Dialog open={ownerToHandleOpen} onOpenChange={setOwnerToHandleOpen}>
+            <DialogContent className="sm:max-w-md" stacked>
+              <DialogHeader>
+                <DialogTitle>Owner to Handle Maintenance</DialogTitle>
+                <DialogDescription>
+                  The owner will arrange and manage this maintenance directly. This task will be
+                  closed and marked as Handled by Owner.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isBusy}
+                  onClick={() => setOwnerToHandleOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() =>
+                    void run(async () => {
+                      await onOwnerToHandle();
+                      setOwnerToHandleOpen(false);
+                      toast.success('Job closed — the owner will handle this maintenance');
+                    })
+                  }
+                >
+                  Confirm
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           <MaintenanceApproveLandlordEmailDialog
             open={approveDialogOpen}
             onOpenChange={setApproveDialogOpen}
@@ -190,7 +243,7 @@ export function MaintenanceQuotationReviewActions({
 
       {canReview && negotiateOpen && canAct && !decision ? (
         <div className="bg-muted/20 space-y-2 rounded-md border p-3">
-          <p className="text-xs font-semibold">Price review (counter offer)</p>
+          <p className="text-xs font-semibold">Negotiate (counter offer)</p>
           <input
             type="number"
             min={0}
@@ -298,7 +351,7 @@ export function MaintenanceQuotationReviewActions({
               value={declineReason}
               inputKind="message"
               onChange={(e) => setDeclineReason(e.target.value)}
-              placeholder="Optional — uses decline reason if empty"
+              placeholder="Optional — uses rejection reason if empty"
               className="min-h-[72px] resize-none text-xs"
               disabled={isBusy}
             />

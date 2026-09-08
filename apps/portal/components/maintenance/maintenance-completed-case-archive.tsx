@@ -16,7 +16,7 @@ function quoteStatusLabel(status: ApiQuotation['status']): string {
     case 'approved':
       return 'Approved';
     case 'declined':
-      return 'Declined';
+      return 'Rejected';
     default:
       return 'Submitted';
   }
@@ -285,7 +285,7 @@ export function MaintenanceCompletedCaseArchive({
             Contractor quotations
           </p>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            All quotes received for this job, including declined submissions.
+            All quotes received for this job, including rejected submissions.
           </p>
         </div>
         <div className="space-y-2 p-3">

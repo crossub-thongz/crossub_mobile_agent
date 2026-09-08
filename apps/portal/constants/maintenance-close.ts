@@ -21,6 +21,10 @@ export const MAINTENANCE_CLOSE_REASON = {
   NO_LONGER_REQUIRED: 'NO_LONGER_REQUIRED',
   NOT_OUR_RESPONSIBILITY: 'NOT_OUR_RESPONSIBILITY',
   HANDLED_OUTSIDE_SYSTEM: 'HANDLED_OUTSIDE_SYSTEM',
+  // Set only by the dedicated "Owner to Handle" quote action — the owner arranges the repair
+  // directly. Deliberately absent from `MAINTENANCE_CLOSE_REASON_ORDER` so the manual Close job
+  // picker keeps its own reasons and this one is never hand-picked there.
+  HANDLED_BY_OWNER: 'HANDLED_BY_OWNER',
   OTHER: 'OTHER',
 } as const;
 
@@ -34,7 +38,25 @@ export const MAINTENANCE_CLOSE_REASON_LABEL: Record<MaintenanceCloseReason, stri
   NO_LONGER_REQUIRED: 'No longer required',
   NOT_OUR_RESPONSIBILITY: 'Not our responsibility',
   HANDLED_OUTSIDE_SYSTEM: 'Handled outside the system',
+  HANDLED_BY_OWNER: 'Handled by owner',
   OTHER: 'Other',
+};
+
+/**
+ * Tones for a closed-reason chip — the app's semantic palette, never an inline hue, both themes.
+ * Surfaced wherever a closed job shows its reason. `HANDLED_BY_OWNER` reads as a settled outcome
+ * handed off to the owner (the same sky tone the V2 payment lane uses for an external settlement);
+ * the rest are neutral, since a cancelled/duplicate close carries no positive or negative weight.
+ */
+export const MAINTENANCE_CLOSE_REASON_TONE: Record<MaintenanceCloseReason, string> = {
+  DUPLICATE: 'border-border bg-muted/40 text-muted-foreground',
+  RAISED_IN_ERROR: 'border-border bg-muted/40 text-muted-foreground',
+  RESOLVED_BY_TENANT: 'border-border bg-muted/40 text-muted-foreground',
+  NO_LONGER_REQUIRED: 'border-border bg-muted/40 text-muted-foreground',
+  NOT_OUR_RESPONSIBILITY: 'border-border bg-muted/40 text-muted-foreground',
+  HANDLED_OUTSIDE_SYSTEM: 'border-border bg-muted/40 text-muted-foreground',
+  HANDLED_BY_OWNER: 'border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+  OTHER: 'border-border bg-muted/40 text-muted-foreground',
 };
 
 export const MAINTENANCE_CLOSE_REASON_ORDER: MaintenanceCloseReason[] = [

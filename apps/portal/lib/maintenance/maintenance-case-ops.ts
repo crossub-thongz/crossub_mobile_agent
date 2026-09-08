@@ -1,6 +1,8 @@
+import { MAINTENANCE_CLOSE_REASON } from '@/constants/maintenance-close';
 import {
   approveMaintenanceQuotation,
   assignPreferredMaintenanceContractor,
+  closeMaintenanceCaseWithReason,
   declineMaintenanceQuotation,
   inviteMaintenanceContractorsForRfq,
   requestMaintenanceEvidence,
@@ -165,6 +167,18 @@ export async function sendMaintenanceQuotationCounterOfferCase(
   message?: string,
 ) {
   await sendMaintenanceQuotationCounterOffer(requestId, quotationId, counterPrice, message);
+}
+
+/**
+ * "Owner to Handle" — the owner arranges and manages the repair directly, so the job is closed
+ * through the facade's manual-close path with the `HANDLED_BY_OWNER` reason. Distinct from the
+ * per-quote decisions above: it settles the whole job rather than acting on a single quote. The
+ * reason value is the contract enum (via the shared close constant), not a hand-typed literal.
+ */
+export async function handleMaintenanceByOwnerCase(requestId: string) {
+  await closeMaintenanceCaseWithReason(requestId, {
+    reason: MAINTENANCE_CLOSE_REASON.HANDLED_BY_OWNER,
+  });
 }
 
 /** @deprecated Use confirmMaintenanceResponsibility */

@@ -22,6 +22,7 @@ import {
 } from '@/lib/crossub-api/maintenance-client';
 import type { ApiMaintenanceRequest, ApiMaintenanceState, ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
 import {
+  handleMaintenanceByOwnerCase,
   reviewMaintenanceQuotationDecisionCase,
   sendMaintenanceContractorFeedbackCase,
   sendMaintenanceQuotationCounterOfferCase,
@@ -150,7 +151,7 @@ function ContractorQuoteCollapsible({
             : 'Approved — sending to landlord'
       : review.contractorFeedbackSentAt
         ? 'Feedback sent'
-        : 'Declined — send feedback'
+        : 'Rejected — send feedback'
     : pendingAgentCounter
       ? 'Awaiting contractor response to counter offer'
     : submitted
@@ -174,7 +175,7 @@ function ContractorQuoteCollapsible({
     : review?.decision === 'approved'
       ? 'Approved'
       : review?.decision === 'declined'
-        ? 'Declined'
+        ? 'Rejected'
         : pendingAgentCounter
           ? 'Counter sent'
           : submitted
@@ -282,6 +283,10 @@ function ContractorQuoteCollapsible({
                     counterPrice,
                     message,
                   );
+                  await onCaseUpdated?.();
+                }}
+                onOwnerToHandle={async () => {
+                  await handleMaintenanceByOwnerCase(submitted.maintenanceRequestId);
                   await onCaseUpdated?.();
                 }}
               />
@@ -441,7 +446,7 @@ export function MaintenanceGetQuotePanel({
       <section className="rounded-xl border bg-card p-4">
         <p className="text-sm font-semibold">Repair quotations</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Expand a contractor to approve, requote, decline, or send the quotation to the landlord.
+          Expand a contractor to approve, negotiate, reject, or send the quotation to the landlord.
           Reminders are sent every 4 hours (up to 3 per contractor) until they respond; if none reply, the system auto-reselects 3 new contractors.
         </p>
         {workflowRequest?.status === 'pending_approval' ? (
