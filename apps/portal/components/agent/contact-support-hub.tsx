@@ -13,11 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { messageDetail } from '@/constants/routes';
 import { resolveAccountManagerContact } from '@/lib/agent-phonebook';
-import {
-  buildDialString,
-  formatAccountManagerPhoneDisplay,
-  placePhoneCall,
-} from '@/lib/phone';
+import { isAccountManagerQueueCode, placePhoneCall } from '@/lib/phone';
 import { findStaffSupportThread } from '@/lib/staff-support-thread';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -37,6 +33,9 @@ function accountManagerCaption(manager: {
 }): string {
   if (!manager.phone) {
     return 'No line available right now — message CROSSUB support and your Account Manager will call you back.';
+  }
+  if (isAccountManagerQueueCode(manager.extension)) {
+    return `Connects you to ${manager.name}. If they are on another call you can hold, or ask for a call back.`;
   }
   if (manager.extension) {
     return `Connects you straight to ${manager.name}.`;
@@ -146,13 +145,13 @@ export function ContactSupportHub() {
                   <button
                     type="button"
                     onClick={() => setPropertyId(property.id)}
-                    className="hover:border-primary/30 flex w-full flex-col gap-1 rounded-xl border px-3 py-2.5 text-left text-sm transition hover:bg-secondary/40"
+                    className="hover:border-primary/30 flex w-full rounded-xl border px-3 py-2.5 text-left text-sm transition hover:bg-secondary/40"
                   >
-                    <span className="truncate font-medium">
+                    <span className="block truncate font-medium">
                       {formatPropertyFullAddress(property)}
                     </span>
                     {property.accountManagerName ? (
-                      <span className="text-muted-foreground truncate text-xs">
+                      <span className="text-muted-foreground block truncate text-xs">
                         {property.accountManagerName}
                       </span>
                     ) : null}
@@ -173,17 +172,6 @@ export function ContactSupportHub() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{accountManager.name}</p>
               <p className="text-muted-foreground text-xs">CROSSUB Account Manager</p>
-              {accountManager.phone ? (
-                <a
-                  href={`tel:${buildDialString(accountManager.phone, accountManager.extension)}`}
-                  className="text-primary mt-1 block truncate text-sm font-medium tabular-nums hover:underline"
-                >
-                  {formatAccountManagerPhoneDisplay(
-                    accountManager.phone,
-                    accountManager.extension,
-                  )}
-                </a>
-              ) : null}
             </div>
           </div>
 

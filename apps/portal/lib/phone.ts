@@ -1,4 +1,8 @@
-import { DIAL_MENU_PAUSES, DIAL_PAUSE } from '@/constants/phone-dial';
+import {
+  ACCOUNT_MANAGER_QUEUE_CODE_MIN_DIGITS,
+  DIAL_MENU_PAUSES,
+  DIAL_PAUSE,
+} from '@/constants/phone-dial';
 
 /** Strip spaces/formatting for `tel:` links. */
 export function normalizePhoneForTel(phone: string): string {
@@ -21,24 +25,6 @@ export function buildDialString(phone: string, extension?: string | null): strin
 }
 
 /**
- * Label for an Account Manager line in the UI.
- *
- * Officers on the shared agency line share the same base number; the API sends the menu
- * digit separately as `accountManagerExtension`. Append it here so Qiaolin reads …9661 and
- * Angel …9663 without hard-coding names or keys in the app.
- */
-export function formatAccountManagerPhoneDisplay(
-  phone: string,
-  extension?: string | null,
-): string {
-  const trimmed = phone.trim();
-  if (!trimmed) return '';
-  const digit = extension?.replace(/[^\d*#]/g, '') ?? '';
-  if (!digit) return trimmed;
-  return `${trimmed}${digit}`;
-}
-
-/**
  * Open the device dialer (mobile) or tel handler (desktop). Pass `extension` to have the
  * dialer press a menu key after the call connects.
  */
@@ -46,4 +32,13 @@ export function placePhoneCall(phone: string, extension?: string | null): void {
   const dial = buildDialString(phone, extension);
   if (!dial) return;
   window.location.href = `tel:${dial}`;
+}
+
+/**
+ * Whether the digits the API sent are a CROSSUB call code (queue-capable line) rather than a
+ * single menu key on the shared agency line. See `ACCOUNT_MANAGER_QUEUE_CODE_MIN_DIGITS`.
+ */
+export function isAccountManagerQueueCode(extension?: string | null): boolean {
+  const digits = extension?.replace(/[^\d*#]/g, '') ?? '';
+  return digits.length >= ACCOUNT_MANAGER_QUEUE_CODE_MIN_DIGITS;
 }

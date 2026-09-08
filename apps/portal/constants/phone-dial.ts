@@ -26,3 +26,14 @@ export const DIAL_PAUSE = ',';
  * call to the agency line either connects or leaves you listening to the menu.
  */
 export const DIAL_MENU_PAUSES = 2;
+
+/**
+ * How many keypad digits mark a CROSSUB call code rather than a menu key.
+ *
+ * Since the Twilio queue went in (Daniel Zhou, 4 Sep 2026) the API can send a six-digit
+ * one-time code instead of a one-digit Calilio menu key. The code tells the phone system
+ * which agent is calling and which manager they mean, and it is what lets the line offer to
+ * hold or call back when that manager is busy. A menu key is never longer than one digit,
+ * so length alone tells the two apart — the caption reads it, nothing else does.
+ */
+export const ACCOUNT_MANAGER_QUEUE_CODE_MIN_DIGITS = 4;

@@ -8,6 +8,11 @@
 ### Changed
 - **The quote row now reads Approve / Decline / Price review, and the version chain is labelled V1 / V2… by thread order.** The negotiation trigger was called "Requote", which named the mechanic (a counter offer) rather than the decision the agent is making; renamed to **Price review** to line the four verbs up with the backend's decision vocabulary (behaviour is unchanged — it still opens the counter-offer panel and calls `sendMaintenanceQuotationCounterOffer`). The contractor's re-submitted history was headed "Previous quotation" / "Previous quote N", which reads as "old" rather than as a position in a sequence; the previous-quotation panel and the Requoted badge dropdown now stamp each entry with its version (`V{n}`, oldest = V1) and mark the live quote as the current, latest version, so an agent negotiating across three rounds can see which figure is which.
 
+## 2026-09-04
+
+### Changed
+- **"Call your Account Manager" reads a six-digit CROSSUB call code the way it read a one-digit menu key, and the caption says what the new line can do.** Daniel Zhou asked (4 Sep) for the agent to be told when their Account Manager is on another call and to hold or get a call back; Calilio has no queue, so the API is moving that line to Twilio behind `TELEPHONY_ENABLED`. Nothing about the dial changes here — `buildDialString` already sends `number,,digits`, and the API simply returns the Twilio number plus a code that identifies this agent and the manager they mean, so the phone system routes by who is calling instead of a hand-kept key table. The only app change is the promise under the button: a code of `ACCOUNT_MANAGER_QUEUE_CODE_MIN_DIGITS` or more digits (`isAccountManagerQueueCode`) now reads *"Connects you to X. If they are on another call you can hold, or ask for a call back."*, while a single Calilio key keeps *"Connects you straight to X."* and no key keeps the menu wording, because with the flag off the API still sends exactly what it sent yesterday. Length is the discriminator on purpose: a menu key is never longer than one digit, and adding a DTO field for this would have forced a contract publish for a caption. The two comma pauses stay — Twilio answers within a second and listens for eight, so the digits land either way.
+
 ## 2026-08-28
 
 ### Added

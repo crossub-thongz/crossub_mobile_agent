@@ -18,11 +18,7 @@ import {
   type AgentPhonebookContact,
   type AgentPhonebookGroup,
 } from '@/lib/agent-phonebook';
-import {
-  buildDialString,
-  formatAccountManagerPhoneDisplay,
-  placePhoneCall,
-} from '@/lib/phone';
+import { isAccountManagerQueueCode, placePhoneCall } from '@/lib/phone';
 import { useShellDockStore } from '@/lib/shell-dock-store';
 import { cn, formatPropertyFullAddress } from '@/lib/utils';
 
@@ -41,10 +37,11 @@ const CONTACT_GROUPS: AgentPhonebookGroup[] = [
 /**
  * What a contact row shows under the name.
  *
- * Geng Xu, 24 Aug 2026: *"AGENT联系的时候，不显示电话号码。属于哪个AGENT就联系到谁"* — in the
- * Contacts list, CROSSUB rows show only the subtitle (not the shared agency line), because
- * printing it beside a named person invites an agency to save it as that person's number.
- * The dedicated Account Manager tab still shows the line so desktop agents can read or copy it.
+ * Geng Xu, 24 Aug 2026: *"AGENT联系的时候，不显示电话号码。属于哪个AGENT就联系到谁"* — an agency
+ * does not see the Account Manager number, because every manager shares one line and the
+ * phone system decides who it reaches. Printing it would invite an agency to save it as a
+ * personal number for a manager it may not actually route to. Tenants, landlords and agency
+ * contacts are real per-person numbers and still show.
  */
 function contactCaption(contact: AgentPhonebookContact): string {
   const parts = contact.group === 'crossub' ? [] : [contact.phone];
@@ -64,6 +61,9 @@ function contactCaption(contact: AgentPhonebookContact): string {
 function accountManagerCaption(manager: AgentAccountManager): string {
   if (!manager.phone) {
     return 'No line available right now — email or message and your Account Manager will call you back.';
+  }
+  if (isAccountManagerQueueCode(manager.extension)) {
+    return `Connects you to ${manager.name}. If they are on another call you can hold, or ask for a call back.`;
   }
   if (manager.extension) {
     return `Connects you straight to ${manager.name}.`;
@@ -356,17 +356,6 @@ export function PhonePanel({
                   <p className="text-muted-foreground truncate text-xs">
                     CROSSUB Account Manager
                   </p>
-                  {accountManagerPhone ? (
-                    <a
-                      href={`tel:${buildDialString(accountManagerPhone, accountManagerExtension)}`}
-                      className="text-emerald-700 dark:text-emerald-300 mt-1 block truncate text-sm font-medium tabular-nums hover:underline"
-                    >
-                      {formatAccountManagerPhoneDisplay(
-                        accountManagerPhone,
-                        accountManagerExtension,
-                      )}
-                    </a>
-                  ) : null}
                 </div>
               </div>
               {accountManagerPhone ? (
