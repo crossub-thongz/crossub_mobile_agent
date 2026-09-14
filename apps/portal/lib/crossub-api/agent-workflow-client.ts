@@ -12,20 +12,10 @@ export type CreateAgentTribunalRentChasingInput =
 const base = (propertyId: string) =>
   `/agent/properties/${encodeURIComponent(propertyId)}/workflows`;
 
-export type CreateAgentLeasingCycleInput = {
-  agentName?: string;
-  agentCompany?: string;
-  agentEmail?: string;
-  agentPhone?: string;
-  rentPerWeek: number;
-  availableFrom: string;
-  fixedTermWeeks?: number;
-  tenantMovedOut?: boolean;
-  tenantMovedOutDate?: string;
-  notes?: string;
-  skipOpenInspection?: boolean;
-  agentConductsOpenInspection?: boolean;
-};
+export type CreateAgentLeasingCycleInput = components['schemas']['AgentCreateLeasingCycleDto'];
+
+/** Proceed / Do not re-let / Decide later on an awaiting-confirmation leasing cycle. */
+export type SetAgentReletDecisionInput = components['schemas']['AgentSetReletDecisionDto'];
 
 export type CreateAgentRentReviewInput = {
   currentWeeklyRent: number;
@@ -103,6 +93,24 @@ export async function createAgentLeasingCycle(
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+/**
+ * Answer the re-let confirmation gate. Until the answer is Proceed, every open-inspection
+ * request on the cycle 409s (`LEASING_RELET_NOT_CONFIRMED`).
+ */
+export async function setAgentReletDecision(
+  propertyId: string,
+  cycleId: string,
+  body: SetAgentReletDecisionInput,
+): Promise<components['schemas']['AgentWorkflowCreateResultDto']> {
+  return agentFetch(
+    `${base(propertyId)}/leasing-cycle/${encodeURIComponent(cycleId)}/relet-decision`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 export async function cancelAgentLeasingCycle(

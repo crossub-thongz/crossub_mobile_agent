@@ -1,3 +1,4 @@
+import type { ServerLeasingMainStatus } from '@/lib/leasing-cycle-types';
 import type {
   LeasingAdvertisingStatus,
   LeasingAgentDecision,
@@ -253,4 +254,8 @@ export interface LeasingPropertyDetail {
   applicationsDetail: LeasingApplicationDetail[];
   onboarding: LeasingOnboardingState;
   timeline: LeasingTimelineEvent[];
+  /** Server main status (`awaiting_confirmation` while the re-let gate is closed). */
+  mainStatus?: ServerLeasingMainStatus;
+  /** The property's agency id from the cycle view. */
+  agencyId?: string | null;
 }

@@ -50,6 +50,9 @@ import {
 } from '@/lib/rent-review/scheduling';
 import { isPropertyVacant } from '@/lib/property-leasing';
 import { SELF_OPEN_INSPECTION_DISCLAIMER } from '@/lib/open-inspection';
+import { LeasingDefaultInspectorField } from '@/components/leasing-workflow/leasing-default-inspector-field';
+import { LEASING_RELET_COPY } from '@/constants/leasing-relet-decision';
+import { buildCreateLeasingOpenInspectionFields } from '@/utils/leasing-relet-decision';
 import { resolveRentPaidTo } from '@/lib/property-overview';
 import {
   buildPropertyWorkflowContext,
@@ -309,6 +312,8 @@ export function PropertyWorkflowCreateDialog({
   const [availableFrom, setAvailableFrom] = useState('');
   const [tenantMovedOut, setTenantMovedOut] = useState<boolean | null>(null);
   const [crossubConductsOpen, setCrossubConductsOpen] = useState<boolean | null>(true);
+  /** Required when the agency (not CROSSUB) runs the open inspections. */
+  const [defaultInspectorId, setDefaultInspectorId] = useState('');
   const [lettingNotes, setLettingNotes] = useState('');
   /** After End Leasing: relist (new leasing + open choice) or end agency management. */
   const [endLeasingNextStep, setEndLeasingNextStep] = useState<'relist' | 'end_management'>(
@@ -401,6 +406,7 @@ export function PropertyWorkflowCreateDialog({
       isPropertyVacant(property, currentLease ? [currentLease] : []) ? true : false,
     );
     setCrossubConductsOpen(true);
+    setDefaultInspectorId('');
     setLettingNotes('');
 
     const instantRentReview = buildRentReviewPrefill(property, agency, currentLease, {
@@ -585,6 +591,9 @@ export function PropertyWorkflowCreateDialog({
         if (crossubConductsOpen === null) {
           throw new Error('Select whether CROSSUB should conduct the open inspection');
         }
+        if (!crossubConductsOpen && !defaultInspectorId) {
+          throw new Error(LEASING_RELET_COPY.inspectorRequired);
+        }
         const fixedTermWeeks = resolveCrossubLeaseTermWeeks(
           crossubLeaseTermChoice,
           crossubCustomTermWeeks,
@@ -595,8 +604,7 @@ export function PropertyWorkflowCreateDialog({
           fixedTermWeeks,
           tenantMovedOut: propertyIsVacant ? true : Boolean(tenantMovedOut),
           notes: lettingNotes.trim() || undefined,
-          skipOpenInspection: crossubConductsOpen,
-          ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
+          ...buildCreateLeasingOpenInspectionFields(crossubConductsOpen, defaultInspectorId),
         });
         toast.success(
           crossubConductsOpen
@@ -701,6 +709,9 @@ export function PropertyWorkflowCreateDialog({
           if (crossubConductsOpen === null) {
             throw new Error('Select whether CROSSUB should conduct the open inspection');
           }
+          if (!crossubConductsOpen && !defaultInspectorId) {
+            throw new Error(LEASING_RELET_COPY.inspectorRequired);
+          }
           resolveCrossubLeaseTermWeeks(crossubLeaseTermChoice, crossubCustomTermWeeks);
         }
 
@@ -760,8 +771,7 @@ export function PropertyWorkflowCreateDialog({
             fixedTermWeeks: newLeasingTermWeeks,
             tenantMovedOut: false,
             notes: lettingNotes.trim() || undefined,
-            skipOpenInspection: crossubConductsOpen,
-            ...(crossubConductsOpen ? {} : { agentConductsOpenInspection: true }),
+            ...buildCreateLeasingOpenInspectionFields(crossubConductsOpen, defaultInspectorId),
           });
           if (apiConnected) {
             try {
@@ -1010,6 +1020,17 @@ export function PropertyWorkflowCreateDialog({
                 <p className="text-amber-700 dark:text-amber-400 text-[11px]">
                   {SELF_OPEN_INSPECTION_DISCLAIMER}
                 </p>
+              ) : null}
+              {crossubConductsOpen === false ? (
+                <LeasingDefaultInspectorField
+                  id="start-leasing-default-inspector"
+                  agencyId={property.agencyId ?? agency?.id}
+                  value={defaultInspectorId}
+                  onChange={setDefaultInspectorId}
+                  enabled={open}
+                  disabled={submitting}
+                  className="pt-1"
+                />
               ) : null}
             </div>
           </div>
@@ -1523,6 +1544,17 @@ export function PropertyWorkflowCreateDialog({
                     <p className="text-amber-700 dark:text-amber-400 text-[11px]">
                       {SELF_OPEN_INSPECTION_DISCLAIMER}
                     </p>
+                  ) : null}
+                  {crossubConductsOpen === false ? (
+                    <LeasingDefaultInspectorField
+                      id="relist-default-inspector"
+                      agencyId={property.agencyId ?? agency?.id}
+                      value={defaultInspectorId}
+                      onChange={setDefaultInspectorId}
+                      enabled={open}
+                      disabled={submitting}
+                      className="pt-1"
+                    />
                   ) : null}
                 </div>
               </>

@@ -50,6 +50,8 @@ import { leasingOpsApi } from '@/lib/leasing-ops-api';
 import { openViewingsApi } from '@/lib/open-viewings-api';
 import { useLivePoll } from '@/lib/use-live-poll';
 import { cn, formatDate } from '@/lib/utils';
+import { LEASING_RELET_COPY } from '@/constants/leasing-relet-decision';
+import { isAwaitingReletConfirmation } from '@/utils/leasing-relet-decision';
 
 export function LeasingStepOpenInspection({
   detail,
@@ -89,6 +91,8 @@ export function LeasingStepOpenInspection({
   const oi = detail.openInspection;
   const { rental } = detail;
   const crossubManagedOpen = !oi.agentConducted;
+  /** The server 409s every open-inspection request until the re-let is confirmed. */
+  const awaitingRelet = isAwaitingReletConfirmation(detail);
 
   const linkedInspection = useMemo(
     () =>
@@ -118,6 +122,7 @@ export function LeasingStepOpenInspection({
   const needsScheduleRequest =
     crossubManagedOpen && needsOpenInspectionScheduleRequest(oi);
   const canStartOpenNow =
+    !awaitingRelet &&
     // CRS-0068 — off for agents. Starting an open "now" chooses its time, and `startNow`
     // skips the weekly batch and the Saturday rule to do it.
     canStartOpenInspectionNow &&
@@ -268,6 +273,11 @@ export function LeasingStepOpenInspection({
 
   return (
     <div className="space-y-3">
+      {awaitingRelet ? (
+        <p className={cn('rounded-lg border px-3 py-2 text-xs', LEASING_UI.callout)}>
+          {LEASING_RELET_COPY.openInspectionBlockedHint}
+        </p>
+      ) : null}
       {oi.agentConducted ? (
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3">
           <p className="text-sm font-semibold">{LEASING_AGENT_SELF_OPEN_LABEL}</p>
@@ -387,6 +397,8 @@ export function LeasingStepOpenInspection({
             type="button"
             size="sm"
             className="mt-4 h-9 gap-1.5"
+            disabled={awaitingRelet}
+            title={awaitingRelet ? LEASING_RELET_COPY.openInspectionBlockedHint : undefined}
             onClick={() => setCreateOpen(true)}
           >
             Create open inspection
@@ -394,7 +406,7 @@ export function LeasingStepOpenInspection({
         </div>
       )}
 
-      {needsScheduleRequest && cycleId ? (
+      {needsScheduleRequest && cycleId && !awaitingRelet ? (
         <OpenInspectionScheduleRequestPanel
           propertyId={detail.propertyId}
           cycleId={cycleId}

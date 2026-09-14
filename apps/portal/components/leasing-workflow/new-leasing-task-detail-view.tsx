@@ -19,6 +19,7 @@ import {
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
+import { LeasingReletDecisionCard } from '@/components/leasing-workflow/leasing-relet-decision-card';
 import { LeasingWorkflowTimeline } from '@/components/leasing-workflow/leasing-workflow-timeline';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { PROPERTY_JOB_KIND_ICON } from '@/constants/property-jobs';
@@ -323,6 +324,8 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
           <TaskWorkflowRailSlot />
 
           <div className="space-y-5">
+            <LeasingReletDecisionCard propertyId={propertyId} cycleId={cycleId} />
+
             <div className="border-b" data-tour="workflow-tabs">
               <div className="flex gap-1 overflow-x-auto">
                 {TABS.map((tab) => (
@@ -353,6 +356,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                   propertyAddress={address}
                   rentWeekly={rentWeekly}
                   hideSectionLabel
+                  showReletDecisionCard={false}
                   onCaseClosed={() => {
                     void refresh().then(() => {
                       router.push(ROUTES.TASKS);

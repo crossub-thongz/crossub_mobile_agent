@@ -166,6 +166,8 @@ export function patchDetailFromCycleView(
     propertyId: view.propertyId,
     cycleId: view.id,
     cycleActive: view.isActive,
+    mainStatus: view.mainStatus,
+    agencyId: view.agencyId ?? existing.agencyId,
     activeStepHint: (view.activeStepHint ?? view.lifecycleStep) as LeasingLifecycleStep,
     agentInfo: {
       ...existing.agentInfo,

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 
 import { LeasingLifecycleTabs } from '@/components/leasing-workflow/leasing-lifecycle-tabs';
+import { LeasingReletDecisionCard } from '@/components/leasing-workflow/leasing-relet-decision-card';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { isUuid } from '@/lib/file-upload';
 import { LEASING_LIFECYCLE_STEP, type LeasingLifecycleStep } from '@/lib/leasing/constants';
@@ -22,6 +23,7 @@ export function LeasingWorkflowTimeline({
   onCaseClosed,
   onOpenInspectionCreated,
   unifiedRail = false,
+  showReletDecisionCard = true,
 }: {
   propertyId: string;
   /** When set (e.g. history row), load this cycle instead of the property's active letting. */
@@ -34,6 +36,8 @@ export function LeasingWorkflowTimeline({
   onCaseClosed?: () => void;
   onOpenInspectionCreated?: (inspectionId: string) => void;
   unifiedRail?: boolean;
+  /** False when the host page mounts the re-let decision card itself. */
+  showReletDecisionCard?: boolean;
 }) {
   const ensureDetail = useLeasingWorkflowStore((s) => s.ensureDetail);
   const applyCycleView = useLeasingWorkflowStore((s) => s.applyCycleView);
@@ -98,6 +102,9 @@ export function LeasingWorkflowTimeline({
         <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wide">
           Leasing workflow
         </p>
+      ) : null}
+      {showReletDecisionCard && resolvedCycleId ? (
+        <LeasingReletDecisionCard propertyId={propertyId} cycleId={resolvedCycleId} />
       ) : null}
       <LeasingLifecycleTabs
         detail={detail}

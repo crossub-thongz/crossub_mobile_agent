@@ -26,6 +26,57 @@ export interface ServerLeasingCycleSummary {
   openReportStatus: string
   createdAt: string
   updatedAt: string
+  /**
+   * Leasing L1 main status. A cycle opens `awaiting_confirmation` until the agent answers
+   * Proceed; open-inspection requests 409 until then. Optional — older payloads lack it.
+   */
+  mainStatus?: ServerLeasingMainStatus
+  reletDecision?: ServerLeasingReletDecision | null
+  reletDeferredAt?: string | null
+  pausedAt?: string | null
+  pauseReason?: string | null
+  /** The property's agency — the pool the default inspector is picked from. */
+  agencyId?: string | null
+}
+
+export type ServerLeasingMainStatus =
+  | "awaiting_confirmation"
+  | "preparation"
+  | "active_leasing"
+  | "offer_pending"
+  | "onboarding"
+  | "key_handover"
+  | "completed"
+  | "paused"
+  | "cancelled"
+
+export type ServerLeasingReletDecision = "proceed" | "do_not_relet" | "decide_later"
+
+export type ServerLeasingOpenProvider = "crossub" | "agency"
+
+/** The agent re-let confirmation state on the cycle view. */
+export interface ServerLeasingRelet {
+  decision: ServerLeasingReletDecision | null
+  decidedAt: string | null
+  decidedById: string | null
+  deferredAt: string | null
+  declineReason: string | null
+  /** Null until the re-let proceeds. */
+  openProvider: ServerLeasingOpenProvider | null
+}
+
+/** Letting terms captured at open / on the relet decision. */
+export interface ServerLeasingLettingTerms {
+  desiredStartDate: string | null
+  furnished: boolean | null
+  furnitureNotes: string | null
+  parkingSpaces: number | null
+  parkingNotes: string | null
+  storageIncluded: boolean | null
+  storageNotes: string | null
+  advertisingOwner: "crossub" | "agent" | null
+  defaultInspectorId: string | null
+  defaultInspectorName: string | null
 }
 
 export interface ServerLeasingApplicationReview {
@@ -115,6 +166,8 @@ export interface ServerLeasingOnboarding {
     inspectionId: string | null
     tenantConfirmed: boolean
     awaitingAgentPayment?: boolean
+    dueDate?: string | null
+    dueTier?: "urgent" | "overdue" | null
   }
   ingoingReportApproval: {
     status: string
@@ -237,6 +290,8 @@ export interface ServerLeasingCycleView extends ServerLeasingCycleSummary {
   tenancyAgreementId: string | null
   timeline: ServerLeasingTimelineEvent[]
   applicationScreeningSkipped: boolean
+  relet?: ServerLeasingRelet
+  lettingTerms?: ServerLeasingLettingTerms
 }
 
 export interface ServerLeasingViewerInvite {

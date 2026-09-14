@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { inspectionDetail, propertyDetail, propertyLeasingWorkflow, ROUTES } from '@/constants/routes';
+import { LEASING_CREATE_RELET_DECISION } from '@/constants/leasing-relet-decision';
 import {
   createAgentIngoingInspection,
   createAgentLeasingCycle,
@@ -745,6 +746,8 @@ export function CreateInspectionWizard({
                   tenantMovedOut: true,
                   // Avoid a duplicate OPEN pool job — we request open explicitly below.
                   skipOpenInspection: true,
+                  // Created confirmed: an unconfirmed cycle 409s the open request below.
+                  reletDecision: LEASING_CREATE_RELET_DECISION.PROCEED,
                 });
                 cycleId = created.id;
               }
