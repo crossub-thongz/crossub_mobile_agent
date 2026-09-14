@@ -5,6 +5,9 @@
 ### Added
 - **Handyman is on the maintenance trade list (Daniel Zhou, 9 Sep 2026).** CROSSUB added a single, global Handyman trade for small general repairs — a loose door handle, a hinge, a curtain rail — that no specialist trade fits and that previously fell to "Others" with free text. The API appended it to its canonical list so every existing trade keeps its id; this list mirrors that, placing Handyman just before Others. It is deliberately not an urgent-eligible type. `tsc --noEmit` on `apps/portal`: 16 → 16, identical error set.
 
+### Changed
+- **`@crossub-thongz/api-contract` ^0.19.0 → ^0.21.0.** 0.21.0 is the release carrying the maintenance AI redesign on the agent facade: every quote now carries the AI quote review's `reviewFlags` and `reviewSummary` and a `purpose` that tells a diagnostic call-out apart from a repair quote. The agent's maintenance screens read their own view models, so nothing renders these yet — the bump makes them typed and available. `tsc --noEmit` on `apps/portal`: 16 → 16, the same error set (three errors reprint their union members in a different order).
+
 ## 2026-09-08
 
 ### Added
