@@ -30,6 +30,9 @@ export const MAINTENANCE_ISSUE_TYPES = [
   'Shower Repair',
   'Cabinet Repair',
   'Carpet Cleaning',
+  // Daniel Zhou, 9 Sep 2026 — global Handyman trade for small general repairs (door handles,
+  // hinges, curtain rails). Mirrors the API list, where it is appended so its id never moves.
+  'Handyman',
   MAINTENANCE_ISSUE_TYPE_OTHER,
 ] as const;
 
