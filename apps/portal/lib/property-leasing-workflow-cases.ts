@@ -16,6 +16,7 @@ import type {
   VacatingCase,
 } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
+import { leasingCycleStageLabel, leasingCycleStatusLabel } from '@/utils/leasing-relet-decision';
 
 export type PropertyLeasingWorkflowCategory = 'leasing' | 'rent_review' | 'end_leasing';
 
@@ -87,8 +88,9 @@ export function buildPropertyLeasingWorkflowCases(input: {
       id: cycle.id,
       category: 'leasing',
       label: workflowCaseReferenceLabel(cycle.id, 'leasing'),
-      status: cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
-      currentStep: progress.currentStepLabel,
+      status:
+        leasingCycleStatusLabel(cycle) ?? cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
+      currentStep: leasingCycleStageLabel(cycle, progress.currentStepLabel),
       detail: cycle.propertyAddress,
       sortAt: cycle.availableFrom,
       createdAt: cycle.createdAt,
@@ -180,8 +182,9 @@ export function buildPropertyLeasingHistoryCases(input: {
       label: workflowCaseReferenceLabel(cycle.id, 'leasing'),
       status: isCompletedLeasingCycle(cycle)
         ? 'completed'
-        : cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase(),
-      currentStep: progress.currentStepLabel,
+        : (leasingCycleStatusLabel(cycle) ??
+          cycle.lifecycleStep.replaceAll('_', ' ').toLowerCase()),
+      currentStep: leasingCycleStageLabel(cycle, progress.currentStepLabel),
       detail: cycle.propertyAddress,
       sortAt: cycle.availableFrom,
       createdAt: cycle.createdAt,

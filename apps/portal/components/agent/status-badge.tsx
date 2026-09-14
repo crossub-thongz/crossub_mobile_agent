@@ -23,6 +23,8 @@ const PRIORITY: Record<
   },
 };
 
+export type StatusBadgeVariant = 'default' | 'approval' | 'success' | 'warning';
+
 export function StatusBadge({
   label,
   priority,
@@ -31,7 +33,7 @@ export function StatusBadge({
 }: {
   label: string;
   priority?: Priority;
-  variant?: 'default' | 'approval' | 'success' | 'warning';
+  variant?: StatusBadgeVariant;
   className?: string;
 }) {
   const styles =

@@ -1,15 +1,49 @@
+import type { StatusBadgeVariant } from '@/components/agent/status-badge';
 import type { AgencyTeamMember } from '@/lib/crossub-api/agent-client';
 import type { CreateAgentLeasingCycleInput } from '@/lib/crossub-api/agent-workflow-client';
 import type { LeasingTimelineEvent } from '@/lib/leasing/types';
 import {
   LEASING_CREATE_RELET_DECISION,
   LEASING_MAIN_STATUS_AWAITING_CONFIRMATION,
+  LEASING_MAIN_STATUS_BADGE_VARIANT,
+  LEASING_MAIN_STATUS_LABEL,
   LEASING_RELET_REMINDER_ACTOR,
 } from '@/constants/leasing-relet-decision';
 
 /** True while the cycle waits on the agent's re-let confirmation. */
 export function isAwaitingReletConfirmation(detail: { mainStatus?: string } | null | undefined): boolean {
   return detail?.mainStatus === LEASING_MAIN_STATUS_AWAITING_CONFIRMATION;
+}
+
+type CycleMainStatusSource = { mainStatus?: string } | null | undefined;
+
+function knownMainStatus(cycle: CycleMainStatusSource): keyof typeof LEASING_MAIN_STATUS_LABEL | null {
+  const status = cycle?.mainStatus;
+  return status && Object.prototype.hasOwnProperty.call(LEASING_MAIN_STATUS_LABEL, status)
+    ? (status as keyof typeof LEASING_MAIN_STATUS_LABEL)
+    : null;
+}
+
+/** Agent-facing main-status label; null when the server did not send a (known) one. */
+export function leasingCycleStatusLabel(cycle: CycleMainStatusSource): string | null {
+  const status = knownMainStatus(cycle);
+  return status ? LEASING_MAIN_STATUS_LABEL[status] : null;
+}
+
+/** `StatusBadge` variant for the main status; null when absent. */
+export function leasingCycleStatusBadgeVariant(cycle: CycleMainStatusSource): StatusBadgeVariant | null {
+  const status = knownMainStatus(cycle);
+  return status ? LEASING_MAIN_STATUS_BADGE_VARIANT[status] : null;
+}
+
+/**
+ * The step text to show for a letting. A cycle awaiting the agent's confirmation has not
+ * started, so its lifecycle step (open inspection) would mislead — show the status instead.
+ */
+export function leasingCycleStageLabel(cycle: CycleMainStatusSource, lifecycleStepLabel: string): string {
+  return isAwaitingReletConfirmation(cycle)
+    ? (leasingCycleStatusLabel(cycle) ?? lifecycleStepLabel)
+    : lifecycleStepLabel;
 }
 
 /** Reminders the server has sent on the re-let ladder, counted from the timeline. */

@@ -68,6 +68,12 @@ import type {
 } from '@/lib/types';
 import { workflowCaseReferenceLabel } from '@/lib/workflow-case-reference';
 import {
+  isAwaitingReletConfirmation,
+  leasingCycleStageLabel,
+  leasingCycleStatusBadgeVariant,
+  leasingCycleStatusLabel,
+} from '@/utils/leasing-relet-decision';
+import {
   tribunalCaseHasArrears,
   tribunalPrimaryDaysOverdue,
   tribunalStatusBadgeVariant,
@@ -1309,7 +1315,10 @@ export function LeasingCyclesTable({
             : compareStrings(a.propertyAddress, b.propertyAddress);
           break;
         case 'lifecycle':
-          cmp = compareStrings(leasingLifecycleProgress(a).currentStepLabel, leasingLifecycleProgress(b).currentStepLabel);
+          cmp = compareStrings(
+            leasingCycleStageLabel(a, leasingLifecycleProgress(a).currentStepLabel),
+            leasingCycleStageLabel(b, leasingLifecycleProgress(b).currentStepLabel),
+          );
           break;
         case 'onboarding':
           cmp = compareStrings(leasingOnboardingProgress(a)?.currentStepLabel ?? '', leasingOnboardingProgress(b)?.currentStepLabel ?? '');
@@ -1377,6 +1386,9 @@ export function LeasingCyclesTable({
           const href = propertyDetail(cycle.propertyId);
           const lifecycle = leasingLifecycleProgress(cycle);
           const onboarding = leasingOnboardingProgress(cycle);
+          const statusLabel = leasingCycleStatusLabel(cycle);
+          const statusVariant = leasingCycleStatusBadgeVariant(cycle) ?? undefined;
+          const awaiting = isAwaitingReletConfirmation(cycle);
           const openCycle = onCycleClick ? () => onCycleClick(cycle) : undefined;
           const title = hidePropertyColumn
             ? workflowCaseReferenceLabel(cycle.id, 'leasing')
@@ -1392,6 +1404,9 @@ export function LeasingCyclesTable({
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
+                  {awaiting && statusLabel ? (
+                    <StatusBadge label={statusLabel} variant={statusVariant} className="mb-1" />
+                  ) : null}
                   <p className="truncate text-sm font-semibold">{title}</p>
                   <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
                     {onboarding?.currentStepLabel
@@ -1402,7 +1417,12 @@ export function LeasingCyclesTable({
                 <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-                <span className="text-primary font-medium">{lifecycle.currentStepLabel}</span>
+                {!awaiting && statusLabel ? (
+                  <StatusBadge label={statusLabel} variant={statusVariant} />
+                ) : null}
+                {awaiting ? null : (
+                  <span className="text-primary font-medium">{lifecycle.currentStepLabel}</span>
+                )}
                 <span className="font-medium tabular-nums">
                   {cycle.rentPerWeek != null ? `${formatCurrency(cycle.rentPerWeek)}/wk` : '—'}
                 </span>
@@ -1439,6 +1459,9 @@ export function LeasingCyclesTable({
               const href = propertyDetail(cycle.propertyId);
               const lifecycle = leasingLifecycleProgress(cycle);
               const onboarding = leasingOnboardingProgress(cycle);
+              const statusLabel = leasingCycleStatusLabel(cycle);
+              const statusVariant = leasingCycleStatusBadgeVariant(cycle) ?? undefined;
+              const awaiting = isAwaitingReletConfirmation(cycle);
               const isSelected = selectedCycleId === cycle.id;
               const openCycle = onCycleClick ? () => onCycleClick(cycle) : undefined;
               return (
@@ -1465,7 +1488,16 @@ export function LeasingCyclesTable({
                     </ModuleTableLinkCell>
                   )}
                   <td className={moduleTableCellClassName('text-xs font-medium text-primary')}>
-                    <ModuleTableTruncateText>{lifecycle.currentStepLabel}</ModuleTableTruncateText>
+                    {statusLabel ? (
+                      <div className="flex flex-col items-start gap-1">
+                        <StatusBadge label={statusLabel} variant={statusVariant} />
+                        {awaiting ? null : (
+                          <ModuleTableTruncateText>{lifecycle.currentStepLabel}</ModuleTableTruncateText>
+                        )}
+                      </div>
+                    ) : (
+                      <ModuleTableTruncateText>{lifecycle.currentStepLabel}</ModuleTableTruncateText>
+                    )}
                   </td>
                   <td className={moduleTableCellClassName('text-xs text-muted-foreground')}>
                     <ModuleTableTruncateText>{onboarding?.currentStepLabel ?? '—'}</ModuleTableTruncateText>

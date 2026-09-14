@@ -2,6 +2,10 @@ import type { components } from '@crossub-thongz/api-contract';
 
 import { ApiError, api, apiV1 } from '@/lib/api';
 import { fileToBase64WithProgress } from '@/lib/file-upload';
+import type {
+  ServerLeasingMainStatus,
+  ServerLeasingReletDecision,
+} from '@/lib/leasing-cycle-types';
 
 import { crossub } from './client';
 
@@ -78,6 +82,9 @@ export type AgentLeasingCycle = {
   rentPerWeek?: number | null;
   availableFrom?: string | null;
   createdAt?: string | null;
+  /** Leasing L1 main status. Optional — older API / cached payloads lack it. */
+  mainStatus?: ServerLeasingMainStatus;
+  reletDecision?: ServerLeasingReletDecision | null;
 };
 export type AgentArchivedLeasingCycle = {
   id: string;

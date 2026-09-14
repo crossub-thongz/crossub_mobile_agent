@@ -1,5 +1,6 @@
 import type { components } from '@crossub-thongz/api-contract';
 
+import type { StatusBadgeVariant } from '@/components/agent/status-badge';
 import type { ServerLeasingMainStatus } from '@/lib/leasing-cycle-types';
 
 type ReletDecision = components['schemas']['AgentSetReletDecisionDto']['decision'];
@@ -46,9 +47,47 @@ export const LEASING_OPEN_PROVIDER_OPTIONS: ReadonlyArray<{
   },
 ];
 
+/** Leasing L1 main status of a cycle (server enum values). */
+export const LEASING_MAIN_STATUS = {
+  AWAITING_CONFIRMATION: 'awaiting_confirmation',
+  PREPARATION: 'preparation',
+  ACTIVE_LEASING: 'active_leasing',
+  OFFER_PENDING: 'offer_pending',
+  ONBOARDING: 'onboarding',
+  KEY_HANDOVER: 'key_handover',
+  COMPLETED: 'completed',
+  PAUSED: 'paused',
+  CANCELLED: 'cancelled',
+} as const satisfies Record<string, ServerLeasingMainStatus>;
+
 /** The main status a cycle holds until the agent answers Proceed. */
-export const LEASING_MAIN_STATUS_AWAITING_CONFIRMATION =
-  'awaiting_confirmation' as const satisfies ServerLeasingMainStatus;
+export const LEASING_MAIN_STATUS_AWAITING_CONFIRMATION = LEASING_MAIN_STATUS.AWAITING_CONFIRMATION;
+
+/** Agent-facing wording for each main status on list rows. */
+export const LEASING_MAIN_STATUS_LABEL: Record<ServerLeasingMainStatus, string> = {
+  [LEASING_MAIN_STATUS.AWAITING_CONFIRMATION]: 'Awaiting your confirmation',
+  [LEASING_MAIN_STATUS.PREPARATION]: 'Preparation',
+  [LEASING_MAIN_STATUS.ACTIVE_LEASING]: 'Leasing',
+  [LEASING_MAIN_STATUS.OFFER_PENDING]: 'Offer pending',
+  [LEASING_MAIN_STATUS.ONBOARDING]: 'Onboarding',
+  [LEASING_MAIN_STATUS.KEY_HANDOVER]: 'Key handover',
+  [LEASING_MAIN_STATUS.COMPLETED]: 'Completed',
+  [LEASING_MAIN_STATUS.PAUSED]: 'Paused',
+  [LEASING_MAIN_STATUS.CANCELLED]: 'Cancelled',
+};
+
+/** `StatusBadge` variant per main status — only the agent's own gate is a warning. */
+export const LEASING_MAIN_STATUS_BADGE_VARIANT: Record<ServerLeasingMainStatus, StatusBadgeVariant> = {
+  [LEASING_MAIN_STATUS.AWAITING_CONFIRMATION]: 'warning',
+  [LEASING_MAIN_STATUS.PREPARATION]: 'default',
+  [LEASING_MAIN_STATUS.ACTIVE_LEASING]: 'approval',
+  [LEASING_MAIN_STATUS.OFFER_PENDING]: 'approval',
+  [LEASING_MAIN_STATUS.ONBOARDING]: 'approval',
+  [LEASING_MAIN_STATUS.KEY_HANDOVER]: 'approval',
+  [LEASING_MAIN_STATUS.COMPLETED]: 'success',
+  [LEASING_MAIN_STATUS.PAUSED]: 'default',
+  [LEASING_MAIN_STATUS.CANCELLED]: 'default',
+};
 
 /** Timeline actor stamped on the server's re-let confirmation reminders. */
 export const LEASING_RELET_REMINDER_ACTOR = 'system:leasing-relet-confirm';

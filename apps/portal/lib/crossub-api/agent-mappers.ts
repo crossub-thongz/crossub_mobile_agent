@@ -722,6 +722,8 @@ export function mapAgentLeasingCycles(
     rentPerWeek: c.rentPerWeek ?? undefined,
     availableFrom: c.availableFrom ?? undefined,
     createdAt: c.createdAt ?? undefined,
+    mainStatus: c.mainStatus ?? undefined,
+    reletDecision: c.reletDecision ?? undefined,
   }));
 }
 

@@ -1,5 +1,9 @@
 import type { PropertyApprovalStatus } from '@/constants/api-enums';
 import type { AgentPortfolioId } from '@/lib/agent-scope';
+import type {
+  ServerLeasingMainStatus,
+  ServerLeasingReletDecision,
+} from '@/lib/leasing-cycle-types';
 
 export type Priority = 'urgent' | 'high' | 'normal' | 'low';
 
@@ -236,6 +240,9 @@ export interface LeasingCycle {
   rentPerWeek?: number;
   availableFrom?: string;
   createdAt?: string;
+  /** Server main status; absent on older payloads — rows fall back to `lifecycleStep`. */
+  mainStatus?: ServerLeasingMainStatus;
+  reletDecision?: ServerLeasingReletDecision | null;
 }
 
 /** Cancelled new-letting cycle in the agent archive. */
