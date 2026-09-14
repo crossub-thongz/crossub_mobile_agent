@@ -26,10 +26,12 @@ export type WorkflowCaseRefKind =
   | 'tribunal';
 
 const WORKFLOW_CASE_REF_PREFIX: Record<WorkflowCaseRefKind, string> = {
+  // Inspection task internal reference rule (Tony, 14 Sep 2026): Entry EI-, Final FI-,
+  // Routine RI-, Open OI-. Must agree with the dashboard's WORKFLOW_CASE_REF_PREFIX.
   routine: 'RI-',
-  ingoing: 'II-',
-  outgoing: 'OI-',
-  open: 'OP-',
+  ingoing: 'EI-',
+  outgoing: 'FI-',
+  open: 'OI-',
   maintenance: 'M-',
   rent_review: 'RR-',
   leasing: 'NL-',
@@ -120,7 +122,7 @@ export function inspectionReferenceLabel(id: string, type: InspectionTypeRef): s
   return inspectionCaseReferenceLabel(id, INSPECTION_TYPE_TO_REF_KIND[type]);
 }
 
-/** UUID to hash for II-/OI-/RI-/OP- — OPEN viewing rows store the inspection UUID separately. */
+/** UUID to hash for EI-/FI-/RI-/OI- — OPEN viewing rows store the inspection UUID separately. */
 export function inspectionRefSourceId(inspection: {
   id: string;
   inspectionRecordId?: string;
