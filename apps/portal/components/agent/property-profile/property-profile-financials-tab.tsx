@@ -7,7 +7,10 @@ import { toast } from 'sonner';
 
 import { InvoiceEditorDialog } from '@/components/accounting/invoice-editor-dialog';
 import { RentReconciliationCaseDialog } from '@/components/accounting/rent-reconciliation-case-dialog';
-import { CreateTribunalRentChasingDialog } from '@/components/agent/create-tribunal-rent-chasing-dialog';
+import {
+  CreateTribunalRentChasingDialog,
+  type ArrearsKind,
+} from '@/components/agent/create-tribunal-rent-chasing-dialog';
 import { RentChasingArrearsDialog } from '@/components/agent/rent-chasing-arrears-dialog';
 import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
@@ -246,6 +249,7 @@ export function PropertyProfileFinancialsTab({
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [rentReconOpen, setRentReconOpen] = useState(false);
   const [rentChasingOpen, setRentChasingOpen] = useState(false);
+  const [recordKind, setRecordKind] = useState<ArrearsKind | null>(null);
   const [arrearsDialogOpen, setArrearsDialogOpen] = useState(false);
   const [showFullLedger, setShowFullLedger] = useState(false);
   const [prefill, setPrefill] = useState<AgentTribunalRentChasingPrefill | null>(null);
@@ -335,6 +339,7 @@ export function PropertyProfileFinancialsTab({
       return;
     }
     if (initialWorkflowAction === 'open_rent_chasing') {
+      setRecordKind(null);
       setRentChasingOpen(true);
       onInitialWorkflowActionHandled?.();
     }
@@ -344,6 +349,11 @@ export function PropertyProfileFinancialsTab({
     if (searchParams.get('focus') !== 'arrears') return;
     setArrearsDialogOpen(true);
   }, [searchParams]);
+
+  const openRecord = (kind: ArrearsKind | null = null) => {
+    setRecordKind(kind);
+    setRentChasingOpen(true);
+  };
 
   const rentSummary = summarizeKind(prefill, 'rent');
   const billSummary = summarizeKind(prefill, 'bill');
@@ -388,7 +398,7 @@ export function PropertyProfileFinancialsTab({
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => setRentChasingOpen(true)}
+              onClick={() => openRecord()}
               className="text-primary inline-flex items-center gap-1 text-sm font-semibold"
             >
               Record arrears
@@ -420,7 +430,7 @@ export function PropertyProfileFinancialsTab({
               days={rentSummary.days}
               hasItems={rentSummary.hasItems}
               details={rentDetails}
-              onRecord={() => setRentChasingOpen(true)}
+              onRecord={() => openRecord('rent')}
               onView={() => setArrearsDialogOpen(true)}
             />
             <ArrearsKindCard
@@ -431,7 +441,7 @@ export function PropertyProfileFinancialsTab({
               days={billSummary.days}
               hasItems={billSummary.hasItems}
               details={billDetails}
-              onRecord={() => setRentChasingOpen(true)}
+              onRecord={() => openRecord('bill')}
               onView={() => setArrearsDialogOpen(true)}
             />
             <ArrearsKindCard
@@ -442,7 +452,7 @@ export function PropertyProfileFinancialsTab({
               days={bondSummary.days}
               hasItems={bondSummary.hasItems}
               details={bondDetails}
-              onRecord={() => setRentChasingOpen(true)}
+              onRecord={() => openRecord('bond')}
               onView={() => setArrearsDialogOpen(true)}
             />
           </div>
@@ -610,12 +620,17 @@ export function PropertyProfileFinancialsTab({
 
       <CreateTribunalRentChasingDialog
         open={rentChasingOpen}
-        onOpenChange={setRentChasingOpen}
+        onOpenChange={(open) => {
+          setRentChasingOpen(open);
+          if (!open) setRecordKind(null);
+        }}
         propertyId={propertyId}
         properties={properties}
         mode="rent_chasing"
+        initialKind={recordKind}
         onCreated={() => {
           setRentChasingOpen(false);
+          setRecordKind(null);
           refreshArrears();
         }}
       />

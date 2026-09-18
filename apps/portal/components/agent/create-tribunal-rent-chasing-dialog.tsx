@@ -40,7 +40,7 @@ import {
 import type { Property } from '@/lib/types';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
-type ArrearsKind = 'rent' | 'bill' | 'bond';
+export type ArrearsKind = 'rent' | 'bill' | 'bond';
 
 const ARREARS_KIND_OPTIONS: { id: ArrearsKind; label: string }[] = [
   { id: 'rent', label: 'Rent arrears' },
@@ -283,6 +283,7 @@ export function CreateTribunalRentChasingDialog({
   propertyId: initialPropertyId,
   properties,
   mode = 'rent_chasing',
+  initialKind,
   onCreated,
 }: {
   open: boolean;
@@ -292,6 +293,8 @@ export function CreateTribunalRentChasingDialog({
   properties: Property[];
   /** Rent Chasing from Accounting vs Add tribunal from the Tribunal tab. */
   mode?: 'rent_chasing' | 'tribunal';
+  /** Pre-select this arrears type when recording from a Rent / Bill / Bond card. */
+  initialKind?: ArrearsKind | null;
   onCreated?: (caseId: string) => void;
 }) {
   const [propertyId, setPropertyId] = useState(initialPropertyId ?? '');
@@ -363,12 +366,12 @@ export function CreateTribunalRentChasingDialog({
   useEffect(() => {
     if (!open) return;
     setPropertyId(initialPropertyId ?? '');
-    setSelectedKinds([]);
+    setSelectedKinds(mode === 'rent_chasing' && initialKind ? [initialKind] : []);
     setSelectedRecordedKeys([]);
     setSelectedPaidKeys([]);
     setPaidDateOpen(false);
     setPrefill(null);
-  }, [open, initialPropertyId]);
+  }, [open, initialPropertyId, initialKind, mode]);
 
   useEffect(() => {
     if (!open || !propertyId) {
@@ -394,13 +397,27 @@ export function CreateTribunalRentChasingDialog({
         if (cancelled) return;
         setPrefill(nextPrefill);
         if (isAddingArrears) {
-          setRentAmount('');
+          const property = properties.find((item) => item.id === propertyId);
           setPaymentCycle('weekly');
-          setRentPaidTo('');
-          setBills([]);
+          setRentAmount(
+            initialKind === 'rent' && property?.rentWeekly
+              ? String(property.rentWeekly)
+              : '',
+          );
+          setRentPaidTo(
+            initialKind === 'rent' && property?.rentPaidUntil
+              ? property.rentPaidUntil.slice(0, 10)
+              : '',
+          );
+          setBills(initialKind === 'bill' ? [newBillRow()] : []);
           setAgreementEndDate(propertyAgreementEnd(nextPrefill));
-          setBondAmount('');
+          if (initialKind === 'bond' && property?.bondAmount) {
+            setBondAmount(String(property.bondAmount));
+          } else {
+            setBondAmount('');
+          }
           setBondNotes('');
+          setSelectedKinds(initialKind ? [initialKind] : []);
         } else {
           stashPrefillFields(nextPrefill, {
             setRentAmount,
@@ -412,8 +429,8 @@ export function CreateTribunalRentChasingDialog({
             setBondNotes,
           });
           setBills([]);
+          setSelectedKinds([]);
         }
-        setSelectedKinds([]);
         setSelectedRecordedKeys([]);
         setSelectedPaidKeys([]);
       } catch (err) {
@@ -433,7 +450,7 @@ export function CreateTribunalRentChasingDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, propertyId, isAddingArrears]);
+  }, [open, propertyId, isAddingArrears, initialKind]);
 
   const lockedProperty = Boolean(initialPropertyId);
 
