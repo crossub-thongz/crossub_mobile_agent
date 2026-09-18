@@ -15,12 +15,14 @@ export function TaskForceActionDialog({
   onOpenChange,
   action,
   submitting,
+  completed = false,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   action: 'complete' | 'delete' | null;
   submitting: boolean;
+  completed?: boolean;
   onConfirm: () => void;
 }) {
   const isDelete = action === 'delete';
@@ -39,7 +41,9 @@ export function TaskForceActionDialog({
           </DialogTitle>
           <DialogDescription>
             {isDelete
-              ? 'This will remove the task from the active workflow and cancel all remaining actions related to it. If this task has already been paid, the fee will be refunded. This action will be recorded in the Audit Log.'
+              ? completed
+                ? 'This will remove the task from the active workflow and cancel all remaining actions related to it. This action will be recorded in the Audit Log.'
+                : 'This will remove the task from the active workflow and cancel all remaining actions related to it. If this task has already been paid, the fee will be refunded. This action will be recorded in the Audit Log.'
               : 'This will force complete the task and close all remaining workflow actions related to this task. If this task requires a payment, it must already be paid.'}
           </DialogDescription>
         </DialogHeader>

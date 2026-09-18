@@ -159,6 +159,7 @@ export function TaskPageActions({
         }}
         action={confirmAction}
         submitting={submitting}
+        completed={completed}
         onConfirm={() => {
           if (confirmAction) void runAction(confirmAction);
         }}

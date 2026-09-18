@@ -19,6 +19,7 @@ import { PropertyApprovalBanner } from '@/components/agent/property-approval-ban
 import { PropertyProfileDetails } from '@/components/agent/property-profile-details';
 import { PropertyProfileV2 } from '@/components/agent/property-profile/property-profile-v2';
 import { PropertyProfileActivitiesTab } from '@/components/agent/property-profile/property-profile-activities-tab';
+import { PropertyProfileFinancialsTab } from '@/components/agent/property-profile/property-profile-financials-tab';
 import { PropertyProfileTasksTab } from '@/components/agent/property-profile/property-profile-tasks-tab';
 import { useIsAgentUiV2 } from '@/components/providers/agent-ui-provider';
 import {
@@ -205,6 +206,11 @@ export default function PropertyDetailPage() {
   );
   const [tab, setTab] = useState<ViewTab>('Documents');
   const [profileSection, setProfileSection] = useState<PropertyProfileSection>('overview');
+  const [pendingAccountingAction, setPendingAccountingAction] =
+    useState<PropertyWorkflowActionId | null>(null);
+  const [financialSubView, setFinancialSubView] = useState<'overview' | 'fees' | 'bills'>(
+    'overview',
+  );
   const [selectedInspectionId, setSelectedInspectionId] = useState<string | null>(null);
   const [selectedRentReviewId, setSelectedRentReviewId] = useState<string | null>(null);
   const [leasingChatOpen, setLeasingChatOpen] = useState(false);
@@ -425,6 +431,9 @@ export default function PropertyDetailPage() {
   );
 
   const updateProfileSection = (section: PropertyProfileSection) => {
+    if (section !== 'financials') {
+      setFinancialSubView('overview');
+    }
     setProfileSection(section);
     const next = new URLSearchParams(searchParams.toString());
     next.set('section', section);
@@ -470,6 +479,7 @@ export default function PropertyDetailPage() {
       actionId === 'open_rent_chasing'
     ) {
       updateProfileSection('financials');
+      setPendingAccountingAction(actionId);
       return true;
     }
     return false;
@@ -592,12 +602,40 @@ export default function PropertyDetailPage() {
             />
           }
           financialsPanel={
-            <div className="v2-dashboard__card rounded-2xl border px-4 py-10 text-center">
-              <p className="text-sm font-medium">Coming Soon</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Property financials are not available yet.
-              </p>
-            </div>
+            financialSubView === 'fees' ? (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setFinancialSubView('overview')}
+                  className="text-primary text-sm font-semibold"
+                >
+                  ← Back to financials
+                </button>
+                <PropertyFeesTab property={property} propertyId={id} />
+              </div>
+            ) : financialSubView === 'bills' ? (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setFinancialSubView('overview')}
+                  className="text-primary text-sm font-semibold"
+                >
+                  ← Back to financials
+                </button>
+                <PropertyBillsTab propertyId={id} invoiceMode={billingTabLabel === 'Invoice'} />
+              </div>
+            ) : (
+              <PropertyProfileFinancialsTab
+                property={property}
+                propertyId={id}
+                accounting={acct}
+                onRefresh={() => void refresh()}
+                initialWorkflowAction={pendingAccountingAction}
+                onInitialWorkflowActionHandled={() => setPendingAccountingAction(null)}
+                onOpenFees={() => setFinancialSubView('fees')}
+                onOpenBills={() => setFinancialSubView('bills')}
+              />
+            )
           }
           documentsPanel={
             <PropertyDocumentsTab
