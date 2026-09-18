@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-18
+
+### Changed
+- **`@crossub-thongz/api-contract` bumped to ^0.24.0 (was ^0.23.0).** Picks up rent review v2's negotiation loop: the agent's `landlord-offer`, `accept-offer`, `keep-landlord-offer`, `withdraw`, `review-later` and `follow-ups/{followUpId}/complete`, plus the tenant's `questions`. Registry install, so it needed 0.24.0 published first. No app code changed; `tsc` reports the same 16 errors as before, line for line, and zero `not assignable to type 'never'`. The app still types these routes by hand where it calls them, so the bump makes the switch possible rather than doing it.
+
 ## 2026-09-15
 
 ### Added
