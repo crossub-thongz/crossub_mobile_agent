@@ -700,7 +700,7 @@ export default function BillPage() {
   }
 
   return (
-    <AgentShell title="Invoice" locked={summary?.billingBlocked === true}>
+    <AgentShell title="Invoice">
       <div className="space-y-5">
         <PageIntro
           title="Payment Method"
