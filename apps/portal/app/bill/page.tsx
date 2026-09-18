@@ -1,6 +1,6 @@
 'use client';
 
-import { CreditCard, FileText, Loader2, Lock, RefreshCw } from 'lucide-react';
+import { CreditCard, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -38,6 +38,7 @@ import {
 import { resolvePaymentFlow } from '@/lib/billing/resolve-payment-flow';
 import { finalizeBillingChargePayment } from '@/lib/billing/finalize-billing-payment';
 import { AgentShell } from '@/components/layout/agent-shell';
+import { AccountLockedBanner } from '@/components/billing/account-locked-banner';
 import { Button } from '@/components/ui/button';
 import {
   confirmAgentPaymentMethodSetup,
@@ -699,7 +700,7 @@ export default function BillPage() {
   }
 
   return (
-    <AgentShell title="Invoice">
+    <AgentShell title="Invoice" locked={summary?.billingBlocked === true}>
       <div className="space-y-5">
         <PageIntro
           title="Payment Method"
@@ -712,20 +713,7 @@ export default function BillPage() {
           }
         />
 
-        {summary?.billingBlocked ? (
-          <div className="flex gap-3 rounded-xl border border-amber-500/35 bg-amber-500/10 p-4">
-            <Lock className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-300" />
-            <div>
-              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                Account locked — invoice overdue
-              </p>
-              <p className="mt-1 text-sm text-amber-800/90 dark:text-amber-200/90">
-                Pay your outstanding service invoice below to restore full access to the Agent
-                app.
-              </p>
-            </div>
-          </div>
-        ) : null}
+        {summary?.billingBlocked ? <AccountLockedBanner /> : null}
 
         {stripeConfigured ? (
           <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm">

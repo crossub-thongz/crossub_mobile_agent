@@ -219,14 +219,15 @@ export function PlatformTaxInvoicePreview({ invoice }: { invoice: AgentBillingTa
       ) : null}
 
       <div className="flex flex-wrap items-start justify-between gap-6">
-        <div className="space-y-1 text-xs">
+        <div className="w-[15.5rem] max-w-full min-w-0 space-y-1 text-xs">
           <p>
             <span className="font-semibold">Due Date:</span> {formatAuDate(invoice.dueDate)}
           </p>
-          <p>Bank: {invoice.bankName}</p>
-          <p>Account Name: {invoice.bankAccountName}</p>
-          <p>BSB: {invoice.bankBsb}</p>
-          <p>Account Number: {invoice.bankAccountNumber}</p>
+          <p className="text-[11px] font-bold leading-snug break-words">
+            All payments are processed securely via Stripe. Please ensure a valid
+            payment method is added to your Agent Portal to allow payment to be
+            processed.
+          </p>
         </div>
         <dl className="min-w-[14rem] space-y-1 text-xs">
           <div className="flex justify-between gap-6">

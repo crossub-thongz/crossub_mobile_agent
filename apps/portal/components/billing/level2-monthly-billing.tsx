@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronDown, FileText, Loader2, Lock } from 'lucide-reac
 import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { AccountLockedBanner } from '@/components/billing/account-locked-banner';
 import {
   includedAllowanceRemainingLabel,
   isMonthlyInvoiceServiceType,
@@ -599,10 +600,7 @@ function Level2MonthGroupCard({
             ) : null}
 
             {billingBlocked && group.paymentStatus === 'unpaid' ? (
-              <div className="flex gap-2 border-b border-destructive/25 bg-destructive/10 px-5 py-3 text-xs text-destructive">
-                <Lock className="mt-0.5 size-3.5 shrink-0" />
-                <p>Account locked — pay this invoice to restore full access to the Agent app.</p>
-              </div>
+              <AccountLockedBanner compact />
             ) : showLockCountdown ? (
               <div
                 className={cn(

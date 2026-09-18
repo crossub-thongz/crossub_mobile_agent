@@ -58,6 +58,7 @@ export function AgentShell({
   fillMain,
   headerMeta,
   headerActions,
+  locked,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -85,6 +86,8 @@ export function AgentShell({
   };
   /** Right-aligned actions on the v2 desktop page title row. */
   headerActions?: React.ReactNode;
+  /** Overdue billing lock — darken the canvas so the pay wall is unmissable. */
+  locked?: boolean;
 }) {
   const pathname = usePathname();
   const isV2 = useIsAgentUiV2();
@@ -146,12 +149,25 @@ export function AgentShell({
     };
   }, [moreOpen]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!locked) {
+      root.classList.remove('account-locked');
+      return;
+    }
+    root.classList.add('account-locked');
+    return () => {
+      root.classList.remove('account-locked');
+    };
+  }, [locked]);
+
   return (
     <div
       className={cn(
         'flex h-[calc(100dvh-var(--env-banner-height,0px))] overflow-hidden',
         isV2 && 'v2-dashboard-canvas',
         !isV2 && 'bg-background',
+        locked && 'account-locked-canvas dark',
       )}
     >
       <Suspense fallback={null}>

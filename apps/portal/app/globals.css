@@ -671,10 +671,84 @@
   }
 }
 
+/* Overdue invoice lock — force a dark red canvas and a spotlight alert.
+   Uses html.account-locked (toggled by AgentShell) so v2 mint canvas and
+   gradient-stripping rules cannot keep the page looking like the rest of the app. */
+html.account-locked,
+html.account-locked[data-ui='v2'] {
+  --background: #0b1020;
+  --card: #1c1416;
+  --card-foreground: #f8fafc;
+  --popover: #1c1416;
+  --popover-foreground: #f8fafc;
+  --foreground: #f8fafc;
+  --secondary: #2a1a1c;
+  --secondary-foreground: #f8fafc;
+  --muted: #2a1a1c;
+  --muted-foreground: #d6d3d1;
+  --accent: #7f1d1d;
+  --accent-foreground: #fff7ed;
+  --border: #3f1d22;
+  --input: #3f1d22;
+  --crossub-ink: #f8fafc;
+  --crossub-body: #e7e5e4;
+  --crossub-muted: #a8a29e;
+  --crossub-border: #3f1d22;
+  --crossub-wash: #0b1020;
+  background-color: #0b1020 !important;
+}
+
+html.account-locked body {
+  background-color: #0b1020 !important;
+  color: #f8fafc;
+}
+
+html.account-locked .v2-dashboard-canvas,
+html.account-locked .v2-dashboard-canvas .v2-dashboard-chrome,
+html.account-locked .account-locked-canvas,
+html.account-locked[data-ui='v2'] .v2-dashboard-canvas,
+html.account-locked[data-ui='v2'] .v2-dashboard-canvas .v2-dashboard-chrome {
+  --dashboard-canvas-base: #0b1020;
+  --dashboard-canvas-layers:
+    radial-gradient(ellipse 80% 50% at 50% -8%, rgba(220, 38, 38, 0.42), transparent 58%),
+    radial-gradient(ellipse 70% 45% at 100% 100%, rgba(127, 29, 29, 0.34), transparent 55%),
+    linear-gradient(180deg, #1a0a0e 0%, #0b1020 42%, #070b14 100%);
+  background-color: #12080c !important;
+  background-image: var(--dashboard-canvas-layers) !important;
+  color: #f8fafc;
+}
+
+html.account-locked .v2-dashboard-canvas::before,
+html.account-locked .account-locked-canvas::before {
+  opacity: 0.2;
+  background-image: radial-gradient(circle at center, rgba(254, 202, 202, 0.2) 0.7px, transparent 0.7px);
+}
+
+.account-locked-alert:not(.account-locked-alert--compact) {
+  animation: account-locked-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes account-locked-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 6px rgba(220, 38, 38, 0.26),
+      0 18px 40px rgba(127, 29, 29, 0.48),
+      inset 0 1px 0 rgba(254, 226, 226, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 14px rgba(220, 38, 38, 0.12),
+      0 22px 52px rgba(185, 28, 28, 0.6),
+      inset 0 1px 0 rgba(254, 226, 226, 0.4);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-voice-wave,
   .animate-voice-wave-settle,
-  .animate-voice-pulse-ring {
+  .animate-voice-pulse-ring,
+  .account-locked-alert {
     animation: none;
   }
 }
