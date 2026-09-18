@@ -60,8 +60,8 @@ export function TaskForceActionDialog({
           >
             {submitting
               ? isDelete
-                ? 'Deletingù'
-                : 'Completingù'
+                ? 'Deleting...'
+                : 'Completing...'
               : isDelete
                 ? 'Delete task'
                 : 'Mark as completed'}
