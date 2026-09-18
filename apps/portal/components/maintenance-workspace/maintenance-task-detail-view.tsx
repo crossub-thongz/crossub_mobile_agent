@@ -375,7 +375,15 @@ export function MaintenanceTaskDetailView({
                 Close job
               </Button>
             ) : null}
-            <TaskPageActions propertyId={item.propertyId} reference={taskRef} />
+            <TaskPageActions
+              propertyId={item.propertyId}
+              reference={taskRef}
+              taskKind="maintenance"
+              taskId={item.id}
+              completed={/complete|closed/i.test(`${item.apiStatus ?? ''} ${item.status}`)}
+              deleted={/cancel/i.test(`${item.apiStatus ?? ''} ${item.status}`)}
+              onMutated={onCaseUpdated}
+            />
           </div>
         </div>
       </header>

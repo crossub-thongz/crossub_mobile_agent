@@ -305,7 +305,13 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                   </div>
                 </div>
               </div>
-              <TaskPageActions propertyId={propertyId} reference={taskRef} />
+              <TaskPageActions
+                propertyId={propertyId}
+                reference={taskRef}
+                taskKind="leasing"
+                taskId={cycleId}
+                completed={cycle.isActive === false}
+              />
             </div>
           </header>
 

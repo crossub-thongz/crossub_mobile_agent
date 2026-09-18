@@ -231,7 +231,15 @@ export function RentReviewTaskDetailView({
               </div>
             </div>
           </div>
-          <TaskPageActions propertyId={propertyId || null} reference={taskRef} />
+          <TaskPageActions
+            propertyId={propertyId || null}
+            reference={taskRef}
+            taskKind="rent_review"
+            taskId={detail.id}
+            completed={detail.workflowState === 'completed'}
+            deleted={detail.workflowState === 'cancelled'}
+            onMutated={() => onUpdated?.(detail)}
+          />
         </div>
       </header>
 

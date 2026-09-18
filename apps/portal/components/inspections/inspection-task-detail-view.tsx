@@ -17,7 +17,12 @@ import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
-import { INSPECTION_TYPE_LABEL, INSPECTION_TYPE_SHORT } from '@/lib/inspections/presentation';
+import {
+  INSPECTION_TYPE_LABEL,
+  INSPECTION_TYPE_SHORT,
+  isInspectionCancelled,
+  isInspectionDone,
+} from '@/lib/inspections/presentation';
 import {
   buildInspectionActivityEntries,
   buildInspectionDetailRows,
@@ -226,7 +231,14 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
               </div>
             </div>
           </div>
-          <TaskPageActions propertyId={propertyId} reference={taskRef} />
+          <TaskPageActions
+            propertyId={propertyId}
+            reference={taskRef}
+            taskKind="inspection"
+            taskId={inspection.id}
+            completed={isInspectionDone(inspection) && !isInspectionCancelled(inspection)}
+            deleted={isInspectionCancelled(inspection)}
+          />
         </div>
       </header>
 

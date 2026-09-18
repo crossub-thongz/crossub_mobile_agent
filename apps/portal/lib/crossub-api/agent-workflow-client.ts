@@ -487,3 +487,38 @@ export async function deleteAgentTribunalCase(
     body: JSON.stringify({ reason }),
   });
 }
+
+export type AgentTaskKind =
+  | 'inspection'
+  | 'leasing'
+  | 'maintenance'
+  | 'rent_review'
+  | 'end_leasing'
+  | 'tribunal';
+
+export type AgentTaskLifecycleResult = {
+  id: string;
+  kind: AgentTaskKind;
+  action: 'force_completed' | 'force_deleted';
+  status: 'COMPLETED' | 'DELETED';
+};
+
+export async function forceCompleteAgentTask(
+  kind: AgentTaskKind,
+  taskId: string,
+): Promise<AgentTaskLifecycleResult> {
+  return agentFetch(
+    `/agent/tasks/${encodeURIComponent(kind)}/${encodeURIComponent(taskId)}/force-complete`,
+    { method: 'POST', body: JSON.stringify({}) },
+  );
+}
+
+export async function forceDeleteAgentTask(
+  kind: AgentTaskKind,
+  taskId: string,
+): Promise<AgentTaskLifecycleResult> {
+  return agentFetch(
+    `/agent/tasks/${encodeURIComponent(kind)}/${encodeURIComponent(taskId)}/force-delete`,
+    { method: 'POST', body: JSON.stringify({}) },
+  );
+}

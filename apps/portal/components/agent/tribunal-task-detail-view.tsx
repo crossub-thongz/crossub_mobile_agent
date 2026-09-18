@@ -261,7 +261,17 @@ export function TribunalTaskDetailView({
               </div>
             </div>
           </div>
-          <TaskPageActions propertyId={tribunalCase.propertyId} reference={taskRef} />
+          <TaskPageActions
+            propertyId={tribunalCase.propertyId}
+            reference={taskRef}
+            taskKind="tribunal"
+            taskId={tribunalCase.id}
+            completed={(tribunalCase.apiStatus ?? '').toLowerCase() === 'completed'}
+            deleted={
+              tribunalCase.status === 'closed' ||
+              (tribunalCase.apiStatus ?? '').toLowerCase() === 'closed'
+            }
+          />
         </div>
       </header>
 

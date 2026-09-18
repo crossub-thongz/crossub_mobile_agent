@@ -34,6 +34,7 @@ import { buildPropertyOverviewJobRows } from '@/lib/property-job-rows';
 import { buildPropertyLeasingWorkflowCases } from '@/lib/property-leasing-workflow-cases';
 import { endLeasingVacateDate } from '@/lib/end-leasing/agent-workflow-model';
 import type { TerminationCaseDetail } from '@/lib/end-leasing/types';
+import { useEndLeasingStore } from '@/lib/end-leasing/store';
 import { resolvePropertyDisplayAddress } from '@/lib/property-address';
 import {
   cn,
@@ -120,6 +121,7 @@ export function EndLeasingTaskDetailView({
     tribunalCases,
     accounting,
   } = useAgentData();
+  const refreshCase = useEndLeasingStore((s) => s.refreshCase);
 
   const [activeTab, setActiveTab] = useState<EndLeasingTaskTab>('workflow');
   useWorkflowTourTabFocus(setActiveTab, 'workflow');
@@ -264,7 +266,15 @@ export function EndLeasingTaskDetailView({
               ) : null}
             </div>
           </div>
-          <TaskPageActions propertyId={propertyId || null} reference={taskRef} />
+          <TaskPageActions
+            propertyId={propertyId || null}
+            reference={taskRef}
+            taskKind="end_leasing"
+            taskId={caseData.id}
+            completed={caseData.status === 'completed'}
+            deleted={Boolean(caseData.cancelledAt) || caseData.status === 'cancelled'}
+            onMutated={() => refreshCase(caseData.id)}
+          />
         </div>
       </header>
 
