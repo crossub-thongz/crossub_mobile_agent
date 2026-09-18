@@ -67,12 +67,13 @@ import {
 } from '@/lib/utils';
 
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
+import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 
 const TABS: { id: MaintenanceTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
   { id: 'details', label: 'Details' },
   { id: 'quotes', label: 'Quotes' },
-  { id: 'activity', label: 'Activity' },
+  { id: 'activity', label: 'Audit Log' },
   { id: 'documents', label: 'Documents' },
   { id: 'notes', label: 'Notes' },
   { id: 'messages', label: 'Messages' },
@@ -172,6 +173,10 @@ export function MaintenanceTaskDetailView({
   const [closeJobOpen, setCloseJobOpen] = useState(false);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
+  const { entries: auditEntries, reload: reloadAudit } = useTaskAuditLog(
+    'maintenance',
+    item.id,
+  );
   // Hidden once the job is finished or gone — there is nothing left to close.
   const canCloseJob = !MAINTENANCE_CLOSE_HIDDEN_STATUSES.includes(workspaceCase.status);
 
@@ -262,8 +267,18 @@ export function MaintenanceTaskDetailView({
     [contractorName, quoteAmount, workspaceCase],
   );
   const activityEntries = useMemo(
-    () => buildMaintenanceActivityEntries(workspaceCase),
-    [workspaceCase],
+    () =>
+      mergeTaskAuditIntoActivity(
+        buildMaintenanceActivityEntries(workspaceCase),
+        auditEntries,
+        (entry) => ({
+          id: entry.id,
+          at: entry.at,
+          title: entry.sentence,
+          actor: entry.actor,
+        }),
+      ),
+    [auditEntries, workspaceCase],
   );
 
   const address =
@@ -382,7 +397,10 @@ export function MaintenanceTaskDetailView({
               taskId={item.id}
               completed={/complete|closed/i.test(`${item.apiStatus ?? ''} ${item.status}`)}
               deleted={/cancel/i.test(`${item.apiStatus ?? ''} ${item.status}`)}
-              onMutated={onCaseUpdated}
+              onMutated={async () => {
+                await onCaseUpdated?.();
+                await reloadAudit();
+              }}
             />
           </div>
         </div>
@@ -508,7 +526,7 @@ export function MaintenanceTaskDetailView({
 
               <section>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold">Activity timeline</h3>
+                  <h3 className="text-sm font-semibold">Audit log</h3>
                   <button
                     type="button"
                     onClick={() => setActiveTab('activity')}

@@ -16,6 +16,7 @@ import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-d
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
+import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import { inspectionDetail, propertyDetail } from '@/constants/routes';
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { fromProperty } from '@/lib/detail-navigation';
@@ -50,7 +51,7 @@ const TABS: { id: EndLeasingTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
   { id: 'details', label: 'Details' },
   { id: 'inspections', label: 'Inspections' },
-  { id: 'activity', label: 'Activity' },
+  { id: 'activity', label: 'Audit Log' },
   { id: 'documents', label: 'Documents' },
   { id: 'notes', label: 'Notes' },
 ];
@@ -126,6 +127,10 @@ export function EndLeasingTaskDetailView({
   const [activeTab, setActiveTab] = useState<EndLeasingTaskTab>('workflow');
   useWorkflowTourTabFocus(setActiveTab, 'workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
+  const { entries: auditEntries, reload: reloadAudit } = useTaskAuditLog(
+    'end_leasing',
+    caseData.id,
+  );
 
   const propertyId = caseData.propertyId ?? '';
   const property = properties.find((row) => row.id === propertyId) ?? null;
@@ -144,8 +149,18 @@ export function EndLeasingTaskDetailView({
     [caseData, workflow],
   );
   const activityEntries = useMemo(
-    () => buildEndLeasingActivityEntries(caseData),
-    [caseData],
+    () =>
+      mergeTaskAuditIntoActivity(
+        buildEndLeasingActivityEntries(caseData),
+        auditEntries,
+        (entry) => ({
+          id: entry.id,
+          at: entry.at,
+          title: entry.sentence,
+          actor: entry.actor,
+        }),
+      ),
+    [auditEntries, caseData],
   );
 
   const displayAddress = resolvePropertyDisplayAddress(
@@ -273,7 +288,10 @@ export function EndLeasingTaskDetailView({
             taskId={caseData.id}
             completed={caseData.status === 'completed'}
             deleted={Boolean(caseData.cancelledAt) || caseData.status === 'cancelled'}
-            onMutated={() => refreshCase(caseData.id)}
+            onMutated={async () => {
+              await refreshCase(caseData.id);
+              await reloadAudit();
+            }}
           />
         </div>
       </header>
@@ -385,7 +403,7 @@ export function EndLeasingTaskDetailView({
 
               <section>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold">Activity timeline</h3>
+                  <h3 className="text-sm font-semibold">Audit log</h3>
                   <button
                     type="button"
                     onClick={() => setActiveTab('activity')}

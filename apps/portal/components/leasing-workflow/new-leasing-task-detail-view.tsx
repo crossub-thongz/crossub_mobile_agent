@@ -35,6 +35,7 @@ import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import { resolveOnboardingTenant } from '@/lib/leasing/onboarding-display';
 import { useLeasingWorkflowStore } from '@/lib/leasing/store';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
+import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import {
   buildNewLeasingActivityEntries,
   buildNewLeasingDocumentGroups,
@@ -68,7 +69,7 @@ const TABS: { id: NewLeasingTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
   { id: 'details', label: 'Details' },
   { id: 'applicants', label: 'Applicants' },
-  { id: 'activity', label: 'Activity' },
+  { id: 'activity', label: 'Audit Log' },
   { id: 'documents', label: 'Documents' },
   { id: 'notes', label: 'Notes' },
 ];
@@ -159,6 +160,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
   const [activeTab, setActiveTab] = useState<NewLeasingTaskTab>('workflow');
   useWorkflowTourTabFocus(setActiveTab, 'workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
+  const { entries: auditEntries, reload: reloadAudit } = useTaskAuditLog('leasing', cycleId);
 
   const propertyId = cycle?.propertyId ?? '';
   const property = properties.find((row) => row.id === propertyId) ?? null;
@@ -194,8 +196,18 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
     [leasingDetail],
   );
   const activityEntries = useMemo(
-    () => (leasingDetail ? buildNewLeasingActivityEntries(leasingDetail) : []),
-    [leasingDetail],
+    () =>
+      mergeTaskAuditIntoActivity(
+        leasingDetail ? buildNewLeasingActivityEntries(leasingDetail) : [],
+        auditEntries,
+        (entry) => ({
+          id: entry.id,
+          at: entry.at,
+          title: entry.sentence,
+          actor: entry.actor,
+        }),
+      ),
+    [auditEntries, leasingDetail],
   );
   const tenant = leasingDetail ? resolveOnboardingTenant(leasingDetail) : null;
   const applications = leasingDetail?.applicationsDetail ?? [];
@@ -311,6 +323,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
                 taskKind="leasing"
                 taskId={cycleId}
                 completed={cycle.isActive === false}
+                onMutated={() => void reloadAudit()}
               />
             </div>
           </header>
@@ -425,7 +438,7 @@ export function NewLeasingTaskDetailView({ cycleId }: { cycleId: string }) {
 
                 <section>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-sm font-semibold">Activity timeline</h3>
+                    <h3 className="text-sm font-semibold">Audit log</h3>
                     <button
                       type="button"
                       onClick={() => setActiveTab('activity')}

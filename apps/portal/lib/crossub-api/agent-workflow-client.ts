@@ -522,3 +522,23 @@ export async function forceDeleteAgentTask(
     { method: 'POST', body: JSON.stringify({}) },
   );
 }
+
+export type AgentTaskAuditLogEntry = {
+  id: string;
+  at: string;
+  action: 'force_completed' | 'force_deleted';
+  label: string;
+  sentence: string;
+  actor: string;
+  taskType?: string;
+  previousStatus?: string;
+};
+
+export async function fetchAgentTaskAuditLog(
+  kind: AgentTaskKind,
+  taskId: string,
+): Promise<{ entries: AgentTaskAuditLogEntry[] }> {
+  return agentFetch(
+    `/agent/tasks/${encodeURIComponent(kind)}/${encodeURIComponent(taskId)}/audit-log`,
+  );
+}

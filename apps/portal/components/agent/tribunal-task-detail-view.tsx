@@ -16,6 +16,7 @@ import { TribunalRentChasingDetail } from '@/components/agent/tribunal-rent-chas
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
+import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import { propertyDetail } from '@/constants/routes';
 import { fetchAgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
 import type { AgentTribunalRentChasingDetail } from '@/lib/crossub-api/agent-workflow-client';
@@ -47,7 +48,7 @@ const TABS: { id: TribunalTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
   { id: 'details', label: 'Details' },
   { id: 'documents', label: 'Documents' },
-  { id: 'activity', label: 'Activity' },
+  { id: 'activity', label: 'Audit Log' },
   { id: 'orders', label: 'Orders' },
   { id: 'notes', label: 'Notes' },
 ];
@@ -131,6 +132,10 @@ export function TribunalTaskDetailView({
   const [rentChasingDetail, setRentChasingDetail] = useState<AgentTribunalRentChasingDetail | null>(
     null,
   );
+  const { entries: auditEntries, reload: reloadAudit } = useTaskAuditLog(
+    'tribunal',
+    tribunalCase.id,
+  );
 
   const propertyId = tribunalCase.propertyId;
   const property = properties.find((row) => row.id === propertyId) ?? null;
@@ -165,8 +170,18 @@ export function TribunalTaskDetailView({
     [tribunalCase, rentChasingDetail],
   );
   const activityEntries = useMemo(
-    () => buildTribunalActivityEntries(tribunalCase, rentChasingDetail),
-    [tribunalCase, rentChasingDetail],
+    () =>
+      mergeTaskAuditIntoActivity(
+        buildTribunalActivityEntries(tribunalCase, rentChasingDetail),
+        auditEntries,
+        (entry) => ({
+          id: entry.id,
+          at: entry.at,
+          title: entry.sentence,
+          actor: entry.actor,
+        }),
+      ),
+    [auditEntries, rentChasingDetail, tribunalCase],
   );
   const upcomingCards = useMemo(
     () => buildTribunalUpcomingCards(tribunalCase, rentChasingDetail),
@@ -271,6 +286,7 @@ export function TribunalTaskDetailView({
               tribunalCase.status === 'closed' ||
               (tribunalCase.apiStatus ?? '').toLowerCase() === 'closed'
             }
+            onMutated={() => void reloadAudit()}
           />
         </div>
       </header>
@@ -378,7 +394,7 @@ export function TribunalTaskDetailView({
 
               <section>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold">Activity timeline</h3>
+                  <h3 className="text-sm font-semibold">Audit log</h3>
                   <button
                     type="button"
                     onClick={() => setActiveTab('activity')}

@@ -43,11 +43,12 @@ import {
 } from '@/lib/utils';
 
 import { useWorkflowTourTabFocus } from '@/hooks/use-workflow-tour-tab-focus';
+import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 
 const TABS: { id: InspectionTaskTab; label: string }[] = [
   { id: 'workflow', label: 'Workflow' },
   { id: 'details', label: 'Details' },
-  { id: 'activity', label: 'Activity' },
+  { id: 'activity', label: 'Audit Log' },
   { id: 'documents', label: 'Documents' },
   { id: 'notes', label: 'Notes' },
 ];
@@ -109,6 +110,10 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
   useWorkflowTourTabFocus(setActiveTab, 'workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
   const { inspection, resolveState } = useResolvedInspection(inspectionId);
+  const { entries: auditEntries, reload: reloadAudit } = useTaskAuditLog(
+    'inspection',
+    inspection?.id,
+  );
 
   const propertyId = inspection?.propertyId;
   const property = properties.find((row) => row.id === propertyId) ?? null;
@@ -126,8 +131,18 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
     [inspection],
   );
   const activityEntries = useMemo(
-    () => (inspection ? buildInspectionActivityEntries(inspection) : []),
-    [inspection],
+    () =>
+      mergeTaskAuditIntoActivity(
+        inspection ? buildInspectionActivityEntries(inspection) : [],
+        auditEntries,
+        (entry) => ({
+          id: entry.id,
+          at: entry.at,
+          title: entry.sentence,
+          detail: entry.actor,
+        }),
+      ),
+    [auditEntries, inspection],
   );
 
   const relatedTasks = useMemo(() => {
@@ -238,6 +253,7 @@ export function InspectionTaskDetailView({ inspectionId }: { inspectionId: strin
             taskId={inspection.id}
             completed={isInspectionDone(inspection) && !isInspectionCancelled(inspection)}
             deleted={isInspectionCancelled(inspection)}
+            onMutated={() => void reloadAudit()}
           />
         </div>
       </header>

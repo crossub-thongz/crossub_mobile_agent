@@ -17,6 +17,7 @@ import { RentReviewTaskDocuments } from '@/components/rent-review/rent-review-ta
 import { PortalBackLink } from '@/components/layout/portal-back-link';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail } from '@/constants/routes';
+import { mergeTaskAuditIntoActivity, useTaskAuditLog } from '@/hooks/use-task-audit-log';
 import { CASE_ASSIGNED_TO_LABEL, resolveCaseAssignedToFromProperty } from '@/lib/case-assigned-to';
 import { relatedPropertyJobHref } from '@/lib/property-job-href';
 import {
@@ -45,7 +46,7 @@ const TABS: { id: RentReviewTaskTab; label: string }[] = [
   { id: 'details', label: 'Details' },
   { id: 'proposal', label: 'Proposal' },
   { id: 'tenant_response', label: 'Tenant response' },
-  { id: 'activity', label: 'Activity' },
+  { id: 'activity', label: 'Audit Log' },
   { id: 'documents', label: 'Documents' },
   { id: 'notes', label: 'Notes' },
 ];
@@ -121,6 +122,10 @@ export function RentReviewTaskDetailView({
 
   const [activeTab, setActiveTab] = useState<RentReviewTaskTab>('workflow');
   const showWorkflowTab = useCallback(() => setActiveTab('workflow'), []);
+  const { entries: auditEntries, reload: reloadAudit } = useTaskAuditLog(
+    'rent_review',
+    detail.id,
+  );
 
   const propertyId = detail.propertyId ?? '';
   const property = properties.find((row) => row.id === propertyId) ?? null;
@@ -134,8 +139,18 @@ export function RentReviewTaskDetailView({
     [detail, property],
   );
   const activityEntries = useMemo(
-    () => buildRentReviewActivityEntries(detail),
-    [detail],
+    () =>
+      mergeTaskAuditIntoActivity(
+        buildRentReviewActivityEntries(detail),
+        auditEntries,
+        (entry) => ({
+          id: entry.id,
+          at: entry.at,
+          title: entry.sentence,
+          actor: entry.actor,
+        }),
+      ),
+    [auditEntries, detail],
   );
   const tenantResponse = useMemo(() => tenantResponseSummary(detail), [detail]);
 
@@ -238,7 +253,10 @@ export function RentReviewTaskDetailView({
             taskId={detail.id}
             completed={detail.workflowState === 'completed'}
             deleted={detail.workflowState === 'cancelled'}
-            onMutated={() => onUpdated?.(detail)}
+            onMutated={async () => {
+              onUpdated?.(detail);
+              await reloadAudit();
+            }}
           />
         </div>
       </header>
@@ -366,7 +384,7 @@ export function RentReviewTaskDetailView({
 
               <section>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold">Activity timeline</h3>
+                  <h3 className="text-sm font-semibold">Audit log</h3>
                   <button
                     type="button"
                     onClick={() => setActiveTab('activity')}

@@ -39,8 +39,8 @@ export function TaskForceActionDialog({
           </DialogTitle>
           <DialogDescription>
             {isDelete
-              ? 'This will remove the task from the active workflow and cancel all remaining actions related to it. This action will be recorded in the Audit Log.'
-              : 'This will force complete the task and close all remaining workflow actions related to this task.'}
+              ? 'This will remove the task from the active workflow and cancel all remaining actions related to it. If this task has already been paid, the fee will be refunded. This action will be recorded in the Audit Log.'
+              : 'This will force complete the task and close all remaining workflow actions related to this task. If this task requires a payment, it must already be paid.'}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-0">
