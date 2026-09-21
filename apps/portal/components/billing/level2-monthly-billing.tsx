@@ -38,7 +38,7 @@ export type Level2MonthGroup = {
   label: string;
   charges: AgentBillingCharge[];
   invoice: AgentBillingMonthlyInvoice | null;
-  paymentStatus: 'paid' | 'unpaid' | 'accruing' | 'retracted' | 'retracted_refunded';
+  paymentStatus: 'paid' | 'unpaid' | 'accruing' | 'retracted' | 'retracted_refunded' | 'replaced';
   showOverdueWarning: boolean;
   /** Whole days until portal lock; null when paid/accruing/no due date. */
   daysUntilAccountLock: number | null;
@@ -188,7 +188,7 @@ export function buildLevel2MonthGroups(
 
     let paymentStatus: Level2MonthGroup['paymentStatus'];
     if (invoice?.retracted) {
-      paymentStatus = invoice.refunded ? 'retracted_refunded' : 'retracted';
+      paymentStatus = invoice.refunded ? 'retracted_refunded' : 'replaced';
     } else if (invoice?.status === 'paid') {
       paymentStatus = 'paid';
     } else if (invoice) {
@@ -420,7 +420,7 @@ function paymentStatusTone(status: Level2MonthGroup['paymentStatus']): string {
   if (status === 'retracted_refunded') {
     return 'border-violet-500/30 bg-violet-500/10 text-violet-800 dark:text-violet-200';
   }
-  if (status === 'retracted') {
+  if (status === 'replaced' || status === 'retracted') {
     return 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300';
   }
   if (status === 'paid') {
@@ -434,20 +434,26 @@ function paymentStatusTone(status: Level2MonthGroup['paymentStatus']): string {
 
 function paymentStatusLabel(status: Level2MonthGroup['paymentStatus']): string {
   if (status === 'retracted_refunded') return 'Retracted · refunded';
-  if (status === 'retracted') return 'Retracted';
+  if (status === 'replaced' || status === 'retracted') return 'Replaced';
   if (status === 'paid') return 'Paid';
   if (status === 'accruing') return 'Accruing';
   return 'Not paid';
 }
 
 function retractedInvoiceCaption(invoice: AgentBillingMonthlyInvoice): string {
+  if (invoice.createdAfterRetractOfInvoiceNumber) {
+    return `This invoice replaces ${invoice.createdAfterRetractOfInvoiceNumber}.`;
+  }
   if (invoice.refunded) {
     const amount = invoice.refundedAmountAud ?? invoice.withdrawnAmountAud;
     return amount != null
       ? `This invoice was retracted by CROSSUB Accounting. A refund of ${formatCurrency(amount)} was issued — do not pay this invoice. A corrected invoice will be sent separately.`
       : 'This invoice was retracted by CROSSUB Accounting and refunded — do not pay this invoice. A corrected invoice will be sent separately.';
   }
-  return 'This invoice was retracted by CROSSUB Accounting before payment — do not pay it. A corrected invoice will be sent separately.';
+  if (invoice.replacementInvoiceNumber) {
+    return `This invoice was replaced by ${invoice.replacementInvoiceNumber}.`;
+  }
+  return 'This invoice was replaced. No payment is required on this copy.';
 }
 
 function invoiceDisplayNumber(invoice: AgentBillingMonthlyInvoice): string {
@@ -596,6 +602,11 @@ function Level2MonthGroupCard({
               <div className="flex gap-2 border-b border-violet-500/25 bg-violet-500/10 px-5 py-3 text-xs text-violet-950 dark:text-violet-100">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 <p>{retractedInvoiceCaption(group.invoice)}</p>
+              </div>
+            ) : group.invoice?.createdAfterRetractOfInvoiceNumber ? (
+              <div className="flex gap-2 border-b border-border/80 bg-muted/30 px-5 py-3 text-xs text-muted-foreground">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                <p>This invoice replaces {group.invoice.createdAfterRetractOfInvoiceNumber}.</p>
               </div>
             ) : null}
 

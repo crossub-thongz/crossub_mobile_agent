@@ -47,19 +47,25 @@ function statusTone(invoice: AgentBillingMonthlyInvoice): string {
 
 function statusLabel(invoice: AgentBillingMonthlyInvoice): string {
   if (invoice.retracted) {
-    return invoice.refunded ? 'Retracted · refunded' : 'Retracted';
+    return invoice.refunded ? 'Retracted · refunded' : 'Replaced';
   }
   return invoice.status.replace(/_/g, ' ');
 }
 
 function retractedDescription(invoice: AgentBillingMonthlyInvoice): string {
+  if (invoice.createdAfterRetractOfInvoiceNumber) {
+    return `This invoice replaces ${invoice.createdAfterRetractOfInvoiceNumber}.`;
+  }
   if (invoice.refunded) {
     const amount = invoice.refundedAmountAud ?? invoice.withdrawnAmountAud;
     return amount != null
       ? `This invoice was retracted by CROSSUB Accounting and refunded (${formatCurrency(amount)}). Do not pay it — a corrected invoice will be sent separately.`
       : 'This invoice was retracted by CROSSUB Accounting and refunded. Do not pay it — a corrected invoice will be sent separately.';
   }
-  return 'This invoice was retracted by CROSSUB Accounting before payment. Do not pay it — a corrected invoice will be sent separately.';
+  if (invoice.replacementInvoiceNumber) {
+    return `This invoice was replaced by ${invoice.replacementInvoiceNumber}.`;
+  }
+  return 'This invoice was replaced. No payment is required on this copy.';
 }
 
 export function PlatformMonthlyInvoiceDialog({
@@ -186,8 +192,10 @@ export function PlatformMonthlyInvoiceDialog({
             </div>
             <DialogDescription className="text-left text-xs leading-relaxed">
               {invoice?.retracted
-                ? `${invoice.invoiceNumber ?? 'Invoice'}${invoice.retractedAt ? ` · retracted ${formatDateTime(invoice.retractedAt)}` : ''}. ${retractedDescription(invoice)}`
-                : `${invoice?.invoiceNumber ?? 'Invoice'}${invoice?.dueDate ? ` · due ${formatDate(invoice.dueDate)}` : ' · due the 7th'} · unpaid accounts are held from the 14th`}
+                ? `${invoice.invoiceNumber ?? 'Invoice'}${invoice.retractedAt ? ` · replaced ${formatDateTime(invoice.retractedAt)}` : ''}. ${retractedDescription(invoice)}`
+                : invoice?.createdAfterRetractOfInvoiceNumber
+                  ? `${invoice.invoiceNumber ?? 'Invoice'}. This invoice replaces ${invoice.createdAfterRetractOfInvoiceNumber}.`
+                  : `${invoice?.invoiceNumber ?? 'Invoice'}${invoice?.dueDate ? ` · due ${formatDate(invoice.dueDate)}` : ' · due the 7th'} · unpaid accounts are held from the 14th`}
             </DialogDescription>
           </div>
           <div className="flex shrink-0 items-center gap-2">

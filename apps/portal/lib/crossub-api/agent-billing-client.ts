@@ -382,6 +382,9 @@ export type AgentBillingMonthlyInvoice = {
   issuedAt?: string | null;
   retracted?: boolean;
   retractedAt?: string | null;
+  replaced?: boolean;
+  replacementInvoiceNumber?: string | null;
+  createdAfterRetractOfInvoiceNumber?: string | null;
   refunded?: boolean;
   refundedAmountAud?: number | null;
   withdrawnAmountAud?: number | null;
