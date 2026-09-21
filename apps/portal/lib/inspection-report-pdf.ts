@@ -67,35 +67,13 @@ async function blobToObjectUrl(blob: Blob): Promise<string> {
   return URL.createObjectURL(typed);
 }
 
-async function blobLooksLikeOpenInspectionReport(blob: Blob): Promise<boolean> {
-  const bytes = new Uint8Array(await blob.slice(0, 512_000).arrayBuffer());
-  let sample = '';
-  for (const byte of bytes) sample += String.fromCharCode(byte);
-  return /Open Inspection Report|Check list before open inspection/i.test(sample);
-}
-
 /** Load a PDF for in-app preview — prefers a blob URL so the browser renders inline. */
-export async function loadInspectionReportPreviewUrl(
-  url: string,
-  inspectionType?: 'ingoing' | 'outgoing' | 'routine' | 'open' | null,
-): Promise<string> {
+export async function loadInspectionReportPreviewUrl(url: string): Promise<string> {
   const blob = await fetchReportBlob(url);
-  if (blob) {
-    if (
-      inspectionType &&
-      inspectionType !== 'open' &&
-      (await blobLooksLikeOpenInspectionReport(blob))
-    ) {
-      throw new Error('Open inspection PDF cannot preview a routine report');
-    }
-    return URL.createObjectURL(blob);
-  }
+  if (blob) return URL.createObjectURL(blob);
   // Same-origin API/proxy misses must fail so the preview can try the next source.
   // Cross-origin R2 URLs fail `fetch` on CORS; the iframe can still render them.
   if (isSameOriginUrl(url)) {
-    throw new Error('Report file is not available');
-  }
-  if (inspectionType && inspectionType !== 'open') {
     throw new Error('Report file is not available');
   }
   return url;
@@ -153,17 +131,8 @@ export async function downloadInspectionReportFromApi(
 export async function loadInspectionReportPreviewFromApi(
   inspectionId: string,
   fetchPdf: (id: string) => Promise<Blob>,
-  inspectionType?: 'ingoing' | 'outgoing' | 'routine' | 'open' | null,
 ): Promise<string> {
-  const blob = await asPdfBlob(await fetchPdf(inspectionId));
-  if (
-    inspectionType &&
-    inspectionType !== 'open' &&
-    (await blobLooksLikeOpenInspectionReport(blob))
-  ) {
-    throw new Error('Open inspection PDF cannot preview a routine report');
-  }
-  return blobToObjectUrl(blob);
+  return blobToObjectUrl(await fetchPdf(inspectionId));
 }
 
 export function revokeInspectionReportBlobUrl(objectUrl: string | null | undefined): void {
@@ -193,7 +162,7 @@ export function isSafeInspectionReportFallbackUrl(
 ): boolean {
   const trimmed = url.trim();
   if (!trimmed) return false;
-  if (/(?:^|\/)open-inspection-reports\//i.test(trimmed) || /open[-_ ]inspection/i.test(trimmed)) {
+  if (/(?:^|\/)open-inspection-reports\//i.test(trimmed)) {
     return inspectionType === 'open';
   }
   const owner = /(?:^|\/)inspection-reports\/([0-9a-fA-F-]{36})(?:\/|$)/.exec(trimmed)?.[1];

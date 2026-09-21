@@ -75,7 +75,6 @@ export function InspectionReportPdfPreviewDialog({
           const next = await loadInspectionReportPreviewFromApi(
             inspectionId,
             fetchPdfRef.current,
-            inspectionType,
           );
           if (keep(next)) return;
         } catch {
@@ -86,7 +85,7 @@ export function InspectionReportPdfPreviewDialog({
       if (inspectionId) {
         for (const href of inspectionReportAuthenticatedPreviewHrefs(inspectionId)) {
           try {
-            const next = await loadInspectionReportPreviewUrl(href, inspectionType);
+            const next = await loadInspectionReportPreviewUrl(href);
             if (keep(next)) return;
           } catch {
             // Try the next authenticated source.
@@ -95,7 +94,6 @@ export function InspectionReportPdfPreviewDialog({
       }
 
       if (
-        inspectionType === 'open' &&
         reportUrl &&
         isSafeInspectionReportFallbackUrl(reportUrl, inspectionId, inspectionType)
       ) {
@@ -133,7 +131,6 @@ export function InspectionReportPdfPreviewDialog({
     if (inspectionId && fetch) {
       void downloadInspectionReportFromApi(inspectionId, filename, fetch).catch(() => {
         if (
-          inspectionType === 'open' &&
           reportUrl &&
           isSafeInspectionReportFallbackUrl(reportUrl, inspectionId, inspectionType)
         ) {

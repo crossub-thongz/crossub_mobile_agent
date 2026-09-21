@@ -1,5 +1,6 @@
 import { INSPECTION_RECORD_STATUS } from '@/constants/inspection-records';
 import type { InspectionDetail } from '@/lib/inspections-types';
+import { hasLeftTaskPool } from '@/lib/inspection-approval';
 
 const SUBMITTED_STATUSES = new Set<string>([
   INSPECTION_RECORD_STATUS.FIRST_REVIEW,
@@ -11,8 +12,8 @@ const SUBMITTED_STATUSES = new Set<string>([
 /**
  * Agent portal should not surface in-progress area photos — only the finished report.
  *
- * View / Download stay available once the job is complete (or a PDF is already
- * filed). Approval is an ops stamp; it must not hide a completed report.
+ * View / Download stay hidden until CROSSUB has approved (or the job is
+ * grandfathered). A submitted status or a report URL alone is not enough.
  */
 export function isInspectionReportReadyForView(
   detail: InspectionDetail | null | undefined,
@@ -22,9 +23,11 @@ export function isInspectionReportReadyForView(
     approvedAt?: string | null;
   },
 ): boolean {
+  const completedAt = options?.completedAt ?? detail?.completedDate ?? null;
+  const approvedAt = options?.approvedAt ?? detail?.approvedAt ?? null;
+  if (!hasLeftTaskPool({ completedAt, approvedAt })) return false;
   const reportUrl = options?.reportUrl ?? detail?.reportUrl;
   if (reportUrl?.trim()) return true;
-  const completedAt = options?.completedAt ?? detail?.completedDate ?? null;
   if (completedAt) return true;
   if (!detail?.status) return false;
   return SUBMITTED_STATUSES.has(detail.status);
