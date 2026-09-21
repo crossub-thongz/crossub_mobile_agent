@@ -532,10 +532,6 @@ export function InspectionDetailView({
     insp.type === 'OPEN' && (openPlatformPaymentActive || awaitingPayment);
   const showRoutinePlatformPayment =
     insp.type === 'ROUTINE' && (routineInPersonInProgress || awaitingPayment);
-  const routineReportInspectionId =
-    routineInspectionRecord?.id ??
-    routineSchedule?.currentInspectionId ??
-    insp.id;
   const routineReportUrl =
     routineInspectionRecord?.reportUrl ??
     routineSchedule?.currentInspection?.reportUrl ??
@@ -1131,8 +1127,8 @@ export function InspectionDetailView({
       {(showRoutineReport || (hasReport && insp.type !== 'OPEN' && insp.type !== 'ROUTINE')) && (
         <section className="space-y-3">
           <InspectionReportDownloadActions
-            inspectionId={routineReportInspectionId}
-            reportUrl={routineReportUrl}
+            inspectionId={insp.id}
+            reportUrl={insp.type === 'ROUTINE' ? null : routineReportUrl}
             propertyLabel={insp.propertyAddress}
             inspectionType={
               insp.type === 'INGOING'

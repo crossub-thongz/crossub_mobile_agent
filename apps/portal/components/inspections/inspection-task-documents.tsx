@@ -76,7 +76,7 @@ export function InspectionTaskDocuments({ inspection }: { inspection: Inspection
         <h3 className="text-sm font-semibold">Inspection report</h3>
         <InspectionReportDownloadActions
           inspectionId={inspection.id}
-          reportUrl={inspection.reportUrl}
+          reportUrl={inspection.type === 'ROUTINE' ? null : inspection.reportUrl}
           propertyLabel={inspection.propertyAddress}
           inspectionType={
             inspection.type === 'INGOING'
