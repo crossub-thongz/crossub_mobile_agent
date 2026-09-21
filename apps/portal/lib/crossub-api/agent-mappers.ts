@@ -392,7 +392,7 @@ function inspectionReportStatus(
     ) {
       return 'approved';
     }
-    return dto.reportUrl ? 'uploaded' : 'pending';
+    return 'uploaded';
   }
   return dto.reportUrl ? 'uploaded' : 'pending';
 }

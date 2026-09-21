@@ -57,7 +57,6 @@ import { Button } from '@/components/ui/button';
 import { useAgentData } from '@/components/providers/agent-data-provider';
 import { propertyDetail, ROUTES, inspectionDetail } from '@/constants/routes';
 import type { DetailNavContext } from '@/lib/detail-navigation';
-import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import {
   inspectionEmailRecordsForStep,
   inspectionJobCaseEmails,
@@ -485,15 +484,8 @@ export function InspectionDetailView({
     inspectionStatus: insp.apiStatus ?? insp.status,
     completedAt: routineCompletedAt,
   });
-  const routineReportReleased = hasLeftTaskPool({
-    completedAt: routineCompletedAt,
-    approvedAt: insp.approvedAt ?? routineInspectionRecord?.approvedAt ?? null,
-  });
   const showRoutineReport =
-    insp.type === 'ROUTINE' &&
-    !isCancelledRoutine &&
-    routineReportStatus.complete &&
-    routineReportReleased;
+    insp.type === 'ROUTINE' && !isCancelledRoutine && routineReportStatus.complete;
   const routineInPersonInProgress =
     isRoutinePlatformPaymentActive({
       inspection: insp,
@@ -780,7 +772,10 @@ export function InspectionDetailView({
             value={
               reportGenerated || insp.reportStatus === 'sent'
                 ? 'Complete'
-                : insp.reportUrl
+                : insp.reportUrl ||
+                    showRoutineReport ||
+                    insp.reportStatus === 'uploaded' ||
+                    insp.reportStatus === 'approved'
                   ? 'Available'
                   : 'Pending'
             }
@@ -1133,14 +1128,7 @@ export function InspectionDetailView({
         />
       ) : null}
 
-      {(showRoutineReport ||
-        (hasReport &&
-          insp.type !== 'OPEN' &&
-          insp.type !== 'ROUTINE' &&
-          hasLeftTaskPool({
-            completedAt: insp.completedAt,
-            approvedAt: insp.approvedAt,
-          }))) && (
+      {(showRoutineReport || (hasReport && insp.type !== 'OPEN' && insp.type !== 'ROUTINE')) && (
         <section className="space-y-3">
           <InspectionReportDownloadActions
             inspectionId={routineReportInspectionId}

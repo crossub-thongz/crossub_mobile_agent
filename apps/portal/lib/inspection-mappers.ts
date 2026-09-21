@@ -91,7 +91,7 @@ function reportStatusFromRecord(
     ) {
       return 'approved';
     }
-    return record.reportUrl ? 'uploaded' : 'pending';
+    return 'uploaded';
   }
   if (record.reportUrl) return 'uploaded';
   return 'pending';
