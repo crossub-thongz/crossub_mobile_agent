@@ -162,7 +162,7 @@ export function isSafeInspectionReportFallbackUrl(
 ): boolean {
   const trimmed = url.trim();
   if (!trimmed) return false;
-  if (/(?:^|\/)open-inspection-reports\//i.test(trimmed)) {
+  if (/(?:^|\/)open-inspection-reports\//i.test(trimmed) || /open[-_ ]inspection/i.test(trimmed)) {
     return inspectionType === 'open';
   }
   const owner = /(?:^|\/)inspection-reports\/([0-9a-fA-F-]{36})(?:\/|$)/.exec(trimmed)?.[1];
