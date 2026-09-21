@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { InspectionReportDownloadActions } from '@/components/inspections/inspection-report-download-actions';
+import { hasLeftTaskPool } from '@/lib/inspection-approval';
 import { inspectionsApi } from '@/lib/inspections-api';
 import { isInspectionDone } from '@/lib/inspections/presentation';
 import { openViewingsApi } from '@/lib/open-viewings-api';
@@ -50,7 +51,12 @@ export function InspectionTaskDocuments({ inspection }: { inspection: Inspection
     inspection.reportStatus === 'sent' ||
     inspection.reportStatus === 'uploaded' ||
     inspection.reportStatus === 'approved' ||
-    (inspection.type === 'ROUTINE' && isInspectionDone(inspection));
+    (inspection.type === 'ROUTINE' &&
+      isInspectionDone(inspection) &&
+      hasLeftTaskPool({
+        completedAt: inspection.completedAt,
+        approvedAt: inspection.approvedAt,
+      }));
 
   if (inspection.type === 'OPEN' && openReportReady) {
     return (

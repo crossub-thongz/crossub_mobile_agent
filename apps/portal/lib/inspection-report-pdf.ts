@@ -1,3 +1,6 @@
+import { fetchApiBlobFromUrl } from '@/lib/api';
+import { agentDocumentFileHref } from '@/lib/document-preview';
+
 /** Slug for a safe download filename segment. */
 function slug(value: string): string {
   return value
@@ -19,20 +22,60 @@ export function buildInspectionReportFilename(
   return `${prefix}-report-${slug(property) || 'property'}.pdf`;
 }
 
+async function asPdfBlob(blob: Blob): Promise<Blob> {
+  const bytes = blob.type === 'application/pdf' ? null : await blob.arrayBuffer();
+  const typed =
+    blob.type === 'application/pdf'
+      ? blob
+      : new Blob([bytes!], { type: 'application/pdf' });
+  if (typed.size < 5) throw new Error('Report file is empty');
+  return typed;
+}
+
+function isSameOriginUrl(url: string): boolean {
+  if (url.startsWith('/') && !url.startsWith('//')) return true;
+  if (typeof window === 'undefined') return false;
+  try {
+    return new URL(url, window.location.origin).origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function isApiProxyPath(url: string): boolean {
+  return url.startsWith('/api/') || url.startsWith('/api/v1/');
+}
+
 async function fetchReportBlob(url: string): Promise<Blob | null> {
   try {
-    const response = await fetch(url);
+    if (isApiProxyPath(url)) {
+      return await asPdfBlob(await fetchApiBlobFromUrl(url));
+    }
+    const response = await fetch(url, {
+      credentials: isSameOriginUrl(url) ? 'include' : 'omit',
+      cache: 'no-store',
+    });
     if (!response.ok) return null;
-    return await response.blob();
+    return await asPdfBlob(await response.blob());
   } catch {
     return null;
   }
+}
+
+async function blobToObjectUrl(blob: Blob): Promise<string> {
+  const typed = await asPdfBlob(blob);
+  return URL.createObjectURL(typed);
 }
 
 /** Load a PDF for in-app preview — prefers a blob URL so the browser renders inline. */
 export async function loadInspectionReportPreviewUrl(url: string): Promise<string> {
   const blob = await fetchReportBlob(url);
   if (blob) return URL.createObjectURL(blob);
+  // Same-origin API/proxy misses must fail so the preview can try the next source.
+  // Cross-origin R2 URLs fail `fetch` on CORS; the iframe can still render them.
+  if (isSameOriginUrl(url)) {
+    throw new Error('Report file is not available');
+  }
   return url;
 }
 
@@ -73,7 +116,7 @@ export async function downloadInspectionReportFromApi(
   filename: string,
   fetchPdf: (id: string) => Promise<Blob>,
 ): Promise<void> {
-  const blob = await fetchPdf(inspectionId);
+  const blob = await asPdfBlob(await fetchPdf(inspectionId));
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
@@ -89,8 +132,7 @@ export async function loadInspectionReportPreviewFromApi(
   inspectionId: string,
   fetchPdf: (id: string) => Promise<Blob>,
 ): Promise<string> {
-  const blob = await fetchPdf(inspectionId);
-  return URL.createObjectURL(blob);
+  return blobToObjectUrl(await fetchPdf(inspectionId));
 }
 
 export function revokeInspectionReportBlobUrl(objectUrl: string | null | undefined): void {
@@ -99,8 +141,44 @@ export function revokeInspectionReportBlobUrl(objectUrl: string | null | undefin
   }
 }
 
-/** Chrome/Edge PDF embed params — hide side panes, fit page width to the iframe. */
+/**
+ * Chrome's PDF viewer treats `#navpanes` on blob URLs as a broken document.
+ * Keep hash params on http(s) URLs only.
+ */
 export function inspectionReportPdfEmbedSrc(url: string): string {
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
   const base = url.split('#')[0] ?? url;
   return `${base}#navpanes=0&toolbar=1&scrollbar=1&view=FitH`;
+}
+
+/**
+ * Stored report URLs that belong to this inspection. Open-inspection PDFs must
+ * not fill a routine/ingoing/outgoing preview.
+ */
+export function isSafeInspectionReportFallbackUrl(
+  url: string,
+  inspectionId?: string | null,
+  inspectionType?: 'ingoing' | 'outgoing' | 'routine' | 'open' | null,
+): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (/(?:^|\/)open-inspection-reports\//i.test(trimmed)) {
+    return inspectionType === 'open';
+  }
+  const owner = /(?:^|\/)inspection-reports\/([0-9a-fA-F-]{36})(?:\/|$)/.exec(trimmed)?.[1];
+  if (owner && inspectionId) {
+    return owner.toLowerCase() === inspectionId.toLowerCase();
+  }
+  return true;
+}
+
+/**
+ * Authenticated preview sources for one inspection, in order: generated/filed
+ * PDF endpoint, then the agent document proxy (filed portal/media PDF).
+ */
+export function inspectionReportAuthenticatedPreviewHrefs(inspectionId: string): string[] {
+  return [
+    agentDocumentFileHref(`inspection-report:${inspectionId}`),
+    agentDocumentFileHref(`inspection:${inspectionId}`),
+  ];
 }

@@ -85,8 +85,8 @@ export function inspectionReportDisplayName(
 ): string {
   const category =
     findInspectionCategory(inspections, doc.inspectionId) ??
-    inspectionCategoryFromDocumentTitle(doc.title) ??
-    'open';
+    inspectionCategoryFromDocumentTitle(doc.title);
+  if (!category) return markSystemGeneratedReportName(doc.title);
   return formatInspectionReportDisplayName(propertyJobDisplayName(property), category);
 }
 
@@ -100,6 +100,7 @@ export function inspectionReportDownloadType(
   if (category === 'outgoing') return 'outgoing';
   if (category === 'routine') return 'routine';
   if (category === 'ingoing') return 'ingoing';
+  if (category === 'open') return 'open';
   return 'open';
 }
 

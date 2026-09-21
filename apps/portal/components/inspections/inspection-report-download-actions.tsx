@@ -144,6 +144,7 @@ export function InspectionReportDownloadActions({
           fetchPdf={fetchPdf}
           filename={filename}
           title={title}
+          inspectionType={inspectionType}
         />
       ) : null}
     </>

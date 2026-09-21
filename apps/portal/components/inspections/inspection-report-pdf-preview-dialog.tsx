@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Download, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -15,6 +15,9 @@ import { cn } from '@/lib/utils';
 import {
   downloadInspectionReportFromApi,
   downloadInspectionReportPdf,
+  inspectionReportAuthenticatedPreviewHrefs,
+  inspectionReportPdfEmbedSrc,
+  isSafeInspectionReportFallbackUrl,
   loadInspectionReportPreviewFromApi,
   loadInspectionReportPreviewUrl,
   revokeInspectionReportBlobUrl,
@@ -29,6 +32,7 @@ export function InspectionReportPdfPreviewDialog({
   fetchPdf,
   filename,
   title = 'Inspection report',
+  inspectionType,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,9 +41,13 @@ export function InspectionReportPdfPreviewDialog({
   fetchPdf?: (id: string) => Promise<Blob>;
   filename: string;
   title?: string;
+  inspectionType?: 'ingoing' | 'outgoing' | 'routine' | 'open';
 }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const fetchPdfRef = useRef(fetchPdf);
+
+  fetchPdfRef.current = fetchPdf;
 
   useEffect(() => {
     if (!open) {
@@ -48,86 +56,98 @@ export function InspectionReportPdfPreviewDialog({
       return;
     }
 
-    if (reportUrl) {
-      let active = true;
-      setLoading(true);
-
-      void loadInspectionReportPreviewUrl(reportUrl)
-        .then((next) => {
-          if (!active) {
-            revokeInspectionReportPreviewUrl(next, reportUrl);
-            return;
-          }
-          setPreviewUrl(next);
-        })
-        .catch(() => {
-          if (!active) return;
-          toast.error('Could not load the report preview');
-          setPreviewUrl(null);
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-
-      return () => {
-        active = false;
-      };
-    }
-
-    if (inspectionId && fetchPdf) {
-      let active = true;
-      setLoading(true);
-
-      void loadInspectionReportPreviewFromApi(inspectionId, fetchPdf)
-        .then((next) => {
-          if (!active) {
-            revokeInspectionReportBlobUrl(next);
-            return;
-          }
-          setPreviewUrl(next);
-        })
-        .catch(() => {
-          if (!active) return;
-          toast.error('Could not load the report preview');
-          setPreviewUrl(null);
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-
-      return () => {
-        active = false;
-      };
-    }
-
+    let cancelled = false;
+    setLoading(true);
     setPreviewUrl(null);
-    setLoading(false);
-  }, [open, reportUrl, inspectionId, fetchPdf]);
+
+    const keep = (next: string) => {
+      if (cancelled) {
+        if (next.startsWith('blob:')) revokeInspectionReportBlobUrl(next);
+        return false;
+      }
+      setPreviewUrl(next);
+      return true;
+    };
+
+    void (async () => {
+      if (inspectionId && fetchPdfRef.current) {
+        try {
+          const next = await loadInspectionReportPreviewFromApi(
+            inspectionId,
+            fetchPdfRef.current,
+          );
+          if (keep(next)) return;
+        } catch {
+          // Fall through to the filed-document proxy.
+        }
+      }
+
+      if (inspectionId) {
+        for (const href of inspectionReportAuthenticatedPreviewHrefs(inspectionId)) {
+          try {
+            const next = await loadInspectionReportPreviewUrl(href);
+            if (keep(next)) return;
+          } catch {
+            // Try the next authenticated source.
+          }
+        }
+      }
+
+      if (
+        reportUrl &&
+        isSafeInspectionReportFallbackUrl(reportUrl, inspectionId, inspectionType)
+      ) {
+        try {
+          const next = await loadInspectionReportPreviewUrl(reportUrl);
+          if (keep(next)) return;
+        } catch {
+          // Fall through to the empty state.
+        }
+      }
+    })().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, reportUrl, inspectionId, fetchPdf, inspectionType]);
 
   useEffect(() => {
     return () => {
       if (!previewUrl) return;
-      if (reportUrl) {
-        revokeInspectionReportPreviewUrl(previewUrl, reportUrl);
+      if (previewUrl.startsWith('blob:')) {
+        revokeInspectionReportBlobUrl(previewUrl);
         return;
       }
-      revokeInspectionReportBlobUrl(previewUrl);
+      if (reportUrl) {
+        revokeInspectionReportPreviewUrl(previewUrl, reportUrl);
+      }
     };
   }, [previewUrl, reportUrl]);
 
   const handleDownload = () => {
-    if (reportUrl) {
-      void downloadInspectionReportPdf(reportUrl, filename);
-      return;
-    }
-    if (inspectionId && fetchPdf) {
-      void downloadInspectionReportFromApi(inspectionId, filename, fetchPdf).catch(() => {
+    const fetch = fetchPdfRef.current;
+    if (inspectionId && fetch) {
+      void downloadInspectionReportFromApi(inspectionId, filename, fetch).catch(() => {
+        if (
+          reportUrl &&
+          isSafeInspectionReportFallbackUrl(reportUrl, inspectionId, inspectionType)
+        ) {
+          void downloadInspectionReportPdf(reportUrl, filename);
+          return;
+        }
         toast.error('Could not download the inspection report PDF');
       });
+      return;
+    }
+    if (reportUrl) {
+      void downloadInspectionReportPdf(reportUrl, filename);
     }
   };
 
-  const canPreview = Boolean(reportUrl || (inspectionId && fetchPdf));
+  const canDownload = Boolean(reportUrl || (inspectionId && fetchPdf));
+  const embedSrc = previewUrl ? inspectionReportPdfEmbedSrc(previewUrl) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,7 +170,7 @@ export function InspectionReportPdfPreviewDialog({
               variant="outline"
               size="sm"
               className="gap-1.5"
-              disabled={!canPreview}
+              disabled={!canDownload}
               onClick={handleDownload}
             >
               <Download className="size-3.5" />
@@ -175,12 +195,19 @@ export function InspectionReportPdfPreviewDialog({
               <Loader2 className="size-4 animate-spin" />
               Loading report…
             </div>
-          ) : previewUrl ? (
-            <iframe
+          ) : embedSrc ? (
+            <object
               title={title}
-              src={previewUrl}
+              data={embedSrc}
+              type="application/pdf"
               className="size-full border-0 bg-background"
-            />
+            >
+              <iframe
+                title={title}
+                src={embedSrc}
+                className="size-full border-0 bg-background"
+              />
+            </object>
           ) : (
             <div className="text-muted-foreground flex h-full items-center justify-center px-6 text-center text-sm">
               Report PDF is not available yet.

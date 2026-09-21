@@ -28,6 +28,7 @@ export function isInspectionReportReadyForView(
   if (!hasLeftTaskPool({ completedAt, approvedAt })) return false;
   const reportUrl = options?.reportUrl ?? detail?.reportUrl;
   if (reportUrl?.trim()) return true;
+  if (completedAt) return true;
   if (!detail?.status) return false;
   return SUBMITTED_STATUSES.has(detail.status);
 }
