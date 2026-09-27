@@ -11,6 +11,7 @@ import {
   TaskWorkflowRailSlot,
   TaskWorkflowRailSlotProvider,
 } from '@/components/agent/tasks/task-workflow-rail-slot';
+import { AgentDeductionsWindow } from '@/components/end-leasing/agent-deductions-window';
 import { EndLeasingAgentWorkflowPanel } from '@/components/end-leasing/end-leasing-agent-workflow-panel';
 import { SettlementDeductionDialog } from '@/components/end-leasing/settlement-deduction-dialog';
 import { PortalBackLink } from '@/components/layout/portal-back-link';
@@ -307,6 +308,8 @@ export function EndLeasingTaskDetailView({
           <p className="text-muted-foreground mt-2 text-sm">{banner.subtitle}</p>
         </section>
       ) : null}
+
+          <AgentDeductionsWindow caseData={caseData} />
 
           <TaskWorkflowRailSlot />
 

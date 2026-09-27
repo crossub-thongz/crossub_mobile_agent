@@ -386,3 +386,34 @@ export const TERMINATION_OUTCOME_TONE: Record<TerminationOutcome, LeasingTone> =
   [TERMINATION_OUTCOME.FULLY_APPLIED]: LEASING_TONE.INFO,
   [TERMINATION_OUTCOME.SHORTFALL]: LEASING_TONE.DESTRUCTIVE,
 }
+
+/**
+ * The tenant's end-of-lease deductions the managing agent keys in when CROSSUB asks (Daniel Zhou,
+ * 27 Sep 2026: "a window on agent side and text box for them to key in"). Values match the API's
+ * `VACATING_DEDUCTION_GROUP`, and the rows of CROSSUB's final statement.
+ */
+export const AGENT_DEDUCTION_GROUP = {
+  RENT: "rent",
+  MAINTENANCE: "maintenance",
+  CLEANING: "cleaning",
+  OTHER: "other",
+} as const
+
+export type AgentDeductionGroup =
+  (typeof AGENT_DEDUCTION_GROUP)[keyof typeof AGENT_DEDUCTION_GROUP]
+
+export const AGENT_DEDUCTION_GROUP_ORDER: AgentDeductionGroup[] = [
+  AGENT_DEDUCTION_GROUP.RENT,
+  AGENT_DEDUCTION_GROUP.MAINTENANCE,
+  AGENT_DEDUCTION_GROUP.CLEANING,
+  AGENT_DEDUCTION_GROUP.OTHER,
+]
+
+export const AGENT_DEDUCTION_GROUP_LABEL: Record<AgentDeductionGroup, string> = {
+  [AGENT_DEDUCTION_GROUP.RENT]: "Rent adjustment",
+  [AGENT_DEDUCTION_GROUP.MAINTENANCE]: "Tenant maintenance",
+  [AGENT_DEDUCTION_GROUP.CLEANING]: "Cleaning",
+  [AGENT_DEDUCTION_GROUP.OTHER]: "Other charges",
+}
+
+export const AGENT_DEDUCTION_NOTE_MAX = 1000

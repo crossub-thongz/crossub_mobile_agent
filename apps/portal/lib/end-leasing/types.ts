@@ -314,6 +314,11 @@ export interface TerminationCaseDetail {
   vacate: VacateStageState
   vacatingPreparation: VacatingPreparationStageState
   overviewEmail?: EndLeasingOverviewEmail | null
+  /** CROSSUB's ask to key in the tenant deductions, and what the agent keyed in. */
+  agentDeductions: {
+    request: import("@/lib/termination-case-types").AgentDeductionRequest | null
+    submission: import("@/lib/termination-case-types").AgentDeductionSubmission | null
+  }
   inspection: InspectionStageState
   reportComparison: ReportComparisonStageState
   makeGood: MakeGoodStageState

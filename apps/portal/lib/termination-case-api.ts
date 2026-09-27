@@ -11,6 +11,7 @@ import {
   type TerminationCaseStatus,
 } from '@/constants/end-leasing';
 import { LEASING_ITEM_STATUS } from '@/lib/leasing/constants';
+import type { AgentDeductionGroup } from '@/constants/end-leasing';
 import { api } from '@/lib/api';
 import type {
   CreateTerminationCaseInput,
@@ -337,6 +338,10 @@ export function mapTerminationCase(
       vacateDateChangeReason: s.vacatingPreparation?.vacateDateChangeReason ?? undefined,
       keyReturnPhotoUrls: s.vacatingPreparation?.keyReturnPhotoUrls ?? [],
       tenantKeyReturnSubmittedAt: undef(s.vacatingPreparation?.tenantKeyReturnSubmittedAt),
+    },
+    agentDeductions: {
+      request: s.vacatingTask?.agentDeductionRequest ?? null,
+      submission: s.vacatingTask?.agentDeductionSubmission ?? null,
     },
     overviewEmail: s.overviewEmail?.commConversationId || s.overviewEmail?.body
       ? {
@@ -781,6 +786,13 @@ export const terminationApi = {
 
   finalizeSettlement: (id: string): Promise<TerminationCaseDetail> =>
     unwrap(api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/settlement/finalize`, {})),
+
+  /** Key in the tenant's deductions when CROSSUB asks (`POST /end-leasing/cases/:id/agent-deductions`). */
+  submitAgentDeductions: (
+    id: string,
+    input: { lines: { group: AgentDeductionGroup; amount: number }[]; note?: string },
+  ): Promise<TerminationCaseDetail> =>
+    unwrap(api.post<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/agent-deductions`, input)),
 
   agentApprove: (id: string): Promise<TerminationCaseDetail> =>
     unwrap(api.patch<{ case: ServerTerminationCase }>(`/end-leasing/cases/${id}/agent-approval/approve`, {})),

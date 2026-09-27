@@ -91,6 +91,11 @@ export interface ServerTerminationCase extends ServerTerminationSummary {
     keyReturnPhotoUrls: string[]
     tenantKeyReturnSubmittedAt: string | null
   }
+  /** Vacating task facts (27 Sep 2026) — only the deductions ask is read by the Agent app. */
+  vacatingTask?: {
+    agentDeductionRequest?: AgentDeductionRequest | null
+    agentDeductionSubmission?: AgentDeductionSubmission | null
+  }
   overviewEmail: {
     commConversationId: string | null
     subject: string | null
@@ -448,4 +453,21 @@ export interface UploadTerminationDocumentInput {
 
 export interface UploadManualInspectionReportInput extends UploadTerminationDocumentInput {
   kind: 'ingoing' | 'outgoing'
+}
+
+/** CROSSUB asked the managing agent to key in the tenant's deductions. */
+export interface AgentDeductionRequest {
+  requestedAt: string
+  requestedByName: string
+  note?: string
+}
+
+/** What the agent keyed in — CROSSUB turns it into the statement (`appliedAt`). */
+export interface AgentDeductionSubmission {
+  lines: { group: import("@/constants/end-leasing").AgentDeductionGroup; amount: number }[]
+  note?: string
+  submittedAt: string
+  submittedByName: string
+  appliedAt?: string
+  appliedByName?: string
 }
