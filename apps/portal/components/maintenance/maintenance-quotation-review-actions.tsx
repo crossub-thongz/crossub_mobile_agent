@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { MaintenanceApproveLandlordEmailDialog } from '@/components/maintenance/maintenance-approve-landlord-email-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,6 +15,13 @@ import { Textarea } from '@/components/ui/textarea';
 import type { ApiQuotation, QuotationReviewRecord } from '@/lib/crossub-api/types';
 import { isContractorRequotedAwaitingAgent } from '@/lib/maintenance/quotation-review-state';
 import { formatCurrency } from '@/lib/utils';
+
+// Agents are all in Australia — never the browser's or the server's zone.
+const SYDNEY_TZ = 'Australia/Sydney';
+
+function formatSydney(iso: string): string {
+  return new Date(iso).toLocaleString('en-AU', { timeZone: SYDNEY_TZ });
+}
 
 function CounterOfferHistory({
   offers,
@@ -44,7 +50,7 @@ function CounterOfferHistory({
               {offer.message ? ` — ${offer.message}` : ''}
             </p>
             <p className="text-muted-foreground mt-0.5">
-              {offer.sentBy ?? 'agent'} · {new Date(offer.sentAt).toLocaleString('en-AU')}
+              {offer.sentBy ?? 'agent'} · {formatSydney(offer.sentAt)}
             </p>
           </li>
         ))}
@@ -53,35 +59,31 @@ function CounterOfferHistory({
   );
 }
 
+/**
+ * The agent's decision on a submitted quote — three choices (Daniel Zhou, 29 Sep 2026):
+ * Approve, Reject, or Owner to Handle. Approve is one confirm: the agent's approval is the
+ * approval, so there is no follow-up "send to landlord" step and no email back to the agent.
+ * Negotiate was removed from this panel; the counter-offer history still shows when a quote
+ * carries one.
+ */
 export function MaintenanceQuotationReviewActions({
   quote,
   review,
   canReview,
   busy = false,
   onReviewDecision,
-  onSendToLandlord,
   onSendFeedback,
-  onCounterOffer,
   onOwnerToHandle,
 }: {
   quote: ApiQuotation;
   review?: QuotationReviewRecord;
   canReview: boolean;
   busy?: boolean;
-  onReviewDecision: (
-    decision: 'approved' | 'declined',
-    declineReason?: string,
-    opts?: { skipRecipientEmail?: boolean },
-  ) => Promise<void>;
-  onSendToLandlord: (opts?: { skipRecipientEmail?: boolean }) => Promise<void>;
+  onReviewDecision: (decision: 'approved' | 'declined', declineReason?: string) => Promise<void>;
   onSendFeedback: (message?: string) => Promise<void>;
-  onCounterOffer: (counterPrice: number, message?: string) => Promise<void>;
   onOwnerToHandle: () => Promise<void>;
 }) {
   const [declineReason, setDeclineReason] = useState(review?.declineReason ?? '');
-  const [negotiateOpen, setNegotiateOpen] = useState(false);
-  const [counterPrice, setCounterPrice] = useState('');
-  const [counterMessage, setCounterMessage] = useState('');
   const [acting, setActing] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [ownerToHandleOpen, setOwnerToHandleOpen] = useState(false);
@@ -89,13 +91,9 @@ export function MaintenanceQuotationReviewActions({
   const isBusy = busy || acting;
   const canAct = canReview && quote.status === 'submitted';
   // After approve, the board may expose an `approved` quote row before review.decision
-  // rehydrates — still treat that as approved so Send to landlord remains available.
+  // rehydrates — still treat that as approved.
   const decision =
     review?.decision ?? (quote.status === 'approved' ? 'approved' : undefined);
-  const approvalSkipped = Boolean(review?.agentApprovalEmailSkipped);
-  const approvalSentAt =
-    review?.agentApprovalEmailSentAt ?? review?.landlordEmailSentAt;
-  const landlordSent = Boolean(approvalSentAt) && !approvalSkipped;
   const feedbackSent = Boolean(review?.contractorFeedbackSentAt);
   const requotedAwaitingAgent = isContractorRequotedAwaitingAgent(review, quote);
 
@@ -146,15 +144,6 @@ export function MaintenanceQuotationReviewActions({
               onClick={() => setOwnerToHandleOpen(true)}
             >
               Owner to Handle
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isBusy}
-              onClick={() => setNegotiateOpen((v) => !v)}
-            >
-              Negotiate
             </Button>
             <Button
               type="button"
@@ -220,126 +209,48 @@ export function MaintenanceQuotationReviewActions({
               </div>
             </DialogContent>
           </Dialog>
-          <MaintenanceApproveLandlordEmailDialog
-            open={approveDialogOpen}
-            onOpenChange={setApproveDialogOpen}
-            busy={isBusy}
-            onProceed={(skipRecipientEmail) =>
-              void run(async () => {
-                await onReviewDecision('approved', undefined, {
-                  skipRecipientEmail,
-                });
-                setApproveDialogOpen(false);
-                toast.success(
-                  skipRecipientEmail
-                    ? 'Quote approved — proceeded without sending landlord email'
-                    : 'Quote approved — quotation sent to landlord',
-                );
-              })
-            }
-          />
+          <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+            <DialogContent className="sm:max-w-md" stacked>
+              <DialogHeader>
+                <DialogTitle>Approve quote</DialogTitle>
+                <DialogDescription>
+                  Approve this quote for {formatCurrency(quote.price)}. The contractor is asked to
+                  arrange a visit time with the tenant.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isBusy}
+                  onClick={() => setApproveDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-[#5f9f6b] text-white hover:bg-[#4f8d5b]"
+                  disabled={isBusy}
+                  onClick={() =>
+                    void run(async () => {
+                      await onReviewDecision('approved');
+                      setApproveDialogOpen(false);
+                      toast.success('Quote approved');
+                    })
+                  }
+                >
+                  Approve
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </>
       ) : null}
 
-      {canReview && negotiateOpen && canAct && !decision ? (
-        <div className="bg-muted/20 space-y-2 rounded-md border p-3">
-          <p className="text-xs font-semibold">Negotiate (counter offer)</p>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            value={counterPrice}
-            onChange={(e) => setCounterPrice(e.target.value)}
-            placeholder="Counter price (AUD inc GST)"
-            className="border-border bg-background w-full rounded-md border px-3 py-2 text-sm"
-            disabled={isBusy}
-          />
-          <Textarea
-            value={counterMessage}
-            inputKind="message"
-            onChange={(e) => setCounterMessage(e.target.value)}
-            placeholder="Optional message to contractor"
-            className="min-h-[72px] resize-none text-xs"
-            disabled={isBusy}
-          />
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isBusy}
-              onClick={() => setNegotiateOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={isBusy}
-              onClick={() =>
-                void run(async () => {
-                  const price = Number(counterPrice);
-                  if (!Number.isFinite(price) || price <= 0) {
-                    toast.error('Enter a valid counter price');
-                    return;
-                  }
-                  await onCounterOffer(price, counterMessage.trim() || undefined);
-                  toast.success('Counter offer sent to contractor');
-                  setNegotiateOpen(false);
-                  setCounterPrice('');
-                  setCounterMessage('');
-                })
-              }
-            >
-              Send counter offer
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {canReview && decision === 'approved' && !landlordSent && !approvalSkipped ? (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={isBusy}
-            onClick={() =>
-              void run(async () => {
-                await onSendToLandlord({ skipRecipientEmail: true });
-                toast.success('Proceeded without sending landlord email');
-              })
-            }
-          >
-            Proceed without sending email
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="bg-[#5f9f6b] text-white hover:bg-[#4f8d5b]"
-            disabled={isBusy}
-            onClick={() =>
-              void run(async () => {
-                await onSendToLandlord();
-                toast.success('Quotation sent to landlord');
-              })
-            }
-          >
-            Send quotation to landlord
-          </Button>
-        </div>
-      ) : null}
-
-      {canReview && decision === 'approved' && approvalSkipped ? (
+      {canReview && decision === 'approved' ? (
         <p className="text-muted-foreground text-xs">
-          Proceeded without sending landlord email
-          {approvalSentAt ? ` · ${new Date(approvalSentAt).toLocaleString('en-AU')}` : ''}
-        </p>
-      ) : null}
-
-      {canReview && decision === 'approved' && landlordSent ? (
-        <p className="text-muted-foreground text-xs">
-          Quotation sent to landlord · {new Date(approvalSentAt!).toLocaleString('en-AU')}
+          Quote approved
+          {review?.decidedAt ? ` · ${formatSydney(review.decidedAt)}` : ''}
         </p>
       ) : null}
 
@@ -379,7 +290,7 @@ export function MaintenanceQuotationReviewActions({
       {canReview && decision === 'declined' && feedbackSent ? (
         <p className="text-muted-foreground text-xs">
           Feedback sent to contractor ·{' '}
-          {new Date(review!.contractorFeedbackSentAt!).toLocaleString('en-AU')}
+          {formatSydney(review!.contractorFeedbackSentAt!)}
         </p>
       ) : null}
     </div>

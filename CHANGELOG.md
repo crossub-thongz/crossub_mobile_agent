@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-09-29
+
+### Changed
+- ⭐ **The quote decision on a landlord-responsibility job is now three choices: Approve, Reject, Owner to Handle** (Daniel Zhou, 29 Sep 2026: "Change the approval progress to 3 choices"). `MaintenanceQuotationReviewActions` used to offer Owner to Handle | Negotiate | Reject | Approve. Approve opened a two-button "Proceed with / without sending email to landlord" dialog, and approval then led to a separate "Send quotation to landlord" step. Negotiate is gone from this panel (the counter-offer history still shows on a quote that has one). Approve is now a single confirm that states the amount and the next step: the contractor is asked to arrange a visit time with the tenant. The follow-up send step is gone; an approved quote reads "Quote approved" with the decision time. The email choice did nothing: `approveMaintenanceQuotation` posts to `…/quotes/{quotationId}/approve` with no body, so both buttons made the same call. It could never have done what it said either, because CROSSUB never emails a landlord. The backend now skips the approval-request email on an agent's approval (crossub_web, same day), so there is nothing left to choose. `onSendToLandlord` and `onCounterOffer` are dropped from the component; `maintenance-get-quote-panel.tsx` no longer passes them. The `…Case` helpers and API clients behind them stay, and so do the other approve surfaces (`ApprovalPanel`, `MaintenanceInlineActions`, which use the request-level approve). Dates on this panel now render in Australia/Sydney. Approve, Reject and Negotiate had all been failing with "Validation failed (uuid is expected)". That was a backend bug (a `ParseUUIDPipe` on a `Q-<timestamp>` id), fixed in crossub_web; no client change was needed for it. `tsc --noEmit` on `apps/portal`: 17 errors, none in the two touched files.
+
 ## 2026-09-18
 
 ### Changed

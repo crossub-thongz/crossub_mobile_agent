@@ -25,8 +25,6 @@ import {
   handleMaintenanceByOwnerCase,
   reviewMaintenanceQuotationDecisionCase,
   sendMaintenanceContractorFeedbackCase,
-  sendMaintenanceQuotationCounterOfferCase,
-  sendMaintenanceQuotationToLandlordCase,
 } from '@/lib/maintenance/maintenance-case-ops';
 import {
   getContractorQuotationHistory,
@@ -268,21 +266,8 @@ function ContractorQuoteCollapsible({
                   );
                   await onCaseUpdated?.();
                 }}
-                onSendToLandlord={async (opts) => {
-                  await sendMaintenanceQuotationToLandlordCase(submitted.id, opts);
-                  await onCaseUpdated?.();
-                }}
                 onSendFeedback={async (message) => {
                   await sendMaintenanceContractorFeedbackCase(submitted.id, message);
-                  await onCaseUpdated?.();
-                }}
-                onCounterOffer={async (counterPrice, message) => {
-                  await sendMaintenanceQuotationCounterOfferCase(
-                    submitted.maintenanceRequestId,
-                    submitted.id,
-                    counterPrice,
-                    message,
-                  );
                   await onCaseUpdated?.();
                 }}
                 onOwnerToHandle={async () => {
