@@ -664,11 +664,6 @@ export function NewPropertyRegistryForm({
       const next = { ...f, [key]: value };
       if (key === 'unit' || key === 'streetNumber' || key === 'streetName') {
         next.address = composeStreetAddress(next.unit, next.streetNumber, next.streetName);
-        // Unit is optional — keep map coordinates when only the unit label changes.
-        if (key === 'streetNumber' || key === 'streetName') {
-          next.latitude = undefined;
-          next.longitude = undefined;
-        }
       }
       return next;
     });
@@ -1040,9 +1035,6 @@ export function NewPropertyRegistryForm({
                         onChange={(e) => setAddressPart('streetNumber', e.target.value)}
                         placeholder="e.g. 66"
                         required
-                        disabled={addressFieldsLocked}
-                        readOnly={addressFieldsLocked}
-                        className={cn(addressFieldsLocked && 'bg-muted/40')}
                       />
                     </FormField>
                   </div>
@@ -1055,9 +1047,6 @@ export function NewPropertyRegistryForm({
                         onChange={(e) => setAddressPart('streetName', e.target.value)}
                         placeholder="e.g. Berry Street"
                         required
-                        disabled={addressFieldsLocked}
-                        readOnly={addressFieldsLocked}
-                        className={cn(addressFieldsLocked && 'bg-muted/40')}
                       />
                     </FormField>
                     <FormField label="City / suburb" required>
@@ -1067,9 +1056,6 @@ export function NewPropertyRegistryForm({
                         onChange={(e) => setAddressPart('suburb', e.target.value)}
                         placeholder="e.g. Bondi Beach"
                         required
-                        disabled={addressFieldsLocked}
-                        readOnly={addressFieldsLocked}
-                        className={cn(addressFieldsLocked && 'bg-muted/40')}
                       />
                     </FormField>
                   </div>
@@ -1081,9 +1067,8 @@ export function NewPropertyRegistryForm({
                         onChange={(e) =>
                           setAddressPart('state', e.target.value as AustralianStateKey)
                         }
-                        className={cn(selectClass, addressFieldsLocked && 'bg-muted/40')}
+                        className={selectClass}
                         required
-                        disabled={addressFieldsLocked}
                       >
                         <option value="">Select state</option>
                         {AUSTRALIAN_STATE_ORDER.map((s) => (

@@ -28,7 +28,7 @@ export function composeStreetAddress(
   const n = streetNumber.trim();
   const name = streetName.trim();
   if (u && n && name) return `${u}/${n} ${name}`;
-  if (n && name) return `${n}, ${name}`;
+  if (n && name) return `${n} ${name}`;
   if (name) return name;
   if (u && n) return `${u}/${n}`;
   if (n) return n;
@@ -66,7 +66,9 @@ function componentValue(
 ): string {
   const match = components.find((c) => c.types.includes(type));
   if (!match) return '';
-  return short ? match.short_name : match.long_name;
+  const primary = short ? match.short_name : match.long_name;
+  const secondary = short ? match.long_name : match.short_name;
+  return (primary || secondary || '').trim();
 }
 
 function parseStreetParts(components: google.maps.GeocoderAddressComponent[]): {
@@ -120,6 +122,45 @@ function resolveAustralianState(shortName: string): AustralianStateKey | '' {
     : '';
 }
 
+/**
+ * Google often returns the route ("Todman Street") and leaves `street_number` off the
+ * components, while the suggestion text still starts with the number ("28 Todman Street").
+ */
+export function streetNumberBesideName(text: string, streetName: string): string {
+  const street = streetName.trim();
+  if (!street) return '';
+  const streetKey = street.toLowerCase();
+  for (const raw of text.split('\n')) {
+    const first = raw.split(',')[0]?.trim() ?? '';
+    if (!first) continue;
+    const extracted = extractUnitFromText(first);
+    const remainder = (extracted?.remainder ?? first).trim();
+    const idx = remainder.toLowerCase().lastIndexOf(streetKey);
+    if (idx <= 0) continue;
+    const head = remainder.slice(0, idx).replace(/[,\s]+$/g, '').trim();
+    const num = head.match(/(\d+[A-Za-z]?)$/);
+    if (num?.[1]) return num[1];
+  }
+  return '';
+}
+
+export function recoverStreetNumber(
+  parsed: ParsedAustralianAddress,
+  texts: Array<string | null | undefined>,
+): ParsedAustralianAddress {
+  if (parsed.streetNumber.trim() || !parsed.streetName.trim()) return parsed;
+  const streetNumber = streetNumberBesideName(
+    texts.filter((line): line is string => Boolean(line?.trim())).join('\n'),
+    parsed.streetName,
+  );
+  if (!streetNumber) return parsed;
+  return {
+    ...parsed,
+    streetNumber,
+    address: composeStreetAddress(parsed.unit, streetNumber, parsed.streetName),
+  };
+}
+
 /** Map a Google Places result into the property registry address fields. */
 export function parsePlaceResult(
   place: google.maps.places.PlaceResult,
@@ -129,6 +170,10 @@ export function parsePlaceResult(
 
   const parts = parseStreetParts(components);
   let { unit, streetNumber, streetName } = parts;
+  if (!streetNumber) {
+    const premise = componentValue(components, 'premise');
+    if (/^\d+[A-Za-z]?$/.test(premise)) streetNumber = premise;
+  }
 
   // Fallback: unit often only appears in name / formatted_address for AU flats.
   if (!unit) {
@@ -154,6 +199,13 @@ export function parsePlaceResult(
     const fallback =
       place.name?.trim() || place.formatted_address?.split(',')[0]?.trim() || '';
     if (fallback) streetName = fallback;
+  }
+
+  if (!streetNumber && streetName) {
+    streetNumber = streetNumberBesideName(
+      [place.name, place.formatted_address].filter(Boolean).join('\n'),
+      streetName,
+    );
   }
 
   const suburb =

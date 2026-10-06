@@ -6,9 +6,11 @@ import { MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  composeStreetAddress,
   getGoogleMapsApiKey,
   loadGoogleMaps,
   parsePlaceResult,
+  recoverStreetNumber,
   type ParsedAustralianAddress,
 } from '@/lib/google-places';
 import { cn } from '@/lib/utils';
@@ -108,7 +110,14 @@ export function PropertyAddressAutocomplete({
                 if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
                   const fromDetails = parsePlaceResult(detail);
                   if (fromDetails) {
-                    applyParsedPlace(fromDetails);
+                    applyParsedPlace(
+                      recoverStreetNumber(fromDetails, [
+                        detail.name,
+                        detail.formatted_address,
+                        place.name,
+                        place.formatted_address,
+                      ]),
+                    );
                     return;
                   }
                 }
