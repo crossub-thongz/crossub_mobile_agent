@@ -17,18 +17,15 @@ export const RENT_REVIEW_CONDUCT_WINDOW_DAYS =
 /**
  * Calendar days from service to the earliest date an increase may lawfully take effect.
  *
- * The sixty days are counted from the day **after** the notice is served — the day of service
- * is not one of them — and the increase takes effect on the sixtieth of them. Served 14 Aug ⇒
- * day 1 on the 15th, day 60 on 13 Oct, rent may rise 13 Oct. Service + 60, which is why this
- * is an alias of the statutory period rather than a number of its own.
+ * Sixty full days counted from the day **after** service, and the increase takes effect on
+ * day 61 — a notice served 7 Oct runs day 1 on the 8th, day 60 on 6 Dec, and the rent may rise
+ * on 7 Dec (Daniel Zhou, 7 Oct 2026, a compliance fix reversing CRS-0126's service + 60).
  *
  * Mirrors `RENT_REVIEW_EARLIEST_INCREASE_OFFSET_DAYS` in the API; if the two disagree the
  * picker offers a date the API refuses, which reads to an agent as a broken form rather than
- * as a rule. Both were `+ 1` between 14 and 22 Aug 2026 — the picker's `min` then sat a day
- * past the statutory floor, so an agent who wanted the lawful date could not select it and
- * the helper text said "60 days notice" beside a date sixty-one days out (CRS-0126).
+ * as a rule.
  */
-export const RENT_REVIEW_EARLIEST_INCREASE_OFFSET_DAYS = RENT_REVIEW_STATUTORY_NOTICE_DAYS;
+export const RENT_REVIEW_EARLIEST_INCREASE_OFFSET_DAYS = RENT_REVIEW_STATUTORY_NOTICE_DAYS + 1;
 /** Agent due date — 30 days before the new lease start or rent increase. */
 export const RENT_REVIEW_DUE_DAYS_BEFORE_NEW_LEASE = 30;
 
@@ -217,7 +214,7 @@ export interface RentReviewSchedulingFields {
   scheduleAnchor: string;
   /** Rent review order opens (rent increase date − 90 days). */
   advanceReviewOpensOn: string;
-  /** Last day to finish review & issue 60-day notice (rent increase date − 60 days). */
+  /** Last day to issue the 60-day notice and still land the increase (rent increase date − 61 days). */
   noticeDeadlineOn: string;
 }
 
@@ -256,7 +253,7 @@ export function deriveRentReviewScheduling(input: {
     ),
     noticeDeadlineOn: isoDateSubtractDays(
       scheduleAnchor,
-      RENT_REVIEW_STATUTORY_NOTICE_DAYS,
+      RENT_REVIEW_EARLIEST_INCREASE_OFFSET_DAYS,
     ),
   };
 }
